@@ -42,17 +42,18 @@
 <script src="assets/portal.js?v=1"></script>
 <script src="assets/temple.js?v=5"></script>
 <script src="assets/temple-construction.js?v=5"></script>
-<script src="assets/temple-game.js?v=6"></script>
+<script src="assets/temple-game.js?v=7"></script>
 <script src="assets/foundry.js?v=2"></script>
-<script src="assets/foundry-game.js?v=2"></script>
+<script src="assets/foundry-game.js?v=3"></script>
 <script src="assets/sawmill.js?v=3"></script>
 <script src="assets/sawmill-grand-arbre.js?v=2"></script>
-<script src="assets/sawmill-game.js?v=1"></script>
+<script src="assets/sawmill-game.js?v=2"></script>
 <script src="assets/ballista.js?v=2"></script>
 <script src="assets/ballista-ruins.js?v=3"></script>
-<script src="assets/turret-game.js?v=4"></script>
+<script src="assets/turret-game.js?v=5"></script>
 <script src="assets/barracks.js?v=3"></script>
-<script src="assets/barracks-game.js?v=1"></script>
+<script src="assets/barracks-game.js?v=2"></script>
+<script src="assets/pixel-buildings.js?v=7"></script>
 <script src="assets/hud.js?v=7"></script>
 <script src="assets/dialogue.js?v=2"></script>
 <script>
@@ -316,7 +317,7 @@ function draw(){
  const O=PIXEL?PW.objs:[];let j=0;
  for(const v of all){
   while(j<O.length&&O[j].d<=v.d)drawDeco(O[j++]);flushDecor();
-  if(v.turret){drawTurret(v.turret);const p=project(v.turret.x,0,v.turret.z),s=Z()/16;captureDecorLayer(p.x-80*s,p.y-145*s,160*s,195*s)}
+  if(v.turret){drawTurret(v.turret);const p=project(v.turret.x,0,v.turret.z),k=Z()*.86/8;captureDecorLayer(p.x-80*k,p.y-120*k,160*k,150*k)}
   else if(v.sawmill){drawSawmill(v.sawmill);captureDecorLayer()}
   else if(v.forester){drawSawmillWorker(v.forester);captureDecorLayer()}
   else if(v.barracks){drawBarracks(v.barracks);captureDecorLayer()}
