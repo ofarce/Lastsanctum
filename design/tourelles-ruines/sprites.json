@@ -1,0 +1,278 @@
+{
+  "cell": {
+    "width": 192,
+    "height": 192,
+    "pivot": {
+      "x": 96,
+      "y": 155
+    }
+  },
+  "primaryDirection": "NE",
+  "selectedState": "04-enfouie",
+  "states": [
+    {
+      "id": "01-abandon",
+      "name": "Sentinelle abandonnée",
+      "tag": "Réactivation rapide",
+      "desc": "Charpente encore debout, corde détendue, treuil grippé et trappe bloquée par des gravats. Bannière effilochée et sceau éteint.",
+      "repair": "Dégager la trappe, remettre le treuil en état et réveiller le sceau.",
+      "atlas": "01-abandon-orientations.png",
+      "directions": {
+        "N": {
+          "file": "01-abandon-N.png",
+          "x": 0,
+          "y": 0,
+          "width": 192,
+          "height": 192
+        },
+        "NE": {
+          "file": "01-abandon-NE.png",
+          "x": 192,
+          "y": 0,
+          "width": 192,
+          "height": 192
+        },
+        "E": {
+          "file": "01-abandon-E.png",
+          "x": 384,
+          "y": 0,
+          "width": 192,
+          "height": 192
+        },
+        "SE": {
+          "file": "01-abandon-SE.png",
+          "x": 576,
+          "y": 0,
+          "width": 192,
+          "height": 192
+        },
+        "S": {
+          "file": "01-abandon-S.png",
+          "x": 0,
+          "y": 192,
+          "width": 192,
+          "height": 192
+        },
+        "SO": {
+          "file": "01-abandon-SO.png",
+          "x": 192,
+          "y": 192,
+          "width": 192,
+          "height": 192
+        },
+        "O": {
+          "file": "01-abandon-O.png",
+          "x": 384,
+          "y": 192,
+          "width": 192,
+          "height": 192
+        },
+        "NO": {
+          "file": "01-abandon-NO.png",
+          "x": 576,
+          "y": 192,
+          "width": 192,
+          "height": 192
+        }
+      }
+    },
+    {
+      "id": "02-arc-rompu",
+      "name": "Arc rompu",
+      "tag": "Dégâts immédiatement lisibles",
+      "desc": "Un bras brisé pend près du socle. La corde est rompue ; le rail, le pivot et l’élévateur restent reconnaissables.",
+      "repair": "Restaurer le bras, remplacer la corde et libérer le mécanisme.",
+      "atlas": "02-arc-rompu-orientations.png",
+      "directions": {
+        "N": {
+          "file": "02-arc-rompu-N.png",
+          "x": 0,
+          "y": 0,
+          "width": 192,
+          "height": 192
+        },
+        "NE": {
+          "file": "02-arc-rompu-NE.png",
+          "x": 192,
+          "y": 0,
+          "width": 192,
+          "height": 192
+        },
+        "E": {
+          "file": "02-arc-rompu-E.png",
+          "x": 384,
+          "y": 0,
+          "width": 192,
+          "height": 192
+        },
+        "SE": {
+          "file": "02-arc-rompu-SE.png",
+          "x": 576,
+          "y": 0,
+          "width": 192,
+          "height": 192
+        },
+        "S": {
+          "file": "02-arc-rompu-S.png",
+          "x": 0,
+          "y": 192,
+          "width": 192,
+          "height": 192
+        },
+        "SO": {
+          "file": "02-arc-rompu-SO.png",
+          "x": 192,
+          "y": 192,
+          "width": 192,
+          "height": 192
+        },
+        "O": {
+          "file": "02-arc-rompu-O.png",
+          "x": 384,
+          "y": 192,
+          "width": 192,
+          "height": 192
+        },
+        "NO": {
+          "file": "02-arc-rompu-NO.png",
+          "x": 576,
+          "y": 192,
+          "width": 192,
+          "height": 192
+        }
+      }
+    },
+    {
+      "id": "03-affaissee",
+      "name": "Charpente affaissée",
+      "tag": "Ruine structurelle",
+      "desc": "Le rail s’est incliné sur un montant cassé. Le tambour détaché et les poutres au sol indiquent une tourelle hors service.",
+      "repair": "Relever le châssis, réparer les supports et remonter le treuil.",
+      "atlas": "03-affaissee-orientations.png",
+      "directions": {
+        "N": {
+          "file": "03-affaissee-N.png",
+          "x": 0,
+          "y": 0,
+          "width": 192,
+          "height": 192
+        },
+        "NE": {
+          "file": "03-affaissee-NE.png",
+          "x": 192,
+          "y": 0,
+          "width": 192,
+          "height": 192
+        },
+        "E": {
+          "file": "03-affaissee-E.png",
+          "x": 384,
+          "y": 0,
+          "width": 192,
+          "height": 192
+        },
+        "SE": {
+          "file": "03-affaissee-SE.png",
+          "x": 576,
+          "y": 0,
+          "width": 192,
+          "height": 192
+        },
+        "S": {
+          "file": "03-affaissee-S.png",
+          "x": 0,
+          "y": 192,
+          "width": 192,
+          "height": 192
+        },
+        "SO": {
+          "file": "03-affaissee-SO.png",
+          "x": 192,
+          "y": 192,
+          "width": 192,
+          "height": 192
+        },
+        "O": {
+          "file": "03-affaissee-O.png",
+          "x": 384,
+          "y": 192,
+          "width": 192,
+          "height": 192
+        },
+        "NO": {
+          "file": "03-affaissee-NO.png",
+          "x": 576,
+          "y": 192,
+          "width": 192,
+          "height": 192
+        }
+      }
+    },
+    {
+      "id": "04-enfouie",
+      "name": "Vestige envahi",
+      "tag": "Retenue · abandon ancien",
+      "desc": "Mousse, lierre et éboulis recouvrent une charpente raccourcie. La trappe reste visible sous une dalle déplacée.",
+      "repair": "Déblayer le socle, dégager l’élévateur et reconstruire la partie haute.",
+      "atlas": "04-enfouie-orientations.png",
+      "directions": {
+        "N": {
+          "file": "04-enfouie-N.png",
+          "x": 0,
+          "y": 0,
+          "width": 192,
+          "height": 192
+        },
+        "NE": {
+          "file": "04-enfouie-NE.png",
+          "x": 192,
+          "y": 0,
+          "width": 192,
+          "height": 192
+        },
+        "E": {
+          "file": "04-enfouie-E.png",
+          "x": 384,
+          "y": 0,
+          "width": 192,
+          "height": 192
+        },
+        "SE": {
+          "file": "04-enfouie-SE.png",
+          "x": 576,
+          "y": 0,
+          "width": 192,
+          "height": 192
+        },
+        "S": {
+          "file": "04-enfouie-S.png",
+          "x": 0,
+          "y": 192,
+          "width": 192,
+          "height": 192
+        },
+        "SO": {
+          "file": "04-enfouie-SO.png",
+          "x": 192,
+          "y": 192,
+          "width": 192,
+          "height": 192
+        },
+        "O": {
+          "file": "04-enfouie-O.png",
+          "x": 384,
+          "y": 192,
+          "width": 192,
+          "height": 192
+        },
+        "NO": {
+          "file": "04-enfouie-NO.png",
+          "x": 576,
+          "y": 192,
+          "width": 192,
+          "height": 192
+        }
+      }
+    }
+  ]
+}

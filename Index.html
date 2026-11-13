@@ -1,17 +1,67 @@
-<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;600;700&display=swap" rel="stylesheet"><title>Exilés — Sanctum Lacertae (Tireur v2)</title><style>
-*{box-sizing:border-box}body{margin:0;overflow:hidden;background:#10191b;color:#f1efdf;font:14px 'Pixelify Sans',system-ui,sans-serif}canvas{display:block;width:100vw;height:100vh;cursor:crosshair}.hud{position:absolute;z-index:2;pointer-events:none}.panel{background:#101c1fe8;border:1px solid #68807088;box-shadow:0 5px 30px #0009;border-radius:9px;padding:12px 15px;backdrop-filter:blur(6px)}#top{top:15px;left:15px;display:flex;gap:10px;align-items:flex-start}#title{font-size:16px;color:#e6cd8d;font-weight:800;letter-spacing:.12em}#stats{margin-top:6px;color:#c6d6c7;font-size:12px;line-height:1.7}#right{right:15px;top:15px;max-width:300px}#bottom{bottom:15px;left:15px;right:15px;display:flex;gap:10px;justify-content:space-between;align-items:end}#roster{display:flex;flex-wrap:wrap;gap:6px;max-width:790px;pointer-events:auto}.unit{border:1px solid #708478;background:#172528eb;padding:9px 11px;border-radius:7px;color:#e6e9df;text-align:left;cursor:pointer;min-width:115px}.unit.sel{border-color:#f6d07e;background:#3c3b2b}.unit small{color:#b9c8c2}.bar{height:4px;background:#493f3d;margin-top:6px;border-radius:10px;overflow:hidden}.bar i{display:block;height:100%;background:#72bba0}#controls{font-size:11px;color:#cbd3c9;line-height:1.7}.btns{display:flex;gap:7px;margin-top:8px;pointer-events:auto}button{font:inherit}.btn{background:#293b37;border:1px solid #829889;color:#e8eee2;border-radius:6px;padding:7px 10px;cursor:pointer}.btn:hover{background:#3d5850}#three{display:none}#notice{position:absolute;left:50%;top:13%;transform:translateX(-50%);padding:10px 19px;background:#111c20e9;border:1px solid #b5a275;border-radius:7px;color:#f3dea7;font-weight:600;opacity:0;transition:opacity .25s;pointer-events:none;white-space:nowrap}#banner{display:none;position:absolute;z-index:5;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;padding:30px 44px;background:#0e1819f2;border:2px solid #ccb47e;border-radius:12px;font-size:25px;font-weight:800}#banner small{font-size:15px;color:#b8c9bb;font-weight:400}#help{max-width:380px}@media(max-width:950px){#bottom{flex-direction:column;align-items:start}#help{display:none}#right{max-width:200px;font-size:11px}#roster{max-width:100%}.unit{min-width:90px;padding:6px}}
-</style></head><body><canvas id="game"></canvas><canvas id="three"></canvas><div id="top" class="hud"><div class="panel"><div id="title">EXILÉS / SANCTUM LACERTAE · TIREUR V3</div><div id="stats">Vague : <b id="wave">1 / 5</b> · Ennemis : <b id="enemies">0</b><br>Intégrité de l'Ancre : <b id="core">100 %</b><br>Objectif : empêcher la profanation du Sanctum.</div><div class="btns"><button class="btn" id="special">Espace · Compétence</button><button class="btn" id="hold">H · Position</button><button class="btn" id="restart">R · Rejouer</button></div></div></div><div id="right" class="hud panel"><strong id="chosen">Paladin</strong><p id="desc" style="color:#c2cfc6;margin-bottom:0">Sélectionnez un Exilé ou une escouade.</p></div><div id="notice"></div><div id="bottom" class="hud"><div id="roster"></div><div id="help" class="panel"><b>COMMANDES</b><div id="controls">Clic gauche : sélectionner · Maj + clic : multi-sélection<br>Clic droit : déplacer ou attaquer · 1 à 4 : choisir<br>A : tous · H : tenir position · Espace : compétence<br>ZQSD / WASD ou clic droit maintenu : caméra · Molette : zoom · P : pixel art / lisse</div></div></div><div id="banner"></div>
-<script src="assets/decor.js?v=2"></script>
+<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Exilés — Sanctum Lacertae</title><link rel="stylesheet" href="assets/hud.css?v=3"><link rel="stylesheet" href="assets/dialogue.css?v=3"></head><body>
+<canvas id="game" aria-label="Champ de bataille"></canvas><canvas id="three"></canvas>
+<header id="hud-top" aria-label="État du sanctuaire">
+ <div class="wave-card metal-panel"><span data-icon="skull"></span><span>Vague <b id="wave">1 / 5</b></span></div>
+ <div id="resources" class="metal-panel" aria-label="Ressources">
+  <div class="resource"><span data-icon="iron"></span><span>Fer <b id="iron">0</b></span></div>
+  <div class="resource"><span data-icon="wood"></span><span>Bois <b id="wood">0</b></span></div>
+  <div class="resource"><span data-icon="spirit"></span><span>Esprit <b id="spirit">0</b></span></div>
+  <div class="resource"><span data-icon="people"></span><span>Exilés <b id="population">1</b></span></div>
+ </div>
+</header>
+<div id="notice" role="status" aria-live="polite"></div>
+<footer id="command-bar" aria-label="Commandement">
+ <section id="map-panel" class="hud-module"><canvas id="minimap" width="240" height="160" tabindex="0" role="button" aria-label="Mini-carte : cliquer pour déplacer la caméra ; flèches pour la déplacer au clavier"></canvas><span class="map-north">N</span></section>
+ <section id="selection-panel" class="hud-module">
+  <button id="portrait-button" aria-label="Centrer sur la sélection"><canvas id="portrait" width="128" height="128"></canvas><span class="portrait-rune" data-icon="rune"></span></button>
+  <div class="identity"><span class="eyebrow" id="selection-kind">EXILÉ · SOUTIEN</span><h1 id="chosen">Ingénieur Exilé</h1><div class="health-row"><span data-icon="heart"></span><div class="health-track" role="progressbar" aria-label="Points de vie" aria-valuemin="0" aria-valuemax="140" aria-valuenow="140"><i id="health-fill"></i><span id="health-text">140 / 140</span></div></div><div id="selection-status"></div></div>
+ </section>
+ <section id="detail-panel" class="hud-module">
+  <div id="unit-details"><div class="stat-row"><div class="unit-stat"><span data-icon="sword"></span><div><span>Dégâts</span><b id="unit-damage">—</b></div></div><div class="unit-stat"><span data-icon="shield"></span><div><span>Armure</span><b id="unit-armor">—</b></div></div><div class="unit-stat"><span data-icon="boot"></span><div><span>Déplacement</span><b id="unit-speed">3,8</b></div></div></div><p id="lore">Il relève les pierres pour que demeure le serment.</p></div>
+  <div id="anchor-details" hidden><div class="eyebrow">DÉFENSE DU SANCTUAIRE</div><div class="assault-line"><span data-icon="skull"></span><span>Prochain assaut <b id="assault-time">—</b></span></div><p class="anchor-lore">Tant qu’elle demeure, le serment tient.</p></div>
+ </section>
+ <section id="action-panel" class="hud-module" aria-label="Ordres">
+  <button id="build" class="action" disabled aria-label="Construire un temple de Sigil gratuitement" title="Temple de Sigil · Gratuit · Construction : 8 s"><span data-icon="hammer"></span><span>Temple · gratuit</span><kbd>B</kbd></button>
+  <button id="build-foundry" class="action" disabled title="Puits de fonderie · Halle des creusets · Gratuit · 8 s"><span data-icon="iron"></span><span>Fonderie · gratuit</span><kbd>F</kbd></button>
+  <button id="build-barracks" class="action" disabled title="Cour du Trident · gratuite · 6 s"><span data-icon="shield"></span><span>Caserne · gratuit</span><kbd>C</kbd></button>
+  <button id="train-indra" class="action" disabled title="Former un soldat d’Indra · gratuit · 6 s · file de 5"><span data-icon="sword"></span><span>Soldat d’Indra</span><kbd>I</kbd></button>
+  <button id="build-sawmill" class="action" disabled title="Scierie · Grand Arbre · Gratuit · 8 s"><span data-icon="wood"></span><span>Scierie · gratuit</span><kbd>S</kbd></button>
+  <button id="special" class="action" aria-label="Réparer l’Ancre"><span data-icon="repair"></span><span id="ability-label">Réparer</span><kbd id="ability-key">R</kbd><span id="cooldown"></span></button>
+  <button id="hold" class="action" aria-label="Tenir position"><span data-icon="flag"></span><span>Position</span><kbd>H</kbd></button>
+  <button id="move-command" class="action" aria-label="Déplacer : choisir une destination"><span data-icon="move"></span><span>Déplacer</span><kbd>M</kbd></button>
+ </section>
+</footer>
+<button id="restart" class="restart-button metal-panel" aria-label="Rejouer la partie"><span data-icon="restart"></span><span>Rejouer</span><kbd>⇧ R</kbd></button>
+<div id="banner" role="alert"></div>
+<script src="assets/decor.js?v=4"></script>
+<script src="assets/wind.js?v=3"></script>
+<script src="assets/decor-renderer.js?v=3"></script>
 <script src="assets/units.js?v=10"></script>
 <script src="assets/enemies.js?v=2"></script>
 <script src="assets/combat.js?v=1"></script>
 <script src="assets/portal.js?v=1"></script>
+<script src="assets/temple.js?v=5"></script>
+<script src="assets/temple-construction.js?v=5"></script>
+<script src="assets/temple-game.js?v=6"></script>
+<script src="assets/foundry.js?v=2"></script>
+<script src="assets/foundry-game.js?v=2"></script>
+<script src="assets/sawmill.js?v=3"></script>
+<script src="assets/sawmill-grand-arbre.js?v=2"></script>
+<script src="assets/sawmill-game.js?v=1"></script>
+<script src="assets/ballista.js?v=2"></script>
+<script src="assets/ballista-ruins.js?v=3"></script>
+<script src="assets/turret-game.js?v=4"></script>
+<script src="assets/barracks.js?v=3"></script>
+<script src="assets/barracks-game.js?v=1"></script>
+<script src="assets/hud.js?v=7"></script>
+<script src="assets/dialogue.js?v=2"></script>
 <script>
 'use strict';
-const canvas=document.getElementById('game'),ctx=canvas.getContext('2d',{alpha:false});let W=0,H=0,dpr=1;// Mode pixel art : on dessine dans un canvas PX fois plus petit, agrandi sans lissage (P pour basculer).
-let PIXEL=true,PX=Math.max(2,Math.round(innerWidth/640));function resize(){dpr=Math.min(devicePixelRatio||1,2);W=innerWidth;H=innerHeight;const k=PX>1?1/PX:dpr;canvas.width=Math.ceil(W*k);canvas.height=Math.ceil(H*k);ctx.setTransform(k,0,0,k,0,0);ctx.imageSmoothingEnabled=!PIXEL;canvas.style.imageRendering=PX>1?'pixelated':'auto'}addEventListener('resize',resize);resize();
-let cam={x:0,z:2,zoom:1};const Z=()=>PIXEL?8*PX/.86:Math.min(W/83,H/54)*cam.zoom;const YK=()=>PIXEL?.43:.42;function project(x,y,z){let s=Z();return {x:W/2+(x-z-cam.x+cam.z)*s*.86,y:H*.43+(x+z-cam.x-cam.z)*s*YK()-y*s*.96}}function groundFromScreen(sx,sy){let s=Z(),a=(sx-W/2)/(s*.86),b=(sy-H*.43)/(s*YK());return{x:(a+b)/2+cam.x,z:(b-a)/2+cam.z}}
-const random=(a,b)=>a+Math.random()*(b-a),clamp=(v,a,b)=>Math.max(a,Math.min(b,v));let units=[],enemies=[],effects=[],particles=[],wave=0,coreHP=100,selected=[],currentTime=0,spawnQueue=[],nextWave=0,ended=false,noticeEnd=0,last=performance.now(),freeze=0;const core={x:0,z:18};let uid=0;const clampWorld=p=>{p.x=clamp(p.x,-108,108);p.z=clamp(p.z,-160,50)};
+const canvas=document.getElementById('game'),ctx=canvas.getContext('2d',{alpha:true,willReadFrequently:true});let W=0,H=0,dpr=1;// Mode pixel art : on dessine dans un canvas PX fois plus petit, agrandi sans lissage (P pour basculer).
+const initialPixelZoom=()=>Math.max(1,Math.max(2,Math.round(innerWidth/640))-1);
+let PIXEL=true,PX=initialPixelZoom();function resize(){dpr=Math.min(devicePixelRatio||1,2);W=innerWidth;H=innerHeight;const k=dpr;canvas.width=Math.ceil(W*k);canvas.height=Math.ceil(H*k);ctx.setTransform(k,0,0,k,0,0);ctx.imageSmoothingEnabled=!PIXEL;canvas.style.imageRendering=PX>1?'pixelated':'auto'}addEventListener('resize',resize);resize();
+let cam={x:0,z:2,zoom:.9};const Z=()=>PIXEL?8*PX/.86:Math.min(W/83,H/54)*cam.zoom;const YK=()=>PIXEL?.43:.42;function project(x,y,z){let s=Z();return {x:W/2+(x-z-cam.x+cam.z)*s*.86,y:H*.43+(x+z-cam.x-cam.z)*s*YK()-y*s*.96}}function groundFromScreen(sx,sy){let s=Z(),a=(sx-W/2)/(s*.86),b=(sy-H*.43)/(s*YK());return{x:(a+b)/2+cam.x,z:(b-a)/2+cam.z}}
+const random=(a,b)=>a+Math.random()*(b-a),clamp=(v,a,b)=>Math.max(a,Math.min(b,v));let units=[],enemies=[],effects=[],particles=[],wave=0,coreHP=100,selected=[],currentTime=0,spawnQueue=[],nextWave=0,ended=false,noticeEnd=0,last=null,freeze=0;const core={x:0,z:18};let uid=0;const clampWorld=p=>{p.x=clamp(p.x,-108,108);p.z=clamp(p.z,-160,50)};
 function poly(points,color,stroke=null){ctx.beginPath();points.forEach((p,i)=>{let q=project(...p);i?ctx.lineTo(q.x,q.y):ctx.moveTo(q.x,q.y)});ctx.closePath();ctx.fillStyle=color;ctx.fill();if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=1;ctx.stroke()}}
 function box3(x,z,dx,dz,height,top,side,front){let a=x-dx/2,b=x+dx/2,c=z-dz/2,d=z+dz/2;poly([[a,0,c],[b,0,c],[b,height,c],[a,height,c]],side);poly([[b,0,c],[b,0,d],[b,height,d],[b,height,c]],front);poly([[a,height,c],[b,height,c],[b,height,d],[a,height,d]],top)}
 function circle3(x,z,r,color,y=0){let p=project(x,y,z);ctx.beginPath();ctx.ellipse(p.x,p.y,r*Z()*.9,r*Z()*.42,-.02,0,Math.PI*2);ctx.fillStyle=color;ctx.fill()}
@@ -21,7 +71,7 @@ function sphere3(x,y,z,r,color){let p=project(x,y,z),sz=r*Z();let g=ctx.createRa
 const CLEARING={x0:-44,x1:44,z0:-8,z1:54},inClearing=(x,z)=>x>CLEARING.x0&&x<CLEARING.x1&&z>CLEARING.z0&&z<CLEARING.z1;
 const trees=[];let seed=19653;function seeded(){seed=(1664525*seed+1013904223)>>>0;return seed/4294967296}for(let i=0;i<3680;i++){let x=(seeded()-.5)*250,z=-170+seeded()*240;if(inClearing(x,z))continue;if(Math.abs(x-(-12))<4&&z<1)continue;if(Math.abs(x-12)<4&&z<1)continue;trees.push({x,z,h:random(2.1,5.5),r:random(.8,1.8)})}const stones=[];for(let i=0;i<1440;i++){let x=(seeded()-.5)*248,z=-168+seeded()*236;if(inClearing(x,z))continue;stones.push({x,z,w:.5+seeded()*1.5})}
 function soldier(name,x,z,role,squad=0){let u={id:uid++,name,x,z,tx:x,tz:z,hp:role==='paladin'?180:role==='healer'?115:role==='shooter'?110:role==='engineer'?140:82,max:role==='paladin'?180:role==='healer'?115:role==='shooter'?110:role==='engineer'?140:82,role,squad,attack:0,ability:0,stance:'attack',radius:role==='paladin'?.85:.55};units.push(u);return u}
-function init(){uid=0;units=[];enemies=[];effects=[];particles=[];wave=0;coreHP=100;selected=[];currentTime=0;spawnQueue=[];nextWave=0;ended=false;freeze=0;cam={x:0,z:2,zoom:1};/* héros mis de côté pour une intégration ultérieure : soldier('Paladin',-2.5,13,'paladin');soldier('Soigneur',1,15,'healer');soldier('Tireur',3,12,'shooter'); */soldier('Ingénieur Exilé',PORTAL.x+.5,PORTAL.z,'engineer').hidden=true;for(let j=0;j<3;j++)for(let k=0;k<4;k++)soldier('Disciple '+(j+1),-10+j*10+(k%2)*1.7,7+Math.floor(k/2)*1.8,'guard',j+1);selected=[units[0]];document.getElementById('banner').style.display='none';startWave();renderRoster();say('Défendez l’Ancre. Sélectionnez des unités et donnez des ordres.',4)}
+function init(){closeCharacterDialogue();resetTemples();resetFoundries();resetSawmills();resetTurrets();uid=0;units=[];enemies=[];effects=[];particles=[];wave=0;coreHP=100;selected=[];currentTime=0;spawnQueue=[];nextWave=0;ended=false;freeze=0;cam={x:0,z:2,zoom:.9};/* héros mis de côté pour une intégration ultérieure : soldier('Paladin',-2.5,13,'paladin');soldier('Soigneur',1,15,'healer');soldier('Tireur',3,12,'shooter'); */soldier('Ingénieur Exilé',PORTAL.x+.5,PORTAL.z,'engineer').hidden=true;selected=[units[0]];HUD.anchor=false;HUD.mode=null;last=null;document.getElementById('banner').style.display='none';startWave();renderRoster();say('Clic droit sur les deux tourelles en ruines : l’Ingénieur les répare gratuitement.',4)}
 function startWave(){wave++;document.getElementById('wave').textContent=wave+' / 5';let n=4+wave*3;spawnQueue=[];for(let i=0;i<n;i++)spawnQueue.push({at:currentTime+2+i*(1.5-wave*.14),x:i%2===0?-12:12,kind:i%5===4?'brute':i%6===3?'spitter':'creep'});say('Assaut '+wave+' : des créatures approchent par la jungle.',3)}
 function spawn(s){let k=s.kind;enemies.push({x:s.x+random(-1.6,1.6),z:-156-random(0,4),hp:k==='brute'?110:k==='spitter'?48:35,max:k==='brute'?110:k==='spitter'?48:35,speed:k==='brute'?1.4:k==='spitter'?2:2.7,range:k==='spitter'?9:1.5,damage:k==='brute'?12:k==='spitter'?5:6,kind:k,cooldown:random(.3,1),target:null})}
 function say(s,seconds=2){let e=document.getElementById('notice');e.textContent=s;e.style.opacity=1;noticeEnd=currentTime+seconds}
@@ -29,10 +79,11 @@ function dist(a,b){return Math.hypot(a.x-b.x,a.z-b.z)}function targetClosest(sou
 function move(u,t,dt,mult=1){let dx=t.x-u.x,dz=t.z-u.z,d=Math.hypot(dx,dz);if(d<.24)return;let speed=(u.role==='paladin'?3.6:u.role==='guard'?3.45:3.8)*mult;let step=Math.min(d,speed*dt);u.x+=dx/d*step;u.z+=dz/d*step;clampWorld(u)}
 function damage(t,amount){t.hp=Math.max(0,t.hp-amount);if(t===core)coreHP=Math.max(0,coreHP-amount)}function flash(x,z,color){effects.push({x,z,age:0,duration:.22,type:'hit',color})}function blast(a,b,color){effects.push({x:a.x,z:a.z,tx:b.x,tz:b.z,age:0,duration:.13,type:'laser',color})}function zone(x,z,r,color){effects.push({x,z,r,age:0,duration:1,type:'zone',color})}
 function ability(){let source=selected.find(u=>u.hp>0&&u.role!=='guard')||selected[0];if(!source)return;if(source.ability>0){say('Compétence en recharge.',1);return}if(source.role==='paladin'){source.ability=16;zone(source.x,source.z,5,'#f1d28c');for(let e of enemies)if(dist(e,source)<5)damage(e,35);for(let u of units)if(dist(u,source)<5)u.shield=7;say('PALADIN — Égide : boucliers renforcés.',2)}else if(source.role==='healer'){source.ability=12;zone(source.x,source.z,7,'#83e5bf');for(let u of units)if(dist(u,source)<7){u.hp=Math.min(u.max,u.hp+55);if(u.hp<=0)u.hp=25}say('SOIGNEUR — Restauration de zone.',2)}else if(source.role==='engineer'){source.ability=18;coreHP=Math.min(100,coreHP+15);zone(core.x,core.z,4,'#ffb03c');say('INGÉNIEUR EXILÉ — Réparation de l’Ancre.',2)}else if(source.role==='shooter'){source.ability=10;let t=targetClosest(source,enemies,18);if(t){damage(t,95);blast(source,t,'#f7e7a2');flash(t.x,t.z,'#f7e7a2')}say('TIREUR — Tir de précision.',2)}else{source.ability=14;zone(source.x,source.z,7,'#a1badb');for(let u of units)if(u.squad===source.squad)u.buff=8;say('DISCIPLES D’INDRA — Discipline martiale.',2)}}
-function update(dt){currentTime+=dt;portalTick();if(noticeEnd<currentTime)document.getElementById('notice').style.opacity=0;if(ended)return;for(const u of units){u.attack-=dt;u.ability=Math.max(0,u.ability-dt);u.shield=Math.max(0,(u.shield||0)-dt);u.buff=Math.max(0,(u.buff||0)-dt)}while(spawnQueue.length&&spawnQueue[0].at<=currentTime)spawn(spawnQueue.shift());let alive=units.filter(u=>u.hp>0);for(let u of alive){let enemy=u.role==='engineer'?null:targetClosest(u,enemies,u.role==='paladin'?3:u.role==='healer'?9:u.role==='shooter'?20:10);if(u.stance!=='hold'&&enemy){let reach=u.role==='paladin'?2.2:u.role==='shooter'?17.2:8.6;/* portée de l'arbalète doublée */if(dist(u,enemy)>reach)move(u,enemy,dt,.65);if(dist(u,enemy)<reach&&u.attack<=0){let dmg=u.role==='paladin'?30:u.role==='shooter'?19:u.role==='healer'?9:12;if(u.buff>0)dmg*=1.5;damage(enemy,dmg);if(u.role!=='paladin')(u.role==='guard'?arrow(u,enemy):u.role==='shooter'&&PIXEL?volley(u,enemy):blast(u,enemy,u.role==='shooter'?'#f4d780':'#bed7df'));else{flash(enemy.x,enemy.z,'#f0dba4');swordStrike(u,enemy)}u.attack=u.role==='paladin'?.88:u.role==='shooter'?.78:1.15}}else if(u.stance!=='hold')move(u,{x:u.tx,z:u.tz},dt);if(u.role==='healer'&&u.attack<=0){let target=alive.filter(t=>t.hp<t.max*.75&&dist(t,u)<8).sort((a,b)=>a.hp/a.max-b.hp/b.max)[0];if(target){target.hp=Math.min(target.max,target.hp+10);u.attack=1;zone(target.x,target.z,.9,'#80ddb8')}}}
-for(let e of enemies){e.cooldown-=dt;let target=targetClosest(e,alive,4.5)||core;let d=dist(e,target);if(d>e.range){let speed=e.speed;let dx=target.x-e.x,dz=target.z-e.z;e.x+=dx/d*speed*dt;e.z+=dz/d*speed*dt}else if(e.cooldown<=0){let dmg=e.damage;if(target!==core){if(target.shield>0)dmg*=.35;damage(target,dmg)}else coreHP=Math.max(0,coreHP-dmg);flash(target.x,target.z,'#e17b63');if(e.kind==='spitter')blast(e,target,'#c88f9e');e.cooldown=e.kind==='brute'?1.7:1.15}}
-enemies=enemies.filter(e=>e.hp>0);effects=effects.filter(e=>(e.age+=dt)<e.duration);document.getElementById('enemies').textContent=enemies.length+spawnQueue.length;document.getElementById('core').textContent=Math.ceil(coreHP)+' %';if(coreHP<=0||alive.length===0){end(false)}else if(!enemies.length&&!spawnQueue.length){if(wave>=5)end(true);else if(!nextWave){nextWave=currentTime+4;say('Zone sécurisée. Prochain assaut imminent.',3)}else if(currentTime>=nextWave){nextWave=0;startWave()}}if(Math.floor(currentTime*3)!==Math.floor((currentTime-dt)*3))renderRoster()}
-function end(won){ended=true;let e=document.getElementById('banner');e.style.display='block';e.innerHTML=won?'SANCTUM PRÉSERVÉ<br><small>Les Exilés et les disciples d’Indra ont repoussé l’assaut.</small>':'L’ANCRE EST PERDUE<br><small>Appuyez sur R pour recommencer.</small>'}
+function update(dt){currentTime+=dt;portalTick();if(noticeEnd<currentTime)document.getElementById('notice').style.opacity=0;if(ended)return;updateTemples(dt);updateFoundries(dt);updateBarracks(dt);updateSawmills(dt);for(const u of units){u.attack-=dt;u.ability=Math.max(0,u.ability-dt);u.shield=Math.max(0,(u.shield||0)-dt);u.buff=Math.max(0,(u.buff||0)-dt)}while(spawnQueue.length&&spawnQueue[0].at<=currentTime)spawn(spawnQueue.shift());let alive=units.filter(u=>u.hp>0);for(let u of alive){let enemy=u.role==='engineer'?null:targetClosest(u,enemies,u.role==='paladin'?3:u.role==='healer'?9:u.role==='shooter'?20:10);if(u.stance!=='hold'&&enemy){let reach=(u.role==='paladin'||u.role==='indra')?2.2:u.role==='shooter'?17.2:8.6;/* portée de l'arbalète doublée */if(dist(u,enemy)>reach)move(u,enemy,dt,.65);if(dist(u,enemy)<reach&&u.attack<=0){let dmg=u.role==='paladin'?30:u.role==='shooter'?19:u.role==='healer'?9:12;if(u.buff>0)dmg*=1.5;damage(enemy,dmg);if(u.role!=='paladin'&&u.role!=='indra')(u.role==='guard'?arrow(u,enemy):u.role==='shooter'&&PIXEL?volley(u,enemy):blast(u,enemy,u.role==='shooter'?'#f4d780':'#bed7df'));else{flash(enemy.x,enemy.z,'#f0dba4');swordStrike(u,enemy)}u.attack=u.role==='paladin'?.88:u.role==='shooter'?.78:1.15}}else if(u.stance!=='hold')move(u,{x:u.tx,z:u.tz},dt);if(u.role==='healer'&&u.attack<=0){let target=alive.filter(t=>t.hp<t.max*.75&&dist(t,u)<8).sort((a,b)=>a.hp/a.max-b.hp/b.max)[0];if(target){target.hp=Math.min(target.max,target.hp+10);u.attack=1;zone(target.x,target.z,.9,'#80ddb8')}}}
+updateTurrets(dt);
+for(let e of enemies){if(e.hp<=0)continue;e.cooldown-=dt;let target=targetClosest(e,alive,4.5)||core;let d=dist(e,target);if(d>e.range){let speed=e.speed;let dx=target.x-e.x,dz=target.z-e.z;e.x+=dx/d*speed*dt;e.z+=dz/d*speed*dt}else if(e.cooldown<=0){let dmg=e.damage;if(target!==core){if(target.shield>0)dmg*=.35;damage(target,dmg)}else coreHP=Math.max(0,coreHP-dmg);flash(target.x,target.z,'#e17b63');if(e.kind==='spitter')blast(e,target,'#c88f9e');e.cooldown=e.kind==='brute'?1.7:1.15}}
+enemies=enemies.filter(e=>e.hp>0);effects=effects.filter(e=>(e.age+=dt)<e.duration);if(coreHP<=0||alive.length===0){end(false)}else if(!enemies.length&&!spawnQueue.length){if(wave>=5)end(true);else if(!nextWave){nextWave=currentTime+4;say('Zone sécurisée. Prochain assaut imminent.',3)}else if(currentTime>=nextWave){nextWave=0;startWave()}}if(Math.floor(currentTime*3)!==Math.floor((currentTime-dt)*3))renderRoster()}
+function end(won){ended=true;let e=document.getElementById('banner');e.style.display='block';e.innerHTML=won?'SANCTUM PRÉSERVÉ<br><small>Les Exilés et les disciples d’Indra ont repoussé l’assaut.</small>':'L’ANCRE EST PERDUE<br><small>Maj + R pour recommencer.</small>'}
 function screenPoly(pts,fill,stroke=null,lw=1){ctx.beginPath();pts.forEach((p,i)=>{i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y)});ctx.closePath();ctx.fillStyle=fill;ctx.fill();if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=lw;ctx.stroke()}}
 function drawShooterModel(u){
   const shadowR=.72; circle3(u.x,u.z,shadowR*1.22,'#0b1615a0');
@@ -84,7 +135,7 @@ function drawWorld(){ctx.fillStyle='#15241f';ctx.fillRect(0,0,W,H);poly([[-37,0,
 // Deux sentiers depuis la jungle jusqu'au sanctuaire.
 for(let lane of [-12,12]){poly([[lane-2.7,.02,-36],[lane+2.7,.02,-36],[lane+2.7,.02,7],[lane-2.7,.02,7]],'#766d57');for(let z=-33;z<5;z+=5){line3([lane-2.2,.04,z],[lane+2.2,.04,z+2],'#8c8068',1)}}poly([[-17,.03,4],[17,.03,4],[20,.03,10],[-20,.03,10]],'#555949');
 // Jungle périphérique et fragments de roche.
-const items=[];for(let t of trees)items.push({z:t.x+t.z,x:t.x,kind:'tree',obj:t});for(let s of stones)items.push({z:s.x+s.z,x:s.x,kind:'stone',obj:s});items.sort((a,b)=>a.z-b.z);for(let item of items){let o=item.obj;if(item.kind==='stone')box3(o.x,o.z,o.w,.8,.3+o.w*.3,'#8a8b75','#5e695b','#4e594b');else{box3(o.x,o.z,.36,.36,o.h*.65,'#78644a','#584935','#514433');sphere3(o.x,o.h*.77,o.z,o.r,'#477047');sphere3(o.x+o.r*.4,o.h*.9,o.z,o.r*.7,'#537850')}}
+const items=[];for(let t of trees)items.push({z:t.x+t.z,x:t.x,kind:'tree',obj:t});for(let s of stones)items.push({z:s.x+s.z,x:s.x,kind:'stone',obj:s});items.sort((a,b)=>a.z-b.z);for(let item of items){let o=item.obj;if(item.kind==='stone')box3(o.x,o.z,o.w,.8,.3+o.w*.3,'#8a8b75','#5e695b','#4e594b');else{box3(o.x,o.z,.36,.36,o.h*.65,'#78644a','#584935','#514433');const breeze=windAt(o.x,o.z),sway=breeze*.07;sphere3(o.x+sway,o.h*.77,o.z+sway*.4,o.r,'#477047');sphere3(o.x+o.r*.4+sway*1.3,o.h*.9,o.z+sway*.5,o.r*.7,'#537850')}}
 // Temple et vestibule.
 poly([[-17,.1,9],[17,.1,9],[17,.1,27],[-17,.1,27]],'#807e68','#c1b696');for(let z of [10,15,20,25])line3([-17,.13,z],[17,.13,z],'#9a9780',1);for(let x of [-17,-12,12,17])for(let z of [9,14,21,27])box3(x,z,1.5,1.5,3.1,'#b7b29d','#797c71','#626b62');for(let z of [9,27])for(let x of [-17,17])box3(x,z,2.8,2.8,4,'#b4b49f','#747e76','#62695f');box3(-17,18,1.8,19,2.8,'#9b9e8b','#656e60','#5b665a');box3(17,18,1.8,19,2.8,'#9b9e8b','#656e60','#5b665a');box3(0,26.7,34,1.4,3.5,'#b9baa4','#818676','#747b6a');
 // Autel et cœur noir.
@@ -111,14 +162,15 @@ function buildPixelWorld(){
  for(const t of trees){const k=hash(Math.round(t.x*10),Math.round(t.z*10),3),v=Math.floor(hash(Math.round(t.x*7),Math.round(t.z*7),5)*5);
   const kind=t.r>1.5?'big':t.h>4.7?'cyp':t.r<.95?'bush':k<.25?'palm':'big',s=.42+Math.round(t.r*4)/4*.17,r=rng(v*977+Math.round(s*100));
   const[gx,gy]=G(t.x,t.z);shadow(P,Math.round(gx+3),Math.round(gy),Math.round(kind==='bush'?10:16*s+4),Math.round(kind==='bush'?4:6*s+2),-500);
-  add(t.x,t.z,t.x+t.z,cached(kind+s+'|'+v,()=>sprite(96,120,48,112,(S,ax,ay)=>{({big:()=>treeBig(S,ax,ay,r,0,s),cyp:()=>cypress(S,ax,ay,r,0),bush:()=>bushDraw(S,ax,ay,r,0),palm:()=>palm(S,ax,ay,r,0)})[kind]()})))}
+  add(t.x,t.z,t.x+t.z,cached(kind+s+'|'+v,()=>windTreeSprite(kind,s,r)),{wind:kind})}
  for(const o of stones){const v=Math.floor(hash(Math.round(o.x*9),Math.round(o.z*9),6)*4),w4=Math.round(o.w*4)/4,r=rng(v*53+w4*100);const[gx,gy]=G(o.x,o.z);shadow(P,Math.round(gx+2),Math.round(gy),8,3,-500);add(o.x,o.z,o.x+o.z,cached('rock'+w4+'|'+v,()=>sprite(40,30,20,24,(S,ax,ay)=>rock(S,ax,ay,r,0,.35+w4*.22))))}
  // fougères éparses hors des chemins et du temple
  const fr=rng(77);for(let k=0;k<1120;k++){const x=(fr()-.5)*248,z=-170+fr()*238;if(inClearing(x,z)||[-12,12].some(l=>Math.abs(x-l)<4)&&z<8)continue;const v=k%6;add(x,z,x+z,cached('fern'+v,()=>sprite(40,30,20,26,(S,ax,ay)=>fern(S,ax,ay,rng(v),0))))}
  // temple : piliers, blocs d'angle, murs latéraux et arrière, autel, Ancre
  const tr=rng(5);
  for(const x of[-12,12])for(const z of[9,14,21]){const broken=x===12&&z===21,ban=z===9;
-  add(x,z,x+z+.5,sprite(64,110,32,100,(S,ax,ay)=>{const ty=column(S,ax,ay+4,30,0,broken,tr);if(!broken&&z===14)vine(S,ax+4,ty+4,16,tr,5);if(ban)bannerDraw(S,ax+(x<0?-15:7),ty+10,8,20,6)}))}
+  let flag=null;const pillar=sprite(64,110,32,100,(S,ax,ay)=>{const ty=column(S,ax,ay+4,30,0,broken,tr);if(!broken&&z===14)vine(S,ax+4,ty+4,16,tr,5);if(ban)flag={x:ax+(x<0?-15:7)-2-32,y:ty+10-2-100,spr:cached('banner',()=>sprite(12,24,0,0,(F)=>bannerDraw(F,2,2,8,20,0)))}});
+  add(x,z,x+z+.5,pillar,{flag})}
  for(const x of[-17,17])for(const z of[9,27])add(x,z,x+z+1.4,blockSprite(x-1.4,z-1.4,2.8,2.8,4,{bh:6,bw:10,moss:1}),{bx:x-1.4,bz:z-1.4});
  for(const x of[17])for(let k=0;k<4;k++){const z0=10.4+k*3.9;add(x,z0,x+.9+z0+3.9,blockSprite(x-.9,z0,1.8,3.9,2.8,{bh:6,bw:10,moss:1,cracks:k%2}),{bx:x-.9,bz:z0})}
  for(let k=0;k<6;k++){const x0=-15.6+k*5.2;add(x0,26,x0+5.2+27.4,blockSprite(x0,26,5.2,1.4,3.5,{bh:6,bw:10,moss:1}),{bx:x0,bz:26})}
@@ -153,15 +205,27 @@ function drawOrbArcs(cx,cy){const r=10.5,t=currentTime; // portée des arcs doub
 // ================= Portail tyrien (design A) sur la face intérieure du mur ouest =================
 // Séquence de début de partie : inerte → activation → ouverture → émergence de l'ingénieur → stabilisation,
 // puis fermeture (initiation → dissipation → refermeture → scellement) et état scellé.
-const PORTAL={x:-16.1,z:18,frames:[],dur:[1,1,1,1.4,1.2,.9,.9,.9,.9,1e9],emerge:3,fps:6};
-function buildPortal(){const D=PortalKit.DESIGNS[0];PORTAL.frames=PortalKit.STATES.map((S,i)=>Array.from({length:i===0||i===9?1:PORTAL.fps},(_,j)=>PortalKit.render(D,{...S,unit:null},j/PORTAL.fps)))}
-function portalState(t){let i=0;for(;i<PORTAL.dur.length-1&&t>=PORTAL.dur[i];i++)t-=PORTAL.dur[i];return i}
+const PORTAL={x:-16.1,z:18,frameCount:554,dur:[1,1,1,1.4,1.2,.9,.9,.9,.9],emerge:3,fps:60};
+// Interpolation continue des paramètres, sans remise à zéro du temps des effets.
+function portalPose(t){let i=0;for(;i<PORTAL.dur.length&&t>=PORTAL.dur[i];i++)t-=PORTAL.dur[i];
+ const A=PortalKit.STATES[i],B=PortalKit.STATES[Math.min(i+1,9)],u=i===9?0:t/PORTAL.dur[i],k=u*u*(3-2*u),S={unit:null};
+ for(const key of ['glyph','seals','rim','open','field','arcs','dust','flicker','seam'])S[key]=(A[key]||0)+((B[key]||0)-(A[key]||0))*k;return S}
+function buildPortal(){PORTAL.atlas=new Image();return new Promise((resolve,reject)=>{PORTAL.atlas.onload=resolve;PORTAL.atlas.onerror=()=>reject(new Error('Chargement du portail impossible'));PORTAL.atlas.src='assets/portal-atlas.png?v=1'})}
 function portalTick(){const eng=units.find(u=>u.hidden);if(!eng)return;let te=0;for(let i=0;i<PORTAL.emerge;i++)te+=PORTAL.dur[i];
- if(currentTime>=te){eng.hidden=false;eng.tx=-11.5;eng.tz=17.5;flash(PORTAL.x+.6,PORTAL.z,'#ffc04a')}}
-function drawPortal(){const st=portalState(currentTime),F=PORTAL.frames[st],fr=F[Math.floor(currentTime*PORTAL.fps)%F.length],[nx,ny]=natP(PORTAL.x,0,PORTAL.z);
- ctx.drawImage(fr,(nx-PortalKit.OX)*PX,(ny-PortalKit.OY)*PX,fr.width*PX,fr.height*PX)}
-function drawDeco(o){if(o.portal){drawPortal();return}let nx,ny;if(o.orb)[nx,ny]=natP(0,3+Math.sin(currentTime*1.7)*.2,18);else if(o.bx!==undefined)[nx,ny]=natP(o.bx,0,o.bz);else[nx,ny]=natP(o.x,0,o.z);if(nx<-70||ny<-30||nx>W/PX+70||ny>H/PX+140)return;blitSpr(o.spr,nx,ny);if(o.orb)drawOrbArcs(nx,ny-8)}
-function drawWorldPixel(){ctx.fillStyle=C.bg;ctx.fillRect(0,0,W,H);const[ox,oy]=natP(0,0,0),G=PW.ground,vw=Math.ceil(W/PX),vh=Math.ceil(H/PX);/* seule la portion visible du sol est copiée */let sx=PW.gx0-ox,sy=PW.gy0-oy,dx=0,dy=0;if(sx<0){dx=-sx;sx=0}if(sy<0){dy=-sy;sy=0}const cw=Math.min(vw-dx,G.width-sx),ch=Math.min(vh-dy,G.height-sy);if(cw>0&&ch>0)ctx.drawImage(G,sx,sy,cw,ch,dx*PX,dy*PX,cw*PX,ch*PX)}
+ if(currentTime>=te){eng.hidden=false;eng.tx=-11.5;eng.tz=17.5;flash(PORTAL.x+.6,PORTAL.z,'#ffc04a');greetEngineer(eng)}}
+function drawPortal(){flushDecor();if(!PORTAL.atlas.complete||!PORTAL.atlas.naturalWidth)return;
+ const i=Math.min(PORTAL.frameCount-1,Math.floor(currentTime*PORTAL.fps)),[nx,ny]=natP(PORTAL.x,0,PORTAL.z);
+ if(decorRenderer&&PIXEL){decorRenderer.portal(i,nx,ny);return}
+ ctx.drawImage(PORTAL.atlas,(i%16)*PortalKit.W,Math.floor(i/16)*PortalKit.H,PortalKit.W,PortalKit.H,(nx-PortalKit.OX)*PX,(ny-PortalKit.OY)*PX,PortalKit.W*PX,PortalKit.H*PX);captureDecorLayer((nx-PortalKit.OX)*PX,(ny-PortalKit.OY)*PX,PortalKit.W*PX,PortalKit.H*PX)}
+function drawDeco(o){if(o.portal){drawPortal();return}let nx,ny;
+ if(o.orb){const p=project(core.x,3+Math.sin(currentTime*1.7)*.2,core.z);nx=p.x/PX;ny=p.y/PX}
+ else if(o.bx!==undefined)[nx,ny]=natP(o.bx,0,o.bz);else[nx,ny]=natP(o.x,0,o.z);
+ if(nx<-70||ny<-30||nx>W/PX+70||ny>H/PX+140)return;
+ if(o.orb){
+  // Translation continue commune au sprite et aux arcs, sans arrondi sur la grille.
+  drawDecorSprite(o.spr,nx,ny);flushDecor();ctx.save();ctx.translate(nx*PX,ny*PX);drawOrbArcs(0,-8);ctx.restore();captureDecorLayer((nx-55)*PX,(ny-65)*PX,110*PX,115*PX);
+ }else if(o.wind)drawWindTree(o,nx,ny);else{drawDecorSprite(o.spr,nx,ny);if(o.flag)drawWindBanner(o,nx,ny)}}
+function drawWorldPixel(){if(!decorRenderer){ctx.fillStyle=C.bg;ctx.fillRect(0,0,W,H)}const[ox,oy]=natP(0,0,0),G=PW.ground,vw=Math.ceil(W/PX),vh=Math.ceil(H/PX);/* seule la portion visible du sol est copiée */let sx=PW.gx0-ox,sy=PW.gy0-oy,dx=0,dy=0;if(sx<0){dx=-sx;sx=0}if(sy<0){dy=-sy;sy=0}const cw=Math.min(vw-dx,G.width-sx),ch=Math.min(vh-dy,G.height-sy);if(cw>0&&ch>0){if(decorRenderer)decorRenderer.ground(sx,sy,cw,ch,dx*PX,dy*PX,cw*PX,ch*PX);else ctx.drawImage(G,sx,sy,cw,ch,dx*PX,dy*PX,cw*PX,ch*PX)}}
 // ================= Sprites d'unités pixel art (kit assets/units.js) =================
 // Chaque rôle est retracé à l'échelle 0,5 (≈40 px de haut) ; 8 images couvrent l'animation des lueurs.
 // WALK_N images par cycle de marche ; STRIDE = distance (unités de monde) parcourue pendant un cycle, pour que les pieds ne glissent pas.
@@ -219,8 +283,8 @@ function drawUnitSprite(u,S=SPR[u.role],isEnemy=false){const r=isEnemy?(u.kind==
  ctx.save();ctx.translate(nx*PX,(ny-bob)*PX);if(f<0)ctx.scale(-1,1);ctx.drawImage(fr,(-ax-(AF?0:kick))*PX,-ay*PX,fr.width*PX,fr.height*PX);ctx.restore()}
 const hpY=(u,isEnemy)=>{if(!PIXEL)return 3*Z();const S=isEnemy?ESPR[u.kind]:SPR[u.role];return S?(S.h+4)*PX:3*Z()};
 function drawCharacter(u,isEnemy=false){if(u.hidden)return;let p=project(u.x,0,u.z);let r=isEnemy?(u.kind==='brute'?.85:.6):u.role==='paladin'?.75:.54;
-if(PIXEL&&!isEnemy&&SPR[u.role]){drawUnitSprite(u)}else if(PIXEL&&isEnemy&&ESPR[u.kind]){drawUnitSprite(u,ESPR[u.kind],true)}else if(!isEnemy&&u.role==='shooter'){drawShooterModel(u)}else{circle3(u.x,u.z,r*1.3,'#0b1615a0');if(!isEnemy&&selected.includes(u)&&u.hp>0){circle3(u.x,u.z,r*1.75,'#ead08c55');let sp=project(u.x,.02,u.z);ctx.strokeStyle='#f8df93';ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(sp.x,sp.y,r*1.75*Z()*.9,r*1.75*Z()*.42,0,0,Math.PI*2);ctx.stroke()}let color=isEnemy?(u.kind==='brute'?'#8b4d45':u.kind==='spitter'?'#a16d8a':'#a75b4e'):u.role==='paladin'?'#d8c48b':u.role==='healer'?'#9ccfba':u.role==='shooter'?'#aac3e1':'#b1b6ac';box3(u.x,u.z,r*1.2,r*.9,isEnemy?u.kind==='brute'?1.8:1.25:1.55,color,isEnemy?'#4d2b2b':'#485b5b',isEnemy?'#673332':'#69726a');sphere3(u.x,isEnemy?1.55:1.9,u.z,r*.49,color);if(!isEnemy){if(u.role==='paladin'){line3([u.x-.7,1,u.z],[u.x-1,2.3,u.z],'#e9c779',3);box3(u.x+.7,u.z, .55,1.1,1.5,'#d6c07a','#77745c','#6f6c55')}else if(u.role==='healer'){sphere3(u.x,2.6,u.z,.2,'#86ffc9')}else line3([u.x-.3,1,u.z],[u.x-1,1,u.z-1],'#b6d4dc',2)}else if(u.kind==='brute'){sphere3(u.x,2.3,u.z,.36,'#d57167')}}
-let hpWidth=Math.max(12,2.8*Z());ctx.fillStyle='#191b1d';ctx.fillRect(p.x-hpWidth/2,p.y-hpY(u,isEnemy),hpWidth,4);ctx.fillStyle=isEnemy?'#db7772':u.role==='guard'?'#9db88f':'#85d6b1';ctx.fillRect(p.x-hpWidth/2,p.y-hpY(u,isEnemy),hpWidth*Math.max(0,u.hp/u.max),4);if(!isEnemy&&u.squad){ctx.textAlign='center';ctx.fillStyle='#f5ecca';ctx.font='bold 10px system-ui';ctx.fillText('I'+u.squad,p.x,p.y-hpY(u,isEnemy)-6)}}
+if(!isEnemy&&u.role==='indra'){drawIndraSoldier(u)}else if(PIXEL&&!isEnemy&&SPR[u.role]){drawUnitSprite(u)}else if(PIXEL&&isEnemy&&ESPR[u.kind]){drawUnitSprite(u,ESPR[u.kind],true)}else if(!isEnemy&&u.role==='shooter'){drawShooterModel(u)}else{circle3(u.x,u.z,r*1.3,'#0b1615a0');if(!isEnemy&&selected.includes(u)&&u.hp>0){circle3(u.x,u.z,r*1.75,'#ead08c55');let sp=project(u.x,.02,u.z);ctx.strokeStyle='#f8df93';ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(sp.x,sp.y,r*1.75*Z()*.9,r*1.75*Z()*.42,0,0,Math.PI*2);ctx.stroke()}let color=isEnemy?(u.kind==='brute'?'#8b4d45':u.kind==='spitter'?'#a16d8a':'#a75b4e'):u.role==='paladin'?'#d8c48b':u.role==='healer'?'#9ccfba':u.role==='shooter'?'#aac3e1':'#b1b6ac';box3(u.x,u.z,r*1.2,r*.9,isEnemy?u.kind==='brute'?1.8:1.25:1.55,color,isEnemy?'#4d2b2b':'#485b5b',isEnemy?'#673332':'#69726a');sphere3(u.x,isEnemy?1.55:1.9,u.z,r*.49,color);if(!isEnemy){if(u.role==='paladin'){line3([u.x-.7,1,u.z],[u.x-1,2.3,u.z],'#e9c779',3);box3(u.x+.7,u.z, .55,1.1,1.5,'#d6c07a','#77745c','#6f6c55')}else if(u.role==='healer'){sphere3(u.x,2.6,u.z,.2,'#86ffc9')}else line3([u.x-.3,1,u.z],[u.x-1,1,u.z-1],'#b6d4dc',2)}else if(u.kind==='brute'){sphere3(u.x,2.3,u.z,.36,'#d57167')}}
+if(!isEnemy){drawEnunciation(u);drawTurretEngineer(u);}let hpWidth=Math.max(12,2.8*Z());ctx.fillStyle='#191b1d';ctx.fillRect(p.x-hpWidth/2,p.y-hpY(u,isEnemy),hpWidth,4);ctx.fillStyle=isEnemy?'#db7772':u.role==='guard'?'#9db88f':'#85d6b1';ctx.fillRect(p.x-hpWidth/2,p.y-hpY(u,isEnemy),hpWidth*Math.max(0,u.hp/u.max),4);if(!isEnemy&&u.squad){ctx.textAlign='center';ctx.fillStyle='#f5ecca';ctx.font='bold 10px system-ui';ctx.fillText('I'+u.squad,p.x,p.y-hpY(u,isEnemy)-6)}}
 // ================= Flèches des escouades d'Indra =================
 // La flèche part de l'arc, suit une courbe en cloche jusqu'à la cible, laisse une traînée d'étincelles bleues
 // puis éclate à l'impact. Les dégâts restent appliqués au tir : l'effet est purement visuel.
@@ -243,29 +307,71 @@ function drawArrowHit(e){if(e.age<0)return;const p=e.age/e.duration,[x,y]=natP(e
  for(let k=0;k<10;k++){const a=k/10*6.283+R()*.4,d=r*(.6+R()*.5);if(R()>p*.8)npx(x+Math.cos(a)*d,cy+Math.sin(a)*d*.7,ARROW_C.spark[p<.4?3:2-(k&1)])}
  if(p<.35){npx(x,cy,'#ffffff');npx(x+1,cy,ARROW_C.spark[3]);npx(x-1,cy,ARROW_C.spark[3]);npx(x,cy-1,ARROW_C.spark[3]);npx(x,cy+1,ARROW_C.spark[3])}}
 function drawEffects(){for(let e of effects){if(e.type==='xbolt'||e.type==='xboom'){if(PIXEL)e.type==='xbolt'?drawXbolt(e):drawXboom(e);continue}if(e.type==='arrow'||e.type==='arrowhit'){if(PIXEL)e.type==='arrow'?drawArrow(e):drawArrowHit(e);else if(e.type==='arrow'&&e.age>=0){const p=e.age/e.duration;line3([e.x+(e.tx-e.x)*Math.max(0,p-.15),1.3,e.z+(e.tz-e.z)*Math.max(0,p-.15)],[e.x+(e.tx-e.x)*p,1.3,e.z+(e.tz-e.z)*p],'#bed7df',3)}continue}let a=1-e.age/e.duration;ctx.globalAlpha=a;if(e.type==='laser')line3([e.x,1.35,e.z],[e.tx,1.2,e.tz],e.color,3);else if(e.type==='hit')sphere3(e.x,1.4,e.z,.4*a,e.color);else if(e.type==='zone'){let p=project(e.x,0,e.z);ctx.beginPath();ctx.ellipse(p.x,p.y,e.r*Z()*.85,e.r*Z()*.4,0,0,Math.PI*2);ctx.lineWidth=3;ctx.strokeStyle=e.color;ctx.stroke()}ctx.globalAlpha=1}}
-function draw(){if(PIXEL)drawWorldPixel();else drawWorld();let all=units.filter(u=>u.hp>0).map(u=>({u,enemy:false,d:u.x+u.z})).concat(enemies.map(u=>({u,enemy:true,d:u.x+u.z})));all.sort((a,b)=>a.d-b.d);/* le décor est trié une fois au chargement : on le fusionne avec les unités triées */const O=PIXEL?PW.objs:[];let j=0;for(const v of all){while(j<O.length&&O[j].d<=v.d)drawDeco(O[j++]);drawCharacter(v.u,v.enemy)}while(j<O.length)drawDeco(O[j++]);drawEffects();let p=project(0,0,18);ctx.fillStyle='#c9afd0';ctx.font='bold 10px system-ui';ctx.textAlign='center';ctx.fillText('ANCRE',p.x,p.y+15*cam.zoom)}
-function renderRoster(){let el=document.getElementById('roster');const groups=[...units.filter(u=>!u.squad).map(u=>({units:[u],name:u.name,role:u.role})),...Array.from({length:3},(_,j)=>({units:units.filter(u=>u.squad===j+1),name:'Indra · Escouade '+(j+1),role:'guard'}))];el.innerHTML=groups.map((g,i)=>{let hp=g.units.reduce((a,u)=>a+u.hp,0),max=g.units.reduce((a,u)=>a+u.max,0),sel=g.units.some(u=>selected.includes(u));return `<button class="unit ${sel?'sel':''}" data-i="${i}"><b>${i+1}. ${g.name}</b><br><small>${g.role==='guard'?g.units.filter(u=>u.hp>0).length+' / 4 soldats':g.role==='paladin'?'Épée et bouclier':g.role==='healer'?'Soins':g.role==='shooter'?'Tir longue portée':g.role==='engineer'?'Construction · réparation':''}</small><div class="bar"><i style="width:${100*hp/max}%"></i></div></button>`}).join('');for(let b of el.querySelectorAll('.unit'))b.addEventListener('click',ev=>selectIndex(+b.dataset.i,ev.shiftKey))}
-function selectIndex(i,add=false){const heroes=units.filter(u=>!u.squad);let group=i<heroes.length?[heroes[i]]:units.filter(u=>u.squad===i-heroes.length+1),alive=group.filter(u=>u.hp>0);selected=add?[...new Set([...selected,...alive])]:alive;showSelection();renderRoster()}
-function showSelection(){let first=selected[0],n=document.getElementById('chosen'),d=document.getElementById('desc');n.textContent=selected.length>1?selected.length+' unités sélectionnées':first?.name||'Aucune unité';d.textContent=first?.role==='paladin'?'Égide (Espace) : protège les alliés proches et frappe les ennemis.':first?.role==='healer'?'Restauration (Espace) : soigne les alliés à proximité.':first?.role==='shooter'?'Tir de précision (Espace) : inflige de lourds dégâts.':first?.role==='guard'?'Discipline martiale (Espace) : renforce l’escouade.':first?.role==='engineer'?'Réparation (Espace) : restaure 15 % de l’intégrité de l’Ancre. Soutien non combattant.':'Choisissez un Exilé ou une escouade.'}
-canvas.addEventListener('pointerdown',ev=>{if(ev.button!==0)return;let candidates=units.filter(u=>u.hp>0).map(u=>({u,p:project(u.x,1,u.z)}));let near=candidates.sort((a,b)=>Math.hypot(a.p.x-ev.clientX,a.p.y-ev.clientY)-Math.hypot(b.p.x-ev.clientX,b.p.y-ev.clientY))[0];if(near&&Math.hypot(near.p.x-ev.clientX,near.p.y-ev.clientY)<Math.max(18,1.3*Z())){let group=near.u.squad?units.filter(u=>u.squad===near.u.squad&&u.hp>0):[near.u];selected=ev.shiftKey?[...new Set([...selected,...group])]:group;showSelection();renderRoster()}});
+function draw(){
+ const gpu=PIXEL&&decorRenderer;if(decorRenderer)decorRenderer.begin();if(gpu)ctx.clearRect(0,0,W,H);
+ if(PIXEL)drawWorldPixel();else drawWorld();
+ const all=units.filter(u=>u.hp>0).map(u=>({u,enemy:false,d:u.x+u.z})).concat(enemies.map(u=>({u,enemy:true,d:u.x+u.z})));
+ for(const turret of turrets)all.push({turret,d:turret.x+turret.z});
+ for(const b of temples){all.push({b,d:b.x+b.z});if(b.priest)all.push({priest:b,d:b.priest.x+b.priest.z})}for(const b of foundries){all.push({foundry:b,d:b.x+b.z});if(b.worker)all.push({smith:b,d:b.worker.x+b.worker.z})}for(const b of sawmills){all.push({sawmill:b,d:b.x+b.z});if(b.worker)all.push({forester:b,d:b.worker.x+b.worker.z})}for(const b of barracks){all.push({barracks:b,d:b.x+b.z});if(b.instructor&&currentTime<b.trainAt)all.push({instructor:b,d:b.instructor.x+b.instructor.z})}all.sort((a,b)=>a.d-b.d);
+ const O=PIXEL?PW.objs:[];let j=0;
+ for(const v of all){
+  while(j<O.length&&O[j].d<=v.d)drawDeco(O[j++]);flushDecor();
+  if(v.turret){drawTurret(v.turret);const p=project(v.turret.x,0,v.turret.z),s=Z()/16;captureDecorLayer(p.x-80*s,p.y-145*s,160*s,195*s)}
+  else if(v.sawmill){drawSawmill(v.sawmill);captureDecorLayer()}
+  else if(v.forester){drawSawmillWorker(v.forester);captureDecorLayer()}
+  else if(v.barracks){drawBarracks(v.barracks);captureDecorLayer()}
+  else if(v.instructor){drawBarracksInstructor(v.instructor);captureDecorLayer()}
+  else if(v.foundry){drawFoundry(v.foundry);captureDecorLayer()}
+  else if(v.smith){drawFoundryWorker(v.smith);captureDecorLayer()}
+  else if(v.b){drawTemple(v.b);captureDecorLayer()}
+  else{const u=v.priest?v.priest.priest:v.u;if(v.priest)drawTemplePriest(v.priest);else drawCharacter(v.u,v.enemy);const p=project(u.x,0,u.z);captureDecorLayer(p.x-90*PX,p.y-120*PX,180*PX,150*PX)}
+ }
+ while(j<O.length)drawDeco(O[j++]);flushDecor();
+ drawEffects();drawTurretBolts();drawTemplePreview();drawFoundryPreview();drawBarracksPreview();drawFoundryFeedback();drawSawmillPreview();drawSawmillFeedback();if(HUD.anchor)circle3(core.x,core.z,1.8,'#e8bc5b55',.15);
+ const p=project(0,0,18);ctx.fillStyle='#c9afd0';ctx.font='bold 10px system-ui';ctx.textAlign='center';ctx.fillText('ANCRE',p.x,p.y+15*cam.zoom);
+ if(effects.length||turretBolts.length||ironPopups.length||woodPopups.length||HUD.mode==='sawmill'||HUD.mode==='foundry'||HUD.mode==='barracks'||HUD.mode==='build'||HUD.anchor)captureDecorLayer();else captureDecorLayer(p.x-50,p.y-5,100,40);
+}
+
+function renderRoster(){updateHUD(true)}
+function selectIndex(i,add=false){const heroes=units.filter(u=>!u.squad);let group=i<heroes.length?[heroes[i]]:units.filter(u=>u.squad===i-heroes.length+1),alive=group.filter(u=>u&&u.hp>0);if(!alive.length)return;selected=add?[...new Set([...selected,...alive])]:alive;showSelection()}
+function showSelection(){HUD.anchor=false;HUD.mode=null;canvas.style.cursor='crosshair';updateHUD(true)}
+canvas.addEventListener('pointerdown',ev=>{if(ev.button!==0)return;
+ if(HUD.mode==='sawmill'){placeSawmill(groundFromScreen(ev.clientX,ev.clientY));return}
+ if(HUD.mode==='barracks'){placeBarracks(groundFromScreen(ev.clientX,ev.clientY));return}
+ if(HUD.mode==='foundry'){placeFoundry(groundFromScreen(ev.clientX,ev.clientY));return}
+ if(HUD.mode==='build'){placeTemple(groundFromScreen(ev.clientX,ev.clientY));return}
+ if(HUD.mode==='move'){issueMove(groundFromScreen(ev.clientX,ev.clientY));return}
+ const orb=project(core.x,3+Math.sin(currentTime*1.7)*.2,core.z);
+ if(Math.hypot(orb.x-ev.clientX,orb.y-ev.clientY)<Math.max(18,Z()*1.15)){selected=[];HUD.anchor=true;HUD.mode=null;updateHUD(true);return}
+ const candidates=units.filter(u=>u.hp>0&&!u.hidden).map(u=>({u,p:project(u.x,1,u.z)}));
+ const near=candidates.sort((a,b)=>Math.hypot(a.p.x-ev.clientX,a.p.y-ev.clientY)-Math.hypot(b.p.x-ev.clientX,b.p.y-ev.clientY))[0];
+ if(near&&Math.hypot(near.p.x-ev.clientX,near.p.y-ev.clientY)<Math.max(18,1.3*Z())){const group=near.u.squad?units.filter(u=>u.squad===near.u.squad&&u.hp>0):[near.u];selected=ev.shiftKey?[...new Set([...selected,...group])]:group;showSelection()}
+ else{selected=[];HUD.anchor=false;HUD.mode=null;updateHUD(true)}});
 /* Déplacement de la caméra par glisser avec le bouton droit maintenu. Un clic droit sans glisser reste un ordre de déplacement/attaque. */
 const PAN={on:false,moved:false,x:0,y:0};
 canvas.addEventListener('pointerdown',ev=>{if(ev.button!==2)return;PAN.on=true;PAN.moved=false;PAN.x=ev.clientX;PAN.y=ev.clientY;canvas.setPointerCapture(ev.pointerId)});
-canvas.addEventListener('pointermove',ev=>{if(!PAN.on||!(ev.buttons&2))return;if(!PAN.moved&&Math.hypot(ev.clientX-PAN.x,ev.clientY-PAN.y)<5)return;PAN.moved=true;canvas.style.cursor='grabbing';
+canvas.addEventListener('pointermove',ev=>{templePointer=groundFromScreen(ev.clientX,ev.clientY);if(!PAN.on||!(ev.buttons&2))return;if(!PAN.moved&&Math.hypot(ev.clientX-PAN.x,ev.clientY-PAN.y)<5)return;PAN.moved=true;canvas.style.cursor='grabbing';
  const a=groundFromScreen(PAN.x,PAN.y),b=groundFromScreen(ev.clientX,ev.clientY);cam.x=clamp(cam.x+a.x-b.x,-98,98);cam.z=clamp(cam.z+a.z-b.z,-148,44);PAN.x=ev.clientX;PAN.y=ev.clientY});
 addEventListener('pointerup',ev=>{if(ev.button!==2)return;PAN.on=false;canvas.style.cursor=''});
-canvas.addEventListener('contextmenu',ev=>{ev.preventDefault();if(PAN.moved){PAN.moved=false;return}if(ended)return;let nearest=enemies.map(u=>({u,p:project(u.x,1,u.z)})).sort((a,b)=>Math.hypot(a.p.x-ev.clientX,a.p.y-ev.clientY)-Math.hypot(b.p.x-ev.clientX,b.p.y-ev.clientY))[0];let target=nearest&&Math.hypot(nearest.p.x-ev.clientX,nearest.p.y-ev.clientY)<Math.max(20,1.2*Z())?nearest.u:groundFromScreen(ev.clientX,ev.clientY);let valid=selected.filter(u=>u.hp>0);valid.forEach((u,i)=>{u.tx=target.x+(i%4-1.5)*1.5;u.tz=target.z+Math.floor(i/4)*1.5;u.stance='attack'});if(nearest&&target===nearest.u)say('Ordre : attaquer la cible.',1)});
-const keys={};addEventListener('keydown',ev=>{if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(ev.code))ev.preventDefault();let k=ev.key.toLowerCase();keys[k]=true;if(!ev.repeat){if(k>='1'&&k<='9')selectIndex(+k-1,ev.shiftKey);if(k==='a'){selected=units.filter(u=>u.hp>0);showSelection();renderRoster()}if(k==='h')hold();if(k==='r')init();if(k==='p'){PIXEL=!PIXEL;PX=PIXEL?Math.max(2,Math.round(innerWidth/640)):1;resize()}if(k===' ')ability()}});addEventListener('keyup',ev=>keys[ev.key.toLowerCase()]=false);canvas.addEventListener('wheel',ev=>{ev.preventDefault();if(PIXEL){PX=clamp(PX+(ev.deltaY>0?-1:1),2,6);resize()}else cam.zoom=clamp(cam.zoom*(ev.deltaY>0?.9:1.1),.65,1.7)},{passive:false});function hold(){selected.forEach(u=>{u.stance='hold';u.tx=u.x;u.tz=u.z});say('Les unités maintiennent leur position.',1)}document.getElementById('special').onclick=ability;document.getElementById('hold').onclick=hold;document.getElementById('restart').onclick=init;
-function frame(t){let dt=Math.min(.045,(t-last)/1000||.016);last=t;let s=10*dt;const dx=(keys.d||keys.arrowright?1:0)-(keys.q||keys.a||keys.arrowleft?1:0),dz=(keys.s||keys.arrowdown?1:0)-(keys.z||keys.w||keys.arrowup?1:0);if(dx||dz){cam.x=clamp(cam.x+dx*s,-98,98);cam.z=clamp(cam.z+dz*s,-148,44)}update(dt);draw();if(window.render3D&&!PIXEL){window.render3D();ctx.save();ctx.setTransform(1,0,0,1,0,0);ctx.drawImage(document.getElementById('three'),0,0,canvas.width,canvas.height);ctx.restore()}requestAnimationFrame(frame)}
+canvas.addEventListener('contextmenu',ev=>{ev.preventDefault();if(PAN.moved){PAN.moved=false;return}if(ended)return;const turret=hitTurret(ev.clientX,ev.clientY);if(turret){orderTurretRepair(turret);return}if(HUD.mode==='build'||HUD.mode==='foundry'||HUD.mode==='sawmill'||HUD.mode==='barracks'){HUD.mode=null;updateHUD(true);return}let nearest=enemies.map(u=>({u,p:project(u.x,1,u.z)})).sort((a,b)=>Math.hypot(a.p.x-ev.clientX,a.p.y-ev.clientY)-Math.hypot(b.p.x-ev.clientX,b.p.y-ev.clientY))[0];let target=nearest&&Math.hypot(nearest.p.x-ev.clientX,nearest.p.y-ev.clientY)<Math.max(20,1.2*Z())?nearest.u:groundFromScreen(ev.clientX,ev.clientY);issueMove(target);if(nearest&&target===nearest.u)say('Ordre : attaquer la cible.',1)});
+const keys={};addEventListener('keydown',ev=>{if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(ev.code))ev.preventDefault();let k=ev.key.toLowerCase();keys[k]=true;if(!ev.repeat){if(k>='1'&&k<='9')selectIndex(+k-1,ev.shiftKey);if(k==='a'){selected=units.filter(u=>u.hp>0&&!u.hidden);showSelection()}if(k==='h')hold();if(k==='r'){if(ev.shiftKey)init();else if(selected.some(u=>u.role==='engineer'&&!u.hidden))runAbility()}if(k==='b')armTemple();if(k==='f')armFoundry();if(k==='c')armBarracks();if(k==='i')trainIndra();if(k==='s')armSawmill();if(k==='m')armMove();if(k==='escape'){HUD.mode=null;canvas.style.cursor='crosshair';updateHUD(true)}if(k==='p'){PIXEL=!PIXEL;PX=PIXEL?initialPixelZoom():1;resize()}if(k===' ')runAbility()}});addEventListener('keyup',ev=>keys[ev.key.toLowerCase()]=false);canvas.addEventListener('wheel',ev=>{ev.preventDefault();if(PIXEL){PX=clamp(PX+(ev.deltaY>0?-1:1),1,6);resize()}else cam.zoom=clamp(cam.zoom*(ev.deltaY>0?.9:1.1),.3,1.7)},{passive:false});function hold(){HUD.mode=null;selected.filter(u=>u.hp>0&&!u.hidden).forEach(u=>{cancelTemple(u);cancelFoundry(u);cancelSawmill(u);cancelTurretRepair(u);u.stance='hold';u.tx=u.x;u.tz=u.z});updateHUD(true);if(selected.length)say('Les unités maintiennent leur position.',1)}
+function frame(t){requestAnimationFrame(frame);let dt=last===null?0:Math.max(0,Math.min(.045,(t-last)/1000));last=t;let s=10*dt;const dx=(keys.d||keys.arrowright?1:0)-(keys.q||keys.a||keys.arrowleft?1:0),dz=(keys.s||keys.arrowdown?1:0)-(keys.z||keys.w||keys.arrowup?1:0);if(dx||dz){cam.x=clamp(cam.x+dx*s,-98,98);cam.z=clamp(cam.z+dz*s,-148,44)}update(dt);updateCharacterDialogue(dt);try{draw()}catch(error){if(decorRenderer){console.error('Rendu WebGL interrompu, reprise en Canvas 2D.',error);useCanvasDecor();draw()}else{window.gameRenderError=error.message;console.error('Erreur de dessin du jeu :',error);throw error}}if(window.render3D&&!PIXEL){window.render3D();ctx.save();ctx.setTransform(1,0,0,1,0,0);ctx.drawImage(document.getElementById('three'),0,0,canvas.width,canvas.height);ctx.restore()}updateHUD()}
 // Réduit chaque canal à 8 niveaux : supprime les dégradés d'anticrénelage, donne des aplats nets.
-const LEVELS=new Uint8Array(256).map((_,v)=>Math.round(Math.round(v/255*7)/7*255));function posterize(){if(!canvas.width||!canvas.height)return;const img=ctx.getImageData(0,0,canvas.width,canvas.height),d=img.data;for(let i=0;i<d.length;i+=4){d[i]=LEVELS[d[i]];d[i+1]=LEVELS[d[i+1]];d[i+2]=LEVELS[d[i+2]]}ctx.putImageData(img,0,0)}buildPixelWorld();buildUnitSprites();buildEnemySprites();buildAttackSprites();buildPortal();init();requestAnimationFrame(frame);
+const LEVELS=new Uint8Array(256).map((_,v)=>Math.round(Math.round(v/255*7)/7*255));function posterize(){if(!canvas.width||!canvas.height)return;const img=ctx.getImageData(0,0,canvas.width,canvas.height),d=img.data;for(let i=0;i<d.length;i+=4){d[i]=LEVELS[d[i]];d[i+1]=LEVELS[d[i+1]];d[i+2]=LEVELS[d[i+2]]}ctx.putImageData(img,0,0)}buildPixelWorld();initDecorRenderer();buildUnitSprites();buildEnemySprites();buildAttackSprites();initHUD();initCharacterDialogue();buildPortal().catch(error=>console.error(error));init();last=null;requestAnimationFrame(frame);
 </script>
 <script src="assets/tireur_saurus_lite.js"></script>
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
 <script type="module">
+// Le mode pixel fonctionne sans réseau ni contexte WebGL du Tireur.
+let tireur3DLoading=false;
+async function ensureTireur3D(){
+ if(PIXEL||window.render3D||tireur3DLoading)return;
+ tireur3DLoading=true;
+ try{
+
 // Calque 3D : affiche le modèle Blender du Tireur par-dessus le canvas 2D, avec la même projection isométrique que project().
-import * as THREE from 'three';
-import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
+const THREE=await import('three');
+const {GLTFLoader}=await import('three/addons/loaders/GLTFLoader.js');
 const el=document.getElementById('three');
 const renderer=new THREE.WebGLRenderer({canvas:el,alpha:true,antialias:false});
 renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.5;
@@ -286,7 +392,7 @@ function syncCamera(){
 // Appelé par la boucle du jeu juste après draw() : le résultat est recopié dans le canvas 2D (même résolution).
 window.render3D=function(){
   if(!proto)return;
-  const k=PX>1?1/PX:dpr;
+  const k=dpr;
   if(el.width!==Math.floor(W*k)||el.height!==Math.floor(H*k)){renderer.setPixelRatio(k);renderer.setSize(W,H,false)}
   syncCamera();
   const live=new Set();
@@ -306,5 +412,11 @@ window.render3D=function(){
   for(const [u,b] of bodies)if(!live.has(u)){scene.remove(b.o);bodies.delete(u)}
   renderer.render(scene,camera);
 };
+
+ }catch(error){window.TIREUR3D=false;console.warn('Tireur 3D indisponible : le rendu 2D reste actif.',error)}
+ finally{tireur3DLoading=false}
+}
+addEventListener('keydown',event=>{if(!event.repeat&&event.key.toLowerCase()==='p')ensureTireur3D()});
+if(!PIXEL)ensureTireur3D();
 </script>
 </body></html>

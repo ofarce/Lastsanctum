@@ -27,7 +27,7 @@ const hexC={};const hex=c=>hexC[c]||(hexC[c]=[1,3,5].map(i=>parseInt(c.substr(i,
 function inside(p,x,y){let r=false;for(let i=0,j=p.length-1;i<p.length;j=i++){const[xi,yi]=p[i],[xj,yj]=p[j];if((yi>y)!==(yj>y)&&x<(xj-xi)*(y-yi)/(yj-yi)+xi)r=!r}return r}
 
 class Px{
- constructor(w,h,transparent=false){this.w=w;this.h=h;this.c=document.createElement('canvas');this.c.width=w;this.c.height=h;this.g=this.c.getContext('2d');this.d=this.g.createImageData(w,h);this.z=new Float32Array(w*h).fill(-1e9);if(!transparent){const b=hex(C.bg);for(let i=0;i<w*h;i++){this.d.data.set([...b,255],i*4)}}}
+ constructor(w,h,transparent=false){this.w=w;this.h=h;this.c=document.createElement('canvas');this.c.width=w;this.c.height=h;this.g=this.c.getContext('2d',{willReadFrequently:true});this.d=this.g.createImageData(w,h);this.z=new Float32Array(w*h).fill(-1e9);if(!transparent){const b=hex(C.bg);for(let i=0;i<w*h;i++){this.d.data.set([...b,255],i*4)}}}
  set(x,y,col,z=0){x=Math.round(x);y=Math.round(y);if(x<0||y<0||x>=this.w||y>=this.h)return;const i=y*this.w+x;if(z<this.z[i])return;this.z[i]=z;this.d.data.set(hex(col),i*4);this.d.data[i*4+3]=255}
  dark(x,y,k,z){x=Math.round(x);y=Math.round(y);if(x<0||y<0||x>=this.w||y>=this.h)return;const i=y*this.w+x;if(z<this.z[i])return;const o=i*4;for(let c=0;c<3;c++)this.d.data[o+c]*=k}
  ramp(r,v,x,y){x=Math.floor(x);y=Math.floor(y);v=Math.max(0,Math.min(.999,v))*(r.length-1);let i=Math.floor(v);if(v-i>BAYER[((y%4)+4)%4][((x%4)+4)%4])i++;return r[Math.min(i,r.length-1)]}
@@ -78,19 +78,19 @@ function trunkDraw(P,x,yb,h,w,R,z,roots=true){
  for(let y=yb-h;y<=yb;y++){const t=(yb-y)/h,ww=w+(t<.15?(.15-t)*14:0);for(let i=-ww/2;i<ww/2;i++){const u=(i+ww/2)/ww;let v=.75-u*.6+(hash(x+i|0,y>>1,3)-.5)*.25;if(((i+y*.3)|0)%3===0)v-=.12;P.set(x+i,y,P.ramp(C.bark,v,x+i|0,y),z)}
   P.set(x-ww/2-1,y,C.outline,z-.01);P.set(x+ww/2,y,C.outline,z-.01)}
  if(roots)for(const s of[-1,1]){for(let i=0;i<5;i++)P.set(x+s*(w/2+1+i),yb-1+(i>>1),C.bark[1+(i<2)],z)}}
-function treeBig(P,x,yb,R,z,s=1){shadow(P,x+4,yb,22*s,8*s,z-50);trunkDraw(P,x,yb,30*s,6*s,R,z);
+function treeBig(P,x,yb,R,z,s=1,L=P){shadow(P,x+4,yb,22*s,8*s,z-50);trunkDraw(P,x,yb,30*s,6*s,R,z);
  for(const b of[-1,1]){P.line(x,yb-22*s,x+b*12*s,yb-34*s,C.bark[2],z+.01);P.line(x,yb-21*s,x+b*12*s,yb-33*s,C.bark[1],z+.01)}
- canopy(P,x-2,yb-48*s,26*s,18*s,R,z+.1,C.leaf,34);canopy(P,x+10*s,yb-38*s,14*s,10*s,R,z+.12,C.leaf,12)}
-function cypress(P,x,yb,R,z){shadow(P,x+3,yb,9,4,z-50);trunkDraw(P,x,yb,8,3,R,z,false);for(let k=0;k<5;k++)canopy(P,x,yb-12-k*9,8-k*1.1,7,R,z+.1+k*.01,C.cyp,8)}
-function palm(P,x,yb,R,z){shadow(P,x+6,yb,12,4,z-50);const H=44;
+ canopy(L,x-2,yb-48*s,26*s,18*s,R,z+.1,C.leaf,34);canopy(L,x+10*s,yb-38*s,14*s,10*s,R,z+.12,C.leaf,12)}
+function cypress(P,x,yb,R,z,L=P){shadow(P,x+3,yb,9,4,z-50);trunkDraw(P,x,yb,8,3,R,z,false);for(let k=0;k<5;k++)canopy(L,x,yb-12-k*9,8-k*1.1,7,R,z+.1+k*.01,C.cyp,8)}
+function palm(P,x,yb,R,z,L=P){shadow(P,x+6,yb,12,4,z-50);const H=44;
  for(let i=0;i<H;i++){const xx=x+Math.round(Math.sin(i/16)*5);for(let k=-1;k<=1;k++)P.set(xx+k,yb-i,P.ramp(C.bark,(i%4===0?.25:.6)-k*.2,xx+k,yb-i),z);P.set(xx-2,yb-i,C.outline,z-.01);P.set(xx+2,yb-i,C.outline,z-.01)}
  const tx=x+Math.round(Math.sin(H/16)*5),ty=yb-H;
  for(const[a,l]of[[-2.9,22],[-2.3,24],[-1.7,20],[-1.1,18],[-.5,22],[.1,24],[.7,20],[2.6,16]]){
-  for(let t=0;t<l;t++){const px=tx+Math.cos(a)*t,py=ty+Math.sin(a)*t*.55+t*t*.03;P.set(px,py,C.palm[1],z+.2);
-   if(t>3&&t%2===0)for(const s of[-1,1]){const lx=px+Math.cos(a+s*1.4)*3,ly=py+Math.sin(a+s*1.4)*2+2;P.line(px,py,lx,ly,f=>P.ramp(C.palm,.85-t/l*.6-f*.3,px|0,py|0),z+.19)}}}
- P.set(tx,ty,C.bark[3],z+.3);P.set(tx+1,ty+1,C.bark[2],z+.3)}
+  for(let t=0;t<l;t++){const px=tx+Math.cos(a)*t,py=ty+Math.sin(a)*t*.55+t*t*.03;L.set(px,py,C.palm[1],z+.2);
+   if(t>3&&t%2===0)for(const s of[-1,1]){const lx=px+Math.cos(a+s*1.4)*3,ly=py+Math.sin(a+s*1.4)*2+2;L.line(px,py,lx,ly,f=>P.ramp(C.palm,.85-t/l*.6-f*.3,px|0,py|0),z+.19)}}}
+ L.set(tx,ty,C.bark[3],z+.3);L.set(tx+1,ty+1,C.bark[2],z+.3)}
 function fern(P,x,yb,R,z){for(let k=0;k<7;k++){const a=-Math.PI/2+(k-3)*.45,l=13+R()*6;for(let t=0;t<l;t++){const px=x+Math.cos(a)*t,py=yb+Math.sin(a)*t*.9+t*t*.04;P.set(px,py,P.ramp(C.leaf,.75-t/l*.5,px|0,py|0),z);if(t%2)for(const s of[-1,1])P.set(px+s,py+1,C.leaf[3+(s>0)],z-.01)}}}
-function bushDraw(P,x,yb,R,z){shadow(P,x+2,yb,12,4,z-50);canopy(P,x,yb-7,11,7,R,z,C.leaf,12)}
+function bushDraw(P,x,yb,R,z,L=P){shadow(P,x+2,yb,12,4,z-50);canopy(L,x,yb-7,11,7,R,z,C.leaf,12)}
 function rock(P,x,yb,R,z,s=1){shadow(P,x+3,yb,11*s,4,z-50);const pts=[[x-10*s,yb],[x-8*s,yb-7*s],[x-2*s,yb-11*s],[x+6*s,yb-9*s],[x+10*s,yb-3*s],[x+8*s,yb+1]];
  P.poly(pts,(px,py)=>{let v=.75-(px-x)/(10*s)*.25-(py-yb+11*s)/(12*s)*.35+(hash(px,py,9)-.5)*.15;if(fbm(px/5,py/5,4)>.62&&py<yb-5*s)return P.ramp(C.moss,v,px,py);return P.ramp(C.stone,v*.8,px,py)},z);
  for(let i=0;i<pts.length;i++){const[a,b]=[pts[i],pts[(i+1)%pts.length]];P.line(a[0],a[1],b[0],b[1],C.outline,z+.01)}}

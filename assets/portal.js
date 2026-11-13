@@ -42,7 +42,7 @@ function doorAt(D,u,v,S,x,y){const op=S.open||0;let du=u;
 function seals(u,v){const a=Math.atan2(v-RC,u),k=Math.round(a/(Math.PI/4)),ka=k*Math.PI/4,cx=Math.cos(ka)*(RI+RO)/2,cy=RC+Math.sin(ka)*(RI+RO)/2;return Math.abs(u-cx)<2.2&&Math.abs(v-cy)<2.2}
 
 /* ---------- matériau d'un point du plan du mur ---------- */
-function shade(D,u,v,S,t,x,y){const st=D.stone,gl=D.glow,pulse=.78+.22*Math.sin(t*4),r=Math.hypot(u,v-RC),fl=S.flicker?(Math.sin(t*23)*Math.sin(t*7.7)>.2?1:.45):1;
+function shade(D,u,v,S,t,x,y){const st=D.stone,gl=D.glow,pulse=.78+.22*Math.sin(t*4),r=Math.hypot(u,v-RC),fl=1-(S.flicker||0)*(.275-.275*Math.sin(t*7.7));
  if(v<0)return null;
  if(v<6&&Math.abs(u)<46){let k=.55-v*.03+(hash(Math.floor(u/6),Math.floor(v/2),2)-.5)*.15;if(v%2<1)k-=.18;return ramp(st,k,x,y)}
  const f=frameAt(D,u,v,S,t);
@@ -75,7 +75,7 @@ function render(D,S,t){const c=document.createElement('canvas');c.width=PW_;c.he
  const m=new Uint8Array(PW_*PH_);for(let i=0;i<m.length;i++)m[i]=a[i*4+3]>0;
  for(let y=1;y<PH_-1;y++)for(let x=1;x<PW_-1;x++){const i=y*PW_+x;if(!m[i]&&(m[i-1]||m[i+1]||m[i-PW_]||m[i+PW_]))put(x,y,'#070808')}
  // arcs électriques le long du bord intérieur
- if(S.arcs)for(let k=0;k<6;k++){if(k>=S.arcs*6)break;const a0=k*1.047+Math.sin(t*2+k)*.6,len=10+Math.sin(t*3+k)*5;let ang=a0,rr=RI-1;
+ if(S.arcs)for(let k=0;k<6;k++){if(k>=Math.ceil(S.arcs*6))break;const a0=k*1.047+Math.sin(t*2+k)*.6,len=10+Math.sin(t*3+k)*5;let ang=a0,rr=RI-1;
   for(let j=0;j<len;j++){ang+=.06*Math.sin(t*9+j+k);rr+=Math.sin(j*1.7+t*11+k)*1.3-.25;const[x,y]=toXY(Math.cos(ang)*rr,RC+Math.sin(ang)*rr);put(x,y,j%3?D.glow[3]:D.glow[5])}}
  // poussière et étincelles au pied
  if(S.dust)for(let k=0;k<26;k++){const ph=((k*.37+t*.5)%1),u=(k%2?1:-1)*(8+((k*13)%28)),v=2+ph*10,[x,y]=toXY(u+Math.sin(t+k)*3,v);put(x,y,ph<.4?D.glow[3]:'#5e574a')}

@@ -1,0 +1,41 @@
+{
+  "ruinId": "04-enfouie",
+  "result": "garde-tyrienne",
+  "actor": "engineer",
+  "cost": 0,
+  "repairDurationSeconds": 8,
+  "demoDurationSeconds": 12,
+  "direction": "NE",
+  "stages": [
+    {
+      "from": 0,
+      "to": 1,
+      "action": "approach"
+    },
+    {
+      "from": 1,
+      "to": 2.6,
+      "action": "clear_debris"
+    },
+    {
+      "from": 2.6,
+      "to": 5.1,
+      "action": "raise_frame"
+    },
+    {
+      "from": 5.1,
+      "to": 7,
+      "action": "assemble_mechanism"
+    },
+    {
+      "from": 7,
+      "to": 8,
+      "action": "commission"
+    },
+    {
+      "from": 8,
+      "to": 12,
+      "action": "automatic_loading_and_test_shot"
+    }
+  ]
+}
