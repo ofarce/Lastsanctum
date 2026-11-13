@@ -1,10 +1,14 @@
-<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Exilés — Sanctum Lacertae (Tireur v2)</title><style>
-*{box-sizing:border-box}body{margin:0;overflow:hidden;background:#10191b;color:#f1efdf;font:14px system-ui,Segoe UI,sans-serif}canvas{display:block;width:100vw;height:100vh;cursor:crosshair}.hud{position:absolute;z-index:2;pointer-events:none}.panel{background:#101c1fe8;border:1px solid #68807088;box-shadow:0 5px 30px #0009;border-radius:9px;padding:12px 15px;backdrop-filter:blur(6px)}#top{top:15px;left:15px;display:flex;gap:10px;align-items:flex-start}#title{font-size:16px;color:#e6cd8d;font-weight:800;letter-spacing:.12em}#stats{margin-top:6px;color:#c6d6c7;font-size:12px;line-height:1.7}#right{right:15px;top:15px;max-width:300px}#bottom{bottom:15px;left:15px;right:15px;display:flex;gap:10px;justify-content:space-between;align-items:end}#roster{display:flex;flex-wrap:wrap;gap:6px;max-width:790px;pointer-events:auto}.unit{border:1px solid #708478;background:#172528eb;padding:9px 11px;border-radius:7px;color:#e6e9df;text-align:left;cursor:pointer;min-width:115px}.unit.sel{border-color:#f6d07e;background:#3c3b2b}.unit small{color:#b9c8c2}.bar{height:4px;background:#493f3d;margin-top:6px;border-radius:10px;overflow:hidden}.bar i{display:block;height:100%;background:#72bba0}#controls{font-size:11px;color:#cbd3c9;line-height:1.7}.btns{display:flex;gap:7px;margin-top:8px;pointer-events:auto}button{font:inherit}.btn{background:#293b37;border:1px solid #829889;color:#e8eee2;border-radius:6px;padding:7px 10px;cursor:pointer}.btn:hover{background:#3d5850}#notice{position:absolute;left:50%;top:13%;transform:translateX(-50%);padding:10px 19px;background:#111c20e9;border:1px solid #b5a275;border-radius:7px;color:#f3dea7;font-weight:600;opacity:0;transition:opacity .25s;pointer-events:none;white-space:nowrap}#banner{display:none;position:absolute;z-index:5;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;padding:30px 44px;background:#0e1819f2;border:2px solid #ccb47e;border-radius:12px;font-size:25px;font-weight:800}#banner small{font-size:15px;color:#b8c9bb;font-weight:400}#help{max-width:380px}@media(max-width:950px){#bottom{flex-direction:column;align-items:start}#help{display:none}#right{max-width:200px;font-size:11px}#roster{max-width:100%}.unit{min-width:90px;padding:6px}}
-</style></head><body><canvas id="game"></canvas><div id="top" class="hud"><div class="panel"><div id="title">EXILÉS / SANCTUM LACERTAE · TIREUR V3</div><div id="stats">Vague : <b id="wave">1 / 5</b> · Ennemis : <b id="enemies">0</b><br>Intégrité de l'Ancre : <b id="core">100 %</b><br>Objectif : empêcher la profanation du Sanctum.</div><div class="btns"><button class="btn" id="special">Espace · Compétence</button><button class="btn" id="hold">H · Position</button><button class="btn" id="restart">R · Rejouer</button></div></div></div><div id="right" class="hud panel"><strong id="chosen">Paladin</strong><p id="desc" style="color:#c2cfc6;margin-bottom:0">Sélectionnez un Exilé ou une escouade.</p></div><div id="notice"></div><div id="bottom" class="hud"><div id="roster"></div><div id="help" class="panel"><b>COMMANDES</b><div id="controls">Clic gauche : sélectionner · Maj + clic : multi-sélection<br>Clic droit : déplacer ou attaquer · 1 à 6 : choisir<br>A : tous · H : tenir position · Espace : compétence<br>ZQSD / WASD : caméra · Molette : zoom</div></div></div><div id="banner"></div>
+<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;600;700&display=swap" rel="stylesheet"><title>Exilés — Sanctum Lacertae (Tireur v2)</title><style>
+*{box-sizing:border-box}body{margin:0;overflow:hidden;background:#10191b;color:#f1efdf;font:14px 'Pixelify Sans',system-ui,sans-serif}canvas{display:block;width:100vw;height:100vh;cursor:crosshair}.hud{position:absolute;z-index:2;pointer-events:none}.panel{background:#101c1fe8;border:1px solid #68807088;box-shadow:0 5px 30px #0009;border-radius:9px;padding:12px 15px;backdrop-filter:blur(6px)}#top{top:15px;left:15px;display:flex;gap:10px;align-items:flex-start}#title{font-size:16px;color:#e6cd8d;font-weight:800;letter-spacing:.12em}#stats{margin-top:6px;color:#c6d6c7;font-size:12px;line-height:1.7}#right{right:15px;top:15px;max-width:300px}#bottom{bottom:15px;left:15px;right:15px;display:flex;gap:10px;justify-content:space-between;align-items:end}#roster{display:flex;flex-wrap:wrap;gap:6px;max-width:790px;pointer-events:auto}.unit{border:1px solid #708478;background:#172528eb;padding:9px 11px;border-radius:7px;color:#e6e9df;text-align:left;cursor:pointer;min-width:115px}.unit.sel{border-color:#f6d07e;background:#3c3b2b}.unit small{color:#b9c8c2}.bar{height:4px;background:#493f3d;margin-top:6px;border-radius:10px;overflow:hidden}.bar i{display:block;height:100%;background:#72bba0}#controls{font-size:11px;color:#cbd3c9;line-height:1.7}.btns{display:flex;gap:7px;margin-top:8px;pointer-events:auto}button{font:inherit}.btn{background:#293b37;border:1px solid #829889;color:#e8eee2;border-radius:6px;padding:7px 10px;cursor:pointer}.btn:hover{background:#3d5850}#three{display:none}#notice{position:absolute;left:50%;top:13%;transform:translateX(-50%);padding:10px 19px;background:#111c20e9;border:1px solid #b5a275;border-radius:7px;color:#f3dea7;font-weight:600;opacity:0;transition:opacity .25s;pointer-events:none;white-space:nowrap}#banner{display:none;position:absolute;z-index:5;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;padding:30px 44px;background:#0e1819f2;border:2px solid #ccb47e;border-radius:12px;font-size:25px;font-weight:800}#banner small{font-size:15px;color:#b8c9bb;font-weight:400}#help{max-width:380px}@media(max-width:950px){#bottom{flex-direction:column;align-items:start}#help{display:none}#right{max-width:200px;font-size:11px}#roster{max-width:100%}.unit{min-width:90px;padding:6px}}
+</style></head><body><canvas id="game"></canvas><canvas id="three"></canvas><div id="top" class="hud"><div class="panel"><div id="title">EXILÉS / SANCTUM LACERTAE · TIREUR V3</div><div id="stats">Vague : <b id="wave">1 / 5</b> · Ennemis : <b id="enemies">0</b><br>Intégrité de l'Ancre : <b id="core">100 %</b><br>Objectif : empêcher la profanation du Sanctum.</div><div class="btns"><button class="btn" id="special">Espace · Compétence</button><button class="btn" id="hold">H · Position</button><button class="btn" id="restart">R · Rejouer</button></div></div></div><div id="right" class="hud panel"><strong id="chosen">Paladin</strong><p id="desc" style="color:#c2cfc6;margin-bottom:0">Sélectionnez un Exilé ou une escouade.</p></div><div id="notice"></div><div id="bottom" class="hud"><div id="roster"></div><div id="help" class="panel"><b>COMMANDES</b><div id="controls">Clic gauche : sélectionner · Maj + clic : multi-sélection<br>Clic droit : déplacer ou attaquer · 1 à 6 : choisir<br>A : tous · H : tenir position · Espace : compétence<br>ZQSD / WASD : caméra · Molette : zoom · P : pixel art / lisse</div></div></div><div id="banner"></div>
+<script src="assets/decor.js?v=2"></script>
+<script src="assets/units.js?v=3"></script>
+<script src="assets/enemies.js?v=1"></script>
 <script>
 'use strict';
-const canvas=document.getElementById('game'),ctx=canvas.getContext('2d',{alpha:false});let W=0,H=0,dpr=1;function resize(){dpr=Math.min(devicePixelRatio||1,2);W=innerWidth;H=innerHeight;canvas.width=Math.round(W*dpr);canvas.height=Math.round(H*dpr);ctx.setTransform(dpr,0,0,dpr,0,0)}addEventListener('resize',resize);resize();
-let cam={x:0,z:2,zoom:1};const Z=()=>Math.min(W/83,H/54)*cam.zoom;function project(x,y,z){let s=Z();return {x:W/2+(x-z-cam.x+cam.z)*s*.86,y:H*.43+(x+z-cam.x-cam.z)*s*.42-y*s*.96}}function groundFromScreen(sx,sy){let s=Z(),a=(sx-W/2)/(s*.86),b=(sy-H*.43)/(s*.42);return{x:(a+b)/2+cam.x,z:(b-a)/2+cam.z}}
+const canvas=document.getElementById('game'),ctx=canvas.getContext('2d',{alpha:false});let W=0,H=0,dpr=1;// Mode pixel art : on dessine dans un canvas PX fois plus petit, agrandi sans lissage (P pour basculer).
+let PIXEL=true,PX=Math.max(2,Math.round(innerWidth/640));function resize(){dpr=Math.min(devicePixelRatio||1,2);W=innerWidth;H=innerHeight;const k=PX>1?1/PX:dpr;canvas.width=Math.ceil(W*k);canvas.height=Math.ceil(H*k);ctx.setTransform(k,0,0,k,0,0);ctx.imageSmoothingEnabled=!PIXEL;canvas.style.imageRendering=PX>1?'pixelated':'auto'}addEventListener('resize',resize);resize();
+let cam={x:0,z:2,zoom:1};const Z=()=>PIXEL?8*PX/.86:Math.min(W/83,H/54)*cam.zoom;const YK=()=>PIXEL?.43:.42;function project(x,y,z){let s=Z();return {x:W/2+(x-z-cam.x+cam.z)*s*.86,y:H*.43+(x+z-cam.x-cam.z)*s*YK()-y*s*.96}}function groundFromScreen(sx,sy){let s=Z(),a=(sx-W/2)/(s*.86),b=(sy-H*.43)/(s*YK());return{x:(a+b)/2+cam.x,z:(b-a)/2+cam.z}}
 const random=(a,b)=>a+Math.random()*(b-a),clamp=(v,a,b)=>Math.max(a,Math.min(b,v));let units=[],enemies=[],effects=[],particles=[],wave=0,coreHP=100,selected=[],currentTime=0,spawnQueue=[],nextWave=0,ended=false,noticeEnd=0,last=performance.now(),freeze=0;const core={x:0,z:18};let uid=0;const clampWorld=p=>{p.x=clamp(p.x,-27,27);p.z=clamp(p.z,-27,25)};
 function poly(points,color,stroke=null){ctx.beginPath();points.forEach((p,i)=>{let q=project(...p);i?ctx.lineTo(q.x,q.y):ctx.moveTo(q.x,q.y)});ctx.closePath();ctx.fillStyle=color;ctx.fill();if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=1;ctx.stroke()}}
 function box3(x,z,dx,dz,height,top,side,front){let a=x-dx/2,b=x+dx/2,c=z-dz/2,d=z+dz/2;poly([[a,0,c],[b,0,c],[b,height,c],[a,height,c]],side);poly([[b,0,c],[b,0,d],[b,height,d],[b,height,c]],front);poly([[a,height,c],[b,height,c],[b,height,d],[a,height,d]],top)}
@@ -29,6 +33,7 @@ function screenPoly(pts,fill,stroke=null,lw=1){ctx.beginPath();pts.forEach((p,i)
 function drawShooterModel(u){
   const shadowR=.72; circle3(u.x,u.z,shadowR*1.22,'#0b1615a0');
   if(selected.includes(u)&&u.hp>0){circle3(u.x,u.z,shadowR*1.65,'#ead08c55');let sp=project(u.x,.02,u.z);ctx.strokeStyle='#f8df93';ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(sp.x,sp.y,shadowR*1.65*Z()*.9,shadowR*1.65*Z()*.42,0,0,Math.PI*2);ctx.stroke()}
+  if(window.TIREUR3D)return; // le modèle 3D (calque Three.js) remplace le dessin 2D
   const hemL=project(u.x-.50,.12,u.z+.18), hemR=project(u.x+.44,.12,u.z-.18), hemM=project(u.x,.12,u.z+.03);
   const knee=project(u.x,.72,u.z+.02), waist=project(u.x,1.08,u.z), chest=project(u.x,1.52,u.z), head=project(u.x,2.12,u.z-.02);
   const shL=project(u.x-.50,1.56,u.z+.07), shR=project(u.x+.52,1.56,u.z-.07);
@@ -80,16 +85,127 @@ const items=[];for(let t of trees)items.push({z:t.x+t.z,x:t.x,kind:'tree',obj:t}
 poly([[-17,.1,9],[17,.1,9],[17,.1,27],[-17,.1,27]],'#807e68','#c1b696');for(let z of [10,15,20,25])line3([-17,.13,z],[17,.13,z],'#9a9780',1);for(let x of [-17,-12,12,17])for(let z of [9,14,21,27])box3(x,z,1.5,1.5,3.1,'#b7b29d','#797c71','#626b62');for(let z of [9,27])for(let x of [-17,17])box3(x,z,2.8,2.8,4,'#b4b49f','#747e76','#62695f');box3(-17,18,1.8,19,2.8,'#9b9e8b','#656e60','#5b665a');box3(17,18,1.8,19,2.8,'#9b9e8b','#656e60','#5b665a');box3(0,26.7,34,1.4,3.5,'#b9baa4','#818676','#747b6a');
 // Autel et cœur noir.
 box3(0,18,5,5,1.2,'#9da9a1','#626f6c','#5c6767');for(let i=0;i<3;i++)circle3(0,18,3.3+i*.52,'#8777ac'+(i===0?'99':'55'),1.25);sphere3(0,3+Math.sin(currentTime*1.7)*.2,18,1.55,'#4e3e7e');const o=project(0,4.8,18);ctx.strokeStyle='#bba7ff';ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(o.x,o.y,3.2*Z(),.95*Z(),-.1,0,Math.PI*2);ctx.stroke();}
+// ================= Décor pixel art natif (bibliothèque assets/decor.js) =================
+// 1 unité de monde = 8 px natifs en largeur et 4 en profondeur : une case de 4×4 unités = tuile 64×32.
+const NAT={kx:8,ky:4,kh:8*.96/.86};
+const PW={ground:null,gx0:0,gy0:0,objs:[]};
+const natW=(x,y,z)=>[(x-z)*NAT.kx,(x+z)*NAT.ky-y*NAT.kh];
+function natP(x,y,z){const p=project(x,y,z);return[Math.round(p.x/PX),Math.round(p.y/PX)]}
+function sprite(w,h,ax,ay,fn){const S=new Px(w,h,true);fn(S,ax,ay);S.flush();return{c:S.c,ax,ay}}
+// bloc maçonné posé au sol : coin minimal (x0,z0), étendue a×b unités, hauteur h unités
+function blockSprite(x0,z0,a,b,h,opt){const A=a*8,Bz=b*8,Hh=h*NAT.kh,w=A+Bz+8,ht=(A+Bz)/2+Hh+8;
+ return sprite(Math.ceil(w),Math.ceil(ht),Bz+4,Hh+4,(S,ax,ay)=>masonry(S,ax,ay,A,Bz,Hh,0,opt))}
+function buildPixelWorld(){
+ const R=rng(2024),E=44,w=E*2*NAT.kx*2+96,h=E*2*NAT.ky*2+96,P=new Px(w,h);PW.gx0=w/2;PW.gy0=h/2;
+ const G=(x,z)=>{const[a,b]=natW(x,0,z);return[a+PW.gx0,b+PW.gy0]};
+ for(let i=-11;i<11;i++)for(let j=-11;j<11;j++){const x=i*4,z=j*4,cx=x+2,cz=z+2,[sx,sy]=G(x,z),zz=-1000+i+j;
+  const temple=Math.abs(cx)<18&&cz>=8&&cz<28,plaza=cz>=4&&cz<10&&Math.abs(cx)<20,lane=[-12,12].some(l=>Math.abs(cx-l)<3)&&cz<8;
+  if(temple||plaza)flagTile(P,sx,sy,R,zz);else if(lane)pathTile(P,sx,sy,R,zz,0);else grassTile(P,sx,sy,R,zz,0)}
+ const objs=[],add=(x,z,d,spr,extra={})=>objs.push({x,z,d,spr,...extra});
+ // arbres : le type dépend de la taille d'origine
+ for(const t of trees){const r=rng(Math.round(t.x*131+t.z*17)+999),k=hash(Math.round(t.x*10),Math.round(t.z*10),3);
+  const kind=t.r>1.5?'big':t.h>4.7?'cyp':t.r<.95?'bush':k<.25?'palm':'big',s=.42+t.r*.17;
+  const[gx,gy]=G(t.x,t.z);shadow(P,Math.round(gx+3),Math.round(gy),Math.round(kind==='bush'?10:16*s+4),Math.round(kind==='bush'?4:6*s+2),-500);
+  add(t.x,t.z,t.x+t.z,sprite(96,120,48,112,(S,ax,ay)=>{({big:()=>treeBig(S,ax,ay,r,0,s),cyp:()=>cypress(S,ax,ay,r,0),bush:()=>bushDraw(S,ax,ay,r,0),palm:()=>palm(S,ax,ay,r,0)})[kind]()}))}
+ for(const o of stones){const r=rng(Math.round(o.x*53+o.z*11));const[gx,gy]=G(o.x,o.z);shadow(P,Math.round(gx+2),Math.round(gy),8,3,-500);add(o.x,o.z,o.x+o.z,sprite(40,30,20,24,(S,ax,ay)=>rock(S,ax,ay,r,0,.35+o.w*.22)))}
+ // fougères éparses hors des chemins et du temple
+ const fr=rng(77);for(let k=0;k<70;k++){const x=(fr()-.5)*70,z=(fr()-.5)*70;if(Math.abs(x)<20&&z>2&&z<29||[-12,12].some(l=>Math.abs(x-l)<4)&&z<8)continue;const r=rng(k);add(x,z,x+z,sprite(40,30,20,26,(S,ax,ay)=>fern(S,ax,ay,r,0)))}
+ // temple : piliers, blocs d'angle, murs latéraux et arrière, autel, Ancre
+ const tr=rng(5);
+ for(const x of[-12,12])for(const z of[9,14,21]){const broken=x===12&&z===21,ban=z===9;
+  add(x,z,x+z+.5,sprite(64,110,32,100,(S,ax,ay)=>{const ty=column(S,ax,ay+4,30,0,broken,tr);if(!broken&&z===14)vine(S,ax+4,ty+4,16,tr,5);if(ban)bannerDraw(S,ax+(x<0?-15:7),ty+10,8,20,6)}))}
+ for(const x of[-17,17])for(const z of[9,27])add(x,z,x+z+1.4,blockSprite(x-1.4,z-1.4,2.8,2.8,4,{bh:6,bw:10,moss:1}),{bx:x-1.4,bz:z-1.4});
+ for(const x of[-17,17])for(let k=0;k<4;k++){const z0=10.4+k*3.9;add(x,z0,x+.9+z0+3.9,blockSprite(x-.9,z0,1.8,3.9,2.8,{bh:6,bw:10,moss:1,cracks:k%2}),{bx:x-.9,bz:z0})}
+ for(let k=0;k<6;k++){const x0=-15.6+k*5.2;add(x0,26,x0+5.2+27.4,blockSprite(x0,26,5.2,1.4,3.5,{bh:6,bw:10,moss:1}),{bx:x0,bz:26})}
+ add(-2.5,15.5,20.5,blockSprite(-2.5,15.5,5,5,1.2,{bh:4,bw:8}),{bx:-2.5,bz:15.5});
+ add(0,18,20.6,sprite(64,64,32,32,(S,ax,ay)=>orbDraw(S,ax,ay-8,0)),{orb:true});
+ P.flush();PW.ground=P.c;PW.objs=objs}
+function blitSpr(spr,nx,ny){ctx.drawImage(spr.c,(nx-spr.ax)*PX,(ny-spr.ay)*PX,spr.c.width*PX,spr.c.height*PX)}
+function drawDeco(o){let nx,ny;if(o.orb)[nx,ny]=natP(0,3+Math.sin(currentTime*1.7)*.2,18);else if(o.bx!==undefined)[nx,ny]=natP(o.bx,0,o.bz);else[nx,ny]=natP(o.x,0,o.z);blitSpr(o.spr,nx,ny)}
+function drawWorldPixel(){ctx.fillStyle=C.bg;ctx.fillRect(0,0,W,H);const[ox,oy]=natP(0,0,0);ctx.drawImage(PW.ground,(ox-PW.gx0)*PX,(oy-PW.gy0)*PX,PW.ground.width*PX,PW.ground.height*PX)}
+// ================= Sprites d'unités pixel art (kit assets/units.js) =================
+// Chaque rôle est retracé à l'échelle 0,5 (≈40 px de haut) ; 8 images couvrent l'animation des lueurs.
+const SPR={},SPR_K=.5,SPR_FRAMES=8;
+function buildUnitSprites(){const U=UnitKit.UNITS,specs={paladin:U[0].list[0].s,healer:U[1].list[0].s,guard:U[2].list[4].s,shooter:UnitKit.TIREUR};
+ for(const[role,s0]of Object.entries(specs)){const s={...s0,noProj:true},frames=[];for(let i=0;i<SPR_FRAMES;i++)frames.push(UnitKit.figure(s,i*.2,SPR_K));SPR[role]={frames,ax:Math.round(30*SPR_K),ay:Math.round(80*SPR_K)}}}
+// hauteur visible d'un sprite (première ligne non transparente), pour placer la barre de vie
+function spriteTop(c){const d=c.getContext('2d').getImageData(0,0,c.width,c.height).data;for(let y=0;y<c.height;y++)for(let x=0;x<c.width;x++)if(d[(y*c.width+x)*4+3])return y;return 0}
+// Ennemis : famille « Credo souillé » (assets/enemies.js)
+const ESPR={};
+function buildEnemySprites(){const F=EnemyKit.FAM[1],map={creep:['fig',F.fig.c,30],brute:['b',F.b,40],spitter:['fig',F.fig.s,30]};
+ for(const[k,[kind,spec,cx]]of Object.entries(map)){const s={...spec,noProj:true},frames=[];for(let i=0;i<SPR_FRAMES;i++)frames.push(EnemyKit.draw(kind,s,i*.2,SPR_K));
+  const ay=Math.round(80*SPR_K);ESPR[k]={frames,ax:Math.round(cx*SPR_K),ay,h:ay-spriteTop(frames[0])}}
+ for(const S of Object.values(SPR))S.h=S.ay-spriteTop(S.frames[0])}
+function drawUnitSprite(u,S=SPR[u.role],isEnemy=false){const r=isEnemy?(u.kind==='brute'?.85:.6):u.role==='paladin'?.75:.54;
+ circle3(u.x,u.z,r*1.3,'#0b1615a0');
+ if(!isEnemy&&selected.includes(u)&&u.hp>0){circle3(u.x,u.z,r*1.75,'#ead08c55');const sp=project(u.x,.02,u.z);ctx.strokeStyle='#f8df93';ctx.lineWidth=PX;ctx.beginPath();ctx.ellipse(sp.x,sp.y,r*1.75*Z()*.9,r*1.75*Z()*.42,0,0,Math.PI*2);ctx.stroke()}
+ // orientation : alliés vers l'ennemi visé, sinon dans le sens de la marche (miroir horizontal à l'écran)
+ const foe=isEnemy?null:targetClosest(u,enemies,10),step=(u.x-u.z)-((u._lx??u.x)-(u._lz??u.z)),moved=Math.hypot(u.x-(u._lx??u.x),u.z-(u._lz??u.z))>.001;
+ const dxs=foe?(foe.x-foe.z)-(u.x-u.z):step;if(Math.abs(dxs)>.001)u._face=dxs<0?-1:1;u._lx=u.x;u._lz=u.z;
+ const bob=moved?Math.round(Math.abs(Math.sin(currentTime*(isEnemy?7:9)+u.id*1.7))*1.4):0,kick=!isEnemy&&u.attack>(u.role==='paladin'?.7:.62)?1:0;
+ const key=u.id??Math.round(u.x*7+u.z*13),fr=S.frames[(Math.floor(currentTime*5)+(key&7))%SPR_FRAMES],[nx,ny]=natP(u.x,0,u.z),f=u._face||1;
+ ctx.save();ctx.translate(nx*PX,(ny-bob)*PX);if(f<0)ctx.scale(-1,1);ctx.drawImage(fr,(-S.ax-kick)*PX,-S.ay*PX,fr.width*PX,fr.height*PX);ctx.restore()}
+const hpY=(u,isEnemy)=>{if(!PIXEL)return 3*Z();const S=isEnemy?ESPR[u.kind]:SPR[u.role];return S?(S.h+4)*PX:3*Z()};
 function drawCharacter(u,isEnemy=false){let p=project(u.x,0,u.z);let r=isEnemy?(u.kind==='brute'?.85:.6):u.role==='paladin'?.75:.54;
-if(!isEnemy&&u.role==='shooter'){drawShooterModel(u)}else{circle3(u.x,u.z,r*1.3,'#0b1615a0');if(!isEnemy&&selected.includes(u)&&u.hp>0){circle3(u.x,u.z,r*1.75,'#ead08c55');let sp=project(u.x,.02,u.z);ctx.strokeStyle='#f8df93';ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(sp.x,sp.y,r*1.75*Z()*.9,r*1.75*Z()*.42,0,0,Math.PI*2);ctx.stroke()}let color=isEnemy?(u.kind==='brute'?'#8b4d45':u.kind==='spitter'?'#a16d8a':'#a75b4e'):u.role==='paladin'?'#d8c48b':u.role==='healer'?'#9ccfba':u.role==='shooter'?'#aac3e1':'#b1b6ac';box3(u.x,u.z,r*1.2,r*.9,isEnemy?u.kind==='brute'?1.8:1.25:1.55,color,isEnemy?'#4d2b2b':'#485b5b',isEnemy?'#673332':'#69726a');sphere3(u.x,isEnemy?1.55:1.9,u.z,r*.49,color);if(!isEnemy){if(u.role==='paladin'){line3([u.x-.7,1,u.z],[u.x-1,2.3,u.z],'#e9c779',3);box3(u.x+.7,u.z, .55,1.1,1.5,'#d6c07a','#77745c','#6f6c55')}else if(u.role==='healer'){sphere3(u.x,2.6,u.z,.2,'#86ffc9')}else line3([u.x-.3,1,u.z],[u.x-1,1,u.z-1],'#b6d4dc',2)}else if(u.kind==='brute'){sphere3(u.x,2.3,u.z,.36,'#d57167')}}
-let hpWidth=Math.max(12,2.8*Z());ctx.fillStyle='#191b1d';ctx.fillRect(p.x-hpWidth/2,p.y-3*Z(),hpWidth,4);ctx.fillStyle=isEnemy?'#db7772':u.role==='guard'?'#9db88f':'#85d6b1';ctx.fillRect(p.x-hpWidth/2,p.y-3*Z(),hpWidth*Math.max(0,u.hp/u.max),4);if(!isEnemy&&u.squad){ctx.textAlign='center';ctx.fillStyle='#f5ecca';ctx.font='bold 10px system-ui';ctx.fillText('I'+u.squad,p.x,p.y-3*Z()-6)}}
+if(PIXEL&&!isEnemy&&SPR[u.role]){drawUnitSprite(u)}else if(PIXEL&&isEnemy&&ESPR[u.kind]){drawUnitSprite(u,ESPR[u.kind],true)}else if(!isEnemy&&u.role==='shooter'){drawShooterModel(u)}else{circle3(u.x,u.z,r*1.3,'#0b1615a0');if(!isEnemy&&selected.includes(u)&&u.hp>0){circle3(u.x,u.z,r*1.75,'#ead08c55');let sp=project(u.x,.02,u.z);ctx.strokeStyle='#f8df93';ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(sp.x,sp.y,r*1.75*Z()*.9,r*1.75*Z()*.42,0,0,Math.PI*2);ctx.stroke()}let color=isEnemy?(u.kind==='brute'?'#8b4d45':u.kind==='spitter'?'#a16d8a':'#a75b4e'):u.role==='paladin'?'#d8c48b':u.role==='healer'?'#9ccfba':u.role==='shooter'?'#aac3e1':'#b1b6ac';box3(u.x,u.z,r*1.2,r*.9,isEnemy?u.kind==='brute'?1.8:1.25:1.55,color,isEnemy?'#4d2b2b':'#485b5b',isEnemy?'#673332':'#69726a');sphere3(u.x,isEnemy?1.55:1.9,u.z,r*.49,color);if(!isEnemy){if(u.role==='paladin'){line3([u.x-.7,1,u.z],[u.x-1,2.3,u.z],'#e9c779',3);box3(u.x+.7,u.z, .55,1.1,1.5,'#d6c07a','#77745c','#6f6c55')}else if(u.role==='healer'){sphere3(u.x,2.6,u.z,.2,'#86ffc9')}else line3([u.x-.3,1,u.z],[u.x-1,1,u.z-1],'#b6d4dc',2)}else if(u.kind==='brute'){sphere3(u.x,2.3,u.z,.36,'#d57167')}}
+let hpWidth=Math.max(12,2.8*Z());ctx.fillStyle='#191b1d';ctx.fillRect(p.x-hpWidth/2,p.y-hpY(u,isEnemy),hpWidth,4);ctx.fillStyle=isEnemy?'#db7772':u.role==='guard'?'#9db88f':'#85d6b1';ctx.fillRect(p.x-hpWidth/2,p.y-hpY(u,isEnemy),hpWidth*Math.max(0,u.hp/u.max),4);if(!isEnemy&&u.squad){ctx.textAlign='center';ctx.fillStyle='#f5ecca';ctx.font='bold 10px system-ui';ctx.fillText('I'+u.squad,p.x,p.y-hpY(u,isEnemy)-6)}}
 function drawEffects(){for(let e of effects){let a=1-e.age/e.duration;ctx.globalAlpha=a;if(e.type==='laser')line3([e.x,1.35,e.z],[e.tx,1.2,e.tz],e.color,3);else if(e.type==='hit')sphere3(e.x,1.4,e.z,.4*a,e.color);else if(e.type==='zone'){let p=project(e.x,0,e.z);ctx.beginPath();ctx.ellipse(p.x,p.y,e.r*Z()*.85,e.r*Z()*.4,0,0,Math.PI*2);ctx.lineWidth=3;ctx.strokeStyle=e.color;ctx.stroke()}ctx.globalAlpha=1}}
-function draw(){drawWorld();let all=units.filter(u=>u.hp>0).map(u=>({u,enemy:false})).concat(enemies.map(u=>({u,enemy:true})));all.sort((a,b)=>(a.u.x+a.u.z)-(b.u.x+b.u.z));for(let v of all)drawCharacter(v.u,v.enemy);drawEffects();let p=project(0,0,18);ctx.fillStyle='#c9afd0';ctx.font='bold 10px system-ui';ctx.textAlign='center';ctx.fillText('ANCRE',p.x,p.y+15*cam.zoom)}
+function draw(){if(PIXEL)drawWorldPixel();else drawWorld();let all=units.filter(u=>u.hp>0).map(u=>({u,enemy:false,d:u.x+u.z})).concat(enemies.map(u=>({u,enemy:true,d:u.x+u.z})),PIXEL?PW.objs.map(o=>({u:o,deco:true,d:o.d})):[]);all.sort((a,b)=>a.d-b.d);for(let v of all)v.deco?drawDeco(v.u):drawCharacter(v.u,v.enemy);drawEffects();let p=project(0,0,18);ctx.fillStyle='#c9afd0';ctx.font='bold 10px system-ui';ctx.textAlign='center';ctx.fillText('ANCRE',p.x,p.y+15*cam.zoom)}
 function renderRoster(){let el=document.getElementById('roster');const groups=[...units.slice(0,3).map(u=>({units:[u],name:u.name,role:u.role})),...Array.from({length:3},(_,j)=>({units:units.filter(u=>u.squad===j+1),name:'Indra · Escouade '+(j+1),role:'guard'}))];el.innerHTML=groups.map((g,i)=>{let hp=g.units.reduce((a,u)=>a+u.hp,0),max=g.units.reduce((a,u)=>a+u.max,0),sel=g.units.some(u=>selected.includes(u));return `<button class="unit ${sel?'sel':''}" data-i="${i}"><b>${i+1}. ${g.name}</b><br><small>${g.role==='guard'?g.units.filter(u=>u.hp>0).length+' / 4 soldats':g.role==='paladin'?'Épée et bouclier':g.role==='healer'?'Soins':g.role==='shooter'?'Tir longue portée':''}</small><div class="bar"><i style="width:${100*hp/max}%"></i></div></button>`}).join('');for(let b of el.querySelectorAll('.unit'))b.addEventListener('click',ev=>selectIndex(+b.dataset.i,ev.shiftKey))}
 function selectIndex(i,add=false){let group=i<3?[units[i]]:units.filter(u=>u.squad===i-2),alive=group.filter(u=>u.hp>0);selected=add?[...new Set([...selected,...alive])]:alive;showSelection();renderRoster()}
 function showSelection(){let first=selected[0],n=document.getElementById('chosen'),d=document.getElementById('desc');n.textContent=selected.length>1?selected.length+' unités sélectionnées':first?.name||'Aucune unité';d.textContent=first?.role==='paladin'?'Égide (Espace) : protège les alliés proches et frappe les ennemis.':first?.role==='healer'?'Restauration (Espace) : soigne les alliés à proximité.':first?.role==='shooter'?'Tir de précision (Espace) : inflige de lourds dégâts.':first?.role==='guard'?'Discipline martiale (Espace) : renforce l’escouade.':'Choisissez un Exilé ou une escouade.'}
 canvas.addEventListener('pointerdown',ev=>{if(ev.button!==0)return;let candidates=units.filter(u=>u.hp>0).map(u=>({u,p:project(u.x,1,u.z)}));let near=candidates.sort((a,b)=>Math.hypot(a.p.x-ev.clientX,a.p.y-ev.clientY)-Math.hypot(b.p.x-ev.clientX,b.p.y-ev.clientY))[0];if(near&&Math.hypot(near.p.x-ev.clientX,near.p.y-ev.clientY)<Math.max(18,1.3*Z())){let group=near.u.squad?units.filter(u=>u.squad===near.u.squad&&u.hp>0):[near.u];selected=ev.shiftKey?[...new Set([...selected,...group])]:group;showSelection();renderRoster()}});
 canvas.addEventListener('contextmenu',ev=>{ev.preventDefault();if(ended)return;let nearest=enemies.map(u=>({u,p:project(u.x,1,u.z)})).sort((a,b)=>Math.hypot(a.p.x-ev.clientX,a.p.y-ev.clientY)-Math.hypot(b.p.x-ev.clientX,b.p.y-ev.clientY))[0];let target=nearest&&Math.hypot(nearest.p.x-ev.clientX,nearest.p.y-ev.clientY)<Math.max(20,1.2*Z())?nearest.u:groundFromScreen(ev.clientX,ev.clientY);let valid=selected.filter(u=>u.hp>0);valid.forEach((u,i)=>{u.tx=target.x+(i%4-1.5)*1.5;u.tz=target.z+Math.floor(i/4)*1.5;u.stance='attack'});if(nearest&&target===nearest.u)say('Ordre : attaquer la cible.',1)});
-const keys={};addEventListener('keydown',ev=>{if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(ev.code))ev.preventDefault();let k=ev.key.toLowerCase();keys[k]=true;if(!ev.repeat){if(k>='1'&&k<='6')selectIndex(+k-1,ev.shiftKey);if(k==='a'){selected=units.filter(u=>u.hp>0);showSelection();renderRoster()}if(k==='h')hold();if(k==='r')init();if(k===' ')ability()}});addEventListener('keyup',ev=>keys[ev.key.toLowerCase()]=false);canvas.addEventListener('wheel',ev=>{ev.preventDefault();cam.zoom=clamp(cam.zoom*(ev.deltaY>0?.9:1.1),.65,1.7)},{passive:false});function hold(){selected.forEach(u=>{u.stance='hold';u.tx=u.x;u.tz=u.z});say('Les unités maintiennent leur position.',1)}document.getElementById('special').onclick=ability;document.getElementById('hold').onclick=hold;document.getElementById('restart').onclick=init;
-function frame(t){let dt=Math.min(.045,(t-last)/1000||.016);last=t;let s=10*dt;const dx=(keys.d||keys.arrowright?1:0)-(keys.q||keys.a||keys.arrowleft?1:0),dz=(keys.s||keys.arrowdown?1:0)-(keys.z||keys.w||keys.arrowup?1:0);if(dx||dz){cam.x=clamp(cam.x+dx*s,-17,17);cam.z=clamp(cam.z+dz*s,-15,16)}update(dt);draw();requestAnimationFrame(frame)}init();requestAnimationFrame(frame);
-</script></body></html>
+const keys={};addEventListener('keydown',ev=>{if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(ev.code))ev.preventDefault();let k=ev.key.toLowerCase();keys[k]=true;if(!ev.repeat){if(k>='1'&&k<='6')selectIndex(+k-1,ev.shiftKey);if(k==='a'){selected=units.filter(u=>u.hp>0);showSelection();renderRoster()}if(k==='h')hold();if(k==='r')init();if(k==='p'){PIXEL=!PIXEL;PX=PIXEL?Math.max(2,Math.round(innerWidth/640)):1;resize()}if(k===' ')ability()}});addEventListener('keyup',ev=>keys[ev.key.toLowerCase()]=false);canvas.addEventListener('wheel',ev=>{ev.preventDefault();if(PIXEL){PX=clamp(PX+(ev.deltaY>0?-1:1),2,6);resize()}else cam.zoom=clamp(cam.zoom*(ev.deltaY>0?.9:1.1),.65,1.7)},{passive:false});function hold(){selected.forEach(u=>{u.stance='hold';u.tx=u.x;u.tz=u.z});say('Les unités maintiennent leur position.',1)}document.getElementById('special').onclick=ability;document.getElementById('hold').onclick=hold;document.getElementById('restart').onclick=init;
+function frame(t){let dt=Math.min(.045,(t-last)/1000||.016);last=t;let s=10*dt;const dx=(keys.d||keys.arrowright?1:0)-(keys.q||keys.a||keys.arrowleft?1:0),dz=(keys.s||keys.arrowdown?1:0)-(keys.z||keys.w||keys.arrowup?1:0);if(dx||dz){cam.x=clamp(cam.x+dx*s,-17,17);cam.z=clamp(cam.z+dz*s,-15,16)}update(dt);draw();if(window.render3D&&!PIXEL){window.render3D();ctx.save();ctx.setTransform(1,0,0,1,0,0);ctx.drawImage(document.getElementById('three'),0,0,canvas.width,canvas.height);ctx.restore()}requestAnimationFrame(frame)}
+// Réduit chaque canal à 8 niveaux : supprime les dégradés d'anticrénelage, donne des aplats nets.
+const LEVELS=new Uint8Array(256).map((_,v)=>Math.round(Math.round(v/255*7)/7*255));function posterize(){if(!canvas.width||!canvas.height)return;const img=ctx.getImageData(0,0,canvas.width,canvas.height),d=img.data;for(let i=0;i<d.length;i+=4){d[i]=LEVELS[d[i]];d[i+1]=LEVELS[d[i+1]];d[i+2]=LEVELS[d[i+2]]}ctx.putImageData(img,0,0)}buildPixelWorld();buildUnitSprites();buildEnemySprites();init();requestAnimationFrame(frame);
+</script>
+<script src="assets/tireur_saurus_lite.js"></script>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
+<script type="module">
+// Calque 3D : affiche le modèle Blender du Tireur par-dessus le canvas 2D, avec la même projection isométrique que project().
+import * as THREE from 'three';
+import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
+const el=document.getElementById('three');
+const renderer=new THREE.WebGLRenderer({canvas:el,alpha:true,antialias:false});
+renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.5;
+const scene=new THREE.Scene();
+scene.add(new THREE.HemisphereLight(0xe4ecdc,0x24332a,1.6));
+const sun=new THREE.DirectionalLight(0xfff0d8,2.6);sun.position.set(-6,12,9);scene.add(sun);
+const rim=new THREE.DirectionalLight(0xffc890,1.4);rim.position.set(8,6,-8);scene.add(rim);
+const camera=new THREE.OrthographicCamera();camera.matrixAutoUpdate=false;
+const SCALE=1.3, bodies=new Map();
+let proto=null;
+const bin=Uint8Array.from(atob(window.TIREUR_GLB_B64),c=>c.charCodeAt(0)).buffer;
+new GLTFLoader().parse(bin,'',g=>{proto=g.scene;window.TIREUR3D=true},e=>console.error('Tireur 3D :',e));
+function syncCamera(){
+  const s=Z(),A=2*s*.86/W,bx=2*s*.86*(cam.z-cam.x)/W,Bxz=-2*s*YK()/H,By=2*s*.96/H,by=.14+2*s*YK()*(cam.x+cam.z)/H,k=1/200;
+  camera.projectionMatrix.set(A,0,-A,bx, Bxz,By,Bxz,by, -k,-.875*k,-k,0, 0,0,0,1);
+  camera.projectionMatrixInverse.copy(camera.projectionMatrix).invert();
+}
+// Appelé par la boucle du jeu juste après draw() : le résultat est recopié dans le canvas 2D (même résolution).
+window.render3D=function(){
+  if(!proto)return;
+  const k=PX>1?1/PX:dpr;
+  if(el.width!==Math.floor(W*k)||el.height!==Math.floor(H*k)){renderer.setPixelRatio(k);renderer.setSize(W,H,false)}
+  syncCamera();
+  const live=new Set();
+  for(const u of units){
+    if(u.role!=='shooter'||u.hp<=0)continue;
+    live.add(u);
+    let b=bodies.get(u);
+    if(!b){b={o:proto.clone(true),px:u.x,pz:u.z,yaw:Math.PI*.75};b.o.scale.setScalar(SCALE);scene.add(b.o);bodies.set(u,b)}
+    const foe=typeof targetClosest==='function'?targetClosest(u,enemies,10):null;
+    let dx=u.x-b.px,dz=u.z-b.pz;
+    if(foe){dx=foe.x-u.x;dz=foe.z-u.z}
+    if(Math.hypot(dx,dz)>1e-3){let want=Math.atan2(dx,dz),d=Math.atan2(Math.sin(want-b.yaw),Math.cos(want-b.yaw));b.yaw+=d*.18}
+    const recoil=u.attack>.62?(u.attack-.62)*.5:0;
+    b.o.position.set(u.x-Math.sin(b.yaw)*recoil,0,u.z-Math.cos(b.yaw)*recoil);
+    b.o.rotation.y=b.yaw;b.px=u.x;b.pz=u.z;
+  }
+  for(const [u,b] of bodies)if(!live.has(u)){scene.remove(b.o);bodies.delete(u)}
+  renderer.render(scene,camera);
+};
+</script>
+</body></html>

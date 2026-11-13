@@ -1,0 +1,30 @@
+<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Ennemis pixel art — 5 propositions</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0b120e;--card:#141c17;--line:#2a3a2e;--txt:#e3e6d4;--mut:#9fb09e;--acc:#d8c26a}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--txt);font:15px/1.4 'Pixelify Sans',system-ui,sans-serif}
+header,main{max-width:1400px;margin:auto;padding:0 16px}header{padding-top:18px}h1{margin:0;font-weight:600;letter-spacing:.08em;font-size:24px;color:var(--acc)}header p{color:var(--mut);margin:4px 0 0;max-width:980px}
+.fam{background:var(--card);border:1px solid var(--line);border-radius:6px;margin:14px 0;overflow:hidden}
+.fam h2{margin:0;padding:10px 14px 0;font-size:19px;color:var(--acc);font-weight:600}.fam>p{margin:2px 14px 8px;color:#c8cdbb}
+.row{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:1px;background:var(--line)}
+.cell{background:radial-gradient(ellipse at 50% 85%,#22322a,#0f1813);padding:8px 8px 6px;display:flex;flex-direction:column;align-items:center}
+.art{display:flex;align-items:flex-end;gap:8px}.cell canvas{image-rendering:pixelated;display:block}
+.cell b{font-weight:600;font-size:15px;margin-top:4px}.cell small{color:var(--mut);text-align:center}
+</style></head><body>
+<header><h1>ENNEMIS · 5 PROPOSITIONS DE CORRUPTION</h1><p>D’après la bible des Terres Féroces : les assaillants du Sanctum sont des « Forces de la Bête », des formes de corruption propres au monde. Chaque proposition décline les trois archétypes du game design : <b>Corrompu</b> (rapide, mêlée), <b>Brute</b> (lente, frappe lourde), <b>Cracheur</b> (fragile, à distance). Gabarit 80×84 affiché ×3 ; la vignette ×1 montre la taille réelle en jeu (échelle 0,5). Lueurs animées.</p></header>
+<main id="main"></main>
+<script src="assets/decor.js?v=2"></script>
+<script src="assets/units.js?v=3"></script>
+<script src="assets/enemies.js?v=1"></script>
+<script>
+'use strict';
+const{FAM,draw}=EnemyKit;
+const cells=[],main=document.getElementById('main');
+for(const f of FAM){const el=document.createElement('section');el.className='fam';el.innerHTML=`<h2>${f.name}</h2><p>${f.desc}</p><div class="row"></div>`;main.appendChild(el);
+ for(const[key,label,role]of[['c','Corrompu','rapide · mêlée'],['b','Brute','lente · frappe lourde'],['s','Cracheur','fragile · à distance']]){
+  const spec=f.fig?.[key]||f[key],kind=f.fig?.[key]?'fig':key,cell=document.createElement('div');cell.className='cell';const art=document.createElement('div');art.className='art';const cv=[];
+  for(const[sc,k]of[[3,1],[2,.5]]){const c=document.createElement('canvas');c.width=Math.ceil(80*k)*sc;c.height=Math.ceil(84*k)*sc;art.appendChild(c);cv.push([c,k])}
+  cell.appendChild(art);cell.insertAdjacentHTML('beforeend',`<b>${label}</b><small>${role}</small>`);el.querySelector('.row').appendChild(cell);cells.push({kind,spec:{...spec,noProj:false},cv})}}
+function paint(t){for(const{kind,spec,cv}of cells)for(const[c,k]of cv){const img=draw(kind,spec,t,k),g=c.getContext('2d');g.imageSmoothingEnabled=false;g.clearRect(0,0,c.width,c.height);g.drawImage(img,0,0,c.width,c.height)}}
+paint(0);let last=0;(function loop(now){requestAnimationFrame(loop);if(now-last<110)return;last=now;paint(now/1000)})(0);
+</script></body></html>

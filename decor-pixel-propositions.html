@@ -1,0 +1,118 @@
+<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Décor pixel art — 5 propositions</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#121314;--card:#1b1c1e;--line:#33302c;--txt:#e6ddcc;--mut:#a59d8f;--acc:#d9a64e}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--txt);font:15px/1.45 'Pixelify Sans',system-ui,sans-serif}
+header{max-width:1640px;margin:auto;padding:18px 16px 4px}h1{margin:0;font-weight:600;letter-spacing:.08em;font-size:24px}header p{color:var(--mut);margin:4px 0 0}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,780px),1fr));gap:16px;max-width:1640px;margin:12px auto;padding:0 16px 28px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.card canvas{display:block;width:100%;height:auto;image-rendering:pixelated}
+.b{padding:10px 14px 14px}.b h2{margin:0;font-size:19px;color:var(--acc);font-weight:600}.b p{margin:4px 0 8px;color:#cfc6b6}
+.sw{display:flex;gap:3px;flex-wrap:wrap}.sw i{width:16px;height:16px;display:block;border:1px solid #0006}
+</style></head><body>
+<header><h1>DÉCOR PIXEL ART · 5 PROPOSITIONS</h1><p>Dessiné en résolution native 300×170 px, agrandi ×3 sans lissage. Chaque planche : une scène (herbe, sentier, arbres, temple) et la bande des éléments isolés.</p></header>
+<div class="grid" id="grid"></div>
+<script>
+'use strict';
+const NW=300,NH=170,SCALE=3;
+const BAYER=[[0,8,2,10],[12,4,14,6],[3,11,1,9],[15,7,13,5]].map(r=>r.map(v=>(v+.5)/16));
+function rng(seed){return()=>{seed=(1664525*seed+1013904223)>>>0;return seed/4294967296}}
+
+/* ---------- surface de dessin pixel ---------- */
+class Px{
+ constructor(w,h,S){this.w=w;this.h=h;this.S=S;this.c=document.createElement('canvas');this.c.width=w;this.c.height=h;this.g=this.c.getContext('2d');this.d=this.g.createImageData(w,h);this.z=new Float32Array(w*h).fill(-1e9)}
+ set(x,y,col,z=0){x|=0;y|=0;if(x<0||y<0||x>=this.w||y>=this.h)return;const i=y*this.w+x;if(z<this.z[i])return;this.z[i]=z;const o=i*4,c=hex(col);this.d.data[o]=c[0];this.d.data[o+1]=c[1];this.d.data[o+2]=c[2];this.d.data[o+3]=255}
+ get(x,y){return x>=0&&y>=0&&x<this.w&&y<this.h&&this.d.data[(y*this.w+x)*4+3]>0}
+ flush(){this.g.putImageData(this.d,0,0)}
+ // choisit une teinte dans une rampe selon v∈[0,1], avec tramage ordonné optionnel
+ ramp(r,v,x,y){v=Math.max(0,Math.min(.999,v))*(r.length-1);let i=Math.floor(v),f=v-i;if(this.S.dither&&f>BAYER[y&3][x&3])i++;else if(!this.S.dither&&f>.5)i++;return r[Math.min(i,r.length-1)]}
+ poly(pts,fn,z){let x0=1e9,x1=-1e9,y0=1e9,y1=-1e9;for(const[x,y]of pts){x0=Math.min(x0,x);x1=Math.max(x1,x);y0=Math.min(y0,y);y1=Math.max(y1,y)}
+  for(let y=Math.floor(y0);y<=y1;y++)for(let x=Math.floor(x0);x<=x1;x++){if(inside(pts,x+.5,y+.5))this.set(x,y,fn(x,y),z)}}
+}
+const hexCache={};function hex(c){return hexCache[c]||(hexCache[c]=[1,3,5].map(i=>parseInt(c.substr(i,2),16)))}
+function inside(p,x,y){let r=false;for(let i=0,j=p.length-1;i<p.length;j=i++){const[xi,yi]=p[i],[xj,yj]=p[j];if((yi>y)!==(yj>y)&&x<(xj-xi)*(y-yi)/(yj-yi)+xi)r=!r}return r}
+
+/* ---------- éléments ---------- */
+// tuile iso 32×16 posée en (cx, y haut)
+function tile(P,cx,ty,kind,R,z){const S=P.S,base=kind==='path'?S.dirt:kind==='stone'?S.stone:S.grass;
+ for(let r=0;r<16;r++){const hw=r<8?(r+1)*2:(16-r)*2;for(let x=cx-hw;x<cx+hw;x++){let v=.55+(R()-.5)*S.noise;
+  if(r<2||x<cx-hw+2)v+=.18; if(r>13)v-=.15;
+  P.set(x,ty+r,P.ramp(base,v,x,ty+r),z)}}
+ if(kind==='grass')for(let k=0;k<5;k++){const x=cx-10+R()*20|0,y=ty+3+R()*9|0;P.set(x,y,S.grass[S.grass.length-1],z+.01);P.set(x+1,y-1,S.grass[S.grass.length-1],z+.01);P.set(x+2,y,S.grass[S.grass.length-2],z+.01)}
+ if(kind==='grass'&&S.flowers&&R()<.5){const x=cx-8+R()*16|0,y=ty+5+R()*6|0;P.set(x,y,S.flower,z+.02)}
+ if(kind==='path')for(let k=0;k<3;k++){const x=cx-8+R()*16|0,y=ty+4+R()*8|0;P.set(x,y,S.dirt[S.dirt.length-1],z+.01);P.set(x+1,y,S.dirt[1],z+.01)}
+}
+// feuillage : amas de disques ombrés depuis la lumière en haut à gauche
+function blob(P,circles,ramp,z,outline){const S=P.S;let x0=1e9,x1=-1e9,y0=1e9,y1=-1e9;for(const[x,y,r]of circles){x0=Math.min(x0,x-r);x1=Math.max(x1,x+r);y0=Math.min(y0,y-r);y1=Math.max(y1,y+r)}
+ const inn=(x,y)=>circles.find(([cx,cy,r])=>(x-cx)**2+(y-cy)**2<=r*r);
+ for(let y=y0-1|0;y<=y1+1;y++)for(let x=x0-1|0;x<=x1+1;x++){const c=inn(x+.5,y+.5);
+  if(c){const[cx,cy,r]=c,nx=(x+.5-cx)/r,ny=(y+.5-cy)/r;let v=.5-(nx*.55+ny*.75)*.55+(1-Math.hypot(nx,ny))*.15;P.set(x,y,P.ramp(ramp,v,x,y),z)}
+  else if(outline&&(inn(x+1.5,y+.5)||inn(x-.5,y+.5)||inn(x+.5,y+1.5)||inn(x+.5,y-.5)))P.set(x,y,S.outline,z-.001)}}
+function trunk(P,x,yb,h,w,z){const S=P.S;for(let y=yb-h;y<yb;y++)for(let i=0;i<w;i++)P.set(x+i,y,i<w/2?S.trunk[1]:S.trunk[0],z);if(S.outline)for(let y=yb-h;y<yb;y++){P.set(x-1,y,S.outline,z-.001);P.set(x+w,y,S.outline,z-.001)}}
+function treeRound(P,x,yb,R,z,s=1){trunk(P,x-1,yb,10*s,3,z);const cs=[];for(let i=0;i<6;i++)cs.push([x+(R()-.5)*14*s,yb-14*s-R()*10*s,(5+R()*4)*s]);cs.push([x,yb-18*s,8*s]);blob(P,cs,P.S.leaf,z+.1,P.S.outline);P.set(x,yb,P.S.shadow,z-1)}
+function treeTall(P,x,yb,R,z){trunk(P,x-1,yb,6,2,z);const cs=[];for(let i=0;i<5;i++)cs.push([x+(R()-.5)*3,yb-8-i*6,5-i*.6]);blob(P,cs,P.S.leaf2,z+.1,P.S.outline)}
+function treePalm(P,x,yb,R,z){const S=P.S;for(let i=0;i<20;i++){const xx=x+Math.round(Math.sin(i/7)*2);P.set(xx,yb-i,S.trunk[i%3?0:1],z);P.set(xx+1,yb-i,S.trunk[0],z)}
+ const tx=x+Math.round(Math.sin(20/7)*2),ty=yb-20;for(const[a,l]of[[-2.6,11],[-1.9,12],[-.9,10],[-.2,11],[.6,12],[1.2,10],[2.9,9]])for(let t=0;t<l;t++){const px=tx+Math.cos(a)*t,py=ty+Math.sin(a)*t*.6+t*t*.05;P.set(px,py,P.ramp(S.leaf2,.75-t/l*.6,px|0,py|0),z+.2);P.set(px,py+1,S.leaf2[0],z+.19)}}
+function bush(P,x,yb,R,z){blob(P,[[x-3,yb-3,4],[x+3,yb-3,4],[x,yb-6,4]],P.S.leaf,z,P.S.outline)}
+// bloc iso : coin arrière (sx,sy), a pixels le long de x, b le long de z, hauteur h
+function box(P,sx,sy,a,b,h,ramp,z,opt={}){const S=P.S,X=(u,v)=>[sx+u-v,sy+(u+v)/2];
+ const p0=X(0,0),px=X(a,0),pz=X(0,b),pxz=X(a,b),up=p=>[p[0],p[1]-h];
+ const tex=(x,y,v)=>{if(opt.brick){const by=(y-sy)%5,bx=(x+((y-sy)/5|0)*3)%7;if(by===0||bx===0)v-=.22}if(opt.grooves&&x%3===0)v-=.15;return P.ramp(ramp,v+(S.noise*.25)*(((x*7+y*13)%5)/5-.5),x,y)};
+ P.poly([pz,pxz,up(pxz),up(pz)],(x,y)=>tex(x,y,.42),z);
+ P.poly([px,pxz,up(pxz),up(px)],(x,y)=>tex(x,y,.22),z);
+ P.poly([up(p0),up(px),up(pxz),up(pz)],(x,y)=>tex(x,y,.82),z+.01);
+ if(S.outline){for(const[e0,e1]of[[up(pz),up(pxz)],[up(pxz),up(px)],[pz,pxz],[pxz,px],[up(pz),pz],[up(px),px],[up(p0),up(px)],[up(p0),up(pz)]]){const n=Math.max(Math.abs(e1[0]-e0[0]),Math.abs(e1[1]-e0[1]));for(let t=0;t<=n;t++)P.set(e0[0]+(e1[0]-e0[0])*t/n,e0[1]+(e1[1]-e0[1])*t/n,S.outline,z+.02)}}
+ else{const n=Math.abs(pxz[0]-up(pxz)[0])+h;for(let t=0;t<h;t++)P.set(pxz[0],pxz[1]-t,P.ramp(ramp,.95,pxz[0],pxz[1]-t),z+.02)}}
+function pillar(P,sx,sy,h,z,broken){const S=P.S;box(P,sx,sy,8,8,3,S.stone,z);box(P,sx,sy-3+1,6,6,h,S.stone,z+.1,{grooves:1});if(!broken)box(P,sx,sy-3-h+2,8,8,3,S.stone,z+.2);
+ else for(let i=0;i<4;i++)P.set(sx-1+i,sy-3-h+1-(i%2),S.stone[1],z+.3)}
+function banner(P,x,y,h,z){const S=P.S;for(let yy=0;yy<h;yy++)for(let xx=0;xx<4;xx++)P.set(x+xx,y+yy,yy===h-1&&xx%3===1?S.bg:P.ramp(S.cloth,.7-yy/h*.4-(xx===3?.2:0),x+xx,y+yy),z);P.set(x+1,y+3,S.cloth2,z+.01);P.set(x+2,y+3,S.cloth2,z+.01);P.set(x+1,y+2,S.cloth2,z+.01)}
+function orb(P,x,y,z){const S=P.S;for(let r=9;r>5;r--)for(let a=0;a<64;a++){const xx=x+Math.cos(a/64*6.283)*r,yy=y+Math.sin(a/64*6.283)*r*.45+6;if(BAYER[yy&3][xx&3]<(10-r)/6)P.set(xx,yy,S.glow,z-.5)}
+ blob(P,[[x,y,5]],S.orbR,z+.3,S.outline)}
+
+/* ---------- scène ---------- */
+function scene(S,seed){const P=new Px(NW,NH,S),R=rng(seed);
+ // fond
+ for(let y=0;y<NH;y++)for(let x=0;x<NW;x++){P.d.data[(y*NW+x)*4]=hex(S.bg)[0];P.d.data[(y*NW+x)*4+1]=hex(S.bg)[1];P.d.data[(y*NW+x)*4+2]=hex(S.bg)[2];P.d.data[(y*NW+x)*4+3]=255}
+ const OX=112,OY=34,T=(i,j)=>[OX+(i-j)*16,OY+(i+j)*8];
+ const N=7,path=(i,j)=>j===4&&i<5||i===4&&j>=4;
+ for(let i=0;i<N;i++)for(let j=0;j<N;j++){const[x,y]=T(i,j);tile(P,x,y,path(i,j)?'path':'grass',R,-200+i+j)}
+ const objs=[];
+ // temple : plateforme 3×2 tuiles en haut à droite, piliers, autel
+ objs.push({d:5.5,f:()=>{const[x,y]=T(4,0);box(P,x,y,48,32,7,S.stone,-90,{brick:1});
+   const top=(u,v)=>[x+u-v,y+(u+v)/2-7];
+   const pl=[[4,4],[44,4],[4,28],[44,28]];pl.forEach(([u,v],k)=>{const[px,py]=top(u,v);pillar(P,px,py,24,-80+u/40+v/30,k===1)});
+   const[ax,ay]=top(24,16);box(P,ax-1,ay-6,12,12,6,S.stone,-60);orb(P,ax-1,ay-20,-50);
+   const[bx,by]=top(4,28);banner(P,bx-6,by-22,12,-40);const[cx,cy]=top(44,28);banner(P,cx+2,cy-22,12,-40);
+ }});
+ // végétation sur les tuiles libres
+ const spots=[[0,0,'round'],[1,0,'tall'],[0,1,'round'],[2,1,'bush'],[0,3,'palm'],[1,2,'tall'],[0,5,'round'],[1,6,'bush'],[2,6,'round'],[6,5,'palm'],[6,6,'round'],[5,6,'tall'],[3,0,'bush'],[6,3,'bush']];
+ for(const[i,j,k]of spots){const[x,y]=T(i,j);objs.push({d:i+j,f:()=>{const yb=y+8;const z=-100+(i+j)*10;
+  if(k==='round')treeRound(P,x,yb,R,z,1.05);else if(k==='tall')treeTall(P,x,yb,R,z);else if(k==='palm')treePalm(P,x,yb,R,z);else bush(P,x,yb,R,z)}})}
+ objs.sort((a,b)=>a.d-b.d).forEach(o=>o.f());
+ // bande des éléments isolés à droite
+ const sx=236;for(let y=6;y<NH-6;y++)P.set(sx-6,y,S.outline||S.stone[0],500);
+ tile(P,sx+16,10,'grass',R,400);tile(P,sx+50,10,'path',R,400);
+ treeRound(P,sx+12,72,R,400,.9);treeTall(P,sx+34,72,R,400);treePalm(P,sx+54,72,R,400);
+ pillar(P,sx+10,108,26,400,false);pillar(P,sx+28,108,18,400,true);box(P,sx+44,100,14,10,8,S.stone,400,{brick:1});
+ orb(P,sx+30,148,400);bush(P,sx+52,160,R,400);
+ P.flush();return P.c}
+
+/* ---------- 5 directions artistiques ---------- */
+const PROPS=[
+ {name:'1 · Jungle sacrée',desc:'Verts profonds, calcaire pâle, contours sombres et tramage doux. Fidèle à l’ambiance actuelle du jeu.',
+  S:{bg:'#0f1a14',grass:['#183224','#21422c','#2c5536','#3c6c3f','#5a8a4a'],dirt:['#4a3f2c','#6b5a3c','#8a7550','#a8916a'],stone:['#4a4a42','#6f6d60','#97947f','#bcb79e','#dcd6bc'],leaf:['#0f2a1a','#1a4226','#2a5e32','#43803e','#6aa252'],leaf2:['#10261c','#1d3f2a','#2f5a38','#4a7a46'],trunk:['#3a2a1c','#5a4028'],outline:'#0a120d',shadow:'#0c1810',orbR:['#1c1230','#3a2864','#6a52a8','#a890e8'],glow:'#8a6ad0',cloth:['#3a0c12','#6a1a24','#962c34'],cloth2:'#d8cfb6',flower:'#d8c26a',flowers:1,dither:true,noise:.45}},
+ {name:'2 · Crépuscule doré',desc:'Herbes ocre, grès chaud, lumière rasante orangée. Ambiance fin de journée, sans contour.',
+  S:{bg:'#1e1220',grass:['#3a2e1e','#5a4a24','#7a6a2e','#9c8a3c','#c4ae56'],dirt:['#5a3422','#7c4a2c','#a0643a','#c4864e'],stone:['#5a3a2a','#8a5a3c','#b8804e','#dca66a','#f4cc8c'],leaf:['#2a2014','#4a3a1a','#6e5a22','#94802e','#c0a844'],leaf2:['#2a1a12','#4a2c1a','#743e22','#a85a2a'],trunk:['#2e1a14','#4e2e1e'],outline:'',shadow:'#2a1a12',orbR:['#3a1414','#7a2a1e','#c45a2a','#ffb05a'],glow:'#ff8a3a',cloth:['#4a0e14','#7a1e22','#a83a2a'],cloth2:'#f4d8a0',flower:'#ff7a4a',flowers:1,dither:true,noise:.4}},
+ {name:'3 · Brume gothique',desc:'Bleus-gris désaturés, pierre sombre moussue, végétation froide. Ton sombre et inquiétant.',
+  S:{bg:'#0c1016',grass:['#141c22','#1c2a2e','#26383a','#34484a','#4a605c'],dirt:['#22262a','#30363a','#424a4c','#5a6262'],stone:['#1e2228','#2e343c','#444c56','#5e6874','#808a96'],leaf:['#0e1618','#162428','#203638','#2e4a4a','#44625e'],leaf2:['#101a1e','#1a2a30','#263c44','#38545c'],trunk:['#1a1a1e','#2c2a2e'],outline:'#06080c',shadow:'#080c10',orbR:['#0e1a2a','#1e3a5a','#3a6a9a','#8ac4f0'],glow:'#4a90c8',cloth:['#2a0a10','#4a121c','#6e1e28'],cloth2:'#a8b4bc',flower:'#7a8ab0',flowers:0,dither:true,noise:.55}},
+ {name:'4 · Éclat 16 bits',desc:'Couleurs saturées, contours noirs, ombrage en aplats sans tramage. Lisibilité maximale, style console.',
+  S:{bg:'#14182a',grass:['#1e5a2a','#2e8a34','#4ab43c','#8ad84a'],dirt:['#6a4a2a','#9a6e3a','#c8984e','#ecc478'],stone:['#5a5a72','#8a8aa4','#b8b8cc','#e8e8f4'],leaf:['#14501e','#20802a','#3ab030','#7ae04a','#c4f46a'],leaf2:['#0e3a2a','#1a6440','#2e9a54','#5ad070'],trunk:['#4a2a14','#7a4a22'],outline:'#0a0a12',shadow:'#0a2a10',orbR:['#2a1060','#5a28b0','#9a5af0','#e0c0ff'],glow:'#b070ff',cloth:['#6a0a18','#b01a28','#e83a3a'],cloth2:'#fff4c0',flower:'#ffe04a',flowers:1,dither:false,noise:.3}},
+ {name:'5 · Sépulcre 4 tons',desc:'Palette réduite à 4 teintes vert-de-gris, tout en tramage. Rendu très rétro, très cohérent.',
+  S:{bg:'#0f1a14',grass:['#0f1a14','#2e4a36','#6a8a5e','#c4d0a0'],dirt:['#0f1a14','#2e4a36','#6a8a5e','#c4d0a0'],stone:['#0f1a14','#2e4a36','#6a8a5e','#c4d0a0'],leaf:['#0f1a14','#2e4a36','#6a8a5e','#c4d0a0'],leaf2:['#0f1a14','#2e4a36','#6a8a5e'],trunk:['#0f1a14','#2e4a36'],outline:'#0f1a14',shadow:'#0f1a14',orbR:['#0f1a14','#2e4a36','#6a8a5e','#c4d0a0'],glow:'#c4d0a0',cloth:['#0f1a14','#2e4a36','#6a8a5e'],cloth2:'#c4d0a0',flower:'#c4d0a0',flowers:0,dither:true,noise:.5}},
+];
+for(const[k,p]of PROPS.entries()){const card=document.createElement('div');card.className='card';
+ const src=scene(p.S,1000+k*77),big=document.createElement('canvas');big.width=NW*SCALE;big.height=NH*SCALE;const g=big.getContext('2d');g.imageSmoothingEnabled=false;g.drawImage(src,0,0,big.width,big.height);
+ const sw=[...new Set([...p.S.grass,...p.S.stone,...p.S.leaf,...p.S.cloth,...p.S.orbR])].map(c=>`<i style="background:${c}"></i>`).join('');
+ card.appendChild(big);card.insertAdjacentHTML('beforeend',`<div class="b"><h2>${p.name}</h2><p>${p.desc}</p><div class="sw">${sw}</div></div>`);
+ document.getElementById('grid').appendChild(card)}
+</script></body></html>
