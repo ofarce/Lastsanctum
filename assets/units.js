@@ -1,7 +1,7 @@
 // Kit de sprites d'unités pixel art (gabarit 80×84). Dépend de assets/decor.js.
 // Expose UnitKit.figure(spec, temps, échelle) et les fiches UnitKit.UNITS / UnitKit.TIREUR.
 'use strict';
-const UnitKit=(()=>{
+const UnitKit=(()=>{const LOOP=2.4,W0=Math.PI*2/LOOP,frac=x=>x-Math.floor(x);
 const K={
  steel:['#1a1b20','#2a2c33','#3e414a','#575b64','#767b84','#9da2a9','#c8ccd0'],
  gun:['#101012','#1a1a1e','#26262c','#34343b','#46464e','#5e5e68'],
@@ -63,21 +63,24 @@ const HEAD={
 };
 /* ---------- armes et boucliers (main en hx,hy) ---------- */
 const W={
- holySword:(P,hx,hy,s,t)=>{const g=K[s.glow||'eGold'],amp=.5+.5*Math.sin(t*4+s.seed),L=s.blade||30,R=rng(s.seed*7+Math.floor(t*6));
+ holySword:(P,hx,hy,s,t)=>{const g=K[s.glow||'eGold'],amp=.5+.5*Math.sin(t*W0*2+s.seed),L=s.blade||30;
   for(let i=0;i<L;i++){const x=hx+i*(s.swing||0),y=hy-4-i;for(let k=-2;k<=2;k++){const c=Math.abs(k)===2?g[1]:Math.abs(k)===1?g[2+(i%3===0)]:g[3+(amp>.6)];P.set(x+k,y,c,50)}}
-  P.set(hx+L*(s.swing||0),hy-4-L,g[4],50);for(let k=0;k<12+amp*14;k++){const i=R()*L,d=2.5+R()*(2+amp*4),a=R()*6.283;P.set(hx+i*(s.swing||0)+Math.cos(a)*d,hy-4-i+Math.sin(a)*d*.6,g[2+(R()<amp*.6)],49)}
+  P.set(hx+L*(s.swing||0),hy-4-L,g[4],50);
+  for(let k=0;k<22;k++){const u=frac(k*.618+t/LOOP*(1+k%3)),i=u*L,side=Math.sin(k*1.7+t*W0*(2+k%2))*(1.6+amp*2.6)+(k%2?1:-1)*1.2,lift=u*1.5;
+   if(u>.9||(k>14&&amp<.35))continue;P.set(hx+i*(s.swing||0)+side,hy-4-i-lift,u<.25?g[4]:u<.6?g[3]:g[2],49);if(u<.5)P.set(hx+i*(s.swing||0)+side,hy-5-i-lift,g[2],48)}
   fill(P,[[hx-6,hy-4],[hx+6,hy-4],[hx+6,hy-1],[hx-6,hy-1]],K.polish,51,{v:.8});fill(P,[[hx-1,hy-1],[hx+1,hy-1],[hx+1,hy+5],[hx-1,hy+5]],K.leath,51);ell(P,hx,hy+6,1.8,1.8,K.polish,51,{v:.9})},
  quiver:(P,hx,hy)=>{},
 };
 const X={
  // bâton tenu à deux mains en diagonale, tête crépitante, projectile tiré vers l'avant
- staffEnergy:(P,o,s,t)=>{const g=K[s.energy||'eViolet'],a=[o.hR[0]-6,o.hR[1]+14],b=[o.hL[0]+7,o.hL[1]-18],R=rng(s.seed*13+Math.floor(t*10));
+ staffEnergy:(P,o,s,t)=>{const g=K[s.energy||'eViolet'],a=[o.hR[0]-6,o.hR[1]+14],b=[o.hL[0]+7,o.hL[1]-18];
   seg(P,a,b,2.4,s.shaft||K.polish,49,{v:.7});for(const k of[.25,.55])P.set(a[0]+(b[0]-a[0])*k,a[1]+(b[1]-a[1])*k,K.gold[4],50);
   fill(P,[[b[0]-4,b[1]+1],[b[0]+3,b[1]-2],[b[0]+1,b[1]+3]],K.gold,50,{v:.8});
-  const cx=b[0]+1,cy=b[1]-5,amp=.5+.5*Math.sin(t*5+s.seed);ell(P,cx,cy,3.6+amp*.8,3.6+amp*.8,g,52,{v:.95});
-  for(let k=0;k<3;k++){let x=cx,y=cy;const dir=R()*6.283;for(let j=0;j<6+R()*5;j++){x+=Math.cos(dir)*1.6+(R()-.5)*2.2;y+=Math.sin(dir)*1.6+(R()-.5)*2.2;P.set(x,y,g[3+(R()<.4)],53)}}
+  const cx=b[0]+1,cy=b[1]-5,amp=.5+.5*Math.sin(t*W0*3+s.seed);ell(P,cx,cy,3.6+amp*.8,3.6+amp*.8,g,52,{v:.95});
+  for(let k=0;k<4;k++){let x=cx,y=cy;const dir=k*1.571+Math.sin(t*W0*(k%2+1)+k)*.9,len=6+3*Math.sin(t*W0*2+k*1.3);
+   for(let j=0;j<len;j++){const w=Math.sin(j*1.9+t*W0*3+k)*1.1+Math.sin(j*3.1-t*W0*5+k*2)*.6;x+=Math.cos(dir)*1.5-Math.sin(dir)*w*.6;y+=Math.sin(dir)*1.5+Math.cos(dir)*w*.6;P.set(x,y,j<2||Math.sin(t*W0*4+k+j)>.3?g[4]:g[3],53)}}
   // projectile
-  const ph=(t*1.2+s.seed*.37)%1,px=cx+6+ph*30,py=cy+ph*6;if(px<78&&!s.noProj){ell(P,px,py,3,2.2,g,55,{v:1});for(let i=1;i<10;i++)P.set(px-i*1.4,py-i*.2+(R()-.5)*1.4,g[i<4?3:2],54-i*.1)}},
+  const ph=frac(t/1.2+s.seed*.37),px=cx+6+ph*30,py=cy+ph*6;if(px<78&&!s.noProj){ell(P,px,py,3,2.2,g,55,{v:1});for(let i=1;i<10;i++)P.set(px-i*1.4,py-i*.2+Math.sin(i*1.3+t*W0*4)*.8,g[i<4?3:2],54-i*.1)}},
  // arc long bandé : arc à la main avant, corde tirée jusqu'à la main arrière, flèche à pointe chargée
  bowDraw:(P,o,s,t)=>{const h=o.hL,r=o.hR,g=K[s.energy||'eBlue'],d=s.loosed?0:(s.draw??1),vib=s.loosed?(s.loosed===1?1.6:-.8):0;for(let k=-22;k<=22;k++){const x=h[0]+2+Math.cos(k/22*1.25)*(3.5+d*2.5)+vib*(1-Math.abs(k)/22),y=h[1]+k;P.set(x,y,(s.bow||K.leath)[4-(Math.abs(k)>16)],48);P.set(x+1,y,(s.bow||K.leath)[2],48)}
   const tip=[h[0]+2,h[1]-22],bot=[h[0]+2,h[1]+22];
@@ -88,12 +91,12 @@ const X={
   if(d<.15)return; // flèche pas encore encochée
   line(P,r[0],r[1],h[0]+12,h[1]-1,K.leath[4],51);fill(P,[[h[0]+12,h[1]-3],[h[0]+16,h[1]-1],[h[0]+12,h[1]+1]],K.polish,52,{v:.9});
   for(const dd of[-1,1])line(P,r[0],r[1],r[0]-3,r[1]+dd*2,K.crim[4],51);
-  if(s.charged&&d>.6){const amp=.5+.5*Math.sin(t*6+s.seed),R=rng(Math.floor(t*12)+s.seed);for(let k=0;k<8+amp*8;k++)P.set(h[0]+14+(R()-.3)*6,h[1]-1+(R()-.5)*5,g[2+(R()<.5)],53)}},
+  if(s.charged&&d>.6){const amp=.5+.5*Math.sin(t*W0*3+s.seed);for(let k=0;k<12;k++){if(k>7+amp*5)continue;const a=k*.785+t*W0*(1+k%2)*(k%3?1:-1),r=1.8+(k%3)+Math.sin(t*W0*3+k)*1.2;P.set(h[0]+15+Math.cos(a)*r*1.4,h[1]-1+Math.sin(a)*r,(k+Math.floor(t*W0*2))%3?g[3]:g[4],53)}}},
  quiverBack:(P,o,s)=>{seg(P,[o.cx+6,24],[o.cx-6,48],5,K.leath,2,{v:.6});for(let i=0;i<4;i++){line(P,o.cx+5+i,24-i,o.cx+7+i,19-i,K.crim[3+(i%2)],3);P.set(o.cx+7+i,18-i,K.white[4],3)}},
  bladeAt:(P,o,s,t)=>{const g=K[s.glow||'eGold'],h=o.hR,a=s.ang??-Math.PI/2,L=s.blade||28,ux=Math.cos(a),uy=Math.sin(a),px=-uy,py=ux,pow=s.power??.5,R=rng(s.seed*7+Math.floor(t*20));
   if(s.trail){const[a0,a1]=s.trail,n=Math.ceil(Math.abs(a1-a0)*L*.9);for(let i=0;i<=n;i++){const aa=a0+(a1-a0)*i/n,fade=i/n;for(let rr=L*.45;rr<=L+2;rr+=1){if(BAYER[Math.floor(rr)&3][i&3]>fade*.95)continue;P.set(h[0]+Math.cos(aa)*rr,h[1]+Math.sin(aa)*rr,g[1+Math.round(fade*2+(rr>L*.85))],64)}}}
   for(let i=4;i<L;i++){const x=h[0]+ux*i,y=h[1]+uy*i;for(let k=-1;k<=1;k++)P.set(x+px*k,y+py*k,k===0?g[3+(pow>.7)]:g[2],66)}P.set(h[0]+ux*L,h[1]+uy*L,g[4],50);
-  for(let k=0;k<6+pow*16;k++){const i=4+R()*(L-4),d=2+R()*(1+pow*4),aa=R()*6.283;P.set(h[0]+ux*i+Math.cos(aa)*d,h[1]+uy*i+Math.sin(aa)*d,g[2+(R()<pow*.6)],65)}
+  for(let k=0;k<6+pow*16;k++){const u=frac(k*.618+t/LOOP*(2+k%3)),i=4+u*(L-4),d=1.5+(1-u)*(1+pow*3),aa=k*2.4+t*W0*(3+k%2);P.set(h[0]+ux*i+Math.cos(aa)*d,h[1]+uy*i+Math.sin(aa)*d,u<.3?g[4]:g[2+(k%3===0)],65)}
   for(let k=-5;k<=5;k++)P.set(h[0]+ux*3+px*k,h[1]+uy*3+py*k,K.polish[5-(Math.abs(k)>3)],67);for(let i=-3;i<3;i++)P.set(h[0]+ux*i,h[1]+uy*i,K.leath[3],67);P.set(h[0]-ux*4,h[1]-uy*4,K.polish[6],67)},
  crossbow:(P,o,s,t)=>{const r=o.hR,l=o.hL,y=r[1]-1,amp=.5+.5*Math.sin(t*4);
   fill(P,[[r[0]-7,y-2],[l[0]+8,y-3],[l[0]+8,y+1],[r[0]-7,y+2]],K.gun,48,{v:.7});fill(P,[[r[0]-9,y-3],[r[0]-5,y-3],[r[0]-5,y+5],[r[0]-9,y+4]],K.leath,48);
