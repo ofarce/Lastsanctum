@@ -90,9 +90,14 @@ const X={
   for(const dd of[-1,1])line(P,r[0],r[1],r[0]-3,r[1]+dd*2,K.crim[4],51);
   if(s.charged&&d>.6){const amp=.5+.5*Math.sin(t*6+s.seed),R=rng(Math.floor(t*12)+s.seed);for(let k=0;k<8+amp*8;k++)P.set(h[0]+14+(R()-.3)*6,h[1]-1+(R()-.5)*5,g[2+(R()<.5)],53)}},
  quiverBack:(P,o,s)=>{seg(P,[o.cx+6,24],[o.cx-6,48],5,K.leath,2,{v:.6});for(let i=0;i<4;i++){line(P,o.cx+5+i,24-i,o.cx+7+i,19-i,K.crim[3+(i%2)],3);P.set(o.cx+7+i,18-i,K.white[4],3)}},
+ bladeAt:(P,o,s,t)=>{const g=K[s.glow||'eGold'],h=o.hR,a=s.ang??-Math.PI/2,L=s.blade||28,ux=Math.cos(a),uy=Math.sin(a),px=-uy,py=ux,pow=s.power??.5,R=rng(s.seed*7+Math.floor(t*20));
+  if(s.trail){const[a0,a1]=s.trail,n=Math.ceil(Math.abs(a1-a0)*L*.9);for(let i=0;i<=n;i++){const aa=a0+(a1-a0)*i/n,fade=i/n;for(let rr=L*.45;rr<=L+2;rr+=1){if(BAYER[Math.floor(rr)&3][i&3]>fade*.95)continue;P.set(h[0]+Math.cos(aa)*rr,h[1]+Math.sin(aa)*rr,g[1+Math.round(fade*2+(rr>L*.85))],64)}}}
+  for(let i=4;i<L;i++){const x=h[0]+ux*i,y=h[1]+uy*i;for(let k=-1;k<=1;k++)P.set(x+px*k,y+py*k,k===0?g[3+(pow>.7)]:g[2],66)}P.set(h[0]+ux*L,h[1]+uy*L,g[4],50);
+  for(let k=0;k<6+pow*16;k++){const i=4+R()*(L-4),d=2+R()*(1+pow*4),aa=R()*6.283;P.set(h[0]+ux*i+Math.cos(aa)*d,h[1]+uy*i+Math.sin(aa)*d,g[2+(R()<pow*.6)],65)}
+  for(let k=-5;k<=5;k++)P.set(h[0]+ux*3+px*k,h[1]+uy*3+py*k,K.polish[5-(Math.abs(k)>3)],67);for(let i=-3;i<3;i++)P.set(h[0]+ux*i,h[1]+uy*i,K.leath[3],67);P.set(h[0]-ux*4,h[1]-uy*4,K.polish[6],67)},
  crossbow:(P,o,s,t)=>{const r=o.hR,l=o.hL,y=r[1]-1,amp=.5+.5*Math.sin(t*4);
   fill(P,[[r[0]-7,y-2],[l[0]+8,y-3],[l[0]+8,y+1],[r[0]-7,y+2]],K.gun,48,{v:.7});fill(P,[[r[0]-9,y-3],[r[0]-5,y-3],[r[0]-5,y+5],[r[0]-9,y+4]],K.leath,48);
-  ell(P,r[0]+5,y+4,4.5,4.5,K.gun,49,{v:.7});for(let i=0;i<3;i++)fill(P,[[r[0]+2,y+2+i*2],[r[0]+8,y+2+i*2],[r[0]+8,y+3+i*2],[r[0]+2,y+3+i*2]],K.amber,50,{v:.7+amp*.25});
+  ell(P,r[0]+5,y+4,4.5,4.5,K.gun,49,{v:.7});for(let i=0;i<3;i++){const yy=y+1+((i*2+(s.drumRot||0))%7);fill(P,[[r[0]+2,yy],[r[0]+8,yy],[r[0]+8,yy+1],[r[0]+2,yy+1]],K.amber,50,{v:.7+amp*.25+(s.drumHot||0)*.2})}
   fill(P,[[r[0]+3,y-6],[r[0]+9,y-6],[r[0]+9,y-3],[r[0]+3,y-3]],K.gun,50,{v:.6});P.set(r[0]+9,y-5,K.amber[4],51);
   const fx=l[0]+7;for(const d of[-1,1]){for(let i=0;i<9;i++)P.set(fx-i*.35,y-1+d*i,K.gun[4-(i>6)],49);P.set(fx-3,y-1+d*9,K.steel[5],49)}
   line(P,fx-3,y-10,r[0]+6,y-1,K.white[3],47);line(P,fx-3,y+8,r[0]+6,y-1,K.white[3],47);line(P,r[0]+6,y-2,fx+5,y-2,K.steel[5],51);P.set(fx+6,y-2,K.amber[4],52);P.set(fx+7,y-2,K.amber[3],52)},
@@ -158,6 +163,7 @@ function figure(s,t=0,k=1){const P0=new Px(Math.ceil(80*k),Math.ceil(84*k),true)
  if(s.pose==='guard'){eR=[cx-12*B,40];hR=[cx-6,44]}
  if(s.pose==='xbow'){eR=[cx-6*B,40];hR=[cx+1,44];eL=[cx+12*B,36];hL=[cx+12,43]}
  if(s.pose==='aim'){const d=s.loosed?0:(s.draw??1);eL=[cx+16*B,30];hL=[cx+22,32];hR=[cx+15-13*d,32+(1-d)];eR=[cx-6*B+(1-d)*7,38-(1-d)*2]}
+ if(s.eRo)eR=s.eRo;if(s.hRo)hR=s.hRo;if(s.eLo)eL=s.eLo;if(s.hLo)hL=s.hLo;
  for(const[a,b,c]of[[sR,eR,hR],[sL,eL,hL]]){seg(P,a,b,5*B,s.arms||K.steel,16,{v:.65});seg(P,b,c,4.5*B,s.fore||s.arms||K.steel,16,{v:.6});ell(P,c[0],c[1],2.6,2.4,s.hands||K.gun,17,{v:.6})}
  if(s.pauld)for(const sd of[-1,1]){const x=cx+sd*10.5*B;for(let i=s.lames||1;i>=1;i--)ell(P,x+sd*i*.6,31+i*2.2,(5.5+i)*s.pauld,(3.6+i*.4)*s.pauld,i%2?(s.pr||K.steel):(s.pr2||K.gun),18+(3-i),{v:sd<0?.82:.6});if(s.rivets)P.set(x,30,K.gold[4],22)}
  if(s.gorget)ell(P,cx+1,28,5,3,s.pr||K.steel,24,{v:.75});

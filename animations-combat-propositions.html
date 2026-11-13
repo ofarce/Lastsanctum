@@ -1,0 +1,26 @@
+<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Animations de combat — propositions</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0b120e;--card:#141c17;--line:#2a3a2e;--txt:#e3e6d4;--mut:#9fb09e;--acc:#d8c26a}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--txt);font:15px/1.4 'Pixelify Sans',system-ui,sans-serif}
+header,main{max-width:1400px;margin:auto;padding:0 16px}header{padding-top:18px}h1{margin:0;font-weight:600;letter-spacing:.08em;font-size:24px;color:var(--acc)}header p{color:var(--mut);margin:4px 0 0}
+h2{font-weight:600;font-size:20px;margin:22px 0 8px;letter-spacing:.06em}
+.row{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,380px),1fr));gap:12px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.card canvas{display:block;width:100%;height:auto;image-rendering:pixelated;background:radial-gradient(ellipse at 30% 90%,#22322a,#0f1813)}
+.b{padding:8px 12px 12px}.b h3{margin:0;font-size:16px;color:var(--acc);font-weight:600}.b p{margin:3px 0 0;color:#c8cdbb;font-size:13px}
+</style></head><body>
+<header><h1>ANIMATIONS DE COMBAT · PROPOSITIONS</h1><p>Paladin « Lame d’aube » et Tireur, au gabarit des sprites (80×84) avec la zone d’effets à droite, affichés ×2,5. Chaque animation tourne en boucle.</p></header>
+<main id="main"></main>
+<script src="assets/decor.js?v=2"></script>
+<script src="assets/units.js?v=8"></script>
+<script src="assets/combat.js?v=1"></script>
+<script>
+'use strict';
+const{SWORD,XBOW,render,EW,EH}=CombatKit;
+const cards=[],main=document.getElementById('main');
+for(const[title,list,kind]of[['PALADIN · COUP D’ÉPÉE',SWORD,'s'],['TIREUR · ARBALÈTE À CARREAUX EXPLOSIFS',XBOW,'x']]){const sec=document.createElement('section');sec.innerHTML=`<h2>${title}</h2><div class="row"></div>`;main.appendChild(sec);
+ for(const A of list){const card=document.createElement('div');card.className='card';const c=document.createElement('canvas');c.width=EW*2.5;c.height=EH*2.5;card.appendChild(c);card.insertAdjacentHTML('beforeend',`<div class="b"><h3>${A.name}</h3><p>${A.desc}</p></div>`);sec.querySelector('.row').appendChild(card);cards.push({A,kind,c})}}
+function paint(now){for(const{A,kind,c}of cards){const t=(now/1000)%A.dur,img=render(A,t,kind),g=c.getContext('2d');g.imageSmoothingEnabled=false;g.clearRect(0,0,c.width,c.height);g.drawImage(img,0,0,c.width,c.height)}}
+let last=0;(function loop(now){requestAnimationFrame(loop);if(now-last<45)return;last=now;paint(now)})(0);paint(0);
+</script></body></html>
