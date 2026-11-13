@@ -26,8 +26,10 @@ function crawler(P,s,t){const sk=s.skin,R=rng(s.seed),b=Math.sin(t*6)*.6;
  if(s.mouths)for(let i=0;i<3;i++){const x=28+i*8,y=62+(i%2)*3;fill(P,[[x-2,y],[x+2,y],[x,y+2]],Q.void,25);P.set(x-1,y,'#e8e0d0',26);P.set(x+1,y,'#e8e0d0',26)}
  if(s.vein)veins(P,38,62,14,7,s.vein,4,s.seed,t);if(s.ghost)ghost(P,s,t)}
 // Brute : colosse voûté aux bras démesurés
-function brute(P,s,t){const sk=s.skin,R=rng(s.seed),br=Math.sin(t*2.5)*.8;
- for(const[a,b,z]of[[[34,64],[31,80],8],[[48,64],[51,80],30]]){seg(P,a,b,9,s.legs||sk,z,{v:z>10?.6:.45});fill(P,[[b[0]-6,77],[b[0]+6,77],[b[0]+7,81],[b[0]-6,81]],s.feet||sk,z+1,{v:.5})}
+function brute(P,s,t){const sk=s.skin,R=rng(s.seed),WK=s.walk!=null,ph=WK?s.walk*Math.PI*2:0,br=Math.sin(t*2.5)*.8+(WK?Math.abs(Math.sin(ph))*4:0);
+ // démarche lourde : grand pas lent, pied levé bas, tassement du corps à chaque appui
+ for(const[a,b0,z,o]of[[[34,64],[31,80],8,0],[[48,64],[51,80],30,Math.PI]]){const sw=WK?Math.sin(ph+o):0,ly=WK?Math.max(0,Math.cos(ph+o))*2:0,b=[b0[0]+sw*4,b0[1]-ly];
+  seg(P,a,b,9,s.legs||sk,z,{v:z>10?.6:.45});fill(P,[[b[0]-6,b[1]-3],[b[0]+6,b[1]-3],[b[0]+7,b[1]+1],[b[0]-6,b[1]+1]],s.feet||sk,z+1,{v:.5})}
  ell(P,40,50+br*.3,19,17,sk,20,{v:.68});ell(P,36,36+br*.3,15,9,sk,21,{v:.75});
  if(s.belly)ell(P,43,56,11,7,s.belly,22,{v:.7});
  seg(P,[24,38],[16,56],11,sk,9,{v:.45});seg(P,[16,56],[18,70],9,sk,9,{v:.42});ell(P,18,72,6,5,s.fist||sk,10,{v:.45});

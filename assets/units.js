@@ -79,11 +79,16 @@ const X={
   // projectile
   const ph=(t*1.2+s.seed*.37)%1,px=cx+6+ph*30,py=cy+ph*6;if(px<78&&!s.noProj){ell(P,px,py,3,2.2,g,55,{v:1});for(let i=1;i<10;i++)P.set(px-i*1.4,py-i*.2+(R()-.5)*1.4,g[i<4?3:2],54-i*.1)}},
  // arc long bandé : arc à la main avant, corde tirée jusqu'à la main arrière, flèche à pointe chargée
- bowDraw:(P,o,s,t)=>{const h=o.hL,r=o.hR,g=K[s.energy||'eBlue'];for(let k=-22;k<=22;k++){const x=h[0]+2+Math.cos(k/22*1.25)*5,y=h[1]+k;P.set(x,y,(s.bow||K.leath)[4-(Math.abs(k)>16)],48);P.set(x+1,y,(s.bow||K.leath)[2],48)}
-  const tip=[h[0]+2,h[1]-22],bot=[h[0]+2,h[1]+22];line(P,tip[0],tip[1],r[0],r[1],K.white[3],47);line(P,bot[0],bot[1],r[0],r[1],K.white[3],47);
+ bowDraw:(P,o,s,t)=>{const h=o.hL,r=o.hR,g=K[s.energy||'eBlue'],d=s.loosed?0:(s.draw??1),vib=s.loosed?(s.loosed===1?1.6:-.8):0;for(let k=-22;k<=22;k++){const x=h[0]+2+Math.cos(k/22*1.25)*(3.5+d*2.5)+vib*(1-Math.abs(k)/22),y=h[1]+k;P.set(x,y,(s.bow||K.leath)[4-(Math.abs(k)>16)],48);P.set(x+1,y,(s.bow||K.leath)[2],48)}
+  const tip=[h[0]+2,h[1]-22],bot=[h[0]+2,h[1]+22];
+  // corde lâchée : elle revient droite et vibre ; sinon elle suit la main arrière
+  if(s.loosed){const nx=h[0]+2+vib*1.5;line(P,tip[0],tip[1],nx,h[1],K.white[3],47);line(P,bot[0],bot[1],nx,h[1],K.white[3],47);
+   if(s.loosed===1){const R=rng(s.seed);for(let i=0;i<10;i++)P.set(h[0]+16+i*2.2,h[1]-1,i<3?g[4]:g[3-(i>6)],53);for(let k=0;k<10;k++)P.set(h[0]+14+R()*8,h[1]-1+(R()-.5)*6,g[2+(R()<.5)],53)}return}
+  line(P,tip[0],tip[1],r[0],r[1],K.white[3],47);line(P,bot[0],bot[1],r[0],r[1],K.white[3],47);
+  if(d<.15)return; // flèche pas encore encochée
   line(P,r[0],r[1],h[0]+12,h[1]-1,K.leath[4],51);fill(P,[[h[0]+12,h[1]-3],[h[0]+16,h[1]-1],[h[0]+12,h[1]+1]],K.polish,52,{v:.9});
-  for(const d of[-1,1])line(P,r[0],r[1],r[0]-3,r[1]+d*2,K.crim[4],51);
-  if(s.charged){const amp=.5+.5*Math.sin(t*6+s.seed),R=rng(Math.floor(t*12)+s.seed);for(let k=0;k<8+amp*8;k++)P.set(h[0]+14+(R()-.3)*6,h[1]-1+(R()-.5)*5,g[2+(R()<.5)],53)}},
+  for(const dd of[-1,1])line(P,r[0],r[1],r[0]-3,r[1]+dd*2,K.crim[4],51);
+  if(s.charged&&d>.6){const amp=.5+.5*Math.sin(t*6+s.seed),R=rng(Math.floor(t*12)+s.seed);for(let k=0;k<8+amp*8;k++)P.set(h[0]+14+(R()-.3)*6,h[1]-1+(R()-.5)*5,g[2+(R()<.5)],53)}},
  quiverBack:(P,o,s)=>{seg(P,[o.cx+6,24],[o.cx-6,48],5,K.leath,2,{v:.6});for(let i=0;i<4;i++){line(P,o.cx+5+i,24-i,o.cx+7+i,19-i,K.crim[3+(i%2)],3);P.set(o.cx+7+i,18-i,K.white[4],3)}},
  crossbow:(P,o,s,t)=>{const r=o.hR,l=o.hL,y=r[1]-1,amp=.5+.5*Math.sin(t*4);
   fill(P,[[r[0]-7,y-2],[l[0]+8,y-3],[l[0]+8,y+1],[r[0]-7,y+2]],K.gun,48,{v:.7});fill(P,[[r[0]-9,y-3],[r[0]-5,y-3],[r[0]-5,y+5],[r[0]-9,y+4]],K.leath,48);
@@ -128,12 +133,17 @@ function scaled(P0,k){let cur=[0,0];return{w:P0.w,h:P0.h,d:P0.d,
  ramp:(r,v,x,y)=>P0.ramp(r,v,cur[0],cur[1]),
  poly:(pts,fn,z)=>P0.poly(pts.map(([x,y])=>[x*k,y*k]),(x,y)=>{cur=[x,y];return fn(x/k,y/k)},z),
  line:(x0,y0,x1,y1,col,z)=>P0.line(x0*k,y0*k,x1*k,y1*k,col,z)}}
-function figure(s,t=0,k=1){const P0=new Px(Math.ceil(80*k),Math.ceil(84*k),true),P=k===1?P0:scaled(P0,k),B=s.bulk||1,cx=30,R=rng(s.seed||1);if(s.under)for(const f of s.under)X[f](P,{cx,B},s,t);if(s.under)for(const f of s.under)X[f](P,{cx,B},s,t);
- if(s.cape)fill(P,[[cx-10*B,31],[cx+10*B,31],[cx+15*B,79],[cx-14*B,79]],s.cape,1,{v:.45,fold:1});
- for(const sd of[-1,1]){const x=cx+sd*4.5*B;fill(P,[[x-3.5*B,50],[x+3.5*B,50],[x+3,72],[x-3,72]],s.legs||K.gun,5,{v:sd<0?.7:.55,tex:3});
-  fill(P,[[x-4,71],[x+4,71],[x+(sd>0?6:3),80],[x-4,80]],s.boots||K.gun,6,{v:sd<0?.6:.45});if(s.knee)ell(P,x+.5,61,3.2,2.6,s.pr||K.steel,7,{v:.8})}
- if(s.robe)fill(P,[[cx-8*B,45],[cx+8*B,45],[cx+13*B,s.robeY||79],[cx-12*B,s.robeY||79]],s.robe,8,{v:.66,lx:.5,fold:1});
- if(s.skirt)fill(P,[[cx-9*B,46],[cx+9*B,46],[cx+11*B,62],[cx-10*B,62]],s.skirt,9,{v:.6,fold:1});
+function figure(s,t=0,k=1){const P0=new Px(Math.ceil(80*k),Math.ceil(84*k),true),P=k===1?P0:scaled(P0,k),B=s.bulk||1,cx=30,R=rng(s.seed||1);if(s.under)for(const f of s.under)X[f](P,{cx,B},s,t);
+ // marche : s.walk = phase du cycle dans [0,1[ ; chaque jambe oscille en opposition, le pied se lève en phase de retour
+ const WK=s.walk!=null,ph=WK?s.walk*Math.PI*2:0,sw=sd=>WK?Math.sin(ph+(sd>0?Math.PI:0)):0,lift=sd=>WK?Math.max(0,Math.cos(ph+(sd>0?Math.PI:0)))*2.4:0,flow=WK?Math.sin(ph*2)*2.4:0;
+ if(s.cape)fill(P,[[cx-10*B,31],[cx+10*B,31],[cx+15*B-flow,79],[cx-14*B-flow*1.4,79]],s.cape,1,{v:.45,fold:1});
+ for(const sd of[-1,1]){const x=cx+sd*4.5*B,dx=sw(sd)*5,ly=lift(sd),kx=x+dx*.45+(ly>0?1.5:0);
+  fill(P,[[x-3.5*B,50],[x+3.5*B,50],[kx+3.2,61-ly*.4],[kx-3.2,61-ly*.4]],s.legs||K.gun,5,{v:sd<0?.7:.55,tex:3});fill(P,[[kx-3.2,60-ly*.4],[kx+3.2,60-ly*.4],[x+dx+3,72-ly],[x+dx-3,72-ly]],s.legs||K.gun,5,{v:sd<0?.66:.5,tex:3});
+  fill(P,[[x+dx-4,71-ly],[x+dx+4,71-ly],[x+dx+(sd>0?6:3),80-ly],[x+dx-4,80-ly]],s.boots||K.gun,6,{v:sd<0?.6:.45});if(s.knee)ell(P,kx+.5,61-ly*.4,3.2,2.6,s.pr||K.steel,7,{v:.8})}
+ if(s.robe)fill(P,[[cx-8*B,45],[cx+8*B,45],[cx+13*B+flow,s.robeY||79],[cx-12*B+flow,s.robeY||79]],s.robe,8,{v:.66,lx:.5,fold:1});
+ // sous une robe, seuls les bouts de pieds dépassent de l'ourlet pendant la marche
+ if(WK&&s.robe)for(const sd of[-1,1]){const x=cx+sd*4.5*B+sw(sd)*5,ly=lift(sd);fill(P,[[x-3,77-ly],[x+5,77-ly],[x+6,81-ly],[x-3,81-ly]],s.boots||K.leath,9,{v:sd<0?.6:.45})}
+ if(s.skirt)fill(P,[[cx-9*B,46],[cx+9*B,46],[cx+11*B+flow*.6,62],[cx-10*B+flow*.6,62]],s.skirt,9,{v:.6,fold:1});
  fill(P,[[cx-10*B,29],[cx+10*B,29],[cx+7*B,48],[cx-7*B,48]],s.torso||K.steel,10,{v:.7,tex:s.mail?5:0});
  if(s.chest)ell(P,cx+1,36,7*B,6,s.chest,11,{v:.8});
  if(s.tabard){fill(P,[[cx-5*B,33],[cx+5*B,33],[cx+6*B,s.tabY||70],[cx-5*B,s.tabY||70]],s.tabard,12,{v:.74,fold:1});if(s.cross)(s.cross)(P,cx,46)}
@@ -141,10 +151,13 @@ function figure(s,t=0,k=1){const P0=new Px(Math.ceil(80*k),Math.ceil(84*k),true)
  fill(P,[[cx-8*B,45],[cx+8*B,45],[cx+8*B,48],[cx-8*B,48]],K.leath,14);P.set(cx+1,46,K.gold[4],15);P.set(cx+2,46,K.gold[3],15);
  if(s.belt)s.belt(P,cx,B);
  let sR=[cx-9.5*B,32],eR=[cx-12.5*B,42],hR=[cx-11*B,50],sL=[cx+9.5*B,32],eL=[cx+13*B,40],hL=[cx+12*B,47];
+ // bras libre (sans objet, pose neutre) : balance en opposition à la jambe du même côté
+ if(WK&&!s.left&&!s.pose){eL=[eL[0]-sw(-1)*2,eL[1]];hL=[hL[0]-sw(-1)*4.5,hL[1]-Math.abs(sw(-1))]}
+ if(WK&&!s.right&&!s.pose){eR=[eR[0]-sw(1)*2,eR[1]];hR=[hR[0]-sw(1)*4.5,hR[1]-Math.abs(sw(1))]}
  if(s.pose==='twohand'){eR=[cx-12*B,44];hR=[cx-5,52];eL=[cx+12*B,38];hL=[cx+7,41]}
  if(s.pose==='guard'){eR=[cx-12*B,40];hR=[cx-6,44]}
  if(s.pose==='xbow'){eR=[cx-6*B,40];hR=[cx+1,44];eL=[cx+12*B,36];hL=[cx+12,43]}
- if(s.pose==='aim'){eR=[cx-6*B,38];hR=[cx+2,32];eL=[cx+16*B,30];hL=[cx+22,32]}
+ if(s.pose==='aim'){const d=s.loosed?0:(s.draw??1);eL=[cx+16*B,30];hL=[cx+22,32];hR=[cx+15-13*d,32+(1-d)];eR=[cx-6*B+(1-d)*7,38-(1-d)*2]}
  for(const[a,b,c]of[[sR,eR,hR],[sL,eL,hL]]){seg(P,a,b,5*B,s.arms||K.steel,16,{v:.65});seg(P,b,c,4.5*B,s.fore||s.arms||K.steel,16,{v:.6});ell(P,c[0],c[1],2.6,2.4,s.hands||K.gun,17,{v:.6})}
  if(s.pauld)for(const sd of[-1,1]){const x=cx+sd*10.5*B;for(let i=s.lames||1;i>=1;i--)ell(P,x+sd*i*.6,31+i*2.2,(5.5+i)*s.pauld,(3.6+i*.4)*s.pauld,i%2?(s.pr||K.steel):(s.pr2||K.gun),18+(3-i),{v:sd<0?.82:.6});if(s.rivets)P.set(x,30,K.gold[4],22)}
  if(s.gorget)ell(P,cx+1,28,5,3,s.pr||K.steel,24,{v:.75});
