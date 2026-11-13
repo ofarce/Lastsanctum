@@ -219,6 +219,61 @@ const UNITS=[
  ]},
 ];
 
+/* ================= Ingénieur de Sigil (planche « Artisan exilé ») ================= */
+const RUST=['#2a160c','#4a2a14','#6e4220','#94602c'];
+const amberPulse=t=>.5+.5*Math.sin(t*W0*2);
+Object.assign(HEAD,{
+ // casque en coin (forme d'enclume) à fente de visée ambrée, crête de laiton
+ wedgehelm:(P,cx,cy,s,t)=>{const hr=s.hr||K.gun;fill(P,[[cx-6,cy+7],[cx-7,cy-3],[cx-3,cy-9],[cx+10,cy-7],[cx+11,cy-1],[cx+7,cy+7]],hr,30,{v:.72,tex:4});
+  fill(P,[[cx-3,cy-9],[cx+10,cy-7],[cx+9,cy-5],[cx-4,cy-7]],K.brass||K.gold,31,{v:.7});const a=amberPulse(t);line(P,cx+1,cy-1,cx+9,cy-2,a>.4?K.amber[4]:K.amber[3],32);line(P,cx+1,cy,cx+8,cy-1,K.amber[2],32);
+  for(const[x,y]of[[cx-4,cy+2],[cx+6,cy+4]])P.set(x,y,K.gold[4],32);if(s.goggles){ell(P,cx+4,cy-1,2.2,2,K.amber,33,{v:.9});ell(P,cx+8,cy-1,1.8,1.8,K.amber,33,{v:.9})}},
+ // capuche cramoisie sur casque en coin
+ hoodwedge:(P,cx,cy,s,t)=>{HEAD.wedgehelm(P,cx,cy,s,t);fill(P,[[cx-8,cy+8],[cx-8,cy-3],[cx-2,cy-11],[cx+5,cy-10],[cx+8,cy-6],[cx-2,cy-6],[cx-4,cy+8]],s.hc||K.crim,34,{v:.6,fold:1})},
+});
+Object.assign(W,{
+ // marteau-lanterne : manche gainé, tête en cage avec cœur ambré
+ hammerLamp:(P,hx,hy,s,t)=>{seg(P,[hx,hy+5],[hx-1,hy-18],2.6,K.leath,50,{v:.6});fill(P,[[hx-6,hy-28],[hx+5,hy-28],[hx+5,hy-18],[hx-6,hy-18]],K.gun,51,{v:.7});
+  const a=amberPulse(t);fill(P,[[hx-4,hy-26],[hx+3,hy-26],[hx+3,hy-20],[hx-4,hy-20]],K.amber,52,{v:.7+a*.3});for(const x of[hx-2,hx+1])line(P,x,hy-26,x,hy-20,K.gun[2],53);
+  fill(P,[[hx+5,hy-26],[hx+9,hy-24],[hx+5,hy-21]],K.steel,51,{v:.8});glowDots(P,hx,hy-23,6+a*3,K.amber[3],Math.round(4+a*5),rng(Math.floor(t*W0*3)))},
+ // clé à molette lourde
+ wrench:(P,hx,hy,s,t)=>{seg(P,[hx,hy+6],[hx+1,hy-20],3,K.gun,50,{v:.7});for(const d of[-1,1])fill(P,[[hx-3,hy-20],[hx+5,hy-20],[hx+5+d,hy-26],[hx+2+d*2,hy-27]],K.steel,51,{v:.8});P.set(hx+1,hy-23,K.gun[1],52);for(let i=0;i<4;i++)P.set(hx+1,hy-6-i*3,RUST[3],51)},
+ // lanterne de chantier tenue à bout de bras
+ lanternHand:(P,hx,hy,s,t)=>{line(P,hx,hy+1,hx,hy+5,K.gun[3],50);fill(P,[[hx-4,hy+5],[hx+4,hy+5],[hx+4,hy+15],[hx-4,hy+15]],K.gun,51,{v:.6});const a=amberPulse(t);
+  fill(P,[[hx-3,hy+6],[hx+3,hy+6],[hx+3,hy+14],[hx-3,hy+14]],K.amber,52,{v:.75+a*.25});for(const x of[hx-1,hx+1])line(P,x,hy+6,x,hy+14,K.gun[2],53);glowDots(P,hx,hy+10,7+a*3,K.amber[3],Math.round(5+a*6),rng(Math.floor(t*W0*3)+3))},
+ // caisse à outils tyrienne
+ toolbox:(P,hx,hy,s,t)=>{line(P,hx-3,hy+1,hx+3,hy+1,K.gun[3],50);fill(P,[[hx-7,hy+3],[hx+7,hy+3],[hx+7,hy+12],[hx-7,hy+12]],K.gun,51,{v:.62});for(const x of[hx-7,hx+6])fill(P,[[x,hy+3],[x+1,hy+3],[x+1,hy+12],[x,hy+12]],K.gold,52);
+  const a=amberPulse(t);fill(P,[[hx-4,hy+6],[hx+4,hy+6],[hx+4,hy+8],[hx-4,hy+8]],K.amber,52,{v:.7+a*.3})},
+});
+Object.assign(X,{
+ // cache-col cramoisi drapé sur les épaules, pan qui retombe dans le dos
+ scarf:(P,o,s)=>{const cx=o.cx;fill(P,[[cx-9,24],[cx+10,24],[cx+12,31],[cx+4,35],[cx-4,34],[cx-12,31]],s.sc||K.crim,27,{v:.62,fold:1});fill(P,[[cx-12,30],[cx-7,32],[cx-9,52],[cx-14,48]],s.sc||K.crim,3,{v:.45,fold:1})},
+ // générateur dorsal : caisson à fenêtre ambrée, lanterne haute, câbles vers la ceinture
+ generator:(P,o,s,t)=>{const cx=o.cx,a=amberPulse(t);fill(P,[[cx-19,16],[cx-7,15],[cx-7,42],[cx-19,42]],K.gun,2,{v:.6,tex:4});for(const y of[16,41])fill(P,[[cx-19,y],[cx-7,y-1],[cx-7,y+1],[cx-19,y+2]],K.gold,3);
+  fill(P,[[cx-17,21],[cx-9,21],[cx-9,33],[cx-17,33]],K.amber,4,{v:.7+a*.3});for(const x of[cx-15,cx-13,cx-11])line(P,x,21,x,33,K.gun[2],5);
+  fill(P,[[cx-16,8],[cx-10,8],[cx-10,15],[cx-16,15]],K.gun,3,{v:.6});fill(P,[[cx-15,9],[cx-11,9],[cx-11,14],[cx-15,14]],K.amber,4,{v:.8+a*.2});
+  for(let i=0;i<18;i++){const u=i/17;P.set(cx-18+Math.sin(u*3)*2,42+u*10,RUST[2+(i%2)],4);P.set(cx-8+u*8,42+Math.sin(u*3)*6,RUST[2],4)}glowDots(P,cx-13,27,9+a*3,K.amber[3],Math.round(3+a*4),rng(Math.floor(t*W0*3)+5))},
+ // bobine de câble de cuivre portée au dos
+ spool:(P,o,s)=>{const cx=o.cx;ell(P,cx-13,30,7,9,K.gun,2,{v:.55});ell(P,cx-13,30,5.5,7.5,RUST,3,{v:.75});for(let y=23;y<38;y+=2)line(P,cx-18,y,cx-8,y,RUST[1],4);ell(P,cx-13,30,1.6,2,K.gun,5)},
+ // bras de levage mécanique fixé au générateur, crochet au bout
+ crane:(P,o,s,t)=>{const cx=o.cx,sw=Math.sin(t*W0)*1.5;seg(P,[cx-12,12],[cx-4,2],3,K.gun,6,{v:.7});seg(P,[cx-4,2],[cx+14,-1+sw*.3].map((v,i)=>i?Math.max(1,v):v),3,K.gun,6,{v:.7});line(P,cx+14,1,cx+14+sw,12,K.gun[4],6);
+  for(let i=0;i<4;i++)P.set(cx+14+sw-(i>2?1:0)+(i===3?2:0),12+i,K.steel[5],7);ell(P,cx-4,2,2,2,K.gold,7)},
+});
+// sceau de Sigil : cercle et croix cramoisis sur le tabard
+const sigilMark=(P,cx,y)=>{for(let a=0;a<32;a++)P.set(cx+.5+Math.cos(a/32*6.283)*4.5,y-1+Math.sin(a/32*6.283)*4.5,K.crim[3],13);fill(P,[[cx,y-8],[cx+1,y-8],[cx+1,y+6],[cx,y+6]],K.crim,13);fill(P,[[cx-6,y-1],[cx+7,y-1],[cx+7,y],[cx-6,y]],K.crim,13)};
+const ENG_BASE={torso:K.gun,arms:K.gun,fore:K.gun,legs:K.gun,boots:K.gun,hands:K.black,pr:K.ivory,pr2:K.gun,pauld:1.15,lames:2,rivets:1,knee:1,gorget:1,
+ tabard:K.ivory,tabY:70,cross:sigilMark,cape:K.crim,belt:pouches,seed:61};
+const ENGINEERS=[
+ {name:'G1 · Artisan exilé',desc:'Fidèle à la planche : casque en coin à fente ambrée, cache-col cramoisi, tabard au sceau de Sigil, générateur dorsal, marteau-lanterne et lanterne de chantier.',
+  s:{...ENG_BASE,head:'wedgehelm',under:['generator'],over:['scarf'],right:'hammerLamp',left:'lanternHand',seed:61}},
+ {name:'G2 · Mécanicien lourd',desc:'Gabarit massif, grandes épaulières ivoire rivetées, clé lourde et caisse à outils tyrienne. Sans générateur : plus lisible, plus robuste.',
+  s:{...ENG_BASE,head:'wedgehelm',bulk:1.2,pauld:1.35,lames:3,over:['scarf'],right:'wrench',left:'toolbox',cape:null,skirt:K.crim,seed:62}},
+ {name:'G3 · Porte-lanterne',desc:'Capuche cramoisie sur le casque, générateur dorsal, marteau-lanterne : l’ingénieur qui éclaire et répare la nuit.',
+  s:{...ENG_BASE,head:'hoodwedge',hc:K.crim,under:['generator'],right:'hammerLamp',left:'lanternHand',seed:63}},
+ {name:'G4 · Sapeur-bâtisseur',desc:'Lunettes ambrées sur le casque, bobine de câble de cuivre au dos, marteau-lanterne et caisse à outils. Tourné vers la construction.',
+  s:{...ENG_BASE,head:'wedgehelm',goggles:1,under:['spool'],over:['scarf'],right:'hammerLamp',left:'toolbox',seed:64}},
+ {name:'G5 · Ingénieur de siège',desc:'Générateur dorsal surmonté d’un bras de levage à crochet, clé lourde : il déploie et répare les fortifications tyriennes.',
+  s:{...ENG_BASE,head:'wedgehelm',bulk:1.1,under:['generator','crane'],over:['scarf'],right:'wrench',left:'lanternHand',seed:65}},
+];
 const TIREUR={head:'saurus',hr:K.gun,torso:K.gun,arms:K.gun,fore:K.gun,legs:K.gun,boots:K.gun,pr:K.steel,pr2:K.gun,pauld:1.05,lames:2,knee:1,gorget:1,
  tabard:K.ivory,tabY:60,cross:crossC,under:['strips'],over:['crossbow'],pose:'xbow',belt:pouches,seed:51};
-return{figure,UNITS,TIREUR,K,HEAD,W,X,fill,ell,seg,line,outlineAll,glowDots,scaled,OUT}})();
+return{figure,UNITS,TIREUR,ENGINEERS,K,HEAD,W,X,fill,ell,seg,line,outlineAll,glowDots,scaled,OUT}})();

@@ -1,0 +1,25 @@
+<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Ingénieur de Sigil — propositions</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0b120e;--card:#141c17;--line:#2a3a2e;--txt:#e3e6d4;--mut:#9fb09e;--acc:#d8c26a}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--txt);font:15px/1.4 'Pixelify Sans',system-ui,sans-serif}
+header,main{max-width:1400px;margin:auto;padding:0 16px}header{padding-top:18px}h1{margin:0;font-weight:600;letter-spacing:.08em;font-size:24px;color:var(--acc)}header p{color:var(--mut);margin:4px 0 0;max-width:980px}
+.row{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:12px;margin-top:16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.art{display:flex;align-items:flex-end;justify-content:center;gap:10px;padding:10px 6px 4px;background:radial-gradient(ellipse at 50% 85%,#22322a,#0f1813)}
+.card canvas{image-rendering:pixelated;display:block}
+.b{padding:8px 12px 12px}.b h3{margin:0;font-size:16px;color:var(--acc);font-weight:600}.b p{margin:3px 0 0;color:#c8cdbb;font-size:13px}
+</style></head><body>
+<header><h1>INGÉNIEUR DE SIGIL · 5 PROPOSITIONS</h1><p>Nouvelle unité de soutien des Exilés (construction, réparation, fortification) d’après la planche « Artisan exilé ». Sprites natifs 80×84 affichés ×3, puis taille réelle en jeu (×1 et ×2 de l’échelle 0,5). Lueurs ambrées animées.</p></header>
+<main><div class="row" id="row"></div></main>
+<script src="assets/decor.js?v=2"></script>
+<script src="assets/units.js?v=10"></script>
+<script>
+'use strict';
+const{figure,ENGINEERS}=UnitKit,cards=[],row=document.getElementById('row');
+for(const p of ENGINEERS){const card=document.createElement('div');card.className='card';const art=document.createElement('div');art.className='art';const cv=[];
+ for(const[sc,k]of[[3,1],[1,.5],[2,.5]]){const c=document.createElement('canvas');c.width=Math.ceil(80*k)*sc;c.height=Math.ceil(84*k)*sc;art.appendChild(c);cv.push([c,k])}
+ card.appendChild(art);card.insertAdjacentHTML('beforeend',`<div class="b"><h3>${p.name}</h3><p>${p.desc}</p></div>`);row.appendChild(card);cards.push({p,cv})}
+function paint(t){for(const{p,cv}of cards)for(const[c,k]of cv){const img=figure(p.s,t,k),g=c.getContext('2d');g.imageSmoothingEnabled=false;g.clearRect(0,0,c.width,c.height);g.drawImage(img,0,0,c.width,c.height)}}
+paint(0);let last=0;(function loop(now){requestAnimationFrame(loop);if(now-last<100)return;last=now;paint(now/1000)})(0);
+</script></body></html>
