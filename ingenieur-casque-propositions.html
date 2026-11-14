@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Casque rétractable</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0b120e;--panel:#111b14;--line:#2a3a2c;--txt:#dcd8bc;--mut:#93a08a;--acc:#e8c870;--red:#b23c3c;--calm:#5dcaa5}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--txt);font:15px/1.45 'Pixelify Sans',system-ui,sans-serif}
+header,main{max-width:1320px;margin:auto;padding:18px 16px}h1{margin:0;font-weight:600;letter-spacing:.08em;font-size:26px;color:var(--acc)}
+header p{color:var(--mut);margin:6px 0 0;max-width:900px}
+button{font:inherit;color:var(--txt);background:#1a2a1d;border:1px solid var(--line);padding:6px 12px;cursor:pointer}button:hover{border-color:var(--acc)}
+.bar{display:flex;gap:8px;align-items:center;margin-top:12px;flex-wrap:wrap}.st{padding:3px 10px;border:1px solid var(--line)}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-top:18px}figure{margin:0;background:var(--panel);border:1px solid var(--line)}
+.stage{display:flex;align-items:flex-end;justify-content:center;gap:14px;background:radial-gradient(ellipse at 50% 85%,#2f4a33,#18261b);padding:10px}
+.stage canvas,.keys canvas{image-rendering:pixelated;display:block}
+.keys{display:flex;gap:4px;justify-content:center;flex-wrap:wrap;padding:8px;border-top:1px solid var(--line);background:#0e1711}
+.keys div{text-align:center;font-size:11px;color:var(--mut)}
+figcaption{padding:10px 14px 14px}figcaption b{color:var(--acc);font-weight:600}figcaption p{margin:4px 0 0;color:var(--mut);font-size:14px}
+.why{border:1px solid var(--line);background:var(--panel);padding:12px 16px;color:var(--mut);margin-top:16px}.why b{color:var(--txt)}
+@media(max-width:900px){.grid{grid-template-columns:1fr}}
+</style></head><body>
+<header><h1>INGÉNIEUR · CASQUE RÉTRACTABLE</h1>
+<p>Cinq propositions sur le sprite de l’ingénieur : au calme le casque se range et laisse voir un visage humain, en combat il se referme. Grande vignette ×4, échelle du jeu à côté, images clés en dessous.</p>
+<div class="bar"><button id="pause">Pause</button><button id="mode">Passer en combat</button><span class="st" id="st">Calme</span></div></header>
+<main><div class="why"><b>Cycle :</b> 1,6 s au calme → fermeture → 1,6 s en combat → ouverture. La fente ambrée ne s’allume que casque fermé : c’est le signal « en combat » lisible de loin.</div>
+<div class="grid" id="grid"></div></main>
+<script src="assets/decor.js?v=4"></script><script src="assets/units.js?v=10"></script><script src="assets/engineer.js?v=2"></script>
+<script>
+'use strict';
+const SETS=[
+ {id:'lamelles',name:'1 · Lamelles',dur:.55,desc:'Quatre plaques sortent du bourrelet de nuque et recouvrent le crâne vers l’avant, une par une.'},
+ {id:'col',name:'2 · Col qui monte',dur:.45,desc:'La coque est écrasée dans le col au calme ; elle remonte d’un bloc et se verrouille au sommet.'},
+ {id:'visiere',name:'3 · Visière et oreillettes',dur:.4,desc:'La calotte reste en place ; la visière glisse dans le front et les oreillettes pivotent vers l’arrière.'},
+ {id:'nano',name:'4 · Nanostructure',dur:.8,desc:'Le casque se dissout en pixels turquoise aspirés par l’émetteur derrière l’oreille, puis se reforme depuis la fente.'},
+ {id:'bricole',name:'5 · Bricolé',dur:.6,desc:'Un piston rabat le casque en 4 à-coups ; les lunettes de laiton tombent ensuite, avec une étincelle au verrouillage.'}];
+const CYC=1.6;
+function closeAt(t,d){const L=2*CYC+2*d,u=t%L;if(u<CYC)return 0;if(u<CYC+d)return(u-CYC)/d;if(u<2*CYC+d)return 1;return 1-(u-2*CYC-d)/d}
+const K=.5,views=[];
+for(const S of SETS){const f=document.createElement('figure');
+ f.innerHTML=`<div class="stage"><canvas class="big"></canvas><canvas class="game"></canvas></div><div class="keys"></div><figcaption><b>${S.name}</b><p>${S.desc}</p></figcaption>`;
+ document.getElementById('grid').append(f);
+ const keys=f.querySelector('.keys');
+ for(const c of[0,.25,.5,.75,1]){const im=EngineerKit.draw({helmet:S.id,close:c},0,K),cv=document.createElement('canvas');cv.width=im.width*3;cv.height=im.height*3;const g=cv.getContext('2d');g.imageSmoothingEnabled=false;g.drawImage(im,0,0,cv.width,cv.height);
+  const d=document.createElement('div');d.append(cv);d.append(c===0?'calme':c===1?'combat':Math.round(c*100)+' %');keys.append(d)}
+ const im=EngineerKit.draw({helmet:S.id},0,K);
+ for(const[sel,sc]of[['.big',4],['.game',1]]){const cv=f.querySelector(sel);cv.width=im.width*sc;cv.height=im.height*sc;views.push({cv,sc,S})}}
+// boucle auto par défaut ; le bouton force un état (transition lissée), un second clic bascule
+let paused=matchMedia('(prefers-reduced-motion: reduce)').matches,auto=true,manual=0,mt=0,t=0,last;
+const st=document.getElementById('st'),pb=document.getElementById('pause'),mb=document.getElementById('mode');
+pb.onclick=()=>{paused=!paused;pb.textContent=paused?'Lecture':'Pause'};
+mb.onclick=()=>{if(auto){auto=false;manual=1;mt=0}else manual=1-manual;mb.textContent=manual?'Passer au calme':'Passer en combat'};
+function loop(now){const dt=last===undefined?0:Math.min((now-last)/1000,.1);last=now;if(!paused){t+=dt;mt+=(manual-mt)*Math.min(1,dt*4)}
+ let anyC=0;for(const v of views){const c=auto?closeAt(t,v.S.dur):mt;anyC=Math.max(anyC,c);
+  const im=EngineerKit.draw({helmet:v.S.id,close:c},t,K),g=v.cv.getContext('2d');g.imageSmoothingEnabled=false;g.clearRect(0,0,v.cv.width,v.cv.height);g.drawImage(im,0,0,v.cv.width,v.cv.height)}
+ const cb=anyC>.5;st.textContent=cb?'Combat':'Calme';st.style.color=cb?'#e88':'var(--calm)';requestAnimationFrame(loop)}
+requestAnimationFrame(loop);
+</script></body></html>
