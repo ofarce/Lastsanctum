@@ -8,7 +8,7 @@ function initCharacterDialogue(){
  addEventListener('keydown',ev=>{if(!CharacterDialogue.active)return;if(ev.key==='Escape'||(ev.key==='Enter'&&ev.target.tagName!=='BUTTON')){ev.preventDefault();ev.stopImmediatePropagation();if(ev.key==='Escape')closeCharacterDialogue();else if(!ev.repeat)advanceCharacterDialogue()}},true);
 }
 function showCharacterDialogue(dialogue){
- const d=CharacterDialogue;if(!d.active)d.returnFocus=document.activeElement;d.active=dialogue;d.index=0;document.getElementById('character-dialogue').hidden=false;document.getElementById('dialogue-name').textContent=dialogue.name;
+ const d=CharacterDialogue;if(!d.active)d.returnFocus=document.activeElement;d.active=dialogue;d.index=0;const panel=document.getElementById('character-dialogue');panel.classList.toggle('compact',!!dialogue.compact);panel.hidden=false;document.getElementById('dialogue-name').textContent=dialogue.name;
  renderCharacterDialogueLine();positionCharacterDialogue();
 }
 function renderCharacterDialogueLine(){
@@ -17,7 +17,7 @@ function renderCharacterDialogueLine(){
  document.getElementById('dialogue-next').textContent=d.index===d.active.lines.length-1?'Terminer ▸':'Suite ▸';
 }
 function updateCharacterDialogue(dt){
- const d=CharacterDialogue;if(!d.active)return;d.elapsed+=dt;
+ const d=CharacterDialogue;if(!d.active)return;d.elapsed+=dt;if(d.active.compact&&d.elapsed>d.active.lines[d.index].length*0.024+3.5){closeCharacterDialogue();return}
  const line=d.active.lines[d.index],count=matchMedia('(prefers-reduced-motion: reduce)').matches?line.length:Math.floor(d.elapsed/0.024),el=document.getElementById('dialogue-text');el.textContent=line.slice(0,count);
  if(count>=line.length&&d.index===d.active.lines.length-1&&!document.getElementById('dialogue-choices').childElementCount){
   for(const choice of d.active.choices||[]){const b=document.createElement('button');b.textContent=choice.label;b.onclick=()=>{if(choice.lines){d.active={...d.active,lines:choice.lines,choices:[]};d.index=0;renderCharacterDialogueLine()}else closeCharacterDialogue()};document.getElementById('dialogue-choices').append(b)}
@@ -39,4 +39,4 @@ function positionCharacterDialogue(){
 }
 function advanceCharacterDialogue(){const d=CharacterDialogue;if(!d.active)return;const line=d.active.lines[d.index];if(document.getElementById('dialogue-text').textContent!==line){d.elapsed=Infinity;updateCharacterDialogue(0);return}if(d.index+1<d.active.lines.length){d.index++;renderCharacterDialogueLine()}else closeCharacterDialogue()}
 function closeCharacterDialogue(){const d=CharacterDialogue;d.active=null;const panel=document.getElementById('character-dialogue');if(!panel)return;const restore=panel.contains(document.activeElement);panel.hidden=true;if(restore&&d.returnFocus?.isConnected)d.returnFocus.focus();d.returnFocus=null}
-function greetEngineer(speaker){showCharacterDialogue({speaker,name:'Ingénieur Exilé',role:'engineer',lines:['L’Ancre tient encore. Donnez-moi le temps de relever ses défenses.'],choices:[{label:'Nous devons préparer la défense.',lines:['Sélectionnez-moi, puis choisissez Temple pour établir un lieu de prière dans la clairière. Le prêtre de Sigil y recueillera de l’Esprit.']},{label:'Que savez-vous de l’Ancre ?',lines:['Tant qu’elle demeure, le serment tient. Si elle est blessée, ordonnez-moi de la réparer.']}]})}
+function greetEngineer(speaker){showCharacterDialogue({speaker,name:'Ingénieur Exilé',role:'engineer',compact:true,lines:['L’Ancre s’est éteinte. Je dois la réactiver : elle réveillera les gardes de l’entrée.']})}

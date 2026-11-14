@@ -27,6 +27,7 @@ function trimWindLayer(layer){
 // Déformation continue du feuillage seulement, sans poses ni arrondi de phase.
 function drawWindTree(o,nx,ny){
  const spec=WIND_TREES[o.wind],shear=-windAt(o.x,o.z)*spec.amplitude/spec.height;
+ if(!decorRenderer){const v=treeVariant(o.spr,shear);if(v){ctx.drawImage(v.c,nx*PX-v.ox,ny*PX-v.oy);return}}
  drawDecorSprite(o.spr,nx,ny);
  drawDecorSprite(o.spr.foliage,nx,ny,shear,true);
 }

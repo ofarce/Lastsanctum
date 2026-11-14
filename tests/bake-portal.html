@@ -1,0 +1,9 @@
+<!doctype html><meta charset="utf-8"><body><script src="../assets/decor.js"></script><script src="../assets/units.js"></script><script src="../assets/portal.js"></script><script>
+// Régénère assets/portal-atlas.png (design A, 554 images à 60 i/s). Lancer : python3 tests/bake-portal.py
+const dur=[1,1,1,1.4,1.2,.9,.9,.9,.9],N=554,fps=60;
+function pose(t){let i=0;for(;i<dur.length&&t>=dur[i];i++)t-=dur[i];const A=PortalKit.STATES[i],B=PortalKit.STATES[Math.min(i+1,9)],u=i===9?0:t/dur[i],k=u*u*(3-2*u),S={unit:null};
+ for(const key of ['glyph','seals','rim','open','field','arcs','dust','flicker','seam'])S[key]=(A[key]||0)+((B[key]||0)-(A[key]||0))*k;return S}
+const W=PortalKit.W,H=PortalKit.H,c=document.createElement('canvas');c.width=W*16;c.height=H*Math.ceil(N/16);const g=c.getContext('2d');
+for(let f=0;f<N;f++)g.drawImage(PortalKit.render(PortalKit.DESIGNS[0],pose(f/fps),f/fps),(f%16)*W,Math.floor(f/16)*H);
+const p=document.createElement('pre');p.id='out';p.textContent=c.toDataURL();document.body.append(p);
+</script>

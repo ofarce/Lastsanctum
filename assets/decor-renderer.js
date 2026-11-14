@@ -75,8 +75,43 @@ function useCanvasDecor(){if(decorRenderer){decorRenderer.canvas.style.display='
 function initDecorRenderer(){if(new URLSearchParams(location.search).get('renderer')!=='webgl'){useCanvasDecor();return}try{decorRenderer=new DecorRenderer(PW.objs)}catch(error){console.warn('Décor : rendu Canvas de secours.',error);useCanvasDecor()}}
 function flushDecor(){if(decorRenderer&&PIXEL)decorRenderer.flush()}
 function captureDecorLayer(x,y,w,h){if(decorRenderer&&PIXEL)decorRenderer.capture(x,y,w,h)}
+// Cache Canvas 2D des sprites de décor déjà agrandis à l'échelle PX (et, pour le feuillage, déjà cisaillés par le vent).
+// Agrandir et cisailler avec lissage à chaque image coûtait ~40 ms en jungle (≈500 arbres visibles) ; une copie 1:1 est quasi gratuite.
+// Le cisaillement est quantifié au tiers de pixel natif (PX/3 px écran) en haut du sprite : le balancement reste visuellement continu.
+// Tous les sprites passés ici sont statiques (décor construit une fois). Budget mémoire borné : au-delà, dessin direct.
+const DECOR_CACHE={px:0,map:new Map(),bytes:0,budget:80e6};
+function decorVariant(s,shear,smooth){
+ if(DECOR_CACHE.px!==PX){DECOR_CACHE.px=PX;DECOR_CACHE.map.clear();DECOR_CACHE.bytes=0}
+ let e=DECOR_CACHE.map.get(s);if(!e){e=new Map();DECOR_CACHE.map.set(s,e)}
+ const top=s.ay*PX,qs=PX/3,n=shear?Math.round(shear*top/qs):0,key=(smooth?'s':'n')+n;let v=e.get(key);if(v)return v;
+ const w=s.c.width*PX,h=s.c.height*PX,sh=top?n*qs/top:0;
+ const minX=-s.ax*PX+Math.min(-sh*top,sh*(h-top)),maxX=(s.c.width-s.ax)*PX+Math.max(-sh*top,sh*(h-top)),ox=Math.ceil(-minX),cw=Math.ceil(maxX)+ox;
+ if(DECOR_CACHE.bytes+cw*h*4>DECOR_CACHE.budget)return null;
+ const c=document.createElement('canvas');c.width=cw;c.height=h;const g=c.getContext('2d');g.imageSmoothingEnabled=smooth;
+ g.translate(ox,top);g.transform(1,0,sh,1,0,0);g.drawImage(s.c,-s.ax*PX,-top,w,h);
+ v={c,ox,oy:top};e.set(key,v);DECOR_CACHE.bytes+=cw*h*4;return v}
+// Arbre au vent : tronc (fixe, net) + feuillage (cisaillé, lissé) fusionnés en une seule image par niveau de vent.
+function treeVariant(t,shear){
+ if(DECOR_CACHE.px!==PX){DECOR_CACHE.px=PX;DECOR_CACHE.map.clear();DECOR_CACHE.bytes=0}
+ let e=DECOR_CACHE.map.get(t);if(!e){e=new Map();DECOR_CACHE.map.set(t,e)}
+ const f=t.foliage,ftop=f.ay*PX,qs=PX/3,n=shear?Math.round(shear*ftop/qs):0,key='t'+n;let v=e.get(key);if(v)return v;
+ const sh=ftop?n*qs/ftop:0,fh=f.c.height*PX,top=Math.max(t.ay,f.ay)*PX,bot=Math.max(t.c.height-t.ay,f.c.height-f.ay)*PX;
+ const minX=Math.min(-t.ax*PX,-f.ax*PX+Math.min(-sh*ftop,sh*(fh-ftop))),maxX=Math.max((t.c.width-t.ax)*PX,(f.c.width-f.ax)*PX+Math.max(-sh*ftop,sh*(fh-ftop)));
+ const ox=Math.ceil(-minX),cw=Math.ceil(maxX)+ox,ch=Math.ceil(top+bot);
+ if(DECOR_CACHE.bytes+cw*ch*4>DECOR_CACHE.budget)return null;
+ const c=document.createElement('canvas');c.width=cw;c.height=ch;const g=c.getContext('2d');
+ g.translate(ox,top);g.imageSmoothingEnabled=false;g.drawImage(t.c,-t.ax*PX,-t.ay*PX,t.c.width*PX,t.c.height*PX);
+ g.imageSmoothingEnabled=true;g.transform(1,0,sh,1,0,0);g.drawImage(f.c,-f.ax*PX,-ftop,f.c.width*PX,fh);
+ v={c,ox,oy:top};e.set(key,v);DECOR_CACHE.bytes+=cw*ch*4;return v}
+// Préchauffage : construit tous les niveaux de vent des arbres et les sprites de décor pendant les temps morts,
+// pour éviter un à-coup la première fois qu'une zone de jungle entre à l'écran. Relancé après un changement de zoom.
+function warmDecorCache(){if(decorRenderer||!PIXEL)return;const px=PX,todo=[],seen=new Set();
+ for(const o of PW.objs){if(!o.spr||seen.has(o.spr))continue;seen.add(o.spr);if(o.wind){const sp=WIND_TREES[o.wind],ftop=o.spr.foliage.ay*PX,qs=PX/3,m=Math.ceil(sp.amplitude/sp.height*ftop/qs);for(let n=-m;n<=m;n++)todo.push([o.spr,n*qs/ftop,true])}else todo.push([o.spr,0,false])}
+ const step=dl=>{if(PX!==px)return;const end=performance.now()+8;while(todo.length&&performance.now()<end&&(!dl||dl.timeRemaining()>1)){const[s,sh,tree]=todo.pop();if(!(tree?treeVariant(s,sh):decorVariant(s,0,false)))return}if(todo.length)schedule()};
+ const schedule=()=>typeof requestIdleCallback==='function'?requestIdleCallback(step,{timeout:500}):setTimeout(step,30);schedule()}
 function drawDecorSprite(s,nx,ny,shear=0,smooth=false){
  if(decorRenderer){decorRenderer.sprite(s,nx,ny,shear,smooth);return}
+ const v=decorVariant(s,shear,smooth);if(v){ctx.drawImage(v.c,nx*PX-v.ox,ny*PX-v.oy);return}
  if(!shear&&!smooth){blitSpr(s,nx,ny);return}
  ctx.save();ctx.imageSmoothingEnabled=smooth;ctx.translate(nx*PX,ny*PX);ctx.transform(1,0,shear,1,0,0);blitSpr(s,0,0);ctx.restore();
 }

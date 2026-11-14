@@ -563,6 +563,180 @@ function ballistaE(P,R,repaired){const[sx,sy]=origin(110,20,160,196);const X=ISO
  bannerDraw(P,...X(20,20,24),8,20,3);bannerDraw(P,...X(96,20,24),8,20,3);
  return{c:top,repaired}}
 
+/* =============== CASERNES D'INDRA =============== */
+// lance d'Indra : hampe, fer, ruban rouge
+function lance(P,x,y,h,z){for(let i=0;i<h;i++){P.set(x,y-i,PAL.wood[4],z);P.set(x+1,y-i,PAL.wood[2],z)}
+ for(let j=0;j<7;j++){const w=j<2?0:j<5?1:0;for(let i=-w;i<=w+1;i++)P.set(x+i,y-h-7+j,rp(PAL.iron,.95-j*.06-(i>0?.3:0),x+i,y-h-7+j),z+.01)}
+ for(let i=-2;i<=3;i++)P.set(x+i,y-h,C.gold[2+(i<1)],z+.02);P.set(x,y-h-8,PAL.iron[5],z+.02)}
+function crenels(P,X,a,b,h,z,step=8){for(let u=2;u<a-2;u+=step)block(P,...X(u,b-4,h),4,4,5,z+u*.001,stoneSh(.05));for(let v=2;v<b-4;v+=step)block(P,...X(a-4,v,h),4,4,5,z+v*.001,stoneSh(.05))}
+function plaza(P,X,a,b,z,ramp=C.stone){P.poly([X(0,0),X(a,0),X(a,b),X(0,b)],(x,y)=>{const r=Math.floor((y-.5*x)/6),c=Math.floor((y+.5*x)/6);let v=.42+(hash(r,c,9)-.5)*.2+(fbm(x/9,y/6,4)-.5)*.2;if(mod(y-.5*x,6)<1||mod(y+.5*x,6)<1)v-=.15;if(fbm(x/7,y/5,3)>.68)return rp(C.moss,v+.1,x,y);return rp(ramp,v,x,y)},z)}
+function sand(P,X,a,b,z){P.poly([X(0,0),X(a,0),X(a,b),X(0,b)],(x,y)=>rp(C.dirt,.6+(fbm(x/6,y/4,5)-.5)*.4,x,y),z)}
+function trident(P,x,y,z){for(let j=0;j<7;j++)P.set(x,y+j,C.gold[3],z);for(const i of[-2,2])for(let j=0;j<3;j++)P.set(x+i,y+j,C.gold[2],z);for(let i=-2;i<=2;i++)P.set(x+i,y+3,C.gold[2],z)}
+function warrior(g,x,y,t,face=1,pose=0){// petit disciple d'Indra animé (couche animée)
+ const c=C.cloth,lift=Math.round(Math.sin(pose)*1.2);
+ for(let j=0;j<4;j++){dot(g,x,y-j,PAL.iron[2]);dot(g,x+1,y-j,PAL.iron[1])}
+ for(let j=4;j<9;j++){dot(g,x,y-j,c[3]);dot(g,x+1,y-j,c[2])}
+ dot(g,x,y-9,'#c99a72');dot(g,x+1,y-9,'#a07656');dot(g,x,y-10,PAL.iron[4]);dot(g,x+1,y-10,PAL.iron[3]);dot(g,x+(face>0?0:1),y-11,c[4]);
+ const tip=[x+face*(6+lift*2),y-7-lift*2];lineA(g,x+.5-face*2,y-5+lift,tip[0],tip[1],PAL.wood[5]);dot(g,tip[0]+face,tip[1]-(lift>0?1:0),PAL.iron[5])}
+
+function indraA(P,R){const[sx,sy]=origin(100,64,160,178);const X=ISOP(sx,sy);shadow(P,166,186,98,30,-50);plaza(P,X,100,64,-80);
+ block(P,...X(20,0),60,12,26,0,stoneSh(0,.4));crenels(P,ISOP(...X(20,0)),60,12,26,.5);
+ for(const u of[0,76]){const T=ISOP(...X(u,0));block(P,...X(u,0),24,24,52,1+u*.01,stoneSh(.04,.3));crenels(P,T,24,24,52,2+u*.01,6);
+  for(const h of[22,38])opening(P,T,'L',24,10,13,h,h+6,2.5+u*.01,'#0d0806',PAL.stone?C.stone[5]:C.stone[5])}
+ const G=ISOP(...X(36,0));block(P,...X(36,0),28,18,40,3,stoneSh(.08));crenels(P,G,28,18,40,3.5,6);
+ opening(P,G,'L',18,7,21,0,24,3.6,'#0d0806',C.stone[6]);for(let u=7;u<=21;u+=.5){const a=(u-14)/7,hh=24+Math.round(Math.sqrt(Math.max(0,1-a*a))*4);P.line(...G(u,18.01,24),...G(u,18.01,hh),'#0d0806',3.61)}
+ for(let i=0;i<9;i++)P.line(...G(4+i*2.6,18.02,30),...G(4+i*2.6,18.02,36),C.stone[2],3.62);
+ const[ex,ey]=G(14,18.03,33);trident(P,ex,ey-3,3.7);
+ for(const u of[0,76])bannerDraw(P,...ISOP(...X(u,0))(4,24,46),8,20,3);
+ for(const u of[26,74]){const[x,y]=X(u,40);brazier(P,x,y,20)}
+ const[lx,ly]=X(50,46);block(P,lx-6,ly-2,12,12,6,21,stoneSh(.1));lance(P,lx,ly-4,54,22);
+ return{X,G,lt:[lx,ly-62],br:[X(26,40,5),X(74,40,5)],tw:[ISOP(...X(0,0))(12,12,57),ISOP(...X(76,0))(12,12,57)]}}
+function indraAAnim(g,s,t){for(const[x,y]of s.br)flame(g,x,y,t,.8,x);for(const[i,[x,y]]of s.tw.entries()){for(let k=0;k<12;k++){dot(g,x,y-k,PAL.wood[4])}flag(g,x+1,y-12,10,7,t+i)}
+ const[x,y]=s.lt;flag(g,x+1,y+10,7,10,t*1.3,C.cloth);if(mod(t,3)<.25){const k=mod(t,3)*16|0;dot(g,x+1-k%3,y-1,'#fffbe0');dot(g,x,y+1,'#fffbe0')}}
+
+function indraB(P,R){const cx=160,cy=182;shadow(P,cx+4,cy+6,96,34,-50);
+ cylinder(P,cx,cy,84,10,0,(x,y,n,hh)=>{const r=Math.floor(y/5),q=x+(r%2)*6;let v=.55-n*.35+(hash(r,q>>3,6)-.5)*.16;if(mod(y,5)===0||mod(q,12)===0)v-=.22;if(hh<5&&fbm(x/6,y/4,2)>.6)return rp(C.moss,v+.1,x,y);return rp(C.stone,v,x,y)},
+  (x,y,d)=>d>.78?rp(C.stone,.78-(hash(x>>2,y>>1,4)-.5)*.2,x,y):d>.72?C.stone[2]:rp(C.dirt,.62+(fbm(x/6,y/4,5)-.5)*.35-(d>.6?.12:0),x,y));
+ const top=cy-10,cols=[];for(let k=0;k<8;k++){const a=k/8*Math.PI*2+Math.PI/8,x=cx+Math.cos(a)*76,y=top+Math.sin(a)*34;cols.push([x,y,Math.sin(a)])}
+ cols.sort((a,b)=>a[1]-b[1]);for(const[x,y,sn]of cols){const h=sn<0?34:28,broken=hash(x|0,1,3)>.8;cylinder(P,Math.round(x),Math.round(y),4,broken?14:h,(y-top)*.1+(sn>0?40:5),(xx,yy,n)=>rp(C.stone,.7-n*.45+(mod(xx,3)===0?-.1:0),xx,yy),(xx,yy,d)=>rp(C.stone,.85-d*.3,xx,yy));if(!broken&&sn<0){const[bx,by]=[Math.round(x)-3,Math.round(y)-h-1];bannerDraw(P,bx,by+4,7,16,(y-top)*.1+6)}}
+ block(P,cx-10,top-6,14,14,8,20,stoneSh(.12));lance(P,cx,top-8,58,21);
+ return{c:[cx,top],lt:[cx,top-66]}}
+function indraBAnim(g,s,t){const[cx,cy]=s.c;for(const k of[0,1]){const a=t*.9+k*Math.PI,x=cx+Math.cos(a)*30,y=cy+6+Math.sin(a)*12;warrior(g,Math.round(x),Math.round(y),t,Math.cos(a+Math.PI/2)>0?1:-1,t*6+k*3)}
+ for(let k=0;k<4;k++){const p=mod(t*.7+k/4,1);dot(g,cx-20+k*12+p*6,cy+10-p*4,C.dirt[4])}const[x,y]=s.lt;flag(g,x+1,y+10,7,10,t*1.3)}
+
+function indraC(P,R){const[sx,sy]=origin(104,60,160,178);const X=ISOP(sx,sy);shadow(P,166,186,100,30,-50);
+ block(P,sx,sy,104,60,4,0,stoneSh(.1,.3));block(P,...X(4,4,4),96,52,4,.5,stoneSh(.15));
+ const[wx,wy]=X(10,8,8),W=ISOP(wx,wy);const plaster=(f,x,y)=>rp(C.stone,(f==='T'?.7:f==='L'?.62:.4)+(fbm(x/5,y/5,12)-.5)*.14+(mod(y,7)<1?-.08:0),x,y);
+ block(P,wx,wy,84,40,26,1,plaster);
+ for(let u=4;u<=80;u+=10.5){if(u>34&&u<50)continue;for(let h=0;h<26;h++){const[x,y]=W(u,44,h);for(let i=-1;i<=2;i++)P.set(x+i,y+(i>0?1:0),rp(C.stone,.85-i*.18,x+i,y),1.6)}}
+ for(let i=0;i<2;i++)P.line(...W(-2,44,26+i),...W(86,44,26+i),C.stone[6-i*2],1.65);
+ const roofX=roof(P,wx,wy,84,44,28,22,5,2,'clay',plaster);
+ opening(P,W,'L',44,36,48,0,18,1.7,'#0f0907',C.gold[2]);
+ const[tx,ty]=W(42,44,40);trident(P,tx,ty-1,3);for(let i=-9;i<=9;i++){P.set(tx+i,ty+8+Math.round(i*.5),C.gold[1],3);}
+ for(const u of[-1,89]){const[x,y]=X(u<0?6:96,u<0?58:58);bannerPole(P,x,y,36,30);bannerDraw(P,x+2,y-34,8,22,30.1)}
+ for(const u of[30,60]){const[x,y]=X(u,60,4);brazier(P,x,y+2,31)}
+ return{br:[X(30,60,9),X(60,60,9)],door:W(42,44,10)}}
+function indraCAnim(g,s,t){for(const[x,y]of s.br){flame(g,x,y,t,.9,x);glowPool(g,x,y+4,10,4,t,PAL.fire[3],.25)}
+ const[dx,dy]=s.door;const p=mod(t/5,1);if(p<.6){warrior(g,Math.round(dx-4+p*30),Math.round(dy+8+p*15),t,1,t*8)}}
+
+function indraD(P,R){const cx=150,cy=176;shadow(P,cx+12,cy+10,92,28,-50);
+ const[sx,sy]=origin(60,40,196,198);const X=ISOP(sx,sy);block(P,sx,sy,60,40,22,0,stoneSh(0,.4));roof(P,sx,sy,60,40,22,16,4,1,'shingle',stoneSh(0));
+ opening(P,X,'L',40,22,34,0,16,.8,'#0e0806',PAL.wood[4]);
+ cylinder(P,cx,cy-6,30,92,2,(x,y,n,hh)=>{const r=Math.floor(y/6),q=x+(r%2)*6;let v=.6-n*.42+(hash(r,q>>3,5)-.5)*.16;if(mod(y,6)===0||mod(q,12)===0)v-=.22;if(hh<14&&fbm(x/6,y/4,2)>.55)return rp(C.moss,v+.1,x,y);return rp(C.stone,v,x,y)},(x,y,d)=>rp(C.stone,.7-d*.2,x,y));
+ for(const h of[30,58]){for(let j=0;j<8;j++)for(let i=0;i<2;i++)P.set(cx-2+i,cy-6-h-j,'#0d0806',3)}
+ const top=cy-98;for(let j=0;j<=34;j++){const w=Math.round(36*(1-j/36));for(let i=-w;i<=w;i++){const v=.72-i/w*.45+(mod(i+j,4)===0?-.08:0)+(mod(j,4)===0?-.12:0);P.set(cx+i,top-j,rp(PAL.clay,v,cx+i,top-j),4)}P.set(cx-w-1,top-j,C.outline,4.1);P.set(cx+w+1,top-j,C.outline,4.1)}
+ for(let i=-36;i<=36;i++){P.set(cx+i,top+1,C.outline,4.1);P.set(cx+i,top,PAL.clay[1],4.05)}
+ lance(P,cx,top-34,16,5);bannerDraw(P,cx-26,cy-62,9,22,3.2);
+ const[gx,gy]=[cx-4,cy+14];opening(P,ISOP(gx,gy),'L',0,-6,6,0,20,3.3,'#0d0806',PAL.wood[4]);
+ for(const dx of[-22,20])brazier(P,cx+dx,cy+22,30);
+ return{win:[[cx-1,cy-40],[cx-1,cy-68]],br:[[cx-22,cy+17],[cx+20,cy+17]],tip:[cx,top-58]}}
+function indraDAnim(g,s,t){for(const[x,y]of s.br)flame(g,x,y,t,.8,x);for(const[i,[x,y]]of s.win.entries()){const f=.5+.5*Math.sin(t*3+i*2);for(let j=0;j<6;j++)dot(g,x,y-j,rp(PAL.fire,.4+f*.4,x,y-j))}
+ const[x,y]=s.tip;flag(g,x+2,y+6,12,8,t)}
+
+function indraE(P,R){const[sx,sy]=origin(104,100,160,178);const X=ISOP(sx,sy);shadow(P,166,186,100,32,-50);
+ block(P,sx,sy,104,100,4,-1,stoneSh(.05,.5));sand(P,ISOP(...X(0,0,4)),104,100,-.5);
+ const tent=(u,v,a,b)=>{const[x,y]=X(u,v,4);const T=ISOP(x,y);block(P,x,y,a,b,4,u+v,(f,xx,yy)=>rp(C.cloth,f==='L'?.55:.35,xx,yy),{edges:false});roof(P,x,y,a,b,4,20,3,u+v+.5,'cloth',(f,xx,yy)=>rp(C.cloth,.4,xx,yy));opening(P,T,'L',b,a/2-4,a/2+4,0,10,u+v+.6,'#170508',C.gold[2]);return T};
+ tent(6,6,34,24);tent(62,6,34,24);
+ const[rx,ry]=X(12,60,4);for(let k=0;k<6;k++){lance(P,rx+k*4,ry-k*2,26,40+k*.01)}for(let i=-2;i<26;i++){P.set(rx+i,ry-6-i*.5+2,PAL.wood[2],40.1);P.set(rx+i,ry-18-i*.5+2,PAL.wood[2],40.1)}
+ const[gx,gy]=X(80,62,4);for(const d of[-12,12])for(let j=0;j<30;j++)P.set(gx+d,gy-j,PAL.wood[3],41);for(let i=-13;i<=13;i++){P.set(gx+i,gy-30,PAL.wood[4],41.1);P.set(gx+i,gy-31,PAL.wood[2],41.1)}
+ const[mx,my]=X(46,86,4);for(let i=0;i<20;i++)P.set(mx,my-i,PAL.wood[3],50);for(let i=-6;i<=6;i++)P.set(mx+i,my-14,PAL.wood[4],50.1);for(let j=0;j<10;j++)for(let i=-3;i<=3;i++)P.set(mx+i,my-24+j,rp(PAL.straw,.7-i*.08,mx+i,my-24+j),50.2);
+ const[px,py]=X(94,94,4);bannerPole(P,px,py,44,60);
+ return{gong:[gx,gy-17],pole:[px,py-44],dummy:[mx,my],sp:X(60,70,4)}}
+function indraEAnim(g,s,t){const[gx,gy]=s.gong,p=mod(t,2.4),sh=p<.6?Math.sin(p*60)*(.6-p)*2:0;
+ for(let j=-8;j<=8;j++)for(let i=-8;i<=8;i++){const d=Math.hypot(i,j);if(d<=8)dot(g,gx+i+sh,gy+j,d>7?C.gold[0]:rp(C.gold,.95-d*.06-(i+j)*.03,gx+i,gy+j))}
+ if(p<.8)for(const r of[11,15]){const rr=r+p*10;for(let a=0;a<40;a++){const an=a/40*6.28;if(hash(a,r,1)>.5)dot(g,gx+Math.cos(an)*rr,gy+Math.sin(an)*rr*.9,C.gold[2])}}
+ const[x,y]=s.pole;flag(g,x+2,y,12,16,t);const[sx,sy]=s.sp;const a=Math.sin(t*2.2);warrior(g,Math.round(sx-8+a*2),Math.round(sy),t,1,t*7);warrior(g,Math.round(sx+8-a*2),Math.round(sy-1),t,-1,t*7+2);
+ const[mx,my]=s.dummy;if(mod(t,1.4)<.12)for(let k=0;k<4;k++)dot(g,mx+4+k,my-20+k,PAL.straw[3])}
+
+/* ===== Anneau d'Istakhr : base détaillée + 5 animations ===== */
+function ringB(P,R){const cx=160,cy=184,RX=84,RY=38;shadow(P,cx+4,cy+6,98,36,-50);
+ cylinder(P,cx,cy,RX,12,0,(x,y,n,hh)=>{const r=Math.floor(y/5),q=x+(r%2)*6;let v=.55-n*.35+(hash(r,q>>3,6)-.5)*.16;if(mod(y,5)===0||mod(q,12)===0)v-=.22;if(hash(q>>3,r,8)>.93)v-=.3;if(hh<6&&fbm(x/6,y/4,2)>.58)return rp(C.moss,v+.1,x,y);return rp(C.stone,v,x,y)},
+  (x,y,d,i,j)=>{if(d>.8)return rp(C.stone,.8-(hash(x>>2,y>>1,4)-.5)*.22-(mod(Math.atan2(j,i)*24/Math.PI,1)<.12?.2:0),x,y);if(d>.74)return C.stone[2];
+   const rk=mod(Math.sqrt(d)*40,3)<.6?-.1:0;return rp(C.dirt,.64+(fbm(x/6,y/4,5)-.5)*.3+rk-(d>.6?.12:0),x,y)});
+ const top=cy-12;
+ // marches d'entrée à l'avant
+ for(let s=0;s<3;s++){const w=18-s*2;for(let i=-w;i<=w;i++)for(let j=0;j<3;j++)P.set(cx+i,cy+RY-2-s*4+j+(-12+12),rp(C.stone,.75-j*.15-s*.05,cx+i,cy+RY-s*4+j),60+s)}
+ // dalle centrale ronde et monument
+ for(let j=-8;j<=8;j++)for(let i=-18;i<=18;i++){const d=(i/18)**2+(j/8)**2;if(d<=1)P.set(cx+i,top+j,d>.8?C.stone[2]:rp(C.stone,.68-(mod(i+j*2,6)===0?.12:0),cx+i,top+j),10)}
+ for(let a=0;a<90;a++){const t=a/90*6.283;P.set(cx+Math.cos(t)*14,top+Math.sin(t)*6,C.gold[1+(a%6===0)],10.5)}
+ block(P,cx-10,top-6,14,14,10,20,stoneSh(.12));for(let i=-6;i<=6;i++)P.set(cx+i,top-11+Math.round(Math.abs(i)*.5),C.gold[2],20.5);lance(P,cx,top-10,58,21);
+ // râteliers et objets
+ for(const[ox,oy,z]of[[cx-56,top-6,8],[cx+44,top-8,8]]){for(let k=0;k<5;k++){for(let i=0;i<20;i++)P.set(ox+k*3,oy-i,PAL.wood[4],z);P.set(ox+k*3,oy-21,PAL.iron[5],z+.1);P.set(ox+k*3,oy-22,PAL.iron[4],z+.1)}for(let i=-1;i<15;i++){P.set(ox+i,oy-5,PAL.wood[2],z+.2);P.set(ox+i,oy-15,PAL.wood[2],z+.2)}}
+ for(const[x,y]of[[cx-30,top+20],[cx+34,top+16]]){for(let j=-4;j<=4;j++)for(let i=-4;i<=4;i++){const d=Math.hypot(i,j);if(d<=4)P.set(x+i,y+j-3,d>3?PAL.iron[3]:d<1.2?C.gold[3]:rp(C.cloth,.7-(i+j)*.05,x+i,y+j),30)}}
+ pile(P,cx+60,cy+30,8,C.pebble,70,R,6);pile(P,cx-74,cy+20,6,C.pebble,70,R,5);
+ const cols=[];for(let k=0;k<8;k++){const a=k/8*Math.PI*2+Math.PI/8;cols.push([cx+Math.cos(a)*(RX-8),top+Math.sin(a)*(RY-4),Math.sin(a),k])}
+ cols.sort((a,b)=>a[1]-b[1]);const caps=[];
+ for(const[x,y,sn,k]of cols){const X0=Math.round(x),Y0=Math.round(y),broken=k===6,h=broken?14:(sn<0?36:30),z=(y-top)*.1+(sn>0?40:5);
+  cylinder(P,X0,Y0,5,h,z,(xx,yy,n)=>rp(C.stone,.72-n*.45+(mod(xx-X0,3)===0?-.12:0),xx,yy),(xx,yy,d)=>rp(C.stone,.88-d*.3,xx,yy));
+  for(let i=-6;i<=6;i++){P.set(X0+i,Y0-h-1,C.stone[6],z+.1);P.set(X0+i,Y0-h,C.stone[3],z+.1);P.set(X0+i,Y0-1,C.stone[3],z+.1)}
+  if(broken){for(let n=0;n<10;n++){P.set(X0+8+n%4*2,Y0+2-(n>>2),C.stone[4+(n%2)],z+.2)}continue}
+  if(k%2===0&&sn<0)bannerDraw(P,X0-3,Y0-h+6,7,18,z+.3);caps.push([X0,Y0-h-2,sn])}
+ return{c:[cx,top],lt:[cx,top-76],caps,RX,RY,cy}}
+function big(g,x,y,fn){g.save();g.translate(Math.round(x),Math.round(y));g.scale(2,2);fn();g.restore()}
+const warrior2=(g,x,y,t,f,p)=>big(g,x,y,()=>warrior(g,0,0,t,f,p));const horse2=(g,x,y,t,f)=>big(g,x,y,()=>horse(g,0,0,t,f));
+const ringPos=(s,a,r=1)=>[s.c[0]+Math.cos(a)*48*r,s.c[1]+10+Math.sin(a)*20*r];
+function ringBase(g,s,t){const[x,y]=s.lt;flag(g,x+1,y+10,7,10,t*1.3)}
+// 1 Duel
+function ringAnim1(g,s,t){ringBase(g,s,t);const ph=t*1.2;for(const k of[0,1]){const a=ph*.6+k*Math.PI,[x,y]=ringPos(s,a,.7);warrior2(g,Math.round(x),Math.round(y),t,k?-1:1,t*7+k*2.5)}
+ const[a,b]=[ringPos(s,ph*.6,.7),ringPos(s,ph*.6+Math.PI,.7)];if(mod(t,.9)<.12){const mx=(a[0]+b[0])/2,my=(a[1]+b[1])/2-8;for(let k=0;k<6;k++)dot(g,mx+Math.cos(k)*3*(1+mod(t,.9)*20),my+Math.sin(k)*2*(1+mod(t,.9)*20),k%2?'#fffbe0':C.gold[3])}
+ for(let k=0;k<5;k++){const p=mod(t*.8+k/5,1);dot(g,s.c[0]-24+k*12+p*4,s.c[1]+20-p*5,C.dirt[5])}}
+// 2 Formation
+function ringAnim2(g,s,t){ringBase(g,s,t);const beat=mod(t,1.2),thr=beat<.35?Math.sin(beat/.35*Math.PI)*1.6:0;
+ for(let r=0;r<2;r++)for(let i=0;i<4;i++){const x=s.c[0]-34+i*14+r*7,y=s.c[1]+14+r*10;warrior2(g,x,y,t,1,thr*1.6-0.4)}
+ const ix=s.c[0]+44,iy=s.c[1]+6;warrior2(g,ix,iy,t,-1,0);if(beat<.25){g.fillStyle='#e8d8a8';g.font='7px monospace';g.fillText('HA!',ix-6,iy-14)}}
+// 3 Cavalier d'Istakhr
+function horse(g,x,y,t,face){const leg=Math.sin(t*12),c=['#2a1a10','#4a3020','#6a4630','#8a6040'];
+ for(let i=-6;i<=6;i++)for(let j=0;j<4;j++)dot(g,x+i,y-7-j,c[j===0?3:j<2?2:1]);for(let j=0;j<5;j++){dot(g,x+face*(7+(j>>1)),y-10-j,c[2]);dot(g,x+face*(8+(j>>1)),y-10-j,c[1])}
+ dot(g,x+face*10,y-15,c[0]);dot(g,x+face*11,y-14,c[1]);for(let j=0;j<4;j++)dot(g,x-face*(7+j*.3),y-9+j,'#1a100a');
+ for(const[o,p]of[[-5,leg],[-3,-leg],[4,-leg],[6,leg]])for(let j=0;j<4;j++)dot(g,x+o+Math.round(p*j*.4),y-3+j,c[1]);
+ for(let j=0;j<5;j++){dot(g,x,y-11-j,C.cloth[3]);dot(g,x+1,y-11-j,C.cloth[2])}dot(g,x,y-16,'#c99a72');dot(g,x,y-17,PAL.iron[4]);dot(g,x+1,y-17,PAL.iron[3]);lineA(g,x-face*4,y-14,x+face*12,y-19,PAL.wood[5]);dot(g,x+face*13,y-19,PAL.iron[5]);
+ for(let i=0;i<4;i++)dot(g,x+face*(9-i),y-19+Math.round(Math.sin(t*10+i)),C.cloth[4])}
+function ringAnim3(g,s,t){ringBase(g,s,t);const a=t*.8,[x,y]=ringPos(s,a,1.05),f=Math.cos(a+Math.PI/2)>0?1:-1;
+ for(let k=1;k<7;k++){const[px,py]=ringPos(s,a-k*.09,1.05);if(hash(k,Math.floor(t*10),2)>.4)dot(g,px+(hash(k,3,1)-.5)*4,py-k*.6,C.dirt[4+(k%2)])}
+ const behind=Math.sin(a)<0;horse2(g,Math.round(x),Math.round(y),t,f);const[tx,ty]=[s.c[0]+32,s.c[1]+4];for(let i=0;i<6;i++)dot(g,tx,ty-i,PAL.wood[4]);for(let j=-2;j<=2;j++)for(let i=-2;i<=2;i++)if(i*i+j*j<6)dot(g,tx+i,ty-8+j,(i*i+j*j<2)?C.cloth[4]:PAL.straw[3])}
+// 4 Veillée
+function ringAnim4(g,s,t){g.fillStyle='rgba(8,10,30,.45)';g.fillRect(0,0,320,240);for(const[x,y]of s.caps){glowPool(g,x,y+4,14,6,t,PAL.fire[3],.35);flame(g,x,y,t,.75,x)}
+ const[cx,cy]=s.c;glowPool(g,cx,cy+2,22,9,t,PAL.fire[4],.3);for(let k=0;k<3;k++){const a=k/3*6.28+.5,[x,y]=ringPos(s,a,.45);warrior2(g,Math.round(x),Math.round(y),t,Math.cos(a)>0?-1:1,0)}
+ for(let k=0;k<10;k++){const p=mod(t*.5+k/10,1),[x,y]=s.caps[k%s.caps.length];dot(g,x+Math.sin(t*3+k)*3,y-6-p*24,p<.5?PAL.fire[5]:PAL.fire[3])}ringBase(g,s,t)}
+// 5 Bénédiction de la Lance
+function ringAnim5(g,s,t){const[cx,cy]=s.c,[lx,ly]=s.lt,p=mod(t/6,1),pulse=.5+.5*Math.sin(t*3);
+ for(let k=0;k<6;k++){const a=k/6*6.283+.3,[x,y]=ringPos(s,a,.75);const kneel=p>.15&&p<.85;if(kneel){for(let j=0;j<5;j++){g.fillStyle=C.cloth[3];g.fillRect(x,y-j*2,4,2)}g.fillStyle='#c99a72';g.fillRect(x,y-12,4,2);g.fillStyle=PAL.iron[4];g.fillRect(x,y-14,4,2)}else warrior2(g,Math.round(x),Math.round(y),t,Math.cos(a)>0?-1:1,0)}
+ if(p>.2&&p<.85){const k=Math.min(1,(p-.2)*5,(.85-p)*5);for(let i=0;i<46;i++){const a=t*2.4+i*.4,h=i*1.3,r=(10-i*.15)*k;dot(g,lx+Math.cos(a)*r,cy-10-h+Math.sin(a)*r*.4,i%2?C.gold[3]:C.cloth[4])}
+  glowPool(g,lx,ly+6,8,8,t,C.gold[3],.5*k*pulse);for(let a=0;a<36;a++){const an=a/36*6.283;if(hash(a,Math.floor(t*6),2)>.5)dot(g,cx+Math.cos(an)*16,cy+Math.sin(an)*7,C.gold[3])}}
+ ringBase(g,s,t)}
+
+/* ===== Duel : 5 déclinaisons finales ===== */
+const ease=x=>x<.5?2*x*x:1-(-2*x+2)**2/2;
+function duelState(t,P=3){const p=mod(t,P)/P;let d,clash=-1;if(p<.35)d=26;else if(p<.47){d=26-ease((p-.35)/.12)*20}else if(p<.6){d=6+ease((p-.47)/.13)*16;clash=(p-.47)/.13}else d=22+ease((p-.6)/.4)*4;return{d,clash,p,lunge:p>.35&&p<.5}}
+function sparks(g,x,y,k,col=C.gold[3]){for(let i=0;i<10;i++){const a=i*.63+k,r=2+k*14;dot(g,x+Math.cos(a)*r,y+Math.sin(a)*r*.6-k*4,i%3?col:'#fffbe0')}}
+function fighter(g,x,y,t,f,pose,arm=C.cloth,champ=false){big(g,x,y,()=>{const c=champ?C.gold:arm;
+ for(let j=0;j<4;j++){dot(g,0,-j,PAL.iron[2]);dot(g,1,-j,PAL.iron[1])}for(let j=4;j<9;j++){dot(g,0,-j,c[3]);dot(g,1,-j,c[2])}
+ dot(g,0,-9,'#c99a72');dot(g,1,-9,'#a07656');dot(g,0,-10,PAL.iron[4]);dot(g,1,-10,PAL.iron[3]);dot(g,f>0?0:1,-11,champ?C.cloth[4]:c[4]);
+ const reach=pose,tip=[f*(5+reach*3),-6-(reach<.2?2:0)];lineA(g,.5-f*2,-5,tip[0],tip[1],PAL.wood[5]);dot(g,tip[0]+f,tip[1],PAL.iron[5]);if(champ)dot(g,-f,-6,C.gold[2])})}
+function fallen(g,x,y){g.fillStyle=PAL.iron[2];g.fillRect(x-8,y-2,6,3);g.fillStyle=C.cloth[3];g.fillRect(x-2,y-2,10,3);g.fillStyle='#c99a72';g.fillRect(x+8,y-2,2,3);lineA(g,x-6,y+3,x+12,y+1,PAL.wood[5])}
+function spectator(g,x,y,t,cheer,k){big(g,x,y,()=>{for(let j=0;j<5;j++){dot(g,0,-j,C.cloth[2+(j>2)]);dot(g,1,-j,C.cloth[1])}dot(g,0,-5,'#c99a72');dot(g,0,-6,PAL.iron[3]);if(cheer){const u=Math.sin(t*10+k)>0;dot(g,-1,-5-u,'#c99a72');dot(g,2,-5-u,'#c99a72')}})}
+function duelCore(g,s,t,o={}){const[cx,cy0]=s.c,cy=cy0+20,st=duelState(t,o.period||3),a=Math.sin(t*.25)*.5,ux=Math.cos(a),uy=Math.sin(a)*.45,dd=st.d*.7;
+ const A=[cx-ux*dd,cy-uy*dd],B=[cx+ux*dd,cy+uy*dd];const fa=ux>0?1:-1;const pose=st.lunge?1:st.clash>=0?.5*(1-st.clash):0;
+ const order=A[1]<B[1]?[[A,fa,0],[B,-fa,1]]:[[B,-fa,1],[A,fa,0]];
+ for(let k=0;k<4;k++){const p=mod(t*.9+k/4,1);dot(g,cx-14+k*9+Math.sin(k+t)*3,cy+6-p*6,C.dirt[5])}
+ for(const[[x,y],f,i]of order){if(o.fallen&&i===1&&o.fallen(st)){fallen(g,Math.round(x),Math.round(y));continue}fighter(g,Math.round(x),Math.round(y),t,f,pose,C.cloth,o.champ&&i===1)}
+ if(st.clash>=0&&st.clash<.6){sparks(g,cx,cy-12,st.clash,o.spark);if(st.clash<.15){g.fillStyle='#fffbe0';g.fillRect(cx-1,cy-13,3,3)}}
+ return st}
+function duel1(g,s,t){ringBase(g,s,t);duelCore(g,s,t)}
+function duel2(g,s,t){ringBase(g,s,t);const st=duelCore(g,s,t);const[cx,cy]=s.c;
+ fighter(g,cx+50,cy+22,t,-1,0,C.gold);const cheer=st.clash>=0&&st.clash<.8;
+ for(let k=0;k<4;k++){const a=Math.PI*.15+k*.28,x=cx+Math.cos(a)*-70,y=cy+18+Math.sin(a)*-28+k*4;spectator(g,Math.round(cx-66+k*10),Math.round(cy+30+k*3),t,cheer,k)}
+ if(cheer){g.fillStyle='#e8d8a8';g.font='7px monospace';g.fillText('INDRA !',cx-78,cy+8)}}
+function duel3(g,s,t){ringBase(g,s,t);const P=6,p=mod(t,P)/P;const st=duelCore(g,s,t,{period:2,fallen:()=>p>.66&&p<.92});
+ const[cx,cy]=s.c;if(p>.66&&p<.7)sparks(g,cx+12,cy+6,(p-.66)*20,PAL.dirt?C.dirt[5]:C.dirt[5]);
+ if(p>.84&&p<.92){g.fillStyle='#e8d8a8';g.font='7px monospace';g.fillText('Relève-toi.',cx-20,cy-30)}}
+function duel4(g,s,t){ringBase(g,s,t);const st=duelCore(g,s,t,{champ:true,spark:C.gold[3]});const[cx,cy]=s.c;
+ for(const[x,y]of s.caps){for(let i=0;i<5;i++)dot(g,x-2+i,y-2-Math.round(Math.sin(t*6+x+i)),C.cloth[4])}
+ if(st.clash>=0&&st.clash<.5)for(let a=0;a<40;a++){const an=a/40*6.28,r=10+st.clash*40;if(hash(a,3,2)>.4)dot(g,cx+Math.cos(an)*r,cy+14+Math.sin(an)*r*.4,C.dirt[5])}}
+function duel5(g,s,t){g.fillStyle='rgba(8,10,30,.5)';g.fillRect(0,0,320,240);for(const[x,y]of s.caps){glowPool(g,x,y+4,14,6,t,PAL.fire[3],.35);flame(g,x,y,t,.75,x)}
+ const[cx,cy]=s.c;glowPool(g,cx,cy+14,30,12,t,PAL.fire[3],.22);const st=duelCore(g,s,t,{spark:PAL.fire[5]});
+ if(st.clash>=0&&st.clash<.3)glowPool(g,cx,cy-12,14,8,t,'#fffbe0',.5*(1-st.clash*3));ringBase(g,s,t)}
+
 /* ---------- catalogue ---------- */
 const sets=[
  {id:'scierie',title:'Scierie',lede:'Bois brut des Exilés : du bardage, des bardeaux, une matière qui contraste avec la pierre tyrienne du temple.',items:[
@@ -595,6 +769,24 @@ const sets=[
   {name:'C · Le Pylône',desc:'Ruine : pilier carré fendu, sommet effondré, failles d’Aether. Réparé : pylône rehaussé, plate-forme à merlons, anneau doré.',seed:53,pair:true,draw:(P,R,r)=>ballistaC(P,R,r),anim:(g,s,t)=>ballistaAnim(g,s,t,1)},
   {name:'D · Le Nid de bois',desc:'Réparation « à la manière des Exilés » : sur le socle tyrien, quatre poteaux contreventés portent une plate-forme bordée de pieux.',seed:54,pair:true,draw:(P,R,r)=>ballistaD(P,R,r),anim:(g,s,t)=>ballistaAnim(g,s,t,1)},
   {name:'E · Le Rempart',desc:'Ruine : mur brisé en deux, tour écroulée. Réparé : courtine crénelée, tour ronde en saillie, bannières : la défense devient un morceau de muraille.',seed:55,pair:true,draw:(P,R,r)=>ballistaE(P,R,r),anim:(g,s,t)=>ballistaAnim(g,s,t,1)}]},
+ {id:'indra',title:'Casernes d’Indra',lede:'Les disciples d’Indra, ordre de combattants d’Istakhr, s’allient aux Exilés. Pierre tyrienne, bannières rouges au trident, la Lance d’Indra comme emblème.',items:[
+  {name:'A · La Porte de la Lance',desc:'Deux tours crénelées et une porterie en arc, le trident doré au-dessus de l’entrée. Devant, la Lance d’Indra se dresse sur son socle entre deux braseros.',seed:61,draw:indraA,anim:indraAAnim},
+  {name:'B · L’Anneau d’Istakhr',desc:'Une arène annulaire, en écho aux cités en anneaux d’Istakhr : colonnes, bannières et sable. Deux disciples s’entraînent à la lance autour du monument central.',seed:62,draw:indraB,anim:indraBAnim},
+  {name:'C · La Salle des Serments',desc:'Une salle à colonnade sur un double soubassement, au toit de tuiles rouges. Les recrues prêtent serment sous le trident, puis sortent entre les braseros.',seed:63,draw:indraC,anim:indraCAnim},
+  {name:'D · La Tour du Veilleur',desc:'Une haute tour ronde au toit conique, hommage au guerrier géant qui veille sur l’anneau intérieur. Une annexe de bardeaux abrite la chambrée. Silhouette repérable de loin.',seed:64,draw:indraD,anim:indraDAnim},
+  {name:'E · Le Camp des Disciples',desc:'Une plate-forme de pierre couverte de sable : tentes rouges, râtelier de lances, gong de bronze qui rythme l’exercice, duel d’entraînement et mannequin.',seed:65,draw:indraE,anim:indraEAnim}]},
+ {id:'anneau',title:'Anneau d’Istakhr · animations',lede:'Base enrichie : marches d’entrée, dalle centrale cerclée d’or, râteliers, boucliers, colonne effondrée, sable ratissé en cercles, joints et mousse. Cinq façons de faire vivre le bâtiment.',items:[
+  {name:'1 · Le Duel',desc:'Deux disciples tournent l’un autour de l’autre à la lance. À chaque passe, les fers se croisent en gerbe d’étincelles et la poussière se soulève.',seed:71,draw:ringB,anim:ringAnim1},
+  {name:'2 · La Formation',desc:'Huit recrues sur deux rangs portent la lance en rythme. Un instructeur leur fait face et donne la cadence : « HA ! ».',seed:71,draw:ringB,anim:ringAnim2},
+  {name:'3 · Le Cavalier d’Istakhr',desc:'Istakhr, cité du cheval : un cavalier fait le tour de la piste au galop, la lance pointée, en soulevant le sable. Une cible de paille attend près du monument.',seed:71,draw:ringB,anim:ringAnim3},
+  {name:'4 · La Veillée',desc:'Variante nocturne : les chapiteaux deviennent des braseros, des braises montent vers le ciel et trois sentinelles montent la garde autour de la Lance.',seed:71,draw:ringB,anim:ringAnim4},
+  {name:'5 · La Bénédiction de la Lance',desc:'Les disciples s’agenouillent en cercle. Des rubans d’or et de pourpre s’enroulent autour de la Lance, qui s’illumine, puis ils se relèvent. Le cycle dure 6 s.',seed:71,draw:ringB,anim:ringAnim5}]},
+ {id:'duel',title:'Le Duel · propositions finales',lede:'Cycle commun : les duellistes se jaugent en tournant, chargent, croisent le fer en gerbe d’étincelles, rompent puis recommencent. L’axe du duel pivote lentement autour de la Lance.',items:[
+  {name:'1A · Le Duel pur',desc:'Lecture la plus nette : deux disciples face à face, charge, choc lumineux, recul. Rien d’autre ne bouge que la poussière et la bannière.',seed:71,draw:ringB,anim:duel1},
+  {name:'1B · Sous l’œil du maître',desc:'Un maître d’armes en tunique dorée observe le duel. Quatre recrues assises sur le muret lèvent les bras à chaque choc : « INDRA ! ».',seed:71,draw:ringB,anim:duel2},
+  {name:'1C · Les trois passes',desc:'Le récit en 6 s : deux passes égales, la troisième envoie un disciple au sol dans un nuage de sable. Le vainqueur l’aide à se relever (« Relève-toi. »), puis le cycle reprend.',seed:71,draw:ringB,anim:duel3},
+  {name:'1D · Le Champion d’Indra',desc:'Un champion en armure dorée affronte un disciple. Chaque choc projette une onde de poussière, et les fanions rouges flottent sur les colonnes.',seed:71,draw:ringB,anim:duel4},
+  {name:'1E · Le Duel de la Veillée',desc:'De nuit, à la lueur des braseros perchés sur les colonnes : chaque choc éclaire brièvement l’arène d’un flash blanc et projette des étincelles de feu.',seed:71,draw:ringB,anim:duel5}]},
 ];
 /* ---------- intégration en jeu ---------- */
 // Px transparent : les ombres deviennent un noir translucide au lieu d'assombrir l'herbe.
@@ -606,7 +798,7 @@ const PICKS={
  sawmill:{set:'scierie',i:1,anchor:[166,176]},
  foundry:{set:'fonderie',i:1,anchor:[152,174]},
  temple:{set:'temple',i:1,anchor:[160,180]},
- barracks:{set:'caserne',i:4,anchor:[160,182]},
+ barracks:{set:'duel',i:1,anchor:[160,186]},
  ballista:{set:'balistes',i:0,anchor:[160,196]},
 };
 const cache={},scratch=document.createElement('canvas');scratch.width=W;scratch.height=H;const sg=scratch.getContext('2d');
@@ -619,8 +811,8 @@ function draw(ctx,kind,px,py,k,time,progress=1,opts={}){const sp=sprite(kind,opt
  sg.clearRect(0,0,W,H);sg.imageSmoothingEnabled=false;
  if(progress<1){sg.globalAlpha=.22;sg.drawImage(sp.img,0,0);sg.globalAlpha=1;const f=clamp(progress),cut=Math.round(sp.bottom-(sp.bottom-sp.top)*f);
   sg.drawImage(sp.img,0,cut,W,H-cut,0,cut,W,H-cut);for(let i=0;i<W;i+=2)if(sp.alpha[cut*W+i]>200&&hash(i,Math.floor(time*8),3)>.6)dot(sg,i,cut-(hash(i,Math.floor(time*8),5)*3|0),'#e8d8a8')}
- else{sg.drawImage(sp.img,0,0);if(kind==='ballista'){if(opts.variant)ballistaWeapon(sg,sp.s.c[0],sp.s.top,0,opts.yaw||0,time,1,0,opts.phase||0,true);else ballistaAnim(sg,sp.s,time,0)}else sp.item.anim(sg,sp.s,time)}
+ else{sg.drawImage(sp.img,0,0);if(kind==='ballista'){if(opts.variant){if(global.BalisteTyrienne)BalisteTyrienne.drawGame(sg,sp.s.c[0],sp.s.top,opts.yaw||0,time,opts.phase||0,0);else ballistaWeapon(sg,sp.s.c[0],sp.s.top,0,opts.yaw||0,time,1,0,opts.phase||0,true)}else ballistaAnim(sg,sp.s,time,0)}else sp.item.anim(sg,sp.s,time)}
  const smooth=ctx.imageSmoothingEnabled;ctx.imageSmoothingEnabled=false;ctx.drawImage(scratch,x0,y0,W*k,H*k);ctx.imageSmoothingEnabled=smooth}
 function bake(item,variant){const P=new Px(W,H);const R=ground(P,item.seed);frame(R,P);const s=item.draw(P,R,variant);P.flush();return{img:P.c,s}}
-global.PixelBuildings={W,H,sets,bake,draw,sprite,PICKS};
+global.PixelBuildings={W,H,sets,bake,draw,sprite,PICKS,lib:{PAL,rp,mod,clamp,ISOP,origin,block,wood,stoneSh,roof,opening,cylinder,logV,logU,post,stake,pile,pebble2,brazier,dot,lineA,smoke,flame,glowPool,sparks,flag,tent,campfire,monoRoof,surf,ground,frame}};
 })(window);

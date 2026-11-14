@@ -22,10 +22,10 @@ updateFoundries(8);assert.equal(b.progress,0); // Travel must finish before buil
 u.x=b.x-8;u.z=b.z+3;currentTime=8;updateFoundries(8);
 assert(b.complete);assert(b.worker);assert(!u.foundryJob);assert.equal(iron,0);
 currentTime=b.workAt+3.99;updateFoundries(0);assert.equal(iron,0);
-currentTime=b.workAt+4;updateFoundries(0);assert.equal(iron,10);assert.equal(ironPopups[0].x,core.x);
+currentTime=b.workAt+4;updateFoundries(0);assert.equal(iron,10);assert.equal(ironPopups[0].x,b.x);assert.equal(ironPopups[0].z,b.z);
 updateFoundries(0);assert.equal(iron,10); // No duplicate gain at the same timestamp.
 temples.push({x:-30,z:10,complete:true});
-currentTime=b.workAt+8;updateFoundries(0);assert.equal(iron,20);assert.equal(ironPopups[0].x,-30);assert.equal(ironPopups[0].z,10);
+currentTime=b.workAt+8;updateFoundries(0);assert.equal(iron,20);assert.equal(ironPopups[0].x,b.x);assert.equal(ironPopups[0].z,b.z);
 currentTime=b.workAt+12;updateFoundries(0);assert.equal(iron,30);
 currentTime=b.workAt+13.81;updateFoundries(0);assert.equal(ironPopups.length,0);
 placeFoundry({x:30,z:30});assert(u.foundryJob);hold();assert(!u.foundryJob);assert.equal(foundries.length,1);

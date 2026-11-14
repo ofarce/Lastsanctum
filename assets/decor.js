@@ -27,8 +27,8 @@ const hexC={};const hex=c=>hexC[c]||(hexC[c]=[1,3,5].map(i=>parseInt(c.substr(i,
 function inside(p,x,y){let r=false;for(let i=0,j=p.length-1;i<p.length;j=i++){const[xi,yi]=p[i],[xj,yj]=p[j];if((yi>y)!==(yj>y)&&x<(xj-xi)*(y-yi)/(yj-yi)+xi)r=!r}return r}
 
 class Px{
- constructor(w,h,transparent=false){this.w=w;this.h=h;this.c=document.createElement('canvas');this.c.width=w;this.c.height=h;this.g=this.c.getContext('2d',{willReadFrequently:true});this.d=this.g.createImageData(w,h);this.z=new Float32Array(w*h).fill(-1e9);if(!transparent){const b=hex(C.bg);for(let i=0;i<w*h;i++){this.d.data.set([...b,255],i*4)}}}
- set(x,y,col,z=0){x=Math.round(x);y=Math.round(y);if(x<0||y<0||x>=this.w||y>=this.h)return;const i=y*this.w+x;if(z<this.z[i])return;this.z[i]=z;this.d.data.set(hex(col),i*4);this.d.data[i*4+3]=255}
+ constructor(w,h,transparent=false){this.w=w;this.h=h;this.c=document.createElement('canvas');this.c.width=w;this.c.height=h;this.g=this.c.getContext('2d',{willReadFrequently:true});this.d=this.g.createImageData(w,h);this.z=new Float32Array(w*h).fill(-1e9);if(!transparent){const b=hex(C.bg);new Uint32Array(this.d.data.buffer).fill(((255<<24)|(b[2]<<16)|(b[1]<<8)|b[0])>>>0)}}
+ set(x,y,col,z=0){x=Math.round(x);y=Math.round(y);if(x<0||y<0||x>=this.w||y>=this.h)return;const i=y*this.w+x;if(z<this.z[i])return;this.z[i]=z;const h=hex(col),d=this.d.data,o=i*4;d[o]=h[0];d[o+1]=h[1];d[o+2]=h[2];d[o+3]=255}
  dark(x,y,k,z){x=Math.round(x);y=Math.round(y);if(x<0||y<0||x>=this.w||y>=this.h)return;const i=y*this.w+x;if(z<this.z[i])return;const o=i*4;for(let c=0;c<3;c++)this.d.data[o+c]*=k}
  ramp(r,v,x,y){x=Math.floor(x);y=Math.floor(y);v=Math.max(0,Math.min(.999,v))*(r.length-1);let i=Math.floor(v);if(v-i>BAYER[((y%4)+4)%4][((x%4)+4)%4])i++;return r[Math.min(i,r.length-1)]}
  poly(pts,fn,z){let x0=1e9,x1=-1e9,y0=1e9,y1=-1e9;for(const[x,y]of pts){x0=Math.min(x0,x);x1=Math.max(x1,x);y0=Math.min(y0,y);y1=Math.max(y1,y)}

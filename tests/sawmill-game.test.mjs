@@ -24,7 +24,7 @@ Object.assign(u,{x:b.x-8,z:b.z+3,tx:b.x-8,tz:b.z+3});
 function tick(s){for(let i=0;i<Math.ceil(s/.025);i++)update(.025)}
 tick(7);assert(!b.complete);drawSawmill(b);tick(1.1);assert(b.complete);assert(!u.sawmillJob);assert(b.worker.start.x> b.x);assert.equal(wood,0);
 currentTime=b.workAt+3.99;updateSawmills(0);assert.equal(wood,0);
-currentTime=b.workAt+4;updateSawmills(0);assert.equal(wood,10);assert.equal(woodPopups.length,1);drawSawmill(b);drawSawmillWorker(b);drawSawmillFeedback();assert.equal(woodPopups[0].x,core.x);
+currentTime=b.workAt+4;updateSawmills(0);assert.equal(wood,10);assert.equal(woodPopups.length,1);drawSawmill(b);drawSawmillWorker(b);drawSawmillFeedback();assert.equal(woodPopups[0].x,b.x);assert.equal(woodPopups[0].z,b.z);
 updateSawmills(0);assert.equal(wood,10);
 temples.push({x:20,z:40,complete:true});currentTime=b.workAt+8;updateSawmills(0);assert.equal(wood,20);assert.equal(woodPopups.at(-1).x,20);
 currentTime=b.workAt+40;updateSawmills(0);assert.equal(wood,100);assert.equal(sawmills.length,1);
