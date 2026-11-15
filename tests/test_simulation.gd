@@ -36,16 +36,17 @@ func test_engineer_emerges_from_portal_at_3s() -> void:
 	var greeted := []
 	sim.engineer_greeted.connect(func(u: Unit) -> void: greeted.append(u))
 	var u := _engineer()
+	var arrival_pos := u.pos()
 	check(u.hidden, "caché au départ")
 	check_eq(GameState.selected, [u], "sélectionné au départ")
 	_run(sim, 2.95)
 	check(u.hidden, "toujours caché avant 3 s")
 	_run(sim, 0.1)
 	check(not u.hidden, "sorti du portail à 3 s")
-	check_eq(Vector2(u.tx, u.tz), Vector2(-13, -147), "rejoint (−13, core.z + 7)")
+	check_eq(Vector2(u.tx, u.tz), arrival_pos, "reste devant le portail")
 	check_eq(greeted.size(), 1, "dialogue d'accueil déclenché une fois")
 	_run(sim, 2.0)
-	check(Vector2(u.x - u.tx, u.z - u.tz).length() < 0.25, "arrivé à destination : %s" % u.pos())
+	check_eq(u.pos(), arrival_pos, "aucun déplacement après la sortie du portail")
 
 
 func test_move_speed_and_wall_sliding() -> void:

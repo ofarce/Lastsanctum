@@ -1,7 +1,7 @@
 class_name Hud
 extends CanvasLayer
 ## HUD de commandement (Index.html, hud.js, hud.css, dialogue.js, 73b410f), à la résolution écran :
-##  - bandeau du haut : vague, Forge, Vie, Discipline, Savoir, Exilés ;
+##  - bandeau du haut : vague, Forge, Vie, Discipline, Savoir, Exilés, Menace ;
 ##  - bandeau de commandement : minicarte, portrait et identité, détails (ou Ancre), panneau d'ordres ;
 ##  - notice, bouton Rejouer, bannière de fin, bulle de dialogue.
 ## La logique (actions, textes) est dans HudModel ; ce nœud ne fait que l'afficher.
@@ -12,10 +12,12 @@ const TOP_INSET := Vector2(16, 14)
 const BAR_MARGIN := 12.0
 const GRID_FR := [16.0, 29.0, 31.0, 30.0]
 const GRID_MIN := [145.0, 270.0, 290.0, 310.0]
-const RES_ICON_COLORS := {"forge": Color("#d5c7a9"), "vie": Color("#ad855d"), "discipline": Color("#85d7f0"), "savoir": Color("#d5c7a9")}
-const RES_ICONS := {"forge": "iron", "vie": "heart", "discipline": "shield", "savoir": "book"}
-const RES_NAMES := {"forge": "Forge", "vie": "Vie", "discipline": "Discipline", "savoir": "Savoir"}
+const RES_ICON_COLORS := {"forge": Color("#d5c7a9"), "vie": Color("#ad855d"), "discipline": Color("#85d7f0"), "savoir": Color("#d5c7a9"), "menace": Color("#df936f")}
+const RES_ICONS := {"forge": "iron", "vie": "heart", "discipline": "shield", "savoir": "book", "menace": "menace"}
+const RES_NAMES := {"forge": "Forge", "vie": "Vie", "discipline": "Discipline", "savoir": "Savoir", "menace": "Menace"}
 const PORTRAITS := "res://assets/baked/hud/portraits/%s.png"
+## Portraits hors baker : Ingénieur sans armure (planches/ingenieur-sans-armure-export.html).
+const PORTRAITS_EXTRA := {"engineer-bare": "res://assets/imported/engineer/engineer_bare_portrait.png"}
 
 var sim: Simulation
 var world: World
@@ -27,6 +29,8 @@ var _wave_icon := TextureRect.new()
 var _wave_label := HudStyle.label(20, HudStyle.IVORY)
 var _res_panel := _Panel.new()
 var _res_items := {}
+var _resource_boost := Button.new()
+var _fast_construction := Button.new()
 # Notice, Rejouer, bannière, dialogue.
 var _notice := _Panel.new()
 var _notice_label := HudStyle.label(14, Color("#e8d2a7"))
@@ -79,6 +83,8 @@ func _ready() -> void:
 	_build_top()
 	_build_bar()
 	_build_overlays()
+	var inventory := preload("res://ui/inventory/engineer_inventory.gd").new()
+	_root.add_child(inventory)
 	get_viewport().size_changed.connect(_layout)
 	Events.notice.connect(say)
 	Events.game_reset.connect(_on_reset)
@@ -92,6 +98,32 @@ func setup(s: Simulation, w: World) -> void:
 	minimap.world = w
 	dialogue.camera = w.camera
 	s.engineer_greeted.connect(dialogue.greet_engineer)
+	s.engineer_spoke.connect(func(u: Unit, text: String) -> void:
+		dialogue.show_dialogue({"speaker": u, "name": "Ingénieur Exilé", "role": "engineer", "compact": true, "lines": [text]}))
+	s.turrets_activated.connect(_on_turrets_activated)
+	# Caméra revenue sur l'Ingénieur : surcharge de l'Ancre (sim/overload.gd), puis le dialogue.
+	w.anchor_spark.engineer_reached.connect(_on_engineer_reached)
+	s.overload_finished.connect(_show_equipment_dialogue)
+
+
+func _on_turrets_activated() -> void:
+	for u in GameState.units:
+		if u.role == "engineer" and u.alive() and not u.hidden:
+			dialogue.close()
+			world.anchor_spark.return_to_engineer(u)
+			return
+
+
+func _on_engineer_reached(u: Unit) -> void:
+	if not Overload.start(u):
+		_show_equipment_dialogue(u)
+
+
+func _show_equipment_dialogue(u: Unit) -> void:
+	dialogue.show_dialogue({"speaker": u, "any_button": true, "lines": [
+		"Je suis en vie... Mais mon équipement n'a pas résisté. Et sans lui, impossible de combattre le Credo.",
+		"Peut-être que la Salamandre peut m'aider. Je devrais pouvoir ériger des temples grâce à mon Enonciation."
+	]})
 
 
 # ---------------------------------------------------------------- Construction
@@ -120,11 +152,49 @@ func _build_top() -> void:
 		for n: Control in [icon, name_l, value_l]:
 			_res_panel.add_child(n)
 		_res_items[k] = {"icon": icon, "name": name_l, "value": value_l}
+	_resource_boost.name = "ResourceBoost"
+	_resource_boost.text = "+1000"
+	_resource_boost.tooltip_text = "Ajouter 1 000 de chaque ressource"
+	_resource_boost.focus_mode = Control.FOCUS_NONE
+	_resource_boost.mouse_filter = Control.MOUSE_FILTER_STOP
+	_resource_boost.add_theme_font_override("font", HudStyle.font())
+	_resource_boost.add_theme_font_size_override("font_size", 16)
+	_resource_boost.add_theme_color_override("font_color", HudStyle.IVORY)
+	for state: String in ["normal", "hover", "pressed"]:
+		var style := StyleBoxFlat.new()
+		style.bg_color = Color("#302a1c") if state != "normal" else Color("#171c17")
+		style.border_color = HudStyle.GOLD_LIGHT if state != "normal" else HudStyle.GOLD
+		style.set_border_width_all(1)
+		_resource_boost.add_theme_stylebox_override(state, style)
+	_resource_boost.pressed.connect(_add_resources)
+	_root.add_child(_resource_boost)
+	_fast_construction.name = "FastConstruction"
+	_fast_construction.toggle_mode = true
+	_fast_construction.text = "Construction rapide : OFF"
+	_fast_construction.tooltip_text = "Double la vitesse de tous les chantiers et de la réactivation de l’Ancre"
+	_fast_construction.focus_mode = Control.FOCUS_NONE
+	_fast_construction.mouse_filter = Control.MOUSE_FILTER_STOP
+	_fast_construction.add_theme_font_override("font", HudStyle.font())
+	_fast_construction.add_theme_font_size_override("font_size", 14)
+	_fast_construction.add_theme_color_override("font_color", HudStyle.IVORY)
+	for state: String in ["normal", "hover", "pressed"]:
+		_fast_construction.add_theme_stylebox_override(state, _resource_boost.get_theme_stylebox(state))
+	_fast_construction.toggled.connect(func(active: bool) -> void:
+		GameState.fast_construction = active
+		_fast_construction.text = "Construction rapide : ON" if active else "Construction rapide : OFF")
+	_root.add_child(_fast_construction)
+
+
+func _add_resources() -> void:
+	for resource: String in Catalog.RES_ORDER:
+		GameState.res[resource] += 1000.0
+	refresh()
 
 
 static func _res_keys() -> Array[String]:
 	var keys: Array[String] = Catalog.RES_ORDER.duplicate()
 	keys.append("population")
+	keys.append("menace")
 	return keys
 
 
@@ -283,6 +353,10 @@ func _layout() -> void:
 	_layout_selection(_modules[1].size)
 	_layout_details(_modules[2].size)
 	_layout_actions(_modules[3].size)
+	_resource_boost.position = Vector2(16, 80)
+	_resource_boost.size = Vector2(100, 38)
+	_fast_construction.position = Vector2(16, 124)
+	_fast_construction.size = Vector2(230, 38)
 	_restart.position = Vector2(s.x - 16.0 - _restart.size.x, 80.0)
 	_layout_notice()
 	_layout_banner()
@@ -307,6 +381,9 @@ func _layout_top(s: Vector2) -> void:
 		total += w + (25.0 + 24.0 if i < keys.size() - 1 else 0.0)
 	var left := TOP_INSET.x + _wave_card.size.x + 26.0
 	var right := s.x - TOP_INSET.x
+	# Réduit les espaces entre ressources si le bandeau dépasse la place disponible.
+	var gap := clampf(49.0 + (right - left - total) / (keys.size() - 1), 0.0, 49.0)
+	total += (gap - 49.0) * (keys.size() - 1)
 	_res_panel.size = Vector2(total, 52.0)
 	_res_panel.position = Vector2(left + maxf(0.0, (right - left - total) / 2.0), TOP_INSET.y)
 	var x := 23.0
@@ -322,9 +399,12 @@ func _layout_top(s: Vector2) -> void:
 		it["value"].size = Vector2(HudStyle.text_width(it["value"].text, 20) + 2.0, 28.0)
 		x += widths[i]
 		if i < keys.size() - 1:
-			seps.append(x + 24.0)
-			x += 25.0 + 24.0
+			seps.append(x + gap / 2.0)
+			x += gap
 	_res_panel.separators = seps
+	var fit := minf(1.0, (right - left) / total)
+	_res_panel.scale = Vector2.ONE * fit
+	_res_panel.position.x = left + maxf(0.0, (right - left - total * fit) / 2.0)
 
 
 func _layout_map(m: Vector2) -> void:
@@ -508,8 +588,9 @@ func refresh(force_map := false) -> void:
 func _apply_view(v: Dictionary) -> void:
 	_wave_label.text = "Vague " + v["wave"]
 	for k in Catalog.RES_ORDER:
-		_res_items[k]["value"].text = v["res"][k]
+		_res_items[k]["value"].text = v["res"][k] + " (+ %s/s)" % HudModel.num_fr(v["resource_rates"][k])
 	_res_items["population"]["value"].text = v["population"]
+	_res_items["menace"]["value"].text = v["menace"]
 	_kind.text = v["kind"]
 	_chosen.text = v["chosen"]
 	_health.set_target(v["health_pct"])
@@ -531,6 +612,8 @@ func _apply_view(v: Dictionary) -> void:
 		_portrait_key = v["portrait_key"]
 		if _portrait_key.begins_with("enemy-"):
 			_portrait.texture = _enemy_portrait(_portrait_key.substr(6))
+		elif PORTRAITS_EXTRA.has(_portrait_key):
+			_portrait.texture = load(PORTRAITS_EXTRA[_portrait_key])
 		else:
 			_portrait.texture = load(PORTRAITS % _portrait_key) if ResourceLoader.exists(PORTRAITS % _portrait_key) else null
 		_portrait.queue_redraw()
@@ -538,12 +621,12 @@ func _apply_view(v: Dictionary) -> void:
 
 ## Portrait d'un ennemi (D14) : première image de repos, cadrée en carré sur la silhouette (pieds en bas).
 func _enemy_portrait(kind: String) -> Texture2D:
-	var meta: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://assets/baked/manifest.json"))["enemies"].get(kind, {})
+	var meta: Dictionary = EnemyArt.all().get(kind, {})
 	if meta.is_empty():
 		return null
 	var n := maxf(22.0, float(meta["h"]) + 6.0)
 	var a := AtlasTexture.new()
-	a.atlas = load("res://assets/baked/enemies/%s_idle.png" % kind)
+	a.atlas = load(EnemyArt.ROOT + "%s_idle.png" % kind)
 	a.region = Rect2(float(meta["ax"]) - n / 2.0, float(meta["ay"]) + 2.0 - n, n, n)
 	return a
 
@@ -576,6 +659,8 @@ func show_banner(won: bool) -> void:
 
 
 func _on_reset() -> void:
+	_fast_construction.set_pressed_no_signal(GameState.fast_construction)
+	_fast_construction.text = "Construction rapide : ON" if GameState.fast_construction else "Construction rapide : OFF"
 	dialogue.close()
 	_banner.visible = false
 	_last_map = -INF
@@ -602,6 +687,12 @@ func _center_on_selection() -> void:
 
 
 func _input(event: InputEvent) -> void:
+	if dialogue.active() and dialogue.dialogue.get("any_button", false) and event.is_pressed():
+		if event is InputEventKey or event is InputEventMouseButton or event is InputEventJoypadButton:
+			if not event.is_echo():
+				dialogue.advance()
+			get_viewport().set_input_as_handled()
+			return
 	# Pendant un dialogue, Entrée et Échap lui sont réservées (écoute en phase de capture).
 	if dialogue.active() and event is InputEventKey and event.pressed:
 		if event.keycode == KEY_ESCAPE:

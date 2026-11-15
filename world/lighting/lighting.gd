@@ -15,7 +15,7 @@ const FORGE := Color8(255, 128, 48)
 const ARCANE := Color8(184, 132, 255)
 const FROST := Color8(110, 200, 230)
 const EVIL := Color8(255, 70, 40)
-## Écart voulu D15 (charte graphique) : une couleur par culte, l'Ancre pourpre.
+## Écart voulu D16 (charte graphique) : une couleur par culte, l'Ancre pourpre.
 const ANCRE := Color8(154, 58, 184)
 const CULT := {"medeina": Color8(122, 224, 112), "indra": Color8(255, 138, 42), "sigil": Color8(228, 234, 246), "aether": Color8(122, 128, 255)}
 const CULT_OF := {"sigil": "sigil", "library": "sigil", "aether": "aether", "forge": "aether", "workshop": "aether",
@@ -92,13 +92,13 @@ func collect() -> Array[Dictionary]:
 	for id: String in DEITY_X:
 		var x: float = DEITY_X[id]
 		L.append({"x": x, "z": PORTAL.y + 1.0, "r": 5.5 * flick(t, x), "rgb": CULT[id], "glow": 0.16})
-	# Cristaux lumineux du décor : liste recalculée seulement quand le décor change.
+	# Grappes de quartz du décor (style ardoise) : liste recalculée seulement quand le décor change.
 	if _decor_version != world.decor.version:
 		_decor_version = world.decor.version
 		_decor_lights.clear()
 		for e: Dictionary in world.decor.entries():
 			if e.get("light", false):
-				_decor_lights.append({"x": e["x"], "z": e["z"], "r": 4.5, "rgb": FROST, "glow": 0.14})
+				_decor_lights.append({"x": e["x"], "z": e["z"], "r": 4.5, "rgb": ArtStyle.QUARTZ_LIGHT, "glow": 0.14})
 	L.append_array(_decor_lights)
 	return L
 

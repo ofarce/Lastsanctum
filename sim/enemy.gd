@@ -11,6 +11,9 @@ var cooldown := 0.0
 var stun := 0.0
 var slow_until := 0.0
 var beast := false
+var armor := 0.0
+var attack_started := -INF
+var died_at := INF
 ## Portail maléfique d'origine (rejetons), ou null.
 var portal: Variant = null
 
@@ -30,6 +33,8 @@ static func make(k: String, px: float, pz: float, cd: float) -> Enemy:
 	e.speed = E["speed"]
 	e.reach = E["range"]
 	e.damage = E["damage"]
+	e.armor = E.get("armor", 0.0)
+	e.name = Catalog.ENEMY_INFO[k]["name"]
 	e.cooldown = cd
 	e.beast = k == "beast"
 	return e

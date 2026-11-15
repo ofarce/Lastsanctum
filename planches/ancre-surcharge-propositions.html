@@ -1,0 +1,346 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Surcharge de l’Ancre</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0b0d10;--panel:#12151a;--line:#2a2f38;--txt:#dcd8cc;--mut:#939aa4;--acc:#c98ae8;--cy:#5ce8ff}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--txt);font:15px/1.45 'Pixelify Sans',system-ui,sans-serif}
+header,main{max-width:1400px;margin:auto;padding:18px 16px}h1{margin:0;font-weight:600;letter-spacing:.08em;font-size:26px;color:var(--acc)}
+header p{color:var(--mut);margin:6px 0 0;max-width:980px}
+button{font:inherit;color:var(--txt);background:#1a1e26;border:1px solid var(--line);padding:6px 12px;cursor:pointer}button:hover{border-color:var(--acc)}
+.bar{display:flex;gap:8px;align-items:center;margin-top:12px;flex-wrap:wrap}
+.why{border:1px solid var(--line);background:var(--panel);padding:12px 16px;color:var(--mut)}.why b{color:var(--txt)}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-top:18px}figure{margin:0;background:var(--panel);border:1px solid var(--line);min-width:0}
+.stage{position:relative;background:#050608;padding:8px;display:flex;justify-content:center}
+.stage canvas{image-rendering:pixelated;display:block;width:100%;max-width:680px;height:auto;aspect-ratio:136/100}
+.tag{position:absolute;left:14px;top:12px;font-size:12px;padding:2px 8px;background:#0b0d10cc;border:1px solid var(--line);color:var(--mut)}
+.keys{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:4px;padding:8px;border-top:1px solid var(--line);background:#0e1116}
+.keys div{text-align:center;font-size:11px;color:var(--mut)}.keys canvas{image-rendering:pixelated;width:100%;height:auto;display:block}
+.low{display:grid;grid-template-columns:minmax(0,200px) minmax(0,1fr);gap:14px;padding:12px 14px 14px;border-top:1px solid var(--line)}
+.close{background:#0a0c0f;border:1px solid var(--line);padding:4px}.close canvas{image-rendering:pixelated;width:100%;height:auto;display:block}
+.close span{display:block;font-size:11px;color:var(--mut);text-align:center;margin-top:2px}
+.cap b{color:var(--acc);font-weight:600;font-size:17px}.cap p{margin:4px 0 0;color:var(--mut);font-size:14px}
+.cap dl{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;margin:8px 0 0;font-size:13px}.cap dt{color:var(--txt)}.cap dd{margin:0;color:var(--mut)}
+.cap .lore{color:#c8b0dc;font-size:13px;border-left:2px solid #6a2088;padding-left:8px;margin-top:8px}
+@media(max-width:1050px){.grid{grid-template-columns:1fr}}
+@media(max-width:520px){.low{grid-template-columns:1fr}.close{max-width:220px}}
+</style></head><body>
+<header><h1>ANCRE · SURCHARGE ET NOVA</h1>
+<p>Les balistes viennent de s’armer, la caméra est revenue sur la salle : avant le dialogue, l’Ancre surcharge, une colonne d’ombre monte vers le ciel, puis une nova part de l’Ancre. L’Ingénieur est pris dedans, l’explosion lui arrache l’armure et le laisse à genoux, à 1 PV. Cinq propositions, rendues à la résolution du jeu (personnage ×0,5) et affichées ×5. Sous chaque scène : les images clés, puis l’Ingénieur sans équipement à la résolution du gabarit (×1).</p>
+<div class="bar"><button id="pause">Pause</button><button id="speed">Vitesse ×1</button></div></header>
+<main><div class="why"><b>Les quatre éléments se combinent librement :</b> chaque proposition associe une surcharge, une explosion, une pose à genoux et une tenue, mais on peut prendre la surcharge de l’une et l’explosion d’une autre. Pourpre et noir sont réservés à l’Ancre ; le cyan reste la technologie des Exilés ; les pièces d’armure arrachées (casque, épaulières ivoire, générateur dorsal, bottes à coque de laiton) restent au sol autour de lui pendant le dialogue.</div>
+<div class="grid" id="grid"></div></main>
+<script src="assets/decor.js?v=6"></script><script src="assets/units.js?v=10"></script><script src="assets/engineer.js?v=3"></script>
+<script>
+'use strict';
+const UK=UnitKit.K,{fill,ell,seg,line,outlineAll,scaled}=UnitKit;
+// set() tolère une couleur nulle (pixels « troués » des vêtements)
+{const _s=Px.prototype.set;Px.prototype.set=function(x,y,c,z){if(c)_s.call(this,x,y,c,z)}}
+const SLATE=['#0d0f13','#14171c','#1b1f25','#23282f','#2c323a','#373e47','#444c56','#535c67','#66707b'];
+const QZ=['#7c7a72','#a8a498','#d0ccc0','#eeeae0'];
+const PUR=['#14061c','#2a0c3a','#4a1666','#6a2088','#9a3ab8','#c060e0','#e6b8ff'];
+const CY=['#0a2a33','#12596b','#1f9fb8','#5ce8ff','#c8fbff','#ffffff'];
+const SMK=['#0c0a10','#17141c','#221e29','#302a38','#40384a','#544a5e','#6c6276'];
+const BRASS=['#3a2808','#6a4a14','#a07424','#d0a03c','#f0cc6a','#fff0b0'],IVORY=['#4a4232','#6e6450','#988c6e','#c0b490','#e0d6b4','#f6f0da'];
+const AMB=UK.amber,SKN=UK.skin,HAIR=['#1a120c','#2e2016','#46321f','#5e4630'],BURN='#140c08',SCR='#7a2e22',VOID='#030205',OUTC='#0a0a0c';
+const SW=136,SH=100,SC=5,AX=96,AY=43,AG=66,PT=58,PR=11,PRY=4,EX=40,FY=82,NR=.45,RCX=AX,RCY=AG+2;
+const RE=Math.hypot(EX-RCX,(FY-RCY)/NR),T={ovS:.6,colS:2.4,novS:3.15,ND:.95,RMAX:112,L:9.6},THIT=T.novS+T.ND*RE/T.RMAX;
+const cl=(v,a=0,b=1)=>Math.max(a,Math.min(b,v)),mix=(a,b,t)=>a+(b-a)*t,mix2=(a,b,t)=>[mix(a[0],b[0],t),mix(a[1],b[1],t)];
+const sm=t=>{t=cl(t);return t*t*(3-2*t)},eio=t=>.5-.5*Math.cos(Math.PI*cl(t)),ein=t=>{t=cl(t);return t*t*t},eout=t=>{t=1-cl(t);return 1-t*t*t};
+const bay=(x,y)=>BAYER[(y%4+4)%4][(x%4+4)%4],rampc=(r,v,x,y)=>Px.prototype.ramp(r,v,x,y),H=(a,b,s)=>hash(a|0,b|0,s|0);
+const off=(P,dx,dy)=>({set:(x,y,c,z)=>P.set(x+dx,y+dy,c,z),ramp:(r,v,x,y)=>P.ramp(r,v,x+dx,y+dy),
+ poly:(pts,fn,z)=>P.poly(pts.map(([x,y])=>[x+dx,y+dy]),(x,y)=>fn(x-dx,y-dy),z),line:(a,b,c,d,col,z)=>P.line(a+dx,b+dy,c+dx,d+dy,col,z)});
+function ik(s,h,l1=10,l2=9.5){const dx=h[0]-s[0],dy=h[1]-s[1];let d=Math.hypot(dx,dy)||.01,hh=h;const L=l1+l2-.2;if(d>L){hh=[s[0]+dx/d*L,s[1]+dy/d*L];d=L}
+ const a=Math.acos(cl((l1*l1+d*d-l2*l2)/(2*l1*d),-1,1)),b=Math.atan2(dy,dx),e1=[s[0]+l1*Math.cos(b+a),s[1]+l1*Math.sin(b+a)],e2=[s[0]+l1*Math.cos(b-a),s[1]+l1*Math.sin(b-a)];
+ return{e:e1[1]>e2[1]?e1:e2,e2:e1[1]>e2[1]?e2:e1,h:hh}}
+
+// ================= INGÉNIEUR À GENOUX, SANS ÉQUIPEMENT (gabarit 80×84, pieds en (30,80)) =================
+function kState(sp,t){const s={b:0,lean:5,sway:0,slump:0,rise:0,hd:2.5,cough:0};
+ const br=(per,inh)=>{const ph=(t%per)/per;return ph<inh?eout(ph/inh):1-eio((ph-inh)/(1-inh))};
+ switch(sp.style){
+  case'heavy':s.b=br(1.7,.35);s.hd=2.5+(1-s.b);break;
+  case'pant':s.b=br(.72,.42)*.85;s.lean=8;s.hd=4.5;s.slump=1;break;
+  case'sway':s.b=br(1.35,.4);s.sway=Math.sin(t*1.4)*1.3;s.lean=4;s.hd=3;break;
+  case'cough':{s.b=br(1.6,.35);const c=(t%2.9)/2.9;if(c<.14){const k=Math.sin(Math.PI*c/.14);s.slump+=2.5*k;s.lean+=2*k;s.hd+=2.5*k;s.cough=k}break}
+  case'push':{s.b=br(1.5,.35);const a=(t%3.6)/3.6;s.rise=a<.4?eio(a/.4)*3.2:a<.62?3.2:a<.82?3.2*(1-ein((a-.62)/.2)):0;if(a>.3&&a<.66)s.sway=Math.sin(t*50)*.5;s.lean=5-s.rise*.6;break}}
+ if(sp.age!=null&&sp.age<.4){const k=1-sp.age/.4;s.slump+=3*k;s.lean+=2*k;s.hd+=2*k}
+ return s}
+function kneel(sp,t,k=.5){
+ const st=kState(sp,t),o=sp.o,P0=new Px(Math.ceil(140*k),Math.ceil(144*k),true),PS=k===1?P0:scaled(P0,k),P=off(PS,30,30+(sp.drop||0));
+ const rise=st.rise,Hp=[29+st.sway*.4,58-rise],S=[Hp[0]+st.lean+st.sway,38-st.b*2.6+st.slump-rise*1.1],PA=o.pants,SHI=o.shirt,FT=o.feet||SKN;
+ const bK=[21,78-rise*.5],bA=[9,77],fK=[44,57],fA=[46,75];
+ // --- jambe arrière : genou au sol, tibia à plat
+ seg(P,[Hp[0]-3,Hp[1]],bK,8,PA,4,{v:.42,tex:3});ell(P,bK[0],bK[1]-.5,4,3.4,PA,4.2,{v:.42});seg(P,bK,bA,6,PA,3.6,{v:.36,tex:3});
+ fill(P,[[bA[0]-4,77],[bA[0]+2,74],[bA[0]+3,80],[bA[0]-4,80]],FT,3.4,{v:.4});
+ if(o.rips.includes('thigh'))for(let i=0;i<6;i++)P.set(mix(Hp[0]-3,bK[0],.3+i*.07)+(i%2),mix(Hp[1],bK[1],.3+i*.07),i%3?SKN[3]:SKN[2],4.5);
+ // --- jambe avant : genou levé, pied à plat
+ seg(P,[Hp[0]+2,Hp[1]-1],fK,8.5,PA,12,{v:.62,tex:3});seg(P,fK,fA,6.5,PA,12.2,{v:.56,tex:3});ell(P,fK[0]+.5,fK[1],4,3.6,PA,12.5,{v:.66});
+ fill(P,[[fA[0]-3,74],[fA[0]+3,74],[fA[0]+9,78],[fA[0]+9,80],[fA[0]-3,80]],FT,12.4,{v:.62});
+ if(o.rips.includes('hem')){fill(P,[[fA[0]-3.4,fA[1]-4],[fA[0]+3.4,fA[1]-5],[fA[0]+3.4,fA[1]+.5],[fA[0]-3.4,fA[1]+.5]],SKN,12.3,{v:.62});
+  for(let i=0;i<4;i++)P.set(fA[0]-3+i*2,fA[1]-4.5+(i%2)*1.5,PA[1],12.35);if(o.feet)fill(P,[[fA[0]-3,74],[fA[0]+3,74],[fA[0]+9,78],[fA[0]+9,80],[fA[0]-3,80]],o.feet,12.45,{v:.5})}
+ if(o.rips.includes('knee')){ell(P,fK[0]+1,fK[1]+.5,2.8,2.4,SKN,12.7,{v:.78});P.set(fK[0]+1,fK[1]+1,SCR,12.8);for(const[dx,dy]of[[-2,-2],[1,-3],[3,-1],[-2,2],[2,3]])P.set(fK[0]+1+dx,fK[1]+.5+dy,PA[4],12.75)}
+ // --- bassin
+ fill(P,[[Hp[0]-8,Hp[1]-5],[Hp[0]+8,Hp[1]-5],[Hp[0]+9,Hp[1]+3],[Hp[0]-8,Hp[1]+3]],PA,9,{v:.55,tex:3});line(P,Hp[0]-8,Hp[1]-4,Hp[0]+8,Hp[1]-4,PA[1],9.2);
+ // --- bras arrière (derrière le buste)
+ const bS=[S[0]-6,S[1]+1],fS=[S[0]+6,S[1]+1],HA={knee:[[47,53],[26,56]],two:[[48,53],[45,51]],ribs:[[S[0]+6,S[1]+12],[S[0]-8,S[1]+18]],push:[[41,56],[26,56]]}[sp.pose];
+ const fH=HA[0],bH=HA[1],B=ik(bS,bH),Fa=ik(fS,fH),bE=B.e,fE=sp.pose==='ribs'?Fa.e2:Fa.e;
+ seg(P,bS,bE,4.6,SKN,5,{v:.45});seg(P,bE,B.h,4.2,SKN,5,{v:.42});ell(P,B.h[0],B.h[1],2.4,2.2,SKN,5.2,{v:.45});
+ if(o.sleeve!=='none')seg(P,bS,mix2(bS,bE,.5),5.8,SHI,5.1,{v:.42});
+ // --- buste : peau, puis t-shirt troué (trous et brûlures dans le repère du buste)
+ fill(P,[[S[0]-8,S[1]-1],[S[0]+8,S[1]],[Hp[0]+8,Hp[1]-4],[Hp[0]-7,Hp[1]-4]],SKN,10,{v:.62});
+ const hem=[];for(let i=0;i<7;i++)hem.push([mix(Hp[0]+8.6,Hp[0]-7.6,i/6),Hp[1]-3.5+(o.hemTorn?hash(i,3,o.seed)*3.5:0)+(i%2)*1.2]);
+ const top=o.sleeve==='none'?[[S[0]-6.5,S[1]-1],[S[0]-3.5,S[1]+1.5],[S[0]+3,S[1]+1.5],[S[0]+6.5,S[1]]]:[[S[0]-8.6,S[1]-1.8],[S[0]-2,S[1]-2.4],[S[0]+3,S[1]-2.2],[S[0]+8.6,S[1]-.8]];
+ const x0=S[0]-9;
+ P.poly([...top,[Hp[0]+8.8,Hp[1]-4],...hem,[Hp[0]-7.8,Hp[1]-4]],(x,y)=>{const lx=x-S[0],ly=y-S[1],n=fbm(lx/2.4+40,ly/2.4+40,o.seed);
+  if(n>o.thr)return null;if(n>o.thr-.07){if(sp.ember>0&&hash(x|0,y|0,5)<.6*sp.ember)return(Math.floor(t*8+x)%3)?AMB[3]:AMB[4];return BURN}
+  let v=.7-(x-x0)/18*.4-ly/22*.12;if((((x|0)*3+(y|0))%8)===0)v-=.1;if(fbm(lx/4,ly/4,o.seed+9)>.63)v-=.2;return P.ramp(SHI,v,x,y)},11);
+ if(o.sleeve==='none')for(const sd of[-1,1])line(P,S[0]+sd*5,S[1]-1,S[0]+sd*4,S[1]+2,SHI[2],11.2);
+ // --- reste d'écharpe
+ if(o.scarf){const w=Math.sin(t*2.2)*1.2;fill(P,[[S[0]-6,S[1]-3],[S[0]+5,S[1]-3],[S[0]+6,S[1]+1],[S[0]-5,S[1]+1]],UK.crim,24.5,{v:.6,fold:1});
+  fill(P,[[S[0]-6,S[1]],[S[0]-3,S[1]+1],[S[0]-5-w,S[1]+10],[S[0]-8-w,S[1]+8]],UK.crim,24.4,{v:.45});P.set(S[0]-7-w,S[1]+10,UK.crim[1],24.5)}
+ // --- bras avant
+ seg(P,fS,fE,4.8,SKN,20,{v:.66});seg(P,fE,Fa.h,4.4,SKN,20,{v:.62});ell(P,Fa.h[0],Fa.h[1],2.6,2.4,SKN,21,{v:.66});
+ line(P,mix(fE[0],Fa.h[0],.3),mix(fE[1],Fa.h[1],.3),mix(fE[0],Fa.h[0],.55),mix(fE[1],Fa.h[1],.55)-1,SCR,20.6);
+ if(o.sleeve==='short')seg(P,fS,mix2(fS,fE,.5),6,SHI,20.5,{v:.62});
+ if(o.sleeve==='tornF'){seg(P,fS,mix2(fS,fE,.22),6,SHI,20.5,{v:.62});const m=mix2(fS,fE,.3);P.set(m[0],m[1],SHI[2],20.6);P.set(m[0]+1,m[1]+1,SHI[1],20.6)}
+ // --- tête nue, inclinée vers le sol
+ const hd=[S[0]+3,S[1]-8+st.hd];
+ seg(P,[S[0]+1,S[1]-1],[hd[0]-1,hd[1]+4],4.6,SKN,24,{v:.55});
+ ell(P,hd[0]+2,hd[1],6,7,SKN,26,{v:.72});
+ fill(P,[[hd[0]-5,hd[1]-6],[hd[0]+5,hd[1]-8],[hd[0]+8,hd[1]-5],[hd[0]+1,hd[1]-3],[hd[0]-3,hd[1]+3],[hd[0]-5,hd[1]+1]],HAIR,26.5,{v:.5});
+ for(const[dx,dy]of[[-3,-8],[-1,-9],[2,-9],[5,-9],[-6,-4]])P.set(hd[0]+dx,hd[1]+dy,HAIR[2],26.6);
+ P.set(hd[0]-1,hd[1]+1,SKN[2],26.8);
+ line(P,hd[0]+4,hd[1],hd[0]+6,hd[1]+1,'#1a1410',27);line(P,hd[0]+3,hd[1]-2,hd[0]+7,hd[1]-1,HAIR[1],27);P.set(hd[0]+8,hd[1]+2,SKN[2],27);
+ if(st.b>.45||st.cough>.3){P.set(hd[0]+6,hd[1]+4,'#2a1410',27);P.set(hd[0]+7,hd[1]+4,'#2a1410',27)}else line(P,hd[0]+5,hd[1]+4,hd[0]+7,hd[1]+4,SKN[1],27);
+ for(const[dx,dy]of[[3,2],[4,3],[1,3]])P.set(hd[0]+dx,hd[1]+dy,'#4a3024',27.1);
+ if(sp.sweat){const p=(t%1.9)/1.9;if(p<.75)P.set(hd[0]+6,hd[1]+6+(p>.45?(p-.45)*28:0),'#dfe6e6',28)}
+ outlineAll(P0);P0.flush();return P0.c}
+
+// ================= DÉCOR (ardoise tyrienne) =================
+const pm=new Uint8Array(SW*SH),GLY=[];
+const BG=(()=>{const P=new Uint8ClampedArray(SW*SH*4),put=(x,y,c)=>{if(x<0||y<0||x>=SW||y>=SH)return;const h=hex(c),i=(y*SW+x)*4;P[i]=h[0];P[i+1]=h[1];P[i+2]=h[2];P[i+3]=255},
+ dk=(x,y,k)=>{const i=(y*SW+x)*4;for(let c=0;c<3;c++)P[i+c]*=k};
+ for(let y=0;y<SH;y++)for(let x=0;x<SW;x++){let c;
+  if(y<22){let v=.26+fbm(x/8,y/6,41)*.3;if(((y+Math.floor(fbm(x/12,0,43)*6))%7)===0)v-=.12;if(y>=19)v-=.16;c=rampc(SLATE,v,x,y);if(fbm(x/5,y/3,77)>.76&&H(x,y,5)>.75)c=QZ[H(x,y,6)>.7?1:0]}
+  else{const uu=x/2+y,vv=y-x/2,cell=Math.floor(uu/16)*7+Math.floor(vv/16)*13;let v=.4+(H(cell,1,4)-.5)*.12+(fbm(x/9,y/6,21)-.5)*.26;
+   if(((uu%16)+16)%16<1||((vv%16)+16)%16<1)v-=.14;if(y<26)v-=(26-y)*.07;v-=Math.hypot((x-68)/90,(y-64)/60)*.18;c=rampc(SLATE,v,x,y)}
+  put(x,y,c)}
+ for(let y=AG-4;y<=AG+7;y++)for(let x=AX-17;x<=AX+17;x++){const d=((x-AX)/17)**2+((y-AG-1)/5.5)**2;if(d<1&&bay(x,y)<.85-d*.5)dk(x,y,.55)}
+ for(let x=AX-PR;x<=AX+PR;x++){const dx=(x-AX)/PR,e=Math.sqrt(Math.max(0,1-dx*dx)),yb=Math.round(AG+e*PRY*.9);
+  for(let y=Math.round(PT-e*PRY);y<=yb;y++)pm[y*SW+x]=1;
+  for(let y=Math.ceil(PT+e*PRY);y<=yb;y++){let v=.42-dx*.18+(fbm(x/3,y/2,61)-.5)*.2;if((y-PT)%4===0)v-=.12;if(((x+Math.floor((y-PT)/4)*3)%7)===0)v-=.1;put(x,y,y===yb?OUTC:rampc(SLATE,v,x,y))}}
+ for(let y=PT-PRY;y<=PT+PRY;y++)for(let x=AX-PR;x<=AX+PR;x++){const d=((x-AX)/PR)**2+((y-PT)/PRY)**2;if(d>1)continue;let v=.6+(fbm(x/4,y/3,62)-.5)*.2-(y-PT)/PRY*.05;if(d>.72)v+=.12;put(x,y,rampc(SLATE,v,x,y))}
+ for(const[i,gx]of[AX-7,AX-3,AX+1,AX+5].entries())for(const[dx,dy]of[[[0,0],[1,1],[0,2]],[[1,0],[0,1],[1,2]],[[0,0],[1,0],[0,2],[1,2]],[[0,0],[1,1],[1,2]]][i])GLY.push([gx+dx,63+dy]);
+ return P})();
+
+// ================= OUTILS DE DESSIN =================
+const FX=g=>{const F={
+ px(x,y,c){x=Math.round(x);y=Math.round(y);if(x<0||y<0||x>=SW||y>=SH)return;g.fillStyle=c;g.fillRect(x,y,1,1)},
+ dpx(x,y,c,a=1){x=Math.round(x);y=Math.round(y);if(x<0||y<0||x>=SW||y>=SH||a<=0)return;if(a>=1||a>bay(x,y)){g.fillStyle=c;g.fillRect(x,y,1,1)}},
+ line(x0,y0,x1,y1,c,a=1){const n=Math.max(1,Math.ceil(Math.max(Math.abs(x1-x0),Math.abs(y1-y0))));for(let k=0;k<=n;k++)F.dpx(x0+(x1-x0)*k/n,y0+(y1-y0)*k/n,c,a)},
+ disc(cx,cy,r,c,a=1){for(let y=Math.floor(cy-r);y<=cy+r;y++)for(let x=Math.floor(cx-r);x<=cx+r;x++){const dd=Math.hypot(x+.5-cx,y+.5-cy)/r;if(dd<=1)F.dpx(x,y,c,a*(1-dd*dd*.6))}},
+ ring(cx,cy,r,c,a=1,ry=r,skip){const n=Math.max(12,Math.ceil(r*7));for(let k=0;k<n;k++){const t=k/n*6.283,x=Math.round(cx+Math.cos(t)*r),y=Math.round(cy+Math.sin(t)*ry);if(skip&&skip(x,y))continue;F.dpx(x,y,c,a)}},
+ ellFill(cx,cy,rx,ry,c,a=1,skip){for(let y=Math.floor(cy-ry);y<=cy+ry;y++)for(let x=Math.floor(cx-rx);x<=cx+rx;x++){if(((x-cx)/rx)**2+((y-cy)/ry)**2>1)continue;if(skip&&skip(x,y))continue;F.dpx(x,y,c,a)}},
+ dim(c,a){if(a<=0)return;g.globalAlpha=cl(a);g.fillStyle=c;g.fillRect(0,0,SW,SH);g.globalAlpha=1}};return F};
+const behind=(x,y)=>y<RCY&&x>=0&&x<SW&&y>=0&&pm[y*SW+x];
+function bolt(F,a,b,seed,o={}){const R=rng(seed);R();const d=Math.hypot(b[0]-a[0],b[1]-a[1])||1,n=Math.max(2,Math.round(d/(o.step||3))),nx=-(b[1]-a[1])/d,ny=(b[0]-a[0])/d,pts=[a],al=o.a??1;
+ for(let k=1;k<n;k++){const t=k/n,j=(R()-.5)*(o.amp||4)*Math.sin(Math.PI*t)*2;pts.push([mix(a[0],b[0],t)+nx*j,mix(a[1],b[1],t)+ny*j])}pts.push(b);
+ for(let k=0;k<pts.length-1;k++){const p=pts[k],q=pts[k+1];F.line(p[0]+1,p[1],q[0]+1,q[1],o.halo||PUR[3],.55*al);F.line(p[0]-1,p[1],q[0]-1,q[1],o.halo||PUR[3],.55*al);F.line(p[0],p[1]+1,q[0],q[1]+1,o.halo||PUR[2],.4*al);F.line(p[0],p[1],q[0],q[1],o.core||VOID,al)}
+ if(o.hot)for(const p of pts)if(R()<.35)F.px(p[0],p[1],o.hot)}
+// éclats balistiques sans état (pause et images clés exactes)
+function burst(F,seed,n,t0,u,o,c){const age=u-t0;if(age<0)return;
+ for(let j=0;j<n;j++){const R=rng((seed*977+j*131+7)>>>0);R();const a=mix(c.a0,c.a1,R()),sp=mix(c.s0,c.s1,R()),life=mix(c.l0,c.l1,R());if(age>life)continue;
+  const vx=Math.cos(a)*sp,vy=Math.sin(a)*sp,g=c.g??220,fy=(c.fy??FY)+R()*(c.depth??7);
+  const pos=t=>{let x=o[0]+vx*t,y=o[1]+vy*t+.5*g*t*t;if(c.land!==false&&y>fy&&fy>o[1]){const tl=(-vy+Math.sqrt(Math.max(0,vy*vy+2*g*(fy-o[1]))))/g;x=o[0]+vx*tl;y=fy}return[x,y]};
+  const[x,y]=pos(age),[qx,qy]=pos(Math.max(0,age-.02));c.draw(F,x,y,age/life,R,qx,qy)}}
+const spark=ramp=>(F,x,y,k,R,qx,qy)=>F.line(qx,qy,x,y,k<.2?ramp[ramp.length-1]:k<.5?ramp[ramp.length-2]:ramp[ramp.length-3],1-k*.5);
+function smoke(F,h,cx,cy,o){for(let j=0;j<o.n;j++){const R=rng(o.seed*31+j*17+5);R();const dl=R()*.1,life=o.life*(.8+R()*.5),ang=R()*6.283,dist=R()*o.spread,age=h-o.t0-dl;if(age<0||age>life)continue;
+ const k=age/life,r=mix(o.r0,o.r1,eout(k))*(.7+R()*.5),a=Math.pow(1-k,1.4)*o.a,x=cx+Math.cos(ang)*dist*(.4+eout(k)*(o.out??1)),y=cy+Math.sin(ang)*dist*.7*(.4+eout(k)*(o.out??1))-8*age*(o.rise??1);
+ const rp=o.ramp||SMK;F.disc(x,y,r,rp[2],a);F.disc(x-r*.25,y-r*.3,r*.55,rp[4],a*.8)}}
+function tinted(im,col,dis,seed){const c=document.createElement('canvas');c.width=im.width;c.height=im.height;const g=c.getContext('2d');g.drawImage(im,0,0);const d=g.getImageData(0,0,c.width,c.height),a=d.data,h=hex(col);
+ for(let y=0;y<c.height;y++)for(let x=0;x<c.width;x++){const i=(y*c.width+x)*4;if(!a[i+3])continue;if(dis>0&&hash(x,y,seed)<dis*1.7-y/c.height*.7){a[i+3]=0;continue}a[i]=h[0];a[i+1]=h[1];a[i+2]=h[2]}
+ g.putImageData(d,0,0);return c}
+
+// ================= PIÈCES D'ARMURE ARRACHÉES =================
+const DPAL={g:UK.gun[3],d:UK.gun[1],G:UK.gun[5],b:BRASS[3],B:BRASS[4],a:AMB[3],i:IVORY[3],I:IVORY[4],c:UK.crim[3],C:UK.crim[2],l:UK.leath[3],L:UK.leath[2]};
+const PIECES=[{s:['.bBb.','ggGgg','gaaag','dgggd'],o:[1,-35],keep:1},{s:['.iI.','iIIi','diid'],o:[-6,-27],keep:1},{s:['.Ii.','iIIi','diid'],o:[7,-27],keep:1},
+ {s:['gGg','ggd','dgd'],o:[0,-21]},{s:['gGg','gdg','dgd'],o:[2,-15]},{s:['bgb','gag','gag','bgb'],o:[-7,-24],keep:1,gen:1},{s:['iI','di'],o:[-2,-10]},{s:['Ii','id'],o:[3,-10]},
+ {s:['bB.','bab','.bb'],o:[7,-17]},{s:['ll.','lLl','bbl'],o:[-2,-2]},{s:['.ll','lLl','lbb'],o:[3,-2]},{s:['ddd','aaa','ddd'],o:[-6,-12]},{s:['cc','C.','cC'],o:[-4,-18]},{s:['c.','cC','.c'],o:[-8,-14]}];
+const rotS=(s,r)=>{let a=s.map(l=>l.split(''));for(let i=0;i<r;i++){const h=a.length,w=a[0].length,b=[];for(let x=0;x<w;x++){b.push([]);for(let y=h-1;y>=0;y--)b[x].push(a[y][x])}a=b}return a};
+PIECES.forEach(p=>p.rots=[0,1,2,3].map(r=>rotS(p.s,r)));
+function makeDeb(p){const R=rng(p.id*977+3);R();const out=[];
+ for(const pc of PIECES){if(p.exp==='ash'&&!pc.keep)continue;const[ox,oy]=pc.o;let vx,vy,dl=0;
+  switch(p.exp){
+   case'unbolt':{const a=Math.atan2(oy+18,ox+.5)+(R()-.5)*.8,s=40+R()*35;vx=Math.cos(a)*s;vy=Math.sin(a)*s-45;break}
+   case'gen':{const dx=ox+7,dy=oy+24,l=Math.hypot(dx,dy)||1,s=50+R()*35;vx=dx/l*s+(R()-.5)*20;vy=dy/l*s-55;if(pc.gen){vx=-10;vy=-145}break}
+   case'short':{dl=R()*.35;vx=(R()-.5)*55-(ox<0?12:-4);vy=-35-R()*35;break}
+   case'ash':{vx=(R()-.5)*22;vy=-8-R()*18;dl=R()*.15;break}
+   case'shield':{vx=-25-R()*35;vy=-30-R()*55;dl=R()*.05;break}}
+  out.push({pc,x0:EX+ox,y0:FY+oy,vx,vy,dl,gy:FY-4+R()*11,spin:R()*4|0,rest:R()*4|0})}return out}
+function debPos(d,a){const g=190,tl=(-d.vy+Math.sqrt(d.vy*d.vy+2*g*(d.gy-d.y0)))/g;if(a<tl)return{x:d.x0+d.vx*a,y:d.y0+d.vy*a+.5*g*a*a,air:1};
+ const b=a-tl,hb=.2,xl=d.x0+d.vx*tl;if(b<hb)return{x:xl+d.vx*.3*b,y:d.gy-Math.sin(Math.PI*b/hb)*Math.min(4,Math.abs(d.vy+g*tl)*.03),air:1};return{x:xl+d.vx*.3*hb,y:d.gy,air:0}}
+function drawDeb(F,u,X,p,layer){const a0=u-THIT-p.debT;if(a0<0)return;
+ for(const d of p.deb){const a=a0-d.dl;if(a<0)continue;const q=debPos(d,a);if((layer==='air')!==!!q.air)continue;
+  const s=d.pc.rots[q.air?(Math.floor(a*16)+d.spin)%4:d.rest],h=s.length,w=s[0].length,x0=Math.round(cl(q.x,2,SW-3)-w/2),y0=Math.round(q.y-h+1);
+  for(let y=0;y<h;y++)for(let x=0;x<w;x++)if(s[y][x]!=='.')for(const[dx,dy]of[[1,0],[-1,0],[0,1],[0,-1]]){const yy=y+dy,xx=x+dx;if(yy<0||yy>=h||xx<0||xx>=w||s[yy][xx]==='.')F.px(x0+xx,y0+yy,OUTC)}
+  for(let y=0;y<h;y++)for(let x=0;x<w;x++)if(s[y][x]!=='.')F.px(x0+x,y0+y,DPAL[s[y][x]])}}
+
+// ================= CONTEXTE TEMPOREL =================
+function ctx(p,u){const X={u,fr:Math.floor(u*30)};
+ X.ov=cl((u-T.ovS)/(T.colS-T.ovS));X.inOv=u>=T.ovS&&u<T.colS;X.ca=u-T.colS;X.cf=cl((u-(THIT+1.4))/1.6);
+ X.nR=u>=T.novS?(u-T.novS)/T.ND*T.RMAX:-1;X.h=u-THIT;X.agit=u<T.colS?X.ov*X.ov:.45*(1-X.cf);
+ let sh=0;if(X.ca>=0&&X.ca<.22)sh=1;if(X.h>=0&&X.h<.35)sh=2*(1-X.h/.35)+.5;if(p.ov==='crack'&&X.inOv&&X.ov>.6)sh=Math.max(sh,.6);if(p.exp==='shield'&&X.h>=.32&&X.h<.6)sh=2;
+ X.sx=Math.round((H(X.fr,3,1)-.5)*2*sh);X.sy=Math.round((H(X.fr,4,2)-.5)*2*sh);
+ X.dim=p.col.style==='wide'&&X.ca>=0?.42*eout(cl(X.ca/.4))*(1-X.cf):p.ov==='eclipse'&&X.inOv?.3*X.ov:0;return X}
+const segBroken=(k,u)=>u>=T.ovS+(k+1)/9*(T.colS-T.ovS);
+
+// ================= ANCRE, SOL, COLONNE, NOVA =================
+function drawFloor(F,u,X,p){const I=.25+.75*X.agit;
+ for(let a=0;a<96;a++){const k=Math.floor(a/12);if(a%12>=8)continue;if(p.ov==='seal'&&segBroken(k,u))continue;
+  const ang=a/96*6.283+(p.ov==='crown'?u*.8+X.agit*u*2:0),x=Math.round(RCX+Math.cos(ang)*19),y=Math.round(RCY+Math.sin(ang)*7);if(behind(x,y))continue;
+  F.dpx(x,y,I>.7?PUR[5]:I>.45?PUR[4]:PUR[3],.55+.45*I)}
+ if(p.ov==='seal')for(let k=0;k<8;k++){const t0=T.ovS+(k+1)/9*(T.colS-T.ovS),ang=(k*12+4)/96*6.283,o=[RCX+Math.cos(ang)*19,RCY+Math.sin(ang)*7];
+  if(u>=t0&&u<t0+.12)F.disc(o[0],o[1],2.5,PUR[6],1-(u-t0)/.12);burst(F,k*7+3,5,t0,u,o,{a0:-3,a1:-.1,s0:15,s1:45,l0:.4,l1:.8,g:200,fy:o[1],depth:3,draw:(F,x,y,kk,R)=>F.dpx(x,y,R()<.5?PUR[5]:PUR[3],1-kk*.6)})}
+ F.ellFill(AX,PT,7,2.5,PUR[2],.2+.45*X.agit);
+ for(const[gx,gy]of GLY)F.dpx(gx,gy,X.agit>.5?PUR[5]:PUR[3],.35+.65*X.agit);
+ if(p.ov==='crown'&&X.inOv){const n=Math.round(X.ov*6);for(let k=0;k<n;k++){const ang=H(k,X.fr>>1,9)*6.283,x=RCX+Math.cos(ang)*(16+H(k,X.fr>>1,8)*10),y=RCY+Math.sin(ang)*(6+H(k,X.fr>>1,8)*4);if(!behind(Math.round(x),Math.round(y)))F.disc(x,y,1.8,PUR[5],.8)}}}
+function drawNova(F,u,X,p){if(X.nR<0||X.nR>T.RMAX)return;const r=X.nR,k=r/T.RMAX,a=1-sm((k-.6)/.4),R=(rr,c,al)=>F.ring(RCX,RCY,rr,c,al*a,rr*NR,behind);
+ switch(p.nova){
+  case'ring':R(r,PUR[4],1);R(r-1,VOID,1);R(r-2,VOID,1);R(r-3,PUR[2],.5);for(let j=0;j<40;j++){const ang=H(j,1,3)*6.283,rr=r+1+H(j,X.fr,4)*3;F.dpx(RCX+Math.cos(ang)*rr,RCY+Math.sin(ang)*rr*NR-H(j,X.fr,5)*2,SLATE[7],.6*a)}break;
+  case'shock':R(r,'#ffffff',.9);R(r-1,PUR[6],1);R(r-2,PUR[4],.8);for(let i=3;i<9;i++)R(r-i,VOID,.55*(1-i/9));break;
+  case'bolt':{const n=Math.ceil(r*.9);let prev=null;for(let j=0;j<=n;j++){const ang=j/n*6.283,rr=r+(H(j,X.fr>>1,7)-.5)*4,pt=[RCX+Math.cos(ang)*rr,RCY+Math.sin(ang)*rr*NR];
+    if(prev&&j%3!==0&&!behind(Math.round(pt[1])<RCY?Math.round(pt[0]):-1,Math.round(pt[1]))){F.line(prev[0],prev[1]+1,pt[0],pt[1]+1,PUR[3],.6*a);F.line(prev[0],prev[1],pt[0],pt[1],j%5?VOID:PUR[5],a)}prev=pt}R(r-2,PUR[2],.4);break}
+  case'disk':F.ellFill(RCX,RCY,r,r*NR,VOID,.5*a*(1-k*.4),behind);R(r,PUR[4],1);R(r+1,PUR[2],.6);for(let j=0;j<30;j++){const ang=H(j,2,3)*6.283,rr=r*(.75+H(j,X.fr>>2,4)*.22);F.dpx(RCX+Math.cos(ang)*rr,RCY+Math.sin(ang)*rr*NR,H(j,5,1)<.5?PUR[5]:PUR[4],a)}break;
+  case'double':R(r,PUR[5],1);R(r-1,PUR[4],1);if(r>8){R(r-8,VOID,1);R(r-9,VOID,1);R(r-10,PUR[2],.6);R(r-7,PUR[3],.5)}break}}
+function drawColumn(F,u,X,p){const a=X.ca,c=p.col;if(a<0||X.cf>=1)return;const fade=X.cf,rise=eout(cl(a/.32)),top=AY-6-(AY+12)*rise,base=AY-4;
+ const W=c.w*(a<.32?.45+.55*rise:1+.12*Math.sin(u*14))*(1-sm(fade));if(W<.4)return;
+ const edge=c.style==='smoke'?SMK[5]:PUR[4],halo=c.style==='smoke'?SMK[3]:PUR[2];
+ for(let y=Math.max(0,Math.floor(top));y<=base;y++){let w=W,cx=AX+Math.sin(y*.22-u*9)*.6;
+  if(c.style==='smoke'){w=W*(1+.35*Math.sin(y*.21+u*4)+(fbm(y/5-u*5,1,5)-.5)*.9);cx+=Math.sin(y*.11+u*2)*1.5}
+  if(c.style==='wide')w=W*(1+.08*Math.sin(y*.3+u*6));w*=.4+.6*cl((y-top)/6);
+  for(let x=Math.floor(cx-w-3);x<=cx+w+3;x++){const d=Math.abs(x+.5-cx);
+   if(d<w-.5){const s=fbm(x/1.6,y/5+u*10,33);F.px(x,y,c.style==='smoke'?(s>.7?SMK[3]:s>.58?SMK[1]:VOID):(s>.74?PUR[3]:s>.64?C.orb[3]:VOID))}
+   else if(d<w+.7)F.dpx(x,y,edge,.9);else if(d<w+2.6)F.dpx(x,y,halo,.45*(1-(d-w-.7)/1.9))}}
+ if(c.style==='smoke')for(let k=0;k<10;k++){const R=rng(k*41+9);R();const q=(a*.7+R())%1,y=base-q*(base-Math.max(0,top)),sd=R()<.5?-1:1;F.disc(AX+sd*(W+1+q*2),y,1.5+R()*1.5,SMK[4],.6*(1-q)*(1-fade))}
+ if(c.style==='braid')for(let k=0;k<3;k++)bolt(F,[AX,base-2],[AX+(H(k,X.fr>>1,3)-.5)*6,Math.max(0,top)],X.fr*7+k*13,{amp:W*1.3,step:4,core:PUR[5],halo:PUR[3],a:1-fade});
+ if(c.style==='rain')for(let k=0;k<40;k++){const R=rng(k*71+5);R();const px=AX+(R()-.5)*30*(.5+R()*.5),spd=30+R()*40,ph=R(),y=AG-((a*spd+ph*90)%90);if(y<top)continue;F.dpx(px,y,R()<.5?PUR[5]:PUR[4],(1-fade)*.9);F.dpx(px,y+1,PUR[2],(1-fade)*.6)}
+ F.ellFill(AX,AY-7,W+3,2,c.style==='smoke'?SMK[4]:PUR[4],.6*(1-fade))}
+function drawAnchor(F,u,X,p){let r=8,x=AX,y=AY,crack=0,white=0;
+ switch(p.ov){
+  case'crack':crack=X.inOv?X.ov*1.15:X.ca<.3?1.3:.5*(1-X.cf);if(X.inOv&&X.ov>.35)x+=Math.round((H(X.fr,1,7)-.5)*2.4*X.ov);break;
+  case'implode':if(X.inOv)r=Math.round(8-4*eio(X.ov));else if(X.ca<.12)r=Math.round(4+7*eout(X.ca/.12));else if(X.ca<.4)r=Math.round(11-3*eio((X.ca-.12)/.28));break;
+  case'crown':crack=.3*X.agit;break;
+  case'eclipse':r=8+Math.round(2*X.agit);white=X.agit;break;
+  case'seal':y=AY-Math.round(Math.max(X.inOv?X.ov:1-X.cf,0)*5+Math.sin(u*20)*X.agit*.6);break}
+ if(X.ca>=0&&X.ca<.1)white=1;
+ for(let j=-r-2;j<=r+2;j++)for(let i=-r-2;i<=r+2;i++){const d=Math.hypot(i,j);if(d>r+1.5)continue;
+  if(d>r+.5){if(white>0&&d>r+1)F.dpx(x+i,y+j,PUR[5],white*.7);else if(d<=r+1)F.px(x+i,y+j,white>.5?'#ffffff':white>0?PUR[6]:OUTC);continue}
+  const nx=i/r,ny=j/r;let v=.42-(nx*.5+ny*.7)*.3+(fbm((i+40)/3,(j+40)/3,11)-.5)*.15;if(d>r-1.4&&nx+ny>-.2)v=d>r-.7?.95:.8;
+  let c=rampc(C.orb,Math.min(v,d>r-1.4?1:.7),x+i,y+j);
+  if(crack>0){const n=Math.abs(fbm(i/3+7,j/3+3,29)-.5);if(n<.045*crack*(1.2-d/r*.4))c=n<.02*crack?PUR[6]:PUR[5]}F.px(x+i,y+j,c)}
+ F.px(x-3,y-4,C.orb[5]);F.px(x-2,y-4,C.orb[5]);F.px(x-3,y-3,C.orb[4]);
+ // éclairs noirs-pourpres : au repos 1 à 2, nombreux pendant la surcharge
+ const n=1+Math.round(X.agit*4);for(let k=0;k<n;k++){if(H(k,X.fr>>2,3)<.35)continue;const ang=H(k,X.fr>>2,4)*6.283,len=4+X.agit*10+H(k,X.fr>>2,5)*4;
+  bolt(F,[x+Math.cos(ang)*r,y+Math.sin(ang)*r],[x+Math.cos(ang)*(r+len),y+Math.sin(ang)*(r+len)],X.fr*13+k,{amp:2,step:2.5,hot:X.agit>.5?PUR[5]:null})}
+ if(p.ov==='crown'&&X.inOv){const m=Math.round(X.ov*6);for(let k=0;k<m;k++){const ang=H(k,X.fr>>1,9)*6.283,gx=RCX+Math.cos(ang)*(16+H(k,X.fr>>1,8)*10),gy=RCY+Math.sin(ang)*(6+H(k,X.fr>>1,8)*4);
+  if(behind(Math.round(gx),Math.round(gy)))continue;bolt(F,[x+(gx>x?r:-r)*.7,y+3],[gx,gy],X.fr*5+k*3,{amp:3,step:3,hot:PUR[6]})}}
+ if(p.ov==='implode'&&X.inOv){for(let k=0;k<44;k++){const R=rng(k*53+1);R();const ang=R()*6.283,q=(u*1.6+R())%1,rr=34*Math.pow(1-q,1.5)+r;F.dpx(x+Math.cos(ang)*rr,y+Math.sin(ang)*rr*.75,R()<.4?PUR[4]:SLATE[7],.4+.6*X.ov)}
+  F.ring(x,y,r+3,VOID,.5*X.ov);F.ring(x,y,r+4,VOID,.35*X.ov)}
+ if(p.ov==='eclipse'&&white>0&&X.ca<0)for(let k=0;k<12;k++){const ang=k/12*6.283+u*.9;F.line(x+Math.cos(ang)*(r+2),y+Math.sin(ang)*(r+2),x+Math.cos(ang)*(r+3+4*white),y+Math.sin(ang)*(r+3+4*white),k%2?PUR[6]:PUR[5],.7*white)}}
+
+// ================= INGÉNIEUR ET EXPLOSION =================
+function drawFigure(g,F,u,X,p){const h=X.h,[h0,h1]=p.hide;
+ if(h<h0){const fl=cl((h+.35)/.35),im=EngineerKit.draw({pad:30,bx:-fl*1.5,by:fl*.5,pulse:X.inOv||h>-.35?.5+.5*Math.sin(u*30):undefined},u,.5);
+  F.ellFill(EX+1,FY+1,8,2.2,OUTC,.55);
+  if(p.exp==='ash'&&h>=0)g.drawImage(tinted(im,h<.08?'#ffffff':'#06050a',h<.08?0:cl((h-.08)/.32),7),EX-30,FY-55);else g.drawImage(im,EX-30,FY-55);
+  if(p.exp==='gen'&&h>-.35)for(let y=FY-30;y<=FY-23;y++)for(let x=EX-9;x<=EX-6;x++)if(H(x,y+X.fr,3)<.55)F.px(x,y,X.fr%2?PUR[5]:AMB[4]);
+  if(p.exp==='short'&&h>=0)for(let k=0;k<3;k++){const a=[EX-6+H(k,X.fr,1)*14,FY-42+H(k,X.fr,2)*38];bolt(F,a,[a[0]+(H(k,X.fr,3)-.5)*14,a[1]+(H(k,X.fr,4)-.5)*14],X.fr*3+k,{amp:2,step:2,core:CY[4],halo:CY[2],hot:'#ffffff'})}
+  return}
+ if(h<h1)return;
+ const age=h-h1,drop=age<.2?-10*(1-ein(age/.2)):0;
+ F.ellFill(EX-2,FY+1,12,2.4,OUTC,.55);
+ g.drawImage(kneel({o:p.o,style:p.kneel.style,pose:p.kneel.pose,drop:drop*2,ember:cl(1-age/3),sweat:p.kneel.sweat,age},age,.5),EX-30,FY-55)}
+function drawExp(F,u,X,p){const h=X.h;if(h<-.25)return;const bc=[EX+1,FY-20],[h0,h1]=p.hide;
+ if(p.exp==='shield'&&h<.32){const s=eout(cl((h+.2)/.15)),rx=14*s,ry=23*s,cx=bc[0],cy=bc[1]-1,fl=h>.2?(X.fr%2?.4:1):1;
+  for(let y=Math.floor(cy-ry);y<=cy+ry;y++)for(let x=Math.floor(cx-rx);x<=cx+rx;x++){const d=((x-cx)/rx)**2+((y-cy)/ry)**2;if(d>1)continue;if(d>.86)F.dpx(x,y,h>=0&&h<.06?'#ffffff':CY[3],.8*fl);else if(y%4===0&&(x+((y/4)%2)*2)%4===0)F.dpx(x,y,CY[2],.45*fl)}
+  if(h>=0){const I=[cx+rx-1,cy-3];for(let k=0;k<6;k++){const ang=Math.PI+(H(k,1,2)-.5)*2.4,L=cl(h/.3)*(10+H(k,2,2)*12);bolt(F,I,[I[0]+Math.cos(ang)*L,I[1]+Math.sin(ang)*L*1.3],k*19+3,{amp:1.5,step:2,core:'#ffffff',halo:CY[3]})}}}
+ if(p.exp==='shield'&&h>=.32)burst(F,51,40,THIT+.32,u,bc,{a0:-3.14,a1:3.14,s0:30,s1:80,l0:.3,l1:.8,g:160,depth:8,draw:(F,x,y,k,R,qx,qy)=>F.line(qx,qy,x,y,k<.3?'#ffffff':CY[3+(R()<.5?1:0)],1-k*.5)});
+ if(h<0)return;
+ if(h<.08)F.disc(bc[0]+7,bc[1]-2,5,PUR[6],1-h/.08);
+ const t0={unbolt:0,gen:0,short:.3,ash:.36,shield:.32}[p.exp];
+ if(p.exp==='unbolt'){if(h<.12){F.disc(bc[0],bc[1],4+12*(1-h/.12),'#ffffff',1);F.ring(bc[0],bc[1],6+h*120,PUR[5],1-h/.12)}
+  burst(F,11,26,THIT,u,bc,{a0:-3.14,a1:3.14,s0:40,s1:95,l0:.3,l1:.7,g:120,depth:9,draw:spark(BRASS)});
+  smoke(F,h,bc[0],bc[1]+4,{n:12,seed:3,t0:.02,life:1.3,spread:14,r0:5,r1:10,a:1,out:1.4});smoke(F,h,bc[0],bc[1],{n:6,seed:4,t0:.02,life:.9,spread:4,r0:7,r1:11,a:1,ramp:[...SMK.slice(0,2),PUR[1],PUR[2],PUR[3]]})}
+ if(p.exp==='gen'){const fc=[EX-7,FY-25];if(h<.3){const r=3+eout(h/.3)*9;F.disc(fc[0],fc[1],r+2,PUR[3],.7*(1-h/.3));F.disc(fc[0],fc[1],r,h<.12?AMB[3]:PUR[4],1);F.disc(fc[0],fc[1],r*.65,h<.08?'#ffffff':AMB[4],1)}
+  burst(F,21,30,THIT,u,fc,{a0:-3.14,a1:.4,s0:40,s1:110,l0:.4,l1:.9,g:200,depth:9,draw:spark(AMB)});
+  smoke(F,h,fc[0]+3,fc[1]+2,{n:14,seed:6,t0:.1,life:1.5,spread:12,r0:5,r1:11,a:1,rise:1.6})}
+ if(p.exp==='short'&&h>=.3){const k=h-.3;if(k<.1){F.disc(bc[0],bc[1],10*(1-k/.1)+3,CY[4],1);F.disc(bc[0],bc[1],5,'#ffffff',1-k/.1)}
+  burst(F,31,22,THIT+.3,u,bc,{a0:-3.14,a1:3.14,s0:30,s1:80,l0:.3,l1:.7,g:150,depth:9,draw:spark(CY)});
+  for(let j=0;j<5;j++){const tt=.3+H(j,1,4)*.3;if(h>tt&&h<tt+.08)F.disc(EX-6+H(j,2,4)*14,FY-38+H(j,3,4)*32,2.5,CY[4],1)}
+  smoke(F,h,bc[0],bc[1]+4,{n:10,seed:8,t0:.32,life:1.2,spread:10,r0:5,r1:9,a:.95})}
+ if(p.exp==='ash'){if(h<.4)for(let j=0;j<80;j++){const R=rng(j*17+2);R();const sx=EX-7+R()*16,sy=FY-46+R()*44,ts=.08+(sy-(FY-46))/44*.3;const a=h-ts;if(a<0)continue;
+   F.dpx(sx-a*14+Math.sin(a*9+j)*1.5,sy+a*a*60+a*6,R()<.18?PUR[4]:R()<.3?AMB[3]:SMK[4+(R()*3|0)],1-a/1.2)}
+  if(h>=.4&&h<1.6)for(let j=0;j<60;j++){const R=rng(j*29+5);R();const a=h-.4+R()*.3;F.dpx(EX-8+R()*18-a*10,FY-30+R()*26+a*a*40,SMK[4+(R()*3|0)],1-a/1.4)}
+  smoke(F,h,EX,FY-4,{n:8,seed:12,t0:.4,life:1.2,spread:12,r0:3,r1:7,a:.8,rise:.4})}
+ if(p.exp==='shield'){const k=h-.32;if(k>=0&&k<.12){F.disc(bc[0],bc[1],4+10*(1-k/.12),'#ffffff',1);F.ring(bc[0],bc[1],6+k*110,CY[3],1-k/.12)}
+  smoke(F,h,bc[0]+2,bc[1]+4,{n:12,seed:14,t0:.34,life:1.3,spread:13,r0:5,r1:10,a:1,out:1.3})}
+ // retombée sur le genou : poussière d'ardoise
+ const kt=h1+.2;if(h>=kt)smoke(F,h,EX-6,FY,{n:5,seed:17,t0:kt,life:.8,spread:8,r0:1.5,r1:4,a:.6,rise:.3,ramp:SLATE.slice(3)});
+ if(p.kneel.style==='cough'&&h>kt+.5){const c=((h-h1)%2.9)/2.9;if(c<.25)for(let j=0;j<4;j++)F.dpx(EX+11+c*20+j,FY-23+j%2+c*8,SLATE[7],.6*(1-c/.25))}
+ // jauge 1 PV
+ if(h>h1+.6){const bx=EX-8,by=FY-38,bl=Math.sin(u*9)>0;for(let x=bx-1;x<=bx+14;x++){F.px(x,by-1,OUTC);F.px(x,by+2,OUTC)}F.px(bx-1,by,OUTC);F.px(bx-1,by+1,OUTC);F.px(bx+14,by,OUTC);F.px(bx+14,by+1,OUTC);
+  for(let x=bx;x<bx+14;x++){F.px(x,by,'#2a1214');F.px(x,by+1,'#1a0a0c')}F.px(bx,by,bl?'#ff6a5a':'#c83c34');F.px(bx,by+1,'#8a2420')}}
+
+// ================= RENDU =================
+function render(p,u,V){const X=ctx(p,u),g=V.g,F=FX(g);g.putImageData(V.bg,0,0);
+ drawFloor(F,u,X,p);drawNova(F,u,X,p);drawDeb(F,u,X,p,'ground');drawColumn(F,u,X,p);drawAnchor(F,u,X,p);
+ drawFigure(g,F,u,X,p);drawExp(F,u,X,p);drawDeb(F,u,X,p,'air');
+ if(X.dim>0)F.dim('#05040a',X.dim);
+ if(p.exp==='ash'&&X.h>=0&&X.h<.08)F.disc(EX+1,FY-20,26,'#ffffff',.55*(1-X.h/.08));
+ const fo=u>T.L-.45?(u-(T.L-.45))/.45:u<.25?1-u/.25:0;if(fo>0)F.dim('#040506',fo);
+ return X}
+
+// ================= PROPOSITIONS =================
+const PROPS=[
+ {id:1,name:'1 · Fêlure pourpre',ov:'crack',col:{style:'beam',w:3.5},nova:'ring',exp:'unbolt',hide:[.06,.42],debT:.02,kneel:{style:'heavy',pose:'knee'},
+  o:{shirt:['#232326','#36363a','#4c4c52','#66666c','#828288'],pants:['#2a2216','#3e3220','#54452c','#6a5838','#806c46'],sleeve:'short',thr:.72,hemTorn:1,rips:['knee','hem'],seed:11},
+  parts:[['Surcharge','des fêlures pourpres courent sur la sphère, qui tremble de plus en plus ; les éclairs se multiplient'],['Colonne','faisceau noir étroit à liseré pourpre'],['Nova','anneau noir bordé de pourpre qui soulève la poussière'],['Explosion','l’exosquelette se déboulonne d’un coup : éclair blanc, rivets en gerbe, toutes les pièces partent en étoile'],['À genoux','avant-bras posé sur le genou levé, tête basse, grandes respirations lentes'],['Tenue','t-shirt gris cendre troué et brûlé, toile kaki déchirée au genou et à la cheville, pieds nus']],
+  lore:'Les fêlures suivent les lignes du sceau tyrien gravé dans l’Ancre : c’est le sceau qui cède, pas la sphère.'},
+ {id:2,name:'2 · Implosion',ov:'implode',col:{style:'smoke',w:4.5},nova:'shock',exp:'gen',hide:[.06,.45],debT:.02,kneel:{style:'pant',pose:'two'},
+  o:{shirt:['#0e0e10','#18181c','#222228','#2e2e36','#3c3c46'],pants:['#16181c','#22252a','#2e3238','#3c4048','#4c5058'],feet:['#101012','#18181c','#202026','#2a2a30'],sleeve:'none',thr:.74,hemTorn:1,rips:['knee','thigh'],seed:23},
+  parts:[['Surcharge','l’Ancre rétrécit et aspire la poussière de la salle ; la lumière du sol s’éteint, puis elle se rouvre d’un coup'],['Colonne','pilier de fumée d’ombre qui ondule et bouillonne sur ses bords'],['Nova','onde de choc : liseré pâle suivi d’une bande sombre'],['Explosion','le générateur dorsal surcharge (ambre puis pourpre) et explose dans le dos ; le générateur part haut, le reste vers l’avant'],['À genoux','penché, les deux mains sur le genou levé, halètement court et rapide'],['Tenue','débardeur noir de sous-combinaison, pantalon anthracite lacéré, chaussettes']],
+  lore:'Le générateur dorsal puise dans le même courant que l’Ancre : quand elle se vide d’un coup, il se remplit trop.'},
+ {id:3,name:'3 · Couronne d’éclairs',ov:'crown',col:{style:'braid',w:2.5},nova:'bolt',exp:'short',hide:[.32,.66],debT:.3,kneel:{style:'sway',pose:'ribs',sweat:1},
+  o:{shirt:IVORY.slice(0,5),pants:['#2a160c','#4a2a14','#6e4220','#94602c','#b8803c'],sleeve:'tornF',thr:.68,hemTorn:1,rips:['knee','hem','thigh'],seed:37},
+  parts:[['Surcharge','des éclairs noirs-pourpres frappent le sol tout autour, l’anneau runique tourne de plus en plus vite'],['Colonne','colonne fine tressée d’éclairs qui montent'],['Nova','anneau d’éclairs qui crépite en s’élargissant'],['Explosion','court-circuit : des arcs cyan parcourent l’armure, puis les plaques sautent une à une'],['À genoux','une main serrée sur les côtes, l’autre bras ballant ; il oscille, une goutte de sueur tombe du menton'],['Tenue','t-shirt écru du tabard, très brûlé, manche avant arrachée ; toile rouille déchirée partout, pieds nus']],
+  lore:'Le cyan qui court sur l’armure, c’est l’Énonciation des Exilés qui tente de dévier la charge et grille les jointures.'},
+ {id:4,name:'4 · Éclipse',ov:'eclipse',col:{style:'wide',w:6.5},nova:'disk',exp:'ash',hide:[.4,.4],keyExp:.2,debT:.3,kneel:{style:'cough',pose:'knee'},
+  o:{shirt:['#1e2414','#2c341c','#3c4626','#4e5a32','#626e40'],pants:['#4a3826','#6e5638','#94784e','#b89a68','#d6bc88'],feet:['#2a2218','#3a3022','#4a3e2c','#5a4c36'],sleeve:'short',thr:.73,hemTorn:0,rips:['knee'],seed:41},
+  parts:[['Surcharge','la sphère grossit, une couronne pâle s’allume sur son bord et la salle s’assombrit'],['Colonne','large colonne d’ombre qui éteint toute la salle'],['Nova','disque obscur qui efface la lumière, bordé de braises pourpres'],['Explosion','éclair blanc, l’Ingénieur n’est plus qu’une silhouette noire dont l’armure tombe en cendres'],['À genoux','avant-bras sur le genou ; toutes les trois secondes, une quinte de toux le plie en avant'],['Tenue','t-shirt olive délavé, troué au torse, pantalon sable déchiré au genou, chaussettes']],
+  lore:'La nova ne brûle pas : elle reprend la lumière. L’armure, faite de la même énergie liée, se défait en cendre.'},
+ {id:5,name:'5 · Rupture du sceau',ov:'seal',col:{style:'rain',w:4},nova:'double',exp:'shield',hide:[.36,.72],debT:.34,kneel:{style:'push',pose:'push'},
+  o:{shirt:['#161c24','#202a36','#2c3a4a','#3a4c5e','#4c6074'],pants:['#1c1c1e','#2a2a2e','#3a3a40','#4c4c54','#60606a'],sleeve:'short',thr:.71,hemTorn:1,rips:['knee','hem'],scarf:1,seed:53},
+  parts:[['Surcharge','les segments de l’anneau runique éclatent un à un et la sphère se soulève de son socle'],['Colonne','colonne d’ombre au milieu d’une pluie de particules qui remonte'],['Nova','double anneau, pourpre puis noir'],['Explosion','son bouclier d’Énonciation cyan s’ouvre, se fend sous l’impact puis vole en éclats, et l’armure est soufflée vers l’arrière'],['À genoux','une main sur la cuisse, il essaie de se relever, tremble, puis retombe'],['Tenue','t-shirt bleu ardoise, pantalon gris, lambeau de l’écharpe cramoisie au cou, pieds nus']],
+  lore:'Le réflexe de l’Ingénieur lui sauve la vie : le bouclier absorbe juste assez pour qu’il reste à 1 PV.'}];
+
+// ================= PLANCHE =================
+const views=[],mk=()=>{const c=document.createElement('canvas');c.width=SW;c.height=SH;return c};
+const phaseTxt=(p,u,X)=>u<T.ovS?'Balistes armées · caméra revenue':u<T.colS?'Surcharge de l’Ancre':u<T.novS?'Colonne d’ombre':X.h<0?'Nova':X.h<p.hide[1]+.3?'Explosion · l’Ingénieur est pris':u<T.L-1.3?'À genoux · 1 PV · sans armure':'→ déclenchement du dialogue';
+for(const p of PROPS){p.deb=makeDeb(p);
+ const f=document.createElement('figure');
+ f.innerHTML=`<div class="stage"><canvas class="big" width="${SW*SC}" height="${SH*SC}"></canvas><span class="tag"></span></div><div class="keys"></div>
+ <div class="low"><div class="close"><canvas width="80" height="68"></canvas><span>sans équipement · ×1</span></div><div class="cap"><b>${p.name}</b><dl>${p.parts.map(([a,b])=>`<dt>${a}</dt><dd>${b}</dd>`).join('')}</dl><p class="lore">${p.lore}</p></div></div>`;
+ document.getElementById('grid').append(f);
+ const sc=mk(),g=sc.getContext('2d'),V={g,bg:new ImageData(new Uint8ClampedArray(BG),SW,SH)},keys=f.querySelector('.keys');
+ for(const[label,u]of[['Surcharge',2.1],['Colonne',2.85],['Nova',THIT-.1],['Explosion',THIT+(p.keyExp??p.hide[0]+.08)],['À genoux · 1 PV',7.2]]){render(p,u,V);const cv=mk();cv.getContext('2d').drawImage(sc,0,0);const d=document.createElement('div');d.append(cv,label);keys.append(d)}
+ const big=f.querySelector('.big'),cl1=f.querySelector('.close canvas');
+ views.push({p,sc,V,g:big.getContext('2d'),tag:f.querySelector('.tag'),cg:cl1.getContext('2d')})}
+let paused=matchMedia('(prefers-reduced-motion: reduce)').matches,speed=1,t=0,last;const SP=[1,.5,.25,2];
+const pb=document.getElementById('pause'),sb=document.getElementById('speed');pb.textContent=paused?'Lecture':'Pause';
+pb.onclick=()=>{paused=!paused;pb.textContent=paused?'Lecture':'Pause'};
+sb.onclick=()=>{speed=SP[(SP.indexOf(speed)+1)%SP.length];sb.textContent='Vitesse ×'+String(speed).replace('.',',')};
+function loop(now){const dt=last===undefined?0:Math.min((now-last)/1000,.1);last=now;if(!paused)t+=dt*speed;
+ for(const v of views){const u=t%T.L,X=render(v.p,u,v.V);v.g.imageSmoothingEnabled=false;v.g.fillStyle='#050608';v.g.fillRect(0,0,SW*SC,SH*SC);v.g.drawImage(v.sc,X.sx*SC,X.sy*SC,SW*SC,SH*SC);v.tag.textContent=phaseTxt(v.p,u,X);
+  const im=kneel({o:v.p.o,style:v.p.kneel.style,pose:v.p.kneel.pose,ember:.25,sweat:v.p.kneel.sweat},t,1);v.cg.fillStyle=SLATE[2];v.cg.fillRect(0,0,80,68);v.cg.fillStyle=SLATE[1];v.cg.fillRect(0,62,80,6);v.cg.drawImage(im,-26,-46)}
+ requestAnimationFrame(loop)}
+requestAnimationFrame(loop);
+</script></body></html>

@@ -58,7 +58,7 @@ Légende de la colonne Auto :
 | Chantier : paiement, remboursement à l'annulation, `workSpot`, Incantation (pierres, agenouillement, miroir, vers) | ✅ `test_construction`, `etape7_incantation_*` | Poser puis annuler un chantier ; regarder une Énonciation complète. | [ ] |
 | Invocation d'adepte (50) et prière (+1/s, popup « +5 » toutes les 5 s) | ✅ `test_prayer` ; ◐ `test_full_game` | Invoquer, voir l'adepte prier et le « +5 ». | [ ] |
 | Caserne : 3 combattants, 100 Discipline, 6 s, file de 5 | ✅ `test_caserne` ; ◐ `test_full_game` (11 entraînés) | Remplir la file, regarder les sorties. | [ ] |
-| Puits des Âmes : rappel pour 200 Vie, niveau conservé | ✅ `test_soulwell` | Faire tomber une unité, la rappeler. | [ ] |
+| Puits des Âmes : rappel pour coût initial × niveau en Vie, niveau conservé | ✅ `test_soulwell` | Faire tomber une unité, la rappeler. | [ ] |
 | Héros Tireur depuis l'Ancre (100 de chaque) | ✅ `test_hud_actions`, `test_heroes` | Invoquer le Tireur, Espace pour le tir de précision. | [ ] |
 
 ## 2.5 Unités, combat et expérience

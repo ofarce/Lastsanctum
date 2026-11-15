@@ -74,9 +74,9 @@ static func can_train(b: Building) -> bool:
 		and Catalog.can_pay(Catalog.CASERNE_COST)
 
 
-static func can_revive(b: Building) -> bool:
+static func can_revive(b: Building, u: Unit) -> bool:
 	return not GameState.ended and b and b.complete and b.type == "soulwell" and not GameState.fallen.is_empty() \
-		and Catalog.can_pay(Catalog.REVIVE_COST)
+		and Simulation.revivable(u) and Catalog.can_pay(Catalog.revive_cost(u))
 
 
 # ---------------------------------------------------------------- panelActions
@@ -95,10 +95,30 @@ static func panel_actions(sim: Simulation) -> Array[Dictionary]:
 				func() -> void: sim.order_orb(), not has_engineer, GameState.orb_owner != null))
 		A.append(_act("hero", "sword", "Tireur · " + Catalog.short_cost(Catalog.HERO_COST), "t",
 			"Invoquer le héros Tireur · " + Catalog.cost_text(Catalog.HERO_COST), sim.summon_hero, not can_summon_hero()))
+		A.append(_act("offering", "menace", "Offrande · +50 menace", "o",
+			"Offrande tyrienne · " + Catalog.cost_text(Catalog.ANCHOR_MENACE_COST) + " · +50 menace · Réutilisable",
+			sim.offer_menace, not Simulation.can_offer_menace()))
 		return A
 	if u == null and B:
 		if not B.complete:
 			return A
+		for id: String in Catalog.RESEARCH:
+			var research: Dictionary = Catalog.RESEARCH[id]
+			if research["building"] != B.type:
+				continue
+			var done := GameState.research_done.has(id)
+			var pending := GameState.research_jobs.has(id)
+			var title: String = research["name"] + " · 10 s · " + Catalog.cost_text(Catalog.MINING_COST) + " · +20 menace à l’achèvement"
+			if not research["requires"].is_empty():
+				var names: PackedStringArray = []
+				for required: String in research["requires"]:
+					names.append(Catalog.RESEARCH[required]["name"])
+				title += " · Prérequis : " + ", ".join(names)
+			var action := _act("research-" + id, "mining_seal", research["name"], "r", title,
+				func() -> void: sim.start_research(B, id), not Simulation.can_research(B, id))
+			action["status"] = "Déjà achevée" if done else ("En cours · %d %%" % int(GameState.research_jobs[id]["progress"] / Catalog.RESEARCH_TIME * 100.0) if pending else "")
+			action["completed"] = done
+			A.append(action)
 		var D := B.def()
 		var deity: String = D["deity"]
 		if not deity.is_empty():
@@ -109,17 +129,18 @@ static func panel_actions(sim: Simulation) -> Array[Dictionary]:
 		if B.type == "caserne":
 			for t: Dictionary in Catalog.CASERNE_UNITS:
 				var id: String = t["id"]
-				A.append(_act("train-" + id, t["icon"], "%s · %s" % [t["label"], Catalog.short_cost(Catalog.CASERNE_COST)], t["key"],
-					"Entraîner un %s · %s · %s s" % [String(Catalog.ADEPT[id]["name"]).to_lower(), Catalog.cost_text(Catalog.CASERNE_COST), num(Catalog.CASERNE_TIME)],
+				A.append(_act("train-" + id, t["icon"], "%s ×4 · %s" % [t["label"], Catalog.short_cost(Catalog.CASERNE_COST)], t["key"],
+					"Former une escouade de 4 · %s · %s · %s s" % [String(Catalog.ADEPT[id]["name"]).to_lower(), Catalog.cost_text(Catalog.CASERNE_COST), num(Catalog.CASERNE_TIME)],
 					func() -> void: sim.train_unit(B, id), not can_train(B)))
 		if B.type == "soulwell":
-			var last := GameState.fallen.slice(maxi(0, GameState.fallen.size() - 9))
+			var eligible := GameState.fallen.filter(func(f: Unit) -> bool: return Simulation.revivable(f))
+			var last := eligible.slice(maxi(0, eligible.size() - 9))
 			last.reverse()
 			for i in last.size():
 				var f: Unit = last[i]
 				A.append(_act("revive-%d" % f.id, "heart", "%s ★%d" % [_adept_prefix.sub(f.name, ""), Catalog.lvl(f)], str(i + 1),
-					"Ressusciter %s (niveau %d) · %s" % [f.name, Catalog.lvl(f), Catalog.cost_text(Catalog.REVIVE_COST)],
-					func() -> void: sim.revive_unit(B, f), not can_revive(B)))
+					"Ressusciter %s (niveau %d) · %s" % [f.name, Catalog.lvl(f), Catalog.cost_text(Catalog.revive_cost(f))],
+					func() -> void: sim.revive_unit(B, f), not can_revive(B, f)))
 		return A
 	if u == null or u.hidden:
 		return A
@@ -154,6 +175,14 @@ static func panel_actions(sim: Simulation) -> Array[Dictionary]:
 	elif u.role == "shooter":
 		A.append(_act("ability", "flame", "Compétence", " ", "Tir de précision", sim.run_ability, u.ability > 0.0, false,
 			"%d s" % ceili(u.ability) if u.ability > 0.0 else ""))
+	if u.squad_capacity > 0 and alive.all(func(member: Unit) -> bool: return member.squad == u.squad):
+		var losses := Simulation.squad_losses(u)
+		if not losses.is_empty():
+			var cost := Simulation.squad_revive_cost(u)
+			A.append(_act("revive-squad", "heart", "Renforts · " + Catalog.cost_text(cost), "r",
+				"Ressusciter %d membre(s) au Puits des Âmes et rallier l’escouade · %s" % [losses.size(), Catalog.cost_text(cost)],
+				func() -> void: sim.revive_squad(u), Simulation.life_well() == null or not Catalog.can_pay(cost)))
+			A[-1]["cost_text"] = Catalog.cost_text(cost)
 	A.append(_act("hold", "flag", "Position", "h", "Tenir position", sim.hold, false, u.stance == "hold"))
 	A.append(_act("move", "move", "Déplacer", "m", "Déplacer : choisir une destination", sim.arm_move, false, GameState.hud_mode == "move"))
 	return A
@@ -185,6 +214,14 @@ static func dig_hits(sim: Simulation, cell: Dictionary) -> int:
 	return sim.state().dig_hits.get(Vector2i(cell["i"], cell["j"]), 0)
 
 
+static func dig_status(sim: Simulation, cell: Dictionary) -> String:
+	var block := sim.state().block_definition(cell["i"], cell["j"])
+	if block.is_empty():
+		return "Bloc non minable"
+	var label: String = block.get("mining_label", "Creuse : " + block["material_name"])
+	return "%s · %d / %d" % [label, dig_hits(sim, cell), block["resistance"]]
+
+
 static func adept_status(sim: Simulation, u: Unit) -> String:
 	var j: Variant = u.job
 	if j == null:
@@ -195,7 +232,7 @@ static func adept_status(sim: Simulation, u: Unit) -> String:
 			return "Prie au %s · +1 %s / s" % [t.def()["name"], Catalog.RES_INFO[Catalog.DEITY_RES[u.role]]["name"]]
 		return "Se rend au " + t.def()["name"]
 	if j["type"] == "dig":
-		return "Creuse la roche · %d / %d" % [dig_hits(sim, j["cell"]), TerrainState.DIG_HITS]
+		return dig_status(sim, j["cell"])
 	return "En attente d’ordres"
 
 
@@ -214,7 +251,7 @@ static func unit_status(sim: Simulation, u: Unit) -> String:
 		if u.orb_job:
 			return "Réactivation de l’Ancre · %d %%" % floori(GameState.orb_progress / ORB_TIME * 100.0)
 		if u.job != null and u.job["type"] == "dig":
-			return "Creuse la roche · %d / %d" % [dig_hits(sim, u.job["cell"]), TerrainState.DIG_HITS]
+			return dig_status(sim, u.job["cell"])
 		if GameState.hud_menu == "build":
 			return "Choisissez un bâtiment à construire"
 		if not GameState.orb_active:
@@ -244,7 +281,7 @@ static func building_status(b: Building) -> String:
 		var n := GameState.fallen.size()
 		if n == 0:
 			return "Aucune unité tombée pour l’instant"
-		return "%d âme%s à rappeler · %s chacune" % [n, "s" if n > 1 else "", Catalog.cost_text(Catalog.REVIVE_COST)]
+		return "%d âme%s à rappeler · coût initial × niveau en Vie" % [n, "s" if n > 1 else ""]
 	return "Achevé · débloqué par le " + Catalog.BUILDINGS[D["requires"]]["name"]
 
 
@@ -264,9 +301,13 @@ static func view(sim: Simulation) -> Dictionary:
 	for k in Catalog.RES_ORDER:
 		res[k] = str(floori(GameState.res[k]))
 	v["res"] = res
+	v["resource_rates"] = Simulation.resource_rates()
+	v["menace"] = str(GameState.menace)
 	v["population"] = str(GameState.units.filter(func(o: Unit) -> bool: return o.alive() and not o.hidden).size())
 	if anchor:
 		v["chosen"] = "Ancre tyrienne"
+	elif u and u.squad_capacity > 0 and alive.all(func(member: Unit) -> bool: return member.squad == u.squad):
+		v["chosen"] = "%s · %d/%d" % [Catalog.ADEPT[u.role]["name"], Simulation.squad_survivors(u).size(), u.squad_capacity]
 	elif alive.size() > 1:
 		v["chosen"] = "%d Exilés" % alive.size()
 	elif u:
@@ -341,7 +382,7 @@ static func view(sim: Simulation) -> Dictionary:
 	# Écart voulu D13 : portée d'attaque, à côté des dégâts.
 	v["range"] = "—" if u == null or B or base == 0 else num_fr(Catalog.unit_reach(u))
 	v["portrait_enabled"] = anchor or u != null or B != null
-	v["portrait_key"] = "anchor" if anchor else (u.role if u else ("bld-" + B.type if B else "empty"))
+	v["portrait_key"] = "anchor" if anchor else (portrait_key(u) if u else ("bld-" + B.type if B else "empty"))
 	v["enemy"] = false
 	var foe := selected_enemy() if not anchor and u == null and B == null else null
 	if foe:
@@ -355,6 +396,11 @@ static func selected_enemy() -> Enemy:
 	if e and (not e.alive() or not GameState.enemies.has(e)):
 		GameState.hud_enemy = null
 	return GameState.hud_enemy
+
+
+## Clé du portrait d'une unité : son rôle, ou « engineer-bare » pour l'Ingénieur qui a perdu son armure.
+static func portrait_key(u: Unit) -> String:
+	return "engineer-bare" if u.role == "engineer" and u.unarmored else u.role
 
 
 ## Fiche d'un ennemi sélectionné : identité, points de vie, statistiques, légende, portrait.
@@ -373,7 +419,7 @@ static func _enemy_view(v: Dictionary, e: Enemy) -> void:
 	v["health_text"] = "%d / %s" % [ceili(e.hp), num(e.max_hp)]
 	v["damage"] = num(e.damage)
 	v["range"] = num_fr(e.reach)
-	v["armor"] = "0"
+	v["armor"] = num(e.armor)
 	v["speed"] = num_fr(e.speed)
 	v["lore"] = I["lore"]
 	v["portrait_enabled"] = true

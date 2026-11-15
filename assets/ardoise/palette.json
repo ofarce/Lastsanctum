@@ -1,0 +1,20 @@
+{
+ "note": "Style ardoise tyrienne (tools/ardoise/ardoise.py)",
+ "period": 504,
+ "rock": [
+  "#141922",
+  "#1c222d",
+  "#262e3b",
+  "#323c4b",
+  "#424e5f",
+  "#424e5f",
+  "#556274",
+  "#6c7a8c",
+  "#8a98a8"
+ ],
+ "light": [
+  0.95,
+  1.02,
+  1.14
+ ]
+}

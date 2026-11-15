@@ -16,6 +16,8 @@ var _box_from := Vector2.ZERO
 var _box_to := Vector2.ZERO
 var _layer := CanvasLayer.new()
 var _box := _SelectBox.new()
+var _mining_hover := preload("res://ui/input/mining_hover.gd").new()
+var _pointer_inside := true
 
 
 func _ready() -> void:
@@ -27,6 +29,10 @@ func _ready() -> void:
 	_box.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_layer.add_child(_box)
+	_mining_hover.world = world
+	_layer.add_child(_mining_hover)
+	get_window().mouse_entered.connect(func() -> void: _pointer_inside = true)
+	get_window().mouse_exited.connect(func() -> void: _pointer_inside = false)
 
 
 func zoom_k() -> float:
@@ -45,6 +51,31 @@ func hit_orb(p: Vector2) -> bool:
 	var y := 3.0 + sin(GameState.sim_time * 1.7) * 0.2 if GameState.orb_active else 2.6
 	var o := project(CaveShape.CORE.x, y, CaveShape.CORE.y)
 	return o.distance_to(p) < maxf(18.0, zoom_k() * 1.15)
+
+
+func _process(_delta: float) -> void:
+	var pointer := get_viewport().get_mouse_position()
+	var blocked := not _pointer_inside or get_viewport().gui_get_hovered_control() != null or _box_on 		or Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT)
+	_mining_hover.cell = mining_hover_cell(pointer, blocked)
+	_mining_hover.queue_redraw()
+	var orb: Sprite2D = world.special("orb")
+	if not is_instance_valid(orb):
+		return
+	var hovered := (not GameState.orb_active
+		and GameState.hud_mode.is_empty()
+		and get_viewport().gui_get_hovered_control() == null
+		and hit_orb(get_viewport().get_mouse_position()))
+	(orb.material as ShaderMaterial).set_shader_parameter("hovered", hovered)
+
+
+## Même résolution de cible que le clic droit, recalculée même si seule la caméra bouge.
+func mining_hover_cell(pointer: Vector2, ui_blocked := false) -> Variant:
+	if ui_blocked or GameState.ended or not GameState.hud_mode.is_empty() 			or not GameState.research_done.has("mining_artifact") 			or not get_viewport().get_visible_rect().has_point(pointer):
+		return null
+	for u: Unit in GameState.selected:
+		if u.role == "engineer" and u.alive() and not u.hidden:
+			return world.terrain_state.diggable_cell(ground(pointer))
+	return null
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -171,6 +202,7 @@ func _box_select(shift: bool) -> void:
 			if p.x >= r.position.x and p.x <= r.end.x and p.y >= r.position.y and p.y <= r.end.y:
 				inside.append(u)
 	if not inside.is_empty():
+		inside = Simulation.expand_squads(inside)
 		GameState.selected = _union(GameState.selected, inside) if shift else inside
 		_show_selection()
 

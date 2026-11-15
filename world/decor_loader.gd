@@ -34,10 +34,10 @@ func _init() -> void:
 		_sprites[id]["path"] = BAKED + "sprites/%s.png" % id
 	var runtime: Dictionary = read_json("res://assets/baked/manifest.json")["world"]["runtime_decor"]
 	for f: Dictionary in runtime["faces"]:
-		_sprites["face5_%d" % f["v"]] = {"ax": f["ax"], "ay": f["ay"], "path": BAKED + "runtime/face5_%d.png" % f["v"]}
+		_sprites["face5_%d" % f["v"]] = {"ax": f["ax"], "ay": f["ay"], "path": ArtStyle.RUNTIME + "face5_%d.png" % f["v"]}
 	for s: Dictionary in runtime["spires"]:
-		_sprites["gallery_spire_%d" % s["v"]] = {"ax": s["ax"], "ay": s["ay"], "path": BAKED + "runtime/gallery_spire_%d.png" % s["v"]}
-	_atlas = load(BAKED + "decor_atlas.png")
+		_sprites["gallery_spire_%d" % s["v"]] = {"ax": s["ax"], "ay": s["ay"], "path": ArtStyle.RUNTIME + "gallery_spire_%d.png" % s["v"]}
+	_atlas = load(ArtStyle.ATLAS)
 	_regions = read_json(BAKED + "decor_atlas.json")["sprites"]
 
 

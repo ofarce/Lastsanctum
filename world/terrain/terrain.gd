@@ -31,7 +31,7 @@ func build() -> void:
 	_textures.clear()
 	for r in int(g["rows"]):
 		for c in _cols:
-			var image: Image = (load(BAKED + "world/ground/ground_r%d_c%d.png" % [r, c]) as Texture2D).get_image()
+			var image: Image = (load(ArtStyle.GROUND % [r, c]) as Texture2D).get_image()
 			if image.is_compressed():
 				image.decompress()
 			image.convert(Image.FORMAT_RGBA8)
@@ -92,6 +92,15 @@ func _for_chunks(rect: Rect2i, fn: Callable) -> void:
 			var k := r * _cols + c
 			fn.call(_images[k], Rect2i(inter.position - origin_px, inter.size), origin_px)
 			_dirty[k] = true
+
+
+## Copie d'un rectangle du sol (coordonnées du sol) ; pixels hors du sol transparents.
+func copy_region(at: Vector2i, size: Vector2i) -> Image:
+	var out := Image.create(size.x, size.y, false, Image.FORMAT_RGBA8)
+	for y in size.y:
+		for x in size.x:
+			out.set_pixel(x, y, get_ground_pixel(at.x + x, at.y + y))
+	return out
 
 
 ## Couleur du sol au pixel (px, py) de l'image complète (coordonnées du sol, pas du monde).

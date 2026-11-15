@@ -1,5 +1,7 @@
 class_name Simulation
 extends Node
+
+const ItemStorage := preload("res://sim/item_storage.gd")
 ## Boucle de simulation (frame() et update(), Index.html, 73b410f) et ordres du joueur.
 ## Ordre des systèmes identique au prototype (R14) : portail, bâtiments et Ancre, tâches des adeptes,
 ## portails maléfiques, unités, tourelles, ennemis, fin de partie. Les étapes 7 et 8 complèteront
@@ -7,6 +9,9 @@ extends Node
 
 signal turrets_activated
 signal engineer_greeted(unit: Unit)
+signal engineer_spoke(unit: Unit, text: String)
+## Surcharge de l'Ancre terminée : l'Ingénieur est à genoux, le dialogue peut s'ouvrir.
+signal overload_finished(unit: Unit)
 
 ## Pas de simulation maximal (frame() : dt ≤ 0,045 s).
 const MAX_DT := 0.045
@@ -24,7 +29,7 @@ const SPEED_ENGINEER := 15.2
 const SPEED_ADEPT := 7.6
 const SPEED_GUARD := 3.45
 const ADEPT_ROLES := ["sigil", "medeina", "aether", "indra", "flammes", "archer", "lame"]
-const DIG_MSG := "Creusement · l’Ingénieur déblaie une case par seconde puis attaque la case voisine."
+const DIG_MSG := "Creusement · l’Ingénieur ancre quatre pitons à distance (une case de portée), la roche est suspendue puis effacée ; il attaque ensuite la case voisine."
 
 var world: World
 var paused := false
@@ -122,12 +127,15 @@ func tick(dt: float) -> void:
 		u.buff = maxf(0.0, u.buff - dt)
 	while not GameState.spawn_queue.is_empty() and GameState.spawn_queue[0]["at"] <= GameState.sim_time:
 		combat.spawn_enemy(GameState.spawn_queue.pop_front())
+	if Overload.tick():
+		overload_finished.emit(GameState.overload_unit)
 	var alive: Array[Unit] = []
 	for u in GameState.units:
 		if u.alive():
 			alive.append(u)
 	if profiling:
 		t = _prof("portails et file", t)
+	update_squads()
 	combat.update_units(dt, alive)
 	if profiling:
 		t = _prof("alliés", t)
@@ -159,9 +167,9 @@ func portal_tick() -> void:
 			continue
 		u.hidden = false
 		if u.role == "engineer":
-			# À l'écart de l'Ancre : la bulle de dialogue ne la masque pas.
-			u.tx = -13.0
-			u.tz = CaveShape.CORE.y + 7.0
+			# Reste juste devant le portail après son émergence.
+			u.tx = u.x
+			u.tz = u.z
 			engineer_greeted.emit(u)
 		else:
 			var e: Vector2 = u.exit_point if u.exit_point != null else Vector2(PORTAL.x + 3.0, CaveShape.CORE.y + 4.0)
@@ -210,6 +218,7 @@ func clamp_world(u: Unit) -> void:
 ## updateBuildings : Ancre, chantiers (l'Ingénieur doit se tenir sur le point de travail), caserne.
 func update_buildings(dt: float) -> void:
 	update_orb(dt)
+	update_research(dt)
 	for b: Building in GameState.buildings.duplicate():
 		var D := b.def()
 		if not b.complete:
@@ -222,7 +231,7 @@ func update_buildings(dt: float) -> void:
 				continue
 			if Combat.hyp(u.x - b.spot.x, u.z - b.spot.y) > 0.5:
 				continue
-			b.progress = minf(D["time"], b.progress + dt)
+			b.progress = minf(D["time"], b.progress + dt * (2.0 if GameState.fast_construction else 1.0))
 			if b.progress < D["time"]:
 				continue
 			b.complete = true
@@ -236,6 +245,11 @@ func update_buildings(dt: float) -> void:
 			else:
 				say("%s achevé.%s" % [D["name"], unlock_text(b.type)], 4.0)
 			continue
+		if b.type == "soulwell":
+			for unit: Unit in GameState.units:
+				if unit.alive() and not unit.hidden and unit.hp < unit.max_hp \
+						and Vector2(unit.x - b.x, unit.z - b.z).length_squared() <= float(D["heal_radius"]) ** 2:
+					unit.hp = minf(unit.max_hp, unit.hp + float(D["heal_per_second"]) * dt)
 		if b.type == "caserne" and not b.queue.is_empty():
 			b.train += dt
 			if b.train >= Catalog.CASERNE_TIME:
@@ -270,7 +284,7 @@ func update_orb(dt: float) -> void:
 		return
 	if Combat.hyp(u.x - ORB_SPOT.x, u.z - ORB_SPOT.y) > 0.6:
 		return
-	GameState.orb_progress = minf(ORB_TIME, GameState.orb_progress + dt)
+	GameState.orb_progress = minf(ORB_TIME, GameState.orb_progress + dt * (2.0 if GameState.fast_construction else 1.0))
 	if GameState.orb_progress < ORB_TIME:
 		return
 	GameState.orb_active = true
@@ -341,6 +355,9 @@ func builder() -> Unit:
 
 
 func set_job(u: Unit, job: Dictionary) -> void:
+	if job.get("type") == "dig" and not can_mine(u):
+		engineer_spoke.emit(u, "Impossible. Je n'ai pas mon sceau de minage.")
+		return
 	# cancelTurretRepair : étape 8.
 	cancel_build(u)
 	cancel_orb(u)
@@ -382,27 +399,49 @@ func update_adepts(_dt: float) -> void:
 		if j == null or not u.alive():
 			continue
 		if j["type"] == "dig":
+			if not can_mine(u):
+				u.job = null
+				u.tx = u.x
+				u.tz = u.z
+				continue
 			var c: Dictionary = j["cell"]
 			var key := Vector2i(c["i"], c["j"])
+			var block := st.block_definition(key.x, key.y)
+			if block.is_empty():
+				u.job = null
+				continue
+			var resistance: int = block["resistance"]
 			var eng := u.role == "engineer"
 			if st.dug.has(key):
 				if not (eng and _next_dig(u)):
 					u.job = null
 				continue
 			var at: Vector2 = j["at"]
-			u.tx = at.x
-			u.tz = at.y
-			if Combat.hyp(u.x - at.x, u.z - at.y) >= 0.7:
-				continue
+			# L'Ingénieur tire ses pitons à distance : il s'arrête dès que la case est à portée.
+			if eng and st.in_dig_reach(key.x, key.y, u.pos()):
+				u.tx = u.x
+				u.tz = u.z
+			else:
+				u.tx = at.x
+				u.tz = at.y
+				if Combat.hyp(u.x - at.x, u.z - at.y) >= 0.7:
+					continue
 			u.working = true
 			j["work"] += dt * (TerrainState.ENGINEER_DIG * TerrainState.DIG_HITS if eng else 0.25)
 			while j["work"] >= TerrainState.HIT_TIME:
 				j["work"] -= TerrainState.HIT_TIME
 				var h: int = st.dig_hits.get(key, 0) + 1
 				st.dig_hits[key] = h
-				Combat.flash(key.x * 4 + 2, key.y * 4 + 2, Color("#a89c86"))
-				if h >= TerrainState.DIG_HITS:
+				st.dig_hit_at[key] = GameState.sim_time
+				if eng:
+					Combat.piton(u, key, (h - 1) % 4)
+				else:
+					Combat.flash(key.x * 4 + 2, key.y * 4 + 2, Color("#a89c86"))
+				if h >= resistance:
+					if eng:
+						Combat.suspend(u, key, world.cell_image(key.x, key.y))
 					world.dig_cell(key.x, key.y)
+					ItemStorage.deposit(block["drop_item"], u, Vector2(key.x * 4 + 2, key.y * 4 + 2))
 					if not (eng and _next_dig(u)):
 						u.job = null
 					break
@@ -451,8 +490,12 @@ func order_adepts(p: Vector2) -> bool:
 		var cell: Variant = state().diggable_cell(p)
 		if cell != null:
 			for u in engs:
+				if not can_mine(u):
+					engineer_spoke.emit(u, "Impossible. Je n'ai pas mon sceau de minage.")
+					continue
 				set_job(u, {"type": "dig", "cell": cell, "at": cell["at"]})
-			say(DIG_MSG, 2.0)
+			if engs.any(func(u: Unit) -> bool: return can_mine(u)):
+				say(DIG_MSG, 2.0)
 			return true
 	return false
 
@@ -463,7 +506,7 @@ func order_adepts(p: Vector2) -> bool:
 func issue_move(target: Vector2, target_is_enemy := false) -> void:
 	if GameState.anchor_selected or GameState.ended:
 		return
-	var valid := GameState.selected.filter(func(u: Unit) -> bool: return u.alive() and not u.hidden)
+	var valid := expand_squads(GameState.selected)
 	var cols := mini(4, valid.size())
 	for i in valid.size():
 		var u: Unit = valid[i]
@@ -480,7 +523,7 @@ func issue_move(target: Vector2, target_is_enemy := false) -> void:
 ## hold : les unités sélectionnées tiennent leur position.
 func hold() -> void:
 	GameState.hud_mode = ""
-	for u in GameState.selected:
+	for u in expand_squads(GameState.selected):
 		if u.alive() and not u.hidden:
 			cancel_work(u)
 			u.stance = "hold"
@@ -769,6 +812,7 @@ func summon_adept(b: Building) -> void:
 	GameState.deity_until[id] = GameState.sim_time + 3.5
 	var A: Dictionary = Catalog.ADEPT[id]
 	var u := spawn(A["name"], DEITY_X[id], PORTAL.y + 1.8, id)
+	GameState.menace += 1
 	u.hp = A["hp"]
 	u.max_hp = u.hp
 	u.radius = 0.55
@@ -794,20 +838,20 @@ func train_unit(b: Building, id: String) -> void:
 
 ## spawnTrained : le combattant sort devant la caserne.
 func spawn_trained(b: Building, id: String) -> void:
-	var h := b.half()
-	var A: Dictionary = Catalog.ADEPT[id]
-	var u := spawn(A["name"], b.x + (rng.randf() - 0.5) * 2.0, b.z + h + 1.0, id)
-	u.hp = A["hp"]
-	u.max_hp = u.hp
-	u.radius = 0.55
-	u.tx = b.x + (rng.randf() - 0.5) * 5.0
-	u.tz = b.z + h + 4.0
-	if not state().walkable(u.x, u.z):
-		var q := state().push_out_of_rock(u.pos())
-		u.x = q.x
-		u.z = q.y
-	Combat.flash(u.x, u.z, Color("#f0dba4"))
-	say("%s sort de la caserne." % A["name"], 2.0)
+	var squad_id := 1
+	for member: Unit in GameState.units:
+		squad_id = maxi(squad_id, member.squad + 1)
+	for i in range(4):
+		var u := spawn(Catalog.ADEPT[id]["name"], b.x + (i % 2 - 0.5) * 1.5,
+			b.z + b.half() + 1.0 + (i / 2) * 1.5, id, squad_id)
+		u.squad_capacity = 4
+		u.hp = Catalog.ADEPT[id]["hp"]
+		u.max_hp = u.hp
+		u.tx = u.x
+		u.tz = u.z + 3.0
+		clamp_world(u)
+	GameState.menace += 4
+	say("Escouade de 4 · %s sort de la caserne." % Catalog.ADEPT[id]["name"], 2.0)
 
 
 ## onUnitDeath : une unité tombée (hors Ingénieur) rejoint les âmes que le Puits peut rappeler.
@@ -817,20 +861,24 @@ func on_unit_death(u: Unit) -> void:
 	cancel_work(u)
 	u.force_move = false
 	GameState.selected.erase(u)
+	if u.squad_capacity > 0 and squad_survivors(u).is_empty():
+		GameState.fallen = GameState.fallen.filter(func(f: Unit) -> bool: return f.squad != u.squad)
+		return
 	if not GameState.fallen.has(u):
 		GameState.fallen.append(u)
 	var well := GameState.buildings.any(func(b: Building) -> bool: return b.type == "soulwell" and b.complete)
 	say("%s est tombé%s" % [u.name, " · le Puits des Âmes peut le rappeler." if well else "."], 2.5)
 
 
-## reviveUnit : l'unité revient devant le Puits, avec son niveau et son expérience (200 Vie).
+## reviveUnit : l'unité revient devant le Puits, avec son niveau et son expérience (coût initial × niveau en Vie).
 func revive_unit(b: Building, u: Unit) -> void:
-	if b == null or b.type != "soulwell" or not b.complete or not GameState.fallen.has(u):
+	if GameState.ended or b == null or not GameState.buildings.has(b) or b.type != "soulwell" or not b.complete or not revivable(u):
 		return
-	if not Catalog.can_pay(Catalog.REVIVE_COST):
-		say("Résurrection : %s requis." % Catalog.cost_text(Catalog.REVIVE_COST), 3.0)
+	var cost := Catalog.revive_cost(u)
+	if not Catalog.can_pay(cost):
+		say("Résurrection : %s requis." % Catalog.cost_text(cost), 3.0)
 		return
-	Catalog.pay(Catalog.REVIVE_COST)
+	Catalog.pay(cost)
 	GameState.fallen.erase(u)
 	var h := b.half()
 	u.hp = u.max_hp
@@ -848,6 +896,173 @@ func revive_unit(b: Building, u: Unit) -> void:
 		u.z = q.y
 	if not GameState.units.has(u):
 		GameState.units.append(u)
+	if u.squad_capacity > 0:
+		u.rejoining = true
+		if GameState.selected.any(func(member: Unit) -> bool: return member.squad == u.squad):
+			GameState.selected.append(u)
+		update_squads()
 	Combat.zone(u.x, u.z, 2.5, Color("#9be27a"))
 	Combat.flash(u.x, u.z, Color("#effde0"))
 	say("%s revient du Puits des Âmes · niveau %d." % [u.name, Catalog.lvl(u)], 3.0)
+
+
+static func can_mine(u: Unit) -> bool:
+	return u.role != "engineer" or not u.unarmored or GameState.research_done.has("mining_artifact")
+
+
+static func research_requirements_met(id: String) -> bool:
+	if not Catalog.RESEARCH.has(id):
+		return false
+	for required: String in Catalog.RESEARCH[id]["requires"]:
+		if not GameState.research_done.has(required):
+			return false
+	return true
+
+
+static func can_research(b: Building, id: String) -> bool:
+	return not GameState.ended and b != null and GameState.buildings.has(b) and b.complete \
+		and Catalog.RESEARCH.has(id) and Catalog.RESEARCH[id]["building"] == b.type \
+		and not GameState.research_done.has(id) and not GameState.research_jobs.has(id) \
+		and research_requirements_met(id) and Catalog.can_pay(Catalog.MINING_COST)
+
+
+func start_research(b: Building, id: String) -> void:
+	if not can_research(b, id):
+		return
+	Catalog.pay(Catalog.MINING_COST)
+	GameState.research_jobs[id] = {"building": b, "progress": 0.0}
+
+
+func update_research(dt: float) -> void:
+	for id: String in GameState.research_jobs.keys():
+		var job: Dictionary = GameState.research_jobs[id]
+		if not GameState.buildings.has(job["building"]) or not job["building"].complete:
+			continue
+		job["progress"] = minf(Catalog.RESEARCH_TIME, job["progress"] + dt)
+		if job["progress"] < Catalog.RESEARCH_TIME:
+			continue
+		GameState.research_jobs.erase(id)
+		GameState.research_done[id] = true
+		GameState.menace += Catalog.RESEARCH_MENACE
+		if id == "mining_artifact":
+			for u in GameState.units:
+				if u.role == "engineer" and u.alive():
+					engineer_spoke.emit(u, "Ce sceau devrait ne faire qu'une bouchée de ces murs en pierre.")
+					break
+
+
+## Offrande réutilisable de l’Ancre : paiement atomique, sans recharge.
+static func can_offer_menace() -> bool:
+	return not GameState.ended and GameState.orb_active and Catalog.can_pay(Catalog.ANCHOR_MENACE_COST)
+
+
+func offer_menace() -> void:
+	if not can_offer_menace():
+		return
+	Catalog.pay(Catalog.ANCHOR_MENACE_COST)
+	GameState.menace += Catalog.ANCHOR_MENACE_GAIN
+
+
+## Revenus actuels : Ancre éveillée et adeptes effectivement en prière.
+static func resource_rates() -> Dictionary:
+	var rates := {}
+	for resource: String in Catalog.RES_ORDER:
+		rates[resource] = 1 if GameState.orb_active and not GameState.ended else 0
+	if GameState.ended:
+		return rates
+	for u: Unit in GameState.units:
+		if not u.alive() or u.hidden or not u.working or u.job == null or u.job.get("type") != "pray":
+			continue
+		var temple: Building = u.job.get("temple")
+		if temple != null and temple.complete and GameState.buildings.has(temple) and Catalog.DEITY_RES.has(u.role):
+			rates[Catalog.DEITY_RES[u.role]] += 1
+	return rates
+
+
+static func squad_survivors(u: Unit) -> Array[Unit]:
+	var members: Array[Unit] = []
+	for other: Unit in GameState.units:
+		if other.squad == u.squad and other.alive() and not other.hidden:
+			members.append(other)
+	return members
+
+
+static func expand_squads(units: Array[Unit]) -> Array[Unit]:
+	var result: Array[Unit] = []
+	for u: Unit in units:
+		var group: Array[Unit] = []
+		if u.squad_capacity > 0:
+			group = squad_survivors(u)
+		else:
+			group.append(u)
+		for member: Unit in group:
+			if member.alive() and not member.hidden and not result.has(member):
+				result.append(member)
+	return result
+
+
+static func revivable(u: Unit) -> bool:
+	return u != null and not u.alive() and GameState.fallen.has(u) and (u.squad_capacity == 0 or not squad_survivors(u).is_empty())
+
+
+static func squad_losses(u: Unit) -> Array[Unit]:
+	var losses: Array[Unit] = []
+	if u.squad_capacity > 0 and not squad_survivors(u).is_empty():
+		for member: Unit in GameState.fallen:
+			if member.squad == u.squad and revivable(member):
+				losses.append(member)
+	return losses
+
+
+static func squad_revive_cost(u: Unit) -> Dictionary:
+	var total := 0
+	for member: Unit in squad_losses(u):
+		total += int(Catalog.revive_cost(member)["vie"])
+	return {"vie": total}
+
+
+static func life_well() -> Building:
+	for b: Building in GameState.buildings:
+		if b.type == "soulwell" and b.complete:
+			return b
+	return null
+
+
+func revive_squad(u: Unit) -> void:
+	var well := life_well()
+	var losses := squad_losses(u)
+	if GameState.ended or well == null or losses.is_empty() or not Catalog.can_pay(squad_revive_cost(u)):
+		return
+	for member: Unit in losses:
+		revive_unit(well, member)
+
+
+func update_squads() -> void:
+	var leaders := {}
+	for u: Unit in GameState.units:
+		if u.squad_capacity > 0 and u.alive() and not u.hidden and not u.rejoining and not leaders.has(u.squad):
+			leaders[u.squad] = u
+	# Si le dernier vétéran tombe pendant un ralliement, un renfort vivant prend la tête.
+	for u: Unit in GameState.units:
+		if u.squad_capacity > 0 and u.alive() and not u.hidden and not leaders.has(u.squad):
+			leaders[u.squad] = u
+			u.rejoining = false
+	for u: Unit in GameState.units:
+		if u.squad_capacity == 0 or not u.alive() or not leaders.has(u.squad):
+			continue
+		var leader: Unit = leaders[u.squad]
+		if u == leader:
+			continue
+		var distance := u.pos().distance_to(leader.pos())
+		if distance > 10.0:
+			u.rejoining = true
+		if u.rejoining:
+			if distance < 3.0:
+				u.rejoining = false
+				u.force_move = false
+				u.stance = leader.stance
+			else:
+				u.tx = leader.x + (u.id % 2 - 0.5) * 1.5
+				u.tz = leader.z + 1.5
+				u.force_move = true
+				u.stance = "attack"

@@ -33,6 +33,6 @@ static func ground_from_screen(p: Vector2, cam: Vector2, px: int, screen: Vector
 	return Vector2((p.x - screen.x / 2.0) / (K * px) + cam.x, (p.y - screen.y * CENTER_Y) / (K * px) + cam.y)
 
 
-## Facteur de pixel initial (initialPixelZoom).
+## Facteur de pixel initial : un cran plus proche que le cadrage du prototype.
 static func initial_px(screen_width: float) -> int:
-	return maxi(1, maxi(2, roundi(screen_width / 640.0)) - 1)
+	return clampi(maxi(2, roundi(screen_width / 640.0)), 1, 6)

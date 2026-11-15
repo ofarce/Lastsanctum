@@ -64,6 +64,52 @@ func test_progress_needs_engineer_on_spot() -> void:
 	check(u.build_job == null, "Ingénieur libéré")
 
 
+func test_fast_construction_toggle_during_work() -> void:
+	var sim := game()
+	give(25.0)
+	_arm("sigil")
+	sim.place_building(Vector2(-27.0, -119.0))
+	var b: Building = GameState.buildings[0]
+	var u := engineer()
+	u.x = b.spot.x
+	u.z = b.spot.y
+	GameState.fast_construction = true
+	sim.update_buildings(1.0)
+	check_near(b.progress, 2.0, 1e-9, "vitesse doublée")
+	GameState.fast_construction = false
+	sim.update_buildings(1.0)
+	check_near(b.progress, 3.0, 1e-9, "retour à la vitesse normale")
+	GameState.fast_construction = true
+	sim.update_buildings(0.5)
+	check(b.complete, "activation en cours de chantier et achèvement accéléré")
+	game()
+	check(not GameState.fast_construction, "désactivé en nouvelle partie")
+
+
+func test_fast_construction_button_and_anchor() -> void:
+	var sim := game()
+	var hud := _main.get_node("Hud")
+	var button: Button = hud.get("_fast_construction")
+	var boost: Button = hud.get("_resource_boost")
+	check(button.position.y >= boost.position.y + boost.size.y, "bouton sous +1000")
+	check(not button.button_pressed and button.text.ends_with("OFF"), "état initial OFF")
+	button.button_pressed = true
+	check(GameState.fast_construction and button.text.ends_with("ON"), "bouton active le mode rapide")
+	var u := engineer()
+	u.x = Simulation.ORB_SPOT.x
+	u.z = Simulation.ORB_SPOT.y
+	u.orb_job = true
+	GameState.orb_owner = u
+	sim.update_orb(1.0)
+	check_near(GameState.orb_progress, 2.0, 1e-9, "réactivation de l’Ancre doublée")
+	button.button_pressed = false
+	sim.update_orb(1.0)
+	check_near(GameState.orb_progress, 3.0, 1e-9, "bouton restaure la vitesse normale")
+	button.button_pressed = true
+	game()
+	check(not button.button_pressed and button.text.ends_with("OFF"), "bouton réinitialisé en nouvelle partie")
+
+
 func test_walk_and_build_in_real_time() -> void:
 	var sim := game()
 	give(25.0)

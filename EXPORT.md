@@ -2,6 +2,10 @@
 
 ## Exporter
 
+Double-cliquer sur **Lancer Exiles.desktop** à la racine du projet pour reconstruire le build Linux et le lancer. Si le gestionnaire de fichiers le demande, autoriser l'exécution du raccourci.
+
+Depuis un terminal : `./lancer-jeu.sh`. Le script fonctionne depuis n'importe quel dossier et lance le jeu uniquement si l'export réussit. Le journal d'export est dans `build/export.log`.
+
 Les modèles d'export officiels de Godot 4.7.2 sont installés dans `~/.local/share/godot/export_templates/4.7.2.stable/` (Linux, Windows, Web sans threads). Ils ont été vérifiés par l'empreinte SHA-512 de la publication officielle.
 
 ```bash

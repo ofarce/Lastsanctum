@@ -25,6 +25,8 @@ var _full: Texture2D
 var _dim: Texture2D
 var _site: Dictionary
 var _footprint: Texture2D
+## Sommet visible du sprite par rapport au point au sol, en pixels natifs.
+var top_offset := 0.0
 ## Pierres en vol à cette image (coordonnées natives du monde), pour les éclairs du miroir.
 var stones: Array[Vector2] = []
 
@@ -40,6 +42,10 @@ func setup(b: Building) -> void:
 	_anim = load("res://assets/baked/buildings/%s_anim.png" % _art)
 	_footprint = load("res://assets/baked/overlay/footprint_build.png")
 	_site = site(_art)
+	var top := float(SH)
+	for tile: Dictionary in _site["tiles"]:
+		top = minf(top, tile["y"])
+	top_offset = (top - float(_meta["arts"][_art]["anchor"][1])) * _f
 	_full = _site["full"]
 	_dim = _site["dim"]
 	position = Proj.nat(b.x, 0.0, b.z)

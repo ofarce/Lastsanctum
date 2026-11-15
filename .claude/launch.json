@@ -4,8 +4,72 @@
     {
       "name": "export-web",
       "runtimeExecutable": "python3",
-      "runtimeArgs": ["-m", "http.server", "8765", "--bind", "127.0.0.1", "--directory", "build/web"],
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8765",
+        "--bind",
+        "127.0.0.1",
+        "--directory",
+        "build/web"
+      ],
       "port": 8765
+    },
+    {
+      "name": "planches",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8124",
+        "--bind",
+        "127.0.0.1",
+        "--directory",
+        "planches"
+      ],
+      "port": 8124
+    },
+    {
+      "name": "planches-2",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8126",
+        "--bind",
+        "127.0.0.1",
+        "--directory",
+        "planches"
+      ],
+      "port": 8126
+    },
+    {
+      "name": "planches-coffre",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8131",
+        "--bind",
+        "127.0.0.1",
+        "--directory",
+        "planches"
+      ],
+      "port": 8131
+    },
+    {
+      "name": "planches-surcharge",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8133",
+        "--bind",
+        "127.0.0.1",
+        "--directory",
+        "planches"
+      ],
+      "port": 8133
     }
   ]
 }

@@ -41,6 +41,8 @@ var _turret_views := {}
 var overlay: WorldOverlay
 ## Étincelle de réactivation de l'Ancre (caméra qui la suit, halo), dans la surimpression.
 var anchor_spark: AnchorSpark
+## Surcharge de l'Ancre après l'armement des balistes (colonne, nova, bouclier, pièces d'armure).
+var anchor_overload: AnchorOverload
 ## Emprises au sol des bâtiments (drawBuildGrid), sous le décor.
 var build_grid: BuildGrid
 
@@ -80,6 +82,10 @@ func _ready() -> void:
 	anchor_spark.name = "AnchorSpark"
 	anchor_spark.world = self
 	overlay.add_child(anchor_spark)
+	anchor_overload = AnchorOverload.new()
+	anchor_overload.name = "AnchorOverload"
+	anchor_overload.world = self
+	overlay.add_child(anchor_overload)
 	lighting = Lighting.new()
 	lighting.name = "Lighting"
 	lighting.world = self
@@ -87,6 +93,7 @@ func _ready() -> void:
 	lighting.providers.append(_building_lights)
 	lighting.providers.append(_combat_lights)
 	lighting.providers.append(anchor_spark.lights)
+	lighting.providers.append(anchor_overload.lights)
 	add_child(lighting)
 	reset_world(randi())
 
@@ -191,6 +198,14 @@ func _portal_sprite(slot: Node2D, xz: Vector2, kind: String, k: float, origin_of
 	return spr
 
 
+## Image du sol de la case (i, j) (32 × 32 pixels natifs), relevée avant qu'elle soit creusée : la roche
+## suspendue par les pitons de l'Ingénieur garde l'aspect exact de la case.
+func cell_image(i: int, j: int) -> Image:
+	if terrain == null or terrain_ops == null or terrain_ops.painter == null:
+		return null
+	return terrain.copy_region(terrain_ops.painter.ground_px(i * 4.0, j * 4.0), Vector2i(32, 32))
+
+
 ## Creuse la case (i, j) : sol repeint, décor mis à jour, galerie révélée si elle est touchée.
 func dig_cell(i: int, j: int) -> void:
 	terrain_ops.dig_cell(i, j)
@@ -267,10 +282,10 @@ func _sync_buildings() -> void:
 ## Ennemis : même rendu que les unités (planches des Forces de la Bête), sans sélection.
 func _sync_enemies() -> void:
 	if _enemy_meta.is_empty():
-		_enemy_meta = JSON.parse_string(FileAccess.get_file_as_string("res://assets/baked/manifest.json"))["enemies"]
+		_enemy_meta = EnemyArt.all()
 	var live := {}
-	for e: Enemy in GameState.enemies:
-		if e.hp <= 0.0 or not _enemy_meta.has(e.kind):
+	for e: Enemy in GameState.enemies + GameState.enemy_corpses:
+		if (e.hp <= 0.0 and not e.dead) or not _enemy_meta.has(e.kind):
 			continue
 		live[e] = true
 		if not _enemy_views.has(e):
@@ -327,7 +342,7 @@ func building_view(b: Building) -> BuildingView:
 	return _building_views.get(b)
 
 
-## Lumières des bâtiments (collectLights) : écart voulu D15 (charte graphique), chaque bâtiment éclaire
+## Lumières des bâtiments (collectLights) : écart voulu D16 (charte graphique), chaque bâtiment éclaire
 ## dans la couleur de son culte ; les feux d'Indra vacillent.
 func _building_lights() -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
@@ -394,6 +409,9 @@ func _update_dynamic() -> void:
 		var core: Vector2 = Vector2(0, -154)
 		orb.position.y = Proj.nat(core.x, y, core.y).y - holder.position.y
 		(orb.material as ShaderMaterial).set_shader_parameter("active", GameState.orb_active)
+		(orb.material as ShaderMaterial).set_shader_parameter("lift", Overload.sphere_lift())
+		(orb.material as ShaderMaterial).set_shader_parameter("ring_dark", Overload.ring_mask(false))
+		(orb.material as ShaderMaterial).set_shader_parameter("ring_flash", Overload.ring_mask(true))
 
 
 func special(name: String) -> Variant:

@@ -1,16 +1,16 @@
 {
  "ok": true,
  "page": "reference.html",
- "duration_s": 76.4,
- "source": "/home/drums/code/exilesdefense",
- "source_rev": "195114ec12daad6cd8ecc939ec350e99fe9ae175",
- "source_fingerprint": "e1366f41ac4ba0b2f88aa8e9fd24e3aa6712ef8b",
+ "duration_s": 44.0,
+ "source": "/home/drums/code/backups/exilesdefense-before-godot",
+ "source_rev": "c1bbe755628c30382547d27561ea12a5a13538d9",
+ "source_fingerprint": "e4206fb63fecb2702b15cf5b493a98d58fa38869",
  "source_unchanged": true,
  "repo_snapshot": {
   "head": "73b410f05fbeb65b5ce88f34e975fbf088f691f2",
-  "refs": "8da3fa752d2ac33855bea1674b77b75bd5fd278b",
+  "refs": "9be4668db966504813baf9cd42218541e75e468f",
   "worktree": "54536d7eee76cc8f3c3d41351a4666d339278c23",
-  "index_mtime_ns": 1794685552476596885
+  "index_mtime_ns": 1794766653917559617
  },
  "timed_out": false,
  "summary": {
@@ -973,7 +973,7 @@
     ]
    }
   ],
-  "page_seconds": 73.529
+  "page_seconds": 41.96
  },
  "files": {
   "etape2_couloir_px2.png": "d975a2be252f9e0f503989e0dedde6888763d8bb",
@@ -995,8 +995,8 @@
   "etape4_indra_actif.png": "874760d47c873470b5f580e8e5c987c6c59cabb2",
   "etape4_portail_t2.png": "2998ff3f652c1be0e9af572532ccfbabe7b4bd2b",
   "etape4_portail_t5.png": "f9ac77e2232dfc8b3d35dce7bd3e61d3400d1ea1",
-  "etape7_batiments_a.png": "4992deffd30b641a3371f0aa312e23996b94384b",
-  "etape7_batiments_b.png": "74b8533e915c5a9c72a6d5a8d1ffb3969a36dbcc",
+  "etape7_batiments_a.png": "81b98887048a22ba43d9635dbdea87e3edf39e09",
+  "etape7_batiments_b.png": "ad157a45671302715ca8f498b0b292cb6573b5d9",
   "etape7_incantation_25.png": "73ac01ab31e1277210cfd77b08330c572373d498",
   "etape7_incantation_50.png": "faa1b60f8977fa06607b5f124bb39d76506b59a3",
   "etape7_incantation_75.png": "22a1bbbc3db45487f8a4246c35b01eb4deea0fcc",

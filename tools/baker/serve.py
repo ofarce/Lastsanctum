@@ -37,10 +37,11 @@ from urllib.parse import unquote, urlparse
 
 BAKER_DIR = Path(__file__).resolve().parent
 PROJECT_DIR = BAKER_DIR.parents[1]
-DEFAULT_SRC = Path('/home/drums/code/exilesdefense')
+# Depuis la migration, le dépôt exilesdefense contient le projet Godot : le prototype vit dans sa sauvegarde.
+DEFAULT_SRC = Path('/home/drums/code/backups/exilesdefense-before-godot')
 # Version de référence de la migration (MIGRATION_PLAN.md v2). « WORKTREE » = dossier de travail.
-# Décision D15 : 73b410f + charte graphique seule (branche charte-graphique du prototype).
-REFERENCE_REV = '195114ec12daad6cd8ecc939ec350e99fe9ae175'
+# Décision D16 : 73b410f + charte graphique seule (branche charte-graphique du prototype), bâtiments secondaires compris.
+REFERENCE_REV = 'c1bbe755628c30382547d27561ea12a5a13538d9'
 ALLOWED_OUT = {'.png', '.json'}
 # Fichiers du prototype réutilisés tels quels (MIGRATION_PLAN.md §3.1).
 IMPORTED = {'assets/portal-atlas.png': 'portal/portal_atlas.png'}

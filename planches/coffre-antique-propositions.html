@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Coffre antique</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0b120e;--panel:#111b14;--line:#2a3a2c;--txt:#dcd8bc;--mut:#93a08a;--acc:#e8c870;--cy:#5ce8ff}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--txt);font:15px/1.45 'Pixelify Sans',system-ui,sans-serif}
+header,main{max-width:1360px;margin:auto;padding:18px 16px}h1{margin:0;font-weight:600;letter-spacing:.08em;font-size:26px;color:var(--acc)}
+header p{color:var(--mut);margin:6px 0 0;max-width:940px}
+button{font:inherit;color:var(--txt);background:#1a2a1d;border:1px solid var(--line);padding:6px 12px;cursor:pointer}button:hover,button[aria-pressed=true]{border-color:var(--acc)}
+.bar{display:flex;gap:8px;align-items:center;margin-top:12px;flex-wrap:wrap}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-top:18px}figure{margin:0;background:var(--panel);border:1px solid var(--line);min-width:0}
+.stage{position:relative;background:#070b08;padding:8px;display:flex;justify-content:center}
+.stage canvas{image-rendering:pixelated;display:block;width:100%;max-width:640px;height:auto;aspect-ratio:4/3}
+.keys{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;padding:8px;border-top:1px solid var(--line);background:#0e1711}
+.keys div{text-align:center;font-size:11px;color:var(--mut)}.keys canvas{image-rendering:pixelated;width:100%;height:auto;display:block}
+figcaption{padding:10px 14px 14px}figcaption b{color:var(--acc);font-weight:600;font-size:17px}figcaption p{margin:4px 0 0;color:var(--mut);font-size:14px}
+figcaption p em{font-style:normal;color:var(--txt)}
+figcaption .lore{color:#b8c4a8;font-size:13px;border-left:2px solid var(--line);padding-left:8px;margin-top:8px}
+.why{border:1px solid var(--line);background:var(--panel);padding:12px 16px;color:var(--mut)}.why b{color:var(--txt)}
+section{margin:34px 0}h2{color:var(--acc);font-weight:600;letter-spacing:.06em;margin:0 0 4px;font-size:22px}section>p{color:var(--mut);margin:0 0 12px;max-width:940px}
+.inv{display:flex;gap:18px;flex-wrap:wrap;align-items:flex-start}
+.inv .box{background:var(--panel);border:1px solid var(--line);padding:12px}
+.inv canvas{image-rendering:pixelated;display:block;width:min(100%,560px);height:auto}
+.inv .box h3{margin:0 0 8px;font-weight:600;font-size:16px;display:flex;justify-content:space-between;gap:16px}.inv .box h3 span{color:var(--mut);font-weight:400}
+.themes{display:flex;flex-wrap:wrap;gap:6px}
+@media(max-width:1000px){.grid{grid-template-columns:1fr}}
+</style></head><body>
+<header><h1>COFFRE ANTIQUE · PROPOSITIONS</h1>
+<p>Cinq pistes pour le coffre de la base : un vestige récupéré dans les ruines, qui contient 100 objets. Chaque coffre occupe une case. Rendu à la résolution du jeu, à côté de l’Ingénieur pour l’échelle (personnage ~36 px), affiché ×5. Les images clés sont en dessous ; la maquette de l’inventaire à 100 cases est en bas de page.</p>
+<div class="bar"><button id="pause">Pause</button><button id="day" aria-pressed="true">Jour</button><button id="night" aria-pressed="false">Nuit</button></div></header>
+<main><div class="why"><b>Boucle :</b> coffre fermé → ouverture → coffre ouvert → fermeture. Charte : pas d’or (Laetan), pas de pourpre (Ancre), pas de rouge (la Bête). Le cyan n’apparaît que sur les glyphes tyriens (A et C), comme sur les ruines. Le quartz laiteux (E) reprend la lumière de la caverne retenue.</div>
+<div class="grid" id="grid"></div>
+<section id="inventaire"><h2>Interface · 100 emplacements</h2>
+<p>Grille de 10 × 10 cases, ouverte au contact du coffre. Le cadre reprend les matériaux de la piste choisie. Objets d’exemple, piles plafonnées à 99.</p>
+<div class="inv"><div class="box"><h3 id="invTitle">Coffre <span id="invCount"></span></h3><canvas id="inv"></canvas></div>
+<div><div class="themes" id="themes"></div></div></div></section>
+<section><h2>À trancher</h2><p class="why"><b>Choisis une piste</b> (A à E), ou un mélange (par exemple : « la malle B, avec l’ouverture en lévitation de E »). Le coffre retenu sera ensuite décliné en sprite pour le jeu (fermé, ouverture, ouvert) avec son interface.</p></section>
+</main>
+<script src="assets/decor.js?v=6"></script><script src="assets/units.js?v=10"></script><script src="assets/engineer.js?v=3"></script>
+<script>
+'use strict';
+// ---------- outils pixel ----------
+const EM=0x1000000,ci=c=>typeof c==='number'?c:parseInt(c.slice(1),16),E=c=>ci(c)|EM,R_=a=>a.map(ci);
+const hh=(x,y,s=0)=>{let h=(Math.imul(x|0,374761393)+Math.imul(y|0,668265263)+Math.imul(s|0,982451653))|0;h=Math.imul(h^(h>>>13),1274126177);return((h^(h>>>16))>>>0)/4294967296};
+function vn(x,y,s){const xi=Math.floor(x),yi=Math.floor(y),xf=x-xi,yf=y-yi,u=xf*xf*(3-2*xf),v=yf*yf*(3-2*yf),a=hh(xi,yi,s),b=hh(xi+1,yi,s),c=hh(xi,yi+1,s),d=hh(xi+1,yi+1,s);return a+(b-a)*u+(c-a)*v+(a-b-c+d)*u*v}
+const BAY=[0,8,2,10,12,4,14,6,3,11,1,9,15,7,13,5].map(v=>(v+.5)/16),bay=(x,y)=>BAY[(y&3)*4+(x&3)];
+const rp=(R,v,x,y)=>{const n=R.length-1,i=Math.floor(v*n+bay(x,y));return R[i<0?0:i>n?n:i]};
+const cl=(v,a=0,b=1)=>Math.max(a,Math.min(b,v)),eio=t=>.5-.5*Math.cos(Math.PI*cl(t)),eout=t=>1-(1-cl(t))**3;
+const OUTL=ci('#0b0a0e');
+class Pix{constructor(w,h){this.w=w;this.h=h;this.c=new Int32Array(w*h).fill(-1)}
+ set(x,y,c){x=Math.floor(x);y=Math.floor(y);if(x<0||y<0||x>=this.w||y>=this.h||c==null)return;c=ci(c);if(c<0)return;this.c[y*this.w+x]=c}
+ get(x,y){return x<0||y<0||x>=this.w||y>=this.h?-1:this.c[y*this.w+x]}
+ rect(x,y,w,h,c){for(let j=y;j<y+h;j++)for(let i=x;i<x+w;i++)this.set(i,j,c)}
+ outline(col=OUTL){const{w,h,c:s}=this,n=new Int32Array(s);for(let y=0;y<h;y++)for(let x=0;x<w;x++){const i=y*w+x;if(s[i]!==-1)continue;if((x>0&&s[i-1]!==-1)||(x<w-1&&s[i+1]!==-1)||(y>0&&s[i-w]!==-1)||(y<h-1&&s[i+w]!==-1))n[i]=col}this.c=n}
+ blit(s,dx=0,dy=0){for(let y=0;y<s.h;y++)for(let x=0;x<s.w;x++){const v=s.c[y*s.w+x];if(v!==-1)this.set(x+dx,y+dy,v)}}}
+
+// ---------- palettes (charte) ----------
+const SL=R_(['#161b24','#1e2430','#2a3240','#3a4454','#4c5868','#5e6c7e','#7a8898','#98a6b4']);
+const WD=R_(['#24160c','#3a2416','#52341f','#6b4629','#835a36','#9c6e44','#b48454']);
+const VG=R_(['#22302a','#2e4438','#3e5c48','#527858','#6e946c','#92b088']);
+const IRON=R_(['#1a1b20','#2a2c33','#3e414a','#575b64','#767b84','#9da2a9','#c8ccd0']);
+const STW=R_(['#2c2c27','#3d3d35','#525046','#6a6858','#85826d','#a29e85','#c0bba0']);
+const MOSS=R_(['#1e3a22','#2c5230','#41703c','#5c8c48','#78a85a']);
+const BARK=R_(['#1e150e','#2c2016','#3c2c1e','#4f3b28','#644c34','#7a5e40']);
+const LEAF=R_(['#173a20','#2a652e','#4b923c','#8cc45c']);
+const BAS=R_(['#141312','#1c1a19','#26231f','#322e29','#403a33','#50483f','#625849']);
+const FLOOR=R_(['#4a3220','#5e4027','#74502e','#8a6036','#a0723f','#b8864b','#cf9c5a']);
+const QZ=['#8a9096','#b4bac0','#d8dde2','#eef1f4','#ffffff'];
+const CY=['#0a2a33','#12596b','#1f9fb8','#5ce8ff','#c8fbff'];
+const LC={cy:[.35,.95,1.15],qz:[1.02,1.05,1.14],fly:[1.1,1.02,.45],warm:[1.2,.72,.3]};
+
+// ---------- scène ----------
+const SW=128,SH=96,FY=80,CX=87,EX=32,SC=5,TLOOP=5.6;
+const openAt=u=>u<1.2?0:u<2.4?eio((u-1.2)/1.2):u<4.2?1:u<5?1-eio((u-4.2)/.8):0;
+const GROUND=(()=>{const g=new Int32Array(SW*SH);for(let y=0;y<SH;y++)for(let x=0;x<SW;x++){let c;const n=vn(x*.35,y*.35,3)-.5;
+ if(y<24){let v=.32+n*.35+(vn(x*.12,y*.5,5)-.5)*.3;if(((y+Math.floor(vn(x*.1,0,8)*6))%7)===0)v-=.12;if(y===23)v=.2;if(y===22)v+=.12;c=rp(SL,v*.85,x,y)}
+ else{const uu=x/2+y,vv=y-x/2,cell=Math.floor(uu/20)*7+Math.floor(vv/20)*13;let v=.6+(hh(cell,1,4)-.5)*.16+(vn(x/9,y/6,21)-.5)*.34;if(vn(x/3,y/2,23)>.74)v-=.2;if(y<30)v-=(30-y)*.06;if(hh(x,y,7)>.975)v+=.18;c=rp(FLOOR,v,x,y)}
+ g[y*SW+x]=c}return g})();
+function shade(g,cx,cy,rx,ry,k=.62){for(let y=Math.floor(cy-ry);y<=cy+ry;y++)for(let x=Math.floor(cx-rx);x<=cx+rx;x++){if(x<0||y<0||x>=SW||y>=SH)continue;const d=((x+.5-cx)/rx)**2+((y+.5-cy)/ry)**2;if(d<1&&bay(x,y)<.95-d*.5){const i=y*SW+x,v=g[i];g[i]=(Math.round((v>>16&255)*k)<<16)|(Math.round((v>>8&255)*k)<<8)|Math.round((v&255)*k)}}}
+
+// ---------- géométrie 3/4 : x à droite, y vers le haut, z vers l'avant ----------
+function face(L,O,A,B,fn){const ax=A[0]-O[0],ay=A[1]-O[1],bx=B[0]-O[0],by=B[1]-O[1],det=ax*by-ay*bx;if(Math.abs(det)<.5)return;const wl=Math.hypot(ax,ay),hl=Math.hypot(bx,by);
+ const xs=[O[0],A[0],B[0],A[0]+bx],ys=[O[1],A[1],B[1],A[1]+by];
+ for(let y=Math.floor(Math.min(...ys));y<Math.ceil(Math.max(...ys));y++)for(let x=Math.floor(Math.min(...xs));x<Math.ceil(Math.max(...xs));x++){const px=x+.5-O[0],py=y+.5-O[1],u=(px*by-py*bx)/det,v=(ax*py-ay*px)/det;
+  if(u<0||u>=1||v<0||v>=1)continue;const c=fn(u,v,x,y,wl,hl);if(c!=null&&c>=0)L.set(x,y,c)}}
+function ctxFor(W,D){const OX=CX-Math.round(W/2),OY=FY-D;return{W,D,OX,OY,pr:(x,y,z)=>[OX+x,OY+z-y]}}
+function boxF(L,c,x0,x1,y0,y1,z0,z1,top,front){if(top)face(L,c.pr(x0,y1,z0),c.pr(x1,y1,z0),c.pr(x0,y1,z1),top);if(front)face(L,c.pr(x0,y1,z1),c.pr(x1,y1,z1),c.pr(x0,y0,z1),front)}
+function hinged(L,c,x0,x1,hy,D,T,a,f){const ca=Math.cos(a),sa=Math.sin(a),P=(x,s,t)=>c.pr(x,hy+s*sa+t*ca,s*ca-t*sa);
+ if(ca-sa>0)face(L,P(x0,0,T),P(x1,0,T),P(x0,D,T),f.outer);else face(L,P(x0,0,0),P(x1,0,0),P(x0,D,0),f.inner);
+ if(sa+ca>0)face(L,P(x0,D,T),P(x1,D,T),P(x0,D,0),f.front)}
+// dessus du corps : rebord + intérieur (iu,iv locaux à l'intérieur)
+const rimTop=(w,rim,inner)=>(u,v,x,y,wl,hl)=>{const iu=Math.floor(u*wl),iv=Math.floor(v*hl);if(iu<w||iu>=wl-w||iv<w||iv>=hl-w)return rim(iu,iv,x,y,wl,hl);return inner(iu-w,iv-w,wl-2*w,hl-2*w,x,y)};
+const floorY=(c,y,w,back)=>[c.pr(0,y,w)[1]+back,c.pr(0,y,c.D-w)[1]-1];
+const MINI=[{p:[' ab ','abcb','bbbb'],m:{a:'#7a8898',b:'#4c5868',c:'#eef1f4'}},{p:['cddd','cddd'],m:{c:'#b48454',d:'#6b4629'}},{p:[' e','ee','ef'],m:{e:'#d8dde2',f:'#8a9096'}},
+ {p:['g g','ghg','g g'],m:{g:'#9da2a9',h:'#3e414a'}},{p:['ii ','iji'],m:{i:'#41703c',j:'#78a85a'}}];
+function pile(L,x0,x1,y,seed){const R=(k)=>hh(seed,k,31);let x=x0,k=0;while(x<x1-2){const m=MINI[Math.floor(R(k)*MINI.length)],w=m.p[0].length,hgt=m.p.length,yy=y-hgt+1-(k&1);
+ if(x+w>x1)break;m.p.forEach((row,j)=>[...row].forEach((ch,i)=>{if(ch!==' ')L.set(x+i,yy+j,m.m[ch])}));x+=w+(R(k+50)>.5?1:0);k++}}
+const DIG={'0':['111','101','101','101','111'],'1':['010','110','010','010','111'],'2':['111','001','111','100','111'],'3':['111','001','111','001','111'],'4':['101','101','111','001','001'],
+ '5':['111','100','111','001','111'],'6':['111','100','111','101','111'],'7':['111','001','010','010','010'],'8':['111','101','111','101','111'],'9':['111','101','111','001','111'],'/':['001','001','010','100','100']};
+function crystal(L,x,yb,h,w=3){const hf=(w-1)/2;for(let j=0;j<h;j++)for(let i=0;i<w;i++){if(Math.abs(i-hf)>j+.5)continue;const b=h-1-j,c=i<hf-.1?3:i>hf+.1?1:2;
+ L.set(x+i,yb-h+1+j,b<2?ci(b<1?'#5a6068':QZ[0]):j<2&&c===3?E(QZ[4]):E(QZ[c]))}}
+
+// ---------- les 5 propositions ----------
+const D=[];
+// A · Reliquaire d'ardoise tyrienne
+D.push({id:'A',name:'Reliquaire d’ardoise tyrienne',
+ desc:'Bloc d’ardoise massif à piliers d’angle, avec une frise de glyphes tyriens. La même pierre que la caverne et les ruines.',
+ open:'Le couvercle se soulève de quelques pixels, puis glisse en arrière pendant que les glyphes s’allument d’une case à l’autre.',
+ lore:'Les Tyriens rangeaient leurs reliques dans un repli de la pierre : le coffre contient bien plus que son volume. D’où ses 100 places.',
+ theme:{frame:SL,slot:'#161b24',acc:'#5ce8ff'},
+ render(F,o,u,t){const W=36,Dp=14,Hb=13,T=7,c=ctxFor(W,Dp),gl=k=>cl(.32+.22*Math.sin(t*2.2-k*.8)+o*.9),
+  glyph=(gx,gy)=>{const cell=Math.floor(gx/5),cx=gx%5;if(cx===0||cx===4||gy<=0||gy>=4)return-1;return hh(cell,cx*7+gy,17)>.42||(cx===2&&gy===2)?cell:-1},
+  gcol=g=>g>.85?E(CY[4]):g>.55?E(CY[3]):g>.32?E(CY[2]):CY[1];
+  F.part(L=>{boxF(L,c,0,W,0,Hb,0,Dp,rimTop(2,(iu,iv,x,y,wl,hl)=>rp(SL,.7+(iv===0?.1:0)+(vn(x*.4,y*.4,3)-.5)*.2,x,y),(ix,iy,iw,ih,x,y)=>{const back=5;
+     if(iy<back){if(iy===2&&ix%4===1)return gcol(gl(ix>>2)*o);return rp(SL,.42-iy*.05,x,y)}return rp(SL,.2-(iy-back)/Math.max(1,ih-back)*.16,x,y)}),
+   (u,v,x,y,wl,hl)=>{const iu=Math.floor(u*wl),iv=Math.floor(v*hl),n=vn(x*.4,y*.4,3)-.5;
+    if(iu<3||iu>=wl-3){let b=.56+n*.15;if(iu===0||iu===wl-3)b+=.14;if(iu===2||iu===wl-1)b-=.16;if(iv===0)b+=.15;if(iv>=hl-2)b-=.18;return rp(SL,b,x,y)}
+    if(iv>=hl-2)return rp(SL,.28+n*.1,x,y);
+    if(iv>=4&&iv<9){const gy=iv-4,k=glyph(iu-3,gy);if(gy===0)return SL[1];if(k>=0)return gcol(gl(k));return rp(SL,.22,x,y)}
+    let b=.5+n*.18;if(iv===0)b+=.2;if(iv===9)b+=.12;if(iv===3)b-=.1;if((iu-3)%10===0&&iv>9)b-=.25;return rp(SL,b,x,y)});
+   const[,fy]=floorY(c,Hb,2,5);if(o>.05)pile(L,c.OX+4,c.OX+W-4,fy,3)});
+  const lift=4*eio(o/.4),slide=11*eio((o-.4)/.6);
+  F.part(L=>boxF(L,c,-1,W+1,Hb+lift,Hb+lift+T,-slide,Dp-slide,(u,v,x,y,wl,hl)=>{const iu=Math.floor(u*wl),iv=Math.floor(v*hl),n=vn(x*.4,y*.4,4)-.5;
+    if(iu<1||iu>=wl-1||iv<1||iv>=hl-1)return rp(SL,.8,x,y);if(iu===2||iu===wl-3||iv===2||iv===hl-3)return SL[2];
+    const dx=iu-wl/2+.5,dy=(iv-hl/2+.5)*1.25,d=Math.hypot(dx,dy);if(Math.abs(d-3.6)<.6)return gcol(gl(Math.floor(Math.atan2(dy,dx)*1.3+4)));if(d<1.1)return gcol(gl(9)+.2);return rp(SL,.62+n*.2,x,y)},
+   (u,v,x,y,wl,hl)=>{const iu=Math.floor(u*wl),iv=Math.floor(v*hl);let b=iv===0?.88:iv===1?.7:.52-iv*.03;if(iu===0)b+=.1;if(iu===wl-1)b-=.15;if(iv===hl-1)b=.25;
+    if(Math.abs(iu-wl/2+.5)<2.5&&iv>=2&&iv<=4)b=.3;return rp(SL,b+(vn(x*.4,y*.4,4)-.5)*.15,x,y)}));
+  F.light(CX,FY-7,18,LC.cy,.35*gl(0));if(o>.05)F.light(CX,FY-Dp-Hb+5,28,LC.cy,.75*o);
+  if(o>.3)for(let i=0;i<6;i++){const p=(t*.7+i/6)%1,x=c.OX+5+hh(i,Math.floor(t*.7+i/6),5)*(W-10),y=FY-Hb-6-p*16;if(bay(x|0,y|0)<(1-p)*o)F.fx(x,y,E(p<.4?CY[4]:CY[3]))}}});
+
+// B · Malle de bronze et de bois
+D.push({id:'B',name:'Malle de bois cerclée de bronze',
+ desc:'Coffre de bois sombre aux planches usées, cerclé de bronze vert-de-gris et riveté, avec une serrure à moraillon. Le plus lisible des cinq.',
+ open:'Le moraillon se libère, puis le couvercle bascule sur ses charnières jusqu’à rester ouvert en arrière.',
+ lore:'Une malle d’expédition antérieure aux Tyriens, retrouvée sous les racines. Le bronze a verdi, le bois a tenu.',
+ theme:{frame:WD,slot:'#1c120a',acc:'#92b088'},
+ render(F,o,u,t){const W=34,Dp=13,Hb=12,T=6,c=ctxFor(W,Dp),cx=W>>1,band=(iu,wl)=>(iu>=3&&iu<6)||(iu>=wl-6&&iu<wl-3),
+  bandC=(iu,iv,wl,x,y,k=0)=>{if((iu===4||iu===wl-5)&&iv%4===2)return VG[5];return rp(VG,.5+k+(iu===3||iu===wl-6?.2:0)-(iu===5||iu===wl-4?.18:0),x,y)},
+  wood=(iu,iv,x,y,k=0,rows=4)=>{const pl=Math.floor(iv/rows);if(iv%rows===0)return WD[1];let b=.5+k+(hh(pl,Math.floor(iu/9),5)-.5)*.22+(hh(iu,pl,6)>.86?-.14:0)+(vn(x*.5,y*.3,2)-.5)*.12;if(iv%rows===1)b+=.1;return rp(WD,b,x,y)};
+  F.part(L=>{boxF(L,c,0,W,0,Hb,0,Dp,rimTop(2,(iu,iv,x,y,wl,hl)=>band(iu,wl)?rp(VG,.6,x,y):rp(WD,.66,x,y),(ix,iy,iw,ih,x,y)=>iy<4?rp(WD,.36-iy*.04,x,y):rp(WD,.18-(iy-4)/ih*.12,x,y)),
+   (u,v,x,y,wl,hl)=>{const iu=Math.floor(u*wl),iv=Math.floor(v*hl);
+    if(iu>=cx-3&&iu<cx+3&&iv<6){if(iv===2&&(iu===cx-1||iu===cx)||iv===3&&iu===cx-1)return OUTL;if(iu===cx-3||iu===cx+2||iv===5)return VG[1];return rp(VG,.62,x,y)}
+    if(iv>=hl-2)return rp(VG,.42+(iv===hl-2?.18:0),x,y);if((iu<2||iu>=wl-2)&&iv<3)return rp(VG,.45,x,y);if(band(iu,wl))return bandC(iu,iv,wl,x,y);return wood(iu,iv,x,y)});
+   const[,fy]=floorY(c,Hb,2,4);if(o>.05)pile(L,c.OX+3,c.OX+W-3,fy,7)});
+  F.part(L=>hinged(L,c,-1,W+1,Hb,Dp,T,o*1.95,{
+   outer:(u,v,x,y,wl,hl)=>{const iu=Math.floor(u*wl),iv=Math.floor(v*hl);if(band(iu-1,wl-2))return bandC(iu-1,iv,wl-2,x,y,.08);if(iv===hl-1)return rp(WD,.75,x,y);if(iv===0)return WD[2];return wood(iu,iv,x,y,.1,5)},
+   front:(u,v,x,y,wl,hl)=>{const iu=Math.floor(u*wl),iv=Math.floor(v*hl),k=iu-1;if(k>=cx-2&&k<cx+2&&iv>=2)return iv===3&&(k===cx-1||k===cx)?VG[5]:rp(VG,.6,x,y);if(band(k,wl-2))return bandC(k,iv,wl-2,x,y);if(iv===0)return rp(WD,.75,x,y);if(iv===hl-1)return WD[1];return wood(iu,iv+1,x,y,-.04,3)},
+   inner:(u,v,x,y,wl,hl)=>{const iu=Math.floor(u*wl),iv=Math.floor(v*hl);if(band(iu-1,wl-2))return rp(VG,.3,x,y);return wood(iu,iv,x,y,-.22,5)}}))}});
+
+// C · Capsule-sceau tyrienne
+D.push({id:'C',name:'Capsule-sceau tyrienne',
+ desc:'Coffre-mécanisme entre deux pylônes d’ardoise et d’acier, avec des fentes lumineuses. Un sceau cyan barre le couvercle en deux.',
+ open:'Le sceau s’éteint, les deux moitiés du couvercle rentrent dans les pylônes, un plateau monte et un compteur holographique « 100 » s’affiche.',
+ lore:'Un dépôt tyrien encore alimenté. L’Énonciation des Exilés le reconnaît et l’ouvre : seul cas où le coffre affiche sa capacité.',
+ theme:{frame:IRON,slot:'#14161b',acc:'#5ce8ff'},
+ render(F,o,u,t){const W=38,Dp=14,Hb=11,T=5,PW=6,Hp=21,c=ctxFor(W,Dp),seam=cl(1-o*2.2)*(.75+.25*Math.sin(t*4)),rise=5*eio((o-.45)/.55),slide=11*eio((o-.12)/.6);
+  const sCol=g=>g>.7?E(CY[4]):g>.4?E(CY[3]):g>.15?E(CY[2]):CY[1];
+  F.part(L=>{boxF(L,c,PW,W-PW,0,Hb,0,Dp,rimTop(2,(iu,iv,x,y)=>rp(IRON,.62,x,y),(ix,iy,iw,ih,x,y)=>{if(iy<4)return rp(SL,.35-iy*.05,x,y);if((ix%4===0||(iy-4)%3===0))return o>.2?E(CY[1]):SL[2];return rp(SL,.16,x,y)}),
+   (u,v,x,y,wl,hl)=>{const iu=Math.floor(u*wl),iv=Math.floor(v*hl),dx=iu-wl/2+.5,dy=iv-5.5,d=Math.hypot(dx,dy);
+    if(iv===0)return rp(IRON,.72,x,y);if(iv>=hl-2)return rp(SL,.25,x,y);if(Math.abs(d-3)<.6)return sCol(.35+.3*Math.sin(t*2.5)+o*.5);if(d<1)return sCol(.6+o*.4);
+    if(iv===4||iv===7)return SL[1];return rp(SL,.5+(vn(x*.4,y*.4,6)-.5)*.2,x,y)});
+   if(o>.05){const[,fy]=floorY(c,Hb,2,4),py=Math.round(fy-rise);if(rise>.5)for(let x=c.OX+PW+3;x<c.OX+W-PW-3;x++){L.set(x,py+1,IRON[5]);for(let y=py+2;y<=fy;y++)L.set(x,y,(x&1)?IRON[2]:IRON[1])}pile(L,c.OX+PW+3,c.OX+W-PW-3,py,11)}});
+  const clip=fn=>(u,v,x,y,wl,hl)=>x<c.OX||x>=c.OX+W?null:fn(u,v,x,y,wl,hl),HW=(W-2*PW)/2;
+  for(const s of[-1,1])F.part(L=>{const x0=s<0?PW-slide:PW+HW+slide,x1=x0+HW,inner=s<0?'r':'l';
+   boxF(L,c,x0,x1,Hb,Hb+T,0,Dp,clip((u,v,x,y,wl,hl)=>{const iu=Math.floor(u*wl),iv=Math.floor(v*hl);if(inner==='r'?iu===wl-1:iu===0)return sCol(seam);
+     if(iv===0||iv===hl-1)return rp(IRON,.5,x,y);const ch=(iu+(s<0?iv:-iv)+40)%6===0&&iv>2&&iv<hl-3;return rp(IRON,ch?.32:.6+(vn(x*.5,y*.5,8)-.5)*.15,x,y)}),
+    clip((u,v,x,y,wl,hl)=>{const iu=Math.floor(u*wl),iv=Math.floor(v*hl);if(inner==='r'?iu===wl-1:iu===0)return sCol(seam*.9);if(iv===0)return rp(IRON,.8,x,y);if(iv===hl-1)return IRON[1];return rp(SL,.48,x,y)}))});
+  for(const px of[0,W-PW])F.part(L=>boxF(L,c,px,px+PW,0,Hp,1,Dp,(u,v,x,y,wl,hl)=>{const iu=Math.floor(u*wl),iv=Math.floor(v*hl);if(iu>=2&&iu<4&&iv>=4&&iv<8)return sCol(.3+.3*Math.sin(t*3)+o*.4);return rp(IRON,iv===0?.85:.66-(iu===wl-1?.2:0),x,y)},
+   (u,v,x,y,wl,hl)=>{const iu=Math.floor(u*wl),iv=Math.floor(v*hl);if(iv<3)return rp(IRON,.75-iv*.12-(iu===wl-1?.2:0),x,y);if(iu>=2&&iu<4&&iv>=5&&iv<hl-4)return sCol(.35+.35*Math.sin(t*3-iv*.45)+o*.3);
+    if(iv>=hl-2)return rp(SL,.22,x,y);return rp(SL,.48+(iu===0?.14:0)-(iu===wl-1?.18:0),x,y)}));
+  F.light(c.OX+3,FY-11,12,LC.cy,.35);F.light(c.OX+W-3,FY-11,12,LC.cy,.35);if(seam>.1)F.light(CX,FY-Hb-8,12,LC.cy,.4*seam);if(o>.05)F.light(CX,FY-Dp-Hb+4,26,LC.cy,.7*o);
+  const ha=cl((o-.7)/.3);if(ha>0){const s='100',tx=CX-5,ty=FY-Hb-Dp-14-Math.round(rise*.4);for(let k=0;k<3;k++)DIG[s[k]].forEach((row,j)=>[...row].forEach((b,i)=>{const x=tx+k*4+i,y=ty+j;if(b==='1'&&((y+Math.floor(t*12))%4!==0)&&bay(x,y)<ha)F.fx(x,y,E(j===0?CY[4]:CY[3]))}));
+   for(let y=ty+6;y<FY-Hb-6;y++)for(let x=CX-4;x<CX+4;x++)if(hh(x,y,Math.floor(t*10))>.93&&bay(x,y)<ha)F.fx(x,y,E(CY[2]))}}});
+
+// D · Coffre englouti par la jungle
+D.push({id:'D',name:'Coffre englouti par la jungle',
+ desc:'Coffre de pierre grise rongé de mousse, enserré par deux racines. Il a l’air d’être là depuis toujours, à moitié repris par la forêt.',
+ open:'Les racines se rétractent dans le sol, puis le lourd couvercle de pierre bascule en arrière. Des lucioles tournent autour la nuit.',
+ lore:'La jungle garde ce qu’on lui confie : il faut l’exhumer pour l’installer dans la base, et les racines repoussent autour.',
+ theme:{frame:STW,slot:'#1e1d19',acc:'#78a85a'},
+ render(F,o,u,t){const W=34,Dp=13,Hb=12,T=6,c=ctxFor(W,Dp),rr=cl(o/.42),lp=eio((o-.42)/.58),OX=c.OX;
+  const stone=(iu,iv,x,y,k=0)=>{const row=Math.floor(iv/5),off=(row&1)*6,col=Math.floor((iu+off)/12);if(iv%5===4||(iu+off)%12===0)return STW[1];let b=.5+k+(hh(col,row,8)-.5)*.2+(vn(x*.5,y*.5,4)-.5)*.25;
+   if(hh(Math.floor(x/2),y,9)>.94)b-=.25;return rp(STW,b,x,y)},mossy=(x,y,th)=>vn(x*.35,y*.45,12)>th;
+  F.part(L=>{boxF(L,c,0,W,0,Hb,0,Dp,rimTop(2,(iu,iv,x,y)=>mossy(x,y,.45)?rp(MOSS,.6,x,y):rp(STW,.66,x,y),(ix,iy,iw,ih,x,y)=>iy<4?rp(STW,.3-iy*.04,x,y):(mossy(x,y,.6)?MOSS[0]:rp(STW,.12,x,y))),
+   (u,v,x,y,wl,hl)=>{const iu=Math.floor(u*wl),iv=Math.floor(v*hl),dx=iu-wl/2+.5,dy=iv-6,d=Math.hypot(dx,dy*1.2),an=Math.atan2(dy,dx);
+    if(iv<3&&mossy(x,y,.42+iv*.08))return rp(MOSS,.7-iv*.2,x,y);if(iv>=hl-1)return rp(STW,.2,x,y);if(d<4.5&&Math.abs(((d-an*.7)%2.2+2.2)%2.2-1.1)<.35)return STW[2];return stone(iu,iv,x,y)});
+   const[,fy]=floorY(c,Hb,2,4);if(o>.45)pile(L,OX+3,OX+W-3,fy,5)});
+  F.part(L=>hinged(L,c,-1,W+1,Hb,Dp,T,lp*1.8,{outer:(u,v,x,y,wl,hl)=>mossy(x,y,.36)?rp(MOSS,.45+(vn(x*.9,y*.9,13)-.5)*.5,x,y):stone(Math.floor(u*wl),Math.floor(v*hl),x,y,.14),
+   front:(u,v,x,y,wl,hl)=>{const iu=Math.floor(u*wl),iv=Math.floor(v*hl);if(iv<2&&mossy(x,y,.4))return MOSS[3-iv];if(iv===0)return rp(STW,.75,x,y);if(iv===hl-1)return STW[1];return stone(iu,iv+2,x,y,.04)},
+   inner:(u,v,x,y,wl,hl)=>stone(Math.floor(u*wl),Math.floor(v*hl),x,y,-.25)}));
+  const top=FY-Hb-T,roots=[[[OX+8,FY+3],[OX+6,FY-4],[OX+9,FY-9],[OX+7,top+1],[OX+9,top-4],[OX+11,top-9],[OX+10,top-Dp+2]],
+   [[OX+W-6,FY+3],[OX+W-8,FY-5],[OX+W-6,FY-Hb+1],[OX+W-9,top-1],[OX+W-11,top-6],[OX+W-9,top-Dp+3]],[[OX-6,FY+2],[OX-1,FY],[OX+2,FY-4],[OX+4,FY-7]]];
+  F.part(L=>roots.forEach((pts,ri)=>{const sam=[];for(let k=1;k<pts.length;k++){const[a,b]=pts[k-1],[c2,d]=pts[k],n=Math.ceil(Math.hypot(c2-a,d-b)*2);for(let j=0;j<n;j++)sam.push([a+(c2-a)*j/n,b+(d-b)*j/n])}
+   const keep=ri===2?sam.length:Math.floor(sam.length*(1-rr));sam.slice(0,keep).forEach(([x,y],j)=>{const th=j<sam.length*.7?2:1;L.set(x,y,BARK[4]);if(th>1)L.set(x+1,y,BARK[2]);if(j%9===4){L.set(x-1,y,LEAF[2]);L.set(x-2,y-1,LEAF[3])}if(j%13===8){L.set(x+2,y,LEAF[1]);L.set(x+3,y-1,LEAF[2])}})}));
+  for(let i=0;i<5;i++){const x=CX+Math.sin(t*.7+i*2.1)*24+Math.sin(t*1.9+i)*4-6,y=FY-22+Math.sin(t*.9+i*1.3)*12;if(Math.sin(t*3+i*5)>-.2){F.fx(x,y,E('#f4ea9a'));F.light(x,y,7,LC.fly,.55)}}}});
+
+// E · Arche de quartz laiteux
+D.push({id:'E',name:'Arche de basalte et de quartz',
+ desc:'Coffre de basalte sombre traversé de veines de quartz laiteux, entre deux amas de cristaux. Une pointe de quartz couronne le couvercle.',
+ open:'Les veines s’éclairent et le couvercle se met à léviter au-dessus du coffre en oscillant, pendant que des poussières claires montent de l’intérieur.',
+ lore:'Le quartz laiteux de la caverne, celui qui éclaire les galeries, sert ici de clé : il soulève la pierre sans la toucher.',
+ theme:{frame:BAS,slot:'#141312',acc:'#eef1f4'},
+ render(F,o,u,t){const W=32,Dp=12,Hb=12,T=6,c=ctxFor(W,Dp),OX=c.OX,lift=10*eio(o)+Math.sin(t*2.4)*1.2*o,vg=cl(.25+o*.9+.1*Math.sin(t*1.7));
+  const vein=(iu,iv,wl)=>[.28,.7].some((p,k)=>iu===Math.round(wl*p+Math.sin(iv*.45+k*2)*1.6)),vCol=g=>g>.75?E(QZ[3]):g>.45?E(QZ[2]):QZ[0];
+  const bas=(iu,iv,x,y,k=0)=>{const row=Math.floor(iv/6),col=Math.floor((iu+(row&1)*5)/10);if(iv%6===5||(iu+(row&1)*5)%10===0)return BAS[1];return rp(BAS,.55+k+(hh(col,row,3)-.5)*.2+(vn(x*.5,y*.5,7)-.5)*.2,x,y)};
+  F.part(L=>{crystal(L,OX-9,FY+2,7,3);crystal(L,OX-6,FY+1,13,4);crystal(L,OX-2,FY+2,8,3);crystal(L,OX+W+1,FY,11,4);crystal(L,OX+W+5,FY+2,6,3)});
+  F.part(L=>{boxF(L,c,0,W,0,Hb,0,Dp,rimTop(2,(iu,iv,x,y)=>rp(BAS,.72,x,y),(ix,iy,iw,ih,x,y)=>{if(iy<4)return o>.1&&hh(x,y,4)>.7?vCol(o*.7):rp(BAS,.4-iy*.05,x,y);return hh(x,y,5)>.9&&o>.1?vCol(o*.5):rp(BAS,.18,x,y)}),
+   (u,v,x,y,wl,hl)=>{const iu=Math.floor(u*wl),iv=Math.floor(v*hl);if(iv>=hl-2)return rp(BAS,.32,x,y);if(vein(iu,iv,wl)&&iv>0)return vCol(vg-iv*.02);if(iv===0)return rp(BAS,.85,x,y);return bas(iu,iv,x,y)});
+   const[,fy]=floorY(c,Hb,2,4);if(o>.05)pile(L,OX+3,OX+W-3,fy,9)});
+  F.part(L=>{const y0=Hb+lift;boxF(L,c,-1,W+1,y0,y0+T,0,Dp,(u,v,x,y,wl,hl)=>{const iu=Math.floor(u*wl),iv=Math.floor(v*hl),d=Math.hypot(iu-wl/2+.5,(iv-hl/2+.5)*1.3);
+    if(iu<1||iu>=wl-1||iv<1||iv>=hl-1)return rp(BAS,.85,x,y);if(Math.abs(d-4.2)<.55)return vCol(vg);return bas(iu,iv,x,y,.12)},
+   (u,v,x,y,wl,hl)=>{const iu=Math.floor(u*wl),iv=Math.floor(v*hl);if(iv===0)return rp(BAS,.9,x,y);if(iv===hl-1)return BAS[1];if(vein(iu,iv+3,wl))return vCol(vg*.9);return bas(iu,iv+1,x,y,.02)});
+   const[,ty]=c.pr(0,y0+T,Dp/2);crystal(L,CX-3,Math.round(ty),10,4);crystal(L,CX+1,Math.round(ty)+1,6,3)});
+  F.light(OX-5,FY-4,14,LC.qz,.5);F.light(OX+W+3,FY-3,12,LC.qz,.45);F.light(CX,FY-Hb-T-Dp/2-4-lift,12,LC.qz,.4);if(o>.05)F.light(CX,FY-Dp-Hb+4,26,LC.qz,.7*o);
+  if(o>.25)for(let i=0;i<7;i++){const p=(t*.45+i/7)%1,x=OX+4+hh(i,Math.floor(t*.45+i/7),6)*(W-8)+Math.sin(t*2+i)*1.5,y=FY-Hb-5-p*20;if(bay(x|0,y|0)<(1-p)*o)F.fx(x,y,E(p<.5?QZ[4]:QZ[2]))}}});
+
+// ---------- rendu ----------
+const ENGC=document.createElement('canvas');
+function engineer(t){const im=EngineerKit.draw({pad:30},t,.5);ENGC.width=im.width;ENGC.height=im.height;const g=ENGC.getContext('2d',{willReadFrequently:true});g.drawImage(im,0,0);return g.getImageData(0,0,im.width,im.height)}
+const GR=D.map(d=>{const g=new Int32Array(GROUND);shade(g,EX+1,FY+1,10,2.6);shade(g,CX+2,FY+1,24,3.2);return g});
+let NIGHT=false;
+function frame(di,u,t,img){const d=D[di],buf=new Int32Array(GR[di]),CH=new Pix(SW,SH),lights=[],fx=[];
+ const F={part(fn){const L=new Pix(SW,SH);fn(L);L.outline();CH.blit(L)},light(x,y,r,c,i){lights.push({x,y,r,c,i})},fx(x,y,c){fx.push([Math.round(x),Math.round(y),c])}};
+ d.render(F,openAt(u),u,t);
+ const ed=engineer(t),ox=EX-30,oy=FY-55;for(let y=0;y<ed.height;y++)for(let x=0;x<ed.width;x++){const o=(y*ed.width+x)*4;if(ed.data[o+3]<128)continue;const X=x+ox,Y=y+oy;if(X<0||Y<0||X>=SW||Y>=SH)continue;
+  const r=ed.data[o],g=ed.data[o+1],b=ed.data[o+2];buf[Y*SW+X]=(r<<16|g<<8|b)|(b>200&&g>170&&r<170?EM:0)}
+ for(let i=0;i<SW*SH;i++)if(CH.c[i]!==-1)buf[i]=CH.c[i];
+ for(const[x,y,c]of fx)if(x>=0&&y>=0&&x<SW&&y<SH)buf[y*SW+x]=c;
+ const amb=NIGHT?[.44,.48,.72]:[1,1,1],nk=NIGHT?1:.12,lr=new Float32Array(SW*SH),lg=new Float32Array(SW*SH),lb=new Float32Array(SW*SH);
+ for(const L of lights){const I=L.i*nk;if(I<=.005)continue;for(let y=Math.max(0,Math.floor(L.y-L.r/1.3));y<=Math.min(SH-1,L.y+L.r/1.3);y++)for(let x=Math.max(0,Math.floor(L.x-L.r));x<=Math.min(SW-1,L.x+L.r);x++){
+  const dd=Math.hypot(x+.5-L.x,(y+.5-L.y)*1.3)/L.r;if(dd>=1)continue;let f=1-dd;f=f*f*(3-2*f);const q=Math.floor(f*5+bay(x,y))/5;if(q<=0)continue;const i=y*SW+x;lr[i]+=L.c[0]*I*q;lg[i]+=L.c[1]*I*q;lb[i]+=L.c[2]*I*q}}
+ const out=img.data;for(let i=0,o=0;i<SW*SH;i++,o+=4){const v=buf[i],r=v>>16&255,g=v>>8&255,b=v&255;
+  if(v&EM){out[o]=r;out[o+1]=g;out[o+2]=b}else{out[o]=Math.min(255,r*(amb[0]+lr[i]));out[o+1]=Math.min(255,g*(amb[1]+lg[i]));out[o+2]=Math.min(255,b*(amb[2]+lb[i]))}out[o+3]=255}
+ return img}
+
+// ---------- page ----------
+const views=[],KEYS=[[.6,'Fermé'],[1.85,'Ouverture'],[3.2,'Ouvert']];
+D.forEach((d,i)=>{const f=document.createElement('figure');
+ f.innerHTML=`<div class="stage"><canvas width="${SW}" height="${SH}"></canvas></div><div class="keys">${KEYS.map(k=>`<div><canvas width="${SW}" height="${SH}"></canvas>${k[1]}</div>`).join('')}</div>
+ <figcaption><b>${d.id} · ${d.name}</b><p>${d.desc}</p><p><em>Ouverture :</em> ${d.open}</p><p class="lore">${d.lore}</p></figcaption>`;
+ document.querySelector('#grid').append(f);const cv=f.querySelector('.stage canvas'),g=cv.getContext('2d');views.push({i,cv,g,img:g.createImageData(SW,SH),keys:[...f.querySelectorAll('.keys canvas')],vis:true})});
+const io=new IntersectionObserver(es=>{for(const e of es){const v=views.find(v=>v.cv===e.target);if(v)v.vis=e.isIntersecting}},{rootMargin:'100px'});views.forEach(v=>io.observe(v.cv));
+function drawKeys(){for(const v of views)v.keys.forEach((k,j)=>{const g=k.getContext('2d');g.putImageData(frame(v.i,KEYS[j][0],KEYS[j][0],g.createImageData(SW,SH)),0,0)})}
+let paused=false,t=0,last;const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+document.querySelector('#pause').onclick=e=>{paused=!paused;e.target.textContent=paused?'Lecture':'Pause'};
+const setN=n=>{NIGHT=n;document.querySelector('#day').setAttribute('aria-pressed',!n);document.querySelector('#night').setAttribute('aria-pressed',n);drawKeys();drawInv()};
+document.querySelector('#day').onclick=()=>setN(false);document.querySelector('#night').onclick=()=>setN(true);
+let acc=0;function loop(now){const dt=last===undefined?0:Math.min((now-last)/1000,.1);last=now;if(!paused&&!reduce)t+=dt;acc+=dt;
+ if(acc>1/20||last===now&&t===0){acc=0;for(const v of views)if(v.vis)v.g.putImageData(frame(v.i,t%TLOOP,t,v.img),0,0)}requestAnimationFrame(loop)}
+
+// ---------- inventaire 100 cases ----------
+let THEME=0;const CS=13,GP=1,PAD=5,HEAD=0,IW=PAD*2+10*CS+9*GP,IH=IW;
+const ICONS=[
+ (P,x,y)=>{for(let j=0;j<6;j++)for(let i=0;i<8;i++){const d=((i-3.5)/4)**2+((j-3)/3)**2;if(d<1)P.set(x+1+i,y+2+j,rp(SL,.75-j*.08-i*.03,x+i,y+j))}P.set(x+4,y+4,QZ[4]);P.set(x+6,y+5,QZ[3])},
+ (P,x,y)=>{for(let j=0;j<4;j++)for(let i=0;i<8;i++)P.set(x+1+i,y+3+j,i<2?WD[6-j]:rp(WD,.55-j*.1,x+i,y+j));P.set(x+1,y+4,WD[3]);P.set(x+2,y+5,WD[3])},
+ (P,x,y)=>{for(let j=0;j<8;j++)for(let i=0;i<3;i++)if(!(j===0&&i!==1))P.set(x+4+i,y+1+j,QZ[i===0?3:i===1?2:1]);P.set(x+5,y+2,QZ[4]);P.set(x+2,y+5,QZ[2]);P.set(x+2,y+6,QZ[1]);P.set(x+2,y+7,QZ[1])},
+ (P,x,y)=>{for(let j=0;j<8;j++)for(let i=0;i<8;i++){const d=Math.hypot(i-3.5,j-3.5),a=Math.atan2(j-3.5,i-3.5);if(d<2.4+((a*4/Math.PI+8)%2<1?1.3:0)&&d>1.1)P.set(x+1+i,y+1+j,rp(IRON,.75-(i+j)*.03,i,j))}},
+ (P,x,y)=>{for(let j=0;j<7;j++){P.set(x+3+(j>>2),y+2+j,MOSS[2]);P.set(x+5,y+1+j,MOSS[3]);P.set(x+7-(j>>2),y+2+j,MOSS[2])}P.set(x+4,y+6,BARK[4]);P.set(x+5,y+6,BARK[4]);P.set(x+6,y+6,BARK[4])},
+ (P,x,y)=>{P.rect(x+3,y+2,4,6,IRON[3]);P.rect(x+4,y+3,2,4,E(CY[3]));P.set(x+4,y+3,E(CY[4]));P.rect(x+4,y+1,2,1,IRON[5]);P.rect(x+3,y+8,4,1,IRON[1])},
+ (P,x,y)=>{for(let i=0;i<7;i++){P.set(x+1+i,y+3+(i===0||i===6?0:-1)+(i>2&&i<5?-1:0),STW[5]);P.set(x+1+i,y+4,STW[4])}P.rect(x+4,y+5,2,3,STW[6]);P.set(x+4,y+7,STW[3])},
+ (P,x,y)=>{for(let j=0;j<6;j++)for(let i=0;i<4;i++){const d=((i-1.5)/2)**2+((j-2.5)/3)**2;if(d<1)P.set(x+3+i,y+2+j,rp(WD,.6-j*.07,i,j))}P.set(x+4,y+3,WD[6]);P.set(x+5,y+1,LEAF[3]);P.set(x+6,y+1,LEAF[2])},
+ (P,x,y)=>{P.rect(x+2,y+3,6,4,rp(IRON,.5,0,0));P.rect(x+2,y+3,6,1,IRON[5]);P.set(x+3,y+5,IRON[1]);P.set(x+6,y+4,IRON[1]);P.set(x+2,y+7,IRON[2]);P.set(x+7,y+2,IRON[4])},
+ (P,x,y)=>{for(let i=0;i<7;i++){P.set(x+2+i,y+7-i,BARK[3]);P.set(x+3+i,y+7-i,BARK[4])}P.set(x+8,y+1,LEAF[3]);P.set(x+7,y+2,LEAF[2]);P.set(x+9,y+2,LEAF[1])}];
+const INVC=document.querySelector('#inv');INVC.width=IW;INVC.height=IH;
+function drawInv(){const th=D[THEME].theme,P=new Pix(IW,IH),F=th.frame;for(let y=0;y<IH;y++)for(let x=0;x<IW;x++){const e=Math.min(x,y,IW-1-x,IH-1-y);let v=e===0?.1:e===1?(x<IW/2&&y<IH/2?.8:.6):e<PAD-1?.45+(vn(x*.4,y*.4,2)-.5)*.2:.15;P.set(x,y,rp(F,v,x,y))}
+ const P2=new Pix(IW,IH);let n=0;
+ for(let r=0;r<10;r++)for(let k=0;k<10;k++){const x=PAD+k*(CS+GP),y=PAD+r*(CS+GP);P.rect(x,y,CS,CS,th.slot);P.rect(x,y,CS,1,rp(F,.08,0,0));P.rect(x,y+CS-1,CS,1,rp(F,.38,x,y));P.rect(x+CS-1,y,1,CS,rp(F,.32,x,y));
+  const id=r*10+k,full=hh(id,3,21)<.42||id<7;if(!full)continue;n++;const L=new Pix(IW,IH);ICONS[Math.floor(hh(id,5,22)*ICONS.length)](L,x+1,y+1);L.outline();P2.blit(L);
+  const q=1+Math.floor(hh(id,9,23)**2*98);if(q>1){const s=String(q);[...s].forEach((ch,ci2)=>DIG[ch].forEach((row,j)=>[...row].forEach((b,i)=>{if(b==='1'){const X=x+CS-1-s.length*4+ci2*4+i,Y=y+CS-6+j;P2.set(X,Y,'#f2f2ea');if(P2.get(X+1,Y+1)!==ci('#f2f2ea'))P2.set(X+1,Y+1,OUTL)}})))}}
+ P.blit(P2);const g=INVC.getContext('2d'),img=g.createImageData(IW,IH);for(let i=0;i<IW*IH;i++){const v=P.c[i];img.data[i*4]=v>>16&255;img.data[i*4+1]=v>>8&255;img.data[i*4+2]=v&255;img.data[i*4+3]=255}g.putImageData(img,0,0);
+ document.querySelector('#invTitle').firstChild.textContent=`Coffre ${D[THEME].id} · ${D[THEME].name} `;document.querySelector('#invCount').textContent=`${n} / 100`;document.querySelector('#invTitle').style.color=th.acc}
+D.forEach((d,i)=>{const b=document.createElement('button');b.textContent=d.id+' · '+d.name;b.setAttribute('aria-pressed',i===0);b.onclick=()=>{THEME=i;document.querySelectorAll('#themes button').forEach((x,j)=>x.setAttribute('aria-pressed',j===i));drawInv()};document.querySelector('#themes').append(b)});
+drawKeys();drawInv();requestAnimationFrame(loop);
+</script></body></html>

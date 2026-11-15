@@ -54,3 +54,28 @@ func test_dig_cell_at_rules() -> void:
 		check(state.walkable((c["at"] as Vector2).x, (c["at"] as Vector2).y), "position de travail praticable")
 	# Mur des portails : interdit.
 	check(state.dig_cell_at(0, -43, Vector2(2, -165)) == null, "mur des portails")
+
+
+func test_engineer_dig_reach() -> void:
+	var state := TerrainState.new()
+	state.generate_galleries(20261114)
+	var c: Variant = state.diggable_cell(Vector2(64, -138))
+	check(c != null, "roche à l'est de la salle")
+	if c == null:
+		return
+	var i: int = c["i"]
+	var j: int = c["j"]
+	check(state.in_dig_reach(i, j, c["at"]), "au contact de la case")
+	# La case creusée sert de couloir : la case suivante, à l'est, est visée depuis son côté ouest.
+	state.dug[Vector2i(i, j)] = true
+	state.version += 1
+	var x := i * 4.0
+	var z := j * 4.0 + 2.0
+	check(state.dig_cell_at(i + 1, j, Vector2(x + 0.5, z)) != null, "case suivante creusable")
+	check(state.in_dig_reach(i + 1, j, Vector2(x + 0.5, z)), "à 3,5 unités : à portée (une case)")
+	check(state.in_dig_reach(i + 1, j, Vector2(x + 3.5, z)), "au contact")
+	check(not state.in_dig_reach(i + 1, j, Vector2(x - 0.6, z)), "à 4,6 unités : hors de portée")
+	# Face à un coin (en diagonale) : hors de portée.
+	check(not state.in_dig_reach(i + 1, j + 1, Vector2(x + 3.5, z + 1.5)), "pas de tir par un coin")
+	# De la roche entre l'Ingénieur et la case : hors de portée.
+	check(not state.in_dig_reach(i + 2, j, Vector2(x + 3.5, z)), "pas de tir à travers la roche")

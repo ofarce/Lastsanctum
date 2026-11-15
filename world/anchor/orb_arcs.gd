@@ -33,7 +33,7 @@ func visible_now() -> bool:
 
 func _draw() -> void:
 	if visible_now():
-		draw_arcs(0.0, -8.0)
+		draw_arcs(0.0, -8.0 - Overload.sphere_lift())
 
 
 func draw_arcs(cx: float, cy: float) -> void:

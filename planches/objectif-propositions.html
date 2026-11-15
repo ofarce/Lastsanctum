@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Panneau d’objectif</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;600&family=Noto+Serif:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0b120e;--panel:#111b14;--line:#2a3a2c;--txt:#dcd8bc;--mut:#93a08a;--acc:#e8c870;
+ --gold:#ae8546;--goldl:#e6c889;--ivory:#eee3c9;--hmut:#b8ad93;--cy:#5ce8ff;--cyd:#1f9fb8;--quartz:#efe9da}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--txt);font:15px/1.45 'Pixelify Sans',system-ui,sans-serif}
+header,main{max-width:1360px;margin:auto;padding:18px 16px}h1{margin:0;font-weight:600;letter-spacing:.08em;font-size:26px;color:var(--acc)}
+header p{color:var(--mut);margin:6px 0 0;max-width:940px}
+button{font:inherit;color:var(--txt);background:#1a2a1d;border:1px solid var(--line);padding:6px 12px;cursor:pointer}button:hover{border-color:var(--acc)}
+.bar{display:flex;gap:10px;align-items:center;margin-top:12px;flex-wrap:wrap}.bar input{flex:1;min-width:160px;max-width:420px;accent-color:var(--acc)}
+.bar output{color:var(--mut);font-size:13px;min-width:150px}
+.why{border:1px solid var(--line);background:var(--panel);padding:12px 16px;color:var(--mut)}.why b{color:var(--txt)}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-top:18px}figure{margin:0;background:var(--panel);border:1px solid var(--line);min-width:0}
+figure.wide{grid-column:1/-1}
+.frame{position:relative;overflow:hidden;background:#070b08}
+figcaption{padding:10px 14px 14px}figcaption b{color:var(--acc);font-weight:600;font-size:17px}figcaption p{margin:4px 0 0;color:var(--mut);font-size:14px}
+figcaption .pro{color:#a9c39a;font-size:13px}figcaption .con{color:#c9a58a;font-size:13px}
+@media(max-width:1100px){.grid{grid-template-columns:1fr}}
+
+/* ======== écran de jeu reconstitué (1 px CSS = 1 px écran, comme le HUD Godot) ======== */
+.stage{position:absolute;left:0;top:0;width:620px;height:300px;transform-origin:0 0;font-family:'Noto Serif',serif;
+ background:url(assets/objectif/sol.png) -40px -6px/1024px 1024px;image-rendering:pixelated}
+.stage::after{content:'';position:absolute;inset:0;pointer-events:none;background:linear-gradient(180deg,#0006,#0000 40%),radial-gradient(ellipse at 80% 120%,#0000,#0004)}
+.stage>*{image-rendering:auto}
+.metal{position:absolute;background:linear-gradient(110deg,#111610f5,#0b0e0df7);border:1px solid var(--gold);
+ box-shadow:inset 0 0 0 3px #0c100f,inset 0 0 0 4px #7c603138,0 6px 16px #0007}
+.metal::before,.metal::after{content:'';position:absolute;width:3px;height:3px;background:var(--goldl);clip-path:polygon(0 0,100% 0,0 100%);left:6px;top:6px}
+.metal::after{left:auto;top:auto;right:6px;bottom:6px;background:var(--gold);clip-path:polygon(100% 100%,0 100%,100% 0)}
+.wave{left:16px;top:14px;height:56px;width:152px;z-index:2}
+.wave svg{position:absolute;left:23px;top:15px;width:26px;height:26px;color:#e69354}
+.wave span{position:absolute;left:61px;top:12px;font-size:20px;color:var(--ivory)}
+.res{left:194px;top:14px;height:52px;width:560px;display:flex;align-items:center;gap:22px;padding:0 23px;color:var(--ivory);font-size:16px;z-index:2}
+.res i{display:inline-flex;gap:9px;align-items:center;font-style:normal;white-space:nowrap}.res svg{width:24px;height:24px}.res em{font-style:normal;font-size:20px}
+.slot{position:absolute;left:16px;top:80px;z-index:3}
+svg.ic{fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;display:block}
+.num{font-variant-numeric:tabular-nums}
+
+/* ---- 1 · Plaque de laiton ---- */
+.p1{width:292px;padding:13px 18px 14px}
+.p1 .eb{font-size:10px;letter-spacing:2px;color:var(--hmut);display:flex;justify-content:space-between}
+.p1 .tt{display:flex;gap:10px;align-items:center;margin-top:5px;font-size:17px;color:var(--ivory)}.p1 .tt svg{width:20px;height:20px;color:var(--goldl);flex:none}
+.p1 hr{border:0;height:1px;background:linear-gradient(90deg,#7c6031aa,#7c603100);margin:9px 0 8px}
+.p1 .st{display:flex;align-items:center;gap:9px;font-size:13px;color:#ddd2b6;margin-top:5px}
+.p1 .dm{width:8px;height:8px;transform:rotate(45deg);border:1px solid var(--gold);flex:none;background:#0b100d}
+.p1 .st.ok{color:#8f8a77}.p1 .st.ok .dm{background:var(--goldl);border-color:var(--goldl)}
+.p1 .st b{white-space:nowrap;margin-left:auto;font-weight:400;color:var(--goldl)}
+.p1 .tr{height:3px;background:#1d2119;margin:6px 0 0 17px;position:relative;overflow:hidden}.p1 .tr i{position:absolute;inset:0 auto 0 0;background:linear-gradient(90deg,#775219,var(--goldl))}
+.p1 .sheen{position:absolute;inset:0;pointer-events:none;background:linear-gradient(105deg,#0000 35%,#ffe0a033 48%,#ffe0a055 50%,#ffe0a033 52%,#0000 65%) no-repeat;background-size:300% 100%}
+
+/* ---- 2 · Onglet de vague ---- */
+.p2wrap{position:absolute;left:16px;top:76px;z-index:3}
+.p2{position:relative;height:36px;display:flex;align-items:center;gap:9px;padding:0 15px 0 13px;white-space:nowrap;overflow:hidden}
+.p2 svg{width:17px;height:17px;color:var(--goldl);flex:none}.p2 .t{font-size:14px;color:var(--ivory)}.p2 .c{font-size:14px;color:var(--goldl);margin-left:6px}
+.p2 .bar2{position:absolute;left:4px;right:4px;bottom:4px;height:2px;background:#1d2119}.p2 .bar2 i{position:absolute;inset:0 auto 0 0;background:var(--goldl)}
+.link{position:absolute;left:30px;top:-10px;width:7px;height:7px;transform:rotate(45deg);background:#0b100d;border:1px solid var(--gold);z-index:4}
+.p2 .acc{font-size:10px;letter-spacing:2px;color:var(--goldl)}
+
+/* ---- 3 · Rapport de l'Ingénieur ---- */
+.p3{width:340px;padding:11px 14px 12px 11px;display:flex;gap:12px}
+.p3 .pf{position:relative;width:58px;height:58px;flex:none;border:1px solid var(--gold);box-shadow:inset 0 0 0 2px #0c100f;background:#152019 center/56px no-repeat;image-rendering:pixelated}
+.p3 .pf .led{position:absolute;right:-3px;bottom:-3px;width:7px;height:7px;background:var(--cy);border:1px solid #0a0a0c;box-shadow:0 0 6px var(--cy)}
+.p3 .bd{flex:1;min-width:0}
+.p3 .eb{font-size:10px;letter-spacing:2px;color:var(--hmut)}
+.p3 .q{font-style:italic;font-size:12.5px;line-height:1.35;color:#ddcfaf;margin-top:3px;min-height:34px}
+.p3 .rd{margin-top:7px;font:12px/1 'Pixelify Sans',monospace;color:var(--cy);letter-spacing:.06em;display:flex;align-items:center;gap:8px;text-shadow:0 0 6px #5ce8ff66}
+.p3 .rd b{font-weight:400;margin-left:auto}
+.p3 .seg{display:flex;gap:2px;margin-top:5px}.p3 .seg i{flex:1;height:4px;background:#0f2a30;border:1px solid #12596b}.p3 .seg i.on{background:var(--cy);border-color:#c8fbff;box-shadow:0 0 4px #5ce8ff99}
+.p3 .rd.ok{color:#c8fbff}
+
+/* ---- 4 · Stèle d'ardoise ---- */
+.p4{position:absolute;width:286px;padding:12px 18px 13px;color:#151920;
+ background:radial-gradient(ellipse at 30% 0,#56607088,#0000 70%),repeating-linear-gradient(172deg,#0000 0 7px,#00000014 7px 8px),linear-gradient(180deg,#4d5668,#363d4b);
+ border:2px solid;border-color:#69738a #1a1e26 #14171d #545e72;outline:1px solid #0a0a0c;
+ clip-path:polygon(8px 0,calc(100% - 8px) 0,100% 8px,100% calc(100% - 8px),calc(100% - 8px) 100%,8px 100%,0 calc(100% - 8px),0 8px);box-shadow:0 6px 16px #0008}
+.p4::before{content:'';position:absolute;inset:0;pointer-events:none;background:radial-gradient(circle at 12% 70%,#7a8a5a33 0 10px,#0000 11px),radial-gradient(circle at 92% 18%,#7a8a5a2a 0 7px,#0000 8px)}
+.p4 .eng{text-shadow:0 1px 0 #7b859acc,0 -1px 0 #0b0d12}
+.p4 .eb{font-size:10px;letter-spacing:3px;text-align:center;color:#1b2029}
+.p4 .tt{font-size:16px;letter-spacing:1.5px;text-align:center;margin-top:3px;font-weight:600;color:#161a22}
+.p4 .tt.lit{color:var(--quartz);text-shadow:0 0 6px #efe9daaa,0 0 14px #efe9da55,0 1px 0 #0b0d12}
+.p4 .gv{position:relative;height:6px;margin:9px 4px 6px;background:#141820;box-shadow:inset 0 1px 1px #000,0 1px 0 #6b7486}
+.p4 .gv i{position:absolute;left:1px;top:1px;bottom:1px;background:linear-gradient(90deg,#b8b2a6,var(--quartz));box-shadow:0 0 6px #efe9da99}
+.p4 .gv u{position:absolute;top:-4px;width:2px;height:14px;background:#0f1218;box-shadow:1px 0 0 #6b7486}
+.p4 .st{font-size:12.5px;font-weight:600;display:flex;justify-content:space-between;color:#0c0f14;letter-spacing:.4px;margin-top:1px}
+.p4 .st.ok{opacity:.55}
+.p4 .rn{position:absolute;left:50%;top:-1px;width:9px;height:9px;transform:translateX(-50%) rotate(45deg);background:#141820;border:1px solid #0a0a0c}
+.p4 .rn.lit{background:var(--quartz);box-shadow:0 0 8px var(--quartz)}
+
+/* ---- 5 · Fil des jalons ---- */
+.p5{position:absolute;left:0;top:0;width:330px;height:210px;overflow:hidden;
+ -webkit-mask:linear-gradient(180deg,#0000 0,#000 14px,#000 172px,#0000 206px);mask:linear-gradient(180deg,#0000 0,#000 14px,#000 172px,#0000 206px)}
+.p5 .bk{position:absolute;inset:0;background:linear-gradient(90deg,#0b0e0de0 0,#0b0e0db0 62%,#0b0e0d00 100%)}
+.p5 .rail{position:absolute;left:22px;width:2px;background:#4a3d22}
+.p5 .rail i{position:absolute;left:0;right:0;top:0;background:var(--goldl)}
+.p5 .it{position:absolute;left:0;right:0;padding-left:44px;color:var(--ivory)}
+.p5 .dm{position:absolute;left:17px;top:4px;width:12px;height:12px;transform:rotate(45deg);border:1px solid var(--gold);background:#0b100d}
+.p5 .it.past{color:#7f7a69;font-size:12.5px}.p5 .it.past .dm{background:#6d5a35;border-color:#6d5a35;width:9px;height:9px;left:18.5px;top:5px}
+.p5 .it.next{color:#6d6a5e;font-size:12.5px;font-style:italic}.p5 .it.next .dm{border-color:#4a3d22;width:9px;height:9px;left:18.5px;top:5px}
+.p5 .it.cur .dm{background:var(--goldl);border-color:#ffe0a0;box-shadow:0 0 0 3px #e6c88922}
+.p5 .it.cur .eb{font-size:10px;letter-spacing:2px;color:var(--hmut)}
+.p5 .it.cur .tt{font-size:16px;margin-top:1px}
+.p5 .it.cur .sub{font-size:12.5px;color:#cbbf9f;display:flex;gap:10px;margin-top:3px;width:240px}.p5 .it.cur .sub b{margin-left:auto;font-weight:400;color:var(--goldl)}
+.p5 .it.cur .tr{height:2px;background:#2a2619;width:240px;margin-top:5px;position:relative}.p5 .it.cur .tr i{position:absolute;inset:0 auto 0 0;background:var(--goldl)}
+</style></head><body>
+<header><h1>PANNEAU D’OBJECTIF · HAUT GAUCHE</h1>
+<p>Cinq propositions pour un panneau d’objectif placé sous la carte de vague, à l’échelle réelle du HUD (1 px de la planche = 1 px d’écran, comme le HUD Godot). Les panneaux rejouent la même boucle : réactiver l’Ancre, puis repousser la première vague, avec à chaque fois l’entrée, la progression, l’état « accompli » et la sortie.</p>
+<div class="bar"><button id="pause">Pause</button><input id="scrub" type="range" min="0" max="14" step="0.01" value="0" aria-label="Position dans la boucle"><output id="ph"></output></div></header>
+<main><div class="why"><b>Contexte :</b> la carte « Vague » occupe (16, 14) sur 56 px de haut ; le panneau commence 10 px plus bas, aligné sur sa marge gauche. Les propositions 1, 2, 3 et 5 reprennent le laiton et le charbon du HUD existant (<code>HudStyle</code>). La 4 sort de ce cadre pour un objet du décor en ardoise tyrienne. Le cyan ne sert qu’à la proposition 3, parce qu’il y représente la technologie de l’Ingénieur exilé.</div>
+<div class="grid" id="grid"></div></main>
+<script>
+'use strict';
+// ---------- icônes (grille 24×24 du HUD : hud_icons.json) ----------
+const IC={skull:'<path d="M8 19v-4c-3-1-4-3-4-6a8 8 0 0 1 16 0c0 3-1 5-4 6v4zM10 19v-3m4 3v-3"/><circle cx="8.5" cy="9" r="1.5"/><circle cx="15.5" cy="9" r="1.5"/><path d="m11 13 1-2 1 2"/>',
+ rune:'<circle cx="12" cy="12" r="7"/><path d="M12 0v24M0 12h24m-12-9 3 9-3 9-3-9z"/>',
+ iron:'<path d="m3 10 12-6 6 4-12 6zM3 10v6l6 4 12-6V8M9 14v6"/>',heart:'<path d="M12 21 3 12C-4 3 8-1 12 6c4-7 16-3 9 6z"/>',
+ shield:'<path d="M12 2 3 6v7c0 5 9 9 9 9s9-4 9-9V6zM12 5v13"/>',book:'<path d="M4 4h6a3 3 0 0 1 2 1 3 3 0 0 1 2-1h6v15h-6a2 2 0 0 0-2 2 2 2 0 0 0-2-2H4zM12 5v16M7 8h2m-2 3h2m6-3h2m-2 3h2"/>',
+ check:'<path d="m5 12 4.5 4.5L19 7"/>',flag:'<path d="M5 22V3m0 1h12l-3 4 3 4H5"/>'};
+const ic=(n,c='ic')=>`<svg class="${c}" viewBox="0 0 24 24">${IC[n]}</svg>`;
+const cl=(v,a=0,b=1)=>Math.max(a,Math.min(b,v)),eo=t=>1-Math.pow(1-cl(t),3),ei=t=>cl(t)*cl(t);
+
+// ---------- boucle d'objectifs (14 s) ----------
+const T=14,KILLS=18;
+const OBJ=[
+ {key:'anchor',icon:'rune',eb:'Objectif',title:'Réactiver l’Ancre',stele:'RALLUMER L’ANCRE',
+  quote:'L’Ancre s’est éteinte. Je dois la réactiver : elle réveillera les gardes de l’entrée.',qdone:'L’Ancre respire de nouveau. Les gardes se lèvent.',
+  prev:'Atteindre le sanctuaire',next:'Repousser la vague 1'},
+ {key:'wave',icon:'skull',eb:'Défense du sanctuaire',title:'Repousser la vague 1',stele:'TENIR LE SEUIL',
+  quote:'Ils viennent par le nord. Tant que l’Ancre tient, nous tenons.',qdone:'La première vague est brisée. Préparez la suivante.',
+  prev:'Réactiver l’Ancre',next:'Ériger le Temple d’Indra'}];
+// phases : in (0,6 s) → run → done → out (0,6 s)
+function state(t){t=((t%T)+T)%T;const idx=t<7?0:1,l=t-idx*7,o=OBJ[idx];
+ const runEnd=idx?5.2:4.2,S={t,l,idx,o};
+ if(l<.6){S.ph='in';S.k=l/.6}else if(l<runEnd){S.ph='run';S.k=(l-.6)/(runEnd-.6)}else if(l<6.4){S.ph='done';S.k=(l-runEnd)/(6.4-runEnd)}else{S.ph='out';S.k=(l-6.4)/.6}
+ const after=S.ph==='done'||S.ph==='out';S.done=after;
+ if(idx===0){const p=after?1:S.ph==='run'?cl((l-2)/2.2):0;S.p=p;
+  S.steps=[{txt:'Sélectionner l’Ingénieur',ok:true},{txt:'Clic droit sur l’Ancre (R)',ok:after,prog:p,val:Math.round(p*100)+' %'}];
+  S.short=after?'Ancre réactivée':p>0?'Réactivation '+Math.round(p*100)+' %':'Clic droit sur l’Ancre';S.count=after?'✓':p>0?Math.round(p*100)+' %':'0 %';
+  S.read=p>0||after?'RÉACTIVATION':'EN ATTENTE';S.readv=Math.round(p*100)+' %'}
+ else{const n=after?KILLS:S.ph==='run'?Math.min(KILLS,Math.floor(eo(S.k*1.02)*KILLS)):0;S.p=n/KILLS;S.n=n;
+  S.steps=[{txt:'Ennemis vaincus',ok:after,prog:n/KILLS,val:n+' / '+KILLS},{txt:'L’Ancre tient',ok:true}];
+  S.short=after?'Vague repoussée':'Ennemis vaincus';S.count=n+' / '+KILLS;S.read='HOSTILES NEUTRALISÉS';S.readv=n+'/'+KILLS}
+ S.flash=S.ph==='done'?Math.max(0,1-S.k*2.2):0;return S}
+// enveloppe d'entrée/sortie commune : glissement depuis la gauche, fondu vers le haut
+function env(S,dx=-18,dy=-8){if(S.ph==='in')return{op:eo(S.k),tf:`translate(${(1-eo(S.k))*dx}px,0)`};if(S.ph==='out')return{op:1-ei(S.k),tf:`translate(0,${ei(S.k)*dy}px)`};return{op:1,tf:'none'}}
+
+// ---------- propositions ----------
+const V=[];
+V.push({id:'plaque',name:'1 · Plaque de laiton',
+ desc:'Un module du HUD existant (même panneau métal, mêmes coins, même liseré) avec surtitre, titre et icône, puis la liste des étapes : losange vide, puis plein et grisé une fois l’étape faite. Quand l’objectif est atteint, un reflet balaie la plaque et le surtitre devient « Objectif accompli ».',
+ pro:'+ Cohérente avec le bandeau du bas, lisible, gère plusieurs étapes.',con:'− Le plus encombrant (≈ 292 × 110 px), toujours plein écran de texte.',
+ html(S){const e=env(S),sh=S.ph==='done'?`<div class="sheen" style="background-position:${100-S.k*140}% 0"></div>`:'';
+  const steps=S.steps.map(s=>`<div class="st${s.ok?' ok':''}"><span class="dm"></span>${s.txt}${s.val&&!s.ok?`<b class="num">${s.val}</b>`:s.ok?`<b>${ic('check')}</b>`.replace('class="ic"','class="ic" style="width:13px;height:13px;color:#8f8a77"'):''}</div>${s.prog!=null&&!s.ok?`<div class="tr"><i style="width:${s.prog*100}%"></i></div>`:''}`).join('');
+  return `<div class="slot" style="opacity:${e.op};transform:${e.tf}"><div class="metal p1" style="${S.flash?`border-color:#ffe0a0;box-shadow:inset 0 0 0 3px #0c100f,inset 0 0 0 4px #7c603138,0 0 ${14*S.flash}px #e6c88988`:''}">
+  <div class="eb"><span>${S.done?'OBJECTIF ACCOMPLI':S.o.eb.toUpperCase()}</span></div>
+  <div class="tt" style="${S.done?'color:var(--goldl)':''}">${ic(S.o.icon)}${S.o.title}</div><hr>${steps}${sh}</div></div>`}});
+
+V.push({id:'onglet',name:'2 · Onglet de vague',
+ desc:'Une seule ligne accrochée sous la carte de vague par le petit losange de liaison du HUD : icône, intitulé court, compteur, et un filet de progression de 2 px au bas. À l’état accompli, l’onglet s’élargit un instant pour afficher « ACCOMPLI », puis se replie pour le prochain objectif.',
+ pro:'+ Très discret (36 px de haut), ne masque presque rien du terrain.',con:'− Une seule étape visible à la fois ; le détail doit passer par une infobulle ou la notice.',
+ html(S){const e=env(S,-24,-6),title=S.done?S.o.title:(S.idx?S.short:S.o.title),
+  extra=S.done?`<span class="acc" style="opacity:${S.ph==='out'?1-S.k:1}">· ACCOMPLI</span>`:`<span class="c num">${S.count}</span>`;
+  return `<div class="p2wrap" style="opacity:${e.op};transform:${e.tf}"><span class="link"></span><div class="metal p2" style="${S.flash?`box-shadow:inset 0 0 0 3px #0c100f,0 0 ${12*S.flash}px #e6c88988;border-color:#ffe0a0`:''}">${ic(S.done?'check':S.o.icon)}<span class="t">${title}</span>${extra}<span class="bar2"><i style="width:${S.p*100}%"></i></span></div></div>`}});
+
+V.push({id:'rapport',name:'3 · Rapport de l’Ingénieur',
+ desc:'L’objectif est donné par l’Ingénieur lui-même : portrait en médaillon (celui du HUD), réplique en italique tapée lettre à lettre, puis une ligne de relevé en cyan, la couleur de la technologie exilée, avec une jauge segmentée. À l’état accompli, il enchaîne sur une réplique de conclusion.',
+ pro:'+ Donne une voix au personnage, reprend la bulle de dialogue d’accueil.',con:'− Plus de texte à lire en plein combat ; demande une réplique par objectif.',
+ html(S){const e=env(S),full=S.done?S.o.qdone:S.o.quote,start=S.done?S.l-(S.idx?5.2:4.2):S.l-.2,n=Math.floor(cl(start/1.4)*full.length),
+  seg=Array.from({length:12},(_,i)=>`<i class="${i<Math.round(S.p*12)?'on':''}"></i>`).join(''),
+  pf=`background-image:url(assets/objectif/engineer.png);${S.flash?`border-color:var(--cy);box-shadow:inset 0 0 0 2px #0c100f,0 0 ${12*S.flash}px var(--cy)`:''}`;
+  return `<div class="slot" style="opacity:${e.op};transform:${e.tf}"><div class="metal p3"><div class="pf" style="${pf}"><span class="led"></span></div><div class="bd">
+  <div class="eb">INGÉNIEUR EXILÉ</div><div class="q">« ${full.slice(0,n)}${n<full.length?'<span style="opacity:.35">▌</span>':' »'}</div>
+  <div class="rd${S.done?' ok':''}">▸ ${S.done?'OBJECTIF ATTEINT':S.read}<b class="num">${S.done?'✓':S.readv}</b></div><div class="seg">${seg}</div></div></div></div>`}});
+
+V.push({id:'stele',name:'4 · Stèle d’ardoise',
+ desc:'Une tablette en ardoise tyrienne au contour noir, avec le texte gravé dans la pierre. La progression est une rainure que le quartz laiteux remplit (la lumière retenue pour la caverne). À l’état accompli, le titre gravé s’allume en quartz et la rune du sommet s’éclaire.',
+ pro:'+ Objet du monde, cohérent avec la caverne et les ruines tyriennes.',con:'− Rompt avec le laiton du reste du HUD ; le texte gravé est moins lisible en petit.',
+ html(S){const e=env(S,-14,-10),notches='',
+  st=S.steps.map(s=>`<div class="st eng${s.ok?' ok':''}"><span>${s.ok?'◆':'◇'} ${s.txt}</span><span class="num">${s.ok?'':s.val||''}</span></div>`).join('');
+  return `<div class="slot" style="opacity:${e.op};transform:${e.tf}"><div class="p4" style="position:relative${S.flash?`;filter:brightness(${1+S.flash*.35})`:''}"><span class="rn${S.done?' lit':''}"></span>
+  <div class="eb eng">${S.done?'ACCOMPLI':S.o.eb.toUpperCase()}</div><div class="tt eng${S.done?' lit':''}">${S.o.stele}</div>
+  <div class="gv"><i style="width:calc(${S.p*100}% - 2px)"></i>${notches}</div>${st}</div></div>`}});
+
+V.push({id:'fil',name:'5 · Fil des jalons',
+ desc:'Sans cadre : un dégradé sombre qui se fond dans le terrain et une colonne de losanges reliés par un rail. L’objectif précédent reste visible, grisé, au-dessus, et le suivant s’annonce en italique en dessous. À l’état accompli, le rail se remplit jusqu’au jalon suivant et la colonne remonte d’un cran.',
+ pro:'+ Montre la progression de la partie ; le moins lourd visuellement à taille égale.',con:'− Sans plaque, il dépend du contraste du terrain ; annoncer le prochain objectif dévoile la suite.',
+ html(S){const step=58,base=26;let shift=0,railF=0;
+  if(S.ph==='done')railF=eo(S.k*1.6);if(S.ph==='out'){railF=1;shift=eo(S.k)*step}if(S.ph==='in')shift=-(1-eo(S.k))*0;
+  const nxt=OBJ[(S.idx+1)%2],next2=S.idx?'Purifier le puits des âmes':nxt.next;
+  const rows=[{c:'past',txt:S.o.prev,y:base},{c:'cur',y:base+step*.5+10},{c:'next',txt:S.o.next,y:base+step*2+10},{c:'next',txt:next2,y:base+step*3,dim:true}];
+  const cur=`<span class="dm"></span><div class="eb">${S.done?'ACCOMPLI':S.o.eb.toUpperCase()}</div><div class="tt" style="${S.done?'color:var(--goldl)':''}">${S.o.title}</div>
+   <div class="sub"><span>${S.steps[S.idx?0:1].txt}</span><b class="num">${S.done?'✓':S.count}</b></div><div class="tr"><i style="width:${S.p*100}%"></i></div>`;
+  const it=rows.map(r=>`<div class="it ${r.c}" style="top:${r.y-shift}px;${r.dim?'opacity:.45':''}${r.c==='cur'&&S.flash?`;filter:brightness(${1+S.flash*.5})`:''}">${r.c==='cur'?cur:`<span class="dm"></span>${r.c==='past'?'✓ ':''}${r.txt}`}</div>`).join('');
+  const y0=base+10-shift,y1=rows[1].y+10-shift,y2=rows[2].y+10-shift;
+  return `<div class="slot" style="top:76px;left:4px"><div class="p5"><div class="bk"></div><div class="rail" style="top:${y0}px;height:${y2-y0}px"><i style="height:${(y1-y0)+railF*(y2-y1)}px"></i></div>${it}</div></div>`}});
+
+// ---------- montage ----------
+const grid=document.getElementById('grid'),FR=[];
+const res=[['iron','Forge','40','#d5c7a9'],['heart','Vie','12','#ad855d'],['shield','Discipline','8','#85d7f0'],['book','Savoir','20','#d5c7a9']];
+const chrome=`<div class="metal wave">${ic('skull')}<span>Vague 1</span></div><div class="metal res">${res.map(r=>`<i><span style="color:${r[3]}">${ic(r[0])}</span>${r[1]} <em>${r[2]}</em></i>`).join('')}</div>`;
+V.forEach((v,i)=>{const f=document.createElement('figure');if(i===4&&V.length%2)f.className='wide';
+ f.innerHTML=`<div class="frame"><div class="stage">${chrome}<div class="hold"></div></div></div><figcaption><b>${v.name}</b><p>${v.desc}</p><p class="pro">${v.pro}</p><p class="con">${v.con}</p></figcaption>`;
+ grid.appendChild(f);FR.push({v,frame:f.querySelector('.frame'),stage:f.querySelector('.stage'),hold:f.querySelector('.hold'),last:''})});
+function fit(){for(const F of FR){const w=F.frame.clientWidth,sc=Math.min(1,w/620);F.stage.style.width=Math.ceil(w/sc)+'px';F.stage.style.transform=`scale(${sc})`;F.frame.style.height=Math.round(250*sc)+'px'}}
+addEventListener('resize',fit);fit();
+
+const scrub=document.getElementById('scrub'),out=document.getElementById('ph'),pb=document.getElementById('pause');
+let t=0,paused=false,prev=performance.now();
+const PH={in:'entrée',run:'en cours',done:'accompli',out:'sortie'};
+function draw(){const S=state(t);for(const F of FR){const h=F.v.html(S);if(h!==F.last){F.hold.innerHTML=h;F.last=h}}
+ scrub.value=t.toFixed(2);out.textContent=`${S.o.title} · ${PH[S.ph]}`}
+function loop(now){const dt=Math.min(.1,(now-prev)/1000);prev=now;if(!paused)t=(t+dt)%T;draw();requestAnimationFrame(loop)}
+pb.onclick=()=>{paused=!paused;pb.textContent=paused?'Lecture':'Pause'};
+scrub.oninput=()=>{t=+scrub.value;paused=true;pb.textContent='Lecture'};
+requestAnimationFrame(loop);
+</script></body></html>

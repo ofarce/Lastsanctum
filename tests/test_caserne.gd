@@ -1,5 +1,5 @@
 extends "res://tests/econ_case.gd"
-## Étape 7 (v2) : caserne (file de 5, 100 Discipline, 6 s par combattant, sortie devant le bâtiment).
+## Étape 7 (v2) : caserne (file de 5, 100 Discipline, 6 s par escouade de quatre, sortie devant le bâtiment).
 
 
 func test_training_queue() -> void:
@@ -9,13 +9,13 @@ func test_training_queue() -> void:
 	sim.train_unit(b, "archer")
 	sim.train_unit(b, "lame")
 	sim.train_unit(b, "flammes")
-	check_eq(b.queue, ["archer", "lame"] as Array[String], "250 Discipline : 2 combattants en file")
+	check_eq(b.queue, ["archer", "lame"] as Array[String], "250 Discipline : 2 escouades en file")
 	check_near(GameState.res["discipline"], 50.0, 1e-9, "200 Discipline payés")
 	var n := GameState.units.size()
 	run(sim, 5.9)
 	check_eq(GameState.units.size(), n, "pas de sortie avant 6 s")
 	run(sim, 0.2)
-	check_eq(GameState.units.size(), n + 1, "premier combattant sorti")
+	check_eq(GameState.units.size(), n + 4, "première escouade de quatre sortie")
 	var u: Unit = GameState.units[-1]
 	check_eq(u.role, "archer", "archer d'abord")
 	check_eq(u.max_hp, 85.0, "PV d'archer")

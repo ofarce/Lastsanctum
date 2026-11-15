@@ -39,6 +39,6 @@ func test_roundtrip_1000_points() -> void:
 
 
 func test_initial_px() -> void:
-	check_eq(Proj.initial_px(1440), 1, "1440 px")
-	check_eq(Proj.initial_px(1920), 2, "1920 px")
-	check_eq(Proj.initial_px(2560), 3, "2560 px")
+	check_eq(Proj.initial_px(1440), 2, "1440 px")
+	check_eq(Proj.initial_px(1920), 3, "1920 px")
+	check_eq(Proj.initial_px(2560), 4, "2560 px")

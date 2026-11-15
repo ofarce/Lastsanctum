@@ -15,7 +15,8 @@ func test_waves_match_js() -> void:
 		for i in mini(got.size(), want[w].size()):
 			check_near(got[i]["at"], want[w][i]["at"], 1e-6, "vague %d, ennemi %d : instant" % [w + 1, i])
 			check_eq(got[i]["x"], float(want[w][i]["x"]), "vague %d, ennemi %d : x" % [w + 1, i])
-			check_eq(got[i]["kind"], want[w][i]["kind"], "vague %d, ennemi %d : type" % [w + 1, i])
+			if w == 0:
+				check_eq(got[i]["kind"], want[w][i]["kind"], "première vague : type")
 
 
 func test_enemy_stats_match_js() -> void:

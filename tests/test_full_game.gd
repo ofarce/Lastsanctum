@@ -127,11 +127,13 @@ func _play() -> PackedStringArray:
 					_mark("caserne : %s" % b.queue[0])
 		# 6. Puits des Âmes : rappel de la première âme (touche 1).
 		for b: Building in GameState.buildings:
-			if b.type == "soulwell" and b.complete and not GameState.fallen.is_empty() and Catalog.can_pay(Catalog.REVIVE_COST):
+			if b.type == "soulwell" and b.complete and not GameState.fallen.is_empty() and Catalog.can_pay(Catalog.revive_cost(GameState.fallen.back())):
 				_click_building(b)
 				var n := GameState.fallen.size()
+				var revive_price: int = Catalog.revive_cost(GameState.fallen.back())["vie"]
 				_key(KEY_1)
 				if GameState.fallen.size() < n:
+					stats["revive_spent"] = stats.get("revive_spent", 0) + revive_price
 					stats["revived"] += 1
 					_mark("Puits : âme rappelée")
 		# 7. Combattants libres : rassemblés à l'entrée de la grotte (clic droit sur le sol).
@@ -179,8 +181,7 @@ func _spent() -> float:
 	s += stats["adepts"] * Catalog.SUMMON_COST
 	for k: String in Catalog.CASERNE_COST:
 		s += Catalog.CASERNE_COST[k] * stats["trained"]
-	for k: String in Catalog.REVIVE_COST:
-		s += Catalog.REVIVE_COST[k] * stats["revived"]
+	s += stats.get("revive_spent", 0)
 	return s
 
 

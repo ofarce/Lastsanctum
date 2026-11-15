@@ -7,10 +7,13 @@ extends RefCounted
 const GAL_W := 464  # WORLD.x1 − WORLD.x0
 const GAL_H := 408  # WORLD.z1 − WORLD.z0
 ## Coups de pioche par case (DIG_HITS) et durée d'un coup (HIT_TIME, en secondes de travail).
-const DIG_HITS := 4
+const Blocks := preload("res://data/mineable_blocks.gd")
+const DIG_HITS: int = Blocks.TYPES["rock"]["resistance"]
 const HIT_TIME := 1.0
-## Vitesse de l'Ingénieur : cases déblayées par seconde (ENGINEER_DIG).
+## Vitesse de l'Ingénieur : cases déblayées par seconde (ENGINEER_DIG) ; un piton d'ancrage par coup.
 const ENGINEER_DIG := 1.0
+## Portée du lance-pitons de l'Ingénieur : au plus une case (4 unités) entre lui et la case visée.
+const DIG_REACH := 4.0
 
 # ----- Galeries (masque à 1 unité : 0 = roche, 1 = galerie ; open = déjà découverte) -----
 var mask := PackedByteArray()
@@ -23,7 +26,11 @@ var portals: Array[Dictionary] = []
 
 # ----- Cases creusées (clé Vector2i(i, j), case de 4×4 unités) -----
 var dug := {}
+## Les cellules sans entrée sont en roche ; un type inconnu n'est pas minable.
+var block_types: Dictionary = {}
 var dig_hits := {}
+## Instant (sim_time) du dernier piton tiré sur chaque case en cours : rendu des pitons plantés.
+var dig_hit_at := {}
 
 ## Incrémenté à chaque changement de praticabilité (WALK.version) : invalide les chemins en cache.
 var version := 0
@@ -116,7 +123,9 @@ func push_out_of_rock(p: Vector2) -> Vector2:
 ## resetBlocks (adepts.js) : aucune case creusée, aucun coup en cours.
 func reset_digging() -> void:
 	dug.clear()
+	block_types.clear()
 	dig_hits.clear()
+	dig_hit_at.clear()
 	version += 1
 
 
@@ -264,7 +273,13 @@ static func _sha1(bytes: PackedByteArray) -> String:
 
 ## digCellAt : case de roche visée, accessible depuis un sol praticable voisin ; null sinon.
 ## Renvoie {i, j, at: Vector2} où `at` est la position de travail de l'Ingénieur.
+func block_definition(i: int, j: int) -> Dictionary:
+	return Blocks.TYPES.get(block_types.get(Vector2i(i, j), "rock"), {})
+
+
 func dig_cell_at(i: int, j: int, p: Vector2) -> Variant:
+	if block_definition(i, j).is_empty():
+		return null
 	var x := i * 4.0
 	var z := j * 4.0
 	if dug.has(Vector2i(i, j)) or (walkable(x + 2.0, z + 2.0) and walkable(x + 0.5, z + 0.5) and walkable(x + 3.5, z + 3.5)):
@@ -318,3 +333,33 @@ func next_dig_cell(cell: Dictionary, from: Vector2) -> Variant:
 			bd = d
 			best = n
 	return best
+
+
+## Point de la case (i, j) le plus proche de p.
+static func cell_nearest(i: int, j: int, p: Vector2) -> Vector2:
+	return Vector2(clampf(p.x, i * 4.0, i * 4.0 + 4.0), clampf(p.y, j * 4.0, j * 4.0 + 4.0))
+
+
+## Le lance-pitons atteint la case (i, j) depuis p : face à l'un de ses côtés (dans le prolongement de la
+## case, jamais en diagonale par un coin), au plus DIG_REACH unités du bord, et un passage dégagé (sol
+## praticable) entre l'Ingénieur et la case : on ne tire pas à travers la roche, et la case creusée reste
+## reliée au sol où il se tient.
+func in_dig_reach(i: int, j: int, p: Vector2) -> bool:
+	var x := i * 4.0
+	var z := j * 4.0
+	var facing_x := p.x >= x + 0.3 and p.x <= x + 3.7
+	var facing_z := p.y >= z + 0.3 and p.y <= z + 3.7
+	if facing_x == facing_z:
+		return false
+	var q := cell_nearest(i, j, p)
+	var d := p.distance_to(q)
+	if d > DIG_REACH:
+		return false
+	var n := ceili(d / 0.4)
+	for k in range(1, n):
+		var s := p.lerp(q, float(k) / n)
+		if s.distance_to(q) < 0.3:
+			break
+		if not walkable(s.x, s.y):
+			return false
+	return true

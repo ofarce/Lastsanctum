@@ -61,6 +61,8 @@ static func target_closest(source: Variant, list: Array, range_ := 1e9) -> Varia
 ## damage : `src` gagne l'expérience du monstre qu'il achève.
 func damage(t: Unit, amount: float, src: Unit = null) -> void:
 	var was := t.hp
+	if t is Enemy and amount > 0.0:
+		amount = maxf(amount * 0.15, amount - (t as Enemy).armor)
 	t.hp = maxf(0.0, t.hp - amount)
 	if src and t.is_enemy() and was > 0.0 and t.hp <= 0.0:
 		_log("%s achève %s" % [src.name, (t as Enemy).kind])
@@ -106,6 +108,33 @@ static func zone(x: float, z: float, r: float, c: Color) -> void:
 	_fx({"type": "zone", "x": x, "z": z, "r": r, "age": 0.0, "duration": 1.0, "color": c})
 
 
+## Durée de vol d'un piton d'ancrage et de la suspension de la case (planche « Pitons d'ancrage »).
+const PITON_FLIGHT := 0.12
+const SUSPEND_TIME := 1.6
+
+
+## piton : piton d'ancrage tiré par l'Ingénieur vers l'angle k (0 : sud-ouest, 1 : nord-ouest, 2 : nord-est,
+## 3 : sud-est) de la case `key`.
+static func piton(u: Unit, key: Vector2i, k: int) -> void:
+	u.face = -1 if piton_corner(key, k).x < u.x else 1
+	_fx({"type": "piton", "x": u.x, "z": u.z, "unit": u, "i": key.x, "j": key.y, "k": k, "face": u.face,
+		"age": 0.0, "duration": PITON_FLIGHT})
+
+
+## Angle k de la case `key`, en unités de monde, légèrement en retrait du bord.
+static func piton_corner(key: Vector2i, k: int) -> Vector2:
+	var x := key.x * 4.0
+	var z := key.y * 4.0
+	return [Vector2(x + 0.5, z + 3.5), Vector2(x + 0.5, z + 0.5), Vector2(x + 3.5, z + 0.5), Vector2(x + 3.5, z + 3.5)][k]
+
+
+## suspend : les quatre pitons se relient, la roche (image de la case avant creusement) se fend en cubes
+## suspendus, se comprime en un point lumineux, puis les pitons reviennent au poignet de l'Ingénieur.
+static func suspend(u: Unit, key: Vector2i, img: Image) -> void:
+	_fx({"type": "suspend", "unit": u, "i": key.x, "j": key.y, "x": key.x * 4.0 + 2.0, "z": key.y * 4.0 + 2.0,
+		"img": img, "age": 0.0, "duration": SUSPEND_TIME})
+
+
 func _seed() -> int:
 	return int(_rand() * 1000.0)
 
@@ -120,7 +149,7 @@ func rivet(a: Unit, b: Unit) -> void:
 
 
 ## arrow : flèche de l'archer, puis étincelles à l'impact.
-func arrow(a: Unit, b: Unit) -> void:
+func arrow(a: Unit, b: Variant) -> void:
 	var face := -1 if b.x - a.x < 0.0 else 1
 	var dur := maxf(0.09, dist(a, b) * 0.02)
 	_fx({"type": "arrow", "x": a.x, "z": a.z, "tx": b.x, "tz": b.z, "face": face, "age": 0.0, "duration": dur, "seed": _seed()})
@@ -155,8 +184,7 @@ func barracks_strike(u: Unit, e: Enemy) -> void:
 	var dmg: float = (F["dmg"] + Catalog.lvl_bonus(u)) * k
 	u.attack = F["cd"]
 	u.face = -1 if e.x - u.x < 0.0 else 1
-	if u.role == "flammes" and GameState.sim_time >= u.sillon_at:
-		sillon(u, e)
+	# D15 : le lance-flammes n'a plus de sillon de feu ; en jeu, il tire en continu (flame_tick).
 	if u.role == "flammes":
 		for o: Enemy in GameState.enemies.duplicate():
 			if o.hp > 0.0 and dist(o, e) < F["splash"]:
@@ -169,8 +197,6 @@ func barracks_strike(u: Unit, e: Enemy) -> void:
 	damage(e, dmg, u)
 	if u.role == "archer":
 		arrow(u, e)
-	elif u.role == "engineer":
-		rivet(u, e)
 	elif F.get("ranged", false):
 		blast(u, e, Color("#bed7df"))
 		flash(e.x, e.z, Color("#bed7df"))
@@ -287,6 +313,36 @@ func update_fire_walls(dt: float) -> void:
 				o.slow_until = now + 0.15
 
 
+## Tir continu du lance-flammes (D15) : dmg / cd par seconde aux ennemis dans `splash` autour de la cible,
+## jet de flammes redessiné toutes les 0,06 s.
+func flame_tick(u: Unit, e: Enemy, dt: float) -> void:
+	var F: Dictionary = Catalog.FIGHT["flammes"]
+	var k := 1.5 if u.buff > 0.0 else 1.0
+	var dmg: float = (F["dmg"] + Catalog.lvl_bonus(u)) * k / F["cd"] * dt
+	u.attack = 0.1
+	u.face = -1 if e.x - u.x < 0.0 else 1
+	for o: Enemy in GameState.enemies.duplicate():
+		if o.hp > 0.0 and dist(o, e) < F["splash"]:
+			damage(o, dmg, u)
+	var now := GameState.sim_time
+	if now >= u.flame_fx:
+		u.flame_fx = now + 0.06
+		blast(u, e, Color("#ff9a30"))
+		flash(e.x, e.z, Color("#ffb050"))
+
+
+## Explosion du lance-flammes à sa mort (D15) : dégâts fixes aux ennemis proches.
+func flame_explosion(u: Unit) -> void:
+	var X := Catalog.FLAME_DEATH
+	for o: Enemy in GameState.enemies.duplicate():
+		if o.hp > 0.0 and dist(o, u) < X["r"]:
+			damage(o, X["dmg"], u)
+			flash(o.x, o.z, Color("#ffb050"))
+	zone(u.x, u.z, X["r"], Color("#ff7a20"))
+	flash(u.x, u.z, Color("#fff0d0"))
+	_log("%s explose" % u.name)
+
+
 ## fightBusy : l'unité est en train de frapper (animation de travail des adeptes).
 static func fight_busy(u: Unit) -> bool:
 	var F: Dictionary = Catalog.FIGHT.get(u.role, {})
@@ -314,7 +370,10 @@ func update_units(dt: float, alive: Array[Unit]) -> void:
 			var reach: float = Catalog.unit_reach(u)
 			if dist(u, enemy) > reach:
 				sim.move(u, sim.steer(u, Vector2(enemy.x, enemy.z)), dt, 0.65)
-			if dist(u, enemy) < reach and u.attack <= 0.0 and fight:
+			if u.role == "flammes":
+				if dist(u, enemy) < reach:
+					flame_tick(u, enemy, dt)
+			elif dist(u, enemy) < reach and u.attack <= 0.0 and fight:
 				barracks_strike(u, enemy)
 			elif dist(u, enemy) < reach and u.attack <= 0.0:
 				var base: int = {"paladin": 30, "shooter": 19, "healer": 9}.get(u.role, 12)
@@ -359,7 +418,7 @@ func update_enemies(dt: float, alive: Array[Unit]) -> void:
 			continue
 		var espd := e.speed * (Catalog.SILLON["slow"] if e.slow_until > GameState.sim_time else 1.0)
 		e.cooldown -= dt
-		var target: Variant = target_closest(e, alive, 4.5)
+		var target: Variant = target_closest(e, alive, e.reach if e.kind == "archer" else 4.5)
 		var is_core := target == null
 		var tx: float = core["x"] if is_core else target.x
 		var tz: float = core["z"] if is_core else target.z
@@ -375,6 +434,8 @@ func update_enemies(dt: float, alive: Array[Unit]) -> void:
 			e.z += dz / l * espd * dt
 			sim.clamp_world(e)
 		elif e.cooldown <= 0.0:
+			e.attack_started = GameState.sim_time
+			e.face = -1 if tx < e.x else 1
 			var dmg := e.damage
 			if not is_core:
 				var u: Unit = target
@@ -386,7 +447,9 @@ func update_enemies(dt: float, alive: Array[Unit]) -> void:
 			else:
 				GameState.core_hp = maxf(0.0, GameState.core_hp - dmg)
 			flash(tx, tz, Color("#e17b63"))
-			if e.kind == "spitter":
+			if e.kind == "archer":
+				arrow(e, core if is_core else target)
+			elif e.kind == "spitter":
 				blast(e, {"x": tx, "z": tz}, Color("#c88f9e"))
 			e.cooldown = Catalog.ENEMY[e.kind]["cd"]
 
@@ -398,12 +461,28 @@ func start_wave() -> void:
 	GameState.wave += 1
 	var w := GameState.wave
 	var n := 4 + w * 3
+	var menace := GameState.menace
 	GameState.spawn_queue = []
 	for i in n:
-		var kind := "brute" if i % 5 == 4 else ("spitter" if i % 6 == 3 else "creep")
+		var kind := wave_kind(w, i, n, menace)
 		GameState.spawn_queue.append({"at": GameState.sim_time + 2.0 + i * maxf(0.35, 1.5 - w * 0.14), "x": -2.0 if i % 2 == 0 else 2.0, "kind": kind})
 	_log("vague %d (%d ennemis)" % [w, n])
 	sim.say("Assaut %d : des créatures remontent la jungle par le sud." % w, 3.0)
+
+
+## Introduction progressive des cinq renforts, à effectif et cadence inchangés.
+static func wave_kind(w: int, i: int, _n: int, menace: int = 0) -> String:
+	if (w >= 8 or menace >= Catalog.STRAZHAR_MENACE) and i == 0:
+		return "strazhar"
+	if w >= 5 and i % 7 == 5:
+		return "shield"
+	if w >= 4 and i % 7 == 3:
+		return "archer"
+	if w >= 3 and i % 7 == 2:
+		return "soldier"
+	if w >= 2 and i % 7 == 1:
+		return "scout"
+	return "brute" if i % 5 == 4 else ("spitter" if i % 6 == 3 else "creep")
 
 
 ## spawn : apparition au sud (z ≈ 62–66).
@@ -526,12 +605,24 @@ func finish_tick(dt: float, alive: Array[Unit]) -> void:
 		if u.hp <= 0.0 and not u.dead:
 			u.dead = true
 			_log("%s tombe" % u.name)
+			if u.role == "flammes":
+				flame_explosion(u)
 			sim.on_unit_death(u)
-	if log_events:
-		for e: Enemy in GameState.enemies:
-			if e.hp <= 0.0:
+	# Comptage avant retrait : une seule fois par mort, hors faune de la caverne.
+	for e: Enemy in GameState.enemies:
+		if e.hp <= 0.0:
+			e.dead = true
+			e.died_at = GameState.sim_time
+			GameState.enemy_corpses.append(e)
+			if not e.beast:
+				GameState.menace += 1
+			if log_events:
 				_log("%s abattu en (%.2f, %.2f)" % [e.kind, e.x, e.z])
 	GameState.enemies = GameState.enemies.filter(func(e: Enemy) -> bool: return e.hp > 0.0)
+	GameState.enemy_corpses = GameState.enemy_corpses.filter(func(e: Enemy) -> bool:
+		return GameState.sim_time - e.died_at < EnemyArt.CORPSE_LIFETIME)
+	while GameState.enemy_corpses.size() > EnemyArt.MAX_CORPSES:
+		GameState.enemy_corpses.pop_front()
 	GameState.effects = GameState.effects.filter(func(e: Dictionary) -> bool:
 		e["age"] += dt
 		return e["age"] < e["duration"])

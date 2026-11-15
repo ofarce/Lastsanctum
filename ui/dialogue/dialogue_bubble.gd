@@ -49,12 +49,12 @@ func show_dialogue(d: Dictionary) -> void:
 ## greetEngineer.
 func greet_engineer(speaker: Unit) -> void:
 	show_dialogue({"speaker": speaker, "name": "Ingénieur Exilé", "role": "engineer", "compact": true,
-		"lines": ["L’Ancre s’est éteinte. Je dois la réactiver : elle réveillera les gardes de l’entrée."]})
+		"lines": ["Ah. elle est là. Au travail."]})
 
 
 func _render_line() -> void:
 	elapsed = 0.0
-	_text.text = ""
+	_text.text = line() if dialogue.get("any_button", false) else ""
 
 
 func line() -> String:
@@ -69,7 +69,7 @@ func tick(dt: float) -> void:
 	if dialogue.get("compact", false) and elapsed > line().length() * CHAR_TIME + 3.5:
 		close()
 		return
-	var count := line().length() if is_inf(elapsed) else floori(elapsed / CHAR_TIME)
+	var count := line().length() if dialogue.get("any_button", false) or is_inf(elapsed) else floori(elapsed / CHAR_TIME)
 	_text.text = line().left(count)
 	_position()
 
@@ -78,13 +78,14 @@ func tick(dt: float) -> void:
 func advance() -> void:
 	if not active():
 		return
-	if _text.text != line():
+	if not dialogue.get("any_button", false) and _text.text != line():
 		elapsed = INF
 		tick(0.0)
 		return
 	if index + 1 < dialogue["lines"].size():
 		index += 1
 		_render_line()
+		_position()
 	else:
 		close()
 

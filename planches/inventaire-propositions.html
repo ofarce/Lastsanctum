@@ -1,0 +1,384 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Inventaires · propositions</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;600&family=Noto+Serif:ital,wght@0,400;0,600;1,400&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0b120e;--panel:#111b14;--line:#2a3a2c;--txt:#dcd8bc;--mut:#93a08a;--acc:#e8c870}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--txt);font:15px/1.45 'Pixelify Sans',system-ui,sans-serif}
+header,main{max-width:1360px;margin:auto;padding:18px 16px}
+h1{margin:0;font-weight:600;letter-spacing:.08em;font-size:26px;color:var(--acc)}
+header p{color:var(--mut);margin:6px 0 0;max-width:980px}
+nav{position:sticky;top:0;z-index:20;background:#0b120ee8;border-bottom:1px solid var(--line);backdrop-filter:blur(4px)}
+nav div{max-width:1360px;margin:auto;padding:8px 16px;display:flex;gap:8px;flex-wrap:wrap}
+nav a{color:var(--txt);text-decoration:none;border:1px solid var(--line);background:#1a2a1d;padding:4px 10px;font-size:14px}
+nav a:hover{border-color:var(--acc)}
+.why{border:1px solid var(--line);background:var(--panel);padding:12px 16px;color:var(--mut)}.why b{color:var(--txt)}
+section.prop{margin-top:34px}
+.ptitle{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:10px}
+.ptitle .letter{font-size:30px;color:var(--acc);font-weight:600}.ptitle h2{margin:0;font-size:22px;font-weight:600}
+.ptitle span{color:var(--mut)}
+.notes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:12px}
+.notes div{background:var(--panel);border:1px solid var(--line);padding:10px 14px;color:var(--mut);font-size:14px}
+.notes b{display:block;color:var(--txt);font-weight:600;margin-bottom:2px}
+.stagebg{padding:22px;border:1px solid var(--line);background:#070b08;overflow:hidden}
+
+/* ---------- squelette commun ---------- */
+.screen{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);grid-template-areas:"base sheet" "perso perso";gap:20px;max-width:1180px;margin:auto}
+.pbase{grid-area:base}.pperso .inv{max-width:660px;margin:0 auto}.psheet{grid-area:sheet}.pperso{grid-area:perso}
+.pnl{position:relative;min-width:0}
+.hd{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.inv{display:grid;grid-template-columns:repeat(10,minmax(0,1fr))}
+.slot{position:relative;aspect-ratio:1;cursor:default;user-select:none;touch-action:none}
+.slot.has{cursor:grab}
+.slot img.it{position:absolute;left:9%;top:9%;width:82%;height:82%;image-rendering:pixelated;pointer-events:none}
+.slot img.gh{position:absolute;left:16%;top:16%;width:68%;height:68%;image-rendering:pixelated;pointer-events:none}
+.slot .q{position:absolute;right:6%;bottom:1%;pointer-events:none;line-height:1}
+.slot .k{position:absolute;left:6%;top:2%;pointer-events:none;line-height:1}
+.doll{position:relative;width:100%}
+.doll .slot{position:absolute;transform:translate(-50%,-50%)}
+.doll .lab{position:absolute;left:50%;top:100%;transform:translateX(-50%);white-space:nowrap;pointer-events:none;margin-top:3px}
+.doll canvas.sil{position:absolute;image-rendering:pixelated;transform:translate(-50%,-50%)}
+.doll svg.lines{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible}
+.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px 14px}
+.stats div{display:flex;justify-content:space-between;gap:6px}
+body.dragging,body.dragging *{cursor:grabbing!important}
+.slot.no{opacity:.35}
+.drag{position:fixed;z-index:100;pointer-events:none;width:56px;height:56px;image-rendering:pixelated;transform:translate(-50%,-50%) scale(1.1);filter:drop-shadow(0 4px 3px #000a)}
+.tip{position:fixed;z-index:90;pointer-events:none;max-width:260px;padding:9px 12px;font-size:13px;line-height:1.35;display:none}
+.tip b{display:block;font-size:15px}.tip i{display:block;font-style:normal;opacity:.75;margin-bottom:4px}.tip .st{margin-top:6px}
+
+/* ---------- A · Laiton & charbon (continuité du HUD) ---------- */
+.sA{font-family:'Noto Serif',serif;color:#eee3c9}
+.sA .pnl{background:linear-gradient(110deg,#111610f5,#0b0e0df7);border:1px solid #ae8546;padding:14px 16px 16px;
+ box-shadow:inset 0 0 0 3px #0c100f,inset 0 0 0 4px #7c603138,0 10px 26px #0008}
+.sA .pnl::before,.sA .pnl::after{content:"";position:absolute;width:9px;height:9px;border:1px solid #e6c889;background:#3a2a10;transform:rotate(45deg)}
+.sA .pnl::before{left:-5px;top:-5px}.sA .pnl::after{right:-5px;bottom:-5px}
+.sA .hd h3{margin:0 0 10px;font-weight:400;font-size:13px;letter-spacing:.24em;text-transform:uppercase;color:#e6c889}
+.sA .hd span{font-size:12px;color:#b8ad93;font-style:italic}
+.sA .inv{gap:3px}
+.sA .slot{background:radial-gradient(circle at 50% 40%,#151b17,#090c0a);border:1px solid #3b3424;box-shadow:inset 0 1px 3px #000c}
+.sA .slot.has:hover,.sA .slot.ok{border-color:#ae8546}
+.sA .slot.ok{box-shadow:inset 0 0 8px #ae854666}
+.sA .slot.sel{border-color:#e6c889;box-shadow:inset 0 0 0 1px #e6c88988,0 0 8px #e6c88944}
+.sA .slot .q{font-size:11px;color:#eee3c9;text-shadow:0 1px 0 #000,0 0 3px #000}
+.sA .slot .k{font-size:10px;color:#7c6c4c}
+.sA .slot img.gh{opacity:.13}
+.sA .doll .slot{width:15%;border-radius:50%;border-color:#7c6031}
+.sA .doll .slot.ok{border-color:#e6c889}
+.sA .doll .lab{font-size:11px;font-style:italic;color:#b8ad93}
+.sA .doll .halo{position:absolute;border-radius:50%;background:radial-gradient(#ae854622,transparent 68%);transform:translate(-50%,-50%)}
+.sA .stats{border-top:1px solid #7c603166;margin-top:14px;padding-top:10px;font-size:13px}
+.sA .stats span{color:#b8ad93}.sA .stats b{font-weight:600;color:#e6c889}
+.sA .who{text-align:center;margin:-2px 0 8px;font-size:12px;color:#b8ad93;font-style:italic}
+.tip.sA{background:#0d110ef7;border:1px solid #ae8546;box-shadow:inset 0 0 0 3px #0c100f;color:#eee3c9}
+.tip.sA b{color:#e6c889;font-weight:600}.tip.sA i{color:#b8ad93;font-style:italic}
+
+/* ---------- B · Tablette d'ardoise (ruines tyriennes) ---------- */
+.sB{font-family:'Pixelify Sans',sans-serif;color:#d8d2c4}
+.sB .pnl{background:var(--slate) 0 0/192px 192px,#2b2723;padding:16px 16px 18px;image-rendering:pixelated;
+ clip-path:polygon(0 8px,8px 8px,8px 0,calc(100% - 8px) 0,calc(100% - 8px) 8px,100% 8px,100% calc(100% - 8px),calc(100% - 8px) calc(100% - 8px),calc(100% - 8px) 100%,8px 100%,8px calc(100% - 8px),0 calc(100% - 8px));
+ box-shadow:inset 4px 4px 0 #564d42,inset -4px -4px 0 #100f0e,inset 0 0 0 8px #211e1b}
+.sB .pnl::before{content:"";position:absolute;left:8px;right:8px;top:0;height:10px;background:var(--moss) 0 0/96px 10px;image-rendering:pixelated}
+.sB .hd h3{margin:4px 0 10px;font-weight:600;font-size:16px;letter-spacing:.06em;color:#e8e4d8;text-shadow:2px 2px 0 #100f0e}
+.sB .hd span{font-size:13px;color:#a69c8a}
+.sB .inv{gap:4px}
+.sB .slot{background:#1c1916;box-shadow:inset 3px 3px 0 #0e0c0b,inset -2px -2px 0 #4a4238}
+.sB .slot.has:hover{background:#221f1b}
+.sB .slot.ok{background:#25231f;box-shadow:inset 3px 3px 0 #0e0c0b,inset -2px -2px 0 #4a4238,inset 0 0 0 2px #bdb6a488}
+.sB .slot.sel{box-shadow:inset 3px 3px 0 #0e0c0b,inset 0 0 0 2px #e8e4d8,0 0 10px #e8e4d855}
+.sB .slot .q{font-size:12px;color:#e8e4d8;text-shadow:1px 1px 0 #000,-1px 0 0 #000}
+.sB .slot .k{font-size:11px;color:#6b6052}
+.sB .slot img.gh{opacity:.14}
+.sB .doll .slot{width:14.5%}
+.sB .doll .lab{font-size:12px;color:#a69c8a}
+.sB .doll .rune{position:absolute;border-radius:50%;border:3px dotted #4a4238;transform:translate(-50%,-50%)}
+.sB .doll .disc{position:absolute;border-radius:50%;background:radial-gradient(#e8e4d81c,#0000 70%);transform:translate(-50%,-50%)}
+.sB .stats{margin-top:14px;padding:10px 12px;background:#1c1916;box-shadow:inset 3px 3px 0 #0e0c0b,inset -2px -2px 0 #4a4238;font-size:14px}
+.sB .stats span{color:#a69c8a}.sB .stats b{color:#e8e4d8;font-weight:600}
+.sB .who{text-align:center;margin:-4px 0 6px;font-size:13px;color:#a69c8a}
+.tip.sB{font-family:'Pixelify Sans',sans-serif;background:#211e1b;color:#d8d2c4;box-shadow:inset 3px 3px 0 #453e36,inset -3px -3px 0 #100f0e,0 0 0 2px #100f0e}
+.tip.sB b{color:#e8e4d8}
+
+/* ---------- C · Interface de l'exosquelette (technologie exilée) ---------- */
+.sC{font-family:'Share Tech Mono',monospace;color:#c8fbff;text-transform:uppercase}
+.sC .pnl{background:linear-gradient(#0a1c22e6,#06121ae6);padding:14px 16px 16px;border:1px solid #1f9fb8;
+ clip-path:polygon(0 0,calc(100% - 16px) 0,100% 16px,100% 100%,16px 100%,0 calc(100% - 16px))}
+.sC .pnl::before{content:"";position:absolute;inset:0;pointer-events:none;background:repeating-linear-gradient(#5ce8ff08 0 1px,#0000 1px 3px)}
+.sC .pnl::after{content:"";position:absolute;right:-1px;top:-1px;width:24px;height:24px;background:linear-gradient(45deg,#0000 calc(50% - 1px),#5ce8ff calc(50% - 1px) calc(50% + 1px),#0000 0)}
+.sC .hd h3{margin:0 0 10px;font-weight:400;font-size:13px;letter-spacing:.12em;color:#5ce8ff}
+.sC .hd h3::before{content:"// ";color:#1f9fb8}
+.sC .hd span{font-size:11px;color:#5aa6b4}
+.sC .inv{gap:4px}
+.sC .slot{background:#0a2a3366;border:1px solid #1f9fb855;clip-path:polygon(0 0,calc(100% - 7px) 0,100% 7px,100% 100%,7px 100%,0 calc(100% - 7px))}
+.sC .slot.has:hover,.sC .slot.ok{border-color:#5ce8ff;background:#12596b55}
+.sC .slot.sel{border-color:#c8fbff;background:#1f9fb855}
+.sC .slot .q{font-size:11px;color:#c8fbff;text-shadow:0 0 3px #000}
+.sC .slot .k{font-size:9px;color:#1f9fb8}
+.sC .slot img.gh{opacity:.16;filter:sepia(1) hue-rotate(140deg) saturate(4)}
+.sC .doll .slot{width:13.5%;clip-path:none}
+.sC .doll .lab{font-size:10px;color:#5aa6b4;letter-spacing:.06em}
+.sC .doll svg.lines path{fill:none;stroke:#1f9fb8;stroke-width:1;vector-effect:non-scaling-stroke}
+.sC .doll svg.lines path.on{stroke:#5ce8ff}
+.sC .doll svg.lines circle{fill:#5ce8ff}
+.sC .doll .scan{position:absolute;height:2px;background:linear-gradient(90deg,#0000,#5ce8ff88,#0000);animation:scan 3.2s linear infinite}
+@keyframes scan{from{transform:translateY(0)}to{transform:translateY(var(--sh))}}
+.sC .stats{margin-top:12px;border-top:1px dashed #1f9fb866;padding-top:10px;font-size:12px}
+.sC .stats span{color:#5aa6b4}.sC .stats b{color:#c8fbff;font-weight:400}
+.sC .who{text-align:center;margin:-2px 0 8px;font-size:11px;color:#5aa6b4;letter-spacing:.1em}
+.tip.sC{font-family:'Share Tech Mono',monospace;background:#06141aee;border:1px solid #5ce8ff;color:#c8fbff;text-transform:uppercase;font-size:12px}
+.tip.sC b{color:#5ce8ff;font-weight:400}
+
+/* ---------- D · Paquetage de campagne (bois & toile, gros pixels) ---------- */
+.sD{font-family:'Pixelify Sans',sans-serif;color:#f0e2c4}
+.sD .pnl{background:var(--wood) 0 0/192px 192px,#5e3e1e;image-rendering:pixelated;padding:14px 16px 16px;margin:6px;
+ box-shadow:0 0 0 3px #1a120c,0 0 0 6px #a2743c,0 0 0 9px #1a120c,inset 0 3px 0 #a2743c55}
+.sD .hd{margin:-14px -16px 12px;padding:6px 14px;background:#2e1e10;box-shadow:inset 0 -3px 0 #1a120c}
+.sD .hd h3{margin:0;font-weight:600;font-size:17px;color:#f0cc6a;text-shadow:2px 2px 0 #1a120c}
+.sD .hd span{font-size:13px;color:#cfae80}
+.sD .inv{gap:5px}
+.sD .slot{background:#2a1c10;box-shadow:inset 3px 3px 0 #140c06,inset -3px -3px 0 #4a3220,0 0 0 2px #1a120c}
+.sD .slot.has:hover{background:#352416}
+.sD .slot.ok{box-shadow:inset 3px 3px 0 #140c06,inset -3px -3px 0 #4a3220,0 0 0 2px #cf9c5a}
+.sD .slot.sel{box-shadow:inset 3px 3px 0 #140c06,inset -3px -3px 0 #4a3220,0 0 0 3px #f6f0da}
+.sD .slot .q{font-size:13px;color:#fff;text-shadow:2px 0 0 #1a120c,-2px 0 0 #1a120c,0 2px 0 #1a120c,0 -2px 0 #1a120c}
+.sD .slot .k{font-size:11px;color:#8a6036}
+.sD .slot img.gh{opacity:.16}
+.sD .doll .slot{width:13%}
+.sD .doll .lab{font-size:11px;color:#cfae80}
+.sD .doll .niche{position:absolute;background:#1e140b;box-shadow:inset 4px 4px 0 #0e0805,inset -3px -3px 0 #4a3220,0 0 0 3px #1a120c;transform:translate(-50%,-50%)}
+.sD .doll .niche::after{content:"";position:absolute;left:12%;right:12%;bottom:6%;height:7%;border-radius:50%;background:#0008}
+.sD .stats{margin-top:12px;padding:8px 10px;background:#2a1c10;box-shadow:inset 3px 3px 0 #140c06,0 0 0 2px #1a120c;font-size:14px}
+.sD .stats span{color:#cfae80}.sD .stats b{color:#fff0b0;font-weight:600}
+.sD .who{margin:0 0 6px;font-size:14px;color:#cfae80}
+.tip.sD{font-family:'Pixelify Sans',sans-serif;background:#2a1c10;color:#f0e2c4;box-shadow:0 0 0 3px #1a120c,0 0 0 5px #a2743c,0 0 0 8px #1a120c}
+.tip.sD b{color:#f0cc6a}
+
+@media(max-width:900px){.screen{grid-template-columns:1fr;grid-template-areas:"perso" "base" "sheet"}.notes{grid-template-columns:1fr}.stagebg{padding:12px 8px}}
+@media(max-width:520px){.slot .k{display:none}.sA .pnl,.sB .pnl,.sC .pnl,.sD .pnl{padding:10px 8px 12px}.sD .hd{margin:-10px -8px 10px}.inv{gap:2px!important}.doll .lab{font-size:9px!important}.stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+</style></head><body>
+<header><h1>INVENTAIRES · FICHE DE PERSONNAGE</h1>
+<p>Quatre directions pour les trois écrans de gestion : la <b>réserve de la base</b> (10 × 10), le <b>paquetage</b> porté par l’Exilé (10 emplacements, qui sert aussi de barre d’action) et la <b>fiche de personnage</b> avec ses dix emplacements d’équipement. Les quatre planches partagent le même contenu : tout ce que vous déplacez dans l’une se retrouve dans les autres.</p></header>
+<nav><div><a href="#pA">A · Laiton &amp; charbon</a><a href="#pB">B · Tablette d’ardoise</a><a href="#pC">C · Interface d’exosquelette</a><a href="#pD">D · Paquetage de campagne</a></div></nav>
+<main>
+<div class="why"><b>À essayer :</b> glisser-déposer les objets entre les trois panneaux (les emplacements d’équipement refusent ce qui ne leur correspond pas) · double-clic pour équiper ou déséquiper · Maj + clic pour passer un objet entre la réserve et le paquetage · touches 1 à 0 (ou clic) pour choisir l’emplacement actif du paquetage · survol pour la fiche de l’objet. Couleurs de la charte respectées : pas d’or pour la rareté (réservé à Laetan), cyan uniquement sur la technologie exilée, ni rouge ni pourpre.</div>
+<div id="props"></div>
+</main>
+<div class="tip" id="tip"></div>
+<script>
+'use strict';
+// ---------- objets (cartes de pixels 12 × 12, contour noir ajouté automatiquement) ----------
+const STEEL={a:'#2c3238',b:'#4a535c',c:'#6f7a84',d:'#a3adb5',e:'#14181c',f:'#5ce8ff',g:'#ffffff'};
+const BRASS={a:'#3a2808',b:'#6a4a14',c:'#a07424',d:'#d0a03c',e:'#ffb040',g:'#fff0b0'};
+const WOODP={1:'#3e2814',2:'#5e3e1e',3:'#80582c',4:'#a2743c',w:'#80582c',v:'#5e3e1e'};
+const ROCKP={1:'#2b2723',2:'#37322c',3:'#453e36',4:'#564d42',5:'#6b6052'};
+const QZ={q:'#e8e4d8',r:'#bdb6a4',t:'#8f887a',u:'#ffffff'};
+const FIRE={y:'#e0601a',x:'#ff9a30',z:'#ffd870'};
+const ITEMS={
+ casque:{n:'Casque d’exo Mk II',s:'tete',d:'Coque de l’exosquelette, visière à lecture d’Énonciation.',st:{arm:4,vis:1},pal:STEEL,m:[
+ "....bbbb....","..bbccccbb..",".bccddddccb.",".bcddccddcb.","bccccccccccb","bcceeeeeeccb","bceffffffecb","bcceeeeeeccb","bbccccccccbb",".abb.aa.bba.",".aab....baa.","............"]},
+ mineur:{n:'Casque de mineur',s:'tete',d:'Casque de cuir bouilli et sa lampe à huile.',st:{arm:2,vis:3,min:1},pal:{...BRASS,...FIRE},m:[
+ "............","....bbbb....","..bbccccbb..",".bccxzzxccb.",".bcccxxcccb.","bccccccccccb","bbbbbbbbbbbb","............","............","............","............","............"]},
+ oeil:{n:'Capteur oculaire tyrien',s:'oeil',d:'Lentille tyrienne montée sur l’exo : révèle les filons et les traces.',st:{vis:4,deg:1},pal:STEEL,m:[
+ "............","............","...bbbbb....","..bcccccb...",".bcbbbbbcb..","bcbfffffbcbb","bcbfgfffbcca","bcbfffffbcbb",".bcbbbbbcb..","..bcccccb...","...bbbbb....","............"]},
+ plastron:{n:'Plastron d’exosquelette',s:'torse',d:'Cuirasse militaire, cœur énergétique cyan.',st:{arm:8,vit:-1},pal:STEEL,m:[
+ ".bb......bb.","bccb....bccb","bcccbbbbcccb","bccccddccccb",".bcccffcccb.",".bccfddfccb.",".bcccffcccb.",".bccccccccb.",".baccccccab.",".bbaaaaaabb.","..bbbbbbbb..","............"]},
+ gants:{n:'Gantelets hydrauliques',s:'gants',d:'Doublent la force de frappe sur la roche.',st:{arm:2,min:2,deg:1},pal:STEEL,m:[
+ "............","..bbbbbbb...",".bcbcbcbcb..",".bcbcbcbcb..",".bcccccccbb.",".bccccccbccb",".bccffccbcb.",".bccccccbb..","..bccccb....","..baaaab....","..bbbbbb....","............"]},
+ bottes:{n:'Bottes de marche',s:'bottes',d:'Semelles amorties pour les sentiers de jungle.',st:{arm:2,vit:2},pal:STEEL,m:[
+ "............","...bbbb.....","...bccb.....","...bccb.....","...bcfb.....","...bccb.....","...bcccbb...","...bccccccb.","..bcccccccb.","..baaaaaaab.","..bbbbbbbbb.","............"]},
+ dos:{n:'Générateur dorsal',s:'dos',d:'Alimente l’exo ; sa lueur ambre éclaire un peu autour de vous.',st:{ene:10},pal:BRASS,m:[
+ "..bbbbbbbb..",".bcddddddcb.",".bcbbbbbbcb.",".bcbeeeebcb.",".bcbeggebcb.",".bcbeeeebcb.",".bcbbbbbbcb.",".bccccccccb.",".bcaccccacb.",".bccccccccb.","..bbbbbbbb..","...b....b..."]},
+ anneau:{n:'Anneau de quartz',s:'anneau',d:'Un éclat de quartz laiteux serti dans l’acier.',st:{ene:3,vit:1},pal:{...STEEL,...QZ},m:[
+ "............",".....qq.....","....qrrq....","....qrrq....","...bbqqbb...","..bc....cb..",".bc......cb.",".bc......cb.",".bc......cb.","..bc....cb..","...bbbbbb...","............"]},
+ pioche:{n:'Pioche à percussion',s:'minage',d:'Tête d’acier sur manche de bois de jungle.',st:{min:6},pal:{...STEEL,...WOODP},m:[
+ "..bbbbbbbb..",".bcccdddccb.","bcb..ww..bcb","bb...ww...bb",".....ww.....",".....ww.....",".....vw.....",".....vw.....",".....vw.....",".....vw.....",".....aa.....","............"]},
+ lame:{n:'Grande lame',s:'md',d:'Lame d’exosquelette, lourde et longue.',st:{deg:9,vit:-1},pal:{...STEEL,...WOODP},m:[
+ "..........dc",".........dcb","........dcb.",".......dcb..","......dcb...",".....dcb....","....dcb.....",".a.dcb......","..aab.......","..wa........",".ww..a......","ww.........."]},
+ pistolet:{n:'Pistolet à rivets',s:'md',d:'Outil de chantier détourné en arme.',st:{deg:5},pal:{...STEEL,...WOODP},m:[
+ "............","............",".bbbbbbbbbb.","bccccccccccb","bcdddddddccb","bccccccccbb.",".bbbbwwwb...","....bwwb....","....bwwb....","...bwwwb....","...bbbbb....","............"]},
+ bouclier:{n:'Bouclier de ruine',s:'mg',d:'Taillé dans une dalle tyrienne, quartz au centre.',st:{arm:5},pal:{b:'#37322c',c:'#6b6052',s:'#453e36',...QZ},m:[
+ ".bbbbbbbbbb.","bccccccccccb","bcsssssssscb","bcsssqqssscb","bcssqrrqsscb","bcsssqqssscb",".bcsssssscb.",".bcsssssscb.","..bcsssscb..","...bcsscb...","....bccb....",".....bb....."]},
+ quartz:{n:'Quartz laiteux',d:'La lumière des cavernes. Sert à l’éclairage et aux anneaux.',stack:1,pal:QZ,m:[
+ "............",".....u......","....uqr.....","...uqqr..u..","...qqqrr.qr.","..uqqqrr.qrr","..qqqqrrtqrr","..qqqrrrtqrt",".ttqqrrrttrt",".tttrrrttttt","..tttttttt..","............"]},
+ ardoise:{n:'Ardoise tyrienne',d:'Bloc de roche des cavernes.',stack:1,pal:ROCKP,m:[
+ "............","............","....55555...","..5544444...",".544333344..","5443323334..","54332223334.",".4332222333.",".3322111223.","..22111112..","....1111....","............"]},
+ bois:{n:'Bois de jungle',d:'Rondins fraîchement abattus.',stack:1,pal:{1:'#5e3e1e',2:'#80582c',3:'#a2743c',4:'#c89a5c'},m:[
+ "............","............","............",".11111112442","122222224334","122222224334",".11111112442","..1111112442",".12222224334",".12222224334","..1111112442","............"]},
+ fibre:{n:'Fibre de liane',d:'Se tresse en cordes et en toile.',stack:1,pal:{g:'#2e4a1e',h:'#4a6e2a',i:'#6e9a3a',j:'#9ac25a'},m:[
+ "............","....hhhh....","..hhiijjhh..",".hi......ih.","hi..hhhh..ih","hi.hi..ih.ih","hi.h.jj.h.ih","hi.hi..ih.ih","hi..hhhh..ih",".hi......ih.","..hhiiiihh..","....gggg...."]},
+ cuivre:{n:'Minerai de cuivre',d:'Filon à fondre à la forge.',stack:1,pal:{...ROCKP,o:'#c87838',p:'#e8a060'},m:[
+ "............","............","....4444....","..44pp4444..",".4433o3pp4..",".43op33o34..","4433332pp34.","43pp3223o33.",".3o3222233..","..22222222..","............","............"]},
+ viande:{n:'Viande grillée',d:'Rend un peu de vie.',stack:1,pal:{1:'#3a1a0c',2:'#6a3416',3:'#9a5228',4:'#c27a44',e:'#e8e0c8'},m:[
+ "............",".........ee.","........eee.","..33333e....",".3444433....","344433332...","343333322...","3333222222..",".322222221..","..2111111...","............","............"]},
+ torche:{n:'Torche',d:'Repousse la nuit pour un temps.',stack:1,pal:{...FIRE,...WOODP,b:'#4a535c',c:'#6f7a84'},m:[
+ "......y.....",".....yx.....",".....xzy....","....yxzx....","....xzzx....",".....xx.....","....bccb....",".....22.....",".....23.....",".....22.....",".....12.....",".....11....."]},
+ stim:{n:'Stimulant',d:'Injection exilée : vitesse accrue quelques secondes.',stack:1,pal:{...STEEL,h:'#0a2a33',f:'#1f9fb8',g:'#c8fbff'},m:[
+ "....bbbb....","....bccb....","...bbbbbb...","...bghhhb...","...bgfffb...","...bgfffb...","...bfgffb...","...bffffb...","...bffffb...","...bbbbbb...","....bccb....",".....bb....."]},
+ graine:{n:'Graine de fougère',d:'À planter près de la base.',stack:1,pal:{g:'#4a3220',h:'#74502e',i:'#a0723f',j:'#cf9c5a'},m:[
+ "............","............","............",".....jj.....","....jiij....","...hiiiih...","...hiijih...","...hiiiih...","....hiih....",".....gg.....","............","............"]},
+};
+const SLOTS=[['tete','Tête','casque'],['oeil','Capteur oculaire','oeil'],['dos','Dos','dos'],['torse','Torse','plastron'],['gants','Gants','gants'],
+ ['md','Main droite','lame'],['mg','Main gauche','bouclier'],['anneau','Anneau','anneau'],['minage','Minage','pioche'],['bottes','Bottes','bottes']];
+const SLOTNAME=Object.fromEntries(SLOTS.map(s=>[s[0],s[1]]));
+const STATS=[['arm','Armure'],['deg','Dégâts'],['min','Minage'],['vit','Vitesse'],['ene','Énergie'],['vis','Vision']];
+const OUT='#0a0a0c';
+
+function iconURL(it,ghost){const c=document.createElement('canvas');c.width=c.height=14;const g=c.getContext('2d'),m=it.m,on=(x,y)=>y>=0&&y<12&&x>=0&&x<12&&m[y][x]!=='.';
+ for(let y=-1;y<13;y++)for(let x=-1;x<13;x++){let col=null;
+  if(on(x,y))col=ghost?'#fff':it.pal[m[y][x]];else if(!ghost&&(on(x+1,y)||on(x-1,y)||on(x,y+1)||on(x,y-1)))col=OUT;
+  if(col){g.fillStyle=col;g.fillRect(x+1,y+1,1,1)}}
+ return c.toDataURL()}
+for(const k in ITEMS){ITEMS[k].img=iconURL(ITEMS[k]);ITEMS[k].ghost=iconURL(ITEMS[k],1)}
+
+// ---------- silhouette de l'Exilé (24 × 31) ----------
+const SIL=[
+".........aaaaaa.........","........abbbbbba........",".......abccccccba.......",".......abcffffcba.......",".......abccccccba.......","........abbbbbba........",".........aabbaa.........",
+"....aaaaabbbbbbaaaaa....","...abbbbaccccccabbbba...","..abccbbacffffcabbccba..","..abcba.acccccca.abcba..","..abcba.abcffcba.abcba..","..abcba.abccccba.abcba..","..abcba.aabbbbaa.abcba..","..abcba.abbbbbba.abcba..",
+".abccba..abbbba..abccba.",".abffba..aaaaaa..abffba.",".abccba.aabbbbaa.abccba.","..aaaa..abbbbbba..aaaa..","........abbaabba........",".......abba..abba.......",".......abca..acba.......",".......abca..acba.......",".......abfa..afba.......",
+".......abca..acba.......",".......abba..abba.......",".......abca..acba.......",".......abca..acba.......","......abbba..abbba......",".....abbbba..abbbba.....",".....aaaaaa..aaaaaa....."];
+const SW=26,SH=33;
+function silCanvas(mode){const c=document.createElement('canvas');c.width=SW;c.height=SH;const g=c.getContext('2d');
+ const on=(x,y)=>y>=0&&y<31&&x>=0&&x<24&&SIL[y][x]!=='.';
+ const P={steel:{a:'#2c3238',b:'#4a535c',c:'#6f7a84',f:'#5ce8ff'},stone:{a:'#2b2723',b:'#453e36',c:'#6b6052',f:'#e8e4d8'},warm:{a:'#3a3a3a',b:'#5e6268',c:'#868c92',f:'#5ce8ff'}}[mode];
+ for(let y=-1;y<32;y++)for(let x=-1;x<25;x++){let col=null;const edge=on(x,y)&&!(on(x+1,y)&&on(x-1,y)&&on(x,y+1)&&on(x,y-1));
+  if(mode==='wire'){if(edge)col='#5ce8ff';else if(on(x,y))col=SIL[y][x]==='f'?'#c8fbff':((x+y)&1?'#12596b':'#0a2a33')}
+  else if(on(x,y))col=P[SIL[y][x]];else if(on(x+1,y)||on(x-1,y)||on(x,y+1)||on(x,y-1))col=mode==='stone'?'#100f0e':OUT;
+  if(col){g.fillStyle=col;g.fillRect(x+1,y+1,1,1)}}
+ return c}
+
+// ---------- textures des panneaux ----------
+function hash(x,y,s){let h=(x*374761393+y*668265263+s*982451653)|0;h=(h^(h>>>13))*1274126177|0;return((h^(h>>>16))>>>0)/4294967295}
+function tex(w,h,fn){const c=document.createElement('canvas');c.width=w;c.height=h;const g=c.getContext('2d');for(let y=0;y<h;y++)for(let x=0;x<w;x++){g.fillStyle=fn(x,y);g.fillRect(x,y,1,1)}return`url(${c.toDataURL()})`}
+const RK=['#211e1b','#26221f','#2b2723','#2f2b26','#37322c'];
+document.documentElement.style.setProperty('--slate',tex(48,48,(x,y)=>{const v=hash(x>>1,y>>1,3)*.5+hash(x>>3,y>>2,7)*.5+((y%12===0)?-.3:0);return RK[Math.max(0,Math.min(4,Math.floor(v*5)))]}));
+const MS=['#2e4a1e','#3e5e24','#4a6e2a','#6e9a3a'];
+document.documentElement.style.setProperty('--moss',tex(24,10,(x,y)=>{const d=2+Math.floor(hash(x,0,5)*5);if(y>d)return'#0000';return MS[Math.min(3,Math.floor(hash(x,y,9)*4))]}));
+const WD=['#4a3220','#5e3e1e','#664424','#6e4a28'];
+document.documentElement.style.setProperty('--wood',tex(48,48,(x,y)=>{if(y%12===11)return'#2e1e10';const v=hash(x>>3,y,11)*.4+hash((x+((y/12|0)*17))>>4,y/12|0,13)*.6;return WD[Math.min(3,Math.floor(v*4))]}));
+
+// ---------- état partagé ----------
+const S={base:Array(100).fill(null),perso:Array(10).fill(null),eq:{},sel:0};
+const put=(c,i,id,q=1)=>S[c][i]={id,q};
+[['casque',1],['plastron',1],['bottes',1],['dos',1],['pioche',1],['lame',1]].forEach(([id])=>S.eq[ITEMS[id].s]={id,q:1});
+put('perso',0,'pistolet');put('perso',1,'torche',12);put('perso',2,'stim',3);put('perso',3,'viande',6);put('perso',5,'quartz',24);put('perso',6,'bois',40);put('perso',9,'graine',8);
+[[0,'ardoise',99],[1,'ardoise',99],[2,'ardoise',57],[3,'cuivre',31],[4,'quartz',64],[5,'bois',99],[6,'bois',18],[7,'fibre',45],[10,'mineur'],[11,'oeil'],[12,'gants'],[13,'anneau'],[14,'bouclier'],
+ [20,'viande',14],[21,'torche',30],[22,'graine',22],[23,'stim',5],[30,'cuivre',99],[31,'fibre',12]].forEach(([i,id,q])=>put('base',i,id,q||1));
+const get=r=>r.c==='eq'?S.eq[r.i]||null:S[r.c][r.i];
+const set=(r,v)=>{if(r.c==='eq'){if(v)S.eq[r.i]=v;else delete S.eq[r.i]}else S[r.c][r.i]=v};
+const fits=(v,r)=>!v||r.c!=='eq'||ITEMS[v.id].s===r.i;
+function move(from,to){if(from.c===to.c&&from.i===to.i)return;const a=get(from),b=get(to);if(!a)return;
+ if(!fits(a,to)||!fits(b,from))return;
+ if(b&&b.id===a.id&&ITEMS[a.id].stack){const n=Math.min(99-b.q,a.q);b.q+=n;a.q-=n;if(!a.q)set(from,null)}
+ else{set(to,a);set(from,b)}refresh()}
+function firstFree(c,id){const arr=S[c];if(ITEMS[id].stack){const j=arr.findIndex(v=>v&&v.id===id&&v.q<99);if(j>=0)return j}return arr.findIndex(v=>!v)}
+function quick(r){const v=get(r);if(!v)return;
+ if(r.c==='eq'){for(const c of['perso','base']){const j=S[c].findIndex(x=>!x);if(j>=0)return move(r,{c,i:j})}return}
+ const dest=r.c==='base'?'perso':'base',j=firstFree(dest,v.id);if(j>=0)move(r,{c:dest,i:j})}
+function equip(r){const v=get(r);if(!v)return;if(r.c==='eq')return quick(r);const s=ITEMS[v.id].s;if(s)move(r,{c:'eq',i:s})}
+function totals(){const t={};for(const[k]of STATS)t[k]=0;for(const k in S.eq){const st=ITEMS[S.eq[k].id].st||{};for(const s in st)t[s]+=st[s]}return t}
+
+// ---------- mises en page des fiches ----------
+const L=(x,y)=>[x,y];
+const PROPS=[
+ {k:'A',cls:'sA',name:'Laiton & charbon',sub:'continuité du HUD actuel',ar:1.12,sil:{x:50,y:49,h:56,mode:'steel'},halo:1,keys:1,
+  pos:{tete:L(50,8),dos:L(23,11),oeil:L(77,11),torse:L(10,35),gants:L(10,58),md:L(10,81),minage:L(90,35),anneau:L(90,58),mg:L(90,81),bottes:L(50,91)},
+  t:{base:'Réserve de la base',perso:'Paquetage',sheet:'Fiche de personnage'},who:'La Recrue — exilée de première vague',
+  notes:[['Intention','Reprend tel quel le langage du HUD en jeu : panneaux charbon, liseré laiton, Noto Serif. Les écrans de gestion ne dépaysent pas.'],
+   ['Fiche','Mannequin classique : armes en bas, main droite à gauche de l’écran (côté droit du personnage), comme dans les RPG de référence.'],
+   ['À trancher','Le laiton reste proche de l’or interdit chez les alliés : on le garde terne (#ae8546) et jamais en aplat lumineux.']]},
+ {k:'B',cls:'sB',name:'Tablette d’ardoise',sub:'gravée dans les ruines tyriennes',ar:1.1,sil:{x:50,y:50,h:44,mode:'stone'},ring:1,keys:1,
+  pos:Object.fromEntries(['tete','oeil','md','minage','anneau','bottes','gants','mg','torse','dos'].map((k,j)=>{const a=(-90+36*j)*Math.PI/180;return[k,L(50+39*Math.cos(a),50+39.5*Math.sin(a))]})),
+  t:{base:'Coffre de la base',perso:'Sacoche',sheet:'Stèle de l’Exilé'},who:'La Recrue',
+  notes:[['Intention','Les panneaux sont des dalles d’Ardoise tyrienne (la roche retenue pour la caverne), cases creusées, mousse sur l’arête, quartz laiteux pour la sélection.'],
+   ['Fiche','Les dix emplacements tournent en cercle autour de l’Exilé sculpté en bas-relief, comme un cadran rituel : lecture moins anatomique, mais très identitaire.'],
+   ['À trancher','Police pixel (Pixelify) au lieu de Noto Serif : il faudrait l’adopter aussi dans le HUD pour rester cohérent.']]},
+ {k:'C',cls:'sC',name:'Interface d’exosquelette',sub:'affichage tête haute des Exilés',ar:1.1,sil:{x:50,y:50,h:70,mode:'wire'},lines:1,keys:1,
+  pos:{tete:L(9,10),torse:L(9,29),gants:L(9,48),md:L(9,67),bottes:L(9,86),oeil:L(91,10),dos:L(91,29),anneau:L(91,48),mg:L(91,67),minage:L(91,86)},
+  anchor:{tete:[12,2],oeil:[14,3],torse:[12,11],dos:[18,8],gants:[3,16],anneau:[20,17],md:[4,17],mg:[21,16],minage:[15,19],bottes:[9,29]},
+  t:{base:'Stock base · 10×10',perso:'Paquetage · 10',sheet:'Diagnostic exo'},who:'Unité R-01 · la Recrue',
+  notes:[['Intention','L’inventaire est affiché par l’exosquelette lui-même : verre sombre, trame de balayage, angles coupés. Le cyan est légitime ici puisque c’est la technologie exilée.'],
+   ['Fiche','Schéma filaire de l’exo, chaque emplacement relié par un trait à la pièce qu’il occupe ; le trait s’allume quand l’emplacement est rempli.'],
+   ['À trancher','Très lisible et moderne, mais tranche avec le HUD laiton actuel : il faudrait réserver ce style aux écrans « exo » ou basculer tout le HUD.']]},
+ {k:'D',cls:'sD',name:'Paquetage de campagne',sub:'bois, toile et gros pixels',ar:1.05,sil:{x:25,y:47,h:58,mode:'warm'},niche:1,keys:1,
+  pos:{tete:L(64,8),oeil:L(64,27),torse:L(64,46),gants:L(64,65),bottes:L(64,84),dos:L(89,8),md:L(89,27),mg:L(89,46),anneau:L(89,65),minage:L(89,84)},
+  t:{base:'Coffre de la base',perso:'Paquetage',sheet:'Équipement'},who:'La Recrue',
+  notes:[['Intention','Le plus proche de l’esprit Core Keeper : cadres de bois à gros pixels, cases biseautées, nombres bien contourés. Lisible de loin, chaleureux.'],
+   ['Fiche','Portrait de l’Exilé dans une niche à gauche, emplacements rangés en deux colonnes à droite : compact, facile à parcourir à la manette.'],
+   ['À trancher','Le moins « science-fiction » des quatre : l’exosquelette n’y est rappelé que par le personnage.']]},
+];
+
+const esc=s=>s.replace(/&/g,'&amp;').replace(/</g,'&lt;');
+function slotEl(c,i,extra=''){return`<div class="slot" data-c="${c}" data-i="${i}">${extra}</div>`}
+function build(p){const sec=document.createElement('section');sec.className='prop';sec.id='p'+p.k;
+ let base='';for(let i=0;i<100;i++)base+=slotEl('base',i);
+ let perso='';for(let i=0;i<10;i++)perso+=slotEl('perso',i);
+ const ar=p.ar,sh=p.sil.h,sw=sh*ar*SW/SH;let doll='';
+ if(p.halo)doll+=`<div class="halo" style="left:${p.sil.x}%;top:${p.sil.y}%;width:${sw*1.6}%;height:${sh*1.15}%"></div>`;
+ if(p.ring)doll+=`<div class="disc" style="left:50%;top:50%;width:66%;height:${66/ar}%"></div><div class="rune" style="left:50%;top:50%;width:78%;height:${78/ar}%"></div>`;
+ if(p.niche)doll+=`<div class="niche" style="left:${p.sil.x}%;top:${p.sil.y}%;width:${sw+6}%;height:${sh+14}%"></div>`;
+ if(p.lines)doll+=`<svg class="lines" viewBox="0 0 100 ${100}" preserveAspectRatio="none"></svg>`;
+ doll+=`<canvas class="sil" data-mode="${p.sil.mode}" style="left:${p.sil.x}%;top:${p.sil.y}%;height:${sh}%;width:${sw}%"></canvas>`;
+ if(p.lines)doll+=`<div class="scan" style="left:${p.sil.x-sw/2}%;width:${sw}%;top:${p.sil.y-sh/2}%;--sh:${0}px"></div>`;
+ for(const[k,n]of SLOTS){const[x,y]=p.pos[k];doll+=`<div class="slot" data-c="eq" data-i="${k}" style="left:${x}%;top:${y}%"><span class="lab">${n}</span></div>`}
+ sec.innerHTML=`<div class="ptitle"><span class="letter">${p.k}</span><h2>${p.name}</h2><span>— ${p.sub}</span></div>
+ <div class="stagebg"><div class="screen ${p.cls}" data-skin="${p.cls}">
+  <div class="pnl pbase"><div class="hd"><h3>${p.t.base}</h3><span class="cnt"></span></div><div class="inv">${base}</div></div>
+  <div class="pnl psheet"><div class="hd"><h3>${p.t.sheet}</h3><span></span></div><div class="who">${p.who}</div>
+   <div class="doll" style="aspect-ratio:1/${ar};margin-bottom:22px">${doll}</div><div class="stats"></div></div>
+  <div class="pnl pperso"><div class="hd"><h3>${p.t.perso}</h3><span>1 – 0 : emplacement actif</span></div><div class="inv">${perso}</div></div>
+ </div></div>
+ <div class="notes">${p.notes.map(([a,b])=>`<div><b>${a}</b>${b}</div>`).join('')}</div>`;
+ document.getElementById('props').appendChild(sec);
+ const cv=sec.querySelector('canvas.sil'),src=silCanvas(p.sil.mode);cv.width=SW;cv.height=SH;cv.getContext('2d').drawImage(src,0,0);
+ if(p.lines){const svg=sec.querySelector('svg.lines'),doll=sec.querySelector('.doll');
+  const draw=()=>{const W=doll.clientWidth,H=doll.clientHeight;if(!W)return;svg.setAttribute('viewBox',`0 0 ${W} ${H}`);
+   const sx=p.sil.x/100*W-sw/200*W,sy=p.sil.y/100*H-sh/200*H,cw=sw/100*W/SW,ch=sh/100*H/SH;let out='';
+   for(const[k]of SLOTS){const[x,y]=p.pos[k],[ax,ay]=p.anchor[k],tx=sx+(ax+1.5)*cw,ty=sy+(ay+1.5)*ch,left=x<50,ex=x/100*W+(left?1:-1)*(.135*W/2+2),ey=y/100*H,mx=left?Math.max(ex+10,tx-26):Math.min(ex-10,tx+26);
+    out+=`<path data-k="${k}" d="M${ex} ${ey}H${mx}L${tx} ${ty}"/><circle cx="${tx}" cy="${ty}" r="2.2"/>`}
+   svg.innerHTML=out;const sc=sec.querySelector('.scan');sc.style.setProperty('--sh',(sh/100*H)+'px');refreshLines()};
+  new ResizeObserver(draw).observe(doll)}}
+PROPS.forEach(build);
+
+function refreshLines(){document.querySelectorAll('svg.lines path').forEach(pth=>pth.classList.toggle('on',!!S.eq[pth.dataset.k]))}
+function refresh(){
+ document.querySelectorAll('.slot').forEach(el=>{const r={c:el.dataset.c,i:el.dataset.c==='eq'?el.dataset.i:+el.dataset.i},v=get(r);
+  let h='';if(v){h=`<img class="it" src="${ITEMS[v.id].img}" alt="">`+(ITEMS[v.id].stack?`<span class="q">${v.q}</span>`:'')}
+  else if(r.c==='eq'){const g=SLOTS.find(s=>s[0]===r.i)[2];h=`<img class="gh" src="${ITEMS[g].ghost}" alt="">`}
+  if(r.c==='perso')h+=`<span class="k">${(r.i+1)%10}</span>`;
+  const lab=el.querySelector('.lab');el.innerHTML=h;if(lab)el.appendChild(lab);
+  el.classList.toggle('has',!!v);el.classList.toggle('sel',r.c==='perso'&&r.i===S.sel)});
+ const used=S.base.filter(Boolean).length;document.querySelectorAll('.cnt').forEach(e=>e.textContent=`${used} / 100`);
+ const t=totals();document.querySelectorAll('.stats').forEach(e=>e.innerHTML=STATS.map(([k,n])=>`<div><span>${n}</span><b>${t[k]}</b></div>`).join(''));
+ refreshLines()}
+refresh();
+
+// ---------- interactions ----------
+const tip=document.getElementById('tip');let drag=null,last={t:0,el:null};
+const refOf=el=>({c:el.dataset.c,i:el.dataset.c==='eq'?el.dataset.i:+el.dataset.i});
+function showTip(el,e){const v=get(refOf(el));if(!v||drag){tip.style.display='none';return}const it=ITEMS[v.id];
+ tip.className='tip '+el.closest('.screen').dataset.skin;
+ const st=Object.entries(it.st||{}).map(([k,n])=>`${STATS.find(s=>s[0]===k)[1]} ${n>0?'+':''}${n}`).join(' · ');
+ tip.innerHTML=`<b>${esc(it.n)}</b><i>${it.s?SLOTNAME[it.s]:'Ressource · pile de 99'}</i>${esc(it.d)}${st?`<div class="st">${st}</div>`:''}`;
+ tip.style.display='block';moveTip(e)}
+function moveTip(e){const w=tip.offsetWidth,h=tip.offsetHeight;let x=e.clientX+16,y=e.clientY+16;if(x+w>innerWidth-8)x=e.clientX-w-12;if(y+h>innerHeight-8)y=e.clientY-h-12;tip.style.left=x+'px';tip.style.top=y+'px'}
+document.addEventListener('pointerover',e=>{const el=e.target.closest('.slot');if(el)showTip(el,e)});
+document.addEventListener('pointerout',e=>{if(e.target.closest('.slot')&&!e.relatedTarget?.closest?.('.slot'))tip.style.display='none'});
+document.addEventListener('pointerdown',e=>{const el=e.target.closest('.slot');if(!el||e.button!==0)return;e.preventDefault();
+ drag={el,from:refOf(el),x:e.clientX,y:e.clientY,on:false,shift:e.shiftKey}});
+document.addEventListener('pointermove',e=>{if(tip.style.display==='block')moveTip(e);if(!drag)return;
+ if(!drag.on&&Math.hypot(e.clientX-drag.x,e.clientY-drag.y)>5){const v=get(drag.from);if(!v){drag=null;return}
+  drag.on=true;tip.style.display='none';document.body.classList.add('dragging');
+  drag.img=Object.assign(document.createElement('img'),{src:ITEMS[v.id].img,className:'drag'});document.body.appendChild(drag.img);drag.el.style.opacity=.35;
+  document.querySelectorAll('.slot[data-c="eq"]').forEach(s=>s.classList.add(ITEMS[v.id].s===s.dataset.i?'ok':'no'))}
+ if(drag.on){drag.img.style.left=e.clientX+'px';drag.img.style.top=e.clientY+'px'}});
+document.addEventListener('pointerup',e=>{if(!drag)return;const d=drag;drag=null;
+ if(d.on){d.img.remove();d.el.style.opacity='';document.body.classList.remove('dragging');document.querySelectorAll('.slot.ok,.slot.no').forEach(s=>s.classList.remove('ok','no'));
+  const t=document.elementFromPoint(e.clientX,e.clientY)?.closest('.slot');if(t)move(d.from,refOf(t));return}
+ const now=performance.now();
+ if(d.shift){quick(d.from);return}
+ if(last.el===d.el&&now-last.t<320){equip(d.from);last={t:0,el:null};return}
+ last={t:now,el:d.el};if(d.from.c==='perso'){S.sel=d.from.i;refresh()}});
+document.addEventListener('keydown',e=>{if(/^[0-9]$/.test(e.key)){S.sel=(+e.key+9)%10;refresh()}});
+</script>
+</body></html>

@@ -1,14 +1,13 @@
 class_name TerrainPainter
 extends RefCounted
-## Repeint le sol après un creusement ou la révélation d'une galerie, à l'identique du prototype
-## (73b410f, adepts.js : digCell ; galleries.js : paintRegion ; Index.html : caveTile, rockTile).
+## Repeint le sol après un creusement ou la révélation d'une galerie, avec les règles du prototype
+## (73b410f, adepts.js : digCell ; galleries.js : paintRegion) et les textures du style ardoise.
 ##
-## Les tuiles sont calculées en coordonnées locales 32×32 : leurs bases (sans les grains aléatoires) sont
-## constantes et extraites par le baker. Ici, on ajoute les 6 grains de caveTile, tirés du générateur de
-## la case, puis, pour les cases à moitié creuses, le masque pixel par pixel et les règles de bord.
+## Les textures (dalles, dessus de roche, terre creusée) sont périodiques et lues en coordonnées
+## absolues du sol, comme le sol complet généré par tools/ardoise/ardoise.py : une case repeinte se
+## raccorde à ses voisines. Pour les cases à moitié creuses : masque pixel par pixel et règles de bord.
 ## Le travail se fait sur des tableaux d'octets RGBA (bien plus rapide que get_pixel / set_pixel).
 
-const TILES := "res://assets/baked/world/tiles/"
 const TILE := 32
 ## Le masque couvre la tuile et une marge de 3 px (les règles de bord regardent jusqu'à ±3 px).
 const M := 38
@@ -16,22 +15,20 @@ const M := 38
 var terrain: Terrain
 var state: TerrainState
 var stats := {"full": 0, "mixed": 0, "skip": 0}
-var _cave := PackedByteArray()
-var _rock := PackedByteArray()
-var _floor4 := PackedByteArray()
-var _floor5 := PackedByteArray()
+var _floor_tex := PackedByteArray()
+var _rock_tex := PackedByteArray()
+var _dug_tex := PackedByteArray()
 var _rock_c: Array[PackedByteArray] = []
 
 
 func _init(ground: Terrain, terrain_state: TerrainState) -> void:
 	terrain = ground
 	state = terrain_state
-	_cave = _rgba(load(TILES + "cave_base.png")).get_data()
-	_rock = _rgba(load(TILES + "rock_base.png")).get_data()
-	var cave_c: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://assets/baked/manifest.json"))["world"]["CAVE_C"]
-	_floor4 = _bytes(cave_c["floor"][4])
-	_floor5 = _bytes(cave_c["floor"][5])
-	for hex: String in cave_c["rock"]:
+	_floor_tex = _rgba(load(ArtStyle.TILES + "floor.png")).get_data()
+	_rock_tex = _rgba(load(ArtStyle.TILES + "rock.png")).get_data()
+	_dug_tex = _rgba(load(ArtStyle.TILES + "dug.png")).get_data()
+	var palette: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(ArtStyle.PALETTE))
+	for hex: String in palette["rock"]:
 		_rock_c.append(_bytes(hex))
 
 
@@ -57,39 +54,29 @@ func ground_px(x: float, z: float) -> Vector2i:
 	return Vector2i(int(x * 8.0) + terrain.origin.x, int(z * 8.0) + terrain.origin.y)
 
 
-## Grains de caveTile : 6 tirages, (R() − 0,5)·40 | 0 et R()·14 | 0 autour du centre de la tuile.
-## `mask` (facultatif) limite l'écriture aux pixels creux, comme le proxy M de paintRegion.
-func _specks(out: PackedByteArray, r: Rng, mask: PackedByteArray = PackedByteArray()) -> void:
-	for k in 6:
-		var x := int(16.0 + (r.next() - 0.5) * 40.0)  # « | 0 » : troncature vers zéro
-		var y := int(9.0 + r.next() * 14.0)
-		_put(out, x, y, _floor5, mask)
-		if r.next() < 0.4:
-			_put(out, x + 1, y, _floor4, mask)
+## Tuile 32×32 de la texture périodique `tex`, coin haut-gauche au pixel absolu `p` du sol.
+static func _sample(tex: PackedByteArray, p: Vector2i) -> PackedByteArray:
+	var n := ArtStyle.PERIOD
+	var tx := posmod(p.x, n)
+	var first := mini(TILE, n - tx) * 4
+	var out := PackedByteArray()
+	for row in TILE:
+		var o := posmod(p.y + row, n) * n * 4
+		out.append_array(tex.slice(o + tx * 4, o + tx * 4 + first))
+		if first < TILE * 4:
+			out.append_array(tex.slice(o, o + TILE * 4 - first))
+	return out
 
 
-static func _put(out: PackedByteArray, x: int, y: int, c: PackedByteArray, mask: PackedByteArray) -> void:
-	if x < 0 or y < 0 or x >= TILE or y >= TILE:
-		return
-	if not mask.is_empty() and mask[(y + 3) * M + x + 3] == 0:
-		return
-	var o := (y * TILE + x) * 4
-	out[o] = c[0]
-	out[o + 1] = c[1]
-	out[o + 2] = c[2]
-	out[o + 3] = 255
-
-
-## digCell : sol de grotte repeint, bords assombris côté roche (bandes '#0008').
+## digCell : terre creusée (avec éclats d'ardoise), bords assombris côté roche (bandes '#0008').
 func paint_dug_cell(i: int, j: int) -> void:
 	# Ordre du prototype : une révélation antérieure est entièrement peinte avant cette case.
 	if not _queue.is_empty():
 		finish()
 	var x := i * 4.0
 	var z := j * 4.0
-	var out := _cave.duplicate()
-	_specks(out, Rng.new(i * 977 + j * 31 + 7))
 	var p := ground_px(x, z)
+	var out := _sample(_dug_tex, p)
 	terrain.blit(_image(out), p.x, p.y)
 	if not state.walkable(x - 2.0, z + 2.0):
 		terrain.darken(Rect2i(p.x, p.y, 2, TILE))
@@ -149,23 +136,22 @@ func _paint_region_cell(x: float, z: float) -> void:
 		stats["skip"] += 1
 		return
 	stats["full" if all else "mixed"] += 1
-	var r := Rng.new((int(x) * 977 + int(z) * 31) & 0xFFFFFFFF)
+	var p := ground_px(x, z)
+	var cave := _sample(_floor_tex, p)
 	var out: PackedByteArray
 	if all:
-		out = _cave.duplicate()
-		_specks(out, r)
+		out = cave
 	else:
 		var mask := _hollow_mask(x, z)
-		out = _rock.duplicate()
+		out = _sample(_rock_tex, p)
 		for py in TILE:
 			for px in TILE:
 				if mask[(py + 3) * M + px + 3] == 1:
 					var o := (py * TILE + px) * 4
-					out[o] = _cave[o]
-					out[o + 1] = _cave[o + 1]
-					out[o + 2] = _cave[o + 2]
+					out[o] = cave[o]
+					out[o + 1] = cave[o + 1]
+					out[o + 2] = cave[o + 2]
 					out[o + 3] = 255
-		_specks(out, r, mask)
 		for py in TILE:
 			for px in TILE:
 				var m := (py + 3) * M + px + 3
@@ -181,7 +167,6 @@ func _paint_region_cell(x: float, z: float) -> void:
 					_copy(out, o, _rock_c[7 if mask[m - M] == 1 else 5])
 				elif mask[m - 2] == 1 or mask[m + 2] == 1:
 					_copy(out, o, _rock_c[0] if mask[m - 1] == 1 or mask[m + 1] == 1 else _rock_c[6])
-	var p := ground_px(x, z)
 	terrain.blit(_image(out), p.x, p.y)
 
 

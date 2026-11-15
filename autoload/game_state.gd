@@ -5,6 +5,8 @@ extends Node
 
 ## Temps de simulation écoulé en secondes (currentTime dans Index.html:65).
 var sim_time: float = 0.0
+## Accélération des chantiers activée par le bouton du HUD.
+var fast_construction := false
 
 ## Partie terminée (victoire ou défaite) : la simulation est figée.
 var ended: bool = false
@@ -17,6 +19,12 @@ var orb_progress: float = 0.0
 var orb_finished_at: float = INF
 ## Étincelle de l'Ancre partie, balistes pas encore armées (elles s'arment à son arrivée, 4,75 s après).
 var spark_pending: bool = false
+## Surcharge de l'Ancre (sim/overload.gd) : début (INF avant), impact de la nova sur l'Ingénieur,
+## Ingénieur pris dedans, étape (0 aucune, 1 en cours, 2 armure perdue, 3 dialogue lancé).
+var overload_at: float = INF
+var overload_hit: float = INF
+var overload_unit: Unit = null
+var overload_stage: int = 0
 ## Instant de (re)lancement de la séquence du portail des Exilés (PORTAL.start).
 var portal_start: float = 0.0
 ## Portails divins actifs (DEITY_PORTALS[].active) : id du dieu -> vrai pendant une invocation.
@@ -30,6 +38,18 @@ var next_wave: float = 0.0
 
 ## Ressources (RES, buildings.js) : Forge, Vie, Discipline, Savoir.
 var res: Dictionary = {"forge": 0.0, "vie": 0.0, "discipline": 0.0, "savoir": 0.0}
+
+## Ressource cumulative : soldats ennemis tués et nouveaux adeptes recrutés.
+var menace: int = 0
+## Recherches achevées et en cours (id -> {building, progress}).
+var research_done: Dictionary = {}
+var research_jobs: Dictionary = {}
+## Coffre antique : le système qui le débloque positionne ce drapeau.
+var base_inventory_unlocked := false
+## Une pile {item, quantity} par case, limitée à 9 999 objets.
+var base_inventory: Array[Dictionary] = []
+## Objets persistants au sol : {item: identifiant, position: Vector2(x, z)}.
+var ground_items: Array[Dictionary] = []
 
 ## Unités alliées et sélection (units, selected).
 var units: Array[Unit] = []
@@ -50,6 +70,8 @@ var wave: int = 0
 ## Assauts programmés (spawnQueue : {"at": instant}) et ennemis vivants (étape 8).
 var spawn_queue: Array = []
 var enemies: Array = []
+## Corps purement visuels : ne bloquent ni les assauts ni le ciblage.
+var enemy_corpses: Array[Enemy] = []
 ## Bâtiments du sanctuaire (buildings) et unités tombées que le Puits des Âmes peut rappeler (FALLEN).
 var buildings: Array[Building] = []
 var fallen: Array[Unit] = []
@@ -69,17 +91,28 @@ var build_pointer: Variant = null
 
 func reset() -> void:
 	sim_time = 0.0
+	fast_construction = false
 	ended = false
 	orb_active = false
 	orb_progress = 0.0
 	orb_finished_at = INF
 	spark_pending = false
+	overload_at = INF
+	overload_hit = INF
+	overload_unit = null
+	overload_stage = 0
 	portal_start = 0.0
 	deity_active = {}
 	orb_owner = null
 	core_hp = 100.0
 	next_wave = 0.0
 	res = {"forge": 0.0, "vie": 0.0, "discipline": 0.0, "savoir": 0.0}
+	menace = 0
+	research_done.clear()
+	research_jobs.clear()
+	base_inventory_unlocked = false
+	base_inventory.clear()
+	ground_items.clear()
 	units.clear()
 	selected.clear()
 	next_uid = 0
@@ -92,6 +125,7 @@ func reset() -> void:
 	wave = 0
 	spawn_queue = []
 	enemies = []
+	enemy_corpses.clear()
 	buildings.clear()
 	fallen.clear()
 	pray_popups.clear()

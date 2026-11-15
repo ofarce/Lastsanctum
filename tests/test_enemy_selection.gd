@@ -6,11 +6,11 @@ extends "res://tests/econ_case.gd"
 
 func test_reach_d13_and_hud_range() -> void:
 	var sim := game()
-	check_eq(Catalog.FIGHT["flammes"]["reach"], 9.0, "lance-flammes : portée 4,5 × 2")
+	check_eq(Catalog.FIGHT["flammes"]["reach"], 12.0, "lance-flammes : portée 12 (D15)")
 	check_eq(Catalog.FIGHT["archer"]["reach"], 56.0, "archer : portée 14 × 4")
 	check(Catalog.FIGHT["flammes"]["seek"] > Catalog.FIGHT["flammes"]["reach"], "lance-flammes : détection au-delà de la portée")
 	check(Catalog.FIGHT["archer"]["seek"] > Catalog.FIGHT["archer"]["reach"], "archer : détection au-delà de la portée")
-	var want := {"engineer": "86", "flammes": "9", "archer": "56", "lame": "2,2", "paladin": "2,2", "shooter": "17,2", "healer": "8,6", "guard": "8,6"}
+	var want := {"engineer": "86", "flammes": "12", "archer": "56", "lame": "2,2", "paladin": "2,2", "shooter": "17,2", "healer": "8,6", "guard": "8,6"}
 	for role: String in want:
 		var u := sim.spawn("U", 0.0, -120.0, role)
 		GameState.selected = [u]

@@ -10,6 +10,9 @@ var id := 0
 var name := ""
 var role := ""
 var squad := 0
+## Escouades de caserne : effectif initial et ralliement depuis le Puits.
+var squad_capacity := 0
+var rejoining := false
 var x := 0.0
 var z := 0.0
 var tx := 0.0
@@ -43,8 +46,17 @@ var dash: Variant = null
 var charged := false
 var orage := 0
 var sillon_at := 0.0
+## Prochain jet visuel du lance-flammes (tir continu, D15).
+var flame_fx := 0.0
 ## Orientation imposée par une attaque (u._face) et départ des animations d'attaque (u._swT0, u._sw, u._shT0).
 var face := 0
+## Surcharge de l'Ancre (sim/overload.gd) : armure perdue ; à genoux, à bout de souffle, à partir de
+## winded_at et jusqu'au prochain ordre (INF sinon).
+## Paquetage personnel : piles {item, quantity}, 9 999 objets par case ; accessible sans armure.
+var inventory: Array[Dictionary] = []
+var inventory_capacity := 10
+var unarmored := false
+var winded_at := INF
 var sw_t0 := -INF
 var sw := -1
 var sh_t0 := -INF

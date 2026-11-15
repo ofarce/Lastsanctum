@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Mettre à jour et lancer Exilés
+Comment=Reconstruit le build Linux puis lance le jeu
+Exec=/home/drums/code/exilesdefense/lancer-jeu.sh
+Path=/home/drums/code/exilesdefense
+Icon=/home/drums/code/exilesdefense/icon.svg
+Terminal=true
+Categories=Game;

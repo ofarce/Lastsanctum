@@ -96,6 +96,74 @@ func test_closes_when_speaker_hidden() -> void:
 	check(not b.active(), "fermée quand l'orateur disparaît")
 
 
+func test_equipment_dialogue_after_turrets() -> void:
+	var b := _bubble()
+	var sim: Simulation = _main.get_node("Simulation")
+	var hud: Hud = _main.get_node("Hud")
+	var u := _emerge(sim)
+	hud.world.camera.set_view(Vector2.ZERO, hud.world.camera.px)
+	GameState.orb_active = true
+	GameState.spark_pending = true
+	GameState.orb_finished_at = GameState.sim_time
+	sim.update_orb(0.0)
+	check(not b.dialogue.get("any_button", false), "pas de nouvelle réplique avant la reconstruction")
+	GameState.sim_time += Simulation.SPARK_ARRIVAL
+	var spark := hud.world.anchor_spark
+	var bend := Vector2(24.0, -110.0)
+	spark._cam_path = PackedVector2Array([u.pos(), bend, Vector2.ZERO])
+	sim.update_orb(0.0)
+	check_eq(hud.world.camera.cam, Vector2.ZERO, "aucun saut au déclenchement du retour")
+	check(not b.active(), "réplique attend l'arrivée de la caméra")
+	spark._return_tick(AnchorSpark.RETURN_DURATION * 0.5)
+	check_eq(hud.world.camera.cam, bend, "retour par le coude du trajet aller")
+	check(not b.active(), "pas de dialogue à mi-chemin")
+	spark._return_tick(AnchorSpark.RETURN_DURATION * 0.5)
+	check_eq(hud.world.camera.cam, u.pos(), "caméra recentrée sur l'Ingénieur")
+	# Surcharge de l'Ancre (sim/overload.gd) avant le dialogue.
+	check(Overload.active() and GameState.overload_unit == u, "surcharge lancée au retour de la caméra")
+	check(not b.active(), "pas de dialogue pendant la surcharge")
+	var at := Vector2(u.x, u.z)
+	u.tx = u.x + 5.0
+	while GameState.sim_time < GameState.overload_hit + Overload.BLAST - 0.05:
+		sim.tick(0.04)
+	check(not u.unarmored and u.hp > 1.0, "armure et PV intacts avant l'éclatement")
+	check_eq(Vector2(u.x, u.z), at, "l'Ingénieur reste sur place")
+	while GameState.sim_time < GameState.overload_hit + Overload.DIALOGUE - 0.05:
+		sim.tick(0.04)
+	check(u.unarmored and u.hp == 1.0, "sans armure, à 1 PV")
+	check_eq(HudModel.portrait_key(u), "engineer-bare", "portrait sans armure")
+	EngineerAim.load_frames()
+	check_eq(EngineerAim.frames_bare.size(), EngineerAim.frames.size(), "poses de tir sans armure")
+	check(Overload.winded(u), "à genoux")
+	check(not b.active(), "dialogue après la chute")
+	sim.tick(0.1)
+	check_eq(b.line(), "Je suis en vie... Mais mon équipement n'a pas résisté. Et sans lui, impossible de combattre le Credo.", "première réplique")
+	b.tick(100.0)
+	check(b.active(), "attend un appui sans fermeture automatique")
+	var key := InputEventKey.new()
+	key.keycode = KEY_A
+	key.pressed = true
+	key.echo = true
+	hud._input(key)
+	check_eq(b.index, 0, "répétition clavier ignorée")
+	key.echo = false
+	hud._input(key)
+	check_eq(b.line(), "Peut-être que la Salamandre peut m'aider. Je devrais pouvoir ériger des temples grâce à mon Enonciation.", "une touche quelconque affiche la seconde réplique")
+	var click := InputEventMouseButton.new()
+	click.button_index = MOUSE_BUTTON_LEFT
+	click.pressed = true
+	hud._input(click)
+	check(not b.active(), "clic ferme la seconde réplique")
+	sim.update_orb(0.0)
+	check(not b.active(), "séquence déclenchée une seule fois")
+	check(Overload.winded(u), "toujours à genoux sans ordre")
+	u.tx = u.x + 4.0
+	check(not Overload.winded(u), "se relève au premier ordre")
+	check(u.unarmored, "reste sans armure")
+	sim.new_game(20261114)
+	check(not Overload.active() and GameState.overload_unit == null, "nouvelle partie : surcharge remise à zéro")
+
+
 func test_new_game_closes_dialogue() -> void:
 	var b := _bubble()
 	var sim: Simulation = _main.get_node("Simulation")

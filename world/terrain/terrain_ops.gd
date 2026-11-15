@@ -23,6 +23,7 @@ func dig_cell(i: int, j: int) -> void:
 		return
 	state.dug[key] = true
 	state.dig_hits.erase(key)
+	state.dig_hit_at.erase(key)
 	var x := i * 4.0
 	var z := j * 4.0
 	if painter:

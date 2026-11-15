@@ -19,7 +19,8 @@ func _init() -> void:
 	focus_mode = Control.FOCUS_NONE
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	_icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_icon.stretch_mode = TextureRect.STRETCH_KEEP_CENTERED
+	_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	add_child(_icon)
 	_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_label.vertical_alignment = VERTICAL_ALIGNMENT_TOP
@@ -47,8 +48,9 @@ func set_action(a: Dictionary) -> void:
 		_icon.texture = HudStyle.icon(_icon_name, 18, 1.6)
 	_label.text = a["label"]
 	var k: String = a["key"]
-	_kbd.text = "Espace" if k == " " else k.to_upper()
-	_cd.text = a["cooldown"]
+	_kbd.text = a.get("status", "") if a.get("status", "") else ("Espace" if k == " " else k.to_upper())
+	_cd.text = a.get("cost_text", a["cooldown"])
+	_cd.add_theme_font_size_override("font_size", 9 if a.has("cost_text") else 10)
 	_relayout()
 	queue_redraw()
 
@@ -77,10 +79,19 @@ func _relayout() -> void:
 	_kbd.size = Vector2(kbd_w, 13.0)
 	_cd.position = Vector2(size.x - 44.0, 2.0)
 	_cd.size = Vector2(40.0, 12.0)
+	if action.has("cost_text"):
+		_icon.position.x = 3.0
+		_cd.position = Vector2(size.x - 43.0, top + 2.0)
+		_cd.size = Vector2(41.0, 14.0)
 	var fg := Color("#7c7c6c") if disabled else (Color("#ffe5ac") if _lit() else HudStyle.IVORY)
 	_label.add_theme_color_override("font_color", fg)
-	_kbd.add_theme_color_override("font_color", fg)
+	_kbd.add_theme_color_override("font_color", Color("#7ae070") if action.get("completed", false) else fg)
 	_icon.modulate = Color("#727263") if disabled else (Color("#ffe1a3") if _lit() else Color("#e9ce9e"))
+	if _icon_name == "mining_seal":
+		_icon.modulate = Color("#727263") if disabled else Color.WHITE
+		_icon.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	else:
+		_icon.texture_filter = CanvasItem.TEXTURE_FILTER_PARENT_NODE
 
 
 func _notification(what: int) -> void:

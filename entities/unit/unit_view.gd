@@ -19,6 +19,7 @@ const HP_BG := Color("#191b1d")
 const HP_ALLY := Color("#85d6b1")
 const HP_GUARD := Color("#9db88f")
 const HP_ENEMY := Color("#db7772")
+const BARE := "res://assets/imported/engineer/engineer_bare"
 
 var unit: Unit
 var simulation: Simulation
@@ -26,8 +27,14 @@ var world: World
 var _meta: Dictionary
 var _idle: Array[AtlasTexture] = []
 var _walk: Array[AtlasTexture] = []
+var _enemy_attack: Array[AtlasTexture] = []
+var _enemy_death: Array[AtlasTexture] = []
+var _corpse_shadow_ready := false
+static var _enemy_sheets: Dictionary = {}
 var _kneel: Array[AtlasTexture] = []
 var _kneel_fps := 12.0
+## Ingénieur sans armure (surcharge de l'Ancre) : repos, marche et agenouillement à bout de souffle.
+static var _bare: Dictionary
 var enemy := false
 ## Animations d'attaque (ATK.sword[0..4], ATK.xbow) : 12 images, ancre propre.
 static var _atk: Dictionary
@@ -52,7 +59,7 @@ func setup(u: Unit, meta: Dictionary, sim: Simulation, w: World = null) -> void:
 	world = w
 	_meta = meta
 	enemy = u.is_enemy()
-	var base := ("res://assets/baked/enemies/%s_" if enemy else "res://assets/baked/units/%s_") % u.role
+	var base := (EnemyArt.ROOT + "%s_" if enemy else "res://assets/baked/units/%s_") % u.role
 	if not enemy and (u.role == "paladin" or u.role == "shooter"):
 		if _atk.is_empty():
 			_atk = JSON.parse_string(FileAccess.get_file_as_string("res://assets/baked/manifest.json"))["attacks"]
@@ -61,8 +68,24 @@ func setup(u: Unit, meta: Dictionary, sim: Simulation, w: World = null) -> void:
 				_sword.append(_frames("res://assets/baked/attacks/sword_%d.png" % i, _atk["sword"]["sheet"]))
 		else:
 			_xbow = _frames("res://assets/baked/attacks/xbow.png", _atk["xbow"]["sheet"])
-	_idle = _frames(base + "idle.png", meta["idle"])
-	_walk = _frames(base + "walk.png", meta["walk"])
+	if not enemy and u.role == "engineer" and _bare.is_empty():
+		var bm: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(BARE + ".json"))
+		_bare = {"meta": bm}
+		for anim: String in ["idle", "walk", "kneel", "pray"]:
+			_bare[anim] = _frames(BARE + "_%s.png" % anim, bm[anim])
+	if enemy:
+		if not _enemy_sheets.has(u.role):
+			var sheets := {}
+			for action: String in ["idle", "walk", "attack", "death"]:
+				sheets[action] = _frames(base + action + ".png", meta[action])
+			_enemy_sheets[u.role] = sheets
+		_idle = _enemy_sheets[u.role]["idle"]
+		_walk = _enemy_sheets[u.role]["walk"]
+		_enemy_attack = _enemy_sheets[u.role]["attack"]
+		_enemy_death = _enemy_sheets[u.role]["death"]
+	else:
+		_idle = _frames(base + "idle.png", meta["idle"])
+		_walk = _frames(base + "walk.png", meta["walk"])
 	if meta.has("kneel"):
 		_kneel = _frames(base + "kneel.png", meta["kneel"])
 		_kneel_fps = float(meta["kneel"].get("fps", 12.0))
@@ -94,8 +117,23 @@ func _process(_delta: float) -> void:
 
 func _update() -> void:
 	var u := unit
-	visible = not u.hidden and u.alive()
+	visible = not u.hidden and (u.alive() or (enemy and u.dead)) and not Overload.hidden_in_blast(u)
 	position = Proj.nat(u.x, 0.0, u.z)
+	if enemy and u.dead:
+		var age := maxf(0.0, GameState.sim_time - (u as Enemy).died_at)
+		_body.texture = _enemy_death[mini(_enemy_death.size() - 1, floori(age * float(_meta["death"]["fps"])))]
+		_body.offset = Vector2(-float(_meta["ax"]), -float(_meta["ay"]))
+		_body.position = Vector2.ZERO
+		_body.scale = Vector2(-1 if u.face < 0 else 1, 1)
+		var progress := clampf(age / EnemyArt.DEATH_DURATION, 0.0, 1.0)
+		_under.position = Vector2(8.0 * progress, -3.0 * progress)
+		_under.scale = Vector2(1.0 + progress, 1.0)
+		if not _corpse_shadow_ready:
+			_corpse_shadow_ready = true
+			_under.queue_redraw()
+		_over.visible = false
+		modulate.a = clampf(EnemyArt.CORPSE_LIFETIME - age, 0.0, 1.0)
+		return
 	if is_nan(_lx):
 		_lx = u.x
 		_lz = u.z
@@ -117,17 +155,20 @@ func _update() -> void:
 	_face = u.face if u.face != 0 else 1
 	_lx = u.x
 	_lz = u.z
-	var wn := _walk.size()
+	var bare := u.unarmored and not _bare.is_empty()
+	var walk_frames: Array[AtlasTexture] = _bare["walk"] if bare else _walk
+	var wn := walk_frames.size()
 	var wi := floori(_wp * wn) % wn
-	var bob := 1 if not _meta.get("self_bob", false) and walking and (wi == 1 or wi == 4) else 0
+	var bob_i := floori(_wp * 6.0) if enemy else wi
+	var bob := 1 if not _meta.get("self_bob", false) and walking and (bob_i == 1 or bob_i == 4) else 0
 	var kick := 1 if not enemy and u.attack > (0.7 if u.role == "paladin" else 0.62) else 0
 	var t := GameState.sim_time
 	var frame: AtlasTexture
 	var key: int = (u as Enemy).anim_key() if enemy else u.id
 	if walking:
-		frame = _walk[wi]
+		frame = walk_frames[wi]
 	else:
-		frame = _idle[(floori(t * SPR_FRAMES / SPR_LOOP) + (key & 7) * 3) % SPR_FRAMES]
+		frame = (_bare["idle"] if bare else _idle)[(floori(t * SPR_FRAMES / SPR_LOOP) + (key & 7) * 3) % SPR_FRAMES]
 	var ax := float(_meta["ax"])
 	var ay := float(_meta["ay"])
 	# attackFrame : coup d'épée (0,8 s) ou salve d'arbalète (0,7 s), sur 12 images.
@@ -147,11 +188,40 @@ func _update() -> void:
 		ax = atk_meta["ax"]
 		ay = atk_meta["ay"]
 		kick = 0
+	if enemy:
+		var age := t - (u as Enemy).attack_started
+		if age >= 0.0 and age < float(Catalog.ENEMY[u.role]["cd"]):
+			frame = _enemy_attack[mini(_enemy_attack.size() - 1, floori(age * float(_meta["attack"]["fps"])))]
+			bob = 0
 	if not _kneel.is_empty() and simulation and simulation.kneeling(u):
-		frame = _kneel[floori(t * _kneel_fps) % _kneel.size()]
+		if bare:
+			var pr: Array = _bare["pray"]
+			frame = pr[floori(t * float(_bare["meta"]["pray"]["fps"])) % pr.size()]
+		else:
+			frame = _kneel[floori(t * _kneel_fps) % _kneel.size()]
+	# Surcharge de l'Ancre : retombe à genoux, puis souffle court jusqu'au prochain ordre.
+	var drop := 0.0
+	var winded := bare and Overload.winded(u)
+	if winded:
+		var age := t - u.winded_at
+		var kn: Array = _bare["kneel"]
+		frame = kn[floori(age * float(_bare["meta"]["kneel"]["fps"])) % kn.size()]
+		drop = -10.0 * (1.0 - pow(clampf(age / Overload.FALL, 0.0, 1.0), 3.0))
+		kick = 0
+		bob = 0
+		_face = 1 if CaveShape.CORE.x >= u.x else -1
+	# Creusement : l'Ingénieur vise et tire ses pitons d'ancrage (EngineerAim).
+	if u.role == "engineer" and not walking and world and not winded:
+		var aim: Variant = EngineerAim.pose(u, world.terrain_state)
+		if aim != null:
+			frame = aim["frame"]
+			ax = aim["ax"]
+			ay = aim["ay"]
+			kick = 0
+			_face = aim["face"]
 	_body.texture = frame
 	_body.offset = Vector2(-ax - kick, -ay)
-	_body.position = Vector2(0, -bob)
+	_body.position = Vector2(0, -bob + roundf(drop))
 	_body.scale = Vector2(-1 if _face < 0 else 1, 1)
 	# Ombre, sélection, barre de vie et badge : redessinés seulement quand leur état change.
 	var under_key := selected()

@@ -1025,7 +1025,7 @@
      "savoir": 200
     },
     "requires": "sigil",
-    "art": "library",
+    "art": "da-library",
     "key": "l",
     "icon": "book",
     "verse": "templeJob",
@@ -1039,7 +1039,7 @@
      "forge": 200
     },
     "requires": "aether",
-    "art": "forge",
+    "art": "da-forge",
     "key": "f",
     "icon": "hammer",
     "verse": "foundryJob",
@@ -1053,7 +1053,7 @@
      "forge": 200
     },
     "requires": "aether",
-    "art": "workshop",
+    "art": "da-workshop",
     "key": "t",
     "icon": "repair",
     "verse": "foundryJob",
@@ -1067,7 +1067,7 @@
      "vie": 200
     },
     "requires": "medeina",
-    "art": "bedroom",
+    "art": "da-bedroom",
     "size": 2,
     "key": "n",
     "icon": "people",
@@ -1081,7 +1081,7 @@
      "vie": 200
     },
     "requires": "medeina",
-    "art": "soulwell",
+    "art": "da-soulwell",
     "size": 2,
     "key": "u",
     "icon": "spirit",
@@ -1095,7 +1095,7 @@
      "discipline": 200
     },
     "requires": "indra",
-    "art": "caserne",
+    "art": "da-caserne",
     "key": "c",
     "icon": "shield",
     "verse": "barracksJob",
@@ -1181,166 +1181,118 @@
      "seam_pixels": 0
     }
    },
-   "library": {
+   "da-library": {
     "anchor": [
      160,
-     178
+     168
     ],
-    "top": 97,
-    "bottom": 219,
-    "pick": {
-     "set": "indra",
-     "i": 2,
-     "anchor": [
-      160,
-      178
-     ]
-    },
+    "top": 103,
+    "bottom": 208,
     "anim": {
      "frame_w": 320,
      "frame_h": 240,
-     "cols": 12,
-     "rows": 5,
-     "count": 60,
-     "seconds": 5,
+     "cols": 1,
+     "rows": 1,
+     "count": 1,
+     "seconds": 0.08333333333333333,
      "fps": 12,
-     "exact": false,
-     "seam_pixels": 29
+     "exact": true,
+     "seam_pixels": 0
     }
    },
-   "forge": {
+   "da-forge": {
     "anchor": [
      160,
-     182
+     168
     ],
-    "top": 78,
-    "bottom": 226,
-    "pick": {
-     "set": "fonderie",
-     "i": 4,
-     "anchor": [
-      160,
-      182
-     ]
-    },
+    "top": 77,
+    "bottom": 202,
     "anim": {
      "frame_w": 320,
      "frame_h": 240,
-     "cols": 12,
-     "rows": 8,
-     "count": 94,
-     "seconds": 7.8125,
-     "fps": 12.032,
-     "exact": false,
-     "seam_pixels": 62
+     "cols": 1,
+     "rows": 1,
+     "count": 1,
+     "seconds": 0.08333333333333333,
+     "fps": 12,
+     "exact": true,
+     "seam_pixels": 0
     }
    },
-   "workshop": {
-    "anchor": [
-     158,
-     176
-    ],
-    "top": 93,
-    "bottom": 217,
-    "pick": {
-     "set": "scierie",
-     "i": 3,
-     "anchor": [
-      158,
-      176
-     ]
-    },
-    "anim": {
-     "frame_w": 320,
-     "frame_h": 240,
-     "cols": 12,
-     "rows": 7,
-     "count": 75,
-     "seconds": 6.28125,
-     "fps": 11.9403,
-     "exact": false,
-     "seam_pixels": 3
-    }
-   },
-   "bedroom": {
+   "da-workshop": {
     "anchor": [
      160,
-     180
+     168
     ],
-    "top": 113,
-    "bottom": 229,
-    "pick": {
-     "set": "caserne",
-     "i": 2,
-     "anchor": [
-      160,
-      180
-     ]
-    },
+    "top": 111,
+    "bottom": 214,
     "anim": {
      "frame_w": 320,
      "frame_h": 240,
-     "cols": 12,
-     "rows": 7,
-     "count": 75,
-     "seconds": 6.27083,
-     "fps": 11.96013,
-     "exact": false,
-     "seam_pixels": 13
+     "cols": 1,
+     "rows": 1,
+     "count": 1,
+     "seconds": 0.08333333333333333,
+     "fps": 12,
+     "exact": true,
+     "seam_pixels": 0
     }
    },
-   "soulwell": {
-    "anchor": [
-     150,
-     166
-    ],
-    "top": 89,
-    "bottom": 216,
-    "pick": {
-     "set": "fonderie",
-     "i": 0,
-     "anchor": [
-      150,
-      166
-     ]
-    },
-    "anim": {
-     "frame_w": 320,
-     "frame_h": 240,
-     "cols": 12,
-     "rows": 4,
-     "count": 37,
-     "seconds": 3.125,
-     "fps": 11.84,
-     "exact": false,
-     "seam_pixels": 118
-    }
-   },
-   "caserne": {
+   "da-bedroom": {
     "anchor": [
      160,
-     182
+     168
     ],
-    "top": 100,
-    "bottom": 233,
-    "pick": {
-     "set": "caserne",
-     "i": 4,
-     "anchor": [
-      160,
-      182
-     ]
-    },
+    "top": 72,
+    "bottom": 222,
     "anim": {
      "frame_w": 320,
      "frame_h": 240,
-     "cols": 12,
-     "rows": 5,
-     "count": 58,
-     "seconds": 4.80208,
-     "fps": 12.07809,
-     "exact": false,
-     "seam_pixels": 4
+     "cols": 1,
+     "rows": 1,
+     "count": 1,
+     "seconds": 0.08333333333333333,
+     "fps": 12,
+     "exact": true,
+     "seam_pixels": 0
+    }
+   },
+   "da-soulwell": {
+    "anchor": [
+     160,
+     168
+    ],
+    "top": 107,
+    "bottom": 218,
+    "anim": {
+     "frame_w": 320,
+     "frame_h": 240,
+     "cols": 1,
+     "rows": 1,
+     "count": 1,
+     "seconds": 0.08333333333333333,
+     "fps": 12,
+     "exact": true,
+     "seam_pixels": 0
+    }
+   },
+   "da-caserne": {
+    "anchor": [
+     160,
+     168
+    ],
+    "top": 108,
+    "bottom": 196,
+    "anim": {
+     "frame_w": 320,
+     "frame_h": 240,
+     "cols": 1,
+     "rows": 1,
+     "count": 1,
+     "seconds": 0.08333333333333333,
+     "fps": 12,
+     "exact": true,
+     "seam_pixels": 0
     }
    }
   },

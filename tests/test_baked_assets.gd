@@ -1,9 +1,9 @@
 extends "res://tests/test_case.gd"
-## Étape 1 (plan v2) : les graphismes extraits de la version figée (73b410f + charte graphique, D15) sont complets,
+## Étape 1 (plan v2) : les graphismes extraits de la version figée (73b410f + charte graphique, D16) sont complets,
 ## importés par Godot et cohérents avec manifest.json.
 
 const BAKED := "res://assets/baked/"
-const REFERENCE_REV := "195114ec12daad6cd8ecc939ec350e99fe9ae175"
+const REFERENCE_REV := "c1bbe755628c30382547d27561ea12a5a13538d9"
 
 
 func _json(path: String) -> Variant:

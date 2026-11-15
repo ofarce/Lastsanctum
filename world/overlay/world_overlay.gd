@@ -111,13 +111,17 @@ func _draw_building_labels() -> void:
 		var p := _project(b.x, 0.0, b.z)
 		var y := p.y + b.half() * kk * 7.3
 		var name := String(D["name"]).to_upper()
-		_text_c(_bold, Vector2(p.x, y), name if b.complete else "%s · %d %%" % [name, floori(b.progress / D["time"] * 100.0)], 10, Color("#ead6a5"))
+		if GameState.hud_building == b:
+			_text_c(_bold, Vector2(p.x, y), name if b.complete else "%s · %d %%" % [name, floori(b.progress / D["time"] * 100.0)], 10, Color("#ead6a5"))
 		if not b.complete:
 			continue
-		if b.type == "caserne" and not b.queue.is_empty():
-			var more := " · +%d" % (b.queue.size() - 1) if b.queue.size() > 1 else ""
-			_text_c(_bold, Vector2(p.x, y + 13.0), "ENTRAÎNEMENT · %s · %d s%s" % [String(Catalog.ADEPT[b.queue[0]]["name"]).to_upper(),
-				ceili(Catalog.CASERNE_TIME - b.train), more], 10, Color("#ffb050"))
+		var jobs := building_jobs(b)
+		var view := world.building_view(b)
+		var roof := view.top_offset if view else -100.0
+		for i in range(jobs.size()):
+			# Au-dessus du sommet du sprite, à la résolution écran.
+			var top := _project(b.x, 0.0, b.z) - Vector2(0, -roof * kk + 18.0)
+			_draw_job(top + Vector2((i - (jobs.size() - 1) * 0.5) * 84, 0), jobs[i])
 		if b.type == "soulwell" and not GameState.fallen.is_empty():
 			var n := GameState.fallen.size()
 			_text_c(_bold, Vector2(p.x, y + 13.0), "%d ÂME%s EN ATTENTE" % [n, "S" if n > 1 else ""], 10, Color("#9be27a"))
@@ -410,6 +414,8 @@ func _draw_anchor() -> void:
 			var a := TAU * i / 48.0
 			pts.append(p + Vector2(cos(a) * 1.8 * z * 0.9, sin(a) * 1.8 * z * 0.42).rotated(-0.02))
 		draw_colored_polygon(pts, Color("#e8bc5b55"))
+	if not GameState.anchor_selected:
+		return
 	var text := "ANCRE ÉTEINTE"
 	if GameState.orb_active:
 		text = "ANCRE"
@@ -417,3 +423,39 @@ func _draw_anchor() -> void:
 		text = "ANCRE · RÉACTIVATION %d %%" % floori(GameState.orb_progress / Simulation.ORB_TIME * 100.0)
 	var q := _project(c.x, 0.0, c.y)
 	_text_c(_bold, Vector2(q.x, q.y + 15.0 * 0.9), text, 10, Color("#c9afd0"))
+
+
+## Une entrée par recherche active et pour l’unité actuellement en formation.
+static func building_jobs(b: Building) -> Array[Dictionary]:
+	var jobs: Array[Dictionary] = []
+	if not b.complete:
+		return jobs
+	for id: String in GameState.research_jobs:
+		var job: Dictionary = GameState.research_jobs[id]
+		if job["building"] == b:
+			jobs.append({"icon": "mining_seal", "progress": clampf(job["progress"] / Catalog.RESEARCH_TIME, 0, 1)})
+	if b.type == "caserne" and not b.queue.is_empty():
+		for unit: Dictionary in Catalog.CASERNE_UNITS:
+			if unit["id"] == b.queue[0]:
+				jobs.append({"icon": unit["icon"], "progress": clampf(b.train / Catalog.CASERNE_TIME, 0, 1)})
+	return jobs
+
+
+func _draw_job(at: Vector2, job: Dictionary) -> void:
+	draw_style_box(_job_panel(), Rect2(at - Vector2(38, 43), Vector2(76, 55)))
+	draw_texture_rect(HudStyle.icon(job["icon"], 28), Rect2(at - Vector2(14, 38), Vector2(28, 28)), false)
+	var bar := Rect2(at + Vector2(-31, -2), Vector2(62, 6))
+	draw_rect(bar, Color("#132c33"))
+	draw_rect(Rect2(bar.position, Vector2(bar.size.x * job["progress"], bar.size.y)), Color("#5ce8ff"))
+	draw_rect(bar, Color("#1f9fb8"), false)
+
+
+static var _job_style: StyleBoxFlat
+static func _job_panel() -> StyleBoxFlat:
+	if _job_style == null:
+		_job_style = StyleBoxFlat.new()
+		_job_style.bg_color = Color("#06121ae8")
+		_job_style.border_color = Color("#1f9fb8")
+		_job_style.set_border_width_all(1)
+		_job_style.set_corner_radius_all(4)
+	return _job_style

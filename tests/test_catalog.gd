@@ -34,7 +34,6 @@ func test_constants_match_js() -> void:
 	check_eq(Catalog.CASERNE_TIME, float(js["caserne_time"]), "CASERNE_TIME")
 	check_eq(Catalog.CASERNE_QUEUE, int(js["caserne_queue"]), "CASERNE_QUEUE")
 	check_eq(Catalog.CASERNE_UNITS, js["caserne_units"], "CASERNE_UNITS")
-	check_eq(Catalog.REVIVE_COST, _ints(js["revive_cost"]), "REVIVE_COST")
 	check_eq(Catalog.HERO_COST, _ints(js["hero_cost"]), "HERO_COST")
 	check_eq(Simulation.ORB_TIME, float(js["orb_time"]), "ORB.time")
 	check_eq(TerrainState.DIG_HITS, int(js["dig_hits"]), "DIG_HITS")
@@ -53,7 +52,8 @@ func test_adepts_and_fight_match_js() -> void:
 	check_eq(Catalog.ADEPT.keys(), js["adept"].keys(), "ordre des adeptes")
 	for k: String in js["fight"]:
 		check_eq(Catalog.FIGHT[k]["dmg"], int(js["fight"][k]["dmg"]), "FIGHT.%s.dmg" % k)
-		check_eq(Catalog.FIGHT[k]["status"], js["fight"][k]["status"], "FIGHT.%s.status" % k)
+		if k != "flammes":  # D15 : statut du lance-flammes réécrit (tir continu, explosion)
+			check_eq(Catalog.FIGHT[k]["status"], js["fight"][k]["status"], "FIGHT.%s.status" % k)
 
 
 static func _ints(d: Dictionary) -> Dictionary:

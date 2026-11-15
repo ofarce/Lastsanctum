@@ -10,6 +10,7 @@ const IVORY := Color("#eee3c9")
 const MUTED := Color("#b8ad93")
 const INK := Color("#101511")
 
+const MINING_SEAL := preload("res://assets/ui/mining_seal.png")
 const ICONS_JSON := "res://assets/baked/overlay/hud_icons.json"
 
 static var _regular: Font
@@ -49,8 +50,11 @@ static func _load_font(path: String) -> Font:
 	return f
 
 
-## Icônes ajoutées après le prototype (même grille 24×24) : « range », cible de la portée (D13).
-const EXTRA_ICONS := {"range": '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/><path d="M12 1v6m0 10v6M1 12h6m10 0h6"/>'}
+## Icônes ajoutées après le prototype (même grille 24×24) : portée et Œil qui veille.
+const EXTRA_ICONS := {
+	"menace": '<path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Z"/><path d="m12 8 2 4-2 4-2-4Z M5 3l2 3m10 0 2-3"/>',
+	"range": '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/><path d="M12 1v6m0 10v6M1 12h6m10 0h6"/>',
+}
 
 
 ## Icône SVG du prototype (HUD_ICONS), en blanc, à teinter avec modulate. `filled` : remplie (cœur de
@@ -59,6 +63,13 @@ static func icon(name: String, px: int, stroke := 1.5, filled := false) -> Textu
 	var key := "%s|%d|%s|%s" % [name, px, stroke, filled]
 	if _icons.has(key):
 		return _icons[key]
+	if name == "mining_seal":
+		# Respecter les 18 px du HUD et conserver la texture entre les dessins.
+		var image := MINING_SEAL.get_image()
+		image.resize(px, px, Image.INTERPOLATE_NEAREST)
+		var texture := ImageTexture.create_from_image(image)
+		_icons[key] = texture
+		return texture
 	if _icon_src.is_empty():
 		_icon_src = JSON.parse_string(FileAccess.get_file_as_string(ICONS_JSON))["icons"]
 	var body: String = EXTRA_ICONS.get(name, _icon_src.get(name, _icon_src["rune"]))

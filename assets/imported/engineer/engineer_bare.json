@@ -1,0 +1,42 @@
+{
+ "source": "planches/assets/engineer-bare.js (planche ancre-surcharge-propositions.html, proposition 5), k=0.5",
+ "ax": 15,
+ "ay": 40,
+ "h": 40,
+ "stride": 2.1,
+ "self_bob": true,
+ "idle": {
+  "frame_w": 40,
+  "frame_h": 42,
+  "cols": 12,
+  "rows": 2,
+  "count": 24,
+  "note": "repos : image floor(t·24/2,4) mod 24, comme le repos armé"
+ },
+ "walk": {
+  "frame_w": 40,
+  "frame_h": 42,
+  "cols": 12,
+  "rows": 1,
+  "count": 12,
+  "note": "marche : phase += distance / stride"
+ },
+ "kneel": {
+  "frame_w": 40,
+  "frame_h": 42,
+  "cols": 12,
+  "rows": 3,
+  "count": 36,
+  "fps": 10,
+  "note": "à genoux, souffle court : tente de se relever toutes les 3,6 s (36 images à 10 i/s)"
+ },
+ "pray": {
+  "frame_w": 40,
+  "frame_h": 42,
+  "cols": 12,
+  "rows": 2,
+  "count": 24,
+  "fps": 10,
+  "note": "agenouillement de l’incantation : mains jointes en (7, −15) depuis les pieds, 24 images à 10 i/s"
+ }
+}

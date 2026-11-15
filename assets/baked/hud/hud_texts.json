@@ -5,7 +5,7 @@
   "name": "Ingénieur Exilé",
   "compact": true,
   "lines": [
-   "L’Ancre s’est éteinte. Je dois la réactiver : elle réveillera les gardes de l’entrée."
+   "Ah. elle est là. Au travail."
   ]
  },
  "banner_won": "SANCTUM PRÉSERVÉ<br><small>Les Exilés et les disciples d’Indra ont repoussé l’assaut.</small>",
@@ -117,7 +117,7 @@
    "time": 8,
    "size": 3,
    "lore": "Les rouleaux de Sigil y sont rassemblés.",
-   "art": "library"
+   "art": "da-library"
   },
   "forge": {
    "name": "Forge",
@@ -131,7 +131,7 @@
    "time": 8,
    "size": 3,
    "lore": "L’enclume d’Aether y résonne.",
-   "art": "forge"
+   "art": "da-forge"
   },
   "workshop": {
    "name": "Atelier",
@@ -145,7 +145,7 @@
    "time": 8,
    "size": 3,
    "lore": "Établis et outils des artisans d’Aether.",
-   "art": "workshop"
+   "art": "da-workshop"
   },
   "bedroom": {
    "name": "Chambre à coucher",
@@ -159,7 +159,7 @@
    "time": 8,
    "size": 2,
    "lore": "Le repos que Medeina accorde aux Exilés.",
-   "art": "bedroom"
+   "art": "da-bedroom"
   },
   "soulwell": {
    "name": "Puits des Âmes",
@@ -173,7 +173,7 @@
    "time": 8,
    "size": 2,
    "lore": "Medeina y rend leur souffle aux défunts, avec toute leur expérience.",
-   "art": "soulwell"
+   "art": "da-soulwell"
   },
   "caserne": {
    "name": "Caserne",
@@ -187,7 +187,7 @@
    "time": 8,
    "size": 3,
    "lore": "Les disciples d’Indra y forment les combattants.",
-   "art": "caserne"
+   "art": "da-caserne"
   }
  },
  "adept": {

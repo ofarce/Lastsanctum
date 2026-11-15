@@ -5,6 +5,8 @@ extends RefCounted
 ## explosions du Tireur (pixels natifs, npx), impacts (sphère dégradée), rayons, zones, murs de feu,
 ## carreaux des balistes. Les tirages (rng(seed)) reproduisent ceux du prototype.
 
+const ItemIcon := preload("res://ui/inventory/item_icon.gd")
+
 const RIVET_GLOW: Array[Color] = [Color("#4a2206"), Color("#8a420c"), Color("#d0781a"), Color("#ffb03c"), Color("#ffe08a")]
 const RIVET_BRASS := Color("#f0cc6a")
 const RIVET_DARK := Color("#6a4a14")
@@ -15,6 +17,9 @@ const ARROW_FL := Color("#ac3438")
 const ARROW_SPARK: Array[Color] = [Color("#18448e"), Color("#2e6cc8"), Color("#64a2f4"), Color("#bcdcff")]
 const FIRE: Array[Color] = [Color("#5a1408"), Color("#a82a10"), Color("#e85a18"), Color("#ff9a30"), Color("#ffd060"), Color("#fff4c0")]
 const INK := Color("#0a0a0c")
+## Pitons d'ancrage de l'Ingénieur (planche « Pitons d'ancrage — Suspension ») : cyan des Exilés et laiton.
+const CY: Array[Color] = [Color("#0a2a33"), Color("#12596b"), Color("#1f9fb8"), Color("#5ce8ff"), Color("#c8fbff"), Color("#ffffff")]
+const BRASS: Array[Color] = [Color("#3a2808"), Color("#6a4a14"), Color("#a07424"), Color("#d0a03c"), Color("#f0cc6a"), Color("#fff0b0")]
 ## Tramage ordonné 4 × 4 (BAYER, decor.js).
 const BAYER := [[0.5 / 16, 8.5 / 16, 2.5 / 16, 10.5 / 16], [12.5 / 16, 4.5 / 16, 14.5 / 16, 6.5 / 16],
 	[3.5 / 16, 11.5 / 16, 1.5 / 16, 9.5 / 16], [15.5 / 16, 7.5 / 16, 13.5 / 16, 5.5 / 16]]
@@ -48,6 +53,11 @@ func draw_all(now: float) -> void:
 	if warmup_frames > 0:
 		warmup_frames -= 1
 		_warmup()
+	for drop: Dictionary in GameState.ground_items:
+		var position: Vector2 = drop["position"]
+		var screen := nat_p(position.x, position.y) * px
+		ci.draw_circle(screen + Vector2(0, 3 * px), 7 * px, Color("#00000066"))
+		ItemIcon.draw_item(ci, drop["item"], screen, px)
 	_fire_walls(now)
 	for e in GameState.effects:
 		match e["type"]:
@@ -57,7 +67,10 @@ func draw_all(now: float) -> void:
 			"arrowhit": _arrow_hit(e)
 			"xbolt": _xbolt(e)
 			"xboom": _xboom(e)
+			"piton": _piton_flight(e)
+			"suspend": _suspend(e, now)
 			_: _simple(e)
+	_planted_pitons(now)
 	_turret_bolts()
 
 
@@ -339,3 +352,199 @@ func _warmup() -> void:
 			"xbolt": _xbolt(e)
 			"xboom": _xboom(e)
 			_: _simple(e)
+
+
+# ---------------------------------------------------------------- Pitons d'ancrage de l'Ingénieur
+
+## Pixel natif tramé : visible si l'opacité dépasse le seuil de Bayer du pixel.
+func dpx(x: float, y: float, c: Color, a: float) -> void:
+	var ix := int(jr(x))
+	var iy := int(jr(y))
+	if BAYER[iy & 3][ix & 3] < a:
+		npx(ix, iy, c)
+
+
+static func _sm(t: float) -> float:
+	t = clampf(t, 0.0, 1.0)
+	return t * t * (3.0 - 2.0 * t)
+
+
+static func _eio(t: float) -> float:
+	return 0.5 - 0.5 * cos(PI * clampf(t, 0.0, 1.0))
+
+
+static func _ein(t: float) -> float:
+	t = clampf(t, 0.0, 1.0)
+	return t * t * t
+
+
+static func _eout(t: float) -> float:
+	t = 1.0 - clampf(t, 0.0, 1.0)
+	return 1.0 - t * t * t
+
+
+## Ligne de pixels natifs (pleine si a ≥ 1, tramée sinon).
+func nline(a: Vector2, b: Vector2, c: Color, al: float = 1.0) -> void:
+	var n := maxi(1, ceili(maxf(absf(b.x - a.x), absf(b.y - a.y))))
+	for k in n + 1:
+		var p := a.lerp(b, float(k) / n)
+		if al >= 1.0:
+			npx(p.x, p.y, c)
+		else:
+			dpx(p.x, p.y, c, al)
+
+
+func ndisc(cx: float, cy: float, r: float, c: Color, a: float) -> void:
+	for y in range(floori(cy - r), ceili(cy + r) + 1):
+		for x in range(floori(cx - r), ceili(cx + r) + 1):
+			if Vector2(x - cx, y - cy).length() <= r:
+				dpx(x, y, c, a)
+
+
+func nring(cx: float, cy: float, r: float, c: Color, a: float) -> void:
+	var n := maxi(8, ceili(r * 7.0))
+	for k in n:
+		var t := TAU * k / n
+		dpx(cx + cos(t) * r, cy + sin(t) * r * 0.75, c, a)
+
+
+## Bouche du lance-pitons de l'Ingénieur u visant `target`, en pixels natifs.
+func _muzzle(x: float, z: float, target: Vector2, u: Unit) -> Vector2:
+	var face := EngineerAim.face_to(x, target, u.face if u and u.face != 0 else 1)
+	return nat_p(x, z) + EngineerAim.muzzle(EngineerAim.angle_to(x, z, target, face), face)
+
+
+## Piton planté : halo cyan pulsé, tête de laiton cernée.
+func _pin(p: Vector2, k: int, now: float) -> void:
+	var gl := 0.55 + 0.45 * sin(now * 8.0 + k * 1.7)
+	ndisc(p.x + 0.5, p.y + 0.5, 2.6, CY[1], 0.45 * gl)
+	for o: Vector2 in [Vector2(-1, 0), Vector2(2, 0), Vector2(0, -1), Vector2(1, -1), Vector2(0, 2), Vector2(1, 2), Vector2(-1, 1), Vector2(2, 1)]:
+		npx(p.x + o.x, p.y + o.y, INK)
+	npx(p.x, p.y, BRASS[5])
+	npx(p.x + 1, p.y, BRASS[3])
+	npx(p.x, p.y + 1, BRASS[3])
+	npx(p.x + 1, p.y + 1, BRASS[1])
+	dpx(p.x, p.y, CY[4], gl * 0.6)
+
+
+func _piton_flight(e: Dictionary) -> void:
+	if e["age"] < 0.0:
+		return
+	var key := Vector2i(e["i"], e["j"])
+	var corner := Combat.piton_corner(key, e["k"])
+	var a := _muzzle(e["x"], e["z"], corner, e["unit"])
+	var b := nat_p(corner.x, corner.y)
+	var p := minf(1.0, e["age"] / e["duration"])
+	var dd := (b - a).normalized()
+	var pos := a.lerp(b, p) - Vector2(0, sin(PI * p) * 2.0)
+	if p < 0.6:
+		ndisc(a.x, a.y, 2.2, CY[4], 1.0 - p / 0.6)
+		npx(a.x, a.y, Color.WHITE)
+	for j in range(1, 9):
+		dpx(pos.x - dd.x * j, pos.y - dd.y * j, CY[4] if j < 3 else CY[2], 1.0 - j / 9.0)
+	nline(pos - dd * 1.5, pos + dd * 1.5, BRASS[4])
+	npx(pos.x + dd.x * 2.0, pos.y + dd.y * 2.0, Color.WHITE)
+
+
+## Pitons fichés dans les cases en cours de creusement (coups déjà portés), avec l'onde d'impact.
+func _planted_pitons(now: float) -> void:
+	var st := world.terrain_state
+	for key: Vector2i in st.dig_hits:
+		var h: int = st.dig_hits[key]
+		var since: float = now - float(st.dig_hit_at.get(key, -100.0)) - Combat.PITON_FLIGHT
+		for k in mini(h, 4):
+			if k == h - 1 and since < 0.0:
+				continue
+			var c := Combat.piton_corner(key, k)
+			var p := nat_p(c.x, c.y)
+			if k == h - 1 and since < 0.3:
+				var q := since / 0.3
+				nring(p.x, p.y, 0.8 + _eout(q) * 5.0, CY[3], 1.0 - q)
+				for m in 5:
+					var R := Rng.new(key.x * 131 + key.y * 17 + k * 7 + m)
+					var ang := -PI * (0.1 + R.next() * 0.8)
+					var sp := 10.0 + R.next() * 18.0
+					npx(p.x + cos(ang) * sp * since, p.y + sin(ang) * sp * since + 60.0 * since * since, Color("#6b6250") if m & 1 else Color("#a89c86"))
+			_pin(p, k, now)
+
+
+## Suspension de la case : cadre cyan entre les pitons, cubes de roche figés en l'air avec la poussière
+## arrêtée, compression en un point lumineux, éclair, retour des pitons au poignet de l'Ingénieur.
+func _suspend(e: Dictionary, now: float) -> void:
+	if e["age"] < 0.0:
+		return
+	var q: float = e["age"] / e["duration"]
+	var key := Vector2i(e["i"], e["j"])
+	var o := nat_p(key.x * 4.0, key.y * 4.0)
+	var cc := o + Vector2(15.5, 15.5)
+	var T: Array[Vector2] = []
+	for k in 4:
+		var c := Combat.piton_corner(key, k)
+		T.append(nat_p(c.x, c.y))
+	var img: Image = e["img"]
+	# Roche de la case : intacte et teintée de cyan, puis fendue en cubes de 8 px, puis comprimée.
+	if img and q < 0.8:
+		var e1 := _eio((q - 0.12) / 0.33)
+		var e2 := _ein((q - 0.45) / 0.35)
+		for ly in 32:
+			for lx in 32:
+				var col := img.get_pixel(lx, ly)
+				if col.a < 0.5:
+					continue
+				var tint: bool = BAYER[ly & 3][lx & 3] < 0.28 * _sm(q / 0.12)
+				if q < 0.12:
+					npx(o.x + lx, o.y + ly, CY[2] if tint else col)
+					continue
+				var pc := Vector2(floorf(lx / 8.0) * 8.0 + 4.0, floorf(ly / 8.0) * 8.0 + 4.0)
+				var off := (pc - Vector2(15.5, 15.5)) * 0.25 * e1 - Vector2(0, 3.0 * e1)
+				var rim: bool = (lx % 8 == 7 or ly % 8 == 7) and BAYER[ly & 3][lx & 3] < 0.6
+				var cr := CY[2] if rim and e1 > 0.1 else col
+				if q < 0.45:
+					npx(o.x + lx + off.x, o.y + ly + off.y, cr)
+				else:
+					var s := 1.0 - e2
+					var pp := cc + (Vector2(lx, ly) + off - Vector2(15.5, 15.5)) * s
+					npx(pp.x, pp.y, CY[5] if e2 > 0.8 else (CY[4] if e2 > 0.5 else (CY[3] if e2 > 0.2 else cr)))
+	# Cadre cyan entre les pitons, puis filins vers le centre pendant la compression.
+	if q < 0.45:
+		var w := _sm(q / 0.12) * 4.0
+		for k in 4:
+			var f := clampf(w - k, 0.0, 1.0)
+			if f <= 0.0:
+				break
+			var flick := Rng.new(k * 97 + int(now * 20.0)).next() > 0.8
+			nline(T[k], T[k].lerp(T[(k + 1) % 4], f), CY[4] if flick else CY[3], 1.0 if q < 0.12 else 0.8)
+	elif q < 0.8:
+		var e2 := _ein((q - 0.45) / 0.35)
+		for k in 4:
+			nline(T[k], T[k].lerp(cc, e2), CY[3], 0.7)
+	# Éclair final.
+	if q > 0.8 and q < 0.92:
+		var f := (q - 0.8) / 0.12
+		nring(cc.x, cc.y, 2.0 + f * 9.0, CY[4], 1.0 - f)
+		for r in int(6.0 * (1.0 - f)) + 1:
+			for d: Vector2 in [Vector2(r, 0), Vector2(-r, 0), Vector2(0, r), Vector2(0, -r)]:
+				npx(cc.x + d.x, cc.y + d.y, Color.WHITE)
+	# Poussière figée en l'air, qui retombe après l'éclair.
+	if q > 0.12:
+		for j in 16:
+			var R := Rng.new(j * 29 + 3)
+			var x := o.x - 4.0 + R.next() * 40.0
+			var y := o.y - 6.0 + R.next() * 40.0
+			var c := Color("#6b6250") if R.next() < 0.5 else Color("#c9b98f")
+			if q > 0.8:
+				var t: float = (q - 0.8) * e["duration"]
+				y += 100.0 * t * t
+				if y > o.y + 36.0:
+					continue
+			dpx(x, y, c, (q - 0.12) / 0.08 if q < 0.2 else 1.0)
+	# Pitons : fichés aux angles, puis rappelés vers le lance-pitons.
+	var u: Unit = e["unit"]
+	for k in 4:
+		var p := T[k]
+		if q > 0.85:
+			if q > 0.98:
+				continue
+			var hand := _muzzle(u.x, u.z, Vector2(e["x"], e["z"]), u) if u else cc
+			p = T[k].lerp(hand, _ein((q - 0.85) / 0.15))
+		_pin(p, k, now)

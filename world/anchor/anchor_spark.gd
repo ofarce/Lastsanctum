@@ -1,5 +1,7 @@
 class_name AnchorSpark
 extends Node2D
+
+signal engineer_reached(unit: Unit)
 ## Étincelle de réactivation de l'Ancre (planche etincelle-ancre-propositions.html du prototype, variante
 ## B « Fil d'éclair », validée). Quand l'Ancre s'éveille, une étincelle noir-argent quitte la sphère,
 ## traverse la caverne et le tunnel jusqu'à l'entrée, s'y divise, et chaque branche s'éteint devant une
@@ -65,6 +67,11 @@ var _sphere := Vector2.ZERO
 var _split := Vector2.ZERO
 var _cam_on := false
 var _cam_last := Vector2.ZERO
+var _cam_path := PackedVector2Array()
+var _return_path := PackedVector2Array()
+var _return_elapsed := 0.0
+var _return_speaker: Unit
+const RETURN_DURATION := T4
 var _t := -1.0
 var _px := 1.0
 var _off := Vector2.ZERO
@@ -76,6 +83,7 @@ var _drawn := false
 
 
 func _ready() -> void:
+	Events.game_reset.connect(_reset_camera_path)
 	_glow_mat.shader = GLOW_SHADER
 	_glow.material = _glow_mat
 	_glow.show_behind_parent = true
@@ -207,6 +215,41 @@ func spark_time() -> float:
 
 # ---------------------------------------------------------------- Caméra
 
+func _reset_camera_path() -> void:
+	_cam_on = false
+	_cam_path.clear()
+	_return_path.clear()
+	_return_speaker = null
+	_key = INF
+
+
+func return_to_engineer(unit: Unit) -> void:
+	_cam_on = false
+	_return_speaker = unit
+	_return_elapsed = 0.0
+	_return_path = PackedVector2Array([world.camera.cam])
+	for i in range(_cam_path.size() - 1, -1, -1):
+		_return_path.append(_cam_path[i])
+	_return_path.append(unit.pos())
+
+
+func _return_tick(delta: float) -> void:
+	if not _return_speaker.alive() or _return_speaker.hidden:
+		_return_path.clear()
+		_return_speaker = null
+		return
+	_return_elapsed += delta
+	var progress := clampf(_return_elapsed / RETURN_DURATION, 0.0, 1.0)
+	var cursor := smoothstep(0.0, 1.0, progress) * (_return_path.size() - 1)
+	var i := mini(floori(cursor), _return_path.size() - 2)
+	_return_path[_return_path.size() - 1] = _return_speaker.pos()
+	world.camera.set_view(_return_path[i].lerp(_return_path[i + 1], cursor - i), world.camera.px)
+	if progress >= 1.0:
+		var speaker := _return_speaker
+		_return_path.clear()
+		_return_speaker = null
+		engineer_reached.emit(speaker)
+
 func _cam_target(t: float) -> Vector2:
 	var ty := _branches[0].last().y - 10.0 if not _branches.is_empty() else _split.y
 	if t < T1:
@@ -232,6 +275,7 @@ func _follow(t: float, delta: float) -> void:
 	var g := _cam_target(t) / UNIT
 	cam.set_view(cam.cam + (g - cam.cam) * (1.0 - exp(-6.0 * delta)), cam.px)
 	_cam_last = cam.cam
+	_cam_path.append(cam.cam)
 
 
 # ---------------------------------------------------------------- Image
@@ -239,6 +283,8 @@ func _follow(t: float, delta: float) -> void:
 func _process(delta: float) -> void:
 	if world == null:
 		return
+	if not _return_path.is_empty():
+		_return_tick(delta)
 	_t = spark_time()
 	if _t < 0.0:
 		if _drawn:
@@ -253,6 +299,7 @@ func _process(delta: float) -> void:
 		_build()
 		_cam_on = true
 		_cam_last = world.camera.cam
+		_cam_path = PackedVector2Array([_cam_last])
 	_follow(_t, delta)
 	_px = float(world.camera.px)
 	_off = world.native_offset

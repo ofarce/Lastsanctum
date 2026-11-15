@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Ingénieur sans armure</title>
+<style>
+:root{--bg:#0b0d10;--txt:#dcd8cc;--mut:#939aa4}
+body{margin:0;background:var(--bg);color:var(--txt);font:14px/1.4 system-ui,sans-serif;padding:16px}
+h1{font-size:20px;margin:0 0 6px}p{color:var(--mut);margin:0 0 12px;max-width:900px}
+canvas{image-rendering:pixelated;background:#23282f;display:block;margin:4px 0 14px;max-width:100%}
+.row{display:flex;gap:16px;flex-wrap:wrap;align-items:flex-end}
+</style></head><body>
+<h1>Ingénieur sans armure · planches du jeu</h1>
+<p>Sprites générés depuis <code>assets/engineer-bare.js</code> (proposition 5 de <code>ancre-surcharge-propositions.html</code>), au même gabarit que l’Ingénieur du jeu (40 × 42, pieds en (15, 40)). <code>exportSheets()</code> renvoie les planches PNG et leurs métadonnées pour <code>assets/imported/engineer/</code>.</p>
+<div class="row"><div>Comparaison (armure / sans)<canvas id="cmp"></canvas></div></div>
+<div id="out"></div>
+<script src="assets/decor.js?v=6"></script><script src="assets/units.js?v=10"></script><script src="assets/engineer.js?v=3"></script><script src="assets/engineer-bare.js?v=2"></script>
+<script>
+'use strict';
+const K=.5,FW=40,FH=42,COLS=12;
+const SHEETS={
+ idle:{count:24,frame:i=>EngineerBare.stand({},i*2.4/24,K),note:'repos : image floor(t·24/2,4) mod 24, comme le repos armé'},
+ walk:{count:12,frame:i=>EngineerBare.stand({walk:i/12},0,K),note:'marche : phase += distance / stride'},
+ kneel:{count:36,fps:10,frame:i=>EngineerBare.kneel({style:'push',pose:'push',per:3.6,breath:1.8},i/10,K),note:'à genoux, souffle court : tente de se relever toutes les 3,6 s (36 images à 10 i/s)'},
+ pray:{count:24,fps:10,frame:i=>EngineerBare.kneel({style:'calm',pose:'pray'},i/10,K),note:'agenouillement de l’incantation : mains jointes en (7, −15) depuis les pieds, 24 images à 10 i/s'}};
+// Pose de tir du lance-pitons : 19 angles (−90° à +90°) × 4 lignes (recul 0 / 1,5 / 3, suspension), comme engineer_aim.
+const AIM={pad:4,fw:44,fh:46,angles:Array.from({length:19},(_,i)=>-90+i*10),rows:[{recoil:0,pulse:.5},{recoil:1.5,pulse:.5},{recoil:3,pulse:.5},{recoil:0,pulse:1}]};
+function buildAim(){const c=document.createElement('canvas');c.width=AIM.fw*19;c.height=AIM.fh*4;const g=c.getContext('2d');
+ AIM.rows.forEach((r,j)=>AIM.angles.forEach((a,i)=>{const d=[Math.cos(a*Math.PI/180),Math.sin(a*Math.PI/180)];g.drawImage(EngineerBare.stand({pad:AIM.pad,aim:{d,rc:r.recoil,glow:r.pulse}},0,K),i*AIM.fw,j*AIM.fh)}));
+ const mz=AIM.angles.map(a=>{const m=EngineerBare.aimArm({d:[Math.cos(a*Math.PI/180),Math.sin(a*Math.PI/180)],rc:0}).muzzle;return[(m[0]+AIM.pad)*K,(m[1]+AIM.pad)*K]});
+ return{canvas:c,meta:{source:'planches/assets/engineer-bare.js (stand, aim) — même géométrie que engineer_aim (makeSusp.poseFor), k=0.5, pad=4',frame_w:AIM.fw,frame_h:AIM.fh,cols:19,rows:4,
+  ax:(30+AIM.pad)*K,ay:(80+AIM.pad)*K,angles:AIM.angles,rows_def:AIM.rows,muzzle:mz,shoulder:[(39.5+AIM.pad)*K,(32+AIM.pad)*K]}}}
+// Portrait du HUD : première image de repos agrandie comme drawHUDPortrait, cadrée sur la tête nue (région 5,1,24,24).
+function buildPortrait(){const c=document.createElement('canvas');c.width=c.height=128;const g=c.getContext('2d');g.imageSmoothingEnabled=false;g.drawImage(SHEETS.idle.frame(0),5,1,24,24,0,10,128,128);return c}
+function build(name){const S=SHEETS[name],rows=Math.ceil(S.count/COLS),c=document.createElement('canvas');c.width=COLS*FW;c.height=rows*FH;const g=c.getContext('2d');
+ for(let i=0;i<S.count;i++){const f=S.frame(i);g.drawImage(f,(i%COLS)*FW,Math.floor(i/COLS)*FH)}
+ return{canvas:c,meta:{frame_w:FW,frame_h:FH,cols:COLS,rows,count:S.count,...(S.fps?{fps:S.fps}:{}),note:S.note}}}
+const built={};
+for(const n of Object.keys(SHEETS)){const b=built[n]=build(n),d=document.createElement('div');d.textContent=`${n} · ${b.meta.count} images`;
+ const v=document.createElement('canvas');v.width=b.canvas.width*3;v.height=b.canvas.height*3;const g=v.getContext('2d');g.imageSmoothingEnabled=false;g.drawImage(b.canvas,0,0,v.width,v.height);d.append(v);document.getElementById('out').append(d)}
+{const c=document.getElementById('cmp');c.width=FW*3*6;c.height=FH*6;const g=c.getContext('2d');g.imageSmoothingEnabled=false;
+ g.drawImage(EngineerKit.draw({},0,K),0,0,FW*6,FH*6);g.drawImage(built.idle.canvas,0,0,FW,FH,FW*6,0,FW*6,FH*6);g.drawImage(built.kneel.canvas,0,0,FW,FH,FW*12,0,FW*6,FH*6)}
+built.aim=buildAim();built.portrait={canvas:buildPortrait(),meta:null};
+for(const n of['aim','portrait']){const b=built[n],d=document.createElement('div');d.textContent=n;const v=document.createElement('canvas');v.width=b.canvas.width*(n==='aim'?2:1);v.height=b.canvas.height*(n==='aim'?2:1);const g=v.getContext('2d');g.imageSmoothingEnabled=false;g.drawImage(b.canvas,0,0,v.width,v.height);d.append(v);document.getElementById('out').append(d)}
+window.exportSheets=()=>{const o={meta:{source:'planches/assets/engineer-bare.js (planche ancre-surcharge-propositions.html, proposition 5), k=0.5',ax:15,ay:40,h:40,stride:2.1,self_bob:true}};
+ for(const[n,b]of Object.entries(built)){if(n==='aim'||n==='portrait')continue;o[n]=b.canvas.toDataURL('image/png');o.meta[n]=b.meta}return o};
+window.exportExtra=()=>({aim:built.aim.canvas.toDataURL('image/png'),aim_meta:built.aim.meta,portrait:built.portrait.canvas.toDataURL('image/png')});
+</script></body></html>

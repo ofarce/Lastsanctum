@@ -2,7 +2,7 @@ class_name PixelDraw
 ## Outils de dessin « pixel par pixel » du prototype (npx, plotPath, smoothArc ; Index.html, 73b410f).
 ## Les coordonnées sont des pixels natifs ; npx arrondit avec Math.round (floor(v + 0,5)).
 
-## Écart voulu D15 (charte graphique) : éclairs noirs ourlés de pourpre autour de l'Ancre noire.
+## Écart voulu D16 (charte graphique) : éclairs noirs ourlés de pourpre autour de l'Ancre noire.
 const ORB_ARC := {
 	"core": Color("#e0a0ff"), "hot": Color("#08000e"), "mid": Color("#12041c"),
 	"cold": Color("#24082e"), "glow": Color("#8a32a8"),

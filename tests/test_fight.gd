@@ -3,8 +3,11 @@ extends "res://tests/fight_case.gd"
 ## prototype (73b410f). Référence : assets/baked/hud/combat.json (tools/baker/hud.js).
 
 
-## Écart voulu D13 : portées relevées après 73b410f (lance-flammes ×2, archer ×4), le reste reste identique.
-const D13 := {"flammes": {"seek": 18.0, "reach": 9.0}, "archer": {"seek": 68.0, "reach": 56.0}}
+## Écarts voulus après 73b410f, le reste reste identique : D13, portées relevées (archer ×4) ; D15, lance-flammes
+## à portée 12, tir continu, sans sillon de feu (statut réécrit).
+const D13 := {"flammes": {"seek": 18.0, "reach": 12.0, "status": "Garde l’Ancre · flammes en continu ; explose à sa mort"},
+	"archer": {"seek": 68.0, "reach": 56.0},
+	"engineer": {"seek": 6.0, "reach": 1.9, "dmg": 5, "ranged": false, "status": "Prêt à recevoir vos ordres · corps à corps"}}
 
 
 func test_fight_table_matches_js() -> void:
@@ -39,6 +42,8 @@ func test_after_armor_matches_js() -> void:
 
 func test_strikes_match_js() -> void:
 	for sc: Dictionary in js()["strikes"]:
+		if sc["role"] in ["flammes", "engineer"]:
+			continue  # D15 : tir continu sans sillon, vérifié par test_flamethrower.gd
 		var u := setup(sc["role"], int(sc["level"]))
 		foe("brute", 1.0, -120.0, 400.0)
 		foe("creep", 2.0, -121.0, 400.0)
@@ -62,3 +67,15 @@ func test_archer_charge_matches_js() -> void:
 		GameState.sim_time += 0.05
 		_same(snap(u), want, "charge, pas %d" % i)
 		i += 1
+
+
+func test_engineer_only_attacks_in_melee() -> void:
+	var u := setup("engineer", 1)
+	var e := foe("brute", 5.0, -120.0, 100.0)
+	game_sim().combat.update_units(0.0, [u])
+	check_near(e.hp, 100.0, 1e-9, "aucune attaque à distance")
+	check(GameState.effects.is_empty(), "aucun projectile à distance")
+	e.x = 1.0
+	game_sim().combat.update_units(0.0, [u])
+	check_near(e.hp, 95.0, 1e-9, "5 dégâts au corps à corps")
+	check_near(u.sw_t0, GameState.sim_time, 1e-9, "animation de frappe en mêlée")
