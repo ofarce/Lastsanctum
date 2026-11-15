@@ -1,0 +1,1493 @@
+{
+ "version": 2,
+ "generated_by": "tools/baker/bake.js",
+ "random_seed": 19653,
+ "gallery_seed": 20261114,
+ "scripts": [
+  "assets/decor.js",
+  "assets/wind.js",
+  "assets/decor-renderer.js",
+  "assets/galleries.js",
+  "assets/units.js",
+  "assets/engineer.js",
+  "assets/enemies.js",
+  "assets/combat.js",
+  "assets/portal.js",
+  "assets/temple.js",
+  "assets/temple-construction.js",
+  "assets/foundry.js",
+  "assets/sawmill.js",
+  "assets/sawmill-grand-arbre.js",
+  "assets/ballista.js",
+  "assets/ballista-ruins.js",
+  "assets/turret-game.js",
+  "assets/barracks.js",
+  "assets/pixel-buildings.js",
+  "assets/ballista-tyrienne-models.js",
+  "assets/temple-incantation.js",
+  "assets/da-planches.js",
+  "assets/buildings.js",
+  "assets/adept-sprites.js",
+  "assets/adepts.js",
+  "assets/lighting.js",
+  "assets/hud.js",
+  "assets/dialogue.js"
+ ],
+ "world": {
+  "WORLD": {
+   "x0": -232,
+   "x1": 232,
+   "z0": -336,
+   "z1": 72
+  },
+  "CAVE": {
+   "x0": -56,
+   "x1": 56,
+   "z0": -168,
+   "z1": -96,
+   "gate": 7,
+   "wall": 4
+  },
+  "NAT": {
+   "kx": 8,
+   "ky": 4,
+   "kh": 8.930232558139535
+  },
+  "core": {
+   "x": 0,
+   "z": -154
+  },
+  "CAVE_C": {
+   "floor": [
+    "#4a3220",
+    "#5e4027",
+    "#74502e",
+    "#8a6036",
+    "#a0723f",
+    "#b8864b",
+    "#cf9c5a"
+   ],
+   "rock": [
+    "#100f0e",
+    "#181614",
+    "#211e1b",
+    "#2b2723",
+    "#37322c",
+    "#453e36",
+    "#564d42",
+    "#6b6052",
+    "#827665"
+   ],
+   "crystal": [
+    "#1a2c3c",
+    "#24506a",
+    "#3a86a8",
+    "#6cc4dc",
+    "#b8f0f8",
+    "#ffffff"
+   ]
+  },
+  "C_moss": [
+   "#1e3a22",
+   "#2c5230",
+   "#41703c",
+   "#5c8c48"
+  ],
+  "C_outline": "#08100b",
+  "ground": {
+   "width": 3808,
+   "height": 3360,
+   "gx0": 1904,
+   "gy0": 2736,
+   "chunk": 1024,
+   "cols": 4,
+   "rows": 4,
+   "note": "Origine du monde (0, 0, 0) au pixel (gx0, gy0) du sol ; natW(x, y, z) = (x·8, z·8 − y·KH)."
+  },
+  "decor": {
+   "sprites": 235,
+   "placements": 8529,
+   "by_kind": {
+    "mountain_rock": 25,
+    "face": 15,
+    "deity_deco": 8,
+    "rock": 43,
+    "spire": 4,
+    "altar": 1,
+    "orb": 1,
+    "crystal": 2,
+    "fern": 6,
+    "tree_cyp": 20,
+    "tree_cyp_foliage": 20,
+    "tree_palm": 15,
+    "tree_palm_foliage": 15,
+    "tree_big": 20,
+    "tree_big_foliage": 20,
+    "tree_bush": 10,
+    "tree_bush_foliage": 10
+   },
+   "wind": {
+    "big": {
+     "amplitude": 1.5,
+     "height": 40
+    },
+    "cyp": {
+     "amplitude": 1.05,
+     "height": 48
+    },
+    "palm": {
+     "amplitude": 2.2,
+     "height": 44
+    },
+    "bush": {
+     "amplitude": 0.65,
+     "height": 7
+    }
+   }
+  },
+  "runtime_decor": {
+   "faces": [
+    {
+     "v": 0,
+     "w": 32,
+     "h": 49,
+     "ax": 0,
+     "ay": 45
+    },
+    {
+     "v": 1,
+     "w": 32,
+     "h": 49,
+     "ax": 0,
+     "ay": 45
+    },
+    {
+     "v": 2,
+     "w": 32,
+     "h": 49,
+     "ax": 0,
+     "ay": 45
+    },
+    {
+     "v": 3,
+     "w": 32,
+     "h": 49,
+     "ax": 0,
+     "ay": 45
+    },
+    {
+     "v": 4,
+     "w": 32,
+     "h": 49,
+     "ax": 0,
+     "ay": 45
+    },
+    {
+     "v": 5,
+     "w": 32,
+     "h": 49,
+     "ax": 0,
+     "ay": 45
+    }
+   ],
+   "spires": [
+    {
+     "v": 0,
+     "crystal": true,
+     "w": 28,
+     "h": 44,
+     "ax": 14,
+     "ay": 40
+    },
+    {
+     "v": 1,
+     "crystal": false,
+     "w": 28,
+     "h": 44,
+     "ax": 14,
+     "ay": 40
+    },
+    {
+     "v": 2,
+     "crystal": true,
+     "w": 28,
+     "h": 44,
+     "ax": 14,
+     "ay": 40
+    },
+    {
+     "v": 3,
+     "crystal": false,
+     "w": 28,
+     "h": 44,
+     "ax": 14,
+     "ay": 40
+    },
+    {
+     "v": 4,
+     "crystal": true,
+     "w": 28,
+     "h": 44,
+     "ax": 14,
+     "ay": 40
+    },
+    {
+     "v": 5,
+     "crystal": false,
+     "w": 28,
+     "h": 44,
+     "ax": 14,
+     "ay": 40
+    }
+   ],
+   "note": "Faces : faceSprite(5, rng(v·41+5)), v = (i·7 + j·3 & 7) % 6 au creusement, ou tiré de rng(GAL.seed + n) à la révélation. Stalagmites des galeries : cristal si v pair."
+  },
+  "tiles": {
+   "size": 32,
+   "cave_specks": "k < 6 : x = 16 + ((R() − 0,5)·40 | 0), y = 9 + (R()·14 | 0) → floor[5] ; si R() < 0,4 : (x + 1, y) → floor[4]",
+   "dig_seed": "rng(i·977 + j·31 + 7)",
+   "region_seed": "rng((x·977 + z·31) >>> 0)"
+  }
+ },
+ "portals": {
+  "exiles": {
+   "atlas": "res://assets/imported/portal/portal_atlas.png",
+   "frame_w": 130,
+   "frame_h": 112,
+   "cols": 16,
+   "ox": 66,
+   "oy": 104,
+   "frames": 554,
+   "fps": 60,
+   "x": 0,
+   "z": -167.7,
+   "durations": [
+    1,
+    1,
+    1,
+    1.4,
+    1.2,
+    0.9,
+    0.9,
+    0.9,
+    0.9
+   ],
+   "emerge_after_states": 3,
+   "transform": "translate(nx·PX, ny·PX) · matrice (PX, PX·0,5, 0, PX)"
+  },
+  "deity": {
+   "n": 12,
+   "scale": 0.62,
+   "deco_offset": 6.2,
+   "look": {
+    "indra": {
+     "glow": [
+      "#3a1404",
+      "#7a3008",
+      "#c85a10",
+      "#ff8a2a",
+      "#ffc890",
+      "#fff4e8"
+     ]
+    },
+    "sigil": {
+     "glow": [
+      "#3a3e4a",
+      "#6a7080",
+      "#a8b0c0",
+      "#dde2ee",
+      "#f4f6ff",
+      "#ffffff"
+     ]
+    },
+    "medeina": {
+     "glow": [
+      "#0d3010",
+      "#1f6420",
+      "#3fa83a",
+      "#7ae070",
+      "#c8f5b0",
+      "#f4fff0"
+     ]
+    },
+    "aether": {
+     "glow": [
+      "#140f40",
+      "#2c2690",
+      "#4a48d0",
+      "#7a80ff",
+      "#c0c4ff",
+      "#f0f0ff"
+     ]
+    }
+   },
+   "portals": [
+    {
+     "id": "indra",
+     "name": "Indra",
+     "x": -41,
+     "active": false
+    },
+    {
+     "id": "sigil",
+     "name": "Sigil",
+     "x": -24,
+     "active": false
+    },
+    {
+     "id": "medeina",
+     "name": "Medeina",
+     "x": 24,
+     "active": false
+    },
+    {
+     "id": "aether",
+     "name": "Aether",
+     "x": 41,
+     "active": false
+    }
+   ],
+   "frame": "floor(t·12/(π/2)) mod 12",
+   "transform": "matrice (k, k·0,5, 0, k), k = 0,62·PX",
+   "indra": {
+    "frame_w": 130,
+    "frame_h": 112,
+    "cols": 12,
+    "rows": 1,
+    "count": 12
+   },
+   "sigil": {
+    "frame_w": 130,
+    "frame_h": 112,
+    "cols": 12,
+    "rows": 1,
+    "count": 12
+   },
+   "medeina": {
+    "frame_w": 130,
+    "frame_h": 112,
+    "cols": 12,
+    "rows": 1,
+    "count": 12
+   },
+   "aether": {
+    "frame_w": 130,
+    "frame_h": 112,
+    "cols": 12,
+    "rows": 1,
+    "count": 12
+   }
+  },
+  "evil": {
+   "scale": 0.7,
+   "interval": 7,
+   "cap": 8,
+   "look": [
+    "#1a0404",
+    "#4a0a0a",
+    "#a01818",
+    "#f04020",
+    "#ffb080",
+    "#ffffff"
+   ],
+   "sheet": {
+    "frame_w": 130,
+    "frame_h": 112,
+    "cols": 12,
+    "rows": 1,
+    "count": 12
+   }
+  }
+ },
+ "units": {
+  "timing": {
+   "idle_frames": 24,
+   "idle_loop_s": 2.4,
+   "walk_frames": 6,
+   "scale": 0.5,
+   "note": "Repos : image (floor(t·24/2,4) + (id & 7)·3) mod 24. Marche : phase += distance / stride ; rebond de 1 px sauf self_bob."
+  },
+  "roles": {
+   "paladin": {
+    "ax": 15,
+    "ay": 40,
+    "h": 37,
+    "stride": 2.1,
+    "self_bob": false,
+    "idle": {
+     "frame_w": 40,
+     "frame_h": 42,
+     "cols": 12,
+     "rows": 2,
+     "count": 24
+    },
+    "walk": {
+     "frame_w": 40,
+     "frame_h": 42,
+     "cols": 6,
+     "rows": 1,
+     "count": 6
+    }
+   },
+   "healer": {
+    "ax": 15,
+    "ay": 40,
+    "h": 37,
+    "stride": 1.9,
+    "self_bob": false,
+    "idle": {
+     "frame_w": 40,
+     "frame_h": 42,
+     "cols": 12,
+     "rows": 2,
+     "count": 24
+    },
+    "walk": {
+     "frame_w": 40,
+     "frame_h": 42,
+     "cols": 6,
+     "rows": 1,
+     "count": 6
+    }
+   },
+   "guard": {
+    "ax": 15,
+    "ay": 40,
+    "h": 36,
+    "stride": 1.9,
+    "self_bob": false,
+    "idle": {
+     "frame_w": 40,
+     "frame_h": 42,
+     "cols": 12,
+     "rows": 2,
+     "count": 24
+    },
+    "walk": {
+     "frame_w": 40,
+     "frame_h": 42,
+     "cols": 6,
+     "rows": 1,
+     "count": 6
+    },
+    "shoot": {
+     "frame_w": 40,
+     "frame_h": 42,
+     "cols": 8,
+     "rows": 1,
+     "count": 8
+    }
+   },
+   "shooter": {
+    "ax": 15,
+    "ay": 40,
+    "h": 37,
+    "stride": 1.9,
+    "self_bob": false,
+    "idle": {
+     "frame_w": 40,
+     "frame_h": 42,
+     "cols": 12,
+     "rows": 2,
+     "count": 24
+    },
+    "walk": {
+     "frame_w": 40,
+     "frame_h": 42,
+     "cols": 6,
+     "rows": 1,
+     "count": 6
+    }
+   },
+   "engineer": {
+    "ax": 15,
+    "ay": 40,
+    "h": 40,
+    "stride": 2.1,
+    "self_bob": true,
+    "idle": {
+     "frame_w": 40,
+     "frame_h": 42,
+     "cols": 12,
+     "rows": 2,
+     "count": 24
+    },
+    "walk": {
+     "frame_w": 40,
+     "frame_h": 42,
+     "cols": 12,
+     "rows": 1,
+     "count": 12
+    },
+    "kneel": {
+     "frame_w": 40,
+     "frame_h": 42,
+     "cols": 12,
+     "rows": 3,
+     "count": 29,
+     "seconds": 2.40625,
+     "fps": 12.05195,
+     "exact": false
+    }
+   }
+  }
+ },
+ "enemies": {
+  "creep": {
+   "ax": 15,
+   "ay": 40,
+   "h": 36,
+   "stride": 1.7,
+   "self_bob": false,
+   "idle": {
+    "frame_w": 40,
+    "frame_h": 42,
+    "cols": 12,
+    "rows": 2,
+    "count": 24
+   },
+   "walk": {
+    "frame_w": 40,
+    "frame_h": 42,
+    "cols": 6,
+    "rows": 1,
+    "count": 6
+   }
+  },
+  "brute": {
+   "ax": 20,
+   "ay": 40,
+   "h": 27,
+   "stride": 2.4,
+   "self_bob": false,
+   "idle": {
+    "frame_w": 40,
+    "frame_h": 42,
+    "cols": 12,
+    "rows": 2,
+    "count": 24
+   },
+   "walk": {
+    "frame_w": 40,
+    "frame_h": 42,
+    "cols": 6,
+    "rows": 1,
+    "count": 6
+   }
+  },
+  "spitter": {
+   "ax": 15,
+   "ay": 40,
+   "h": 37,
+   "stride": 1.8,
+   "self_bob": false,
+   "idle": {
+    "frame_w": 40,
+    "frame_h": 42,
+    "cols": 12,
+    "rows": 2,
+    "count": 24
+   },
+   "walk": {
+    "frame_w": 40,
+    "frame_h": 42,
+    "cols": 6,
+    "rows": 1,
+    "count": 6
+   }
+  },
+  "beast": {
+   "ax": 20,
+   "ay": 40,
+   "h": 17,
+   "stride": 1.6,
+   "self_bob": false,
+   "idle": {
+    "frame_w": 40,
+    "frame_h": 42,
+    "cols": 12,
+    "rows": 2,
+    "count": 24
+   },
+   "walk": {
+    "frame_w": 40,
+    "frame_h": 42,
+    "cols": 6,
+    "rows": 1,
+    "count": 6
+   }
+  }
+ },
+ "attacks": {
+  "sword": {
+   "swing_s": 0.8,
+   "combos": 5,
+   "ax": 17,
+   "ay": 40,
+   "sheet": {
+    "frame_w": 85,
+    "frame_h": 42,
+    "cols": 12,
+    "rows": 1,
+    "count": 12
+   }
+  },
+  "xbow": {
+   "volley_s": 0.7,
+   "shots_at": [
+    0,
+    0.13,
+    0.26
+   ],
+   "ax": 17,
+   "ay": 40,
+   "sheet": {
+    "frame_w": 85,
+    "frame_h": 42,
+    "cols": 12,
+    "rows": 1,
+    "count": 12
+   }
+  }
+ },
+ "adepts": {
+  "fps": 6,
+  "scale_k": 1.9,
+  "adept": {
+   "sigil": {
+    "name": "Adepte de Sigil",
+    "task": "pray",
+    "hp": 90,
+    "lore": "Sa prière au temple de Sigil nourrit le Savoir."
+   },
+   "medeina": {
+    "name": "Adepte de Medeina",
+    "task": "pray",
+    "hp": 95,
+    "lore": "Sa prière au temple de Medeina nourrit la Vie."
+   },
+   "aether": {
+    "name": "Adepte d’Aether",
+    "task": "pray",
+    "hp": 100,
+    "lore": "Sa prière au temple d’Aether nourrit la Forge."
+   },
+   "indra": {
+    "name": "Adepte d’Indra",
+    "task": "pray",
+    "hp": 110,
+    "lore": "Sa prière au temple d’Indra nourrit la Discipline."
+   },
+   "flammes": {
+    "name": "Adepte lance-flammes",
+    "task": "fight",
+    "hp": 120,
+    "lore": "Le feu de sa lance ne laisse derrière lui que des cendres."
+   },
+   "archer": {
+    "name": "Adepte archer",
+    "task": "fight",
+    "hp": 85,
+    "lore": "Sa flèche part avant que l’ennemi ne l’ait vu."
+   },
+   "lame": {
+    "name": "Adepte d’épée et bouclier",
+    "task": "fight",
+    "hp": 170,
+    "lore": "Son bouclier est un mur que la meute ne franchit pas."
+   }
+  },
+  "fight": {
+   "flammes": {
+    "seek": 9,
+    "reach": 4.5,
+    "dmg": 6,
+    "cd": 0.3,
+    "splash": 2.2,
+    "status": "Garde l’Ancre · flammes ; sillon de feu toutes les 4 s"
+   },
+   "archer": {
+    "seek": 17,
+    "reach": 14,
+    "dmg": 11,
+    "cd": 0.95,
+    "melee": {
+     "reach": 2.3,
+     "dmg": 13,
+     "cd": 0.6
+    },
+    "status": "Garde l’Ancre · arc, puis Charge du Lac au contact"
+   },
+   "lame": {
+    "seek": 7,
+    "reach": 2.2,
+    "dmg": 16,
+    "cd": 0.85,
+    "guard": 0.55,
+    "status": "Garde l’Ancre · mêlée ; moulinet d’orage toutes les 3 frappes"
+   },
+   "sigil": {
+    "seek": 6,
+    "reach": 1.9,
+    "dmg": 4,
+    "cd": 1.1,
+    "status": "En attente · petite attaque au corps à corps"
+   },
+   "medeina": {
+    "seek": 6,
+    "reach": 1.9,
+    "dmg": 4,
+    "cd": 1.1,
+    "status": "En attente · petite attaque au corps à corps"
+   },
+   "aether": {
+    "seek": 6,
+    "reach": 1.9,
+    "dmg": 4,
+    "cd": 1.1,
+    "status": "En attente · petite attaque au corps à corps"
+   },
+   "indra": {
+    "seek": 6,
+    "reach": 1.9,
+    "dmg": 4,
+    "cd": 1.1,
+    "status": "En attente · petite attaque au corps à corps"
+   },
+   "engineer": {
+    "seek": 86,
+    "reach": 86,
+    "dmg": 80,
+    "cd": 1.15,
+    "ranged": true,
+    "status": "Prêt à recevoir vos ordres"
+   }
+  },
+  "note": "Échelle en jeu : Z()/16 × 1,9, soit 1,1047 × PX ; filtre « le plus proche ». Image : floor(t·6) & 3 (marche : & 1).",
+  "roles": {
+   "sigil": {
+    "ax": 7,
+    "ay": 26,
+    "modes": {
+     "idle": {
+      "frame_w": 18,
+      "frame_h": 27,
+      "cols": 1,
+      "rows": 1,
+      "count": 1
+     },
+     "walk": {
+      "frame_w": 18,
+      "frame_h": 27,
+      "cols": 2,
+      "rows": 1,
+      "count": 2
+     },
+     "work": {
+      "frame_w": 18,
+      "frame_h": 27,
+      "cols": 4,
+      "rows": 1,
+      "count": 4
+     }
+    }
+   },
+   "medeina": {
+    "ax": 7,
+    "ay": 25,
+    "modes": {
+     "idle": {
+      "frame_w": 20,
+      "frame_h": 26,
+      "cols": 1,
+      "rows": 1,
+      "count": 1
+     },
+     "walk": {
+      "frame_w": 20,
+      "frame_h": 26,
+      "cols": 2,
+      "rows": 1,
+      "count": 2
+     },
+     "work": {
+      "frame_w": 20,
+      "frame_h": 26,
+      "cols": 4,
+      "rows": 1,
+      "count": 4
+     }
+    }
+   },
+   "aether": {
+    "ax": 7,
+    "ay": 26,
+    "modes": {
+     "idle": {
+      "frame_w": 20,
+      "frame_h": 27,
+      "cols": 1,
+      "rows": 1,
+      "count": 1
+     },
+     "walk": {
+      "frame_w": 20,
+      "frame_h": 27,
+      "cols": 2,
+      "rows": 1,
+      "count": 2
+     },
+     "work": {
+      "frame_w": 20,
+      "frame_h": 27,
+      "cols": 4,
+      "rows": 1,
+      "count": 4
+     }
+    }
+   },
+   "indra": {
+    "ax": 11,
+    "ay": 27,
+    "modes": {
+     "idle": {
+      "frame_w": 21,
+      "frame_h": 28,
+      "cols": 1,
+      "rows": 1,
+      "count": 1
+     },
+     "walk": {
+      "frame_w": 21,
+      "frame_h": 28,
+      "cols": 2,
+      "rows": 1,
+      "count": 2
+     },
+     "work": {
+      "frame_w": 21,
+      "frame_h": 28,
+      "cols": 4,
+      "rows": 1,
+      "count": 4
+     }
+    }
+   },
+   "flammes": {
+    "ax": 9,
+    "ay": 25,
+    "modes": {
+     "idle": {
+      "frame_w": 22,
+      "frame_h": 26,
+      "cols": 1,
+      "rows": 1,
+      "count": 1
+     },
+     "walk": {
+      "frame_w": 22,
+      "frame_h": 26,
+      "cols": 2,
+      "rows": 1,
+      "count": 2
+     },
+     "work": {
+      "frame_w": 22,
+      "frame_h": 26,
+      "cols": 4,
+      "rows": 1,
+      "count": 4
+     }
+    }
+   },
+   "archer": {
+    "ax": 8,
+    "ay": 26,
+    "modes": {
+     "idle": {
+      "frame_w": 21,
+      "frame_h": 27,
+      "cols": 1,
+      "rows": 1,
+      "count": 1
+     },
+     "walk": {
+      "frame_w": 21,
+      "frame_h": 27,
+      "cols": 2,
+      "rows": 1,
+      "count": 2
+     },
+     "work": {
+      "frame_w": 21,
+      "frame_h": 27,
+      "cols": 4,
+      "rows": 1,
+      "count": 4
+     }
+    }
+   },
+   "lame": {
+    "ax": 9,
+    "ay": 27,
+    "modes": {
+     "idle": {
+      "frame_w": 21,
+      "frame_h": 28,
+      "cols": 1,
+      "rows": 1,
+      "count": 1
+     },
+     "walk": {
+      "frame_w": 21,
+      "frame_h": 28,
+      "cols": 2,
+      "rows": 1,
+      "count": 2
+     },
+     "work": {
+      "frame_w": 21,
+      "frame_h": 28,
+      "cols": 4,
+      "rows": 1,
+      "count": 4
+     }
+    }
+   }
+  }
+ },
+ "buildings": {
+  "fps": 12,
+  "canvas": [
+   320,
+   240
+  ],
+  "catalogue": {
+   "sigil": {
+    "name": "Temple de Sigil",
+    "cost": {
+     "savoir": 20
+    },
+    "deity": "sigil",
+    "art": "da-sigil",
+    "key": "g",
+    "icon": "rune",
+    "verse": "templeJob",
+    "time": 4,
+    "lore": "Ses adeptes y prient pour le Savoir.",
+    "size": 3
+   },
+   "aether": {
+    "name": "Temple d’Aether",
+    "cost": {
+     "forge": 20
+    },
+    "deity": "aether",
+    "art": "da-aether",
+    "key": "e",
+    "icon": "iron",
+    "verse": "foundryJob",
+    "time": 4,
+    "lore": "Ses adeptes y prient pour la Forge.",
+    "size": 3
+   },
+   "medeina": {
+    "name": "Temple de Medeina",
+    "cost": {
+     "vie": 20
+    },
+    "deity": "medeina",
+    "art": "da-medeina",
+    "key": "v",
+    "icon": "wood",
+    "verse": "sawmillJob",
+    "time": 4,
+    "lore": "Ses adeptes y prient pour la Vie.",
+    "size": 3
+   },
+   "indra": {
+    "name": "Temple d’Indra",
+    "cost": {
+     "discipline": 20
+    },
+    "deity": "indra",
+    "art": "da-indra",
+    "key": "i",
+    "icon": "sword",
+    "verse": "barracksJob",
+    "time": 4,
+    "lore": "Ses adeptes y prient pour la Discipline.",
+    "size": 3
+   },
+   "library": {
+    "name": "Bibliothèque",
+    "cost": {
+     "savoir": 200
+    },
+    "requires": "sigil",
+    "art": "library",
+    "key": "l",
+    "icon": "book",
+    "verse": "templeJob",
+    "time": 8,
+    "lore": "Les rouleaux de Sigil y sont rassemblés.",
+    "size": 3
+   },
+   "forge": {
+    "name": "Forge",
+    "cost": {
+     "forge": 200
+    },
+    "requires": "aether",
+    "art": "forge",
+    "key": "f",
+    "icon": "hammer",
+    "verse": "foundryJob",
+    "time": 8,
+    "lore": "L’enclume d’Aether y résonne.",
+    "size": 3
+   },
+   "workshop": {
+    "name": "Atelier",
+    "cost": {
+     "forge": 200
+    },
+    "requires": "aether",
+    "art": "workshop",
+    "key": "t",
+    "icon": "repair",
+    "verse": "foundryJob",
+    "time": 8,
+    "lore": "Établis et outils des artisans d’Aether.",
+    "size": 3
+   },
+   "bedroom": {
+    "name": "Chambre à coucher",
+    "cost": {
+     "vie": 200
+    },
+    "requires": "medeina",
+    "art": "bedroom",
+    "size": 2,
+    "key": "n",
+    "icon": "people",
+    "verse": "sawmillJob",
+    "time": 8,
+    "lore": "Le repos que Medeina accorde aux Exilés."
+   },
+   "soulwell": {
+    "name": "Puits des Âmes",
+    "cost": {
+     "vie": 200
+    },
+    "requires": "medeina",
+    "art": "soulwell",
+    "size": 2,
+    "key": "u",
+    "icon": "spirit",
+    "verse": "sawmillJob",
+    "time": 8,
+    "lore": "Medeina y rend leur souffle aux défunts, avec toute leur expérience."
+   },
+   "caserne": {
+    "name": "Caserne",
+    "cost": {
+     "discipline": 200
+    },
+    "requires": "indra",
+    "art": "caserne",
+    "key": "c",
+    "icon": "shield",
+    "verse": "barracksJob",
+    "time": 8,
+    "lore": "Les disciples d’Indra y forment les combattants.",
+    "size": 3
+   }
+  },
+  "arts": {
+   "da-sigil": {
+    "anchor": [
+     160,
+     168
+    ],
+    "top": 74,
+    "bottom": 212,
+    "anim": {
+     "frame_w": 320,
+     "frame_h": 240,
+     "cols": 1,
+     "rows": 1,
+     "count": 1,
+     "seconds": 0.08333333333333333,
+     "fps": 12,
+     "exact": true,
+     "seam_pixels": 0
+    }
+   },
+   "da-aether": {
+    "anchor": [
+     160,
+     168
+    ],
+    "top": 85,
+    "bottom": 215,
+    "anim": {
+     "frame_w": 320,
+     "frame_h": 240,
+     "cols": 1,
+     "rows": 1,
+     "count": 1,
+     "seconds": 0.08333333333333333,
+     "fps": 12,
+     "exact": true,
+     "seam_pixels": 0
+    }
+   },
+   "da-medeina": {
+    "anchor": [
+     160,
+     168
+    ],
+    "top": 57,
+    "bottom": 214,
+    "anim": {
+     "frame_w": 320,
+     "frame_h": 240,
+     "cols": 1,
+     "rows": 1,
+     "count": 1,
+     "seconds": 0.08333333333333333,
+     "fps": 12,
+     "exact": true,
+     "seam_pixels": 0
+    }
+   },
+   "da-indra": {
+    "anchor": [
+     160,
+     168
+    ],
+    "top": 83,
+    "bottom": 210,
+    "anim": {
+     "frame_w": 320,
+     "frame_h": 240,
+     "cols": 1,
+     "rows": 1,
+     "count": 1,
+     "seconds": 0.08333333333333333,
+     "fps": 12,
+     "exact": true,
+     "seam_pixels": 0
+    }
+   },
+   "library": {
+    "anchor": [
+     160,
+     178
+    ],
+    "top": 97,
+    "bottom": 219,
+    "pick": {
+     "set": "indra",
+     "i": 2,
+     "anchor": [
+      160,
+      178
+     ]
+    },
+    "anim": {
+     "frame_w": 320,
+     "frame_h": 240,
+     "cols": 12,
+     "rows": 5,
+     "count": 60,
+     "seconds": 5,
+     "fps": 12,
+     "exact": false,
+     "seam_pixels": 29
+    }
+   },
+   "forge": {
+    "anchor": [
+     160,
+     182
+    ],
+    "top": 78,
+    "bottom": 226,
+    "pick": {
+     "set": "fonderie",
+     "i": 4,
+     "anchor": [
+      160,
+      182
+     ]
+    },
+    "anim": {
+     "frame_w": 320,
+     "frame_h": 240,
+     "cols": 12,
+     "rows": 8,
+     "count": 94,
+     "seconds": 7.8125,
+     "fps": 12.032,
+     "exact": false,
+     "seam_pixels": 62
+    }
+   },
+   "workshop": {
+    "anchor": [
+     158,
+     176
+    ],
+    "top": 93,
+    "bottom": 217,
+    "pick": {
+     "set": "scierie",
+     "i": 3,
+     "anchor": [
+      158,
+      176
+     ]
+    },
+    "anim": {
+     "frame_w": 320,
+     "frame_h": 240,
+     "cols": 12,
+     "rows": 7,
+     "count": 75,
+     "seconds": 6.28125,
+     "fps": 11.9403,
+     "exact": false,
+     "seam_pixels": 3
+    }
+   },
+   "bedroom": {
+    "anchor": [
+     160,
+     180
+    ],
+    "top": 113,
+    "bottom": 229,
+    "pick": {
+     "set": "caserne",
+     "i": 2,
+     "anchor": [
+      160,
+      180
+     ]
+    },
+    "anim": {
+     "frame_w": 320,
+     "frame_h": 240,
+     "cols": 12,
+     "rows": 7,
+     "count": 75,
+     "seconds": 6.27083,
+     "fps": 11.96013,
+     "exact": false,
+     "seam_pixels": 13
+    }
+   },
+   "soulwell": {
+    "anchor": [
+     150,
+     166
+    ],
+    "top": 89,
+    "bottom": 216,
+    "pick": {
+     "set": "fonderie",
+     "i": 0,
+     "anchor": [
+      150,
+      166
+     ]
+    },
+    "anim": {
+     "frame_w": 320,
+     "frame_h": 240,
+     "cols": 12,
+     "rows": 4,
+     "count": 37,
+     "seconds": 3.125,
+     "fps": 11.84,
+     "exact": false,
+     "seam_pixels": 118
+    }
+   },
+   "caserne": {
+    "anchor": [
+     160,
+     182
+    ],
+    "top": 100,
+    "bottom": 233,
+    "pick": {
+     "set": "caserne",
+     "i": 4,
+     "anchor": [
+      160,
+      182
+     ]
+    },
+    "anim": {
+     "frame_w": 320,
+     "frame_h": 240,
+     "cols": 12,
+     "rows": 5,
+     "count": 58,
+     "seconds": 4.80208,
+     "fps": 12.07809,
+     "exact": false,
+     "seam_pixels": 4
+    }
+   }
+  },
+  "constants": {
+   "CELL": 4,
+   "SUMMON_COST": 50,
+   "CASERNE_COST": {
+    "discipline": 100
+   },
+   "CASERNE_TIME": 6,
+   "CASERNE_QUEUE": 5,
+   "REVIVE_COST": {
+    "vie": 200
+   },
+   "HERO_COST": {
+    "forge": 100,
+    "vie": 100,
+    "discipline": 100,
+    "savoir": 100
+   },
+   "CASERNE_UNITS": [
+    {
+     "id": "flammes",
+     "label": "Lance-flammes",
+     "key": "l",
+     "icon": "flame"
+    },
+    {
+     "id": "archer",
+     "label": "Archer",
+     "key": "u",
+     "icon": "bow"
+    },
+    {
+     "id": "lame",
+     "label": "Épée et bouclier",
+     "key": "e",
+     "icon": "shield"
+    }
+   ],
+   "RES_ORDER": [
+    "forge",
+    "vie",
+    "discipline",
+    "savoir"
+   ],
+   "DEITY_RES": {
+    "sigil": "savoir",
+    "aether": "forge",
+    "medeina": "vie",
+    "indra": "discipline"
+   },
+   "ORB_TIME": 8
+  },
+  "note": "Échelle en jeu : k = Z()·0,86/8·(size/3) = PX·size/3 ; filtre « le plus proche ».",
+  "ballista": {
+   "config": {
+    "range": 70,
+    "damage": 40,
+    "repairTime": 8,
+    "cycle": 3.6,
+    "boltSpeed": 85
+   },
+   "ruin": {
+    "anchor": [
+     160,
+     196
+    ],
+    "top": 139,
+    "bottom": 221,
+    "anim": {
+     "frame_w": 320,
+     "frame_h": 240,
+     "cols": 12,
+     "rows": 7,
+     "count": 81,
+     "seconds": 6.70833,
+     "fps": 12.07453,
+     "seam_pixels": 5
+    }
+   },
+   "active": {
+    "anchor": [
+     160,
+     196
+    ],
+    "top": 125,
+    "bottom": 217,
+    "weapon": {
+     "frame_w": 320,
+     "frame_h": 240,
+     "cols": 24,
+     "rows": 16,
+     "count": 384,
+     "yaws": 16,
+     "phases": 24,
+     "note": "Ligne = yaw (k·2π/16, yaw = atan2(dz, dx) en monde) ; colonne = phase du cycle (cycleAge / cycle)."
+    }
+   },
+   "pick": {
+    "set": "balistes",
+    "i": 0,
+    "anchor": [
+     160,
+     196
+    ]
+   }
+  }
+ },
+ "overlay": {
+  "scale": 2,
+  "footprints": {
+   "build": {
+    "frame_w": 396,
+    "frame_h": 134,
+    "cols": 6,
+    "rows": 6,
+    "count": 31,
+    "ax": 198,
+    "ay": 67,
+    "seconds": 2.5625,
+    "seam_pixels": 6643
+   },
+   "valid": {
+    "frame_w": 396,
+    "frame_h": 134,
+    "cols": 6,
+    "rows": 6,
+    "count": 31,
+    "ax": 198,
+    "ay": 67,
+    "seconds": 2.5625,
+    "seam_pixels": 6646
+   },
+   "invalid": {
+    "frame_w": 396,
+    "frame_h": 134,
+    "cols": 6,
+    "rows": 6,
+    "count": 31,
+    "ax": 198,
+    "ay": 67,
+    "seconds": 2.5625,
+    "seam_pixels": 6640
+   }
+  },
+  "hud_icons": "overlay/hud_icons.json",
+  "note": "Empreintes à l’échelle ×2 du repère bâtiment 320×240 ; elles seront probablement redessinées dans Godot (_draw)."
+ }
+}

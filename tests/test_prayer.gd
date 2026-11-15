@@ -1,0 +1,62 @@
+extends "res://tests/econ_case.gd"
+## Étape 7 (v2) : invocation d'adepte au temple (50 de la ressource du dieu, portail divin actif 3,5 s) et prière
+## (+1 par seconde et par adepte, popup « +5 » toutes les 5 s), comme dans buildings.js et adepts.js (73b410f).
+
+
+func test_summon_adept() -> void:
+	var sim := game()
+	var t := built("sigil", -26.0, -118.0)
+	GameState.res["savoir"] = 60.0
+	sim.summon_adept(t)
+	check_near(GameState.res["savoir"], 10.0, 1e-9, "50 Savoir payés")
+	var a: Unit = GameState.units[-1]
+	check_eq(a.role, "sigil", "adepte de Sigil")
+	check_eq(a.max_hp, 90.0, "PV d'un adepte de Sigil")
+	check_eq(Vector2(a.x, a.z), Vector2(-24.0, Simulation.PORTAL.y + 1.8), "sort du portail de Sigil")
+	check(a.job != null and a.job["type"] == "pray" and a.job["temple"] == t, "part prier")
+	sim.tick(DT)
+	check(GameState.deity_active["sigil"], "portail de Sigil actif")
+	run(sim, 3.6)
+	check(not GameState.deity_active["sigil"], "portail refermé après 3,5 s")
+	sim.summon_adept(t)
+	check_eq(GameState.units.size(), 2, "10 Savoir : invocation refusée")
+
+
+func test_prayer_income_and_popups() -> void:
+	var sim := game()
+	var t := built("sigil", -26.0, -118.0)
+	var adepts: Array[Unit] = []
+	for i in 3:
+		var a := sim.spawn("Adepte de Sigil", -26.0, -105.0, "sigil")
+		sim.send_to_pray(a, t)
+		adepts.append(a)
+	run(sim, 4.0)
+	for a in adepts:
+		check(a.working, "en prière : %s" % a.pos())
+	var s0: float = GameState.res["savoir"]
+	run(sim, 2.0)
+	check_near(GameState.res["savoir"] - s0, 6.0, 0.06, "3 adeptes : +3 Savoir par seconde")
+	check(not GameState.pray_popups.is_empty(), "popup « +5 » (cumul de prière du temple ≥ 5 s)")
+	check_eq(GameState.pray_popups[0]["res"], "savoir", "ressource du popup")
+	# prayerSpot : rangées de 5, à 2 unités d'écart, devant le temple.
+	check_eq(sim.prayer_spot(adepts[1], t), Vector2(-26.0 - 4.0 + 2.0, -118.0 + 6.0 + 1.0), "place du 2e adepte")
+
+
+func test_prayer_only_at_own_temple() -> void:
+	var sim := game()
+	built("sigil", -26.0, -118.0)
+	var a := sim.spawn("Adepte de Medeina", -20.0, -110.0, "medeina")
+	check(not sim.send_to_pray(a), "aucun temple de Medeina")
+	GameState.selected = [a]
+	sim.pray_selected()
+	check(a.job == null, "pas de prière")
+
+
+func test_prayer_stops_when_temple_removed() -> void:
+	var sim := game()
+	var t := built("sigil", -26.0, -118.0)
+	var a := sim.spawn("Adepte de Sigil", -26.0, -105.0, "sigil")
+	sim.send_to_pray(a, t)
+	GameState.buildings.erase(t)
+	sim.tick(DT)
+	check(a.job == null, "temple disparu : tâche annulée")

@@ -1,0 +1,2214 @@
+{
+ "generated_by": "tools/baker/hud.js",
+ "contexts": [
+  {
+   "name": "debut_cache",
+   "t": 0.5,
+   "units": [
+    {
+     "name": "Ingénieur Exilé",
+     "role": "engineer",
+     "x": 0,
+     "z": -166.9,
+     "hidden": true
+    }
+   ],
+   "selected": [
+    0
+   ]
+  },
+  {
+   "name": "ingenieur_ancre_eteinte",
+   "t": 6,
+   "units": [
+    {
+     "name": "Ingénieur Exilé",
+     "role": "engineer",
+     "x": -13,
+     "z": -147
+    }
+   ],
+   "selected": [
+    0
+   ]
+  },
+  {
+   "name": "ingenieur_reactivation",
+   "t": 9,
+   "units": [
+    {
+     "name": "Ingénieur Exilé",
+     "role": "engineer",
+     "x": -5,
+     "z": -150,
+     "orb_job": true
+    }
+   ],
+   "orb": {
+    "progress": 3.2,
+    "owner": 0
+   },
+   "selected": [
+    0
+   ]
+  },
+  {
+   "name": "ingenieur_creuse",
+   "t": 12,
+   "units": [
+    {
+     "name": "Ingénieur Exilé",
+     "role": "engineer",
+     "x": 58,
+     "z": -130,
+     "job": {
+      "type": "dig",
+      "cell": [
+       15,
+       -33
+      ],
+      "hits": 2
+     }
+    }
+   ],
+   "selected": [
+    0
+   ]
+  },
+  {
+   "name": "ingenieur_menu_construire",
+   "t": 40,
+   "orb": {
+    "active": true
+   },
+   "res": {
+    "forge": 30,
+    "vie": 10,
+    "discipline": 20,
+    "savoir": 250
+   },
+   "units": [
+    {
+     "name": "Ingénieur Exilé",
+     "role": "engineer",
+     "x": -13,
+     "z": -130
+    }
+   ],
+   "buildings": [
+    {
+     "type": "sigil",
+     "x": -26,
+     "z": -118,
+     "complete": true
+    }
+   ],
+   "selected": [
+    0
+   ],
+   "menu": "build",
+   "mode": "build",
+   "build_type": "library"
+  },
+  {
+   "name": "ingenieur_menu_chantier",
+   "t": 41,
+   "orb": {
+    "active": true
+   },
+   "res": {
+    "forge": 5,
+    "vie": 210,
+    "discipline": 0,
+    "savoir": 12
+   },
+   "units": [
+    {
+     "name": "Ingénieur Exilé",
+     "role": "engineer",
+     "x": -34,
+     "z": -112,
+     "build_job": 0
+    }
+   ],
+   "buildings": [
+    {
+     "type": "medeina",
+     "x": -26,
+     "z": -118,
+     "progress": 1.5
+    }
+   ],
+   "selected": [
+    0
+   ],
+   "menu": "build"
+  },
+  {
+   "name": "chantier_incantation",
+   "t": 43.3,
+   "orb": {
+    "active": true
+   },
+   "units": [
+    {
+     "name": "Ingénieur Exilé",
+     "role": "engineer",
+     "x": -34,
+     "z": -115,
+     "build_job": 0
+    }
+   ],
+   "buildings": [
+    {
+     "type": "medeina",
+     "x": -26,
+     "z": -118,
+     "progress": 2.2
+    }
+   ],
+   "selected": [
+    0
+   ]
+  },
+  {
+   "name": "ingenieur_reparer_recharge",
+   "t": 55,
+   "orb": {
+    "active": true
+   },
+   "units": [
+    {
+     "name": "Ingénieur Exilé",
+     "role": "engineer",
+     "x": -13,
+     "z": -130,
+     "ability": 7.3,
+     "stance": "hold",
+     "level": 3,
+     "xp": 41.6,
+     "hp": 97
+    }
+   ],
+   "selected": [
+    0
+   ],
+   "mode": "move"
+  },
+  {
+   "name": "ancre_eteinte",
+   "t": 7,
+   "units": [
+    {
+     "name": "Ingénieur Exilé",
+     "role": "engineer",
+     "x": -13,
+     "z": -147
+    }
+   ],
+   "anchor": true
+  },
+  {
+   "name": "ancre_reactivation_sans_ingenieur",
+   "t": 2,
+   "units": [
+    {
+     "name": "Ingénieur Exilé",
+     "role": "engineer",
+     "x": 0,
+     "z": -166.9,
+     "hidden": true
+    }
+   ],
+   "anchor": true
+  },
+  {
+   "name": "ancre_active_heros",
+   "t": 30,
+   "orb": {
+    "active": true
+   },
+   "next_wave": 105.4,
+   "core_hp": 72.3,
+   "res": {
+    "forge": 120,
+    "vie": 120,
+    "discipline": 120,
+    "savoir": 120
+   },
+   "units": [
+    {
+     "name": "Ingénieur Exilé",
+     "role": "engineer",
+     "x": -13,
+     "z": -147
+    }
+   ],
+   "anchor": true
+  },
+  {
+   "name": "ancre_active_pauvre",
+   "t": 31,
+   "orb": {
+    "active": true
+   },
+   "next_wave": 31.2,
+   "res": {
+    "forge": 120,
+    "vie": 99.5,
+    "discipline": 120,
+    "savoir": 120
+   },
+   "units": [
+    {
+     "name": "Ingénieur Exilé",
+     "role": "engineer",
+     "x": -13,
+     "z": -147
+    }
+   ],
+   "anchor": true
+  },
+  {
+   "name": "temple_sigil",
+   "t": 60,
+   "orb": {
+    "active": true
+   },
+   "res": {
+    "forge": 10,
+    "vie": 10,
+    "discipline": 10,
+    "savoir": 60
+   },
+   "units": [
+    {
+     "name": "Ingénieur Exilé",
+     "role": "engineer",
+     "x": -13,
+     "z": -147
+    },
+    {
+     "name": "Adepte de Sigil",
+     "role": "sigil",
+     "x": -30,
+     "z": -111,
+     "job": {
+      "type": "pray",
+      "temple": 0
+     },
+     "working": true
+    }
+   ],
+   "buildings": [
+    {
+     "type": "sigil",
+     "x": -26,
+     "z": -118,
+     "complete": true
+    }
+   ],
+   "building": 0
+  },
+  {
+   "name": "temple_aether_chantier",
+   "t": 61,
+   "units": [
+    {
+     "name": "Ingénieur Exilé",
+     "role": "engineer",
+     "x": -34,
+     "z": -112,
+     "build_job": 0
+    }
+   ],
+   "buildings": [
+    {
+     "type": "aether",
+     "x": -26,
+     "z": -118,
+     "progress": 1.5
+    }
+   ],
+   "building": 0
+  },
+  {
+   "name": "caserne",
+   "t": 90,
+   "orb": {
+    "active": true
+   },
+   "res": {
+    "forge": 0,
+    "vie": 0,
+    "discipline": 150,
+    "savoir": 0
+   },
+   "units": [
+    {
+     "name": "Ingénieur Exilé",
+     "role": "engineer",
+     "x": -13,
+     "z": -147
+    }
+   ],
+   "buildings": [
+    {
+     "type": "indra",
+     "x": 26,
+     "z": -118,
+     "complete": true
+    },
+    {
+     "type": "caserne",
+     "x": 26,
+     "z": -104,
+     "complete": true,
+     "queue": [
+      "archer",
+      "lame"
+     ]
+    }
+   ],
+   "building": 1
+  },
+  {
+   "name": "caserne_pleine",
+   "t": 91,
+   "res": {
+    "forge": 0,
+    "vie": 0,
+    "discipline": 500,
+    "savoir": 0
+   },
+   "units": [
+    {
+     "name": "Ingénieur Exilé",
+     "role": "engineer",
+     "x": -13,
+     "z": -147
+    }
+   ],
+   "buildings": [
+    {
+     "type": "caserne",
+     "x": 26,
+     "z": -104,
+     "complete": true,
+     "queue": [
+      "archer",
+      "lame",
+      "flammes",
+      "archer",
+      "archer"
+     ]
+    }
+   ],
+   "building": 0
+  },
+  {
+   "name": "puits_des_ames",
+   "t": 120,
+   "res": {
+    "forge": 0,
+    "vie": 250,
+    "discipline": 0,
+    "savoir": 0
+   },
+   "units": [
+    {
+     "name": "Ingénieur Exilé",
+     "role": "engineer",
+     "x": -13,
+     "z": -147
+    }
+   ],
+   "buildings": [
+    {
+     "type": "soulwell",
+     "x": -30,
+     "z": -104,
+     "complete": true
+    }
+   ],
+   "fallen": [
+    {
+     "name": "Adepte archer",
+     "role": "archer",
+     "level": 3
+    },
+    {
+     "name": "Adepte de Sigil",
+     "role": "sigil",
+     "level": 1
+    },
+    {
+     "name": "Adepte d’épée et bouclier",
+     "role": "lame",
+     "level": 2
+    }
+   ],
+   "building": 0
+  },
+  {
+   "name": "puits_des_ames_vide",
+   "t": 121,
+   "res": {
+    "forge": 0,
+    "vie": 250,
+    "discipline": 0,
+    "savoir": 0
+   },
+   "units": [
+    {
+     "name": "Ingénieur Exilé",
+     "role": "engineer",
+     "x": -13,
+     "z": -147
+    }
+   ],
+   "buildings": [
+    {
+     "type": "soulwell",
+     "x": -30,
+     "z": -104,
+     "complete": true
+    }
+   ],
+   "building": 0
+  },
+  {
+   "name": "bibliotheque",
+   "t": 122,
+   "units": [
+    {
+     "name": "Ingénieur Exilé",
+     "role": "engineer",
+     "x": -13,
+     "z": -147
+    }
+   ],
+   "buildings": [
+    {
+     "type": "sigil",
+     "x": -26,
+     "z": -118,
+     "complete": true
+    },
+    {
+     "type": "library",
+     "x": -26,
+     "z": -104,
+     "complete": true
+    }
+   ],
+   "building": 1
+  },
+  {
+   "name": "adepte_sigil_en_route",
+   "t": 70,
+   "units": [
+    {
+     "name": "Ingénieur Exilé",
+     "role": "engineer",
+     "x": -13,
+     "z": -147
+    },
+    {
+     "name": "Adepte de Sigil",
+     "role": "sigil",
+     "x": -10,
+     "z": -140,
+     "level": 2,
+     "xp": 12.4,
+     "job": {
+      "type": "pray",
+      "temple": 0
+     }
+    }
+   ],
+   "buildings": [
+    {
+     "type": "sigil",
+     "x": -26,
+     "z": -118,
+     "complete": true
+    }
+   ],
+   "selected": [
+    1
+   ]
+  },
+  {
+   "name": "adepte_medeina_sans_temple",
+   "t": 71,
+   "units": [
+    {
+     "name": "Ingénieur Exilé",
+     "role": "engineer",
+     "x": -13,
+     "z": -147
+    },
+    {
+     "name": "Adepte de Medeina",
+     "role": "medeina",
+     "x": -10,
+     "z": -140
+    }
+   ],
+   "buildings": [
+    {
+     "type": "sigil",
+     "x": -26,
+     "z": -118,
+     "complete": true
+    }
+   ],
+   "selected": [
+    1
+   ]
+  },
+  {
+   "name": "combattant_archer",
+   "t": 72,
+   "units": [
+    {
+     "name": "Ingénieur Exilé",
+     "role": "engineer",
+     "x": -13,
+     "z": -147
+    },
+    {
+     "name": "Adepte archer",
+     "role": "archer",
+     "x": 4,
+     "z": -120,
+     "hp": 51
+    }
+   ],
+   "selected": [
+    1
+   ]
+  },
+  {
+   "name": "heros_tireur",
+   "t": 140,
+   "units": [
+    {
+     "name": "Ingénieur Exilé",
+     "role": "engineer",
+     "x": -13,
+     "z": -147
+    },
+    {
+     "name": "Tireur",
+     "role": "shooter",
+     "x": 3,
+     "z": -150,
+     "ability": 4.2,
+     "level": 2,
+     "xp": 3
+    }
+   ],
+   "selected": [
+    1
+   ]
+  },
+  {
+   "name": "multi_selection",
+   "t": 80,
+   "units": [
+    {
+     "name": "Ingénieur Exilé",
+     "role": "engineer",
+     "x": -13,
+     "z": -147
+    },
+    {
+     "name": "Adepte de Sigil",
+     "role": "sigil",
+     "x": -10,
+     "z": -140
+    },
+    {
+     "name": "Adepte archer",
+     "role": "archer",
+     "x": -8,
+     "z": -140,
+     "hp": 40
+    }
+   ],
+   "buildings": [
+    {
+     "type": "sigil",
+     "x": -26,
+     "z": -118,
+     "complete": true
+    }
+   ],
+   "selected": [
+    0,
+    1,
+    2
+   ]
+  },
+  {
+   "name": "aucune_selection",
+   "t": 15,
+   "units": [
+    {
+     "name": "Ingénieur Exilé",
+     "role": "engineer",
+     "x": -13,
+     "z": -147
+    }
+   ]
+  },
+  {
+   "name": "fin_partie",
+   "t": 200,
+   "orb": {
+    "active": true
+   },
+   "ended": true,
+   "core_hp": 0,
+   "units": [
+    {
+     "name": "Ingénieur Exilé",
+     "role": "engineer",
+     "x": -13,
+     "z": -147
+    }
+   ],
+   "selected": [
+    0
+   ]
+  },
+  {
+   "name": "fin_partie_ancre",
+   "t": 200,
+   "orb": {
+    "active": true
+   },
+   "ended": true,
+   "core_hp": 35,
+   "units": [
+    {
+     "name": "Ingénieur Exilé",
+     "role": "engineer",
+     "x": -13,
+     "z": -147
+    }
+   ],
+   "anchor": true
+  }
+ ],
+ "results": [
+  {
+   "name": "debut_cache",
+   "hud": {
+    "actions": [],
+    "wave": "—",
+    "res": {
+     "forge": "0",
+     "vie": "0",
+     "discipline": "0",
+     "savoir": "0"
+    },
+    "population": "0",
+    "kind": "PORTAIL · ÉMERGENCE",
+    "chosen": "Ingénieur Exilé",
+    "health_text": "140 / 140",
+    "health_pct": 100,
+    "health_label": "Points de vie",
+    "status": "Franchit le portail…",
+    "damage": "80",
+    "armor": "0",
+    "speed": "15,2",
+    "lore": "Il relève les pierres pour que demeure le serment.",
+    "assault": "",
+    "anchor_details": false,
+    "portrait_enabled": true,
+    "portrait_key": "engineer"
+   }
+  },
+  {
+   "name": "ingenieur_ancre_eteinte",
+   "hud": {
+    "actions": [
+     {
+      "id": "menu-build",
+      "icon": "hammer",
+      "label": "Construire",
+      "key": "b",
+      "title": "Construire un temple ou un bâtiment",
+      "disabled": false,
+      "active": false,
+      "cooldown": ""
+     },
+     {
+      "id": "orb",
+      "icon": "rune",
+      "label": "Réactiver",
+      "key": "r",
+      "title": "Réactiver l’Ancre · 8 s",
+      "disabled": false,
+      "active": false,
+      "cooldown": ""
+     },
+     {
+      "id": "hold",
+      "icon": "flag",
+      "label": "Position",
+      "key": "h",
+      "title": "Tenir position",
+      "disabled": false,
+      "active": false,
+      "cooldown": ""
+     },
+     {
+      "id": "move",
+      "icon": "move",
+      "label": "Déplacer",
+      "key": "m",
+      "title": "Déplacer : choisir une destination",
+      "disabled": false,
+      "active": false,
+      "cooldown": ""
+     }
+    ],
+    "wave": "—",
+    "res": {
+     "forge": "0",
+     "vie": "0",
+     "discipline": "0",
+     "savoir": "0"
+    },
+    "population": "1",
+    "kind": "EXILÉ · SOUTIEN · NIV. 1 · 0 / 20 XP",
+    "chosen": "Ingénieur Exilé",
+    "health_text": "140 / 140",
+    "health_pct": 100,
+    "health_label": "Points de vie",
+    "status": "L’Ancre est éteinte · clic droit dessus (ou R) pour la réactiver",
+    "damage": "80",
+    "armor": "0",
+    "speed": "15,2",
+    "lore": "Il relève les pierres pour que demeure le serment.",
+    "assault": "",
+    "anchor_details": false,
+    "portrait_enabled": true,
+    "portrait_key": "engineer"
+   }
+  },
+  {
+   "name": "ingenieur_reactivation",
+   "hud": {
+    "actions": [
+     {
+      "id": "menu-build",
+      "icon": "hammer",
+      "label": "Construire",
+      "key": "b",
+      "title": "Construire un temple ou un bâtiment",
+      "disabled": false,
+      "active": false,
+      "cooldown": ""
+     },
+     {
+      "id": "orb",
+      "icon": "rune",
+      "label": "Réactiver",
+      "key": "r",
+      "title": "Réactiver l’Ancre · 8 s",
+      "disabled": false,
+      "active": true,
+      "cooldown": ""
+     },
+     {
+      "id": "hold",
+      "icon": "flag",
+      "label": "Position",
+      "key": "h",
+      "title": "Tenir position",
+      "disabled": false,
+      "active": false,
+      "cooldown": ""
+     },
+     {
+      "id": "move",
+      "icon": "move",
+      "label": "Déplacer",
+      "key": "m",
+      "title": "Déplacer : choisir une destination",
+      "disabled": false,
+      "active": false,
+      "cooldown": ""
+     }
+    ],
+    "wave": "—",
+    "res": {
+     "forge": "0",
+     "vie": "0",
+     "discipline": "0",
+     "savoir": "0"
+    },
+    "population": "1",
+    "kind": "EXILÉ · SOUTIEN · NIV. 1 · 0 / 20 XP",
+    "chosen": "Ingénieur Exilé",
+    "health_text": "140 / 140",
+    "health_pct": 100,
+    "health_label": "Points de vie",
+    "status": "Réactivation de l’Ancre · 40 %",
+    "damage": "80",
+    "armor": "0",
+    "speed": "15,2",
+    "lore": "Il relève les pierres pour que demeure le serment.",
+    "assault": "",
+    "anchor_details": false,
+    "portrait_enabled": true,
+    "portrait_key": "engineer"
+   }
+  },
+  {
+   "name": "ingenieur_creuse",
+   "hud": {
+    "actions": [
+     {
+      "id": "menu-build",
+      "icon": "hammer",
+      "label": "Construire",
+      "key": "b",
+      "title": "Construire un temple ou un bâtiment",
+      "disabled": false,
+      "active": false,
+      "cooldown": ""
+     },
+     {
+      "id": "orb",
+      "icon": "rune",
+      "label": "Réactiver",
+      "key": "r",
+      "title": "Réactiver l’Ancre · 8 s",
+      "disabled": false,
+      "active": false,
+      "cooldown": ""
+     },
+     {
+      "id": "hold",
+      "icon": "flag",
+      "label": "Position",
+      "key": "h",
+      "title": "Tenir position",
+      "disabled": false,
+      "active": false,
+      "cooldown": ""
+     },
+     {
+      "id": "move",
+      "icon": "move",
+      "label": "Déplacer",
+      "key": "m",
+      "title": "Déplacer : choisir une destination",
+      "disabled": false,
+      "active": false,
+      "cooldown": ""
+     }
+    ],
+    "wave": "—",
+    "res": {
+     "forge": "0",
+     "vie": "0",
+     "discipline": "0",
+     "savoir": "0"
+    },
+    "population": "1",
+    "kind": "EXILÉ · SOUTIEN · NIV. 1 · 0 / 20 XP",
+    "chosen": "Ingénieur Exilé",
+    "health_text": "140 / 140",
+    "health_pct": 100,
+    "health_label": "Points de vie",
+    "status": "Creuse la roche · 2 / 4",
+    "damage": "80",
+    "armor": "0",
+    "speed": "15,2",
+    "lore": "Il relève les pierres pour que demeure le serment.",
+    "assault": "",
+    "anchor_details": false,
+    "portrait_enabled": true,
+    "portrait_key": "engineer"
+   }
+  },
+  {
+   "name": "ingenieur_menu_construire",
+   "hud": {
+    "actions": [
+     {
+      "id": "b-sigil",
+      "icon": "rune",
+      "label": "T. Sigil · 20",
+      "key": "g",
+      "title": "Temple de Sigil · 20 Savoir",
+      "disabled": false,
+      "active": false,
+      "cooldown": ""
+     },
+     {
+      "id": "b-aether",
+      "icon": "iron",
+      "label": "T. Aether · 20",
+      "key": "e",
+      "title": "Temple d’Aether · 20 Forge",
+      "disabled": false,
+      "active": false,
+      "cooldown": ""
+     },
+     {
+      "id": "b-medeina",
+      "icon": "wood",
+      "label": "T. Medeina · 20",
+      "key": "v",
+      "title": "Temple de Medeina · 20 Vie",
+      "disabled": true,
+      "active": false,
+      "cooldown": ""
+     },
+     {
+      "id": "b-indra",
+      "icon": "sword",
+      "label": "T. Indra · 20",
+      "key": "i",
+      "title": "Temple d’Indra · 20 Discipline",
+      "disabled": false,
+      "active": false,
+      "cooldown": ""
+     },
+     {
+      "id": "b-library",
+      "icon": "book",
+      "label": "Bibliothèque · 200",
+      "key": "l",
+      "title": "Bibliothèque · 200 Savoir",
+      "disabled": false,
+      "active": true,
+      "cooldown": ""
+     },
+     {
+      "id": "b-forge",
+      "icon": "hammer",
+      "label": "Forge · 200",
+      "key": "f",
+      "title": "Forge · 200 Forge · nécessite un Temple d’Aether",
+      "disabled": true,
+      "active": false,
+      "cooldown": ""
+     },
+     {
+      "id": "b-workshop",
+      "icon": "repair",
+      "label": "Atelier · 200",
+      "key": "t",
+      "title": "Atelier · 200 Forge · nécessite un Temple d’Aether",
+      "disabled": true,
+      "active": false,
+      "cooldown": ""
+     },
+     {
+      "id": "b-bedroom",
+      "icon": "people",
+      "label": "Chambre à coucher · 200",
+      "key": "n",
+      "title": "Chambre à coucher · 200 Vie · nécessite un Temple de Medeina · 2 × 2",
+      "disabled": true,
+      "active": false,
+      "cooldown": ""
+     },
+     {
+      "id": "b-soulwell",
+      "icon": "spirit",
+      "label": "Puits des Âmes · 200",
+      "key": "u",
+      "title": "Puits des Âmes · 200 Vie · nécessite un Temple de Medeina · 2 × 2",
+      "disabled": true,
+      "active": false,
+      "cooldown": ""
+     },
+     {
+      "id": "b-caserne",
+      "icon": "shield",
+      "label": "Caserne · 200",
+      "key": "c",
+      "title": "Caserne · 200 Discipline · nécessite un Temple d’Indra",
+      "disabled": true,
+      "active": false,
+      "cooldown": ""
+     },
+     {
+      "id": "back",
+      "icon": "restart",
+      "label": "Retour",
+      "key": "b",
+      "title": "Revenir aux ordres de l’Ingénieur (B ou Échap)",
+      "disabled": false,
+      "active": false,
+      "cooldown": ""
+     }
+    ],
+    "wave": "—",
+    "res": {
+     "forge": "30",
+     "vie": "10",
+     "discipline": "20",
+     "savoir": "250"
+    },
+    "population": "1",
+    "kind": "EXILÉ · SOUTIEN · NIV. 1 · 0 / 20 XP",
+    "chosen": "Ingénieur Exilé",
+    "health_text": "140 / 140",
+    "health_pct": 100,
+    "health_label": "Points de vie",
+    "status": "Placez : Bibliothèque · 200 Savoir",
+    "damage": "80",
+    "armor": "0",
+    "speed": "15,2",
+    "lore": "Il relève les pierres pour que demeure le serment.",
+    "assault": "",
+    "anchor_details": false,
+    "portrait_enabled": true,
+    "portrait_key": "engineer"
+   }
+  },
+  {
+   "name": "ingenieur_menu_chantier",
+   "hud": {
+    "actions": [
+     {
+      "id": "b-sigil",
+      "icon": "rune",
+      "label": "T. Sigil · 20",
+      "key": "g",
+      "title": "Temple de Sigil · 20 Savoir",
+      "disabled": true,
+      "active": false,
+      "cooldown": ""
+     },
+     {
+      "id": "b-aether",
+      "icon": "iron",
+      "label": "T. Aether · 20",
+      "key": "e",
+      "title": "Temple d’Aether · 20 Forge",
+      "disabled": true,
+      "active": false,
+      "cooldown": ""
+     },
+     {
+      "id": "b-medeina",
+      "icon": "wood",
+      "label": "T. Medeina · 20",
+      "key": "v",
+      "title": "Temple de Medeina · 20 Vie",
+      "disabled": false,
+      "active": false,
+      "cooldown": ""
+     },
+     {
+      "id": "b-indra",
+      "icon": "sword",
+      "label": "T. Indra · 20",
+      "key": "i",
+      "title": "Temple d’Indra · 20 Discipline",
+      "disabled": true,
+      "active": false,
+      "cooldown": ""
+     },
+     {
+      "id": "b-library",
+      "icon": "book",
+      "label": "Bibliothèque · 200",
+      "key": "l",
+      "title": "Bibliothèque · 200 Savoir · nécessite un Temple de Sigil",
+      "disabled": true,
+      "active": false,
+      "cooldown": ""
+     },
+     {
+      "id": "b-forge",
+      "icon": "hammer",
+      "label": "Forge · 200",
+      "key": "f",
+      "title": "Forge · 200 Forge · nécessite un Temple d’Aether",
+      "disabled": true,
+      "active": false,
+      "cooldown": ""
+     },
+     {
+      "id": "b-workshop",
+      "icon": "repair",
+      "label": "Atelier · 200",
+      "key": "t",
+      "title": "Atelier · 200 Forge · nécessite un Temple d’Aether",
+      "disabled": true,
+      "active": false,
+      "cooldown": ""
+     },
+     {
+      "id": "b-bedroom",
+      "icon": "people",
+      "label": "Chambre à coucher · 200",
+      "key": "n",
+      "title": "Chambre à coucher · 200 Vie · nécessite un Temple de Medeina · 2 × 2",
+      "disabled": true,
+      "active": false,
+      "cooldown": ""
+     },
+     {
+      "id": "b-soulwell",
+      "icon": "spirit",
+      "label": "Puits des Âmes · 200",
+      "key": "u",
+      "title": "Puits des Âmes · 200 Vie · nécessite un Temple de Medeina · 2 × 2",
+      "disabled": true,
+      "active": false,
+      "cooldown": ""
+     },
+     {
+      "id": "b-caserne",
+      "icon": "shield",
+      "label": "Caserne · 200",
+      "key": "c",
+      "title": "Caserne · 200 Discipline · nécessite un Temple d’Indra",
+      "disabled": true,
+      "active": false,
+      "cooldown": ""
+     },
+     {
+      "id": "back",
+      "icon": "restart",
+      "label": "Retour",
+      "key": "b",
+      "title": "Revenir aux ordres de l’Ingénieur (B ou Échap)",
+      "disabled": false,
+      "active": false,
+      "cooldown": ""
+     }
+    ],
+    "wave": "—",
+    "res": {
+     "forge": "5",
+     "vie": "210",
+     "discipline": "0",
+     "savoir": "12"
+    },
+    "population": "1",
+    "kind": "EXILÉ · SOUTIEN · NIV. 1 · 0 / 20 XP",
+    "chosen": "Ingénieur Exilé",
+    "health_text": "140 / 140",
+    "health_pct": 100,
+    "health_label": "Points de vie",
+    "status": "Construction · Temple de Medeina · 37 %",
+    "damage": "80",
+    "armor": "0",
+    "speed": "15,2",
+    "lore": "Il relève les pierres pour que demeure le serment.",
+    "assault": "",
+    "anchor_details": false,
+    "portrait_enabled": true,
+    "portrait_key": "engineer"
+   }
+  },
+  {
+   "name": "chantier_incantation",
+   "hud": {
+    "actions": [
+     {
+      "id": "menu-build",
+      "icon": "hammer",
+      "label": "Construire",
+      "key": "b",
+      "title": "Construire un temple ou un bâtiment",
+      "disabled": false,
+      "active": false,
+      "cooldown": ""
+     },
+     {
+      "id": "repair",
+      "icon": "repair",
+      "label": "Réparer",
+      "key": "r",
+      "title": "Réparer l’Ancre · +15 % d’intégrité",
+      "disabled": false,
+      "active": false,
+      "cooldown": ""
+     },
+     {
+      "id": "hold",
+      "icon": "flag",
+      "label": "Position",
+      "key": "h",
+      "title": "Tenir position",
+      "disabled": false,
+      "active": false,
+      "cooldown": ""
+     },
+     {
+      "id": "move",
+      "icon": "move",
+      "label": "Déplacer",
+      "key": "m",
+      "title": "Déplacer : choisir une destination",
+      "disabled": false,
+      "active": false,
+      "cooldown": ""
+     }
+    ],
+    "wave": "—",
+    "res": {
+     "forge": "0",
+     "vie": "0",
+     "discipline": "0",
+     "savoir": "0"
+    },
+    "population": "1",
+    "kind": "EXILÉ · SOUTIEN · NIV. 1 · 0 / 20 XP",
+    "chosen": "Ingénieur Exilé",
+    "health_text": "140 / 140",
+    "health_pct": 100,
+    "health_label": "Points de vie",
+    "status": "Construction · Temple de Medeina · 55 %",
+    "damage": "80",
+    "armor": "0",
+    "speed": "15,2",
+    "lore": "Il relève les pierres pour que demeure le serment.",
+    "assault": "",
+    "anchor_details": false,
+    "portrait_enabled": true,
+    "portrait_key": "engineer"
+   }
+  },
+  {
+   "name": "ingenieur_reparer_recharge",
+   "hud": {
+    "actions": [
+     {
+      "id": "menu-build",
+      "icon": "hammer",
+      "label": "Construire",
+      "key": "b",
+      "title": "Construire un temple ou un bâtiment",
+      "disabled": false,
+      "active": false,
+      "cooldown": ""
+     },
+     {
+      "id": "repair",
+      "icon": "repair",
+      "label": "Réparer",
+      "key": "r",
+      "title": "Réparer l’Ancre · +15 % d’intégrité",
+      "disabled": true,
+      "active": false,
+      "cooldown": "8 s"
+     },
+     {
+      "id": "hold",
+      "icon": "flag",
+      "label": "Position",
+      "key": "h",
+      "title": "Tenir position",
+      "disabled": false,
+      "active": true,
+      "cooldown": ""
+     },
+     {
+      "id": "move",
+      "icon": "move",
+      "label": "Déplacer",
+      "key": "m",
+      "title": "Déplacer : choisir une destination",
+      "disabled": false,
+      "active": true,
+      "cooldown": ""
+     }
+    ],
+    "wave": "—",
+    "res": {
+     "forge": "0",
+     "vie": "0",
+     "discipline": "0",
+     "savoir": "0"
+    },
+    "population": "1",
+    "kind": "EXILÉ · SOUTIEN · NIV. 3 · 41 / 51 XP",
+    "chosen": "Ingénieur Exilé",
+    "health_text": "97 / 140",
+    "health_pct": 69.2857,
+    "health_label": "Points de vie",
+    "status": "Choisissez une destination",
+    "damage": "82",
+    "armor": "2",
+    "speed": "15,2",
+    "lore": "Il relève les pierres pour que demeure le serment.",
+    "assault": "",
+    "anchor_details": false,
+    "portrait_enabled": true,
+    "portrait_key": "engineer"
+   }
+  },
+  {
+   "name": "ancre_eteinte",
+   "hud": {
+    "actions": [
+     {
+      "id": "orb",
+      "icon": "rune",
+      "label": "Réactiver",
+      "key": "r",
+      "title": "Envoyer l’Ingénieur réactiver l’Ancre · 8 s",
+      "disabled": false,
+      "active": false,
+      "cooldown": ""
+     },
+     {
+      "id": "hero",
+      "icon": "sword",
+      "label": "Tireur · 100+100+100+100",
+      "key": "t",
+      "title": "Invoquer le héros Tireur · 100 Forge + 100 Vie + 100 Discipline + 100 Savoir",
+      "disabled": true,
+      "active": false,
+      "cooldown": ""
+     }
+    ],
+    "wave": "—",
+    "res": {
+     "forge": "0",
+     "vie": "0",
+     "discipline": "0",
+     "savoir": "0"
+    },
+    "population": "1",
+    "kind": "SANCTUAIRE · ANCRE",
+    "chosen": "Ancre tyrienne",
+    "health_text": "Intégrité : 100 %",
+    "health_pct": 100,
+    "health_label": "Intégrité de l’Ancre",
+    "status": "Éteinte · l’Ingénieur doit la réactiver",
+    "damage": "—",
+    "armor": "—",
+    "speed": "—",
+    "lore": "Un serment veille encore sur ces pierres.",
+    "assault": "Au réveil de l’Ancre",
+    "anchor_details": true,
+    "portrait_enabled": true,
+    "portrait_key": "anchor"
+   }
+  },
+  {
+   "name": "ancre_reactivation_sans_ingenieur",
+   "hud": {
+    "actions": [
+     {
+      "id": "orb",
+      "icon": "rune",
+      "label": "Réactiver",
+      "key": "r",
+      "title": "Envoyer l’Ingénieur réactiver l’Ancre · 8 s",
+      "disabled": true,
+      "active": false,
+      "cooldown": ""
+     },
+     {
+      "id": "hero",
+      "icon": "sword",
+      "label": "Tireur · 100+100+100+100",
+      "key": "t",
+      "title": "Invoquer le héros Tireur · 100 Forge + 100 Vie + 100 Discipline + 100 Savoir",
+      "disabled": true,
+      "active": false,
+      "cooldown": ""
+     }
+    ],
+    "wave": "—",
+    "res": {
+     "forge": "0",
+     "vie": "0",
+     "discipline": "0",
+     "savoir": "0"
+    },
+    "population": "0",
+    "kind": "SANCTUAIRE · ANCRE",
+    "chosen": "Ancre tyrienne",
+    "health_text": "Intégrité : 100 %",
+    "health_pct": 100,
+    "health_label": "Intégrité de l’Ancre",
+    "status": "Éteinte · l’Ingénieur doit la réactiver",
+    "damage": "—",
+    "armor": "—",
+    "speed": "—",
+    "lore": "Un serment veille encore sur ces pierres.",
+    "assault": "Au réveil de l’Ancre",
+    "anchor_details": true,
+    "portrait_enabled": true,
+    "portrait_key": "anchor"
+   }
+  },
+  {
+   "name": "ancre_active_heros",
+   "hud": {
+    "actions": [
+     {
+      "id": "hero",
+      "icon": "sword",
+      "label": "Tireur · 100+100+100+100",
+      "key": "t",
+      "title": "Invoquer le héros Tireur · 100 Forge + 100 Vie + 100 Discipline + 100 Savoir",
+      "disabled": false,
+      "active": false,
+      "cooldown": ""
+     }
+    ],
+    "wave": "—",
+    "res": {
+     "forge": "120",
+     "vie": "120",
+     "discipline": "120",
+     "savoir": "120"
+    },
+    "population": "1",
+    "kind": "SANCTUAIRE · ANCRE",
+    "chosen": "Ancre tyrienne",
+    "health_text": "Intégrité : 73 %",
+    "health_pct": 72.3,
+    "health_label": "Intégrité de l’Ancre",
+    "status": "Éveillée · +1 Forge, Vie, Discipline et Savoir / s",
+    "damage": "—",
+    "armor": "—",
+    "speed": "—",
+    "lore": "Un serment veille encore sur ces pierres.",
+    "assault": "01:16",
+    "anchor_details": true,
+    "portrait_enabled": true,
+    "portrait_key": "anchor"
+   }
+  },
+  {
+   "name": "ancre_active_pauvre",
+   "hud": {
+    "actions": [
+     {
+      "id": "hero",
+      "icon": "sword",
+      "label": "Tireur · 100+100+100+100",
+      "key": "t",
+      "title": "Invoquer le héros Tireur · 100 Forge + 100 Vie + 100 Discipline + 100 Savoir",
+      "disabled": true,
+      "active": false,
+      "cooldown": ""
+     }
+    ],
+    "wave": "—",
+    "res": {
+     "forge": "120",
+     "vie": "99",
+     "discipline": "120",
+     "savoir": "120"
+    },
+    "population": "1",
+    "kind": "SANCTUAIRE · ANCRE",
+    "chosen": "Ancre tyrienne",
+    "health_text": "Intégrité : 100 %",
+    "health_pct": 100,
+    "health_label": "Intégrité de l’Ancre",
+    "status": "Éveillée · +1 Forge, Vie, Discipline et Savoir / s",
+    "damage": "—",
+    "armor": "—",
+    "speed": "—",
+    "lore": "Un serment veille encore sur ces pierres.",
+    "assault": "00:01",
+    "anchor_details": true,
+    "portrait_enabled": true,
+    "portrait_key": "anchor"
+   }
+  },
+  {
+   "name": "temple_sigil",
+   "hud": {
+    "actions": [
+     {
+      "id": "summon",
+      "icon": "rune",
+      "label": "Adepte · 50",
+      "key": "i",
+      "title": "Invoquer un adepte de sigil · 50 Savoir · prie au temple : +1 Savoir / s",
+      "disabled": false,
+      "active": false,
+      "cooldown": ""
+     }
+    ],
+    "wave": "—",
+    "res": {
+     "forge": "10",
+     "vie": "10",
+     "discipline": "10",
+     "savoir": "60"
+    },
+    "population": "2",
+    "kind": "BÂTIMENT · TEMPLE",
+    "chosen": "Temple de Sigil",
+    "health_text": "Achevé",
+    "health_pct": 100,
+    "health_label": "Points de vie",
+    "status": "Adepte de Sigil · 50 Savoir · 1 en prière (+1 Savoir / s)",
+    "damage": "—",
+    "armor": "—",
+    "speed": "—",
+    "lore": "Ses adeptes y prient pour le Savoir.",
+    "assault": "",
+    "anchor_details": false,
+    "portrait_enabled": true,
+    "portrait_key": "bld-sigil"
+   }
+  },
+  {
+   "name": "temple_aether_chantier",
+   "hud": {
+    "actions": [],
+    "wave": "—",
+    "res": {
+     "forge": "0",
+     "vie": "0",
+     "discipline": "0",
+     "savoir": "0"
+    },
+    "population": "1",
+    "kind": "BÂTIMENT · TEMPLE",
+    "chosen": "Temple d’Aether",
+    "health_text": "En construction",
+    "health_pct": 37.5,
+    "health_label": "Points de vie",
+    "status": "Construction · 37 % · l’Ingénieur doit rester sur le chantier",
+    "damage": "—",
+    "armor": "—",
+    "speed": "—",
+    "lore": "Ses adeptes y prient pour la Forge.",
+    "assault": "",
+    "anchor_details": false,
+    "portrait_enabled": true,
+    "portrait_key": "bld-aether"
+   }
+  },
+  {
+   "name": "caserne",
+   "hud": {
+    "actions": [
+     {
+      "id": "train-flammes",
+      "icon": "flame",
+      "label": "Lance-flammes · 100",
+      "key": "l",
+      "title": "Entraîner un adepte lance-flammes · 100 Discipline · 6 s",
+      "disabled": false,
+      "active": false,
+      "cooldown": ""
+     },
+     {
+      "id": "train-archer",
+      "icon": "bow",
+      "label": "Archer · 100",
+      "key": "u",
+      "title": "Entraîner un adepte archer · 100 Discipline · 6 s",
+      "disabled": false,
+      "active": false,
+      "cooldown": ""
+     },
+     {
+      "id": "train-lame",
+      "icon": "shield",
+      "label": "Épée et bouclier · 100",
+      "key": "e",
+      "title": "Entraîner un adepte d’épée et bouclier · 100 Discipline · 6 s",
+      "disabled": false,
+      "active": false,
+      "cooldown": ""
+     }
+    ],
+    "wave": "—",
+    "res": {
+     "forge": "0",
+     "vie": "0",
+     "discipline": "150",
+     "savoir": "0"
+    },
+    "population": "1",
+    "kind": "BÂTIMENT",
+    "chosen": "Caserne",
+    "health_text": "Achevé",
+    "health_pct": 100,
+    "health_label": "Points de vie",
+    "status": "Entraînement · 100 Discipline · 6 s · file 2 / 5",
+    "damage": "—",
+    "armor": "—",
+    "speed": "—",
+    "lore": "Les disciples d’Indra y forment les combattants.",
+    "assault": "",
+    "anchor_details": false,
+    "portrait_enabled": true,
+    "portrait_key": "bld-caserne"
+   }
+  },
+  {
+   "name": "caserne_pleine",
+   "hud": {
+    "actions": [
+     {
+      "id": "train-flammes",
+      "icon": "flame",
+      "label": "Lance-flammes · 100",
+      "key": "l",
+      "title": "Entraîner un adepte lance-flammes · 100 Discipline · 6 s",
+      "disabled": true,
+      "active": false,
+      "cooldown": ""
+     },
+     {
+      "id": "train-archer",
+      "icon": "bow",
+      "label": "Archer · 100",
+      "key": "u",
+      "title": "Entraîner un adepte archer · 100 Discipline · 6 s",
+      "disabled": true,
+      "active": false,
+      "cooldown": ""
+     },
+     {
+      "id": "train-lame",
+      "icon": "shield",
+      "label": "Épée et bouclier · 100",
+      "key": "e",
+      "title": "Entraîner un adepte d’épée et bouclier · 100 Discipline · 6 s",
+      "disabled": true,
+      "active": false,
+      "cooldown": ""
+     }
+    ],
+    "wave": "—",
+    "res": {
+     "forge": "0",
+     "vie": "0",
+     "discipline": "500",
+     "savoir": "0"
+    },
+    "population": "1",
+    "kind": "BÂTIMENT",
+    "chosen": "Caserne",
+    "health_text": "Achevé",
+    "health_pct": 100,
+    "health_label": "Points de vie",
+    "status": "Entraînement · 100 Discipline · 6 s · file 5 / 5",
+    "damage": "—",
+    "armor": "—",
+    "speed": "—",
+    "lore": "Les disciples d’Indra y forment les combattants.",
+    "assault": "",
+    "anchor_details": false,
+    "portrait_enabled": true,
+    "portrait_key": "bld-caserne"
+   }
+  },
+  {
+   "name": "puits_des_ames",
+   "hud": {
+    "actions": [
+     {
+      "id": "revive-3",
+      "icon": "heart",
+      "label": "épée et bouclier ★2",
+      "key": "1",
+      "title": "Ressusciter Adepte d’épée et bouclier (niveau 2) · 200 Vie",
+      "disabled": false,
+      "active": false,
+      "cooldown": ""
+     },
+     {
+      "id": "revive-2",
+      "icon": "heart",
+      "label": "Sigil ★1",
+      "key": "2",
+      "title": "Ressusciter Adepte de Sigil (niveau 1) · 200 Vie",
+      "disabled": false,
+      "active": false,
+      "cooldown": ""
+     },
+     {
+      "id": "revive-1",
+      "icon": "heart",
+      "label": "archer ★3",
+      "key": "3",
+      "title": "Ressusciter Adepte archer (niveau 3) · 200 Vie",
+      "disabled": false,
+      "active": false,
+      "cooldown": ""
+     }
+    ],
+    "wave": "—",
+    "res": {
+     "forge": "0",
+     "vie": "250",
+     "discipline": "0",
+     "savoir": "0"
+    },
+    "population": "1",
+    "kind": "BÂTIMENT",
+    "chosen": "Puits des Âmes",
+    "health_text": "Achevé",
+    "health_pct": 100,
+    "health_label": "Points de vie",
+    "status": "3 âmes à rappeler · 200 Vie chacune",
+    "damage": "—",
+    "armor": "—",
+    "speed": "—",
+    "lore": "Medeina y rend leur souffle aux défunts, avec toute leur expérience.",
+    "assault": "",
+    "anchor_details": false,
+    "portrait_enabled": true,
+    "portrait_key": "bld-soulwell"
+   }
+  },
+  {
+   "name": "puits_des_ames_vide",
+   "hud": {
+    "actions": [],
+    "wave": "—",
+    "res": {
+     "forge": "0",
+     "vie": "250",
+     "discipline": "0",
+     "savoir": "0"
+    },
+    "population": "1",
+    "kind": "BÂTIMENT",
+    "chosen": "Puits des Âmes",
+    "health_text": "Achevé",
+    "health_pct": 100,
+    "health_label": "Points de vie",
+    "status": "Aucune unité tombée pour l’instant",
+    "damage": "—",
+    "armor": "—",
+    "speed": "—",
+    "lore": "Medeina y rend leur souffle aux défunts, avec toute leur expérience.",
+    "assault": "",
+    "anchor_details": false,
+    "portrait_enabled": true,
+    "portrait_key": "bld-soulwell"
+   }
+  },
+  {
+   "name": "bibliotheque",
+   "hud": {
+    "actions": [],
+    "wave": "—",
+    "res": {
+     "forge": "0",
+     "vie": "0",
+     "discipline": "0",
+     "savoir": "0"
+    },
+    "population": "1",
+    "kind": "BÂTIMENT",
+    "chosen": "Bibliothèque",
+    "health_text": "Achevé",
+    "health_pct": 100,
+    "health_label": "Points de vie",
+    "status": "Achevé · débloqué par le Temple de Sigil",
+    "damage": "—",
+    "armor": "—",
+    "speed": "—",
+    "lore": "Les rouleaux de Sigil y sont rassemblés.",
+    "assault": "",
+    "anchor_details": false,
+    "portrait_enabled": true,
+    "portrait_key": "bld-library"
+   }
+  },
+  {
+   "name": "adepte_sigil_en_route",
+   "hud": {
+    "actions": [
+     {
+      "id": "pray",
+      "icon": "rune",
+      "label": "Prier",
+      "key": "y",
+      "title": "Prier au temple de son dieu",
+      "disabled": false,
+      "active": false,
+      "cooldown": ""
+     },
+     {
+      "id": "hold",
+      "icon": "flag",
+      "label": "Position",
+      "key": "h",
+      "title": "Tenir position",
+      "disabled": false,
+      "active": false,
+      "cooldown": ""
+     },
+     {
+      "id": "move",
+      "icon": "move",
+      "label": "Déplacer",
+      "key": "m",
+      "title": "Déplacer : choisir une destination",
+      "disabled": false,
+      "active": false,
+      "cooldown": ""
+     }
+    ],
+    "wave": "—",
+    "res": {
+     "forge": "0",
+     "vie": "0",
+     "discipline": "0",
+     "savoir": "0"
+    },
+    "population": "2",
+    "kind": "ADEPTE · SIGIL · NIV. 2 · 12 / 32 XP",
+    "chosen": "Adepte de Sigil",
+    "health_text": "90 / 90",
+    "health_pct": 100,
+    "health_label": "Points de vie",
+    "status": "Se rend au Temple de Sigil",
+    "damage": "5",
+    "armor": "1",
+    "speed": "7,6",
+    "lore": "Sa prière au temple de Sigil nourrit le Savoir.",
+    "assault": "",
+    "anchor_details": false,
+    "portrait_enabled": true,
+    "portrait_key": "sigil"
+   }
+  },
+  {
+   "name": "adepte_medeina_sans_temple",
+   "hud": {
+    "actions": [
+     {
+      "id": "pray",
+      "icon": "rune",
+      "label": "Prier",
+      "key": "y",
+      "title": "Prier au temple de son dieu",
+      "disabled": true,
+      "active": false,
+      "cooldown": ""
+     },
+     {
+      "id": "hold",
+      "icon": "flag",
+      "label": "Position",
+      "key": "h",
+      "title": "Tenir position",
+      "disabled": false,
+      "active": false,
+      "cooldown": ""
+     },
+     {
+      "id": "move",
+      "icon": "move",
+      "label": "Déplacer",
+      "key": "m",
+      "title": "Déplacer : choisir une destination",
+      "disabled": false,
+      "active": false,
+      "cooldown": ""
+     }
+    ],
+    "wave": "—",
+    "res": {
+     "forge": "0",
+     "vie": "0",
+     "discipline": "0",
+     "savoir": "0"
+    },
+    "population": "2",
+    "kind": "ADEPTE · MEDEINA · NIV. 1 · 0 / 20 XP",
+    "chosen": "Adepte de Medeina",
+    "health_text": "95 / 95",
+    "health_pct": 100,
+    "health_label": "Points de vie",
+    "status": "En attente · petite attaque au corps à corps",
+    "damage": "4",
+    "armor": "0",
+    "speed": "7,6",
+    "lore": "Sa prière au temple de Medeina nourrit la Vie.",
+    "assault": "",
+    "anchor_details": false,
+    "portrait_enabled": true,
+    "portrait_key": "medeina"
+   }
+  },
+  {
+   "name": "combattant_archer",
+   "hud": {
+    "actions": [
+     {
+      "id": "hold",
+      "icon": "flag",
+      "label": "Position",
+      "key": "h",
+      "title": "Tenir position",
+      "disabled": false,
+      "active": false,
+      "cooldown": ""
+     },
+     {
+      "id": "move",
+      "icon": "move",
+      "label": "Déplacer",
+      "key": "m",
+      "title": "Déplacer : choisir une destination",
+      "disabled": false,
+      "active": false,
+      "cooldown": ""
+     }
+    ],
+    "wave": "—",
+    "res": {
+     "forge": "0",
+     "vie": "0",
+     "discipline": "0",
+     "savoir": "0"
+    },
+    "population": "2",
+    "kind": "COMBATTANT · NIV. 1 · 0 / 20 XP",
+    "chosen": "Adepte archer",
+    "health_text": "51 / 85",
+    "health_pct": 60,
+    "health_label": "Points de vie",
+    "status": "Garde l’Ancre · arc, puis Charge du Lac au contact",
+    "damage": "11",
+    "armor": "0",
+    "speed": "7,6",
+    "lore": "Sa flèche part avant que l’ennemi ne l’ait vu.",
+    "assault": "",
+    "anchor_details": false,
+    "portrait_enabled": true,
+    "portrait_key": "archer"
+   }
+  },
+  {
+   "name": "heros_tireur",
+   "hud": {
+    "actions": [
+     {
+      "id": "ability",
+      "icon": "flame",
+      "label": "Compétence",
+      "key": " ",
+      "title": "Tir de précision",
+      "disabled": true,
+      "active": false,
+      "cooldown": "5 s"
+     },
+     {
+      "id": "hold",
+      "icon": "flag",
+      "label": "Position",
+      "key": "h",
+      "title": "Tenir position",
+      "disabled": false,
+      "active": false,
+      "cooldown": ""
+     },
+     {
+      "id": "move",
+      "icon": "move",
+      "label": "Déplacer",
+      "key": "m",
+      "title": "Déplacer : choisir une destination",
+      "disabled": false,
+      "active": false,
+      "cooldown": ""
+     }
+    ],
+    "wave": "—",
+    "res": {
+     "forge": "0",
+     "vie": "0",
+     "discipline": "0",
+     "savoir": "0"
+    },
+    "population": "2",
+    "kind": "EXILÉ · COMBATTANT · NIV. 2 · 3 / 32 XP",
+    "chosen": "Tireur",
+    "health_text": "110 / 110",
+    "health_pct": 100,
+    "health_label": "Points de vie",
+    "status": "Prêt à recevoir vos ordres",
+    "damage": "20",
+    "armor": "1",
+    "speed": "15,2",
+    "lore": "Une seule respiration, puis le silence.",
+    "assault": "",
+    "anchor_details": false,
+    "portrait_enabled": true,
+    "portrait_key": "shooter"
+   }
+  },
+  {
+   "name": "multi_selection",
+   "hud": {
+    "actions": [
+     {
+      "id": "menu-build",
+      "icon": "hammer",
+      "label": "Construire",
+      "key": "b",
+      "title": "Construire un temple ou un bâtiment",
+      "disabled": false,
+      "active": false,
+      "cooldown": ""
+     },
+     {
+      "id": "orb",
+      "icon": "rune",
+      "label": "Réactiver",
+      "key": "r",
+      "title": "Réactiver l’Ancre · 8 s",
+      "disabled": false,
+      "active": false,
+      "cooldown": ""
+     },
+     {
+      "id": "hold",
+      "icon": "flag",
+      "label": "Position",
+      "key": "h",
+      "title": "Tenir position",
+      "disabled": false,
+      "active": false,
+      "cooldown": ""
+     },
+     {
+      "id": "move",
+      "icon": "move",
+      "label": "Déplacer",
+      "key": "m",
+      "title": "Déplacer : choisir une destination",
+      "disabled": false,
+      "active": false,
+      "cooldown": ""
+     }
+    ],
+    "wave": "—",
+    "res": {
+     "forge": "0",
+     "vie": "0",
+     "discipline": "0",
+     "savoir": "0"
+    },
+    "population": "3",
+    "kind": "EXILÉ · SOUTIEN",
+    "chosen": "3 Exilés",
+    "health_text": "270 / 315",
+    "health_pct": 85.7143,
+    "health_label": "Points de vie",
+    "status": "L’Ancre est éteinte · clic droit dessus (ou R) pour la réactiver",
+    "damage": "80",
+    "armor": "0",
+    "speed": "15,2",
+    "lore": "Il relève les pierres pour que demeure le serment.",
+    "assault": "",
+    "anchor_details": false,
+    "portrait_enabled": true,
+    "portrait_key": "engineer"
+   }
+  },
+  {
+   "name": "aucune_selection",
+   "hud": {
+    "actions": [],
+    "wave": "—",
+    "res": {
+     "forge": "0",
+     "vie": "0",
+     "discipline": "0",
+     "savoir": "0"
+    },
+    "population": "1",
+    "kind": "SANCTUAIRE",
+    "chosen": "Aucune sélection",
+    "health_text": "—",
+    "health_pct": 0,
+    "health_label": "Points de vie",
+    "status": "Cliquez une unité, un bâtiment ou l’Ancre",
+    "damage": "—",
+    "armor": "—",
+    "speed": "—",
+    "lore": "Un serment veille encore sur ces pierres.",
+    "assault": "",
+    "anchor_details": false,
+    "portrait_enabled": false,
+    "portrait_key": "empty"
+   }
+  },
+  {
+   "name": "fin_partie",
+   "hud": {
+    "actions": [],
+    "wave": "—",
+    "res": {
+     "forge": "0",
+     "vie": "0",
+     "discipline": "0",
+     "savoir": "0"
+    },
+    "population": "1",
+    "kind": "EXILÉ · SOUTIEN · NIV. 1 · 0 / 20 XP",
+    "chosen": "Ingénieur Exilé",
+    "health_text": "140 / 140",
+    "health_pct": 100,
+    "health_label": "Points de vie",
+    "status": "Prêt à recevoir vos ordres",
+    "damage": "80",
+    "armor": "0",
+    "speed": "15,2",
+    "lore": "Il relève les pierres pour que demeure le serment.",
+    "assault": "",
+    "anchor_details": false,
+    "portrait_enabled": true,
+    "portrait_key": "engineer"
+   }
+  },
+  {
+   "name": "fin_partie_ancre",
+   "hud": {
+    "actions": [],
+    "wave": "—",
+    "res": {
+     "forge": "0",
+     "vie": "0",
+     "discipline": "0",
+     "savoir": "0"
+    },
+    "population": "1",
+    "kind": "SANCTUAIRE · ANCRE",
+    "chosen": "Ancre tyrienne",
+    "health_text": "Intégrité : 35 %",
+    "health_pct": 35,
+    "health_label": "Intégrité de l’Ancre",
+    "status": "Éveillée · +1 Forge, Vie, Discipline et Savoir / s",
+    "damage": "—",
+    "armor": "—",
+    "speed": "—",
+    "lore": "Un serment veille encore sur ces pierres.",
+    "assault": "Assauts terminés",
+    "anchor_details": true,
+    "portrait_enabled": true,
+    "portrait_key": "anchor"
+   }
+  }
+ ]
+}

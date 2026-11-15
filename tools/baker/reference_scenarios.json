@@ -1,0 +1,841 @@
+{
+ "note": "Captures du jeu d'origine (version figée 73b410f) pour la validation visuelle (MIGRATION_PLAN.md v2 §5). Chaque scénario fixe PX, la caméra (cam.x, cam.z en unités de monde) et le temps de simulation t. Les galeries sont générées avec la graine de référence. « disable » retire ce que l'étape ne migre pas encore : wind, arcs, portals (portail des Exilés, portails divins et maléfiques), lighting, effects, text, turrets, units (unités masquées). « dig » applique le scénario de creusement de référence et centre la caméra sur la dernière case. « orb » : 'active' ou progression de réactivation (0–1). « deity » : portail divin actif. Les captures *_light.png contiennent le calque d'éclairage (canvas superposé en CSS). « buildings » : bâtiments posés directement ({type, x, z, progress} ; progress 1 par défaut = achevé, sinon chantier sans Ingénieur). « enemies » : ennemis posés directement ({kind, x, z}, 20 PV sur 35). « turrets » : 'active' éveille les balistes.",
+ "viewport": [
+  1440,
+  900
+ ],
+ "scenarios": [
+  {
+   "name": "etape2_salle_px1",
+   "px": 1,
+   "cam": {
+    "x": 0,
+    "z": -148
+   },
+   "t": 0,
+   "disable": [
+    "wind",
+    "arcs",
+    "portals",
+    "lighting",
+    "effects",
+    "text",
+    "turrets"
+   ]
+  },
+  {
+   "name": "etape2_salle_px2",
+   "px": 2,
+   "cam": {
+    "x": 0,
+    "z": -140
+   },
+   "t": 0,
+   "disable": [
+    "wind",
+    "arcs",
+    "portals",
+    "lighting",
+    "effects",
+    "text",
+    "turrets"
+   ]
+  },
+  {
+   "name": "etape2_salle_px3",
+   "px": 3,
+   "cam": {
+    "x": -21.3,
+    "z": -131.7
+   },
+   "t": 0,
+   "disable": [
+    "wind",
+    "arcs",
+    "portals",
+    "lighting",
+    "effects",
+    "text",
+    "turrets"
+   ]
+  },
+  {
+   "name": "etape2_portails_px3",
+   "px": 3,
+   "cam": {
+    "x": 0,
+    "z": -160
+   },
+   "t": 0,
+   "disable": [
+    "wind",
+    "arcs",
+    "portals",
+    "lighting",
+    "effects",
+    "text",
+    "turrets"
+   ]
+  },
+  {
+   "name": "etape2_couloir_px2",
+   "px": 2,
+   "cam": {
+    "x": 0,
+    "z": -80
+   },
+   "t": 0,
+   "disable": [
+    "wind",
+    "arcs",
+    "portals",
+    "lighting",
+    "effects",
+    "text",
+    "turrets"
+   ]
+  },
+  {
+   "name": "etape2_jungle_px2",
+   "px": 2,
+   "cam": {
+    "x": 0,
+    "z": 10
+   },
+   "t": 0,
+   "disable": [
+    "wind",
+    "arcs",
+    "portals",
+    "lighting",
+    "effects",
+    "text",
+    "turrets"
+   ]
+  },
+  {
+   "name": "etape2_montagne_px2",
+   "px": 2,
+   "cam": {
+    "x": -120,
+    "z": -250
+   },
+   "t": 0,
+   "disable": [
+    "wind",
+    "arcs",
+    "portals",
+    "lighting",
+    "effects",
+    "text",
+    "turrets"
+   ]
+  },
+  {
+   "name": "etape2_vent_t7",
+   "px": 2,
+   "cam": {
+    "x": 20,
+    "z": 20
+   },
+   "t": 7.3,
+   "disable": [
+    "arcs",
+    "portals",
+    "lighting",
+    "effects",
+    "text",
+    "turrets"
+   ]
+  },
+  {
+   "name": "etape3_creusement_px2",
+   "px": 2,
+   "dig": true,
+   "t": 0,
+   "disable": [
+    "wind",
+    "arcs",
+    "portals",
+    "lighting",
+    "effects",
+    "text",
+    "turrets"
+   ]
+  },
+  {
+   "name": "etape3_creusement_px1",
+   "px": 1,
+   "dig": true,
+   "t": 0,
+   "disable": [
+    "wind",
+    "arcs",
+    "portals",
+    "lighting",
+    "effects",
+    "text",
+    "turrets"
+   ]
+  },
+  {
+   "name": "etape4_ancre_t0_5",
+   "px": 3,
+   "cam": {
+    "x": 0,
+    "z": -150
+   },
+   "t": 0.5,
+   "orb": "active",
+   "disable": [
+    "lighting",
+    "effects",
+    "text",
+    "turrets",
+    "units"
+   ]
+  },
+  {
+   "name": "etape4_ancre_t1_3",
+   "px": 3,
+   "cam": {
+    "x": 0,
+    "z": -150
+   },
+   "t": 1.3,
+   "orb": "active",
+   "disable": [
+    "lighting",
+    "effects",
+    "text",
+    "turrets",
+    "units"
+   ]
+  },
+  {
+   "name": "etape4_ancre_t2_7",
+   "px": 3,
+   "cam": {
+    "x": 0,
+    "z": -150
+   },
+   "t": 2.7,
+   "orb": "active",
+   "disable": [
+    "lighting",
+    "effects",
+    "text",
+    "turrets",
+    "units"
+   ]
+  },
+  {
+   "name": "etape4_ancre_reactivation",
+   "px": 3,
+   "cam": {
+    "x": 0,
+    "z": -150
+   },
+   "t": 2.0,
+   "orb": 0.6,
+   "disable": [
+    "lighting",
+    "effects",
+    "text",
+    "turrets",
+    "units"
+   ]
+  },
+  {
+   "name": "etape4_portail_t2",
+   "px": 3,
+   "cam": {
+    "x": 0,
+    "z": -160
+   },
+   "t": 2.0,
+   "disable": [
+    "lighting",
+    "effects",
+    "text",
+    "turrets",
+    "units"
+   ]
+  },
+  {
+   "name": "etape4_portail_t5",
+   "px": 3,
+   "cam": {
+    "x": 0,
+    "z": -160
+   },
+   "t": 5.0,
+   "disable": [
+    "lighting",
+    "effects",
+    "text",
+    "turrets",
+    "units"
+   ]
+  },
+  {
+   "name": "etape4_indra_actif",
+   "px": 3,
+   "cam": {
+    "x": -41,
+    "z": -160
+   },
+   "t": 1.0,
+   "deity": "indra",
+   "disable": [
+    "lighting",
+    "effects",
+    "text",
+    "turrets",
+    "units"
+   ]
+  },
+  {
+   "name": "etape4_eclairage",
+   "px": 2,
+   "cam": {
+    "x": 0,
+    "z": -148
+   },
+   "t": 1.0,
+   "orb": "active",
+   "disable": [
+    "effects",
+    "text",
+    "units",
+    "turrets"
+   ]
+  },
+  {
+   "name": "etape7_batiments_a",
+   "px": 2,
+   "cam": {
+    "x": 0,
+    "z": -122
+   },
+   "t": 0,
+   "disable": [
+    "wind",
+    "arcs",
+    "portals",
+    "lighting",
+    "effects",
+    "text",
+    "turrets",
+    "units"
+   ],
+   "buildings": [
+    {
+     "type": "sigil",
+     "x": -34,
+     "z": -130
+    },
+    {
+     "type": "aether",
+     "x": -18,
+     "z": -130
+    },
+    {
+     "type": "medeina",
+     "x": 18,
+     "z": -130
+    },
+    {
+     "type": "indra",
+     "x": 34,
+     "z": -130
+    },
+    {
+     "type": "caserne",
+     "x": -26,
+     "z": -108
+    },
+    {
+     "type": "soulwell",
+     "x": 26,
+     "z": -108
+    }
+   ]
+  },
+  {
+   "name": "etape7_batiments_b",
+   "px": 2,
+   "cam": {
+    "x": 0,
+    "z": -122
+   },
+   "t": 0,
+   "disable": [
+    "wind",
+    "arcs",
+    "portals",
+    "lighting",
+    "effects",
+    "text",
+    "turrets",
+    "units"
+   ],
+   "buildings": [
+    {
+     "type": "library",
+     "x": -34,
+     "z": -130
+    },
+    {
+     "type": "forge",
+     "x": -18,
+     "z": -130
+    },
+    {
+     "type": "workshop",
+     "x": 18,
+     "z": -130
+    },
+    {
+     "type": "bedroom",
+     "x": 34,
+     "z": -130
+    }
+   ]
+  },
+  {
+   "name": "etape7_incantation_25",
+   "px": 3,
+   "cam": {
+    "x": -26,
+    "z": -124
+   },
+   "t": 0,
+   "disable": [
+    "wind",
+    "arcs",
+    "portals",
+    "lighting",
+    "effects",
+    "text",
+    "turrets",
+    "units"
+   ],
+   "buildings": [
+    {
+     "type": "sigil",
+     "x": -26,
+     "z": -118,
+     "progress": 0.25
+    }
+   ]
+  },
+  {
+   "name": "etape7_incantation_50",
+   "px": 3,
+   "cam": {
+    "x": -26,
+    "z": -124
+   },
+   "t": 0,
+   "disable": [
+    "wind",
+    "arcs",
+    "portals",
+    "lighting",
+    "effects",
+    "text",
+    "turrets",
+    "units"
+   ],
+   "buildings": [
+    {
+     "type": "sigil",
+     "x": -26,
+     "z": -118,
+     "progress": 0.5
+    }
+   ]
+  },
+  {
+   "name": "etape7_incantation_75",
+   "px": 3,
+   "cam": {
+    "x": -26,
+    "z": -124
+   },
+   "t": 0,
+   "disable": [
+    "wind",
+    "arcs",
+    "portals",
+    "lighting",
+    "effects",
+    "text",
+    "turrets",
+    "units"
+   ],
+   "buildings": [
+    {
+     "type": "sigil",
+     "x": -26,
+     "z": -118,
+     "progress": 0.75
+    }
+   ]
+  },
+  {
+   "name": "etape8_balistes_ruine",
+   "px": 3,
+   "cam": {
+    "x": 0,
+    "z": -76
+   },
+   "t": 0,
+   "disable": [
+    "wind",
+    "arcs",
+    "portals",
+    "lighting",
+    "effects",
+    "text",
+    "units"
+   ]
+  },
+  {
+   "name": "etape8_balistes_actives",
+   "px": 3,
+   "cam": {
+    "x": 0,
+    "z": -76
+   },
+   "t": 0,
+   "turrets": "active",
+   "disable": [
+    "wind",
+    "arcs",
+    "portals",
+    "lighting",
+    "effects",
+    "text",
+    "units"
+   ]
+  },
+  {
+   "name": "etape8_ennemis",
+   "px": 3,
+   "cam": {
+    "x": 0,
+    "z": -112
+   },
+   "t": 1.3,
+   "disable": [
+    "wind",
+    "arcs",
+    "portals",
+    "lighting",
+    "effects",
+    "text",
+    "units",
+    "turrets"
+   ],
+   "enemies": [
+    {
+     "kind": "creep",
+     "x": -9,
+     "z": -110
+    },
+    {
+     "kind": "spitter",
+     "x": -3,
+     "z": -110
+    },
+    {
+     "kind": "brute",
+     "x": 3,
+     "z": -110
+    },
+    {
+     "kind": "beast",
+     "x": 9,
+     "z": -110
+    }
+   ]
+  },
+  {
+   "name": "etape9_heros",
+   "px": 3,
+   "cam": {
+    "x": 0,
+    "z": -118
+   },
+   "t": 1.3,
+   "disable": [
+    "wind",
+    "arcs",
+    "portals",
+    "lighting",
+    "text",
+    "turrets",
+    "effects"
+   ],
+   "units": [
+    {
+     "role": "paladin",
+     "x": -8,
+     "z": -118,
+     "hp": 120,
+     "selected": true
+    },
+    {
+     "role": "healer",
+     "x": -4,
+     "z": -118
+    },
+    {
+     "role": "shooter",
+     "x": 0,
+     "z": -118,
+     "face": -1
+    },
+    {
+     "role": "engineer",
+     "x": 4,
+     "z": -118
+    },
+    {
+     "role": "guard",
+     "x": 8,
+     "z": -118,
+     "hp": 40
+    }
+   ]
+  },
+  {
+   "name": "etape9_attaques",
+   "px": 3,
+   "cam": {
+    "x": 0,
+    "z": -118
+   },
+   "t": 2.0,
+   "disable": [
+    "wind",
+    "arcs",
+    "portals",
+    "lighting",
+    "text",
+    "turrets",
+    "effects"
+   ],
+   "units": [
+    {
+     "role": "paladin",
+     "x": -12,
+     "z": -121,
+     "swing": [
+      0,
+      0.12
+     ],
+     "face": 1
+    },
+    {
+     "role": "paladin",
+     "x": -6,
+     "z": -121,
+     "swing": [
+      1,
+      0.25
+     ],
+     "face": -1
+    },
+    {
+     "role": "paladin",
+     "x": 0,
+     "z": -121,
+     "swing": [
+      2,
+      0.38
+     ],
+     "face": 1
+    },
+    {
+     "role": "paladin",
+     "x": 6,
+     "z": -121,
+     "swing": [
+      3,
+      0.51
+     ],
+     "face": -1
+    },
+    {
+     "role": "paladin",
+     "x": 12,
+     "z": -121,
+     "swing": [
+      4,
+      0.64
+     ],
+     "face": 1
+    },
+    {
+     "role": "shooter",
+     "x": -5,
+     "z": -115,
+     "volley": 0.25,
+     "face": 1
+    },
+    {
+     "role": "shooter",
+     "x": 5,
+     "z": -115,
+     "volley": 0.5,
+     "face": -1
+    }
+   ]
+  },
+  {
+   "name": "etape9_effets",
+   "px": 3,
+   "cam": {
+    "x": 0,
+    "z": -118
+   },
+   "t": 2.0,
+   "disable": [
+    "wind",
+    "arcs",
+    "portals",
+    "lighting",
+    "text",
+    "turrets",
+    "units"
+   ],
+   "effects": [
+    {
+     "type": "hit",
+     "x": -12,
+     "z": -122,
+     "age": 0.05,
+     "duration": 0.22,
+     "color": "#f0dba4"
+    },
+    {
+     "type": "zone",
+     "x": -6,
+     "z": -122,
+     "r": 2.5,
+     "age": 0.3,
+     "duration": 1,
+     "color": "#64a2f4"
+    },
+    {
+     "type": "laser",
+     "x": -2,
+     "z": -123,
+     "tx": 4,
+     "tz": -121,
+     "age": 0.03,
+     "duration": 0.13,
+     "color": "#bed7df"
+    },
+    {
+     "type": "rivet",
+     "x": 6,
+     "z": -123,
+     "tx": 14,
+     "tz": -122,
+     "face": 1,
+     "age": 0.05,
+     "duration": 0.12,
+     "seed": 17
+    },
+    {
+     "type": "rivethit",
+     "x": 12,
+     "z": -118,
+     "face": -1,
+     "age": 0.1,
+     "duration": 1,
+     "seed": 17
+    },
+    {
+     "type": "arrow",
+     "x": -14,
+     "z": -115,
+     "tx": -6,
+     "tz": -114,
+     "face": 1,
+     "age": 0.08,
+     "duration": 0.16,
+     "seed": 5
+    },
+    {
+     "type": "arrowhit",
+     "x": -4,
+     "z": -113,
+     "age": 0.08,
+     "duration": 0.24,
+     "seed": 9
+    },
+    {
+     "type": "xbolt",
+     "x": 0,
+     "z": -115,
+     "tx": 8,
+     "tz": -112,
+     "face": 1,
+     "age": 0.05,
+     "duration": 0.11,
+     "seed": 3
+    },
+    {
+     "type": "xboom",
+     "x": 10,
+     "z": -112,
+     "age": 0.15,
+     "duration": 0.45,
+     "seed": 11
+    },
+    {
+     "type": "hit",
+     "x": 14,
+     "z": -113,
+     "age": 0.0,
+     "duration": 0.22,
+     "color": "#e17b63"
+    },
+    {
+     "type": "zone",
+     "x": 0,
+     "z": -118,
+     "r": 7,
+     "age": 0.1,
+     "duration": 1,
+     "color": "#bba7ff"
+    }
+   ],
+   "fire_walls": [
+    {
+     "x": -10,
+     "z": -110,
+     "dx": 1,
+     "dz": 0,
+     "len": 6,
+     "age": 0.6,
+     "left": 2
+    },
+    {
+     "x": 4,
+     "z": -108,
+     "dx": 0.6,
+     "dz": -0.8,
+     "len": 5,
+     "age": 0.2,
+     "left": 0.3
+    }
+   ]
+  }
+ ]
+}

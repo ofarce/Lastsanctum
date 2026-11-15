@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Capture du HUD — Exilés</title>
+<style>html,body{margin:0;background:#000;overflow:hidden}iframe{border:0;width:1440px;height:900px;display:block}</style>
+</head>
+<body>
+<!-- Capture du HUD du prototype (version figée) dans un contexte de hud_contexts.json, pour la revue humaine
+     de l'étape 6. Utilisation (le serveur du baker doit tourner) :
+       firefox --headless --window-size=1440,900 --screenshot out.png 'http://127.0.0.1:PORT/hud_shot.html?ctx=NOM'
+     Le jeu est préparé de façon synchrone (XMLHttpRequest synchrone, srcdoc) pour que l'événement « load »
+     de la page, qui déclenche la capture, attende la fin de l'amorçage et l'application du contexte. -->
+<iframe id="game"></iframe>
+<script src="lib.js"></script>
+<script>
+'use strict';
+(() => {
+  const get = url => { const x = new XMLHttpRequest(); x.open('GET', url, false); x.send(); return x.responseText; };
+  const name = new URLSearchParams(location.search).get('ctx');
+  const ctx = JSON.parse(get('/hud_contexts.json')).contexts.find(c => c.name === name);
+  const html = get('/src/Index.html');
+  const seed = `<base href="/src/"><script>${mulberry32.toString()}\nMath.random=mulberry32(${RANDOM_SEED});<\/script>`;
+  // Après l'amorçage : contexte appliqué, notice masquée, boucle gelée après la première image.
+  const after = `<script>${get('/hud_apply.js')}\nvar GALLERY_SEED=${GALLERY_SEED};`
+    + `hudApplyContext(${JSON.stringify(ctx)});`
+    + `document.getElementById('notice').hidden=true;`
+    + `const __raf=requestAnimationFrame;let __n=0;requestAnimationFrame=f=>__n++<1?__raf(f):0;updateHUD(true);<\/script>`;
+  document.getElementById('game').srcdoc = html.replace('<head>', '<head>' + seed).replace('</body>', after + '</body>');
+})();
+</script>
+</body>
+</html>

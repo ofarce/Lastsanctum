@@ -1,0 +1,6 @@
+{
+ "note": "Tolérances par scénario (écart maximal par canal RVB pour qu'un pixel soit « identique »). Défaut : 6. Toute exception est justifiée dans tests/visual/ECARTS.md.",
+ "tolerance": {
+  "etape2_vent_t7": 20
+ }
+}

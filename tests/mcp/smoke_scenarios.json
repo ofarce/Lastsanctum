@@ -1,0 +1,60 @@
+{
+ "description": "Tests de fumée joués dans l'éditeur par le MCP Godot (étape 10). Chaque scénario part d'une partie neuve (godot_runtime_play_scene, scène principale). Étapes : wait_until (godot_runtime_read_property en boucle), key (godot_input_simulate_key, appui puis relâchement), hold (touche maintenue ms millisecondes), wheel (godot_input_simulate_mouse), assert (godot_testing_assert_node_state), stress (godot_testing_run_stress_test), errors (godot_runtime_get_game_output : aucune erreur). Résultats : tests/mcp/RESULTATS.md.",
+ "nodes": {"state": "/root/GameState", "camera": "/root/Main/World/Camera"},
+ "scenarios": [
+  {"name": "introduction_et_reactivation", "covers": "§2.3 introduction, réactivation au clavier",
+   "steps": [
+    {"wait_until": ["state", "sim_time", ">=", 5.5]},
+    {"assert": ["state", "orb_active", "==", false]},
+    {"key": "Escape"}, {"key": "R"},
+    {"assert": ["state", "orb_owner", "!=", null]},
+    {"wait_until": ["state", "orb_active", "==", true], "timeout_ms": 15000},
+    {"assert": ["state", "wave", "==", 0]},
+    {"errors": 0}]},
+  {"name": "menu_de_construction", "covers": "§2.8 panneau d'actions, touches B, G, Échap",
+   "steps": [
+    {"wait_until": ["state", "sim_time", ">=", 5.5]},
+    {"key": "Escape"}, {"key": "B"},
+    {"assert": ["state", "hud_menu", "==", "build"]},
+    {"key": "G"},
+    {"assert": ["state", "hud_mode", "==", "build"]},
+    {"assert": ["state", "hud_build_type", "==", "sigil"]},
+    {"key": "Escape"},
+    {"assert": ["state", "hud_mode", "==", ""]},
+    {"assert": ["state", "hud_menu", "==", ""]}]},
+  {"name": "camera_clavier_et_molette", "covers": "§2.1 caméra : ZQSD/WASD, molette PX 1 à 6",
+   "steps": [
+    {"wait_until": ["state", "sim_time", ">=", 1.0]},
+    {"read": ["camera", "cam"]},
+    {"hold": "D", "ms": 1000},
+    {"assert_changed": ["camera", "cam", "x", ">", 5.0]},
+    {"read": ["camera", "px"]},
+    {"wheel": "wheel_up"},
+    {"assert_changed": ["camera", "px", "", "==", 1]},
+    {"wheel": "wheel_down"}, {"wheel": "wheel_down"},
+    {"assert_changed": ["camera", "px", "", "==", -1]}]},
+  {"name": "touche_A_selection", "covers": "D2 : A maintenue déplace la caméra à gauche ; Ctrl+A sélectionne tout sans la déplacer",
+   "steps": [
+    {"wait_until": ["state", "sim_time", ">=", 5.5]},
+    {"key": "Escape"},
+    {"read": ["camera", "cam"]},
+    {"hold": "A", "ms": 500},
+    {"assert_changed": ["camera", "cam", "x", "<", -2.0]},
+    {"read": ["camera", "cam"]},
+    {"key": "A", "ctrl": true},
+    {"assert_changed": ["camera", "cam", "x", "==", 0.0]},
+    {"assert": ["state", "anchor_selected", "==", false]}]},
+  {"name": "redemarrage", "covers": "Maj+R : nouvelle partie",
+   "steps": [
+    {"wait_until": ["state", "sim_time", ">=", 4.0]},
+    {"key": "R", "shift": true},
+    {"assert": ["state", "sim_time", "<", 1.0]},
+    {"assert": ["state", "orb_active", "==", false]}]},
+  {"name": "fuzz", "covers": "robustesse : 400 entrées aléatoires (touches du jeu et clics)",
+   "steps": [
+    {"wait_until": ["state", "sim_time", ">=", 5.5]},
+    {"stress": {"iterations": 400, "seed": 7, "actions": ["click", "Escape", "B", "G", "E", "V", "I", "R", "A", "H", "M", "Y", "T", "U", "C", "L", "N", "F", "Space", "1", "2", "3", "W", "S", "D", "Q", "Z"]}},
+    {"assert": ["state", "ended", "==", false]},
+    {"errors": 0}]}
+ ]
+}

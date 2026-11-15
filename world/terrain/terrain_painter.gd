@@ -1,0 +1,254 @@
+class_name TerrainPainter
+extends RefCounted
+## Repeint le sol après un creusement ou la révélation d'une galerie, à l'identique du prototype
+## (73b410f, adepts.js : digCell ; galleries.js : paintRegion ; Index.html : caveTile, rockTile).
+##
+## Les tuiles sont calculées en coordonnées locales 32×32 : leurs bases (sans les grains aléatoires) sont
+## constantes et extraites par le baker. Ici, on ajoute les 6 grains de caveTile, tirés du générateur de
+## la case, puis, pour les cases à moitié creuses, le masque pixel par pixel et les règles de bord.
+## Le travail se fait sur des tableaux d'octets RGBA (bien plus rapide que get_pixel / set_pixel).
+
+const TILES := "res://assets/baked/world/tiles/"
+const TILE := 32
+## Le masque couvre la tuile et une marge de 3 px (les règles de bord regardent jusqu'à ±3 px).
+const M := 38
+
+var terrain: Terrain
+var state: TerrainState
+var stats := {"full": 0, "mixed": 0, "skip": 0}
+var _cave := PackedByteArray()
+var _rock := PackedByteArray()
+var _floor4 := PackedByteArray()
+var _floor5 := PackedByteArray()
+var _rock_c: Array[PackedByteArray] = []
+
+
+func _init(ground: Terrain, terrain_state: TerrainState) -> void:
+	terrain = ground
+	state = terrain_state
+	_cave = _rgba(load(TILES + "cave_base.png")).get_data()
+	_rock = _rgba(load(TILES + "rock_base.png")).get_data()
+	var cave_c: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://assets/baked/manifest.json"))["world"]["CAVE_C"]
+	_floor4 = _bytes(cave_c["floor"][4])
+	_floor5 = _bytes(cave_c["floor"][5])
+	for hex: String in cave_c["rock"]:
+		_rock_c.append(_bytes(hex))
+
+
+static func _rgba(tex: Texture2D) -> Image:
+	var img := tex.get_image()
+	if img.is_compressed():
+		img.decompress()
+	img.convert(Image.FORMAT_RGBA8)
+	return img
+
+
+static func _bytes(hex: String) -> PackedByteArray:
+	var c := Color(hex)
+	return PackedByteArray([c.r8, c.g8, c.b8, 255])
+
+
+static func _image(data: PackedByteArray) -> Image:
+	return Image.create_from_data(TILE, TILE, false, Image.FORMAT_RGBA8, data)
+
+
+## Pixel du sol (coin haut-gauche) de la case (x, z) en unités de monde (multiples de 4).
+func ground_px(x: float, z: float) -> Vector2i:
+	return Vector2i(int(x * 8.0) + terrain.origin.x, int(z * 8.0) + terrain.origin.y)
+
+
+## Grains de caveTile : 6 tirages, (R() − 0,5)·40 | 0 et R()·14 | 0 autour du centre de la tuile.
+## `mask` (facultatif) limite l'écriture aux pixels creux, comme le proxy M de paintRegion.
+func _specks(out: PackedByteArray, r: Rng, mask: PackedByteArray = PackedByteArray()) -> void:
+	for k in 6:
+		var x := int(16.0 + (r.next() - 0.5) * 40.0)  # « | 0 » : troncature vers zéro
+		var y := int(9.0 + r.next() * 14.0)
+		_put(out, x, y, _floor5, mask)
+		if r.next() < 0.4:
+			_put(out, x + 1, y, _floor4, mask)
+
+
+static func _put(out: PackedByteArray, x: int, y: int, c: PackedByteArray, mask: PackedByteArray) -> void:
+	if x < 0 or y < 0 or x >= TILE or y >= TILE:
+		return
+	if not mask.is_empty() and mask[(y + 3) * M + x + 3] == 0:
+		return
+	var o := (y * TILE + x) * 4
+	out[o] = c[0]
+	out[o + 1] = c[1]
+	out[o + 2] = c[2]
+	out[o + 3] = 255
+
+
+## digCell : sol de grotte repeint, bords assombris côté roche (bandes '#0008').
+func paint_dug_cell(i: int, j: int) -> void:
+	# Ordre du prototype : une révélation antérieure est entièrement peinte avant cette case.
+	if not _queue.is_empty():
+		finish()
+	var x := i * 4.0
+	var z := j * 4.0
+	var out := _cave.duplicate()
+	_specks(out, Rng.new(i * 977 + j * 31 + 7))
+	var p := ground_px(x, z)
+	terrain.blit(_image(out), p.x, p.y)
+	if not state.walkable(x - 2.0, z + 2.0):
+		terrain.darken(Rect2i(p.x, p.y, 2, TILE))
+	if not state.walkable(x + 6.0, z + 2.0):
+		terrain.darken(Rect2i(p.x + 30, p.y, 2, TILE))
+	if not state.walkable(x + 2.0, z + 6.0):
+		terrain.darken(Rect2i(p.x, p.y + 30, TILE, 2))
+
+
+## paintRegion : repeint les cases (4×4 unités) de la zone ; roche, sol de grotte et bords.
+## Les cases sont mises en file : process() les peint par lots, dans un budget de temps par image
+## (une grande galerie coûte plus de 100 ms en GDScript). finish() vide la file immédiatement.
+func paint_region(x0: float, z0: float, x1: float, z1: float) -> void:
+	stats = {"full": 0, "mixed": 0, "skip": 0}
+	var x := x0
+	while x < x1:
+		var z := z0
+		while z < z1:
+			_queue.append(Vector2(x, z))
+			z += 4.0
+		x += 4.0
+
+
+var _queue: Array[Vector2] = []
+
+
+func pending() -> int:
+	return _queue.size()
+
+
+## Peint des cases de la file pendant au plus `budget_ms` millisecondes. Renvoie le nombre restant.
+func process(budget_ms: float) -> int:
+	var deadline := Time.get_ticks_usec() + int(budget_ms * 1000.0)
+	while not _queue.is_empty() and Time.get_ticks_usec() < deadline:
+		var c: Vector2 = _queue.pop_front()
+		_paint_region_cell(c.x, c.y)
+	terrain.flush()
+	return _queue.size()
+
+
+## Peint toute la file sans limite de temps (captures, tests, chargement).
+func finish() -> void:
+	while not _queue.is_empty():
+		var c: Vector2 = _queue.pop_front()
+		_paint_region_cell(c.x, c.y)
+	terrain.flush()
+
+
+func _paint_region_cell(x: float, z: float) -> void:
+	var any := false
+	var all := true
+	for o: Vector2 in [Vector2(0, 0), Vector2(4, 0), Vector2(0, 4), Vector2(4, 4), Vector2(2, 2), Vector2(2, 0), Vector2(0, 2), Vector2(4, 2), Vector2(2, 4)]:
+		var h := state.hollow(x + o.x, z + o.y)
+		any = any or h
+		all = all and h
+	if not any:
+		stats["skip"] += 1
+		return
+	stats["full" if all else "mixed"] += 1
+	var r := Rng.new((int(x) * 977 + int(z) * 31) & 0xFFFFFFFF)
+	var out: PackedByteArray
+	if all:
+		out = _cave.duplicate()
+		_specks(out, r)
+	else:
+		var mask := _hollow_mask(x, z)
+		out = _rock.duplicate()
+		for py in TILE:
+			for px in TILE:
+				if mask[(py + 3) * M + px + 3] == 1:
+					var o := (py * TILE + px) * 4
+					out[o] = _cave[o]
+					out[o + 1] = _cave[o + 1]
+					out[o + 2] = _cave[o + 2]
+					out[o + 3] = 255
+		_specks(out, r, mask)
+		for py in TILE:
+			for px in TILE:
+				var m := (py + 3) * M + px + 3
+				if mask[m] == 1:
+					continue
+				var o := (py * TILE + px) * 4
+				if mask[m + 2 * M] == 1 and mask[m - 3 * M] == 0:
+					# Px.dark(…, 0,55) : canal × 0,55 dans un Uint8ClampedArray.
+					out[o] = _clamp8(out[o] * 0.55)
+					out[o + 1] = _clamp8(out[o + 1] * 0.55)
+					out[o + 2] = _clamp8(out[o + 2] * 0.55)
+				elif mask[m - 2 * M] == 1:
+					_copy(out, o, _rock_c[7 if mask[m - M] == 1 else 5])
+				elif mask[m - 2] == 1 or mask[m + 2] == 1:
+					_copy(out, o, _rock_c[0] if mask[m - 1] == 1 or mask[m + 1] == 1 else _rock_c[6])
+	var p := ground_px(x, z)
+	terrain.blit(_image(out), p.x, p.y)
+
+
+static func _copy(out: PackedByteArray, o: int, c: PackedByteArray) -> void:
+	out[o] = c[0]
+	out[o + 1] = c[1]
+	out[o + 2] = c[2]
+	out[o + 3] = 255
+
+
+## Masque des pixels creux (hol) sur la tuile de la case (x, z) et une marge de 3 px.
+## Loin de la salle et du couloir, hol se réduit à « galerie ouverte ou case creusée » : calcul direct
+## sur les tableaux, sans appel de fonction par pixel. Sinon, appel de state.hollow (formules exactes).
+func _hollow_mask(x: float, z: float) -> PackedByteArray:
+	var mask := PackedByteArray()
+	mask.resize(M * M)
+	var near_cave := x + 4.5 > -66.0 and x - 0.5 < 66.0 and z + 4.5 > -171.0 and z - 0.5 < -85.0
+	var near_tunnel := x + 4.5 > -CaveShape.CAVE_GATE and x - 0.5 < CaveShape.CAVE_GATE
+	if near_cave or near_tunnel:
+		for py in range(-3, 35):
+			for px in range(-3, 35):
+				mask[(py + 3) * M + px + 3] = 1 if state.hollow(x + px / 8.0, z + py / 8.0) else 0
+		return mask
+	var opened := state.found > 0
+	var open := state.open
+	# Cases creusées voisines (3 × 3) ; la plupart du temps aucune : le test par pixel est alors évité.
+	var ci := floori(x / 4.0)
+	var cj := floori(z / 4.0)
+	var dug := PackedByteArray([0, 0, 0, 0, 0, 0, 0, 0, 0])
+	var any_dug := false
+	for di in range(-1, 2):
+		for dj in range(-1, 2):
+			if state.dug.has(Vector2i(ci + di, cj + dj)):
+				dug[(dj + 1) * 3 + di + 1] = 1
+				any_dug = true
+	# Colonnes : indice de galerie et case creusée de chaque sous-pixel (constants sur la ligne).
+	var col_i := PackedInt32Array()
+	var col_d := PackedInt32Array()
+	col_i.resize(M)
+	col_d.resize(M)
+	for px in range(-3, 35):
+		var xw := x + px / 8.0
+		col_i[px + 3] = floori(xw - CaveShape.WORLD_X0)
+		col_d[px + 3] = floori(xw / 4.0) - ci + 1
+	var gw := TerrainState.GAL_W
+	for py in range(-3, 35):
+		var zw := z + py / 8.0
+		var j := floori(zw - CaveShape.WORLD_Z0)
+		var drow := (floori(zw / 4.0) - cj + 1) * 3
+		var base := j * gw
+		var row_ok := opened and j >= 0 and j < TerrainState.GAL_H
+		var mo := (py + 3) * M
+		for c in M:
+			var h := 0
+			if row_ok:
+				var i := col_i[c]
+				if i >= 0 and i < gw and open[base + i] == 1:
+					h = 1
+			if h == 0 and any_dug and dug[drow + col_d[c]] == 1:
+				h = 1
+			mask[mo + c] = h
+	return mask
+
+
+## Conversion d'un Uint8ClampedArray : arrondi au plus proche, égalités vers le pair.
+static func _clamp8(v: float) -> int:
+	var f := floorf(v)
+	var d := v - f
+	var n := int(f) + (1 if d > 0.5 or (d == 0.5 and int(f) % 2 == 1) else 0)
+	return clampi(n, 0, 255)

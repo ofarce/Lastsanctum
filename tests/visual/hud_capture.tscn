@@ -1,0 +1,6 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://tests/visual/hud_capture.gd" id="1_hudcap"]
+
+[node name="hud_capture" type="Node"]
+script = ExtResource("1_hudcap")

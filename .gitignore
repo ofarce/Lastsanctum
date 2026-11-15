@@ -1,0 +1,16 @@
+# Godot 4+ specific ignores
+.godot/
+/android/
+
+# Exports et artefacts
+/build/
+/export/
+*.tmp
+
+# Sorties temporaires des tests et du baker
+/tests/visual/out/
+/tools/baker/.cache/
+/tools/resync_out/
+
+# Configuration locale de Claude Code (serveur de prévisualisation)
+/.claude/

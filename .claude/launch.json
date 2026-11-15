@@ -2,14 +2,10 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "jeu",
+      "name": "export-web",
       "runtimeExecutable": "python3",
-      "runtimeArgs": [
-        "-m",
-        "http.server",
-        "8123"
-      ],
-      "port": 8123
+      "runtimeArgs": ["-m", "http.server", "8765", "--bind", "127.0.0.1", "--directory", "build/web"],
+      "port": 8765
     }
   ]
 }

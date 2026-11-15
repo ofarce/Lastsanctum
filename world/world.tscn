@@ -1,0 +1,17 @@
+[gd_scene format=3 uid="uid://e5b135evk2lf"]
+
+[ext_resource type="Script" uid="uid://dmo3cctsjyxlm" path="res://world/world.gd" id="1_tcf2h"]
+[ext_resource type="Script" uid="uid://d2xni6g28xjom" path="res://world/camera/world_camera.gd" id="2_4717r"]
+[ext_resource type="Script" uid="uid://b1f4khyflgugp" path="res://world/terrain/terrain.gd" id="3_4717r"]
+
+[node name="World" type="Node2D" unique_id=470612585]
+script = ExtResource("1_tcf2h")
+
+[node name="Camera" type="Node" parent="." unique_id=205117955]
+script = ExtResource("2_4717r")
+
+[node name="Terrain" type="Node2D" parent="." unique_id=495106242]
+script = ExtResource("3_4717r")
+
+[node name="YSort" type="Node2D" parent="." unique_id=2024758391]
+y_sort_enabled = true

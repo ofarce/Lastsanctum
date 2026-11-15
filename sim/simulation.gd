@@ -1,0 +1,853 @@
+class_name Simulation
+extends Node
+## Boucle de simulation (frame() et update(), Index.html, 73b410f) et ordres du joueur.
+## Ordre des systèmes identique au prototype (R14) : portail, bâtiments et Ancre, tâches des adeptes,
+## portails maléfiques, unités, tourelles, ennemis, fin de partie. Les étapes 7 et 8 complèteront
+## bâtiments, combat, tourelles et ennemis ; leurs emplacements sont marqués ci-dessous.
+
+signal turrets_activated
+signal engineer_greeted(unit: Unit)
+
+## Pas de simulation maximal (frame() : dt ≤ 0,045 s).
+const MAX_DT := 0.045
+const ORB_TIME := 8.0
+const ORB_SPOT := Vector2(-5.0, -150.0)  # (core.x − 5, core.z + 4)
+## Délai entre l'éveil de l'Ancre et l'armement des balistes : temps de trajet de l'étincelle
+## (AnchorSpark, planche etincelle-ancre-propositions.html). Écart voulu avec le prototype, qui les arme aussitôt.
+const SPARK_ARRIVAL := 4.75
+## Durées des états du portail (PORTAL.dur) ; l'émergence a lieu après les 3 premiers.
+const PORTAL_DUR := [1.0, 1.0, 1.0, 1.4, 1.2, 0.9, 0.9, 0.9, 0.9]
+const PORTAL_EMERGE := 3
+const PORTAL := Vector2(0.0, -167.7)
+## Vitesses (move) : Ingénieur 15,2 ; adeptes 7,6 ; gardes 3,45.
+const SPEED_ENGINEER := 15.2
+const SPEED_ADEPT := 7.6
+const SPEED_GUARD := 3.45
+const ADEPT_ROLES := ["sigil", "medeina", "aether", "indra", "flammes", "archer", "lame"]
+const DIG_MSG := "Creusement · l’Ingénieur déblaie une case par seconde puis attaque la case voisine."
+
+var world: World
+var paused := false
+## Hasard de la partie (Math.random du prototype) : apparitions, effets, sorties de la caserne. Graine fixée
+## par new_game pour rejouer une partie à l'identique (tests, parties scriptées).
+var rng := RandomNumberGenerator.new()
+## Combat, ennemis, vagues et balistes (étape 8).
+var combat := Combat.new(self)
+## Décision D9 : Paladin, Soigneur et Tireur présents dès le début de partie, comme avant leur mise de côté
+## dans 73b410f (soldier(...) commentés dans init). Désactivé par défaut ; réglage de projet
+## « exiles/debug/heros_historiques » ou affectation directe (tests).
+static var legacy_heroes: bool = ProjectSettings.get_setting("exiles/debug/heros_historiques", false)
+
+
+## Chronométrage optionnel des phases de tick (profilage, étape 12) : {phase: [cumul µs, max µs, appels]}.
+var profile: Dictionary = {}
+var profiling := false
+
+
+func _process(delta: float) -> void:
+	if not paused:
+		tick(minf(delta, MAX_DT))
+
+
+func _prof(phase: String, t0: int) -> int:
+	var now := Time.get_ticks_usec()
+	var r: Array = profile.get(phase, [0, 0, 0])
+	r[0] += now - t0
+	r[1] = maxi(r[1], now - t0)
+	r[2] += 1
+	profile[phase] = r
+	return now
+
+
+# ---------------------------------------------------------------- Partie
+
+## init() : nouvelle partie. `seed` < 0 : graine des galeries au hasard.
+func new_game(seed: int = -1) -> void:
+	GameState.reset()
+	var gallery_seed := seed if seed >= 0 else randi()
+	rng.seed = gallery_seed
+	combat.events.clear()
+	Combat.reset_turrets()
+	if world:
+		world.reset_world(gallery_seed)
+		world.camera.reset()
+	# Héros « mis de côté pour une intégration ultérieure » dans 73b410f (décision D9) : derrière un drapeau.
+	if legacy_heroes:
+		spawn("Paladin", -2.5, 13.0, "paladin")
+		spawn("Soigneur", 1.0, 15.0, "healer")
+		spawn("Tireur", 3.0, 12.0, "shooter")
+	var eng := spawn("Ingénieur Exilé", PORTAL.x, PORTAL.y + 0.8, "engineer")
+	eng.hidden = true
+	# selected = [units[0]] : le Paladin quand les héros sont présents.
+	GameState.selected = [GameState.units[0]]
+	say("L’Ancre s’est éteinte. Sélectionnez l’Ingénieur, puis clic droit sur l’Ancre (ou R) pour la réactiver.", 7.0)
+
+
+func spawn(unit_name: String, x: float, z: float, role: String, squad := 0) -> Unit:
+	var u := Unit.create(GameState.next_uid, unit_name, x, z, role, squad)
+	GameState.next_uid += 1
+	GameState.units.append(u)
+	return u
+
+
+func say(text: String, seconds := 2.0) -> void:
+	Events.notice.emit(text, seconds)
+
+
+func is_adept(u: Unit) -> bool:
+	return ADEPT_ROLES.has(u.role)
+
+
+func state() -> TerrainState:
+	return world.terrain_state
+
+
+# ---------------------------------------------------------------- Boucle
+
+func tick(dt: float) -> void:
+	GameState.sim_time += dt
+	portal_tick()
+	if GameState.ended:
+		return
+	var t := Time.get_ticks_usec() if profiling else 0
+	update_buildings(dt)
+	update_adepts(dt)
+	if profiling:
+		t = _prof("bâtiments et adeptes", t)
+	combat.update_evil_portals()
+	for u in GameState.units:
+		u.attack -= dt
+		u.ability = maxf(0.0, u.ability - dt)
+		u.shield = maxf(0.0, u.shield - dt)
+		u.buff = maxf(0.0, u.buff - dt)
+	while not GameState.spawn_queue.is_empty() and GameState.spawn_queue[0]["at"] <= GameState.sim_time:
+		combat.spawn_enemy(GameState.spawn_queue.pop_front())
+	var alive: Array[Unit] = []
+	for u in GameState.units:
+		if u.alive():
+			alive.append(u)
+	if profiling:
+		t = _prof("portails et file", t)
+	combat.update_units(dt, alive)
+	if profiling:
+		t = _prof("alliés", t)
+	combat.update_turrets(dt)
+	if profiling:
+		t = _prof("balistes", t)
+	combat.update_enemies(dt, alive)
+	if profiling:
+		t = _prof("ennemis", t)
+	combat.finish_tick(dt, alive)
+	if profiling:
+		_prof("fin de tick", t)
+
+
+## steer : prochain point du chemin A* vers `to` (chemin en cache dans u.memo).
+func steer(u: Unit, to: Vector2) -> Vector2:
+	return world.pathfinder.steer(u.pos(), to, u.memo)
+
+
+## portalTick : les unités cachées sortent du portail quand la séquence atteint l'émergence.
+func portal_tick() -> void:
+	var te := GameState.portal_start
+	for i in PORTAL_EMERGE:
+		te += PORTAL_DUR[i]
+	if GameState.sim_time < te:
+		return
+	for u in GameState.units:
+		if not u.hidden:
+			continue
+		u.hidden = false
+		if u.role == "engineer":
+			# À l'écart de l'Ancre : la bulle de dialogue ne la masque pas.
+			u.tx = -13.0
+			u.tz = CaveShape.CORE.y + 7.0
+			engineer_greeted.emit(u)
+		else:
+			var e: Vector2 = u.exit_point if u.exit_point != null else Vector2(PORTAL.x + 3.0, CaveShape.CORE.y + 4.0)
+			u.tx = e.x
+			u.tz = e.y
+			if u.arrival:
+				say(u.arrival, 2.5)
+
+
+## move : avance vers t ; glisse le long des murs si le pas direct entre dans la roche.
+func move(u: Unit, t: Vector2, dt: float, mult := 1.0) -> void:
+	var dx := t.x - u.x
+	var dz := t.y - u.z
+	var d := sqrt(dx * dx + dz * dz)
+	if d < 0.24:
+		return
+	var speed := (SPEED_GUARD if u.role == "guard" else SPEED_ADEPT if is_adept(u) else SPEED_ENGINEER) * mult
+	var step := minf(d, speed * dt)
+	var nx := u.x + dx / d * step
+	var nz := u.z + dz / d * step
+	var st := state()
+	if st.walkable(nx, nz):
+		u.x = nx
+		u.z = nz
+	elif st.walkable(nx, u.z):
+		u.x = nx
+	elif st.walkable(u.x, nz):
+		u.z = nz
+	clamp_world(u)
+
+
+## clampWorld : limites du monde puis sortie de la roche.
+func clamp_world(u: Unit) -> void:
+	u.x = clampf(u.x, CaveShape.WORLD_X0 + 8.0, CaveShape.WORLD_X1 - 8.0)
+	u.z = clampf(u.z, CaveShape.WORLD_Z0 + 8.0, CaveShape.WORLD_Z1 - 6.0)
+	# Position conservée en double précision quand elle est praticable (un Vector2 l'arrondirait en 32 bits).
+	if state().walkable(u.x, u.z):
+		return
+	var p := state().push_out_of_rock(u.pos())
+	u.x = p.x
+	u.z = p.y
+
+
+# ---------------------------------------------------------------- Ancre (buildings.js)
+
+## updateBuildings : Ancre, chantiers (l'Ingénieur doit se tenir sur le point de travail), caserne.
+func update_buildings(dt: float) -> void:
+	update_orb(dt)
+	for b: Building in GameState.buildings.duplicate():
+		var D := b.def()
+		if not b.complete:
+			var u := b.owner
+			if u == null or not u.alive() or u.hidden or u.build_job != b:
+				if u:
+					cancel_build(u)
+				else:
+					GameState.buildings.erase(b)
+				continue
+			if Combat.hyp(u.x - b.spot.x, u.z - b.spot.y) > 0.5:
+				continue
+			b.progress = minf(D["time"], b.progress + dt)
+			if b.progress < D["time"]:
+				continue
+			b.complete = true
+			b.finished_at = GameState.sim_time
+			u.build_job = null
+			Combat.zone(b.x, b.z, b.half(), Color("#e8d9a8"))
+			var deity: String = D["deity"]
+			if deity:
+				say("%s achevé. Sélectionnez-le pour invoquer un adepte de %s (%d %s)." % [D["name"], Catalog.DEITY_NAMES[deity],
+					Catalog.SUMMON_COST, Catalog.RES_INFO[Catalog.DEITY_RES[deity]]["name"]], 4.0)
+			else:
+				say("%s achevé.%s" % [D["name"], unlock_text(b.type)], 4.0)
+			continue
+		if b.type == "caserne" and not b.queue.is_empty():
+			b.train += dt
+			if b.train >= Catalog.CASERNE_TIME:
+				b.train = 0.0
+				spawn_trained(b, b.queue.pop_front())
+	GameState.pray_popups = GameState.pray_popups.filter(func(p: Dictionary) -> bool: return GameState.sim_time - p["at"] < 1.8)
+
+
+## unlockText : bâtiments débloqués par celui qui vient d'être achevé.
+static func unlock_text(type: String) -> String:
+	var next: PackedStringArray = []
+	for k: String in Catalog.BUILDINGS:
+		if Catalog.BUILDINGS[k]["requires"] == type:
+			next.append(Catalog.BUILDINGS[k]["name"])
+	return " Nouveau : %s." % ", ".join(next) if not next.is_empty() else ""
+
+
+func update_orb(dt: float) -> void:
+	if GameState.orb_active:
+		for k: String in GameState.res:
+			GameState.res[k] += dt
+		if GameState.spark_pending and GameState.sim_time - GameState.orb_finished_at >= SPARK_ARRIVAL:
+			GameState.spark_pending = false
+			combat.activate_turrets()
+			turrets_activated.emit()
+		return
+	var u := GameState.orb_owner
+	if u == null:
+		return
+	if not u.alive() or u.hidden or not u.orb_job:
+		GameState.orb_owner = null
+		return
+	if Combat.hyp(u.x - ORB_SPOT.x, u.z - ORB_SPOT.y) > 0.6:
+		return
+	GameState.orb_progress = minf(ORB_TIME, GameState.orb_progress + dt)
+	if GameState.orb_progress < ORB_TIME:
+		return
+	GameState.orb_active = true
+	GameState.orb_finished_at = GameState.sim_time
+	u.orb_job = false
+	Combat.zone(CaveShape.CORE.x, CaveShape.CORE.y, 7.0, Color("#bba7ff"))
+	Combat.zone(CaveShape.CORE.x, CaveShape.CORE.y, 12.0, Color("#8777ac"))
+	# Les balistes s'arment à l'arrivée de l'étincelle (SPARK_ARRIVAL), plus haut.
+	GameState.spark_pending = true
+	GameState.next_wave = GameState.sim_time + 20.0
+	say("L’Ancre s’éveille ! Les gardes tyriennes de l’entrée se rallument · premier assaut dans 20 s.", 5.0)
+
+
+## orderOrb : envoie l'Ingénieur (sélectionné, sinon le premier disponible) réactiver l'Ancre.
+func order_orb(u: Unit = null) -> void:
+	if GameState.ended:
+		return
+	if GameState.orb_active:
+		say("L’Ancre est éveillée · +1 de chaque ressource par seconde.", 2.0)
+		return
+	if u == null:
+		u = builder()
+	if u == null:
+		for o in GameState.units:
+			if o.role == "engineer" and o.alive() and not o.hidden:
+				u = o
+				break
+	if u == null:
+		say("Attendez la sortie de l’Ingénieur.", 2.0)
+		return
+	cancel_work(u)
+	GameState.orb_owner = u
+	u.orb_job = true
+	u.tx = ORB_SPOT.x
+	u.tz = ORB_SPOT.y
+	u.stance = "attack"
+	GameState.selected = [u]
+	GameState.anchor_selected = false
+	GameState.hud_menu = ""
+	say("L’Ingénieur rejoint l’Ancre pour la réactiver · %d s d’Énonciation." % ORB_TIME, 3.0)
+
+
+func cancel_orb(u: Unit) -> void:
+	if u == null:
+		return
+	if GameState.orb_owner == u and not GameState.orb_active:
+		GameState.orb_owner = null
+	u.orb_job = false
+
+
+## L'Ingénieur s'agenouille pendant l'Énonciation (templeKneeling) : chantier en cours ou réactivation de
+## l'Ancre (réparation des balistes : étape 8).
+func kneeling(u: Unit) -> bool:
+	var b: Building = u.build_job
+	if b:
+		return b.owner == u and not b.complete and b.progress > 0.0 and Combat.hyp(u.x - b.spot.x, u.z - b.spot.y) <= 0.5
+	return GameState.orb_owner == u and u.orb_job and not GameState.orb_active and GameState.orb_progress > 0.0 \
+		and Combat.hyp(u.x - ORB_SPOT.x, u.z - ORB_SPOT.y) <= 0.6
+
+
+# ---------------------------------------------------------------- Tâches (adepts.js)
+
+func builder() -> Unit:
+	for u in GameState.selected:
+		if u.role == "engineer" and u.alive() and not u.hidden:
+			return u
+	return null
+
+
+func set_job(u: Unit, job: Dictionary) -> void:
+	# cancelTurretRepair : étape 8.
+	cancel_build(u)
+	cancel_orb(u)
+	job.merge({"phase": "go", "carry": 0, "work": 0.0})
+	u.job = job
+	u.stance = "attack"
+	u.force_move = false
+
+
+func cancel_work(u: Unit) -> void:
+	if u == null:
+		return
+	cancel_build(u)
+	cancel_orb(u)
+	# cancelTurretRepair : étape 8.
+	u.job = null
+
+
+## cancelBuild : un chantier abandonné disparaît et son coût est remboursé.
+func cancel_build(u: Unit) -> void:
+	if u == null:
+		return
+	var b: Building = u.build_job
+	if b and not b.complete:
+		GameState.buildings.erase(b)
+		Catalog.refund(b.def()["cost"])
+		if GameState.hud_building == b:
+			GameState.hud_building = null
+	u.build_job = null
+
+
+func update_adepts(_dt: float) -> void:
+	var dt := _dt
+	combat.update_fire_walls(dt)
+	var st := state()
+	for u in GameState.units:
+		u.working = false
+		var j: Variant = u.job
+		if j == null or not u.alive():
+			continue
+		if j["type"] == "dig":
+			var c: Dictionary = j["cell"]
+			var key := Vector2i(c["i"], c["j"])
+			var eng := u.role == "engineer"
+			if st.dug.has(key):
+				if not (eng and _next_dig(u)):
+					u.job = null
+				continue
+			var at: Vector2 = j["at"]
+			u.tx = at.x
+			u.tz = at.y
+			if Combat.hyp(u.x - at.x, u.z - at.y) >= 0.7:
+				continue
+			u.working = true
+			j["work"] += dt * (TerrainState.ENGINEER_DIG * TerrainState.DIG_HITS if eng else 0.25)
+			while j["work"] >= TerrainState.HIT_TIME:
+				j["work"] -= TerrainState.HIT_TIME
+				var h: int = st.dig_hits.get(key, 0) + 1
+				st.dig_hits[key] = h
+				Combat.flash(key.x * 4 + 2, key.y * 4 + 2, Color("#a89c86"))
+				if h >= TerrainState.DIG_HITS:
+					world.dig_cell(key.x, key.y)
+					if not (eng and _next_dig(u)):
+						u.job = null
+					break
+			continue
+		if j["type"] == "pray":
+			var t: Building = j["temple"]
+			if not GameState.buildings.has(t) or not t.complete:
+				u.job = null
+				continue
+			var spot := prayer_spot(u, t)
+			u.tx = spot.x
+			u.tz = spot.y
+			if Combat.hyp(u.x - spot.x, u.z - spot.y) >= 0.7:
+				continue
+			u.working = true
+			var r: String = Catalog.DEITY_RES[u.role]
+			GameState.res[r] += dt
+			t.acc += dt
+			if t.acc >= 5.0:
+				t.acc -= 5.0
+				GameState.pray_popups.append({"x": t.x, "z": t.z, "amount": 5, "res": r, "at": GameState.sim_time})
+			continue
+		u.job = null
+	for id: String in Catalog.DEITY_NAMES:
+		GameState.deity_active[id] = GameState.sim_time < GameState.deity_until.get(id, 0.0)
+
+
+## nextDig : enchaîne sur une case de roche voisine de celle qui vient d'être déblayée.
+func _next_dig(u: Unit) -> bool:
+	var n: Variant = state().next_dig_cell(u.job["cell"], u.pos())
+	if n == null:
+		return false
+	u.job["cell"] = n
+	u.job["at"] = n["at"]
+	u.job["work"] = 0.0
+	return true
+
+
+## orderAdepts : clic droit de l'Ingénieur sur la roche (creuser). Prière au temple : étape 7.
+func order_adepts(p: Vector2) -> bool:
+	var engs: Array[Unit] = []
+	for u in GameState.selected:
+		if u.role == "engineer" and u.alive() and not u.hidden:
+			engs.append(u)
+	if not engs.is_empty():
+		var cell: Variant = state().diggable_cell(p)
+		if cell != null:
+			for u in engs:
+				set_job(u, {"type": "dig", "cell": cell, "at": cell["at"]})
+			say(DIG_MSG, 2.0)
+			return true
+	return false
+
+
+# ---------------------------------------------------------------- Ordres (hud.js, Index.html)
+
+## issueMove : formation en grille de 4 colonnes espacées de 1,5. `target_is_enemy` : ordre d'attaque.
+func issue_move(target: Vector2, target_is_enemy := false) -> void:
+	if GameState.anchor_selected or GameState.ended:
+		return
+	var valid := GameState.selected.filter(func(u: Unit) -> bool: return u.alive() and not u.hidden)
+	var cols := mini(4, valid.size())
+	for i in valid.size():
+		var u: Unit = valid[i]
+		cancel_work(u)
+		u.tx = target.x + (i % cols - (cols - 1) / 2.0) * 1.5
+		u.tz = target.y + (floori(float(i) / cols) - (ceili(float(valid.size()) / cols) - 1) / 2.0) * 1.5
+		u.tx = clampf(u.tx, CaveShape.WORLD_X0 + 8.0, CaveShape.WORLD_X1 - 8.0)
+		u.tz = clampf(u.tz, CaveShape.WORLD_Z0 + 8.0, CaveShape.WORLD_Z1 - 8.0)
+		u.stance = "attack"
+		u.force_move = not target_is_enemy
+	GameState.hud_mode = ""
+
+
+## hold : les unités sélectionnées tiennent leur position.
+func hold() -> void:
+	GameState.hud_mode = ""
+	for u in GameState.selected:
+		if u.alive() and not u.hidden:
+			cancel_work(u)
+			u.stance = "hold"
+			u.tx = u.x
+			u.tz = u.z
+	if not GameState.selected.is_empty():
+		say("Les unités maintiennent leur position.", 1.0)
+
+
+## ability : compétence de la première unité sélectionnée vivante hors garde (Index.html:96). Ingénieur :
+## réactiver l'Ancre si elle est éteinte, sinon la réparer (+15 %, 18 s). Paladin : Égide (16 s). Soigneur :
+## Restauration (12 s). Tireur : tir de précision (10 s). Autres : Discipline martiale (14 s).
+func ability() -> void:
+	var source: Unit = null
+	for u in GameState.selected:
+		if u.alive() and u.role != "guard":
+			source = u
+			break
+	if source == null and not GameState.selected.is_empty():
+		source = GameState.selected[0]
+	if source == null:
+		return
+	if source.role == "engineer" and not GameState.orb_active:
+		order_orb(source)
+		return
+	if source.ability > 0.0:
+		say("Compétence en recharge.", 1.0)
+		return
+	if source.role == "paladin":
+		# Égide : onde de 5, 35 dégâts aux ennemis proches, boucliers (dégâts subis ÷ 2) pendant 7 s.
+		source.ability = 16.0
+		Combat.zone(source.x, source.z, 5.0, Color("#f1d28c"))
+		for e in GameState.enemies:
+			if Combat.dist(e, source) < 5.0:
+				combat.damage(e, 35.0 + Catalog.lvl_bonus(source), source)
+		for u in GameState.units:
+			if Combat.dist(u, source) < 5.0:
+				u.shield = 7.0
+		say("PALADIN — Égide : boucliers renforcés.", 2.0)
+	elif source.role == "healer":
+		# Restauration : +55 PV dans un rayon de 7. Comme le prototype, une unité tombée dans le rayon
+		# reprend aussi 55 PV (elle reste pourtant parmi les âmes du Puits) : comportement reproduit tel quel.
+		source.ability = 12.0
+		Combat.zone(source.x, source.z, 7.0, Color("#83e5bf"))
+		for u in GameState.units:
+			if Combat.dist(u, source) < 7.0:
+				u.hp = minf(u.max_hp, u.hp + 55.0)
+				if u.hp <= 0.0:
+					u.hp = 25.0
+		say("SOIGNEUR — Restauration de zone.", 2.0)
+	elif source.role == "engineer":
+		source.ability = 18.0
+		GameState.core_hp = minf(100.0, GameState.core_hp + 15.0)
+		Combat.zone(CaveShape.CORE.x, CaveShape.CORE.y, 4.0, Color("#ffb03c"))
+		say("INGÉNIEUR EXILÉ — Réparation de l’Ancre.", 2.0)
+	elif source.role == "shooter":
+		source.ability = 10.0
+		var t: Variant = Combat.target_closest(source, GameState.enemies, 18.0)
+		if t:
+			combat.damage(t, 95.0 + Catalog.lvl_bonus(source), source)
+			Combat.blast(source, t, Color("#f7e7a2"))
+			Combat.flash(t.x, t.z, Color("#f7e7a2"))
+		say("TIREUR — Tir de précision.", 2.0)
+	else:
+		# Toute autre unité (branche finale du prototype) : Discipline martiale, dégâts ×1,5 pendant 8 s pour
+		# toute son escouade (escouade 0 comprise : toutes les unités hors escouade).
+		source.ability = 14.0
+		Combat.zone(source.x, source.z, 7.0, Color("#a1badb"))
+		for u in GameState.units:
+			if u.squad == source.squad:
+				u.buff = 8.0
+		say("DISCIPLES D’INDRA — Discipline martiale.", 2.0)
+
+
+## prayerSpot : rangées de 5 devant le temple (derrière s'il est adossé à la roche).
+func prayer_spot(u: Unit, t: Building) -> Vector2:
+	var praying := GameState.units.filter(func(o: Unit) -> bool:
+		return o.job != null and o.job["type"] == "pray" and o.job["temple"] == t and o.alive())
+	var i := maxi(0, praying.find(u))
+	var h := t.half()
+	var s := Vector2(t.x - 4.0 + (i % 5) * 2.0, t.z + h + 1.0 + floori(i / 5.0) * 1.6)
+	if not state().walkable(s.x, s.y):
+		s = Vector2(t.x - 4.0 + (i % 5) * 2.0, t.z - h - 1.0 - floori(i / 5.0) * 1.6)
+	return s
+
+
+# ---------------------------------------------------------------- Ordres du panneau (hud.js, buildings.js, adepts.js)
+
+## runAbility : compétence de la sélection (bouton Réparer ou Compétence).
+func run_ability() -> void:
+	if GameState.anchor_selected or GameState.ended or not _any_selected_visible():
+		return
+	ability()
+
+
+## armMove : bascule le mode « choisir une destination ».
+func arm_move() -> void:
+	if GameState.anchor_selected or GameState.ended or not _any_selected_visible():
+		return
+	GameState.hud_mode = "" if GameState.hud_mode == "move" else "move"
+
+
+func _any_selected_visible() -> bool:
+	return GameState.selected.any(func(u: Unit) -> bool: return u.alive() and not u.hidden)
+
+
+## armBuild : choisit le bâtiment à placer. Le placement au clic (placeBuilding) arrive à l'étape 7.
+func arm_build(type: String) -> void:
+	if GameState.ended or builder() == null:
+		return
+	var D: Dictionary = Catalog.BUILDINGS[type]
+	if not HudModel.unlocked(type):
+		say("%s : construisez d’abord un %s." % [D["name"], Catalog.BUILDINGS[D["requires"]]["name"]], 3.0)
+		return
+	if not Catalog.can_pay(D["cost"]):
+		say("%s : %s requis." % [D["name"], Catalog.cost_text(D["cost"])], 3.0)
+		return
+	GameState.hud_mode = "build"
+	GameState.hud_build_type = type
+	say("%s · %s · cliquez un emplacement libre. Échap : annuler." % [D["name"], Catalog.cost_text(D["cost"])], 4.0)
+
+
+## summonHero : le héros Tireur franchit le portail central (même séquence que l'Ingénieur).
+func summon_hero() -> void:
+	if GameState.ended:
+		return
+	if not GameState.anchor_selected:
+		say("Cliquez sur l’Ancre pour invoquer le héros Tireur.", 3.0)
+		return
+	if not GameState.orb_active:
+		say("L’Ancre doit d’abord être réactivée par l’Ingénieur.", 3.0)
+		return
+	if not Catalog.can_pay(Catalog.HERO_COST):
+		say("Héros Tireur : %s requis." % Catalog.cost_text(Catalog.HERO_COST), 3.0)
+		return
+	Catalog.pay(Catalog.HERO_COST)
+	var u := spawn("Tireur", PORTAL.x, PORTAL.y + 0.8, "shooter")
+	u.hidden = true
+	u.exit_point = Vector2(PORTAL.x + 3.0, CaveShape.CORE.y + 4.0)
+	u.arrival = "Le héros Tireur franchit le portail."
+	GameState.portal_start = GameState.sim_time
+	say("Le portail s’éveille…", 2.0)
+
+
+## sendToPray, pour chaque adepte sélectionné (bouton Prier).
+func pray_selected() -> void:
+	var n := 0
+	for u in HudModel.alive_selected():
+		if send_to_pray(u):
+			n += 1
+	say("Les adeptes rejoignent leur temple pour prier." if n else "Aucun temple de leur dieu n’est achevé.", 2.0)
+
+
+func send_to_pray(u: Unit, t: Building = null) -> bool:
+	if not Catalog.prays(u):
+		return false
+	if t == null:
+		var best := INF
+		for o in HudModel.own_temples(u):
+			var d := Combat.hyp(o.x - u.x, o.z - u.z)
+			if d < best:
+				best = d
+				t = o
+	if t == null:
+		return false
+	set_job(u, {"type": "pray", "temple": t})
+	return true
+
+
+# ---------------------------------------------------------------- Construction (buildings.js)
+
+const CELL := 4.0
+## Emplacements des deux balistes de l'entrée (resetTurrets, turret-game.js) : aucun bâtiment à moins de h + 5.
+const TURRET_SPOTS: Array[Vector2] = [Vector2(-11, -71), Vector2(11, -71)]
+## Portails divins (DEITY_PORTALS, Index.html) : abscisse de chaque dieu sur la rangée nord.
+const DEITY_X := {"indra": -41.0, "sigil": -24.0, "medeina": 24.0, "aether": 41.0}
+
+
+static func half_of(type: String) -> float:
+	return int(Catalog.BUILDINGS[type]["size"]) * CELL / 2.0
+
+
+## Math.round du JS : arrondi au demi supérieur (y compris pour les négatifs).
+static func js_round(v: float) -> float:
+	return floorf(v + 0.5)
+
+
+## snapFor : centre de case (côté impair) ou nœud de la grille (côté pair).
+static func snap_for(type: String, p: Vector2) -> Vector2:
+	if int(Catalog.BUILDINGS[type]["size"]) % 2:
+		return Vector2(floorf(p.x / CELL) * CELL + CELL / 2.0, floorf(p.y / CELL) * CELL + CELL / 2.0)
+	return Vector2(js_round(p.x / CELL) * CELL, js_round(p.y / CELL) * CELL)
+
+
+## buildableGround : praticable, hors couloir, chemin de la jungle, allée centrale et rangée des portails.
+func buildable_ground(x: float, z: float) -> bool:
+	if not state().walkable(x, z) or CaveShape.in_tunnel(x, z) or CaveShape.in_path(x, z):
+		return false
+	if CaveShape.in_cave(x, z) and (absf(x) < 12.0 or z < -140.0):
+		return false
+	return true
+
+
+## validSite : sol constructible sous toute l'emprise, à l'écart des bâtiments, des balistes, de l'Ancre
+## et des unités.
+func valid_site(type: String, p: Vector2) -> bool:
+	var h := half_of(type)
+	var x := p.x - h + 0.5
+	while x <= p.x + h - 0.4:
+		var z := p.y - h + 0.5
+		while z <= p.y + h - 0.4:
+			if not buildable_ground(x, z):
+				return false
+			z += 2.0
+		x += 2.0
+	for b in GameState.buildings:
+		if absf(b.x - p.x) < b.half() + h and absf(b.z - p.y) < b.half() + h:
+			return false
+	for t in TURRET_SPOTS:
+		if absf(t.x - p.x) < h + 5.0 and absf(t.y - p.y) < h + 5.0:
+			return false
+	if absf(CaveShape.CORE.x - p.x) < h + 4.0 and absf(CaveShape.CORE.y - p.y) < h + 4.0:
+		return false
+	for u in GameState.units:
+		if u.alive() and not u.hidden and absf(u.x - p.x) < h + 0.6 and absf(u.z - p.y) < h + 0.6:
+			return false
+	return true
+
+
+## workSpot : premier côté praticable (ouest, est, sud, nord) où l'Ingénieur se tient.
+func work_spot(type: String, p: Vector2) -> Vector2:
+	var h := half_of(type)
+	for q: Vector2 in [Vector2(p.x - h - 2.0, p.y + 3.0), Vector2(p.x + h + 2.0, p.y + 3.0), Vector2(p.x, p.y + h + 2.0), Vector2(p.x, p.y - h - 2.0)]:
+		if state().walkable(q.x, q.y):
+			return q
+	return Vector2(p.x - h - 2.0, p.y + 3.0)
+
+
+## placeBuilding : clic en mode construction. Paie, crée le chantier et envoie l'Ingénieur sur son point.
+func place_building(p: Vector2) -> void:
+	var u := builder()
+	var type := GameState.hud_build_type
+	if GameState.ended or u == null or type.is_empty() or GameState.hud_mode != "build":
+		return
+	var D: Dictionary = Catalog.BUILDINGS[type]
+	p = snap_for(type, p)
+	if not valid_site(type, p):
+		say("Emplacement impossible : il faut un sol dégagé (grotte, galerie creusée ou jungle).", 2.0)
+		return
+	if not Catalog.can_pay(D["cost"]):
+		say("%s : %s requis." % [D["name"], Catalog.cost_text(D["cost"])], 3.0)
+		GameState.hud_mode = ""
+		return
+	cancel_work(u)
+	Catalog.pay(D["cost"])
+	var id := 0
+	for o in GameState.buildings:
+		id = maxi(id, o.id + 1)
+	var b := Building.create(id, type, p.x, p.y)
+	b.owner = u
+	b.spot = work_spot(type, p)
+	GameState.buildings.append(b)
+	u.build_job = b
+	u.tx = b.spot.x
+	u.tz = b.spot.y
+	u.stance = "attack"
+	GameState.hud_mode = ""
+	GameState.hud_menu = ""
+	say("L’Ingénieur rejoint le chantier · %s · Énonciation : %s s." % [D["name"], HudModel.num(D["time"])], 3.0)
+
+
+# ---------------------------------------------------------------- Temples, caserne, Puits des Âmes
+
+## summonAdept : un adepte du dieu franchit son portail divin (actif 3,5 s) et part prier au temple.
+func summon_adept(b: Building) -> void:
+	if GameState.ended or b == null:
+		return
+	var id: String = b.def()["deity"]
+	if not b.complete or id.is_empty():
+		return
+	var cost := HudModel.summon_cost(b)
+	if not Catalog.can_pay(cost):
+		say("Invocation : %s requis." % Catalog.cost_text(cost), 3.0)
+		return
+	Catalog.pay(cost)
+	GameState.deity_until[id] = GameState.sim_time + 3.5
+	var A: Dictionary = Catalog.ADEPT[id]
+	var u := spawn(A["name"], DEITY_X[id], PORTAL.y + 1.8, id)
+	u.hp = A["hp"]
+	u.max_hp = u.hp
+	u.radius = 0.55
+	Combat.flash(DEITY_X[id], PORTAL.y + 1.0, Catalog.DEITY_GLOW[id])
+	set_job(u, {"type": "pray", "temple": b})
+	say("%s franchit le portail et rejoint son temple pour prier." % A["name"], 2.0)
+
+
+## trainUnit : file de la caserne (5 au plus), 100 Discipline par combattant.
+func train_unit(b: Building, id: String) -> void:
+	if b == null or b.type != "caserne" or not b.complete:
+		return
+	if b.queue.size() >= Catalog.CASERNE_QUEUE:
+		say("File d’entraînement pleine.", 2.0)
+		return
+	if not Catalog.can_pay(Catalog.CASERNE_COST):
+		say("Entraînement : %s requis." % Catalog.cost_text(Catalog.CASERNE_COST), 3.0)
+		return
+	Catalog.pay(Catalog.CASERNE_COST)
+	b.queue.append(id)
+	say("%s à l’entraînement · %s s." % [Catalog.ADEPT[id]["name"], HudModel.num(Catalog.CASERNE_TIME)], 2.0)
+
+
+## spawnTrained : le combattant sort devant la caserne.
+func spawn_trained(b: Building, id: String) -> void:
+	var h := b.half()
+	var A: Dictionary = Catalog.ADEPT[id]
+	var u := spawn(A["name"], b.x + (rng.randf() - 0.5) * 2.0, b.z + h + 1.0, id)
+	u.hp = A["hp"]
+	u.max_hp = u.hp
+	u.radius = 0.55
+	u.tx = b.x + (rng.randf() - 0.5) * 5.0
+	u.tz = b.z + h + 4.0
+	if not state().walkable(u.x, u.z):
+		var q := state().push_out_of_rock(u.pos())
+		u.x = q.x
+		u.z = q.y
+	Combat.flash(u.x, u.z, Color("#f0dba4"))
+	say("%s sort de la caserne." % A["name"], 2.0)
+
+
+## onUnitDeath : une unité tombée (hors Ingénieur) rejoint les âmes que le Puits peut rappeler.
+func on_unit_death(u: Unit) -> void:
+	if u.role == "engineer":
+		return
+	cancel_work(u)
+	u.force_move = false
+	GameState.selected.erase(u)
+	if not GameState.fallen.has(u):
+		GameState.fallen.append(u)
+	var well := GameState.buildings.any(func(b: Building) -> bool: return b.type == "soulwell" and b.complete)
+	say("%s est tombé%s" % [u.name, " · le Puits des Âmes peut le rappeler." if well else "."], 2.5)
+
+
+## reviveUnit : l'unité revient devant le Puits, avec son niveau et son expérience (200 Vie).
+func revive_unit(b: Building, u: Unit) -> void:
+	if b == null or b.type != "soulwell" or not b.complete or not GameState.fallen.has(u):
+		return
+	if not Catalog.can_pay(Catalog.REVIVE_COST):
+		say("Résurrection : %s requis." % Catalog.cost_text(Catalog.REVIVE_COST), 3.0)
+		return
+	Catalog.pay(Catalog.REVIVE_COST)
+	GameState.fallen.erase(u)
+	var h := b.half()
+	u.hp = u.max_hp
+	u.dead = false
+	u.x = b.x
+	u.z = b.z + h + 1.0
+	u.tx = b.x
+	u.tz = b.z + h + 3.5
+	u.memo.clear()
+	u.attack = 0.0
+	u.stance = "attack"
+	if not state().walkable(u.x, u.z):
+		var q := state().push_out_of_rock(u.pos())
+		u.x = q.x
+		u.z = q.y
+	if not GameState.units.has(u):
+		GameState.units.append(u)
+	Combat.zone(u.x, u.z, 2.5, Color("#9be27a"))
+	Combat.flash(u.x, u.z, Color("#effde0"))
+	say("%s revient du Puits des Âmes · niveau %d." % [u.name, Catalog.lvl(u)], 3.0)

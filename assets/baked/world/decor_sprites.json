@@ -1,0 +1,1477 @@
+{
+ "mountain_rock_01": {
+  "w": 70,
+  "h": 50,
+  "ax": 35,
+  "ay": 40
+ },
+ "mountain_rock_02": {
+  "w": 70,
+  "h": 50,
+  "ax": 35,
+  "ay": 40
+ },
+ "mountain_rock_03": {
+  "w": 70,
+  "h": 50,
+  "ax": 35,
+  "ay": 40
+ },
+ "mountain_rock_04": {
+  "w": 70,
+  "h": 50,
+  "ax": 35,
+  "ay": 40
+ },
+ "mountain_rock_05": {
+  "w": 70,
+  "h": 50,
+  "ax": 35,
+  "ay": 40
+ },
+ "mountain_rock_06": {
+  "w": 70,
+  "h": 50,
+  "ax": 35,
+  "ay": 40
+ },
+ "mountain_rock_07": {
+  "w": 70,
+  "h": 50,
+  "ax": 35,
+  "ay": 40
+ },
+ "mountain_rock_08": {
+  "w": 70,
+  "h": 50,
+  "ax": 35,
+  "ay": 40
+ },
+ "mountain_rock_09": {
+  "w": 70,
+  "h": 50,
+  "ax": 35,
+  "ay": 40
+ },
+ "mountain_rock_10": {
+  "w": 70,
+  "h": 50,
+  "ax": 35,
+  "ay": 40
+ },
+ "mountain_rock_11": {
+  "w": 70,
+  "h": 50,
+  "ax": 35,
+  "ay": 40
+ },
+ "mountain_rock_12": {
+  "w": 70,
+  "h": 50,
+  "ax": 35,
+  "ay": 40
+ },
+ "mountain_rock_13": {
+  "w": 70,
+  "h": 50,
+  "ax": 35,
+  "ay": 40
+ },
+ "mountain_rock_14": {
+  "w": 70,
+  "h": 50,
+  "ax": 35,
+  "ay": 40
+ },
+ "mountain_rock_15": {
+  "w": 70,
+  "h": 50,
+  "ax": 35,
+  "ay": 40
+ },
+ "mountain_rock_16": {
+  "w": 70,
+  "h": 50,
+  "ax": 35,
+  "ay": 40
+ },
+ "mountain_rock_17": {
+  "w": 70,
+  "h": 50,
+  "ax": 35,
+  "ay": 40
+ },
+ "mountain_rock_18": {
+  "w": 70,
+  "h": 50,
+  "ax": 35,
+  "ay": 40
+ },
+ "mountain_rock_19": {
+  "w": 70,
+  "h": 50,
+  "ax": 35,
+  "ay": 40
+ },
+ "mountain_rock_20": {
+  "w": 70,
+  "h": 50,
+  "ax": 35,
+  "ay": 40
+ },
+ "mountain_rock_21": {
+  "w": 70,
+  "h": 50,
+  "ax": 35,
+  "ay": 40
+ },
+ "mountain_rock_22": {
+  "w": 70,
+  "h": 50,
+  "ax": 35,
+  "ay": 40
+ },
+ "mountain_rock_23": {
+  "w": 70,
+  "h": 50,
+  "ax": 35,
+  "ay": 40
+ },
+ "mountain_rock_24": {
+  "w": 70,
+  "h": 50,
+  "ax": 35,
+  "ay": 40
+ },
+ "mountain_rock_25": {
+  "w": 70,
+  "h": 50,
+  "ax": 35,
+  "ay": 40
+ },
+ "face_01": {
+  "w": 32,
+  "h": 67,
+  "ax": 0,
+  "ay": 63
+ },
+ "face_02": {
+  "w": 32,
+  "h": 67,
+  "ax": 0,
+  "ay": 63
+ },
+ "face_03": {
+  "w": 32,
+  "h": 67,
+  "ax": 0,
+  "ay": 63
+ },
+ "face_04": {
+  "w": 32,
+  "h": 67,
+  "ax": 0,
+  "ay": 63
+ },
+ "face_05": {
+  "w": 32,
+  "h": 67,
+  "ax": 0,
+  "ay": 63
+ },
+ "face_06": {
+  "w": 32,
+  "h": 67,
+  "ax": 0,
+  "ay": 63
+ },
+ "face_07": {
+  "w": 32,
+  "h": 58,
+  "ax": 0,
+  "ay": 54
+ },
+ "deity_deco_01": {
+  "w": 48,
+  "h": 80,
+  "ax": 24,
+  "ay": 72
+ },
+ "deity_deco_02": {
+  "w": 48,
+  "h": 80,
+  "ax": 24,
+  "ay": 72
+ },
+ "deity_deco_03": {
+  "w": 48,
+  "h": 80,
+  "ax": 24,
+  "ay": 72
+ },
+ "deity_deco_04": {
+  "w": 48,
+  "h": 80,
+  "ax": 24,
+  "ay": 72
+ },
+ "deity_deco_05": {
+  "w": 48,
+  "h": 80,
+  "ax": 24,
+  "ay": 72
+ },
+ "deity_deco_06": {
+  "w": 48,
+  "h": 80,
+  "ax": 24,
+  "ay": 72
+ },
+ "deity_deco_07": {
+  "w": 48,
+  "h": 80,
+  "ax": 24,
+  "ay": 72
+ },
+ "deity_deco_08": {
+  "w": 48,
+  "h": 80,
+  "ax": 24,
+  "ay": 72
+ },
+ "face_08": {
+  "w": 32,
+  "h": 58,
+  "ax": 0,
+  "ay": 54
+ },
+ "rock_01": {
+  "w": 40,
+  "h": 30,
+  "ax": 20,
+  "ay": 24
+ },
+ "rock_02": {
+  "w": 40,
+  "h": 30,
+  "ax": 20,
+  "ay": 24
+ },
+ "rock_03": {
+  "w": 40,
+  "h": 30,
+  "ax": 20,
+  "ay": 24
+ },
+ "rock_04": {
+  "w": 40,
+  "h": 30,
+  "ax": 20,
+  "ay": 24
+ },
+ "rock_05": {
+  "w": 40,
+  "h": 30,
+  "ax": 20,
+  "ay": 24
+ },
+ "rock_06": {
+  "w": 40,
+  "h": 30,
+  "ax": 20,
+  "ay": 24
+ },
+ "face_09": {
+  "w": 32,
+  "h": 58,
+  "ax": 0,
+  "ay": 54
+ },
+ "rock_07": {
+  "w": 40,
+  "h": 30,
+  "ax": 20,
+  "ay": 24
+ },
+ "rock_08": {
+  "w": 40,
+  "h": 30,
+  "ax": 20,
+  "ay": 24
+ },
+ "spire_01": {
+  "w": 28,
+  "h": 44,
+  "ax": 14,
+  "ay": 40
+ },
+ "spire_02": {
+  "w": 28,
+  "h": 44,
+  "ax": 14,
+  "ay": 40
+ },
+ "rock_09": {
+  "w": 40,
+  "h": 30,
+  "ax": 20,
+  "ay": 24
+ },
+ "rock_10": {
+  "w": 40,
+  "h": 30,
+  "ax": 20,
+  "ay": 24
+ },
+ "rock_11": {
+  "w": 40,
+  "h": 30,
+  "ax": 20,
+  "ay": 24
+ },
+ "spire_03": {
+  "w": 28,
+  "h": 44,
+  "ax": 14,
+  "ay": 40
+ },
+ "spire_04": {
+  "w": 28,
+  "h": 44,
+  "ax": 14,
+  "ay": 40
+ },
+ "rock_12": {
+  "w": 40,
+  "h": 30,
+  "ax": 20,
+  "ay": 24
+ },
+ "rock_13": {
+  "w": 40,
+  "h": 30,
+  "ax": 20,
+  "ay": 24
+ },
+ "altar_01": {
+  "w": 40,
+  "h": 51,
+  "ax": 0,
+  "ay": 11
+ },
+ "orb_01": {
+  "w": 64,
+  "h": 64,
+  "ax": 32,
+  "ay": 32
+ },
+ "crystal_01": {
+  "w": 28,
+  "h": 44,
+  "ax": 14,
+  "ay": 40
+ },
+ "rock_14": {
+  "w": 40,
+  "h": 30,
+  "ax": 20,
+  "ay": 24
+ },
+ "rock_15": {
+  "w": 40,
+  "h": 30,
+  "ax": 20,
+  "ay": 24
+ },
+ "crystal_02": {
+  "w": 28,
+  "h": 44,
+  "ax": 14,
+  "ay": 40
+ },
+ "face_10": {
+  "w": 32,
+  "h": 40,
+  "ax": 0,
+  "ay": 36
+ },
+ "face_11": {
+  "w": 32,
+  "h": 40,
+  "ax": 0,
+  "ay": 36
+ },
+ "face_12": {
+  "w": 32,
+  "h": 40,
+  "ax": 0,
+  "ay": 36
+ },
+ "face_13": {
+  "w": 32,
+  "h": 40,
+  "ax": 0,
+  "ay": 36
+ },
+ "face_14": {
+  "w": 32,
+  "h": 40,
+  "ax": 0,
+  "ay": 36
+ },
+ "face_15": {
+  "w": 32,
+  "h": 40,
+  "ax": 0,
+  "ay": 36
+ },
+ "rock_16": {
+  "w": 40,
+  "h": 30,
+  "ax": 20,
+  "ay": 24
+ },
+ "fern_01": {
+  "w": 40,
+  "h": 30,
+  "ax": 20,
+  "ay": 26
+ },
+ "fern_02": {
+  "w": 40,
+  "h": 30,
+  "ax": 20,
+  "ay": 26
+ },
+ "rock_17": {
+  "w": 40,
+  "h": 30,
+  "ax": 20,
+  "ay": 24
+ },
+ "fern_03": {
+  "w": 40,
+  "h": 30,
+  "ax": 20,
+  "ay": 26
+ },
+ "tree_cyp_01": {
+  "w": 8,
+  "h": 9,
+  "ax": 4,
+  "ay": 8,
+  "foliage": "tree_cyp_foliage_01"
+ },
+ "tree_cyp_foliage_01": {
+  "w": 24,
+  "h": 57,
+  "ax": 11,
+  "ay": 58
+ },
+ "tree_cyp_02": {
+  "w": 8,
+  "h": 9,
+  "ax": 4,
+  "ay": 8,
+  "foliage": "tree_cyp_foliage_02"
+ },
+ "tree_cyp_foliage_02": {
+  "w": 24,
+  "h": 55,
+  "ax": 11,
+  "ay": 58
+ },
+ "rock_18": {
+  "w": 40,
+  "h": 30,
+  "ax": 20,
+  "ay": 24
+ },
+ "tree_cyp_03": {
+  "w": 8,
+  "h": 9,
+  "ax": 4,
+  "ay": 8,
+  "foliage": "tree_cyp_foliage_03"
+ },
+ "tree_cyp_foliage_03": {
+  "w": 23,
+  "h": 61,
+  "ax": 11,
+  "ay": 61
+ },
+ "rock_19": {
+  "w": 40,
+  "h": 30,
+  "ax": 20,
+  "ay": 24
+ },
+ "fern_04": {
+  "w": 40,
+  "h": 30,
+  "ax": 20,
+  "ay": 26
+ },
+ "tree_cyp_04": {
+  "w": 8,
+  "h": 9,
+  "ax": 4,
+  "ay": 8,
+  "foliage": "tree_cyp_foliage_04"
+ },
+ "tree_cyp_foliage_04": {
+  "w": 27,
+  "h": 55,
+  "ax": 12,
+  "ay": 57
+ },
+ "tree_palm_01": {
+  "w": 10,
+  "h": 44,
+  "ax": 2,
+  "ay": 43,
+  "foliage": "tree_palm_foliage_01"
+ },
+ "tree_palm_foliage_01": {
+  "w": 45,
+  "h": 23,
+  "ax": 19,
+  "ay": 46
+ },
+ "tree_big_01": {
+  "w": 17,
+  "h": 25,
+  "ax": 8,
+  "ay": 23,
+  "foliage": "tree_big_foliage_01"
+ },
+ "tree_big_foliage_01": {
+  "w": 47,
+  "h": 35,
+  "ax": 24,
+  "ay": 50
+ },
+ "rock_20": {
+  "w": 40,
+  "h": 30,
+  "ax": 20,
+  "ay": 24
+ },
+ "tree_big_02": {
+  "w": 17,
+  "h": 25,
+  "ax": 8,
+  "ay": 23,
+  "foliage": "tree_big_foliage_02"
+ },
+ "tree_big_foliage_02": {
+  "w": 42,
+  "h": 35,
+  "ax": 20,
+  "ay": 49
+ },
+ "fern_05": {
+  "w": 40,
+  "h": 30,
+  "ax": 20,
+  "ay": 26
+ },
+ "rock_21": {
+  "w": 40,
+  "h": 30,
+  "ax": 20,
+  "ay": 24
+ },
+ "tree_cyp_05": {
+  "w": 8,
+  "h": 9,
+  "ax": 4,
+  "ay": 8,
+  "foliage": "tree_cyp_foliage_05"
+ },
+ "tree_cyp_foliage_05": {
+  "w": 26,
+  "h": 57,
+  "ax": 12,
+  "ay": 58
+ },
+ "tree_palm_02": {
+  "w": 10,
+  "h": 44,
+  "ax": 2,
+  "ay": 43,
+  "foliage": "tree_palm_foliage_02"
+ },
+ "tree_palm_foliage_02": {
+  "w": 45,
+  "h": 23,
+  "ax": 19,
+  "ay": 46
+ },
+ "tree_big_03": {
+  "w": 19,
+  "h": 26,
+  "ax": 9,
+  "ay": 24,
+  "foliage": "tree_big_foliage_03"
+ },
+ "tree_big_foliage_03": {
+  "w": 47,
+  "h": 39,
+  "ax": 24,
+  "ay": 53
+ },
+ "tree_bush_01": {
+  "w": 1,
+  "h": 1,
+  "ax": 48,
+  "ay": 112,
+  "foliage": "tree_bush_foliage_01"
+ },
+ "tree_bush_foliage_01": {
+  "w": 22,
+  "h": 23,
+  "ax": 5,
+  "ay": 19
+ },
+ "rock_22": {
+  "w": 40,
+  "h": 30,
+  "ax": 20,
+  "ay": 24
+ },
+ "tree_big_04": {
+  "w": 17,
+  "h": 25,
+  "ax": 8,
+  "ay": 23,
+  "foliage": "tree_big_foliage_04"
+ },
+ "tree_big_foliage_04": {
+  "w": 45,
+  "h": 37,
+  "ax": 24,
+  "ay": 50
+ },
+ "tree_cyp_06": {
+  "w": 8,
+  "h": 9,
+  "ax": 4,
+  "ay": 8,
+  "foliage": "tree_cyp_foliage_06"
+ },
+ "tree_cyp_foliage_06": {
+  "w": 25,
+  "h": 51,
+  "ax": 14,
+  "ay": 55
+ },
+ "fern_06": {
+  "w": 40,
+  "h": 30,
+  "ax": 20,
+  "ay": 26
+ },
+ "tree_big_05": {
+  "w": 19,
+  "h": 26,
+  "ax": 9,
+  "ay": 24,
+  "foliage": "tree_big_foliage_05"
+ },
+ "tree_big_foliage_05": {
+  "w": 44,
+  "h": 39,
+  "ax": 22,
+  "ay": 53
+ },
+ "tree_cyp_07": {
+  "w": 8,
+  "h": 9,
+  "ax": 4,
+  "ay": 8,
+  "foliage": "tree_cyp_foliage_07"
+ },
+ "tree_cyp_foliage_07": {
+  "w": 25,
+  "h": 58,
+  "ax": 12,
+  "ay": 59
+ },
+ "tree_palm_03": {
+  "w": 10,
+  "h": 44,
+  "ax": 2,
+  "ay": 43,
+  "foliage": "tree_palm_foliage_03"
+ },
+ "tree_palm_foliage_03": {
+  "w": 45,
+  "h": 23,
+  "ax": 19,
+  "ay": 46
+ },
+ "rock_23": {
+  "w": 40,
+  "h": 30,
+  "ax": 20,
+  "ay": 24
+ },
+ "tree_big_06": {
+  "w": 15,
+  "h": 22,
+  "ax": 7,
+  "ay": 20,
+  "foliage": "tree_big_foliage_06"
+ },
+ "tree_big_foliage_06": {
+  "w": 37,
+  "h": 33,
+  "ax": 18,
+  "ay": 44
+ },
+ "rock_24": {
+  "w": 40,
+  "h": 30,
+  "ax": 20,
+  "ay": 24
+ },
+ "rock_25": {
+  "w": 40,
+  "h": 30,
+  "ax": 20,
+  "ay": 24
+ },
+ "rock_26": {
+  "w": 40,
+  "h": 30,
+  "ax": 20,
+  "ay": 24
+ },
+ "rock_27": {
+  "w": 40,
+  "h": 30,
+  "ax": 20,
+  "ay": 24
+ },
+ "tree_big_07": {
+  "w": 17,
+  "h": 24,
+  "ax": 8,
+  "ay": 22,
+  "foliage": "tree_big_foliage_07"
+ },
+ "tree_big_foliage_07": {
+  "w": 41,
+  "h": 36,
+  "ax": 24,
+  "ay": 47
+ },
+ "tree_big_08": {
+  "w": 17,
+  "h": 24,
+  "ax": 8,
+  "ay": 22,
+  "foliage": "tree_big_foliage_08"
+ },
+ "tree_big_foliage_08": {
+  "w": 41,
+  "h": 34,
+  "ax": 22,
+  "ay": 46
+ },
+ "tree_big_09": {
+  "w": 19,
+  "h": 26,
+  "ax": 9,
+  "ay": 24,
+  "foliage": "tree_big_foliage_09"
+ },
+ "tree_big_foliage_09": {
+  "w": 47,
+  "h": 38,
+  "ax": 24,
+  "ay": 53
+ },
+ "tree_cyp_08": {
+  "w": 8,
+  "h": 9,
+  "ax": 4,
+  "ay": 8,
+  "foliage": "tree_cyp_foliage_08"
+ },
+ "tree_cyp_foliage_08": {
+  "w": 26,
+  "h": 60,
+  "ax": 12,
+  "ay": 60
+ },
+ "rock_28": {
+  "w": 40,
+  "h": 30,
+  "ax": 20,
+  "ay": 24
+ },
+ "rock_29": {
+  "w": 40,
+  "h": 30,
+  "ax": 20,
+  "ay": 24
+ },
+ "tree_big_10": {
+  "w": 17,
+  "h": 25,
+  "ax": 8,
+  "ay": 23,
+  "foliage": "tree_big_foliage_10"
+ },
+ "tree_big_foliage_10": {
+  "w": 43,
+  "h": 35,
+  "ax": 22,
+  "ay": 49
+ },
+ "tree_palm_04": {
+  "w": 10,
+  "h": 44,
+  "ax": 2,
+  "ay": 43,
+  "foliage": "tree_palm_foliage_04"
+ },
+ "tree_palm_foliage_04": {
+  "w": 45,
+  "h": 23,
+  "ax": 19,
+  "ay": 46
+ },
+ "tree_big_11": {
+  "w": 17,
+  "h": 24,
+  "ax": 8,
+  "ay": 22,
+  "foliage": "tree_big_foliage_11"
+ },
+ "tree_big_foliage_11": {
+  "w": 39,
+  "h": 35,
+  "ax": 20,
+  "ay": 46
+ },
+ "tree_bush_02": {
+  "w": 1,
+  "h": 1,
+  "ax": 48,
+  "ay": 112,
+  "foliage": "tree_bush_foliage_02"
+ },
+ "tree_bush_foliage_02": {
+  "w": 29,
+  "h": 19,
+  "ax": 15,
+  "ay": 13
+ },
+ "rock_30": {
+  "w": 40,
+  "h": 30,
+  "ax": 20,
+  "ay": 24
+ },
+ "tree_big_12": {
+  "w": 17,
+  "h": 25,
+  "ax": 8,
+  "ay": 23,
+  "foliage": "tree_big_foliage_12"
+ },
+ "tree_big_foliage_12": {
+  "w": 45,
+  "h": 33,
+  "ax": 23,
+  "ay": 48
+ },
+ "rock_31": {
+  "w": 40,
+  "h": 30,
+  "ax": 20,
+  "ay": 24
+ },
+ "tree_big_13": {
+  "w": 17,
+  "h": 24,
+  "ax": 8,
+  "ay": 22,
+  "foliage": "tree_big_foliage_13"
+ },
+ "tree_big_foliage_13": {
+  "w": 46,
+  "h": 32,
+  "ax": 24,
+  "ay": 45
+ },
+ "tree_big_14": {
+  "w": 15,
+  "h": 22,
+  "ax": 7,
+  "ay": 20,
+  "foliage": "tree_big_foliage_14"
+ },
+ "tree_big_foliage_14": {
+  "w": 40,
+  "h": 35,
+  "ax": 20,
+  "ay": 45
+ },
+ "tree_cyp_09": {
+  "w": 8,
+  "h": 9,
+  "ax": 4,
+  "ay": 8,
+  "foliage": "tree_cyp_foliage_09"
+ },
+ "tree_cyp_foliage_09": {
+  "w": 24,
+  "h": 62,
+  "ax": 11,
+  "ay": 60
+ },
+ "rock_32": {
+  "w": 40,
+  "h": 30,
+  "ax": 20,
+  "ay": 24
+ },
+ "tree_palm_05": {
+  "w": 10,
+  "h": 44,
+  "ax": 2,
+  "ay": 43,
+  "foliage": "tree_palm_foliage_05"
+ },
+ "tree_palm_foliage_05": {
+  "w": 45,
+  "h": 23,
+  "ax": 19,
+  "ay": 46
+ },
+ "tree_cyp_10": {
+  "w": 8,
+  "h": 9,
+  "ax": 4,
+  "ay": 8,
+  "foliage": "tree_cyp_foliage_10"
+ },
+ "tree_cyp_foliage_10": {
+  "w": 24,
+  "h": 54,
+  "ax": 13,
+  "ay": 56
+ },
+ "tree_palm_06": {
+  "w": 10,
+  "h": 44,
+  "ax": 2,
+  "ay": 43,
+  "foliage": "tree_palm_foliage_06"
+ },
+ "tree_palm_foliage_06": {
+  "w": 45,
+  "h": 23,
+  "ax": 19,
+  "ay": 46
+ },
+ "tree_bush_03": {
+  "w": 1,
+  "h": 1,
+  "ax": 48,
+  "ay": 112,
+  "foliage": "tree_bush_foliage_03"
+ },
+ "tree_bush_foliage_03": {
+  "w": 25,
+  "h": 19,
+  "ax": 16,
+  "ay": 17
+ },
+ "tree_bush_04": {
+  "w": 1,
+  "h": 1,
+  "ax": 48,
+  "ay": 112,
+  "foliage": "tree_bush_foliage_04"
+ },
+ "tree_bush_foliage_04": {
+  "w": 30,
+  "h": 23,
+  "ax": 14,
+  "ay": 19
+ },
+ "tree_palm_07": {
+  "w": 10,
+  "h": 44,
+  "ax": 2,
+  "ay": 43,
+  "foliage": "tree_palm_foliage_07"
+ },
+ "tree_palm_foliage_07": {
+  "w": 45,
+  "h": 23,
+  "ax": 19,
+  "ay": 46
+ },
+ "rock_33": {
+  "w": 40,
+  "h": 30,
+  "ax": 20,
+  "ay": 24
+ },
+ "tree_big_15": {
+  "w": 15,
+  "h": 22,
+  "ax": 7,
+  "ay": 20,
+  "foliage": "tree_big_foliage_15"
+ },
+ "tree_big_foliage_15": {
+  "w": 42,
+  "h": 32,
+  "ax": 22,
+  "ay": 43
+ },
+ "tree_big_16": {
+  "w": 19,
+  "h": 26,
+  "ax": 9,
+  "ay": 24,
+  "foliage": "tree_big_foliage_16"
+ },
+ "tree_big_foliage_16": {
+  "w": 44,
+  "h": 31,
+  "ax": 21,
+  "ay": 49
+ },
+ "rock_34": {
+  "w": 40,
+  "h": 30,
+  "ax": 20,
+  "ay": 24
+ },
+ "tree_palm_08": {
+  "w": 10,
+  "h": 44,
+  "ax": 2,
+  "ay": 43,
+  "foliage": "tree_palm_foliage_08"
+ },
+ "tree_palm_foliage_08": {
+  "w": 45,
+  "h": 23,
+  "ax": 19,
+  "ay": 46
+ },
+ "tree_bush_05": {
+  "w": 1,
+  "h": 1,
+  "ax": 48,
+  "ay": 112,
+  "foliage": "tree_bush_foliage_05"
+ },
+ "tree_bush_foliage_05": {
+  "w": 23,
+  "h": 22,
+  "ax": 9,
+  "ay": 17
+ },
+ "rock_35": {
+  "w": 40,
+  "h": 30,
+  "ax": 20,
+  "ay": 24
+ },
+ "tree_big_17": {
+  "w": 17,
+  "h": 24,
+  "ax": 8,
+  "ay": 22,
+  "foliage": "tree_big_foliage_17"
+ },
+ "tree_big_foliage_17": {
+  "w": 41,
+  "h": 33,
+  "ax": 21,
+  "ay": 44
+ },
+ "tree_big_18": {
+  "w": 15,
+  "h": 22,
+  "ax": 7,
+  "ay": 20,
+  "foliage": "tree_big_foliage_18"
+ },
+ "tree_big_foliage_18": {
+  "w": 40,
+  "h": 31,
+  "ax": 20,
+  "ay": 44
+ },
+ "tree_bush_06": {
+  "w": 1,
+  "h": 1,
+  "ax": 48,
+  "ay": 112,
+  "foliage": "tree_bush_foliage_06"
+ },
+ "tree_bush_foliage_06": {
+  "w": 31,
+  "h": 25,
+  "ax": 14,
+  "ay": 19
+ },
+ "tree_big_19": {
+  "w": 15,
+  "h": 22,
+  "ax": 7,
+  "ay": 20,
+  "foliage": "tree_big_foliage_19"
+ },
+ "tree_big_foliage_19": {
+  "w": 42,
+  "h": 33,
+  "ax": 21,
+  "ay": 44
+ },
+ "tree_big_20": {
+  "w": 19,
+  "h": 26,
+  "ax": 9,
+  "ay": 24,
+  "foliage": "tree_big_foliage_20"
+ },
+ "tree_big_foliage_20": {
+  "w": 45,
+  "h": 37,
+  "ax": 25,
+  "ay": 52
+ },
+ "tree_bush_07": {
+  "w": 1,
+  "h": 1,
+  "ax": 48,
+  "ay": 112,
+  "foliage": "tree_bush_foliage_07"
+ },
+ "tree_bush_foliage_07": {
+  "w": 24,
+  "h": 21,
+  "ax": 15,
+  "ay": 18
+ },
+ "rock_36": {
+  "w": 40,
+  "h": 30,
+  "ax": 20,
+  "ay": 24
+ },
+ "tree_palm_09": {
+  "w": 10,
+  "h": 44,
+  "ax": 2,
+  "ay": 43,
+  "foliage": "tree_palm_foliage_09"
+ },
+ "tree_palm_foliage_09": {
+  "w": 45,
+  "h": 23,
+  "ax": 19,
+  "ay": 46
+ },
+ "tree_bush_08": {
+  "w": 1,
+  "h": 1,
+  "ax": 48,
+  "ay": 112,
+  "foliage": "tree_bush_foliage_08"
+ },
+ "tree_bush_foliage_08": {
+  "w": 33,
+  "h": 23,
+  "ax": 15,
+  "ay": 17
+ },
+ "tree_palm_10": {
+  "w": 10,
+  "h": 44,
+  "ax": 2,
+  "ay": 43,
+  "foliage": "tree_palm_foliage_10"
+ },
+ "tree_palm_foliage_10": {
+  "w": 45,
+  "h": 23,
+  "ax": 19,
+  "ay": 46
+ },
+ "rock_37": {
+  "w": 40,
+  "h": 30,
+  "ax": 20,
+  "ay": 24
+ },
+ "rock_38": {
+  "w": 40,
+  "h": 30,
+  "ax": 20,
+  "ay": 24
+ },
+ "rock_39": {
+  "w": 40,
+  "h": 30,
+  "ax": 20,
+  "ay": 24
+ },
+ "tree_cyp_11": {
+  "w": 8,
+  "h": 9,
+  "ax": 4,
+  "ay": 8,
+  "foliage": "tree_cyp_foliage_11"
+ },
+ "tree_cyp_foliage_11": {
+  "w": 24,
+  "h": 57,
+  "ax": 10,
+  "ay": 58
+ },
+ "tree_cyp_12": {
+  "w": 8,
+  "h": 9,
+  "ax": 4,
+  "ay": 8,
+  "foliage": "tree_cyp_foliage_12"
+ },
+ "tree_cyp_foliage_12": {
+  "w": 28,
+  "h": 60,
+  "ax": 13,
+  "ay": 60
+ },
+ "tree_palm_11": {
+  "w": 10,
+  "h": 44,
+  "ax": 2,
+  "ay": 43,
+  "foliage": "tree_palm_foliage_11"
+ },
+ "tree_palm_foliage_11": {
+  "w": 45,
+  "h": 23,
+  "ax": 19,
+  "ay": 46
+ },
+ "tree_cyp_13": {
+  "w": 8,
+  "h": 9,
+  "ax": 4,
+  "ay": 8,
+  "foliage": "tree_cyp_foliage_13"
+ },
+ "tree_cyp_foliage_13": {
+  "w": 23,
+  "h": 57,
+  "ax": 12,
+  "ay": 58
+ },
+ "rock_40": {
+  "w": 40,
+  "h": 30,
+  "ax": 20,
+  "ay": 24
+ },
+ "tree_cyp_14": {
+  "w": 8,
+  "h": 9,
+  "ax": 4,
+  "ay": 8,
+  "foliage": "tree_cyp_foliage_14"
+ },
+ "tree_cyp_foliage_14": {
+  "w": 23,
+  "h": 54,
+  "ax": 11,
+  "ay": 55
+ },
+ "tree_palm_12": {
+  "w": 10,
+  "h": 44,
+  "ax": 2,
+  "ay": 43,
+  "foliage": "tree_palm_foliage_12"
+ },
+ "tree_palm_foliage_12": {
+  "w": 45,
+  "h": 23,
+  "ax": 19,
+  "ay": 46
+ },
+ "tree_bush_09": {
+  "w": 1,
+  "h": 1,
+  "ax": 48,
+  "ay": 112,
+  "foliage": "tree_bush_foliage_09"
+ },
+ "tree_bush_foliage_09": {
+  "w": 29,
+  "h": 19,
+  "ax": 13,
+  "ay": 15
+ },
+ "tree_bush_10": {
+  "w": 1,
+  "h": 1,
+  "ax": 48,
+  "ay": 112,
+  "foliage": "tree_bush_foliage_10"
+ },
+ "tree_bush_foliage_10": {
+  "w": 26,
+  "h": 22,
+  "ax": 14,
+  "ay": 19
+ },
+ "rock_41": {
+  "w": 40,
+  "h": 30,
+  "ax": 20,
+  "ay": 24
+ },
+ "rock_42": {
+  "w": 40,
+  "h": 30,
+  "ax": 20,
+  "ay": 24
+ },
+ "tree_cyp_15": {
+  "w": 8,
+  "h": 9,
+  "ax": 4,
+  "ay": 8,
+  "foliage": "tree_cyp_foliage_15"
+ },
+ "tree_cyp_foliage_15": {
+  "w": 25,
+  "h": 61,
+  "ax": 13,
+  "ay": 61
+ },
+ "tree_palm_13": {
+  "w": 10,
+  "h": 44,
+  "ax": 2,
+  "ay": 43,
+  "foliage": "tree_palm_foliage_13"
+ },
+ "tree_palm_foliage_13": {
+  "w": 45,
+  "h": 23,
+  "ax": 19,
+  "ay": 46
+ },
+ "rock_43": {
+  "w": 40,
+  "h": 30,
+  "ax": 20,
+  "ay": 24
+ },
+ "tree_cyp_16": {
+  "w": 8,
+  "h": 9,
+  "ax": 4,
+  "ay": 8,
+  "foliage": "tree_cyp_foliage_16"
+ },
+ "tree_cyp_foliage_16": {
+  "w": 26,
+  "h": 60,
+  "ax": 12,
+  "ay": 59
+ },
+ "tree_cyp_17": {
+  "w": 8,
+  "h": 9,
+  "ax": 4,
+  "ay": 8,
+  "foliage": "tree_cyp_foliage_17"
+ },
+ "tree_cyp_foliage_17": {
+  "w": 26,
+  "h": 60,
+  "ax": 12,
+  "ay": 59
+ },
+ "tree_cyp_18": {
+  "w": 8,
+  "h": 9,
+  "ax": 4,
+  "ay": 8,
+  "foliage": "tree_cyp_foliage_18"
+ },
+ "tree_cyp_foliage_18": {
+  "w": 24,
+  "h": 54,
+  "ax": 11,
+  "ay": 54
+ },
+ "tree_palm_14": {
+  "w": 10,
+  "h": 44,
+  "ax": 2,
+  "ay": 43,
+  "foliage": "tree_palm_foliage_14"
+ },
+ "tree_palm_foliage_14": {
+  "w": 45,
+  "h": 23,
+  "ax": 19,
+  "ay": 46
+ },
+ "tree_palm_15": {
+  "w": 10,
+  "h": 44,
+  "ax": 2,
+  "ay": 43,
+  "foliage": "tree_palm_foliage_15"
+ },
+ "tree_palm_foliage_15": {
+  "w": 45,
+  "h": 23,
+  "ax": 19,
+  "ay": 46
+ },
+ "tree_cyp_19": {
+  "w": 8,
+  "h": 9,
+  "ax": 4,
+  "ay": 8,
+  "foliage": "tree_cyp_foliage_19"
+ },
+ "tree_cyp_foliage_19": {
+  "w": 26,
+  "h": 53,
+  "ax": 12,
+  "ay": 57
+ },
+ "tree_cyp_20": {
+  "w": 8,
+  "h": 9,
+  "ax": 4,
+  "ay": 8,
+  "foliage": "tree_cyp_foliage_20"
+ },
+ "tree_cyp_foliage_20": {
+  "w": 25,
+  "h": 61,
+  "ax": 11,
+  "ay": 61
+ }
+}

@@ -1,0 +1,706 @@
+{
+ "note": "Contextes du HUD (étape 6, plan v2). Chaque contexte décrit un état de jeu de façon déclarative ; tools/baker/hud.js l'applique au prototype d'origine (73b410f) et relève panelActions() et les textes du HUD ; tests/test_hud_actions.gd applique le même état dans Godot et compare. Indices : positions dans les tableaux units et buildings.",
+ "contexts": [
+  {
+   "name": "debut_cache",
+   "t": 0.5,
+   "units": [
+    {
+     "name": "Ingénieur Exilé",
+     "role": "engineer",
+     "x": 0,
+     "z": -166.9,
+     "hidden": true
+    }
+   ],
+   "selected": [
+    0
+   ]
+  },
+  {
+   "name": "ingenieur_ancre_eteinte",
+   "t": 6,
+   "units": [
+    {
+     "name": "Ingénieur Exilé",
+     "role": "engineer",
+     "x": -13,
+     "z": -147
+    }
+   ],
+   "selected": [
+    0
+   ]
+  },
+  {
+   "name": "ingenieur_reactivation",
+   "t": 9,
+   "units": [
+    {
+     "name": "Ingénieur Exilé",
+     "role": "engineer",
+     "x": -5,
+     "z": -150,
+     "orb_job": true
+    }
+   ],
+   "orb": {
+    "progress": 3.2,
+    "owner": 0
+   },
+   "selected": [
+    0
+   ]
+  },
+  {
+   "name": "ingenieur_creuse",
+   "t": 12,
+   "units": [
+    {
+     "name": "Ingénieur Exilé",
+     "role": "engineer",
+     "x": 58,
+     "z": -130,
+     "job": {
+      "type": "dig",
+      "cell": [
+       15,
+       -33
+      ],
+      "hits": 2
+     }
+    }
+   ],
+   "selected": [
+    0
+   ]
+  },
+  {
+   "name": "ingenieur_menu_construire",
+   "t": 40,
+   "orb": {
+    "active": true
+   },
+   "res": {
+    "forge": 30,
+    "vie": 10,
+    "discipline": 20,
+    "savoir": 250
+   },
+   "units": [
+    {
+     "name": "Ingénieur Exilé",
+     "role": "engineer",
+     "x": -13,
+     "z": -130
+    }
+   ],
+   "buildings": [
+    {
+     "type": "sigil",
+     "x": -26,
+     "z": -118,
+     "complete": true
+    }
+   ],
+   "selected": [
+    0
+   ],
+   "menu": "build",
+   "mode": "build",
+   "build_type": "library"
+  },
+  {
+   "name": "ingenieur_menu_chantier",
+   "t": 41,
+   "orb": {
+    "active": true
+   },
+   "res": {
+    "forge": 5,
+    "vie": 210,
+    "discipline": 0,
+    "savoir": 12
+   },
+   "units": [
+    {
+     "name": "Ingénieur Exilé",
+     "role": "engineer",
+     "x": -34,
+     "z": -112,
+     "build_job": 0
+    }
+   ],
+   "buildings": [
+    {
+     "type": "medeina",
+     "x": -26,
+     "z": -118,
+     "progress": 1.5
+    }
+   ],
+   "selected": [
+    0
+   ],
+   "menu": "build"
+  },
+  {
+   "name": "chantier_incantation",
+   "t": 43.3,
+   "orb": {
+    "active": true
+   },
+   "units": [
+    {
+     "name": "Ingénieur Exilé",
+     "role": "engineer",
+     "x": -34,
+     "z": -115,
+     "build_job": 0
+    }
+   ],
+   "buildings": [
+    {
+     "type": "medeina",
+     "x": -26,
+     "z": -118,
+     "progress": 2.2
+    }
+   ],
+   "selected": [
+    0
+   ]
+  },
+  {
+   "name": "ingenieur_reparer_recharge",
+   "t": 55,
+   "orb": {
+    "active": true
+   },
+   "units": [
+    {
+     "name": "Ingénieur Exilé",
+     "role": "engineer",
+     "x": -13,
+     "z": -130,
+     "ability": 7.3,
+     "stance": "hold",
+     "level": 3,
+     "xp": 41.6,
+     "hp": 97
+    }
+   ],
+   "selected": [
+    0
+   ],
+   "mode": "move"
+  },
+  {
+   "name": "ancre_eteinte",
+   "t": 7,
+   "units": [
+    {
+     "name": "Ingénieur Exilé",
+     "role": "engineer",
+     "x": -13,
+     "z": -147
+    }
+   ],
+   "anchor": true
+  },
+  {
+   "name": "ancre_reactivation_sans_ingenieur",
+   "t": 2,
+   "units": [
+    {
+     "name": "Ingénieur Exilé",
+     "role": "engineer",
+     "x": 0,
+     "z": -166.9,
+     "hidden": true
+    }
+   ],
+   "anchor": true
+  },
+  {
+   "name": "ancre_active_heros",
+   "t": 30,
+   "orb": {
+    "active": true
+   },
+   "next_wave": 105.4,
+   "core_hp": 72.3,
+   "res": {
+    "forge": 120,
+    "vie": 120,
+    "discipline": 120,
+    "savoir": 120
+   },
+   "units": [
+    {
+     "name": "Ingénieur Exilé",
+     "role": "engineer",
+     "x": -13,
+     "z": -147
+    }
+   ],
+   "anchor": true
+  },
+  {
+   "name": "ancre_active_pauvre",
+   "t": 31,
+   "orb": {
+    "active": true
+   },
+   "next_wave": 31.2,
+   "res": {
+    "forge": 120,
+    "vie": 99.5,
+    "discipline": 120,
+    "savoir": 120
+   },
+   "units": [
+    {
+     "name": "Ingénieur Exilé",
+     "role": "engineer",
+     "x": -13,
+     "z": -147
+    }
+   ],
+   "anchor": true
+  },
+  {
+   "name": "temple_sigil",
+   "t": 60,
+   "orb": {
+    "active": true
+   },
+   "res": {
+    "forge": 10,
+    "vie": 10,
+    "discipline": 10,
+    "savoir": 60
+   },
+   "units": [
+    {
+     "name": "Ingénieur Exilé",
+     "role": "engineer",
+     "x": -13,
+     "z": -147
+    },
+    {
+     "name": "Adepte de Sigil",
+     "role": "sigil",
+     "x": -30,
+     "z": -111,
+     "job": {
+      "type": "pray",
+      "temple": 0
+     },
+     "working": true
+    }
+   ],
+   "buildings": [
+    {
+     "type": "sigil",
+     "x": -26,
+     "z": -118,
+     "complete": true
+    }
+   ],
+   "building": 0
+  },
+  {
+   "name": "temple_aether_chantier",
+   "t": 61,
+   "units": [
+    {
+     "name": "Ingénieur Exilé",
+     "role": "engineer",
+     "x": -34,
+     "z": -112,
+     "build_job": 0
+    }
+   ],
+   "buildings": [
+    {
+     "type": "aether",
+     "x": -26,
+     "z": -118,
+     "progress": 1.5
+    }
+   ],
+   "building": 0
+  },
+  {
+   "name": "caserne",
+   "t": 90,
+   "orb": {
+    "active": true
+   },
+   "res": {
+    "forge": 0,
+    "vie": 0,
+    "discipline": 150,
+    "savoir": 0
+   },
+   "units": [
+    {
+     "name": "Ingénieur Exilé",
+     "role": "engineer",
+     "x": -13,
+     "z": -147
+    }
+   ],
+   "buildings": [
+    {
+     "type": "indra",
+     "x": 26,
+     "z": -118,
+     "complete": true
+    },
+    {
+     "type": "caserne",
+     "x": 26,
+     "z": -104,
+     "complete": true,
+     "queue": [
+      "archer",
+      "lame"
+     ]
+    }
+   ],
+   "building": 1
+  },
+  {
+   "name": "caserne_pleine",
+   "t": 91,
+   "res": {
+    "forge": 0,
+    "vie": 0,
+    "discipline": 500,
+    "savoir": 0
+   },
+   "units": [
+    {
+     "name": "Ingénieur Exilé",
+     "role": "engineer",
+     "x": -13,
+     "z": -147
+    }
+   ],
+   "buildings": [
+    {
+     "type": "caserne",
+     "x": 26,
+     "z": -104,
+     "complete": true,
+     "queue": [
+      "archer",
+      "lame",
+      "flammes",
+      "archer",
+      "archer"
+     ]
+    }
+   ],
+   "building": 0
+  },
+  {
+   "name": "puits_des_ames",
+   "t": 120,
+   "res": {
+    "forge": 0,
+    "vie": 250,
+    "discipline": 0,
+    "savoir": 0
+   },
+   "units": [
+    {
+     "name": "Ingénieur Exilé",
+     "role": "engineer",
+     "x": -13,
+     "z": -147
+    }
+   ],
+   "buildings": [
+    {
+     "type": "soulwell",
+     "x": -30,
+     "z": -104,
+     "complete": true
+    }
+   ],
+   "fallen": [
+    {
+     "name": "Adepte archer",
+     "role": "archer",
+     "level": 3
+    },
+    {
+     "name": "Adepte de Sigil",
+     "role": "sigil",
+     "level": 1
+    },
+    {
+     "name": "Adepte d’épée et bouclier",
+     "role": "lame",
+     "level": 2
+    }
+   ],
+   "building": 0
+  },
+  {
+   "name": "puits_des_ames_vide",
+   "t": 121,
+   "res": {
+    "forge": 0,
+    "vie": 250,
+    "discipline": 0,
+    "savoir": 0
+   },
+   "units": [
+    {
+     "name": "Ingénieur Exilé",
+     "role": "engineer",
+     "x": -13,
+     "z": -147
+    }
+   ],
+   "buildings": [
+    {
+     "type": "soulwell",
+     "x": -30,
+     "z": -104,
+     "complete": true
+    }
+   ],
+   "building": 0
+  },
+  {
+   "name": "bibliotheque",
+   "t": 122,
+   "units": [
+    {
+     "name": "Ingénieur Exilé",
+     "role": "engineer",
+     "x": -13,
+     "z": -147
+    }
+   ],
+   "buildings": [
+    {
+     "type": "sigil",
+     "x": -26,
+     "z": -118,
+     "complete": true
+    },
+    {
+     "type": "library",
+     "x": -26,
+     "z": -104,
+     "complete": true
+    }
+   ],
+   "building": 1
+  },
+  {
+   "name": "adepte_sigil_en_route",
+   "t": 70,
+   "units": [
+    {
+     "name": "Ingénieur Exilé",
+     "role": "engineer",
+     "x": -13,
+     "z": -147
+    },
+    {
+     "name": "Adepte de Sigil",
+     "role": "sigil",
+     "x": -10,
+     "z": -140,
+     "level": 2,
+     "xp": 12.4,
+     "job": {
+      "type": "pray",
+      "temple": 0
+     }
+    }
+   ],
+   "buildings": [
+    {
+     "type": "sigil",
+     "x": -26,
+     "z": -118,
+     "complete": true
+    }
+   ],
+   "selected": [
+    1
+   ]
+  },
+  {
+   "name": "adepte_medeina_sans_temple",
+   "t": 71,
+   "units": [
+    {
+     "name": "Ingénieur Exilé",
+     "role": "engineer",
+     "x": -13,
+     "z": -147
+    },
+    {
+     "name": "Adepte de Medeina",
+     "role": "medeina",
+     "x": -10,
+     "z": -140
+    }
+   ],
+   "buildings": [
+    {
+     "type": "sigil",
+     "x": -26,
+     "z": -118,
+     "complete": true
+    }
+   ],
+   "selected": [
+    1
+   ]
+  },
+  {
+   "name": "combattant_archer",
+   "t": 72,
+   "units": [
+    {
+     "name": "Ingénieur Exilé",
+     "role": "engineer",
+     "x": -13,
+     "z": -147
+    },
+    {
+     "name": "Adepte archer",
+     "role": "archer",
+     "x": 4,
+     "z": -120,
+     "hp": 51
+    }
+   ],
+   "selected": [
+    1
+   ]
+  },
+  {
+   "name": "heros_tireur",
+   "t": 140,
+   "units": [
+    {
+     "name": "Ingénieur Exilé",
+     "role": "engineer",
+     "x": -13,
+     "z": -147
+    },
+    {
+     "name": "Tireur",
+     "role": "shooter",
+     "x": 3,
+     "z": -150,
+     "ability": 4.2,
+     "level": 2,
+     "xp": 3
+    }
+   ],
+   "selected": [
+    1
+   ]
+  },
+  {
+   "name": "multi_selection",
+   "t": 80,
+   "units": [
+    {
+     "name": "Ingénieur Exilé",
+     "role": "engineer",
+     "x": -13,
+     "z": -147
+    },
+    {
+     "name": "Adepte de Sigil",
+     "role": "sigil",
+     "x": -10,
+     "z": -140
+    },
+    {
+     "name": "Adepte archer",
+     "role": "archer",
+     "x": -8,
+     "z": -140,
+     "hp": 40
+    }
+   ],
+   "buildings": [
+    {
+     "type": "sigil",
+     "x": -26,
+     "z": -118,
+     "complete": true
+    }
+   ],
+   "selected": [
+    0,
+    1,
+    2
+   ]
+  },
+  {
+   "name": "aucune_selection",
+   "t": 15,
+   "units": [
+    {
+     "name": "Ingénieur Exilé",
+     "role": "engineer",
+     "x": -13,
+     "z": -147
+    }
+   ]
+  },
+  {
+   "name": "fin_partie",
+   "t": 200,
+   "orb": {
+    "active": true
+   },
+   "ended": true,
+   "core_hp": 0,
+   "units": [
+    {
+     "name": "Ingénieur Exilé",
+     "role": "engineer",
+     "x": -13,
+     "z": -147
+    }
+   ],
+   "selected": [
+    0
+   ]
+  },
+  {
+   "name": "fin_partie_ancre",
+   "t": 200,
+   "orb": {
+    "active": true
+   },
+   "ended": true,
+   "core_hp": 35,
+   "units": [
+    {
+     "name": "Ingénieur Exilé",
+     "role": "engineer",
+     "x": -13,
+     "z": -147
+    }
+   ],
+   "anchor": true
+  }
+ ]
+}

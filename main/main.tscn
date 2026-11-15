@@ -1,0 +1,21 @@
+[gd_scene format=3 uid="uid://bb21hheuckm4x"]
+
+[ext_resource type="Script" uid="uid://ct0jeqq4o3lpo" path="res://main/main.gd" id="1_53q0u"]
+[ext_resource type="PackedScene" uid="uid://e5b135evk2lf" path="res://world/world.tscn" id="2_pjrb6"]
+[ext_resource type="Script" uid="uid://esqltjp0vple" path="res://sim/simulation.gd" id="3_c651c"]
+[ext_resource type="Script" uid="uid://ce16lb1x66lql" path="res://ui/input/input_controller.gd" id="4_3wy1v"]
+[ext_resource type="Script" path="res://ui/hud/hud.gd" id="5_hud"]
+
+[node name="Main" type="Node" unique_id=436230000]
+script = ExtResource("1_53q0u")
+
+[node name="World" parent="." unique_id=470612585 instance=ExtResource("2_pjrb6")]
+
+[node name="Simulation" type="Node" parent="." unique_id=873551842]
+script = ExtResource("3_c651c")
+
+[node name="Input" type="Node" parent="." unique_id=1511082066]
+script = ExtResource("4_3wy1v")
+
+[node name="Hud" type="CanvasLayer" parent="."]
+script = ExtResource("5_hud")

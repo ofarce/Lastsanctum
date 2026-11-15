@@ -1,0 +1,336 @@
+{
+ "generated_by": "tools/baker/hud.js",
+ "init_notice": "L’Ancre s’est éteinte. Sélectionnez l’Ingénieur, puis clic droit sur l’Ancre (ou R) pour la réactiver.",
+ "greeting": {
+  "name": "Ingénieur Exilé",
+  "compact": true,
+  "lines": [
+   "L’Ancre s’est éteinte. Je dois la réactiver : elle réveillera les gardes de l’entrée."
+  ]
+ },
+ "banner_won": "SANCTUM PRÉSERVÉ<br><small>Les Exilés et les disciples d’Indra ont repoussé l’assaut.</small>",
+ "banner_core": "L’ANCRE EST PERDUE<br><small>Maj + R pour recommencer.</small>",
+ "banner_engineer": "L’INGÉNIEUR EST TOMBÉ<br><small>Maj + R pour recommencer.</small>",
+ "lore": {
+  "engineer": "Il relève les pierres pour que demeure le serment.",
+  "paladin": "Son bouclier porte le poids des serments oubliés.",
+  "healer": "Dans le silence de l’Ancre, il écoute les vivants.",
+  "shooter": "Une seule respiration, puis le silence.",
+  "guard": "La force tient dans les rangs qui ne cèdent pas."
+ },
+ "res_info": {
+  "forge": {
+   "name": "Forge",
+   "icon": "iron"
+  },
+  "vie": {
+   "name": "Vie",
+   "icon": "heart"
+  },
+  "discipline": {
+   "name": "Discipline",
+   "icon": "shield"
+  },
+  "savoir": {
+   "name": "Savoir",
+   "icon": "book"
+  }
+ },
+ "res_order": [
+  "forge",
+  "vie",
+  "discipline",
+  "savoir"
+ ],
+ "deity_res": {
+  "sigil": "savoir",
+  "aether": "forge",
+  "medeina": "vie",
+  "indra": "discipline"
+ },
+ "buildings": {
+  "sigil": {
+   "name": "Temple de Sigil",
+   "cost": {
+    "savoir": 20
+   },
+   "deity": "sigil",
+   "requires": null,
+   "key": "g",
+   "icon": "rune",
+   "time": 4,
+   "size": 3,
+   "lore": "Ses adeptes y prient pour le Savoir.",
+   "art": "da-sigil"
+  },
+  "aether": {
+   "name": "Temple d’Aether",
+   "cost": {
+    "forge": 20
+   },
+   "deity": "aether",
+   "requires": null,
+   "key": "e",
+   "icon": "iron",
+   "time": 4,
+   "size": 3,
+   "lore": "Ses adeptes y prient pour la Forge.",
+   "art": "da-aether"
+  },
+  "medeina": {
+   "name": "Temple de Medeina",
+   "cost": {
+    "vie": 20
+   },
+   "deity": "medeina",
+   "requires": null,
+   "key": "v",
+   "icon": "wood",
+   "time": 4,
+   "size": 3,
+   "lore": "Ses adeptes y prient pour la Vie.",
+   "art": "da-medeina"
+  },
+  "indra": {
+   "name": "Temple d’Indra",
+   "cost": {
+    "discipline": 20
+   },
+   "deity": "indra",
+   "requires": null,
+   "key": "i",
+   "icon": "sword",
+   "time": 4,
+   "size": 3,
+   "lore": "Ses adeptes y prient pour la Discipline.",
+   "art": "da-indra"
+  },
+  "library": {
+   "name": "Bibliothèque",
+   "cost": {
+    "savoir": 200
+   },
+   "deity": null,
+   "requires": "sigil",
+   "key": "l",
+   "icon": "book",
+   "time": 8,
+   "size": 3,
+   "lore": "Les rouleaux de Sigil y sont rassemblés.",
+   "art": "library"
+  },
+  "forge": {
+   "name": "Forge",
+   "cost": {
+    "forge": 200
+   },
+   "deity": null,
+   "requires": "aether",
+   "key": "f",
+   "icon": "hammer",
+   "time": 8,
+   "size": 3,
+   "lore": "L’enclume d’Aether y résonne.",
+   "art": "forge"
+  },
+  "workshop": {
+   "name": "Atelier",
+   "cost": {
+    "forge": 200
+   },
+   "deity": null,
+   "requires": "aether",
+   "key": "t",
+   "icon": "repair",
+   "time": 8,
+   "size": 3,
+   "lore": "Établis et outils des artisans d’Aether.",
+   "art": "workshop"
+  },
+  "bedroom": {
+   "name": "Chambre à coucher",
+   "cost": {
+    "vie": 200
+   },
+   "deity": null,
+   "requires": "medeina",
+   "key": "n",
+   "icon": "people",
+   "time": 8,
+   "size": 2,
+   "lore": "Le repos que Medeina accorde aux Exilés.",
+   "art": "bedroom"
+  },
+  "soulwell": {
+   "name": "Puits des Âmes",
+   "cost": {
+    "vie": 200
+   },
+   "deity": null,
+   "requires": "medeina",
+   "key": "u",
+   "icon": "spirit",
+   "time": 8,
+   "size": 2,
+   "lore": "Medeina y rend leur souffle aux défunts, avec toute leur expérience.",
+   "art": "soulwell"
+  },
+  "caserne": {
+   "name": "Caserne",
+   "cost": {
+    "discipline": 200
+   },
+   "deity": null,
+   "requires": "indra",
+   "key": "c",
+   "icon": "shield",
+   "time": 8,
+   "size": 3,
+   "lore": "Les disciples d’Indra y forment les combattants.",
+   "art": "caserne"
+  }
+ },
+ "adept": {
+  "sigil": {
+   "name": "Adepte de Sigil",
+   "task": "pray",
+   "hp": 90,
+   "lore": "Sa prière au temple de Sigil nourrit le Savoir."
+  },
+  "medeina": {
+   "name": "Adepte de Medeina",
+   "task": "pray",
+   "hp": 95,
+   "lore": "Sa prière au temple de Medeina nourrit la Vie."
+  },
+  "aether": {
+   "name": "Adepte d’Aether",
+   "task": "pray",
+   "hp": 100,
+   "lore": "Sa prière au temple d’Aether nourrit la Forge."
+  },
+  "indra": {
+   "name": "Adepte d’Indra",
+   "task": "pray",
+   "hp": 110,
+   "lore": "Sa prière au temple d’Indra nourrit la Discipline."
+  },
+  "flammes": {
+   "name": "Adepte lance-flammes",
+   "task": "fight",
+   "hp": 120,
+   "lore": "Le feu de sa lance ne laisse derrière lui que des cendres."
+  },
+  "archer": {
+   "name": "Adepte archer",
+   "task": "fight",
+   "hp": 85,
+   "lore": "Sa flèche part avant que l’ennemi ne l’ait vu."
+  },
+  "lame": {
+   "name": "Adepte d’épée et bouclier",
+   "task": "fight",
+   "hp": 170,
+   "lore": "Son bouclier est un mur que la meute ne franchit pas."
+  }
+ },
+ "fight": {
+  "flammes": {
+   "dmg": 6,
+   "status": "Garde l’Ancre · flammes ; sillon de feu toutes les 4 s"
+  },
+  "archer": {
+   "dmg": 11,
+   "status": "Garde l’Ancre · arc, puis Charge du Lac au contact"
+  },
+  "lame": {
+   "dmg": 16,
+   "status": "Garde l’Ancre · mêlée ; moulinet d’orage toutes les 3 frappes"
+  },
+  "sigil": {
+   "dmg": 4,
+   "status": "En attente · petite attaque au corps à corps"
+  },
+  "medeina": {
+   "dmg": 4,
+   "status": "En attente · petite attaque au corps à corps"
+  },
+  "aether": {
+   "dmg": 4,
+   "status": "En attente · petite attaque au corps à corps"
+  },
+  "indra": {
+   "dmg": 4,
+   "status": "En attente · petite attaque au corps à corps"
+  },
+  "engineer": {
+   "dmg": 80,
+   "status": "Prêt à recevoir vos ordres"
+  }
+ },
+ "deity_portals": [
+  {
+   "id": "indra",
+   "name": "Indra"
+  },
+  {
+   "id": "sigil",
+   "name": "Sigil"
+  },
+  {
+   "id": "medeina",
+   "name": "Medeina"
+  },
+  {
+   "id": "aether",
+   "name": "Aether"
+  }
+ ],
+ "summon_cost": 50,
+ "caserne_cost": {
+  "discipline": 100
+ },
+ "caserne_time": 6,
+ "caserne_queue": 5,
+ "caserne_units": [
+  {
+   "id": "flammes",
+   "label": "Lance-flammes",
+   "key": "l",
+   "icon": "flame"
+  },
+  {
+   "id": "archer",
+   "label": "Archer",
+   "key": "u",
+   "icon": "bow"
+  },
+  {
+   "id": "lame",
+   "label": "Épée et bouclier",
+   "key": "e",
+   "icon": "shield"
+  }
+ ],
+ "revive_cost": {
+  "vie": 200
+ },
+ "hero_cost": {
+  "forge": 100,
+  "vie": 100,
+  "discipline": 100,
+  "savoir": 100
+ },
+ "orb_time": 8,
+ "dig_hits": 4,
+ "xp_need": [
+  20,
+  32,
+  51,
+  82,
+  131,
+  210,
+  336,
+  537
+ ]
+}
