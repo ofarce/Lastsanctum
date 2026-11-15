@@ -1,4 +1,4 @@
-<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Exilés — Sanctum Lacertae</title><link rel="stylesheet" href="assets/hud.css?v=4"><link rel="stylesheet" href="assets/dialogue.css?v=6"><style>/* panneau d’ordres : 11 boutons sur deux rangées */#action-panel{grid-template-columns:repeat(6,minmax(0,1fr))!important;grid-auto-flow:row!important;grid-template-rows:repeat(2,minmax(0,1fr))!important;gap:3px!important;padding:5px!important}#action-panel .action{gap:1px!important;padding:2px 1px!important;font-size:10px!important;line-height:1.1;text-align:center}#action-panel .action .icon{width:18px!important;height:18px!important}#action-panel .action kbd{font-size:9px!important;line-height:11px!important}#action-panel .action[hidden]{display:none!important}</style></head><body>
+<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Exilés — Sanctum Lacertae</title><link rel="stylesheet" href="assets/hud.css?v=5"><link rel="stylesheet" href="assets/dialogue.css?v=6"><style>/* panneau d’ordres : 11 boutons sur deux rangées */#action-panel{grid-template-columns:repeat(6,minmax(0,1fr))!important;grid-auto-flow:row!important;grid-template-rows:repeat(2,minmax(0,1fr))!important;gap:3px!important;padding:5px!important}#action-panel .action{gap:1px!important;padding:2px 1px!important;font-size:10px!important;line-height:1.1;text-align:center}#action-panel .action .icon{width:18px!important;height:18px!important}#action-panel .action kbd{font-size:9px!important;line-height:11px!important}#action-panel .action[hidden]{display:none!important}</style></head><body>
 <canvas id="game" aria-label="Champ de bataille"></canvas><canvas id="three"></canvas>
 <header id="hud-top" aria-label="État du sanctuaire">
  <div class="wave-card metal-panel"><span data-icon="skull"></span><span>Vague <b id="wave">—</b></span></div>
@@ -18,19 +18,19 @@
   <div class="identity"><span class="eyebrow" id="selection-kind">EXILÉ · SOUTIEN</span><h1 id="chosen">Ingénieur Exilé</h1><div class="health-row"><span data-icon="heart"></span><div class="health-track" role="progressbar" aria-label="Points de vie" aria-valuemin="0" aria-valuemax="140" aria-valuenow="140"><i id="health-fill"></i><span id="health-text">140 / 140</span></div></div><div id="selection-status"></div></div>
  </section>
  <section id="detail-panel" class="hud-module">
-  <div id="unit-details"><div class="stat-row"><div class="unit-stat"><span data-icon="sword"></span><div><span>Dégâts</span><b id="unit-damage">—</b></div></div><div class="unit-stat"><span data-icon="shield"></span><div><span>Armure</span><b id="unit-armor">—</b></div></div><div class="unit-stat"><span data-icon="boot"></span><div><span>Déplacement</span><b id="unit-speed">3,8</b></div></div></div><p id="lore">Il relève les pierres pour que demeure le serment.</p></div>
+  <div id="unit-details"><div class="stat-row"><div class="unit-stat"><span data-icon="sword"></span><div><span>Dégâts</span><b id="unit-damage">—</b></div></div><div class="unit-stat"><span data-icon="range"></span><div><span>Portée</span><b id="unit-range">—</b></div></div><div class="unit-stat"><span data-icon="shield"></span><div><span>Armure</span><b id="unit-armor">—</b></div></div><div class="unit-stat"><span data-icon="boot"></span><div><span>Déplacement</span><b id="unit-speed">3,8</b></div></div></div><p id="lore">Il relève les pierres pour que demeure le serment.</p></div>
   <div id="anchor-details" hidden><div class="eyebrow">DÉFENSE DU SANCTUAIRE</div><div class="assault-line"><span data-icon="skull"></span><span>Prochain assaut <b id="assault-time">—</b></span></div><p class="anchor-lore">Tant qu’elle demeure, le serment tient.</p></div>
  </section>
  <section id="action-panel" class="hud-module" aria-label="Ordres"></section>
 </footer>
 <button id="restart" class="restart-button metal-panel" aria-label="Rejouer la partie"><span data-icon="restart"></span><span>Rejouer</span><kbd>⇧ R</kbd></button>
 <div id="banner" role="alert"></div>
-<script src="assets/decor.js?v=5"></script>
+<script src="assets/decor.js?v=6"></script>
 <script src="assets/wind.js?v=4"></script>
 <script src="assets/decor-renderer.js?v=7"></script>
-<script src="assets/galleries.js?v=4"></script>
+<script src="assets/galleries.js?v=5"></script>
 <script src="assets/units.js?v=10"></script>
-<script src="assets/engineer.js?v=2"></script>
+<script src="assets/engineer.js?v=3"></script>
 <script src="assets/enemies.js?v=2"></script>
 <script src="assets/combat.js?v=1"></script>
 <script src="assets/portal.js?v=2"></script>
@@ -43,12 +43,13 @@
 <script src="assets/ballista-ruins.js?v=3"></script>
 <script src="assets/turret-game.js?v=11"></script>
 <script src="assets/barracks.js?v=3"></script>
-<script src="assets/pixel-buildings.js?v=12"></script>
+<script src="assets/pixel-buildings.js?v=13"></script>
 <script src="assets/ballista-tyrienne-models.js?v=2"></script>
 <script src="assets/temple-incantation.js?v=5"></script>
-<script src="assets/buildings.js?v=2"></script>
-<script src="assets/adept-sprites.js?v=2"></script><script src="assets/adepts.js?v=18"></script>
-<script src="assets/lighting.js?v=5"></script><script src="assets/hud.js?v=23"></script>
+<script src="assets/da-planches.js?v=14"></script>
+<script src="assets/buildings.js?v=3"></script>
+<script src="assets/adept-sprites.js?v=3"></script><script src="assets/adepts.js?v=20"></script>
+<script src="assets/lighting.js?v=6"></script><script src="assets/hud.js?v=26"></script>
 <script src="assets/dialogue.js?v=4"></script>
 <script>
 'use strict';
@@ -84,8 +85,10 @@ function pushOutOfRock(p){if(walkable(p.x,p.z))return p;for(let r=.3;r<=4.2;r+=.
  {x:p.x,z:mountainEdge(p.x)+.05}];let best=c[0],d=1e9;for(const q of c){const nd=Math.hypot(q.x-p.x,q.z-p.z);if(nd<d){d=nd;best=q}}p.x=best.x;p.z=best.z;return p}
 const DEITY_PORTALS=[{id:'indra',name:'Indra',x:-41,active:false},{id:'sigil',name:'Sigil',x:-24,active:false},{id:'medeina',name:'Medeina',x:24,active:false},{id:'aether',name:'Aether',x:41,active:false}];
 const trees=[];let seed=19653;function seeded(){seed=(1664525*seed+1013904223)>>>0;return seed/4294967296}for(let i=0;i<6600;i++){let x=(seeded()-.5)*448,z=-170+seeded()*240;if(z<mountainEdge(x)+3||Math.abs(x)<8||Math.abs(Math.abs(x)-11)<7&&Math.abs(z+66)<11)continue;trees.push({x,z,h:random(2.1,5.5),r:random(.8,1.8)})}const stones=[];for(let i=0;i<2600;i++){let x=(seeded()-.5)*446,z=-168+seeded()*236;if(z<mountainEdge(x)+2||Math.abs(x)<6)continue;stones.push({x,z,w:.5+seeded()*1.5})}
+// portée d'attaque d'une unité (combat et HUD)
+const unitReach=u=>FIGHT[u.role]?FIGHT[u.role].reach:u.role==='paladin'?2.2:u.role==='shooter'?17.2:8.6;
 function soldier(name,x,z,role,squad=0){let u={id:uid++,name,x,z,tx:x,tz:z,hp:role==='paladin'?180:role==='healer'?115:role==='shooter'?110:role==='engineer'?140:82,max:role==='paladin'?180:role==='healer'?115:role==='shooter'?110:role==='engineer'?140:82,role,squad,attack:0,ability:0,stance:'attack',radius:role==='paladin'?.85:.55,level:1,xp:0};units.push(u);return u}
-function init(){closeCharacterDialogue();fireWalls=[];if(init.ran){generateGalleries();resetBlocks();buildPixelWorld();if(decorRenderer)useCanvasDecor();if(HUD.els)buildMiniMap()}else resetBlocks();init.ran=true;resetBuildings();resetResources();resetTurrets();uid=0;units=[];PORTAL.start=0;enemies=[];effects=[];particles=[];wave=0;document.getElementById('wave').textContent='—';coreHP=100;selected=[];currentTime=0;spawnQueue=[];nextWave=0;ended=false;freeze=0;cam={x:0,z:-148,zoom:.9};resetOrb();/* héros mis de côté pour une intégration ultérieure : soldier('Paladin',-2.5,13,'paladin');soldier('Soigneur',1,15,'healer');soldier('Tireur',3,12,'shooter'); */soldier('Ingénieur Exilé',PORTAL.x,PORTAL.z+.8,'engineer').hidden=true;selected=[units[0]];HUD.anchor=false;HUD.mode=null;HUD.menu=null;HUD.building=null;HUD.buildType=null;last=null;document.getElementById('banner').style.display='none';renderRoster();say('L’Ancre s’est éteinte. Sélectionnez l’Ingénieur, puis clic droit sur l’Ancre (ou R) pour la réactiver.',7)}
+function init(){closeCharacterDialogue();fireWalls=[];if(init.ran){generateGalleries();resetBlocks();buildPixelWorld();if(decorRenderer)useCanvasDecor();if(HUD.els)buildMiniMap()}else resetBlocks();init.ran=true;resetBuildings();resetResources();resetTurrets();uid=0;units=[];PORTAL.start=0;enemies=[];effects=[];particles=[];wave=0;document.getElementById('wave').textContent='—';coreHP=100;selected=[];HUD.enemy=null;currentTime=0;spawnQueue=[];nextWave=0;ended=false;freeze=0;cam={x:0,z:-148,zoom:.9};resetOrb();/* héros mis de côté pour une intégration ultérieure : soldier('Paladin',-2.5,13,'paladin');soldier('Soigneur',1,15,'healer');soldier('Tireur',3,12,'shooter'); */soldier('Ingénieur Exilé',PORTAL.x,PORTAL.z+.8,'engineer').hidden=true;selected=[units[0]];HUD.anchor=false;HUD.mode=null;HUD.menu=null;HUD.building=null;HUD.buildType=null;last=null;document.getElementById('banner').style.display='none';renderRoster();say('L’Ancre s’est éteinte. Sélectionnez l’Ingénieur, puis clic droit sur l’Ancre (ou R) pour la réactiver.',7)}
 function startWave(){wave++;document.getElementById('wave').textContent=String(wave);let n=4+wave*3;spawnQueue=[];for(let i=0;i<n;i++)spawnQueue.push({at:currentTime+2+i*Math.max(.35,1.5-wave*.14),x:i%2===0?-2:2,kind:i%5===4?'brute':i%6===3?'spitter':'creep'});say('Assaut '+wave+' : des créatures remontent la jungle par le sud.',3)}
 function spawn(s){let k=s.kind;enemies.push({x:s.x+random(-1.6,1.6),z:62+random(0,4),hp:k==='brute'?110:k==='spitter'?48:35,max:k==='brute'?110:k==='spitter'?48:35,speed:k==='brute'?1.4:k==='spitter'?2:2.7,range:k==='spitter'?9:1.5,damage:k==='brute'?12:k==='spitter'?5:6,kind:k,cooldown:random(.3,1),target:null})}
 function say(s,seconds=2){let e=document.getElementById('notice');e.textContent=s;e.style.opacity=1;noticeEnd=currentTime+seconds}
@@ -94,7 +97,7 @@ function move(u,t,dt,mult=1){let dx=t.x-u.x,dz=t.z-u.z,d=Math.hypot(dx,dz);if(d<
 // src : unité à l'origine des dégâts ; elle gagne l'expérience du monstre qu'elle achève
 function damage(t,amount,src){const was=t.hp;t.hp=Math.max(0,t.hp-amount);if(t===core)coreHP=Math.max(0,coreHP-amount);if(src&&t.kind&&was>0&&t.hp<=0)gainXP(src,KILL_XP[t.kind]||10)}function flash(x,z,color){effects.push({x,z,age:0,duration:.22,type:'hit',color})}function blast(a,b,color){effects.push({x:a.x,z:a.z,tx:b.x,tz:b.z,age:0,duration:.13,type:'laser',color})}function zone(x,z,r,color){effects.push({x,z,r,age:0,duration:1,type:'zone',color})}
 function ability(){let source=selected.find(u=>u.hp>0&&u.role!=='guard')||selected[0];if(!source)return;if(source.role==='engineer'&&!ORB.active){orderOrb(source);return}if(source.ability>0){say('Compétence en recharge.',1);return}if(source.role==='paladin'){source.ability=16;zone(source.x,source.z,5,'#f1d28c');for(let e of enemies)if(dist(e,source)<5)damage(e,35+lvlBonus(source),source);for(let u of units)if(dist(u,source)<5)u.shield=7;say('PALADIN — Égide : boucliers renforcés.',2)}else if(source.role==='healer'){source.ability=12;zone(source.x,source.z,7,'#83e5bf');for(let u of units)if(dist(u,source)<7){u.hp=Math.min(u.max,u.hp+55);if(u.hp<=0)u.hp=25}say('SOIGNEUR — Restauration de zone.',2)}else if(source.role==='engineer'){source.ability=18;coreHP=Math.min(100,coreHP+15);zone(core.x,core.z,4,'#ffb03c');say('INGÉNIEUR EXILÉ — Réparation de l’Ancre.',2)}else if(source.role==='shooter'){source.ability=10;let t=targetClosest(source,enemies,18);if(t){damage(t,95+lvlBonus(source),source);blast(source,t,'#f7e7a2');flash(t.x,t.z,'#f7e7a2')}say('TIREUR — Tir de précision.',2)}else{source.ability=14;zone(source.x,source.z,7,'#a1badb');for(let u of units)if(u.squad===source.squad)u.buff=8;say('DISCIPLES D’INDRA — Discipline martiale.',2)}}
-function update(dt){currentTime+=dt;portalTick();if(noticeEnd<currentTime)document.getElementById('notice').style.opacity=0;if(ended)return;updateBuildings(dt);updateAdepts(dt);updateEvilPortals();for(const u of units){u.attack-=dt;u.ability=Math.max(0,u.ability-dt);u.shield=Math.max(0,(u.shield||0)-dt);u.buff=Math.max(0,(u.buff||0)-dt)}while(spawnQueue.length&&spawnQueue[0].at<=currentTime)spawn(spawnQueue.shift());let alive=units.filter(u=>u.hp>0);for(let u of alive){if(u.forceMove&&Math.hypot(u.x-u.tx,u.z-u.tz)<.6)u.forceMove=false;let enemy=u.forceMove?null:u.hidden||u.role==='engineer'&&(u.job||u.buildJob||u.orbJob||u.turretJob)||isAdept(u)&&u.job?null:targetClosest(u,enemies,FIGHT[u.role]?FIGHT[u.role].seek:u.role==='paladin'?3:u.role==='healer'?9:u.role==='shooter'?20:10);if(u.role==='archer'&&archerTick(u,enemy,dt))continue;if(u.stance!=='hold'&&enemy){let reach=FIGHT[u.role]?FIGHT[u.role].reach:u.role==='paladin'?2.2:u.role==='shooter'?17.2:8.6;/* portée de l'arbalète doublée */if(dist(u,enemy)>reach)move(u,steer(u,enemy),dt,.65);if(dist(u,enemy)<reach&&u.attack<=0&&FIGHT[u.role])barracksStrike(u,enemy);else if(dist(u,enemy)<reach&&u.attack<=0){let dmg=(u.role==='paladin'?30:u.role==='shooter'?19:u.role==='healer'?9:12)+lvlBonus(u);if(u.buff>0)dmg*=1.5;damage(enemy,dmg,u);if(u.role!=='paladin')(u.role==='guard'||u.role==='indra'?arrow(u,enemy):u.role==='shooter'&&PIXEL?volley(u,enemy):u.role==='engineer'?rivet(u,enemy):blast(u,enemy,u.role==='shooter'?'#f4d780':'#bed7df'));else{flash(enemy.x,enemy.z,'#f0dba4');swordStrike(u,enemy)}u.attack=u.role==='paladin'?.88:u.role==='shooter'?.78:u.role==='indra'?.55:1.15}}else if(u.stance!=='hold')move(u,steer(u,{x:u.tx,z:u.tz}),dt);if(u.role==='healer'&&u.attack<=0){let target=alive.filter(t=>t.hp<t.max*.75&&dist(t,u)<8).sort((a,b)=>a.hp/a.max-b.hp/b.max)[0];if(target){target.hp=Math.min(target.max,target.hp+10);u.attack=1;zone(target.x,target.z,.9,'#80ddb8')}}}
+function update(dt){currentTime+=dt;portalTick();if(noticeEnd<currentTime)document.getElementById('notice').style.opacity=0;if(ended)return;updateBuildings(dt);updateAdepts(dt);updateEvilPortals();for(const u of units){u.attack-=dt;u.ability=Math.max(0,u.ability-dt);u.shield=Math.max(0,(u.shield||0)-dt);u.buff=Math.max(0,(u.buff||0)-dt)}while(spawnQueue.length&&spawnQueue[0].at<=currentTime)spawn(spawnQueue.shift());let alive=units.filter(u=>u.hp>0);for(let u of alive){if(u.forceMove&&Math.hypot(u.x-u.tx,u.z-u.tz)<.6)u.forceMove=false;let enemy=u.forceMove?null:u.hidden||u.role==='engineer'&&(u.job||u.buildJob||u.orbJob||u.turretJob)||isAdept(u)&&u.job?null:targetClosest(u,enemies,FIGHT[u.role]?FIGHT[u.role].seek:u.role==='paladin'?3:u.role==='healer'?9:u.role==='shooter'?20:10);if(u.role==='archer'&&archerTick(u,enemy,dt))continue;if(u.stance!=='hold'&&enemy){let reach=unitReach(u);/* portée de l'arbalète doublée */if(dist(u,enemy)>reach)move(u,steer(u,enemy),dt,.65);if(dist(u,enemy)<reach&&u.attack<=0&&FIGHT[u.role])barracksStrike(u,enemy);else if(dist(u,enemy)<reach&&u.attack<=0){let dmg=(u.role==='paladin'?30:u.role==='shooter'?19:u.role==='healer'?9:12)+lvlBonus(u);if(u.buff>0)dmg*=1.5;damage(enemy,dmg,u);if(u.role!=='paladin')(u.role==='guard'||u.role==='indra'?arrow(u,enemy):u.role==='shooter'&&PIXEL?volley(u,enemy):u.role==='engineer'?rivet(u,enemy):blast(u,enemy,u.role==='shooter'?'#f4d780':'#bed7df'));else{flash(enemy.x,enemy.z,'#f0dba4');swordStrike(u,enemy)}u.attack=u.role==='paladin'?.88:u.role==='shooter'?.78:u.role==='indra'?.55:1.15}}else if(u.stance!=='hold')move(u,steer(u,{x:u.tx,z:u.tz}),dt);if(u.role==='healer'&&u.attack<=0){let target=alive.filter(t=>t.hp<t.max*.75&&dist(t,u)<8).sort((a,b)=>a.hp/a.max-b.hp/b.max)[0];if(target){target.hp=Math.min(target.max,target.hp+10);u.attack=1;zone(target.x,target.z,.9,'#80ddb8')}}}
 updateTurrets(dt);
 for(let e of enemies){if(e.hp<=0)continue;if(e.stun>0){e.stun-=dt;continue}const espd=e.speed*(e.slowUntil>currentTime?SILLON.slow:1);e.cooldown-=dt;let target=targetClosest(e,alive,4.5)||core;let d=dist(e,target);if(d>e.range){const s=steer(e,target),dx=s.x-e.x,dz=s.z-e.z,l=Math.hypot(dx,dz)||1;e.x+=dx/l*espd*dt;e.z+=dz/l*espd*dt;clampWorld(e)}else if(e.cooldown<=0){let dmg=e.damage;if(target!==core){if(target.shield>0)dmg*=.35;if(FIGHT[target.role]&&FIGHT[target.role].guard)dmg*=FIGHT[target.role].guard;damage(target,afterArmor(target,dmg))}else coreHP=Math.max(0,coreHP-dmg);flash(target.x,target.z,'#e17b63');if(e.kind==='spitter')blast(e,target,'#c88f9e');e.cooldown=e.kind==='brute'?1.7:1.15}}
 for(const u of units)if(u.hp<=0&&!u.dead){u.dead=true;onUnitDeath(u)}enemies=enemies.filter(e=>e.hp>0);effects=effects.filter(e=>(e.age+=dt)<e.duration);if(coreHP<=0||alive.length===0||units.some(u=>u.role==='engineer'&&u.hp<=0)){end(false)}else if(ORB.active&&!enemies.some(e=>!e.beast)&&!spawnQueue.length){if(!nextWave){nextWave=currentTime+4;say('Zone sécurisée. Prochain assaut imminent.',3)}else if(currentTime>=nextWave){nextWave=0;startWave()}}if(Math.floor(currentTime*3)!==Math.floor((currentTime-dt)*3))renderRoster()}
@@ -224,7 +227,7 @@ function buildPixelWorld(){
   const kind=t.r>1.5?'big':t.h>4.7?'cyp':t.r<.95?'bush':k<.25?'palm':'big',s=.42+Math.round(t.r*4)/4*.17,r=rng(v*977+Math.round(s*100));
   const[gx,gy]=G(t.x,t.z);shadow(P,Math.round(gx+3),Math.round(gy),Math.round(kind==='bush'?10:16*s+4),Math.round(kind==='bush'?4:6*s+2),-500);
   add(t.x,t.z,t.x+t.z,cached(kind+s+'|'+v,()=>windTreeSprite(kind,s,r)),{wind:kind})}
- for(const o of stones){const v=Math.floor(hash(Math.round(o.x*9),Math.round(o.z*9),6)*4),w4=Math.round(o.w*4)/4,r=rng(v*53+w4*100);const[gx,gy]=G(o.x,o.z);shadow(P,Math.round(gx+2),Math.round(gy),8,3,-500);add(o.x,o.z,o.x+o.z,cached('rock'+w4+'|'+v,()=>sprite(40,30,20,24,(S,ax,ay)=>rock(S,ax,ay,r,0,.35+w4*.22))))}
+ for(const o of stones){const v=Math.floor(hash(Math.round(o.x*9),Math.round(o.z*9),6)*4),w4=Math.round(o.w*4)/4,r=rng(v*53+w4*100);const[gx,gy]=G(o.x,o.z);shadow(P,Math.round(gx+2),Math.round(gy),8,3,-500);add(o.x,o.z,o.x+o.z,cached('rock'+w4+'|'+v,()=>sprite(40,30,20,24,(S,ax,ay)=>rock(S,ax,ay,r,0,.35+w4*.22))),{r:(.35+w4*.22)*1.25})}
  // fougères éparses hors des chemins et du temple
  const fr=rng(77);for(let k=0;k<2000;k++){const x=(fr()-.5)*444,z=-170+fr()*238;if(z<mountainEdge(x)+2||Math.abs(x)<6)continue;const v=k%6;add(x,z,x+z,cached('fern'+v,()=>sprite(40,30,20,26,(S,ax,ay)=>fern(S,ax,ay,rng(v),0))))}
  // falaises : une face rocheuse vue de face partout où la roche surplombe un sol praticable au sud
@@ -233,11 +236,11 @@ function buildPixelWorld(){
  for(let x=-68;x<68;x+=4){const bz=caveN(x+2);if(!inCave(x+2,bz+1.5))continue;const hgt=Math.abs(x+2)<48?7:6,v=Math.floor(cr()*6);add(x,bz,0,cached('face'+hgt+'|'+v,()=>faceSprite(hgt,rng(v*41+hgt))),{bx:x,bz,dz:bz})}
  // éboulis au pied des parois : la salle n'est plus un rectangle net
  const er=rng(4242);for(let k=0;k<70;k++){const side=k%3,t=er();let x,z;if(side===0){z=-160+t*60;x=(er()<.5?caveW(z)+1.2:caveE(z)-1.2)}else if(side===1){x=(er()<.5?-1:1)*(50+er()*6);z=caveN(x)+1.2+er()*2}else{x=(er()<.5?-1:1)*(12+t*40);z=caveS(x)-1.2}
-  if(!inCave(x,z)||Math.abs(x)<10&&z>-110||Math.abs(x)<48&&z<-150)continue;const v=k%4,sz=.35+er()*.35;add(x,z,0,cached('rub'+v+'|'+Math.round(sz*10),()=>sprite(40,30,20,24,(S,ax,ay)=>rock(S,ax,ay,rng(v*13+5),0,sz))))}
+  if(!inCave(x,z)||Math.abs(x)<10&&z>-110||Math.abs(x)<48&&z<-150)continue;const v=k%4,sz=.35+er()*.35;add(x,z,0,cached('rub'+v+'|'+Math.round(sz*10),()=>sprite(40,30,20,24,(S,ax,ay)=>rock(S,ax,ay,rng(v*13+5),0,sz))),{r:sz*1.25})}
  // éboulis sur le dos de la montagne
  const mr=rng(913);for(let k=0;k<1900;k++){const x=(mr()-.5)*452,z=WORLD.z0+4+mr()*(-76-WORLD.z0),sz=.7+mr()*1.1;if(walkable(x,z)||z>mountainEdge(x)-4)continue;
   if(x>CAVE.x0-6&&x<CAVE.x1+6&&z>CAVE.z0-10&&z<CAVE.z1+6)continue;if(Math.abs(x)<CAVE.gate+6&&z>CAVE.z1)continue;
-  const v=k%5;add(x,z,x+z,cached('mrock'+v+'|'+Math.round(sz*4),()=>sprite(70,50,35,40,(S,ax,ay)=>rock(S,ax,ay,rng(v*31+7),0,sz*1.6))))}
+  const v=k%5;add(x,z,x+z,cached('mrock'+v+'|'+Math.round(sz*4),()=>sprite(70,50,35,40,(S,ax,ay)=>rock(S,ax,ay,rng(v*31+7),0,sz*1.6))),{r:sz*2})}
  // stalagmites et cristaux le long des parois, hors des emplacements constructibles
  const sr=rng(57),spots=[];for(let z=-160;z<-98;z+=5.5){spots.push([caveW(z)+2.2,z],[caveE(z)-2.2,z])}for(let x=-50;x<=50;x+=7)if(Math.abs(x)>11)spots.push([x,caveS(x)-1.8]);
  for(const[x,z]of spots){const v=Math.floor(sr()*6);add(x,z,x+z,cached('cave'+v,()=>sprite(28,44,14,40,(S,ax,ay)=>caveSpire(S,ax,ay,rng(v*17+3),v%3===0))),{light:v%3===0})}
@@ -252,7 +255,7 @@ function blitSpr(spr,nx,ny){ctx.drawImage(spr.c,(nx-spr.ax)*PX,(ny-spr.ay)*PX,sp
 // ================= Arcs électriques de l'Ancre =================
 // Petits arcs organiques : tracés par déplacement du point milieu (ligne brisée qui serpente), avec rameaux,
 // renouvelés plusieurs fois par seconde. Certains rampent le long de la surface, d'autres s'échappent puis reviennent.
-const ORB_ARC={core:'#ffffff',hot:'#e6dcff',mid:'#a890f0',cold:'#6a52c0',glow:'#3c2a78'};
+const ORB_ARC={core:'#e0a0ff',hot:'#08000e',mid:'#12041c',cold:'#24082e',glow:'#8a32a8'}; // Ancre : éclairs noirs ourlés de pourpre
 function arcPath(x0,y0,x1,y1,R,rough,depth=4){let pts=[[x0,y0],[x1,y1]];for(let d=0;d<depth;d++){const n=[pts[0]];for(let i=1;i<pts.length;i++){const[a,b]=[pts[i-1],pts[i]],l=Math.hypot(b[0]-a[0],b[1]-a[1]),nx=-(b[1]-a[1])/(l||1),ny=(b[0]-a[0])/(l||1),o=(R()-.5)*l*rough;n.push([(a[0]+b[0])/2+nx*o,(a[1]+b[1])/2+ny*o],b)}pts=n}return pts}
 function plotPath(pts,col,thick){for(let i=1;i<pts.length;i++){const[a,b]=[pts[i-1],pts[i]],n=Math.max(1,Math.ceil(Math.hypot(b[0]-a[0],b[1]-a[1])));for(let t=0;t<=n;t++){const x=a[0]+(b[0]-a[0])*t/n,y=a[1]+(b[1]-a[1])*t/n;npx(x,y,col);if(thick)npx(x+1,y,col)}}}
 // Chaque arc a son propre cycle de vie (apparition, crépitement, extinction). Ses extrémités glissent lentement
@@ -292,7 +295,8 @@ function drawPortal(){flushDecor();if(!PORTAL.atlas.complete||!PORTAL.atlas.natu
  // sprite conçu pour un mur isométrique : cisaillement qui le remet de face contre la paroi nord
  ctx.save();ctx.translate(nx*PX,ny*PX);ctx.transform(PX,PX*.5,0,PX,0,0);ctx.drawImage(PORTAL.atlas,(i%16)*PortalKit.W,Math.floor(i/16)*PortalKit.H,PortalKit.W,PortalKit.H,-PortalKit.OX,-PortalKit.OY,PortalKit.W,PortalKit.H);ctx.restore();captureDecorLayer((nx-PortalKit.OX)*PX,(ny-PortalKit.OY)*PX,PortalKit.W*PX,PortalKit.H*PX)}
 // Portails divins (Indra, Sigil, Medeina, Aether) : arche tyrienne réduite, ouverte en permanence, lueur propre à chaque divinité.
-const DEITY_LOOK={indra:{glow:['#0a1a4a','#1d3f9a','#3f7cf0','#9cc8ff','#eef6ff','#ffffff']},sigil:{glow:['#063a3a','#0e6e70','#20b0b4','#78eef0','#e0ffff','#ffffff']},medeina:{glow:['#0d3010','#1f6420','#3fa83a','#9be27a','#effde0','#ffffff']},aether:{glow:['#2a0f40','#5b2a90','#a060e0','#e0b8ff','#fbf0ff','#ffffff']}};
+// couleurs de la charte (direction-artistique.html) : Medeina vert, Indra orange, Sigil blanc, Aether bleu-violet
+const DEITY_LOOK={indra:{glow:['#3a1404','#7a3008','#c85a10','#ff8a2a','#ffc890','#fff4e8']},sigil:{glow:['#3a3e4a','#6a7080','#a8b0c0','#dde2ee','#f4f6ff','#ffffff']},medeina:{glow:['#0d3010','#1f6420','#3fa83a','#7ae070','#c8f5b0','#f4fff0']},aether:{glow:['#140f40','#2c2690','#4a48d0','#7a80ff','#c0c4ff','#f0f0ff']}};
 const DEITY_FRAMES={},DEITY_N=12,DEITY_SCALE=.62;
 function deityFrames(id,active){const key=id+(active?'':'-off');if(!DEITY_FRAMES[key]){if(!active){DEITY_FRAMES[key]=[PortalKit.render(PortalKit.DESIGNS[0],{unit:null},0)];return DEITY_FRAMES[key]}const D={...PortalKit.DESIGNS[0],glow:DEITY_LOOK[id].glow},S={glyph:.5,seals:1,open:1,field:.65,rim:.75,arcs:.35,unit:null};
  DEITY_FRAMES[id]=Array.from({length:DEITY_N},(_,k)=>PortalKit.render(D,S,k/DEITY_N*Math.PI/2))}return DEITY_FRAMES[key]}
@@ -304,14 +308,14 @@ function drawDeityPortal(o){flushDecor();const[nx,ny]=natP(o.x,0,o.z);if(nx<-90|
 const DECO_OFF=6.2;
 const DEITY_DECO={
  // Indra : piliers de bronze couronnés d'un vajra, socle de basalte
- indra(P,x,y,R){const st=CAVE_C.rock,g=C.gold,bl=DEITY_LOOK.indra.glow;
+ indra(P,x,y,R){const st=CAVE_C.rock,g=['#3a2410','#5a3a18','#80562a','#a87a3a','#c89a50','#e2c27a'],bl=DEITY_LOOK.indra.glow;
   shadow(P,x+2,y,10,3,-50);P.poly([[x-7,y],[x-6,y-6],[x+6,y-6],[x+7,y]],(px,py)=>P.ramp(st,px<x?.65:.4,px,py),0);
   P.poly([[x-3,y-6],[x-3,y-40],[x+3,y-40],[x+3,y-6]],(px,py)=>P.ramp(g,px<x?.85:.45,px,py),.01);
   for(let k=0;k<4;k++)P.line(x-3,y-11-k*8,x+3,y-11-k*8,g[0],.02);
   P.poly([[x-4,y-40],[x-2,y-44],[x+2,y-44],[x+4,y-40]],(px,py)=>P.ramp(g,.9,px,py),.03);
   for(const d of[-1,1]){P.line(x+d*2,y-44,x+d*5,y-50,g[2],.04);P.line(x+d*5,y-50,x+d*2,y-56,g[2],.04)}P.line(x,y-44,x,y-58,g[3],.04);
   P.set(x,y-59,bl[4],.05);P.set(x-1,y-48,bl[3],.05);P.set(x+1,y-48,bl[3],.05)},
- // Sigil : stèles runiques de pierre sombre, glyphes cyan gravés
+ // Sigil : stèles runiques de pierre sombre, glyphes blancs gravés
  sigil(P,x,y,R){const st=CAVE_C.rock,cy=DEITY_LOOK.sigil.glow;shadow(P,x+2,y,10,3,-50);
   P.poly([[x-6,y],[x-6,y-34],[x-3,y-40],[x+3,y-40],[x+6,y-34],[x+6,y]],(px,py)=>P.ramp(st,(px<x?.75:.55)+(fbm(px/4,py/6,61)-.5)*.2,px,py),0);
   P.line(x-6,y-34,x-3,y-40,C.outline,.01);P.line(x+3,y-40,x+6,y-34,C.outline,.01);
@@ -405,7 +409,7 @@ function drawXboom(e){if(e.age<0)return;const p=e.age/e.duration,[x,y]=natP(e.x,
  for(let k=0;k<12;k++){const a=R()*6.283,d=r*(1.1+p)*(.7+R()*.5);if(p<.75)npx(x+Math.cos(a)*d,cy+Math.sin(a)*d*.8,p<.35?'#ffe08a':'#d0781a')}}
 function drawUnitSprite(u,S=SPR[u.role],isEnemy=false){const r=isEnemy?(u.kind==='brute'?.85:.6):u.role==='paladin'?.75:.54;
  circle3(u.x,u.z,r*1.3,'#0b1615a0');
- if(!isEnemy&&selected.includes(u)&&u.hp>0){circle3(u.x,u.z,r*2.3,'#ead08c55');const sp=project(u.x,.02,u.z);ctx.strokeStyle='#f8df93';ctx.lineWidth=PX;ctx.beginPath();ctx.ellipse(sp.x,sp.y,r*1.75*Z()*.9,r*1.75*Z()*.42,0,0,Math.PI*2);ctx.stroke()}
+ if((isEnemy?HUD.enemy===u:selected.includes(u))&&u.hp>0){circle3(u.x,u.z,r*2.3,isEnemy?'#db505055':'#ead08c55');const sp=project(u.x,.02,u.z);ctx.strokeStyle=isEnemy?'#ff7a6a':'#f8df93';ctx.lineWidth=PX;ctx.beginPath();ctx.ellipse(sp.x,sp.y,r*1.75*Z()*.9,r*1.75*Z()*.42,0,0,Math.PI*2);ctx.stroke()}
  // orientation : alliés vers l'ennemi visé, sinon dans le sens de la marche (miroir horizontal à l'écran)
  const dist=Math.hypot(u.x-(u._lx??u.x),u.z-(u._lz??u.z)),foe=isEnemy?null:targetClosest(u,enemies,u.role==='shooter'?20:10),step=u.x-(u._lx??u.x),moved=dist>.001;
  // phase de marche avancée à la distance réellement parcourue ; retour au repos après un court arrêt
@@ -420,7 +424,7 @@ function drawUnitSprite(u,S=SPR[u.role],isEnemy=false){const r=isEnemy?(u.kind==
  ctx.save();ctx.translate(nx*PX,(ny-bob)*PX);if(f<0)ctx.scale(-1,1);ctx.drawImage(fr,(-ax-(AF?0:kick))*PX,-ay*PX,fr.width*PX,fr.height*PX);ctx.restore()}
 const hpY=(u,isEnemy)=>{if(!PIXEL)return 3*Z();const S=isEnemy?ESPR[u.kind]:SPR[u.role];return S?(S.h+4)*PX:3*Z()};
 function drawCharacter(u,isEnemy=false){if(u.hidden)return;let p=project(u.x,0,u.z);let r=isEnemy?(u.kind==='brute'?.85:.6):u.role==='paladin'?.75:.54;
-if(!isEnemy&&isAdept(u)){drawAdept(u)}else if(PIXEL&&!isEnemy&&SPR[u.role]){drawUnitSprite(u)}else if(PIXEL&&isEnemy&&ESPR[u.kind]){drawUnitSprite(u,ESPR[u.kind],true)}else if(!isEnemy&&u.role==='shooter'){drawShooterModel(u)}else{circle3(u.x,u.z,r*1.3,'#0b1615a0');if(!isEnemy&&selected.includes(u)&&u.hp>0){circle3(u.x,u.z,r*2.3,'#ead08c55');let sp=project(u.x,.02,u.z);ctx.strokeStyle='#f8df93';ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(sp.x,sp.y,r*1.75*Z()*.9,r*1.75*Z()*.42,0,0,Math.PI*2);ctx.stroke()}let color=isEnemy?(u.kind==='brute'?'#8b4d45':u.kind==='spitter'?'#a16d8a':'#a75b4e'):u.role==='paladin'?'#d8c48b':u.role==='healer'?'#9ccfba':u.role==='shooter'?'#aac3e1':'#b1b6ac';box3(u.x,u.z,r*1.2,r*.9,isEnemy?u.kind==='brute'?1.8:1.25:1.55,color,isEnemy?'#4d2b2b':'#485b5b',isEnemy?'#673332':'#69726a');sphere3(u.x,isEnemy?1.55:1.9,u.z,r*.49,color);if(!isEnemy){if(u.role==='paladin'){line3([u.x-.7,1,u.z],[u.x-1,2.3,u.z],'#e9c779',3);box3(u.x+.7,u.z, .55,1.1,1.5,'#d6c07a','#77745c','#6f6c55')}else if(u.role==='healer'){sphere3(u.x,2.6,u.z,.2,'#86ffc9')}else line3([u.x-.3,1,u.z],[u.x-1,1,u.z-1],'#b6d4dc',2)}else if(u.kind==='brute'){sphere3(u.x,2.3,u.z,.36,'#d57167')}}
+if(!isEnemy&&isAdept(u)){drawAdept(u)}else if(PIXEL&&!isEnemy&&SPR[u.role]){drawUnitSprite(u)}else if(PIXEL&&isEnemy&&ESPR[u.kind]){drawUnitSprite(u,ESPR[u.kind],true)}else if(!isEnemy&&u.role==='shooter'){drawShooterModel(u)}else{circle3(u.x,u.z,r*1.3,'#0b1615a0');if((isEnemy?HUD.enemy===u:selected.includes(u))&&u.hp>0){circle3(u.x,u.z,r*2.3,isEnemy?'#db505055':'#ead08c55');let sp=project(u.x,.02,u.z);ctx.strokeStyle=isEnemy?'#ff7a6a':'#f8df93';ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(sp.x,sp.y,r*1.75*Z()*.9,r*1.75*Z()*.42,0,0,Math.PI*2);ctx.stroke()}let color=isEnemy?(u.kind==='brute'?'#8b4d45':u.kind==='spitter'?'#a16d8a':'#a75b4e'):u.role==='paladin'?'#d8c48b':u.role==='healer'?'#9ccfba':u.role==='shooter'?'#aac3e1':'#b1b6ac';box3(u.x,u.z,r*1.2,r*.9,isEnemy?u.kind==='brute'?1.8:1.25:1.55,color,isEnemy?'#4d2b2b':'#485b5b',isEnemy?'#673332':'#69726a');sphere3(u.x,isEnemy?1.55:1.9,u.z,r*.49,color);if(!isEnemy){if(u.role==='paladin'){line3([u.x-.7,1,u.z],[u.x-1,2.3,u.z],'#e9c779',3);box3(u.x+.7,u.z, .55,1.1,1.5,'#d6c07a','#77745c','#6f6c55')}else if(u.role==='healer'){sphere3(u.x,2.6,u.z,.2,'#86ffc9')}else line3([u.x-.3,1,u.z],[u.x-1,1,u.z-1],'#b6d4dc',2)}else if(u.kind==='brute'){sphere3(u.x,2.3,u.z,.36,'#d57167')}}
 if(!isEnemy){drawTurretEngineer(u);drawLevelBadge(u,p.x,p.y-hpY(u,isEnemy)-(u.squad?16:5))}let hpWidth=Math.max(12,2.8*Z());ctx.fillStyle='#191b1d';ctx.fillRect(p.x-hpWidth/2,p.y-hpY(u,isEnemy),hpWidth,4);ctx.fillStyle=isEnemy?'#db7772':u.role==='guard'?'#9db88f':'#85d6b1';ctx.fillRect(p.x-hpWidth/2,p.y-hpY(u,isEnemy),hpWidth*Math.max(0,u.hp/u.max),4);if(!isEnemy&&u.squad){ctx.textAlign='center';ctx.fillStyle='#f5ecca';ctx.font='bold 10px system-ui';ctx.fillText('I'+u.squad,p.x,p.y-hpY(u,isEnemy)-6)}}
 // ================= Flèches des escouades d'Indra =================
 // La flèche part de l'arc, suit une courbe en cloche jusqu'à la cible, laisse une traînée d'étincelles bleues
@@ -474,23 +478,26 @@ function draw(){
   else{const u=v.u;drawCharacter(v.u,v.enemy);const p=project(u.x,0,u.z);captureDecorLayer(p.x-90*PX,p.y-120*PX,180*PX,150*PX)}
  }
  while(j<O.length)drawDeco(O[j++]);flushDecor();if(typeof drawLighting==='function')drawLighting();
- drawEffects();drawTurretBolts();drawTempleOverlays();drawBuildCells();drawBuildPreview();drawPrayFeedback();if(HUD.anchor)circle3(core.x,core.z,1.8,'#e8bc5b55',.15);
+ drawEffects();drawDigHover();drawTurretBolts();drawTempleOverlays();drawBuildCells();drawBuildPreview();drawPrayFeedback();if(HUD.anchor)circle3(core.x,core.z,1.8,'#e8bc5b55',.15);
  const p=project(core.x,0,core.z);ctx.fillStyle='#c9afd0';ctx.font='bold 10px system-ui';ctx.textAlign='center';ctx.fillText(ORB.active?'ANCRE':ORB.owner&&ORB.progress>0?'ANCRE · RÉACTIVATION '+Math.floor(ORB.progress/ORB.time*100)+' %':'ANCRE ÉTEINTE',p.x,p.y+15*cam.zoom);
  if(effects.length||turretBolts.length||prayPopups.length||HUD.mode==='build'||HUD.anchor)captureDecorLayer();else captureDecorLayer(p.x-50,p.y-5,100,40);
 }
 
 function renderRoster(){updateHUD(true)}
 function selectIndex(i,add=false){const heroes=units.filter(u=>!u.squad);let group=i<heroes.length?[heroes[i]]:units.filter(u=>u.squad===i-heroes.length+1),alive=group.filter(u=>u&&u.hp>0);if(!alive.length)return;selected=add?[...new Set([...selected,...alive])]:alive;showSelection()}
-function showSelection(){HUD.anchor=false;HUD.mode=null;HUD.menu=null;HUD.building=null;canvas.style.cursor='crosshair';updateHUD(true)}
+// ennemi le plus proche du point cliqué (même tolérance que pour les alliés)
+function pickEnemy(x,y){const n=enemies.filter(e=>e.hp>0&&!e.hidden).map(e=>({e,p:project(e.x,1,e.z)})).sort((a,b)=>Math.hypot(a.p.x-x,a.p.y-y)-Math.hypot(b.p.x-x,b.p.y-y))[0];return n&&Math.hypot(n.p.x-x,n.p.y-y)<Math.max(18,1.3*Z())?n.e:null}
+function showSelection(){HUD.enemy=null;HUD.anchor=false;HUD.mode=null;HUD.menu=null;HUD.building=null;canvas.style.cursor='crosshair';updateHUD(true)}
 canvas.addEventListener('pointerdown',ev=>{if(ev.button!==0)return;if(!HUD.mode)HUD.building=null;
  if(HUD.mode==='build'){placeBuilding(groundFromScreen(ev.clientX,ev.clientY));return}
  if(HUD.mode==='move'){issueMove(groundFromScreen(ev.clientX,ev.clientY));return}
- if(hitOrb(ev.clientX,ev.clientY)){selected=[];HUD.anchor=true;HUD.mode=null;HUD.menu=null;updateHUD(true);return}
+ if(hitOrb(ev.clientX,ev.clientY)){selected=[];HUD.enemy=null;HUD.anchor=true;HUD.mode=null;HUD.menu=null;updateHUD(true);return}
  const candidates=units.filter(u=>u.hp>0&&!u.hidden).map(u=>({u,p:project(u.x,1,u.z)}));
  const near=candidates.sort((a,b)=>Math.hypot(a.p.x-ev.clientX,a.p.y-ev.clientY)-Math.hypot(b.p.x-ev.clientX,b.p.y-ev.clientY))[0];
  if(near&&Math.hypot(near.p.x-ev.clientX,near.p.y-ev.clientY)<Math.max(18,1.3*Z())){const group=near.u.squad?units.filter(u=>u.squad===near.u.squad&&u.hp>0):[near.u];selected=ev.shiftKey?[...new Set([...selected,...group])]:group;showSelection()}
- else if(hitBuilding(groundFromScreen(ev.clientX,ev.clientY))){selected=[];HUD.anchor=false;HUD.menu=null;HUD.building=hitBuilding(groundFromScreen(ev.clientX,ev.clientY));updateHUD(true)}
- else{selected=[];HUD.anchor=false;HUD.mode=null;updateHUD(true)}});
+ else if(pickEnemy(ev.clientX,ev.clientY)){selected=[];HUD.anchor=false;HUD.mode=null;HUD.menu=null;HUD.building=null;HUD.enemy=pickEnemy(ev.clientX,ev.clientY);updateHUD(true)}
+ else if(hitBuilding(groundFromScreen(ev.clientX,ev.clientY))){selected=[];HUD.anchor=false;HUD.menu=null;HUD.enemy=null;HUD.building=hitBuilding(groundFromScreen(ev.clientX,ev.clientY));updateHUD(true)}
+ else{selected=[];HUD.enemy=null;HUD.anchor=false;HUD.mode=null;updateHUD(true)}});
 /* Sélection multiple : glisser avec le clic gauche maintenu trace un cadre ; les unités dedans sont sélectionnées au relâchement. */
 const BOX={on:false,x:0,y:0,el:Object.assign(document.createElement('div'),{id:'select-box'})};Object.assign(BOX.el.style,{position:'fixed',border:'1px solid #f8df93',background:'#ead08c22',pointerEvents:'none',display:'none',zIndex:5});document.body.append(BOX.el);
 canvas.addEventListener('pointerdown',ev=>{if(ev.button!==0||HUD.mode)return;BOX.on=true;BOX.x=ev.clientX;BOX.y=ev.clientY});

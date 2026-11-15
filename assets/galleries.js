@@ -66,13 +66,19 @@ function drawEvilPortal(o){flushDecor();const[nx,ny]=natP(o.x,0,o.z);if(nx<-90||
  // braises qui s'échappent du portail
  for(let i=0;i<6;i++){const u=(currentTime*.6+i/6)%1;npx(nx+Math.sin(currentTime*2+i*2.1)*9,ny-6-u*34,u<.5?EVIL.look[4]:EVIL.look[3])}captureDecorLayer()}
 // Repeint le sol (cases de 4 × 4) d'une zone : roche, sol de grotte et bords, comme à la création du monde.
-function paintRegion(X0,Z0,X1,Z1){const g=PW.ground.getContext('2d'),old=diamond;diamond=squareTile;
- try{for(let x=X0;x<X1;x+=4)for(let z=Z0;z<Z1;z+=4){const hol=(a,b)=>isGalleryOpen(a,b)||isDug(a,b)||inCave(a,b)||inTunnel(a,b),smp=[[0,0],[4,0],[0,4],[4,4],[2,2],[2,0],[0,2],[4,2],[2,4]].map(([a,b])=>hol(x+a,z+b));
-   if(!smp.some(v=>v))continue;const[a,b]=natW(x,0,z),sx=a+PW.gx0,sy=b+PW.gy0,T=new Px(32,32,true),R=rng((x*977+z*31)>>>0),at=(px,py)=>hol(x+px/NAT.kx,z+py/NAT.kx);
-   if(smp.every(v=>v)){caveTile(T,16,0,R,0)}else{const M={set:(px,py,c,k)=>{if(at(px,py))T.set(px,py,c,k)},ramp:T.ramp.bind(T),dark:(px,py,f,k)=>{if(at(px,py))T.dark(px,py,f,k)}};
-    rockTile(T,16,0,R,0);caveTile(M,16,0,R,.1);
-    for(let py=0;py<32;py++)for(let px=0;px<32;px++){if(at(px,py))continue;if(at(px,py+2)&&!at(px,py-3))T.dark(px,py,.55,.6);else if(at(px,py-2))T.set(px,py,CAVE_C.rock[at(px,py-1)?7:5],.6);else if(at(px-2,py)||at(px+2,py))T.set(px,py,at(px-1,py)||at(px+1,py)?CAVE_C.rock[0]:CAVE_C.rock[6],.6)}}
-   T.flush();g.drawImage(T.c,sx,sy)}}finally{diamond=old}}
+function paintRegion(X0,Z0,X1,Z1){const g=PW.ground.getContext('2d'),hol=(a,b)=>isGalleryOpen(a,b)||isDug(a,b)||inCave(a,b)||inTunnel(a,b);
+ for(let x=X0;x<X1;x+=4)for(let z=Z0;z<Z1;z+=4)paintGroundTile(g,x,z,hol)}
+// Repeint une case 4 × 4 (coin x,z) du sol. Le bruit est calculé en coordonnées de la texture du monde, comme à sa création :
+// le sol repeint se raccorde sans couture au sol voisin. Les bords de roche ne sont dessinés que sur les pixels de roche.
+// Une case sans aucun pixel creux est laissée telle quelle.
+function paintGroundTile(g,x,z,hol){const[a,b]=natW(x,0,z),sx=a+PW.gx0,sy=b+PW.gy0,open=new Uint8Array(34*34);let n=0;
+ for(let py=-1;py<33;py++)for(let px=-1;px<33;px++){const v=hol(x+(px+.5)/NAT.kx,z+(py+.5)/NAT.kx)?1:0;open[(py+1)*34+px+1]=v;if(v&&px>=0&&px<32&&py>=0&&py<32)n++}
+ if(!n)return;const at=(px,py)=>px<-1||py<-1||px>32||py>32?hol(x+(px+.5)/NAT.kx,z+(py+.5)/NAT.kx):open[(py+1)*34+px+1]===1;
+ const T=new Px(32,32,true),R=rng((x*977+z*31)>>>0),W2={set:(px,py,c,k)=>T.set(px-sx,py-sy,c,k),dark:(px,py,f,k)=>T.dark(px-sx,py-sy,f,k),ramp:T.ramp.bind(T)},old=diamond;diamond=squareTile;
+ try{if(n===1024)caveTile(W2,sx+16,sy,R,0);else{const M={set:(px,py,c,k)=>{if(at(px-sx,py-sy))W2.set(px,py,c,k)},ramp:W2.ramp,dark:(px,py,f,k)=>{if(at(px-sx,py-sy))W2.dark(px,py,f,k)}};
+   rockTile(W2,sx+16,sy,R,0);caveTile(M,sx+16,sy,R,.1);
+   for(let py=0;py<32;py++)for(let px=0;px<32;px++){if(at(px,py))continue;if(at(px,py+2)&&!at(px,py-3))T.dark(px,py,.55,.6);else if(at(px,py-2))T.set(px,py,CAVE_C.rock[at(px,py-1)?7:5],.6);else if(at(px-2,py)||at(px+2,py))T.set(px,py,at(px-1,py)||at(px+1,py)?CAVE_C.rock[0]:CAVE_C.rock[6],.6)}}}
+ finally{diamond=old}T.flush();g.clearRect(sx,sy,32,32);g.drawImage(T.c,sx,sy)}
 
 // ----- Déplacement : grille de 2 unités, A* à 8 directions, lissage par ligne de vue -----
 const WALK={cell:2,w:(WORLD.x1-WORLD.x0)/2,h:(WORLD.z1-WORLD.z0)/2,cache:null,version:0};WALK.cache=new Uint8Array(WALK.w*WALK.h);

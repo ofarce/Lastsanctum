@@ -14,8 +14,8 @@ const ADEPT={
 // seek : rayon de détection ; reach : portée d'attaque ; splash : rayon de brûlure ; guard : part des dégâts subis
 const MELEE_ADEPT={seek:6,reach:1.9,dmg:4,cd:1.1,status:'En attente · petite attaque au corps à corps'};
 const FIGHT={
- flammes:{seek:9,reach:4.5,dmg:6,cd:.3,splash:2.2,status:'Garde l’Ancre · flammes ; sillon de feu toutes les 4 s'},
- archer:{seek:17,reach:14,dmg:11,cd:.95,melee:{reach:2.3,dmg:13,cd:.6},status:'Garde l’Ancre · arc, puis Charge du Lac au contact'},
+ flammes:{seek:18,reach:9,dmg:6,cd:.3,splash:2.2,status:'Garde l’Ancre · flammes ; sillon de feu toutes les 4 s'},
+ archer:{seek:68,reach:56,dmg:11,cd:.95,melee:{reach:2.3,dmg:13,cd:.6},status:'Garde l’Ancre · arc, puis Charge du Lac au contact'},
  lame:{seek:7,reach:2.2,dmg:16,cd:.85,guard:.55,status:'Garde l’Ancre · mêlée ; moulinet d’orage toutes les 3 frappes'},
  sigil:MELEE_ADEPT,medeina:MELEE_ADEPT,aether:MELEE_ADEPT,indra:MELEE_ADEPT,
  // dégâts et portée de l'Ingénieur multipliés par 10 (8 → 80, 8,6 → 86)
@@ -93,22 +93,35 @@ function isDug(x,z){return DUG.size>0&&DUG.has(Math.floor(x/4)+','+Math.floor(z/
 // case de roche visée : dans les limites du monde, hors du mur des portails, et accessible depuis un sol praticable voisin
 function diggableCell(p){if(walkable(p.x,p.z))return null;const i0=Math.floor(p.x/4),j0=Math.floor(p.z/4);let best=null,bd=1e9;
  for(let di=-1;di<=1;di++)for(let dj=-1;dj<=1;dj++){const c=digCellAt(i0+di,j0+dj,p);if(!c)continue;const d=(di||dj?1:0)*100+Math.hypot(c.at.x-p.x,c.at.z-p.z);if(d<bd){bd=d;best=c}}return best}
-function digCellAt(i,j,p){const x=i*4,z=j*4;if(DUG.has(i+','+j)||walkable(x+2,z+2)&&walkable(x+.5,z+.5)&&walkable(x+3.5,z+3.5))return null;
- if(x<WORLD.x0+8||x+4>WORLD.x1-8||z<WORLD.z0+8||Math.abs(x+2)<52&&z<CAVE.z0+1)return null;
+// case de roche destructible (accessible ou non) : pas encore creusée, pas entièrement praticable, hors des limites interdites
+function isDiggableRock(i,j){const x=i*4,z=j*4;if(DUG.has(i+','+j)||walkable(x+2,z+2)&&walkable(x+.5,z+.5)&&walkable(x+3.5,z+3.5))return false;
+ return!(x<WORLD.x0+8||x+4>WORLD.x1-8||z<WORLD.z0+8||Math.abs(x+2)<52&&z<CAVE.z0+1)}
+function digCellAt(i,j,p){const x=i*4,z=j*4;if(!isDiggableRock(i,j))return null;
  // accessible : un point praticable touche l'un des bords de la case ; l'Ingénieur s'y place pour creuser
  let at=null,best=1e9;for(const t of[.3,1,2,3,3.7])for(const q of[{x:x-.6,z:z+t},{x:x+4.6,z:z+t},{x:x+t,z:z-.6},{x:x+t,z:z+4.6}]){if(!walkable(q.x,q.z))continue;const d=Math.hypot(q.x-p.x,q.z-p.z);if(d<best){best=d;at=q}}
  return at?{i,j,at}:null}
 function digCell(i,j){const key=i+','+j;if(DUG.has(key))return;DUG.add(key);DIG_HITS_DONE.delete(key);const x=i*4,z=j*4;
- // sol de grotte repeint dans la texture du terrain, bords assombris côté roche
- const[a,b]=natW(x,0,z),sx=a+PW.gx0,sy=b+PW.gy0,T=new Px(32,32,true),old=diamond;diamond=squareTile;try{caveTile(T,16,0,rng(i*977+j*31+7),0)}finally{diamond=old}T.flush();
- const g=PW.ground.getContext('2d');g.drawImage(T.c,sx,sy);g.fillStyle='#0008';
- if(!walkable(x-2,z+2))g.fillRect(sx,sy,2,32);if(!walkable(x+6,z+2))g.fillRect(sx+30,sy,2,32);if(!walkable(x+2,z+6))g.fillRect(sx,sy+30,32,2);
- // décors de la case retirés (falaise, éboulis) ; nouvelle falaise au fond si la case au nord reste de la roche
- PW.objs=PW.objs.filter(o=>o.portal||o.dportal||o.orb||o.deityFx||o.evil||!(o.x>=x-.01&&o.x<x+4&&o.z>=z-.01&&o.z<=z+4.01));
+ // sol de grotte repeint en continuité avec le sol voisin (même bruit, coordonnées du monde) : aucune jonction visible.
+ // Les cases voisines déjà en partie creuses sont repeintes aussi, pour que leur bord de roche disparaisse côté case creusée.
+ const hol=(a,b)=>isGalleryOpen(a,b)||isDug(a,b)||inCave(a,b)||inTunnel(a,b),g=PW.ground.getContext('2d');
+ for(let di=-1;di<=1;di++)for(let dj=-1;dj<=1;dj++)paintGroundTile(g,x+di*4,z+dj*4,hol);
+ // rien ne reste sur la case : décors posés dessus et rochers voisins qui la recouvrent ; nouvelle falaise au fond si la case au nord reste de la roche
+ PW.objs=PW.objs.filter(o=>o.portal||o.dportal||o.orb||o.deityFx||o.evil||!(o.x>=x-.01&&o.x<x+4&&o.z>=z-.01&&o.z<=z+4.01||o.r&&o.x+o.r>x&&o.x-o.r<x+4&&o.z>z-.2&&o.z-o.r*1.1<z+4));
  if(!walkable(x+2,z-2)){const v=(i*7+j*3&7)%6;PW.objs.push({x,z,d:z,spr:faceSprite(5,rng(v*41+5)),bx:x,bz:z,dz:z})}
  PW.objs.sort((a,b)=>a.d-b.d);WALK.version++;WALK.cache.fill(0);zone(x+2,z+2,2,'#a89c86');
  // une galerie touche la case : elle est découverte
  if(!revealGalleriesNear(x-1.5,z-1.5,x+5.5,z+5.5))say('Roche creusée : la grotte s’agrandit.',1.5);if(HUD.els)buildMiniMap()}
+
+// ----- Survol : contour carré de la case de roche destructible sous le curseur -----
+const DIG_HOVER={x:0,y:0,on:false},GAME_CANVAS=document.getElementById('game');
+GAME_CANVAS.addEventListener('pointermove',ev=>{DIG_HOVER.x=ev.clientX;DIG_HOVER.y=ev.clientY;DIG_HOVER.on=true});
+GAME_CANVAS.addEventListener('pointerleave',()=>{DIG_HOVER.on=false});
+function drawDigHover(){if(!DIG_HOVER.on||ended||HUD.mode||typeof PAN!=='undefined'&&PAN.moved)return;
+ const p=groundFromScreen(DIG_HOVER.x,DIG_HOVER.y),i=Math.floor(p.x/4),j=Math.floor(p.z/4);if(!isDiggableRock(i,j))return;
+ const a=project(i*4,0,j*4),b=project(i*4+4,0,j*4+4),lw=Math.max(2,Math.round(PX)),x0=Math.round(a.x)+lw/2,y0=Math.round(a.y)+lw/2,w=Math.round(b.x)-Math.round(a.x)-lw,h=Math.round(b.y)-Math.round(a.y)-lw;
+ ctx.save();ctx.lineWidth=lw;ctx.strokeStyle='#0009';ctx.strokeRect(x0+lw,y0+lw,w,h);
+ ctx.globalAlpha=.75+.25*Math.sin(currentTime*6);ctx.strokeStyle='#f8df93';ctx.strokeRect(x0,y0,w,h);ctx.restore();
+ captureDecorLayer(x0-lw*2,y0-lw*2,w+lw*5,h+lw*5)}
 
 // ----- Tâches -----
 function nearestOf(p,list){let best=null,d=1e9;for(const o of list){const nd=Math.hypot(o.x-p.x,o.z-p.z);if(nd<d){d=nd;best=o}}return best}

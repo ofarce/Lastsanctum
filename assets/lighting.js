@@ -5,15 +5,18 @@
 const LIGHTING={on:true,ambient:'rgba(12,7,4,.28)',k:4,c:document.createElement('canvas')};
 LIGHTING.c.id='lighting';Object.assign(LIGHTING.c.style,{position:'fixed',left:'0',top:'0',pointerEvents:'none',zIndex:'1',display:'none'});
 const LIGHT_WARM='255,176,92',LIGHT_FORGE='255,128,48',LIGHT_ARCANE='184,132,255',LIGHT_FROST='110,200,230';
+// charte : un culte = une couleur ; l'Ancre est pourpre
+const LIGHT_CULT={medeina:'122,224,112',indra:'255,138,42',sigil:'228,234,246',aether:'122,128,255'},LIGHT_ANCRE='154,58,184';
+const CULT_OF={sigil:'sigil',library:'sigil',aether:'aether',forge:'aether',workshop:'aether',medeina:'medeina',bedroom:'medeina',soulwell:'medeina',indra:'indra',caserne:'indra'};
 function collectLights(){
  const L=[],push=(x,z,r,rgb,glow=.16)=>L.push({x,z,r,rgb,glow}),flick=(i,a=.06)=>1+Math.sin(currentTime*9+i*1.7)*a+Math.sin(currentTime*23+i)*a*.5;
  for(const u of units)if(u.hp>0&&!u.hidden)push(u.x,u.z,8*flick(u.id||0),LIGHT_WARM,.14);
- for(const b of buildings){const t=b.type;if(t==='sigil'||t==='library')push(b.x,b.z,8,LIGHT_ARCANE,.12);else if(t==='aether'||t==='forge'||t==='workshop')push(b.x,b.z,8.5*flick(b.x,.08),LIGHT_FORGE,.2);else push(b.x,b.z,7.5,LIGHT_WARM,.12)}
+ for(const b of buildings){const c=CULT_OF[b.type];push(b.x,b.z,c==='indra'?8.5*flick(b.x,.08):8,c?LIGHT_CULT[c]:LIGHT_WARM,c==='indra'?.18:.14)}
  for(const t of turrets)push(t.x,t.z,5,LIGHT_WARM,.1);
- if(ORB.active)push(core.x,core.z,10*flick(1,.04),LIGHT_ARCANE,.22);else push(core.x,core.z,4+ORB.progress/ORB.time*5,LIGHT_ARCANE,.08);
+ if(ORB.active)push(core.x,core.z,10*flick(1,.04),LIGHT_ANCRE,.22);else push(core.x,core.z,4+ORB.progress/ORB.time*5,LIGHT_ANCRE,.08);
  push(PORTAL.x,PORTAL.z,9,LIGHT_FROST,.18);
  for(const p of GAL.portals)if(p.active)push(p.x,p.z+1,8*flick(p.id+3,.08),'255,70,40',.22);
- if(typeof DEITY_PORTALS!=='undefined')for(const d of DEITY_PORTALS)push(d.x,PORTAL.z+1,5.5*flick(d.x),LIGHT_WARM,.16);
+ if(typeof DEITY_PORTALS!=='undefined')for(const d of DEITY_PORTALS)push(d.x,PORTAL.z+1,5.5*flick(d.x),LIGHT_CULT[d.id]||LIGHT_WARM,.16);
  for(const o of PW.objs)if(o.light)push(o.x,o.z,4.5,LIGHT_FROST,.14);
  for(const e of effects)if(e.type==='xboom'&&e.age>=0&&e.x!==undefined)push(e.x,e.z,4,LIGHT_FORGE,.3);
  return L}

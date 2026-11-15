@@ -3,14 +3,16 @@
 // AdeptArt.draw(g,x,y,role,t,mode,scale) : pieds en (x,y), mode 'idle' | 'walk' | 'work'.
 const AdeptArt=(()=>{const W=24,H=28,FPS=6;
  const LOOK={
-  sigil:{work:'scribe',p:['#5a4a8a','#e8c060','#e8c8a8'],hat:'cap'},
-  medeina:{work:'wood',p:['#6a4a30','#7ae070','#8a6a48'],hat:'leaves'},
-  aether:{work:'forge',p:['#3a3a42','#e07a30','#c89070'],hat:'bald'},
-  indra:{work:'drum',p:['#8a2a2a','#f0c040','#c89070'],hat:'feather'},
+  // couleurs de la charte : Sigil érudit en toge grise (lueur blanche), Medeina vert, Aether bleu-violet, Indra orange
+  sigil:{work:'scribe',p:['#b4b6be','#e4e8f0','#c89a78'],hat:'band'},
+  medeina:{work:'wood',p:['#4c5a30','#7ae070','#8a6a48'],hat:'leaves'},
+  aether:{work:'forge',p:['#2e2a3a','#7a80ff','#c89070'],hat:'halo'},
+  indra:{work:'drum',p:['#5a3a20','#ff8a2a','#c89070'],hat:'crest'},
   // adeptes combattants de la caserne
-  flammes:{work:'flame',p:['#7a2e18','#ff9a2a','#c89070'],hat:'hood'},
-  archer:{work:'bow',p:['#4a5a2a','#d8b060','#c89070'],hat:'hoodg'},
-  lame:{work:'blade',p:['#3a4a6a','#d0d4dc','#c89070'],hat:'helm'}};
+  // disciples d'Indra formés à la caserne : orange et bronze
+  flammes:{work:'flame',p:['#5a3a20','#ff8a2a','#c89070'],hat:'hood'},
+  archer:{work:'bow',p:['#5a4a2a','#ff8a2a','#c89070'],hat:'hoodg'},
+  lame:{work:'blade',p:['#6a6e78','#ff8a2a','#c89070'],hat:'helm'}};
  const sh=(hex,k)=>{const n=parseInt(hex.slice(1),16),f=v=>Math.max(0,Math.min(255,Math.round(k<0?v*(1+k):v+(255-v)*k)));return'#'+[n>>16,n>>8&255,n&255].map(f).map(v=>v.toString(16).padStart(2,'0')).join('')};
  const cache={};
  // f : image de travail (0-3) ; walk : -1 aucune marche, sinon phase de pas (0-1)
@@ -31,9 +33,12 @@ const AdeptArt=(()=>{const W=24,H=28,FPS=6;
   if(h==='bald')B(7,6,6,1,sh(skin,.15));
   if(h==='leaves'){B(6,5,8,1,acc);for(const x of[6,8,10,12])B(x,4,1,1,acc);B(7,3,1,1,acc);B(12,3,1,1,acc)}
   if(h==='feather'){B(7,5,6,1,acc);B(9,1,1,4,'#e04040');B(11,2,1,3,'#f0f0f0')}
+  if(h==='crest'){B(7,4,6,3,'#9aa0a8');B(7,4,6,1,'#c8ced6');B(6,6,1,4,'#7a8088');B(13,6,1,4,'#7a8088');B(8,2,5,2,acc);B(12,3,1,3,sh(acc,-.25))}
+  if(h==='band'){B(7,5,6,1,'#8a8278');B(7,6,6,1,acc);B(6,6,1,3,'#8a8278')}
+  if(h==='halo'){B(7,6,6,1,sh(skin,.15));for(const[x,y]of[[6,3],[7,2],[8,2],[9,2],[10,2],[11,2],[12,2],[13,3]])R(x+O,y+y0,1,1,acc,1)}
   if(h==='hood'){B(6,4,8,2,dk);B(7,3,6,1,dk);B(6,6,1,5,dk);B(13,6,1,5,dk);B(7,8,6,1,'#3a3e46');B(8,8,1,1,acc,1);B(11,8,1,1,acc,1)}
   if(h==='hoodg'){B(6,4,8,2,robe);B(7,3,6,1,robe);B(12,2,2,1,robe);B(6,6,1,4,dk);B(13,6,1,3,dk)}
-  if(h==='helm'){B(7,4,6,3,'#b8bcc8');B(7,4,6,1,'#e8ecf4');B(6,6,8,1,'#8a8e9a');B(9,7,2,2,'#8a8e9a');B(9,2,2,2,'#c03030');B(11,3,1,1,'#c03030')}
+  if(h==='helm'){B(7,4,6,3,'#b8bcc8');B(7,4,6,1,'#e8ecf4');B(6,6,8,1,'#8a8e9a');B(9,7,2,2,'#8a8e9a');B(9,2,2,2,acc);B(11,3,1,1,acc)}
   const busy=walk<0&&f>=0,F=busy?f:0;
   if(work==='flame'){// réservoir dans le dos, lance tenue à deux mains, flamme pilote
    B(2,13,4,8,'#5a5e66');B(2,13,4,1,'#9aa0a8');B(3,15,2,4,'#7a2e18');B(5,20,2,1,'#3a3e46');
@@ -41,14 +46,14 @@ const AdeptArt=(()=>{const W=24,H=28,FPS=6;
    if(busy){const L=[2,3,3,2][f];for(let k=0;k<L;k++){const y=17+((f+k)&1)-(k>1?1:0);R(20+O+k,y,1,2,k===0?'#fff4a0':k===1?'#ffc040':'#ff7a20',1)}R(20+O,16,1,1,'#ff9a2a',1)}
    else B(20,19,1,1,acc,1)}
   if(work==='bow'){// carquois dans le dos, arc tenu devant
-   B(3,11,2,9,'#7a4a20');B(3,10,1,2,'#e8e0c8');B(4,10,1,2,'#c03030');B(4,14,2,6,robe);
+   B(3,11,2,9,'#7a4a20');B(3,10,1,2,'#e8e0c8');B(4,10,1,2,acc);B(4,14,2,6,robe);
    const pull=busy?[1,3,0,0][f]:0,bw='#8a5a2a';
    B(17,10,1,13,bw);B(16,9,1,2,bw);B(16,22,1,2,bw);B(13,15,4,2,robe);
    for(let y=10;y<=22;y++){const x=16-Math.round(pull*(1-Math.abs(y-16)/6.5));B(Math.min(16,x),y,1,1,'#e8e0c8')}
    if(busy&&f<2){B(13-pull,16,6+pull,1,'#6c4c2e');B(19,16,1,1,'#d6d9dc')}
    if(busy&&f===2){R(19+O,16,4,1,'#6c4c2e');R(23,16,1,1,'#d6d9dc')}}
   if(work==='blade'){// bouclier à gauche, épée à droite
-   const lift=busy?[0,0,1,0][f]:0;B(2,13,5,9,'#8a2a2a');B(2,13,5,1,acc);B(2,21,5,1,sh('#8a2a2a',-.3));B(3,16,3,3,'#f0c040');B(4,17,1,1,'#fff4c0');
+   const lift=busy?[0,0,1,0][f]:0;B(2,13,5,9,'#e07028');B(2,13,5,1,'#a87a3a');B(2,21,5,1,sh('#e07028',-.3));B(3,16,3,3,'#a87a3a');B(4,17,1,1,'#e2c27a');
    if(!busy||f===3){B(14,15,2,4,robe);B(15,6,1,9,'#d0d4dc');B(16,7,1,7,'#9aa0a8');B(14,15,3,1,'#c89050');B(15,16,1,2,'#6a4020')}
    else if(f===0){B(14,10,2,5,robe);B(14,1,1,9,'#d0d4dc');B(15,2,1,7,'#9aa0a8');B(13,10,3,1,'#c89050')}
    else if(f===1){B(14,14,3,2,robe);R(17+O,14,6,1,'#e8ecf4');B(16,13,1,3,'#c89050');R(18+O,12,4,1,acc,1);R(19+O,16,3,1,acc,1)}

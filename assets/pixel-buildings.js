@@ -801,8 +801,12 @@ const PICKS={
  barracks:{set:'duel',i:1,anchor:[160,186]},
  ballista:{set:'balistes',i:0,anchor:[160,196]},
 };
+// sprites externes (temples de la charte, voir da-planches.js) : fn() → {img,anchor}
+const EXTRA={};function register(kind,fn){EXTRA[kind]=fn;delete cache[kind]}
 const cache={},scratch=document.createElement('canvas');scratch.width=W;scratch.height=H;const sg=scratch.getContext('2d');
-function sprite(kind,variant){const key=kind+(variant===undefined?'':':'+variant);if(cache[key])return cache[key];const pk=PICKS[kind],item=sets.find(s=>s.id===pk.set).items[pk.i];
+function sprite(kind,variant){const key=kind+(variant===undefined?'':':'+variant);if(cache[key])return cache[key];
+ if(EXTRA[kind]){const ex=EXTRA[kind](),d=ex.img.getContext('2d').getImageData(0,0,W,H).data,alpha=new Uint8Array(W*H);let top=H,bottom=0;for(let i=0;i<W*H;i++){alpha[i]=d[i*4+3];if(alpha[i]>200){const y=(i/W)|0;top=Math.min(top,y);bottom=Math.max(bottom,y)}}
+  return cache[key]={img:ex.img,s:null,item:{anim(){}},anchor:ex.anchor,top,bottom,alpha}}const pk=PICKS[kind],item=sets.find(s=>s.id===pk.set).items[pk.i];
  const P=new TPx(W,H),s=item.draw(P,rng(item.seed),variant);P.flush();
  let top=H,bottom=0;const d=P.d.data;for(let y=0;y<H;y++)for(let x=0;x<W;x++)if(d[(y*W+x)*4+3]>200){top=Math.min(top,y);bottom=Math.max(bottom,y);break}
  const alpha=new Uint8Array(W*H);for(let i=0;i<W*H;i++)alpha[i]=d[i*4+3];return cache[key]={img:P.c,s,item,anchor:pk.anchor,top,bottom,alpha}}
@@ -814,5 +818,5 @@ function draw(ctx,kind,px,py,k,time,progress=1,opts={}){const sp=sprite(kind,opt
  else{sg.drawImage(sp.img,0,0);if(kind==='ballista'){if(opts.variant){if(global.BalisteTyrienne)BalisteTyrienne.drawGame(sg,sp.s.c[0],sp.s.top,opts.yaw||0,time,opts.phase||0,0);else ballistaWeapon(sg,sp.s.c[0],sp.s.top,0,opts.yaw||0,time,1,0,opts.phase||0,true)}else ballistaAnim(sg,sp.s,time,0)}else sp.item.anim(sg,sp.s,time)}
  const smooth=ctx.imageSmoothingEnabled;ctx.imageSmoothingEnabled=false;ctx.drawImage(scratch,x0,y0,W*k,H*k);ctx.imageSmoothingEnabled=smooth}
 function bake(item,variant){const P=new Px(W,H);const R=ground(P,item.seed);frame(R,P);const s=item.draw(P,R,variant);P.flush();return{img:P.c,s}}
-global.PixelBuildings={W,H,sets,bake,draw,sprite,PICKS,lib:{PAL,rp,mod,clamp,ISOP,origin,block,wood,stoneSh,roof,opening,cylinder,logV,logU,post,stake,pile,pebble2,brazier,dot,lineA,smoke,flame,glowPool,sparks,flag,tent,campfire,monoRoof,surf,ground,frame}};
+global.PixelBuildings={W,H,sets,bake,draw,sprite,register,PICKS,lib:{PAL,rp,mod,clamp,ISOP,origin,block,wood,stoneSh,roof,opening,cylinder,logV,logU,post,stake,pile,pebble2,brazier,dot,lineA,smoke,flame,glowPool,sparks,flag,tent,campfire,monoRoof,surf,ground,frame}};
 })(window);

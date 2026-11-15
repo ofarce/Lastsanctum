@@ -11,6 +11,7 @@ const HUD_ICONS={
  sword:'<path d="m5 21 12-12 3-7-7 3L1 17m2-6 10 10m-9-1 3 3M10 8l6 6"/>',
  flame:'<path d="M12 22c-4 0-7-3-7-7 0-4 3-6 4-10 1 3 3 4 4 6 1-2 1-4 0-7 4 2 8 7 8 11 0 4-3 7-7 7z"/><path d="M12 22c-2 0-3-2-3-4s2-3 3-5c1 2 3 3 3 5s-1 4-3 4z"/>',
  bow:'<path d="M6 2c9 4 9 16 0 20M6 2v20M3 12h18m-4-3 4 3-4 3"/>',
+ range:'<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/><path d="M12 1v6m0 10v6M1 12h6m10 0h6"/>',
  shield:'<path d="M12 2 3 6v7c0 5 9 9 9 9s9-4 9-9V6zM12 5v13"/>',
  boot:'<path d="m10 3 9 2-3 10 5 3v3H3v-4l5-2zM9 7l8 2m-9 2 7 2M3 18h11"/>',
  rune:'<circle cx="12" cy="12" r="7"/><path d="M12 0v24M0 12h24m-12-9 3 9-3 9-3-9z"/>',
@@ -26,7 +27,7 @@ function initHUD(){
  HUD.els={};for(const el of document.querySelectorAll('[id]'))HUD.els[el.id]=el;
  for(const el of document.querySelectorAll('[data-icon]'))el.innerHTML=iconSVG(el.dataset.icon);
  HUD.els.restart.onclick=init;
- HUD.els['portrait-button'].onclick=()=>{const u=HUD.anchor?core:selectedBuilding()||selected.find(u=>u.hp>0);if(u){cam.x=u.x;cam.z=u.z;clampCam();drawMiniMap()}};
+ HUD.els['portrait-button'].onclick=()=>{const u=HUD.anchor?core:selectedBuilding()||selected.find(u=>u.hp>0)||HUD.enemy;if(u){cam.x=u.x;cam.z=u.z;clampCam();drawMiniMap()}};
  const map=HUD.els.minimap;
  const pan=ev=>{const r=map.getBoundingClientRect();cam.x=WORLD.x0+(ev.clientX-r.left)/r.width*(WORLD.x1-WORLD.x0);cam.z=WORLD.z0+(ev.clientY-r.top)/r.height*(WORLD.z1-WORLD.z0);clampCam();drawMiniMap()};
  map.addEventListener('pointerdown',ev=>{if(ev.button!==0)return;pan(ev);map.setPointerCapture(ev.pointerId)});
@@ -44,7 +45,13 @@ function formatAssault(){
  const t=Math.max(0,Math.ceil(due-currentTime));return String(Math.floor(t/60)).padStart(2,'0')+':'+String(t%60).padStart(2,'0');
 }
 // ----- Panneau d'ordres : boutons calculés selon la sélection (unité, bâtiment, Ancre) -----
-HUD.actions=[];HUD.menu=null;HUD.building=null;HUD.buildType=null;
+HUD.actions=[];HUD.menu=null;HUD.building=null;HUD.buildType=null;HUD.enemy=null;
+// fiches des ennemis affichées quand on en sélectionne un
+const ENEMY_INFO={
+ creep:{name:'Fanatique du Credo',kind:'ENNEMI · CREDO SOUILLÉ',lore:'Robe ivoire trempée d’ichor noir : il frappe au contact pour son maître caché.'},
+ spitter:{name:'Thuriféraire souillé',kind:'ENNEMI · CREDO SOUILLÉ',lore:'Il projette de loin une lumière souillée par la Bête.'},
+ brute:{name:'Automate de Byrsa',kind:'ENNEMI · CREDO SOUILLÉ',lore:'Un automate d’or fêlé ; ses coups lourds brisent les lignes.'},
+ beast:{name:'Aberration du Dévoreur',kind:'ENNEMI · CHAIR DU DÉVOREUR',lore:'Chair pâle et gueules multiples, vomie par les galeries.'}};
 const shortCost=c=>Object.values(c).join('+');
 function panelActions(){const alive=selected.filter(u=>u.hp>0),u=alive[0],B=selectedBuilding(),A=[],act=o=>A.push(o);if(ended)return A;
  if(HUD.anchor){if(!ORB.active)act({id:'orb',icon:'rune',label:'Réactiver',key:'r',title:'Envoyer l’Ingénieur réactiver l’Ancre · '+ORB.time+' s',disabled:!units.some(o=>o.role==='engineer'&&o.hp>0&&!o.hidden),active:!!ORB.owner,run:()=>orderOrb()});
@@ -88,6 +95,7 @@ function buildingStatus(b){const D=BUILDINGS[b.type];if(!b.complete)return'Const
 function updateHUD(force=false){
  if(!HUD.els)return;
  if(!force&&currentTime>=HUD.lastUpdate&&currentTime-HUD.lastUpdate<.1)return;HUD.lastUpdate=currentTime;
+ if(HUD.enemy&&(HUD.enemy.hp<=0||!enemies.includes(HUD.enemy)))HUD.enemy=null;
  const e=HUD.els,alive=selected.filter(u=>u.hp>0),u=alive[0],anchor=HUD.anchor;
  for(const k of RES_ORDER)e['res-'+k].textContent=Math.floor(RES[k]);
  e.population.textContent=units.filter(u=>u.hp>0&&!u.hidden).length;
@@ -105,11 +113,16 @@ function updateHUD(force=false){
  e['assault-time'].textContent=anchor?formatAssault():'';
  const base=u&&(FIGHT[u.role]?FIGHT[u.role].dmg:{paladin:30,shooter:19,healer:9,guard:12}[u.role]);
  e['unit-damage'].textContent=!u||B||!base?'—':String(base+lvlBonus(u));
+ e['unit-range'].textContent=!u||B||!base?'—':unitReach(u).toLocaleString('fr-FR');
  e['unit-armor'].textContent=u&&!B?String(lvlBonus(u)):'—';e['unit-speed'].textContent=u&&!B?(u.role==='guard'?3.45:isAdept(u)?7.6:15.2).toLocaleString('fr-FR'):'—';
  e.lore.textContent=B?BUILDINGS[B.type].lore:u?(ADEPT[u.role]&&ADEPT[u.role].lore)||HUD_LORE[u.role]||HUD_LORE.guard:'Un serment veille encore sur ces pierres.';
  e['portrait-button'].disabled=!anchor&&!u&&!B;
+ const foe=!anchor&&!u&&!B?HUD.enemy:null;e['command-bar'].classList.toggle('enemy-selected',!!foe);if(foe){const I=ENEMY_INFO[foe.kind]||ENEMY_INFO.creep;
+  e.chosen.textContent=I.name;e['selection-kind'].textContent=I.kind;e['selection-status'].textContent=foe.stun>0?'Étourdi':foe.slowUntil>currentTime?'Ralenti par les flammes':'Marche sur l’Ancre';
+  health.setAttribute('aria-valuemax',foe.max);health.setAttribute('aria-valuenow',Math.ceil(foe.hp));e['health-fill'].style.width=Math.max(0,foe.hp/foe.max)*100+'%';e['health-text'].textContent=Math.ceil(foe.hp)+' / '+foe.max;
+  e['unit-damage'].textContent=String(foe.damage);e['unit-range'].textContent=foe.range.toLocaleString('fr-FR');e['unit-armor'].textContent='0';e['unit-speed'].textContent=foe.speed.toLocaleString('fr-FR');e.lore.textContent=I.lore;e['portrait-button'].disabled=false}
  renderActions();
- const key=anchor?'anchor':u?.role||(B?'bld-'+B.type:'empty');if(HUD.portraitKey!==key){HUD.portraitKey=key;drawHUDPortrait(key)}
+ const key=foe?'enemy-'+foe.kind:anchor?'anchor':u?.role||(B?'bld-'+B.type:'empty');if(HUD.portraitKey!==key){HUD.portraitKey=key;drawHUDPortrait(key)}
  drawMiniMap();
 }
 function runAbility(){if(HUD.anchor||ended||!selected.some(u=>u.hp>0&&!u.hidden))return;ability();updateHUD(true)}
@@ -126,6 +139,7 @@ function drawHUDPortrait(key){
   const gradient=g.createRadialGradient(64,65,8,64,65,55);gradient.addColorStop(0,'#9271c288');gradient.addColorStop(1,'#25173900');g.fillStyle=gradient;g.fillRect(0,0,128,128);
   const orb=PW.objs.find(o=>o.orb)?.spr;if(orb)g.drawImage(orb.c,12,3,40,40,0,0,128,128);
  }else if(key.startsWith('bld-')){const D=BUILDINGS[key.slice(4)];PixelBuildings.draw(g,D.art,64,108,D.size===2?.55:.42,0,1)}
+ else if(key.startsWith('enemy-')&&ESPR[key.slice(6)]){const S=ESPR[key.slice(6)],n=Math.max(22,S.h+6);g.drawImage(S.frames[0],S.ax-n/2,S.ay+2-n,n,n,4,4,120,120)}
  else if(AdeptArt.LOOK[key]&&!SPR[key]){AdeptArt.draw(g,64,112,key,0,'idle',2.6)}else if(SPR[key]){const sprite=SPR[key].frames[0];g.drawImage(sprite,6,0,27,27,-7,8,142,142)}
  else{g.strokeStyle='#9e8047';g.lineWidth=1;g.strokeRect(35,35,58,58);g.beginPath();g.moveTo(64,20);g.lineTo(64,108);g.moveTo(20,64);g.lineTo(108,64);g.stroke()}
 }

@@ -31,3 +31,5 @@
 #unit-details,#anchor-details{max-height:100%}
 #lore,.anchor-lore{overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
 @media(max-height:760px){:root{--hud-height:96px}#lore,.anchor-lore{-webkit-line-clamp:1}#selection-status{display:none}}
+/* fiche d'un ennemi sélectionné : barre de vie rouge */
+#command-bar.enemy-selected .health-track{border-color:#a8443a}#command-bar.enemy-selected .health-track i{background:linear-gradient(#d0584a,#7a2620)}

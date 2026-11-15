@@ -61,12 +61,15 @@ function helmetRetract(H,P,s,t,hx0,hy0,shell,pulse){
   if(c>.72&&c<.95)for(let i=0;i<5;i++){const q=hash(i,Math.floor(t*20));H.set(hx0+13+q*5,hy0-9+hash(q*99|0,i)*6,i%2?K.amber[4]:'#fff0b0',40)}}
 }
 
+// Options de pose (planches d'animation de travail) : s.pad marge autour du gabarit, s.bx/s.by penché du buste,
+// s.arms {eL,hL,eR,hR} coudes et mains imposés, s.tool 'none' + s.toolFn(U,ctx) outil dessiné par l'appelant,
+// s.noLantern, s.swing balancier imposé de la lanterne, s.pulse lueur imposée du générateur (0..1).
 function draw(s={},t=0,k=1){
- const P0=new Px(Math.ceil(80*k),Math.ceil(84*k),true),P=k===1?P0:scaled(P0,k),cx=30;
+ const pad=s.pad||0,P0=new Px(Math.ceil((80+pad*2)*k),Math.ceil((84+pad*2)*k),true),PS=k===1?P0:scaled(P0,k),P=pad?off(PS,pad,pad):PS,cx=30;
  const WK=s.walk!=null,ph=WK?s.walk*Math.PI*2:0,sw=sd=>WK?Math.sin(ph+(sd>0?Math.PI:0)):0,lift=sd=>WK?Math.max(0,Math.cos(ph+(sd>0?Math.PI:0)))*3:0;
- const breath=Math.sin(t*W0),pulse=.5+.5*Math.sin(t*W0*2);
+ const breath=Math.sin(t*W0),pulse=s.pulse??.5+.5*Math.sin(t*W0*2),bx=s.bx||0,by=s.by||0;
  // buste : 1 px (à l'échelle 0,5) de respiration, ou rebond au contact des pieds pendant la marche
- const uy=WK?(Math.abs(Math.sin(ph))>.6?2:0):(breath>0?0:1),U=off(P,0,uy),U2=off(P,0,WK?uy:breath>0?0:2);
+ const uy=WK?(Math.abs(Math.sin(ph))>.6?2:0):(breath>0?0:1),U=off(P,bx,uy+by),U2=off(P,bx,(WK?uy:breath>0?0:2)+by);
  const wind=WK?Math.sin(ph*2)*2+2:Math.sin(t*W0+1)*1.2;
 
  // --- CAPE (fond) ---
@@ -78,15 +81,15 @@ function draw(s={},t=0,k=1){
  for(const y of[16,24,41])fill(U,[[cx-21,y],[cx-7,y-1],[cx-7,y+1],[cx-21,y+2]],BRASS,3,{v:.7});
  rect(U,cx-18,26,cx-10,38,K.amber,4,{v:.62+pulse*.35});
  for(const x of[cx-16,cx-14,cx-12])line(U,x,26,x,38,K.gun[1],5);
- for(const y of[29,33])P.set(cx-19,y+uy,BRASS[4],5);
+ for(const y of[29,33])U.set(cx-19,y,BRASS[4],5);
  // cheminée + manomètre
  rect(U,cx-17,6,cx-13,15,K.gun,3,{v:.55});rect(U,cx-18,5,cx-12,7,BRASS,4,{v:.75});
  ell(U,cx-10,19,2.6,2.6,IVORY,5,{v:.9});line(U,cx-10,19,cx-10+Math.cos(t*W0*1.5)*1.6,19-1.6,K.crim[2],6);
  // panaches de vapeur qui montent en boucle
- for(let i=0;i<3;i++){const q=((t/LOOP)*1.5+i/3)%1,px=cx-15+Math.sin(q*5+i)*2-q*4,py=3-q*14+uy,r=1.4+q*2.6;
+ for(let i=0;i<3;i++){const q=((t/LOOP)*1.5+i/3)%1,px=cx-15+bx+Math.sin(q*5+i)*2-q*4,py=3-q*14+uy+by,r=1.4+q*2.6;
   if(q<.9)ell(P,px,py,r,r*.85,K.white,2.5,{v:.95-q*.5})}
  // câbles vers la ceinture
- for(let i=0;i<16;i++){const u=i/15;P.set(cx-9+u*8,42+Math.sin(u*3)*5+uy,RUST[2+(i%2)],4);P.set(cx-9+u*8,43+Math.sin(u*3)*5+uy,RUST[1],4)}
+ for(let i=0;i<16;i++){const u=i/15;U.set(cx-9+u*8,42+Math.sin(u*3)*5,RUST[2+(i%2)],4);U.set(cx-9+u*8,43+Math.sin(u*3)*5,RUST[1],4)}
 
  // --- JAMBES ---
  for(const sd of[-1,1]){const x=cx+sd*4.5,dx=sw(sd)*5.5,ly=lift(sd),kx=x+dx*.45+(ly>0?1.5:0),dk=sd<0?.72:.52;
@@ -106,25 +109,26 @@ function draw(s={},t=0,k=1){
  const tw=WK?Math.sin(ph*2):Math.sin(t*W0)*.4;
  fill(U,[[cx-5,33],[cx+6,33],[cx+7+tw,61],[cx+1,63],[cx-5+tw,61]],IVORY,12,{v:.78,fold:1});
  line(U,cx-5+tw,61,cx+7+tw,61,K.crim[3],12.5);
- {const y=43;for(let a=0;a<28;a++)P.set(cx+.5+Math.cos(a/28*6.283)*4,y-1+Math.sin(a/28*6.283)*4+uy,K.crim[3],13);
+ {const y=43;for(let a=0;a<28;a++)U.set(cx+.5+Math.cos(a/28*6.283)*4,y-1+Math.sin(a/28*6.283)*4,K.crim[3],13);
   rect(U,cx,y-7,cx+1,y+5,K.crim,13);rect(U,cx-5,y-1,cx+6,y,K.crim,13)}
  // ceinture, boucle, sacoches et marteau d'appoint
- rect(U,cx-9,46,cx+9,49,K.leath,14,{v:.5});rect(U,cx,46,cx+3,49,BRASS,15,{v:.85});P.set(cx+1,47+uy,K.leath[1],15.5);
+ rect(U,cx-9,46,cx+9,49,K.leath,14,{v:.5});rect(U,cx,46,cx+3,49,BRASS,15,{v:.85});U.set(cx+1,47,K.leath[1],15.5);
  for(const sd of[-1,1])rect(U,cx+sd*6-2,47,cx+sd*6+3,54,K.leath,15,{v:sd<0?.45:.65});
- P.set(cx+6,49+uy,BRASS[4],15.5);P.set(cx-6,49+uy,BRASS[3],15.5);
+ U.set(cx+6,49,BRASS[4],15.5);U.set(cx-6,49,BRASS[3],15.5);
  seg(U,[cx+9,48],[cx+12,58],1.6,RUST,14.5,{v:.7});rect(U,cx+10,56,cx+15,59,K.steel,14.6,{v:.8});
 
  // --- BRAS ---
  // arrière (écran gauche) : porte la lanterne, balance en opposition à la jambe
- const sR=[cx-9.5,32],eR=[cx-12.5-sw(1)*1.5,42],hR=[cx-11.5-sw(1)*4.5,51-Math.abs(sw(1))*1.2];
+let sR=[cx-9.5,32],eR=[cx-12.5-sw(1)*1.5,42],hR=[cx-11.5-sw(1)*4.5,51-Math.abs(sw(1))*1.2];
  // avant (écran droite) : clé lourde levée, suit la marche
- const sL=[cx+9.5,32],eL=[cx+13+sw(-1)*1.2,40],hL=[cx+12+sw(-1)*3,47-Math.abs(sw(-1))];
+let sL=[cx+9.5,32],eL=[cx+13+sw(-1)*1.2,40],hL=[cx+12+sw(-1)*3,47-Math.abs(sw(-1))];
  // lanterne en pendule : retard de phase sur la main
- const swing=WK?Math.sin(ph+Math.PI-.9)*5:Math.sin(t*W0*.5)*1.2,lx=hR[0]+swing,ly=hR[1]+12+uy;
- line(P,hR[0],hR[1]+2+uy,lx,ly-6,K.gun[4],8.6);
+ if(s.arms)({eL,hL,eR,hR}={eL,hL,eR,hR,...s.arms});
+ const swing=s.swing??(WK?Math.sin(ph+Math.PI-.9)*5:Math.sin(t*W0*.5)*1.2),lx=hR[0]+swing+bx,ly=hR[1]+12+uy+by;
+ if(!s.noLantern){ line(P,hR[0]+bx,hR[1]+2+uy+by,lx,ly-6,K.gun[4],8.6);
  rect(P,lx-4.5,ly-6,lx+4.5,ly-4,K.gun,8.7,{v:.7});rect(P,lx-4,ly-4,lx+4,ly+6,K.gun,8.7,{v:.55});
  rect(P,lx-3,ly-3,lx+3,ly+5,K.amber,8.8,{v:.7+pulse*.3});line(P,lx,ly-3,lx,ly+5,K.gun[2],8.9);rect(P,lx-4.5,ly+6,lx+4.5,ly+7,BRASS,8.9,{v:.7});
- glowDots(P,lx,ly+1,7+pulse*3,K.amber[3],Math.round(5+pulse*6),rng(Math.floor(t*W0*3)+3));
+ glowDots(P,lx,ly+1,7+pulse*3,K.amber[3],Math.round(5+pulse*6),rng(Math.floor(t*W0*3)+3))}
  seg(U,sR,eR,5,K.gun,9,{v:.5});seg(U,eR,hR,4.5,K.gun,9,{v:.46});ell(U,hR[0],hR[1],2.6,2.4,K.leath,9.2,{v:.5});
  seg(U,sL,eL,5,K.gun,16,{v:.66});seg(U,eL,hL,4.5,K.gun,16,{v:.62});
  rect(U,eL[0]-2.5,eL[1]+2,eL[0]+2.5,eL[1]+5,K.leath,16.5,{v:.6});// brassard de cuir
@@ -142,11 +146,12 @@ function draw(s={},t=0,k=1){
   rect(U,hL[0]-2,hL[1]-4,hL[0],hL[1]+1,K.crim,17.7,{v:.8});line(U,hL[0]-1,hL[1]+1,hL[0]-2,hL[1]+5+Math.sin(t*W0*2),K.crim[3],17.7)}
  if(tool==='pick'){// pic de maçon levé, fer à deux pointes
   const a=.35+ta,wx=Math.sin(a),wy=-Math.cos(a),tip=[hL[0]+wx*20,hL[1]+wy*20];seg(U,[hL[0]-wx*4,hL[1]-wy*4],tip,2.6,K.leath,50,{v:.7});
-  fill(U,[[tip[0]-10,tip[1]+4],[tip[0]-2,tip[1]-3],[tip[0]+2,tip[1]-3],[tip[0]+10,tip[1]+4],[tip[0]+1,tip[1]+1],[tip[0]-1,tip[1]+1]],K.steel,51,{v:.85});P.set(tip[0],tip[1]-1+uy,BRASS[4],52)}
+  fill(U,[[tip[0]-10,tip[1]+4],[tip[0]-2,tip[1]-3],[tip[0]+2,tip[1]-3],[tip[0]+10,tip[1]+4],[tip[0]+1,tip[1]+1],[tip[0]-1,tip[1]+1]],K.steel,51,{v:.85});U.set(tip[0],tip[1]-1,BRASS[4],52)}
  if(tool==='compass'){// compas de géomètre en laiton, pointes vers le sol
   const o=Math.sin(t*W0*.5)*.6,b=[hL[0],hL[1]-3];ell(U,b[0],b[1],2.2,2.2,BRASS,52,{v:.9});
   for(const d of[-1,1])seg(U,b,[b[0]+d*(4+o)+3,b[1]+17],1.8,BRASS,51,{v:d<0?.6:.85});line(U,b[0]-1+3,b[1]+10,b[0]+7,b[1]+10,BRASS[2],51.5)}
 
+ if(s.toolFn)s.toolFn(U,{sL,eL,hL,sR,eR,hR,t,pulse,BRASS,IVORY,RUST});
  // --- ÉPAULIÈRES IVOIRE ---
  for(const sd of[-1,1]){const x=cx+sd*10.5;for(let i=2;i>=1;i--)ell(U,x+sd*i*.6,31+i*2.2,(5.5+i)*1.15,(3.6+i*.4)*1.15,i%2?IVORY:K.gun,sd<0?11-i*.1:18+(3-i),{v:sd<0?.72:.68});
   U.set(x+sd*2,29,BRASS[4],22);U.set(x-sd*2,30,BRASS[4],22)}

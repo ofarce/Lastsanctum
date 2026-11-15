@@ -33,6 +33,8 @@ const TEMPLE_TYPES=['sigil','aether','medeina','indra'];
 Object.assign(PixelBuildings.PICKS,{
  library:{set:'indra',i:2,anchor:[160,178]},forge:{set:'fonderie',i:4,anchor:[160,182]},workshop:{set:'scierie',i:3,anchor:[158,176]},
  bedroom:{set:'caserne',i:2,anchor:[160,180]},soulwell:{set:'fonderie',i:0,anchor:[150,166]},caserne:{set:'caserne',i:4,anchor:[160,182]}});
+// temples dessinés selon la charte (direction-artistique.html)
+if(typeof DA!=='undefined'&&PixelBuildings.register)for(const k of TEMPLE_TYPES){PixelBuildings.register('da-'+k,()=>DA.templeSprite(k));BUILDINGS[k].art='da-'+k}
 const SUMMON_COST=50,CASERNE_COST={discipline:100},CASERNE_TIME=6,CASERNE_QUEUE=5,REVIVE_COST={vie:200};
 const CASERNE_UNITS=[{id:'flammes',label:'Lance-flammes',key:'l',icon:'flame'},{id:'archer',label:'Archer',key:'u',icon:'bow'},{id:'lame',label:'Épée et bouclier',key:'e',icon:'shield'}];
 

@@ -15,7 +15,8 @@ const C={
  bark:['#1e150e','#2c2016','#3c2c1e','#4f3b28','#644c34'],
  cloth:['#2e080d','#4c1018','#6e1a24','#922a30','#b23c3c'],
  gold:['#5a4320','#8a6a30','#c09a48','#e8c870'],
- orb:['#120a22','#24164a','#3c2a78','#5c46aa','#8a72d8','#c4b2ff'],
+ orb:['#040306','#08050c','#0e0814','#170c20','#6a2088','#c060e0'], // Ancre : noir, reflets pourpres
+ ancreGlow:['#3e1050','#9a3ab8'],
  glow:['#6a52c0','#9a80f0'],flower:['#d8c26a','#e4e0c8','#c8607a'],
 };
 function rng(seed){return()=>{seed=(1664525*seed+1013904223)>>>0;return seed/4294967296}}
@@ -137,10 +138,10 @@ function bannerDraw(P,x,y,w,h,z){for(let j=0;j<h;j++)for(let i=0;i<w;i++){if(j>h
  for(let i=-1;i<=w;i++)P.set(x+i,y-1,C.gold[2],z+.01);
  const cx=x+(w>>1),cy=y+(h>>1)-2;for(let k=-3;k<=3;k++){P.set(cx,cy+k,C.gold[3],z+.02);P.set(cx+k,cy,C.gold[3],z+.02)}}
 function orbDraw(P,x,y,z,t=0){
- for(let r=22;r>9;r--)for(let a=0;a<180;a++){const xx=Math.round(x+Math.cos(a/180*6.283)*r),yy=Math.round(y+Math.sin(a/180*6.283)*r*.42+14);if(BAYER[(yy%4+4)%4][(xx%4+4)%4]<(23-r)/14*.6)P.set(xx,yy,C.glow[r<15?1:0],z-.5)}
+ for(let r=22;r>9;r--)for(let a=0;a<180;a++){const xx=Math.round(x+Math.cos(a/180*6.283)*r),yy=Math.round(y+Math.sin(a/180*6.283)*r*.42+14);if(BAYER[(yy%4+4)%4][(xx%4+4)%4]<(23-r)/14*.6)P.set(xx,yy,C.ancreGlow[r<15?1:0],z-.5)}
  // anneau runique
- for(let a=0;a<64;a++){const xx=x+Math.cos(a/64*6.283)*15,yy=y+Math.sin(a/64*6.283)*6+14;if(a%8<5)P.set(xx,yy,C.glow[1],z+.4)}
- const r=10;for(let j=-r;j<=r;j++)for(let i=-r;i<=r;i++){const d=Math.hypot(i,j);if(d>r)continue;const n=[i/r,j/r];let v=.55-(n[0]*.5+n[1]*.7)*.45+(1-d/r)*.2+(fbm((x+i)/4,(y+j)/4,11)-.5)*.2;P.set(x+i,y+j,P.ramp(C.orb,v,x+i,y+j),z+.5)}
+ for(let a=0;a<64;a++){const xx=x+Math.cos(a/64*6.283)*15,yy=y+Math.sin(a/64*6.283)*6+14;if(a%8<5)P.set(xx,yy,C.ancreGlow[1],z+.4)}
+ const r=10;for(let j=-r;j<=r;j++)for(let i=-r;i<=r;i++){const d=Math.hypot(i,j);if(d>r)continue;const n=[i/r,j/r];let v=.42-(n[0]*.5+n[1]*.7)*.3+(fbm((x+i)/4,(y+j)/4,11)-.5)*.15;if(d>r-1.6&&n[0]+n[1]>-.2)v=d>r-.8?.95:.8;P.set(x+i,y+j,P.ramp(C.orb,Math.min(v,d>r-1.6?1:.7),x+i,y+j),z+.5)}
  for(let a=0;a<80;a++){const xx=x+Math.cos(a/80*6.283)*(r+1),yy=y+Math.sin(a/80*6.283)*(r+1);P.set(xx,yy,C.outline,z+.45)}
  P.set(x-4,y-5,C.orb[5],z+.6);P.set(x-3,y-5,C.orb[5],z+.6);P.set(x-4,y-4,C.orb[4],z+.6)}
 function temple(P,sx,sy,R,z){
