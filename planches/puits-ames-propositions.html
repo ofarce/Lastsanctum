@@ -1,0 +1,364 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Puits des Âmes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0b120e;--panel:#111b14;--line:#2a3a2c;--txt:#dcd8bc;--mut:#93a08a;--acc:#7ae070}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--txt);font:15px/1.45 'Pixelify Sans',system-ui,sans-serif}
+header,main{max-width:1400px;margin:auto;padding:18px 16px}h1{margin:0;font-weight:600;letter-spacing:.08em;font-size:26px;color:var(--acc)}
+header p{color:var(--mut);margin:6px 0 0;max-width:980px}
+button{font:inherit;color:var(--txt);background:#1a2a1d;border:1px solid var(--line);padding:6px 12px;cursor:pointer}button:hover,button[aria-pressed=true]{border-color:var(--acc)}
+.bar{display:flex;gap:8px;align-items:center;margin-top:12px;flex-wrap:wrap}.bar input{flex:1;min-width:160px;max-width:420px;accent-color:var(--acc)}.bar output{min-width:150px;color:var(--mut)}
+.why{border:1px solid var(--line);background:var(--panel);padding:12px 16px;color:var(--mut)}.why b{color:var(--txt)}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-top:18px}figure{margin:0;background:var(--panel);border:1px solid var(--line);min-width:0}
+.stage{position:relative;background:#050806;padding:8px;display:flex;justify-content:center}
+.stage canvas{image-rendering:pixelated;display:block;width:100%;max-width:680px;height:auto;aspect-ratio:200/128}
+.tag{position:absolute;left:14px;top:12px;font-size:12px;padding:2px 8px;background:#0b120ecc;border:1px solid var(--line);color:var(--mut)}
+.keys{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:4px;padding:8px;border-top:1px solid var(--line);background:#0e1711}
+.keys div{text-align:center;font-size:11px;color:var(--mut)}.keys canvas{image-rendering:pixelated;width:100%;height:auto;display:block}
+figcaption{padding:10px 14px 14px}figcaption b{color:var(--acc);font-weight:600;font-size:17px}figcaption p{margin:4px 0 0;color:var(--mut);font-size:14px}
+figcaption dl{display:grid;grid-template-columns:auto 1fr;gap:3px 10px;margin:8px 0 0;font-size:13px}figcaption dt{color:var(--txt)}figcaption dd{margin:0;color:var(--mut)}
+figcaption .lore{color:#b8c4a8;font-size:13px;border-left:2px solid #3fa83a;padding-left:8px;margin-top:8px}
+section{margin:34px 0}h2{color:var(--acc);font-weight:600;letter-spacing:.06em;margin:0 0 4px;font-size:22px}
+@media(max-width:1050px){.grid{grid-template-columns:1fr}}
+@media(max-width:560px){.keys{grid-template-columns:repeat(3,minmax(0,1fr))}}
+</style></head><body>
+<header><h1>PUITS DES ÂMES · PROPOSITIONS</h1>
+<p>Cinq pistes pour le bâtiment de Medeina (2 × 2 cases), dans la salle d’ardoise de la base. Chaque scène boucle sur 11 secondes : le puits au repos, puis un Paladin blessé soigné par l’aura du puits, puis un Tireur tombé rappelé devant le puits. Rendu à la résolution du jeu, sprites d’unités du jeu (~28 px), affiché ×4.</p>
+<div class="bar"><button id="pause">Pause</button><button id="speed">Vitesse ×1</button><input id="scrub" type="range" min="0" max="11" step="0.01" value="0" aria-label="Temps de la boucle"><output id="clock">0,0 s</output></div></header>
+<main><div class="why"><b>Les trois volets se combinent :</b> on peut garder le puits d’une piste, le soin d’une autre et la résurrection d’une troisième. L’effet de soin est le même pour le soin du Puits et pour celui du Soigneur : il se lit sur l’unité soignée, pas sur la source. Charte Medeina : pierre, bois, mousse, os et vert. Pas de cyan (Exilés), pas d’or (Laetan), pas de rouge (la Bête), pas de pourpre (l’Ancre).</div>
+<div class="grid" id="grid"></div>
+<section><h2>À trancher</h2><p class="why"><b>Choisis une piste</b> (1 à 5) ou un mélange, par exemple : « le puits 2, le soin 1, la résurrection 5 ». Le puits retenu remplacera l’art <code>da-soulwell</code> ; les deux animations seront ajoutées aux unités en jeu.</p></section>
+</main>
+<script src="assets/decor.js?v=6"></script><script src="assets/units.js?v=10"></script>
+<script>
+'use strict';
+const {fill,ell,seg,outlineAll}=UnitKit;
+{const _s=Px.prototype.set;Px.prototype.set=function(x,y,c,z){if(c)_s.call(this,x,y,c,z)}}
+// ================= PALETTES =================
+const SLATE=['#0d0f13','#14171c','#1b1f25','#23282f','#2c323a','#373e47','#444c56','#535c67','#66707b'];
+const QZ=['#7c7a72','#a8a498','#d0ccc0','#eeeae0'];
+const G=['#0a2412','#0f3a1a','#1f6a2a','#3fa83a','#7ae070','#b8f0a0','#e8ffe0'];
+const STONE=['#232a35','#313a47','#424d5b','#55626f','#6b7885','#86929e','#a2acb6'];
+const DSTONE=['#15171c','#1e2128','#292d35','#363b44','#454b55','#575e69'];
+const MOSS=['#1e3a22','#2c5230','#41703c','#5c8c48','#78a85a'];
+const WOOD=['#2a1a10','#40281a','#5a3a24','#74502f','#8e663c','#a87e4c'];
+const BARK=['#1e150e','#2c2016','#3c2c1e','#4f3b28','#644c34','#7a6044'];
+const DEAD=['#3a3630','#544e44','#6e665a','#8a8272','#a69e8c'];
+const BONE=['#5a5240','#857a60','#b0a584','#d4caa8','#ece4c8'];
+const LEAF=['#0f2a18','#163a20','#1f4c28','#2b6131','#3b783b','#529248','#71ac58'];
+const PETAL=['#8a6f7a','#b88f9a','#e0c4c8','#f4e8e4'];
+const OUTC='#0a0a0c';
+// ================= SCÈNE =================
+const W=200,H=128,L=11,WX=100,WY=72,PALF=[154,106],SPN=[50,108],WELL=[60,82],WOX=WX-WELL[0],WOY=WY-WELL[1];
+const HS=1.0,TICK=.9,NT=5,HE=HS+TICK*(NT-1)+.5,RS=5.6,RA=.9,RT=1.7,RF=3.3,RE=4.0,FO=10.4;
+const cl=(v,a=0,b=1)=>Math.max(a,Math.min(b,v)),mix=(a,b,t)=>a+(b-a)*t,sm=t=>{t=cl(t);return t*t*(3-2*t)},eout=t=>{t=1-cl(t);return 1-t*t*t},ein=t=>{t=cl(t);return t*t*t};
+const bay=(x,y)=>BAYER[(y%4+4)%4][(x%4+4)%4],H3=(a,b,s)=>hash(a|0,b|0,s|0);
+// État temporel commun : soin et rappel
+function ctxT(u){const X={u};X.hp=u<HS?.3:cl(.3+.7*(u-HS)/(TICK*(NT-1)+.2),0,1);
+ X.ticks=[];for(let k=0;k<NT;k++){const a=u-(HS+k*TICK);if(a>=0&&a<1.4)X.ticks.push({k,a})}
+ X.healing=u>=HS-.1&&u<HE;X.r=u-RS;X.act=X.r<0||X.r>=RE?0:X.r<RA?sm(X.r/RA):X.r<RF?1:1-sm((X.r-RF)/(RE-RF));
+ X.trav=X.r>=RA&&X.r<RT?(X.r-RA)/(RT-RA):-1;X.form=X.r>=RT&&X.r<RF?(X.r-RT)/(RF-RT):X.r>=RF?1:-1;X.flo=X.r>=RF&&X.r<RE+.6?(X.r-RF)/(RE+.6-RF):-1;
+ X.alive=X.r>=RT&&u<L;X.fade=u>=FO?(u-FO)/(L-FO):0;
+ X.phase=u<HS-.1?'Repos':u<HE?'Soin du Paladin':u<RS?'Repos':X.r<RA?'Rappel · le puits s’éveille':X.r<RT?'Rappel · l’âme quitte le puits':X.r<RF?'Rappel · recomposition':X.r<RE+.4?'Rappel · retour':'Repos';return X}
+// ================= SOL D'ARDOISE (trois états d'éclairage) =================
+const FLOOR=(()=>{const base=new Float32Array(W*H*3),put=(x,y,c)=>{const h=hex(c),i=(y*W+x)*3;base[i]=h[0];base[i+1]=h[1];base[i+2]=h[2]};
+ for(let y=0;y<H;y++)for(let x=0;x<W;x++){let c;
+  if(y<18){let v=.26+fbm(x/8,y/6,41)*.3;if(((y+Math.floor(fbm(x/12,0,43)*6))%7)===0)v-=.12;if(y>=15)v-=.16;c=Px.prototype.ramp(SLATE,v,x,y);if(fbm(x/5,y/3,77)>.76&&H3(x,y,5)>.75)c=QZ[H3(x,y,6)>.7?1:0]}
+  else{const uu=x/2+y,vv=y-x/2,cell=Math.floor(uu/16)*7+Math.floor(vv/16)*13;let v=.42+(H3(cell,1,4)-.5)*.12+(fbm(x/9,y/6,21)-.5)*.26;
+   if(((uu%16)+16)%16<1||((vv%16)+16)%16<1)v-=.14;if(y<22)v-=(22-y)*.07;v-=Math.hypot((x-100)/130,(y-70)/90)*.16;c=Px.prototype.ramp(SLATE,v,x,y)}
+  put(x,y,c)}
+ const mk=(m,a)=>{const d=new ImageData(W,H);for(let i=0;i<W*H;i++)for(let c=0;c<3;c++)d.data[i*4+c]=cl(base[i*3+c]*m[c]+a[c],0,255);for(let i=0;i<W*H;i++)d.data[i*4+3]=255;return d};
+ return[mk([.78,.8,.82],[0,0,0]),mk([.78,1.2,.82],[0,10,4]),mk([.9,1.55,.95],[8,26,12])]})();
+const fImg=new ImageData(W,H);
+function drawFloor(g,lights){const d=fImg.data;
+ for(let y=0;y<H;y++)for(let x=0;x<W;x++){let I=0;for(const l of lights){const dx=(x-l.x)/l.r,dy=(y-l.y)/(l.r*.62),dd=Math.sqrt(dx*dx+dy*dy);if(dd<1)I+=l.i*(1-dd)}
+  let v=cl(I,0,1.2)*1.7,k=Math.floor(v);if(v-k>bay(x,y))k++;k=Math.min(2,k);const i=(y*W+x)*4,s=FLOOR[k].data;d[i]=s[i];d[i+1]=s[i+1];d[i+2]=s[i+2];d[i+3]=255}
+ g.putImageData(fImg,0,0)}
+// ================= OUTILS DE DESSIN (coordonnées de scène) =================
+const FX=g=>{const F={
+ px(x,y,c){x=Math.round(x);y=Math.round(y);if(x<0||y<0||x>=W||y>=H)return;g.fillStyle=c;g.fillRect(x,y,1,1)},
+ dpx(x,y,c,a=1){x=Math.round(x);y=Math.round(y);if(x<0||y<0||x>=W||y>=H||a<=0)return;if(a>=1||a>bay(x,y)){g.fillStyle=c;g.fillRect(x,y,1,1)}},
+ line(x0,y0,x1,y1,c,a=1){const n=Math.max(1,Math.ceil(Math.max(Math.abs(x1-x0),Math.abs(y1-y0))));for(let k=0;k<=n;k++)F.dpx(x0+(x1-x0)*k/n,y0+(y1-y0)*k/n,c,a)},
+ disc(cx,cy,r,c,a=1,ry=r){for(let y=Math.floor(cy-ry);y<=cy+ry;y++)for(let x=Math.floor(cx-r);x<=cx+r;x++){const dd=Math.hypot((x+.5-cx)/r,(y+.5-cy)/ry);if(dd<=1)F.dpx(x,y,c,a*(1-dd*dd*.6))}},
+ ring(cx,cy,r,c,a=1,ry=r,arc){const n=Math.max(12,Math.ceil(r*7));for(let k=0;k<n;k++){const t=k/n*6.283;if(arc&&!arc(t))continue;F.dpx(cx+Math.cos(t)*r,cy+Math.sin(t)*ry,c,a)}},
+ dark(cx,cy,rx,ry,k=.6){for(let y=Math.floor(cy-ry);y<=cy+ry;y++)for(let x=Math.floor(cx-rx);x<=cx+rx;x++){const d=((x-cx)/rx)**2+((y-cy)/ry)**2;if(d<1&&bay(x,y)<.9-d*.6){g.globalAlpha=1-k;g.fillStyle='#000';g.fillRect(x,y,1,1);g.globalAlpha=1}}},
+ plus(x,y,c,a=1){for(const[dx,dy]of[[0,-1],[-1,0],[0,0],[1,0],[0,1]])F.dpx(x+dx,y+dy,c,a)},
+ // lueur centrale + halo tramé
+ glow(x,y,r,a=1){F.disc(x,y,r*1.6,G[3],.35*a);F.disc(x,y,r,G[4],.7*a);F.disc(x,y,r*.5,G[6],a)},
+ leaf(x,y,ang,c=LEAF[5],c2=LEAF[3]){const dx=Math.round(Math.cos(ang)),dy=Math.round(Math.sin(ang));F.px(x,y,c);F.px(x+dx,y+dy,c2);F.px(x-dx,y-dy,c)}};return F};
+// ================= UNITÉS (sprites du jeu, 40×42, pied en 16,41) =================
+const IMG={};for(const n of['paladin','shooter','healer']){const im=new Image();im.src=`assets/puits/${n}_idle.png`;IMG[n]=im}
+const UW=40,UH=42,UFX=16,UFY=41;
+const oc=document.createElement('canvas');oc.width=UW;oc.height=UH;const ocg=oc.getContext('2d');
+const oc2=document.createElement('canvas');oc2.width=UW;oc2.height=UH;const ocg2=oc2.getContext('2d');
+const patC={};function dpat(col,lv){const k=col+lv;if(patC[k])return patC[k];const c=document.createElement('canvas');c.width=c.height=4;const q=c.getContext('2d');q.fillStyle=col;
+ for(let y=0;y<4;y++)for(let x=0;x<4;x++)if(BAYER[y][x]<lv)q.fillRect(x,y,1,1);return patC[k]=ocg.createPattern(c,'repeat')}
+function frameTo(q,name,t){const f=Math.floor(t*8)%12;q.clearRect(0,0,UW,UH);q.drawImage(IMG[name],f*UW,0,UW,UH,0,0,UW,UH)}
+// o : flash {c,a}, sil {c} (silhouette pleine), ghost (0..1, transparence tramée), solidFrom/silFrom (ligne à partir de laquelle on dessine), scan {y,c}, dir (+1 bas→haut)
+function drawUnit(g,name,fx,fy,t,o={}){const x0=Math.round(fx-UFX),y0=Math.round(fy-UFY);
+ frameTo(ocg,name,t);
+ if(o.flash&&o.flash.a>0){ocg.globalCompositeOperation='source-atop';ocg.fillStyle=dpat(o.flash.c,cl(o.flash.a));ocg.fillRect(0,0,UW,UH);ocg.globalCompositeOperation='source-over'}
+ const sil=c=>{frameTo(ocg2,name,t);ocg2.globalCompositeOperation='source-atop';ocg2.fillStyle=c;ocg2.fillRect(0,0,UW,UH);ocg2.globalCompositeOperation='source-over'};
+ const slice=(cv,a,b)=>{a=Math.max(0,Math.round(a));b=Math.min(UH,Math.round(b));if(b>a)g.drawImage(cv,0,a,UW,b-a,x0,y0+a,UW,b-a)};
+ if(o.ghost!=null){sil(o.ghostC||G[5]);ocg2.globalCompositeOperation='destination-in';ocg2.fillStyle=dpat('#fff',cl(o.ghost));ocg2.fillRect(0,0,UW,UH);ocg2.globalCompositeOperation='source-over';g.drawImage(oc2,x0,y0)}
+ if(o.sil){sil(o.sil);const r=o.silRange||[0,UH];slice(oc2,r[0],r[1])}
+ const sr=o.solid||[0,UH];slice(oc,sr[0],sr[1]);
+ if(o.scan){sil(o.scan.c);slice(oc2,o.scan.y,o.scan.y+1);if(o.scan.c2)slice(oc2,o.scan.y+(o.scan.d||1),o.scan.y+(o.scan.d||1)+1)}}
+function hpBar(F,x,y,v,a=1){if(a<=0)return;x=Math.round(x)-7;y=Math.round(y);for(let i=-1;i<=14;i++){F.dpx(x+i,y-1,OUTC,a);F.dpx(x+i,y+2,OUTC,a)}F.dpx(x-1,y,OUTC,a);F.dpx(x-1,y+1,OUTC,a);F.dpx(x+14,y,OUTC,a);F.dpx(x+14,y+1,OUTC,a);
+ for(let i=0;i<14;i++){const on=i<Math.round(v*14);F.dpx(x+i,y,on?G[4]:'#24282e',a);F.dpx(x+i,y+1,on?G[3]:'#1a1d22',a)}}
+const UNIT_TOP=38; // hauteur visible d'une unité au-dessus des pieds
+// ================= AIDES POUR LE PUITS (repère local Px) =================
+function ellP(P,cx,cy,rx,ry,fn,z){for(let y=Math.floor(cy-ry);y<=cy+ry;y++)for(let x=Math.floor(cx-rx);x<=cx+rx;x++){const nx=(x+.5-cx)/rx,ny=(y+.5-cy)/ry;if(nx*nx+ny*ny<=1){const c=fn(x,y,nx,ny);if(c)P.set(x,y,c,z)}}}
+function sideP(P,cx,cy,rx,ry,h,fn,z,hf){for(let x=Math.floor(cx-rx);x<=cx+rx;x++){const dx=(x+.5-cx)/rx;if(Math.abs(dx)>1)continue;const e=Math.sqrt(1-dx*dx),hh=hf?hf(dx):h;
+ for(let y=Math.round(cy-hh+e*ry);y<=Math.round(cy+e*ry);y++)P.set(x,y,fn(x,y,dx,(y-(cy-hh+e*ry))/hh),z)}}
+const blocks=(R,x,y,dx,vy,seed,o={})=>{const row=Math.floor(vy*(o.rows||3)),bx=Math.floor((x+row*3)/(o.bw||6));let v=.62-dx*.28-vy*.18+(H3(bx,row,seed)-.5)*.16;
+ const ly=vy*(o.rows||3)-row;if(ly<.18||((x+row*3)%(o.bw||6)+6)%(o.bw||6)===0)v-=.22;return Px.prototype.ramp(R,v,x,y)};
+// ================= LES CINQ PUITS =================
+const PROPS=[];
+
+// ---------- 1 · Puits du cycle, refondu ----------
+PROPS.push({name:'1 · Puits du cycle',desc:'Refonte du puits actuel : margelle de pierre moussue, eau verte qui tourne en spirale, portique de bois coiffé de bois de cerf. Une gousse-lanterne pend au-dessus de l’eau ; un cairn d’os bourgeonne à côté.',
+ healTxt:'Spirale de feuilles : trois feuilles montent en tournant autour de l’unité, un anneau s’ouvre à ses pieds, un éclat vert passe sur l’armure et une petite croix de feuilles s’élève.',
+ revTxt:'L’eau tourbillonne et la gousse s’allume ; une âme-luciole sort du puits, passe sous la gousse et retombe devant le puits. Sa silhouette se dessine en vert de bas en haut, puis la couleur revient derrière une ligne de lumière.',
+ lore:'« Ce qui tombe retourne à l’eau ; ce que l’eau garde, Medeina le rend. »',
+ well(P,t,X){const[cx,cy]=WELL,rx=20,ry=11,h=11,top=cy-h,spd=1+X.act*5;
+  // portique (derrière)
+  for(const s of[-1,1]){const px=cx+s*25;fill(P,[[px-1.5,cy-48],[px+1.5,cy-48],[px+1.5,cy-4],[px-1.5,cy-4]],WOOD,1,{v:.6,tex:3});P.set(px,cy-3,WOOD[1],1)}
+  fill(P,[[cx-29,cy-50],[cx+29,cy-50],[cx+29,cy-46],[cx-29,cy-46]],WOOD,2,{v:.7,tex:5});
+  for(const s of[-1,1]){const b=[[0,0],[s,-1],[s*2,-2],[s*2,-3],[s*3,-4],[s*3,-5],[s*4,-6],[s*3,-7],[s*5,-6],[s*6,-7],[s*2,-5]];for(const[dx,dy]of b)P.set(cx+s*2+dx,cy-50+dy,dy<-5?BONE[4]:BONE[3],2.5)}
+  P.set(cx,cy-51,BONE[2],2.5);P.set(cx-1,cy-51,BONE[2],2.5);P.set(cx+1,cy-51,BONE[2],2.5);
+  // gousse-lanterne
+  const sw=Math.sin(t*1.6)*1.2,gx=cx+sw,gy=cy-33,gl=.55+.25*Math.sin(t*2.4)+X.act*.4;
+  for(let y=cy-45;y<gy-3;y++)P.set(cx+sw*(y-(cy-45))/(gy-cy+45),y,WOOD[1],3);
+  ellP(P,gx,gy,3.2,4.2,(x,y,nx,ny)=>Px.prototype.ramp(G,gl+.25-nx*.15-ny*.2,x,y),3);
+  for(const dx of[-2,0,2])P.set(gx+dx,gy-4,LEAF[4],3.2);P.set(gx,gy+4,LEAF[3],3.2);
+  // puits
+  sideP(P,cx,cy,rx,ry,h,(x,y,dx,vy)=>{if(vy<.3&&fbm(x/3,y/2,9)>.56)return Px.prototype.ramp(MOSS,.7-dx*.3,x,y);return blocks(STONE,x,y,dx,vy,11)},5);
+  ellP(P,cx,top,rx,ry,(x,y,nx,ny)=>{const r=Math.hypot(nx,ny);if(r>.74){if(fbm(x/3,y/2,12)>.58)return Px.prototype.ramp(MOSS,.75-nx*.2-ny*.3,x,y);const a=Math.atan2(ny,nx);
+    let v=.78-nx*.2-ny*.25;if(Math.floor((a+3.2)*4.5)%2===0&&Math.abs(r-.87)<.12)v-=.05;if(Math.abs(Math.sin((a+3.2)*4.5))<.12)v-=.28;return Px.prototype.ramp(STONE,v,x,y)}
+   const wx=nx/.74,wy=ny/.74,wr=Math.hypot(wx,wy);if(wy<-.55&&wr>.6)return G[1];
+   const a=Math.atan2(wy,wx),s=Math.sin(a*2-wr*7+t*spd*1.6);let v=.42+.22*s*(1-wr)+(1-wr)*.25+X.act*.25;if(wr>.85)v-=.15;if(H3(x,y,Math.floor(t*6))>.97)v=.95;return Px.prototype.ramp(G,v,x,y)},6);
+  // cairn d'os qui bourgeonne
+  const kx=cx-31,ky=cy+6;ell(P,kx,ky,5,3,DSTONE,7,{v:.55});ell(P,kx+1,ky-4,4,2.6,STONE,7.2,{v:.6});ell(P,kx,ky-7.5,2.6,2,BONE,7.4,{v:.7});
+  P.set(kx-1,ky-8,'#2a2418',7.6);P.set(kx+1,ky-8,'#2a2418',7.6);for(let i=0;i<4;i++)P.set(kx+1,ky-10-i,i<2?LEAF[3]:LEAF[5],7.5);P.set(kx+2,ky-13,LEAF[6],7.5);P.set(kx,ky-12,LEAF[5],7.5);
+  // champignons et herbes
+  for(const[mx,my]of[[cx+27,cy+7],[cx+30,cy+5]]){P.set(mx,my,BONE[3],7);P.set(mx,my-1,BONE[3],7);fill(P,[[mx-2,my-3],[mx+2,my-3],[mx+1,my-1],[mx-1,my-1]],G,7.1,{v:.7})}
+  for(let i=0;i<5;i++)P.set(cx-18+i*2,cy+11-(i%2),LEAF[4+(i%2)],7)},
+ lights(t,X){return[{x:WX,y:WY-8,r:44+X.act*14,i:.75+X.act*.35},{x:WX+Math.sin(t*1.6)*1.2,y:WY-33,r:20,i:.35+X.act*.4}]},
+ idle(F,t,X){for(let j=0;j<6;j++){const per=2.2+H3(j,1,3),ph=((t+H3(j,2,3)*per)%per)/per,a=H3(j,3,3)*6.28,d=H3(j,4,3)*12;F.dpx(WX+Math.cos(a)*d+Math.sin(ph*6+j)*1.2,WY-11+Math.sin(a)*d*.5-ph*20,ph<.5?G[5]:G[4],1-ph)}},
+ heal(F,g,X,fx,fy){for(const{a}of X.ticks){if(a>.9)continue;const k=a/.9;F.ring(fx,fy,4+k*7,G[4],(1-k)*.9,(4+k*7)*.42);
+   for(let i=0;i<3;i++){const an=i*2.094+a*7,hy=eout(k)*28,lx=fx+Math.cos(an)*8*(1-k*.3),ly=fy-hy+Math.sin(an)*3;if(Math.sin(an)<-.2)continue;F.leaf(lx,ly,an+1.57,LEAF[6],G[4]);F.dpx(lx-Math.cos(an)*2,ly+2,G[5],.6)}
+   if(a<.8){const py=fy-UNIT_TOP-3-a*10;F.plus(fx+4,py,G[5],1-k);F.px(fx+4,py,G[6])}}},
+ healBack(F,g,X,fx,fy){for(const{a}of X.ticks){if(a>.9)continue;const k=a/.9;for(let i=0;i<3;i++){const an=i*2.094+a*7;if(Math.sin(an)>=-.2)continue;F.leaf(fx+Math.cos(an)*8*(1-k*.3),fy-eout(k)*28+Math.sin(an)*3,an,LEAF[4],LEAF[2])}}},
+ revive(F,g,X,t){const[sx,sy]=SPN,r=X.r;
+  if(r>=0&&r<RE){const a=r<RA?sm(r/.5):1-sm((r-RF)/(RE-RF));for(let i=0;i<14;i++){if(H3(i,9,1)>a)continue;const an=i/14*6.283+t*.6;F.leaf(sx+Math.cos(an)*12,sy+Math.sin(an)*5,an+1.57,LEAF[5],LEAF[3])}}
+  if(X.trav>=0){const k=X.trav,p0=[WX,WY-14],p1=[WX-6,WY-46],p2=[sx,sy-20],q=1-k,x=q*q*p0[0]+2*q*k*p1[0]+k*k*p2[0],y=q*q*p0[1]+2*q*k*p1[1]+k*k*p2[1];
+   for(let j=1;j<8;j++){const kk=Math.max(0,k-j*.025),qq=1-kk;F.dpx(qq*qq*p0[0]+2*qq*kk*p1[0]+kk*kk*p2[0],qq*qq*p0[1]+2*qq*kk*p1[1]+kk*kk*p2[1],j<3?G[5]:G[4],1-j/8)}F.glow(x,y,2.4)}
+  if(X.form>=0&&X.form<1){const k=X.form;F.glow(sx,sy-14+k*6,2.4*(1-k),1-k)}
+  if(X.flo>=0&&X.flo<1){const k=X.flo;for(let i=0;i<16;i++){const an=i/16*6.283,d=4+eout(k)*16;F.leaf(sx+Math.cos(an)*d,sy-12+Math.sin(an)*d*.7+k*8,an,i%3?LEAF[5]:PETAL[2],LEAF[3])}F.ring(sx,sy,6+k*14,G[5],1-k,(6+k*14)*.42)}},
+ reviveUnit(X){const k=X.form;if(k<0)return null;const silK=sm(k/.5),solK=sm((k-.5)/.5);
+  return{sil:G[4],silRange:[UH-silK*UH,UH],solid:[UH-solK*UH,UH],scan:k<1?{y:Math.round(UH-(silK<1?silK:solK)*UH),c:G[6]}:null,flash:k>=1&&X.flo<.3?{c:G[5],a:1-X.flo/.3}:null}}});
+
+// ---------- 2 · Souche-mère ----------
+PROPS.push({name:'2 · Souche-mère',desc:'Le puits est le tronc creux d’un arbre géant, abattu depuis longtemps. Une moitié vit (mousse, branche feuillue et fleurie), l’autre est morte et blanchie : le cycle de Medeina en un seul objet. Une sève verte lumineuse remplit le creux, les racines s’étalent sur l’ardoise.',
+ healTxt:'Vrilles : trois pousses sortent de l’ardoise et s’enroulent autour des jambes de l’unité ; un bourgeon éclot au bout de chacune, puis elles se retirent dans le sol.',
+ revTxt:'Les racines s’allument et l’une d’elles court sur le sol jusqu’à l’emplacement de l’unité. Elle y tresse un cocon de racines qui pulse, s’ouvre en quatre pétales et libère l’unité.',
+ lore:'« La souche ne meurt pas : elle attend qu’on lui rende ce qui pousse. »',
+ well(P,t,X){const[cx,cy]=WELL,rx=21,ry=12,h=14,top=cy-h,ht=dx=>h+(H3(Math.round(dx*9),1,7)-.5)*3+(dx>.3?-2:0);
+  // racines au sol
+  const roots=[[-1,.35],[-.75,.95],[.1,1],[.8,.85],[1,.25],[-.95,-.3]];
+  for(const[i,[ax,ay]]of roots.entries()){const bx=cx+ax*(rx-2),by=cy+ay*(ry-3),ex=cx+ax*(rx+12),ey=cy+ay*(ry+5),mx=(bx+ex)/2+(H3(i,2,3)-.5)*6,my=(by+ey)/2+(H3(i,3,3)-.5)*3;
+   const dead=ax>.3;seg(P,[bx,by],[mx,my],4,dead?DEAD:BARK,3,{v:.6,tex:4});seg(P,[mx,my],[ex,ey],2.4,dead?DEAD:BARK,3,{v:.55});
+   if(X.act>0)for(let k=0;k<=10;k++){const q=k/10,x=q<.5?mix(bx,mx,q*2):mix(mx,ex,q*2-1),y=q<.5?mix(by,my,q*2):mix(my,ey,q*2-1);if((k+Math.floor(t*10))%3===0)P.set(x,y,X.act>.5?G[5]:G[4],3.5)}}
+  // branche morte (droite) et vivante (gauche), derrière
+  seg(P,[cx+12,top-2],[cx+22,top-24],3.6,DEAD,2,{v:.7,tex:6});seg(P,[cx+22,top-24],[cx+26,top-33],2,DEAD,2,{v:.75});seg(P,[cx+19,top-18],[cx+29,top-22],1.6,DEAD,2,{v:.7});seg(P,[cx+22,top-25],[cx+16,top-32],1.4,DEAD,2,{v:.7});
+  seg(P,[cx-12,top-2],[cx-21,top-22],4,BARK,2,{v:.6,tex:6});seg(P,[cx-21,top-22],[cx-28,top-30],2.4,BARK,2,{v:.6});seg(P,[cx-18,top-16],[cx-10,top-26],2,BARK,2,{v:.6});
+  const sway=Math.sin(t*1.3)*.8;
+  for(const[lx,ly,r]of[[-28,-33,6],[-22,-28,6.5],[-11,-29,5],[-31,-25,4.5],[-17,-35,5]])ell(P,cx+lx+sway,top+ly,r,r*.75,LEAF,2.5,{v:.62});
+  for(const[fx,fy]of[[-27,-35],[-20,-31],[-12,-31],[-31,-26],[-16,-37],[-24,-26]]){const x=cx+fx+sway,y=top+fy;P.set(x,y,PETAL[3],2.8);P.set(x+1,y,PETAL[2],2.8);P.set(x,y+1,PETAL[2],2.8);P.set(x-1,y,PETAL[2],2.8)}
+  // tronc
+  sideP(P,cx,cy,rx,ry,h,(x,y,dx,vy)=>{const dead=dx>.25;let v=.66-dx*.32-vy*.12+(fbm(x/2,y/6,4)-.5)*.3;if(((x+Math.floor(y/5))%3)===0)v-=.18;
+   if(!dead&&vy<.35&&fbm(x/3,y/2,5)>.55)return Px.prototype.ramp(MOSS,.7-dx*.3,x,y);return Px.prototype.ramp(dead?DEAD:BARK,v+(dead?.05:0),x,y)},5,ht);
+  ellP(P,cx,top,rx,ry,(x,y,nx,ny)=>{const r=Math.hypot(nx,ny),dead=nx>.25;if(r>.78){const ring=Math.sin(r*40)*.08;return Px.prototype.ramp(dead?DEAD:BARK,.78-ny*.3+ring,x,y)}
+   if(r>.7)return dead?DEAD[0]:BARK[0];const wx=nx/.7,wy=ny/.7,wr=Math.hypot(wx,wy);if(wy<-.5&&wr>.55)return G[1];
+   let v=.48+(1-wr)*.25+X.act*.22;for(let k=0;k<2;k++){const rr=((t*.35+k*.5)%1);if(Math.abs(wr-rr)<.07)v+=.18*(1-rr)}if(H3(x,y,Math.floor(t*5))>.975)v=.95;return Px.prototype.ramp(G,v,x,y)},6);
+  // mousse sur la lèvre vivante
+  for(let i=0;i<12;i++){const a=Math.PI*.55+i*.1,x=cx+Math.cos(a)*rx*.9,y=top+Math.sin(a)*ry*.9;P.set(x,y,MOSS[3+(i%2)],6.5)}
+  // champignons
+  for(const[mx,my]of[[cx-23,cy+3],[cx-20,cy+7]]){P.set(mx,my,BONE[3],7);fill(P,[[mx-2,my-3],[mx+2,my-3],[mx+1,my-1],[mx-1,my-1]],G,7.1,{v:.75})}},
+ lights(t,X){return[{x:WX,y:WY-14,r:40+X.act*12,i:.7+X.act*.3}]},
+ idle(F,t,X){for(let j=0;j<2;j++){const per=3.1+j*.9,ph=((t+j*1.7)%per)/per,x=WX-20-j*8+Math.sin(ph*9+j)*4+ph*10,y=WY-44+ph*58;if(ph<.92)F.leaf(x,y,ph*12,j?PETAL[2]:LEAF[5],j?PETAL[1]:LEAF[3])}},
+ healBack(F,g,X,fx,fy){this._vines(F,X,fx,fy,-1)},
+ heal(F,g,X,fx,fy){this._vines(F,X,fx,fy,1)},
+ _vines(F,X,fx,fy,side){for(const{k:kk,a}of X.ticks){if(a>1.1)continue;const grow=eout(a/.35),ret=sm((a-.75)/.35),len=grow*(1-ret);
+   for(let i=0;i<3;i++){const ox=[-6,5,0][i],oy=[1,1,3][i],hgt=[16,13,10][i]*len,ph=i*2+kk;
+    for(let s=0;s<=hgt;s+=.5){const an=s*.45+ph,x=fx+ox+Math.cos(an)*(3+s*.08),y=fy+oy-s,front=Math.sin(an)>0;if(front!==(side>0))continue;F.px(x,y,s>hgt-1.5?LEAF[6]:LEAF[4]);if(s<hgt-1)F.px(x+1,y,LEAF[2])}
+    if(side>0&&a>.3&&a<.95){const an=hgt*.45+ph,x=fx+ox+Math.cos(an)*(3+hgt*.08),y=fy+oy-hgt,b=sm((a-.3)/.15);F.px(x,y-1,PETAL[3]);if(b>.5){F.px(x-1,y-1,PETAL[2]);F.px(x+1,y-1,PETAL[2]);F.px(x,y-2,PETAL[2])}}}
+   if(side>0&&a<.4)for(let i=0;i<5;i++)F.dpx(fx-6+i*3,fy+2,LEAF[1],1-a/.4)}},
+ revive(F,g,X,t){const[sx,sy]=SPN,r=X.r,path=s=>[mix(WX-16,sx+4,s),mix(WY+8,sy-1,s)+Math.sin(s*9)*2.5];
+  const pr=X.trav>=0?sm(X.trav):r>=RT&&r<RE+.4?1-sm((r-RF-.3)/.6):0;
+  if(pr>0)for(let s=0;s<=1;s+=.012){const lead=X.trav>=0?X.trav*1.02:1;if(s>lead||(X.trav<0&&s<1-pr))continue;const[x,y]=path(s);F.px(x,y+1,OUTC);F.px(x,y,BARK[3]);F.px(x+1,y,BARK[2]);if(((s*80+t*14)|0)%5===0)F.px(x,y,G[5])}
+  if(X.trav>=0){const[x,y]=path(sm(X.trav));F.glow(x,y-1,1.8)}
+  // cocon
+  if(X.form>=0&&X.r<RF+.5){const k=X.form,hgt=eout(k/.35)*34,open=sm((k-.62)/.3),ex=sx,ey=sy;
+   if(open<1){const CH=34,ph=Math.floor(t*6);for(let y=0;y<hgt;y++){const yy=ey-y,pr=(y+(CH-hgt))/CH,w=9.5*Math.pow(Math.sin(Math.PI*cl(pr*.92+.06)),.55)+(y<2?2:0);
+     for(let x=Math.ceil(-w);x<=Math.floor(w);x++){const edge=Math.abs(x)>w-1||y===Math.ceil(hgt)-1,st=Math.round(x+Math.sin(y*.35+x*.2)*1.6);
+      let c=edge?OUTC:(st%3+3)%3===0?BARK[1]:Px.prototype.ramp(BARK,.75-(x+w)/(2*w)*.45+(y%4===0?-.1:0),ex+x,yy);
+      if(!edge&&k>.25&&(st%3+3)%3===0&&H3(x,y,ph)<.35)c=Math.sin(t*10)>0?G[5]:G[4];
+      if(open>0){const side=x<0?-1:1,nx=Math.round(ex+x+side*open*(5+y*.25));F.dpx(nx,yy+open*3,c,1-open);continue}F.px(ex+x,yy,c)}}}
+   if(open>0){for(let i=0;i<4;i++){const an=-Math.PI/2+(i-1.5)*.9,d=8+open*12,px=ex+Math.cos(an)*d,py=ey-12+Math.sin(an)*d*.8+open*14;F.disc(px,py,3,PETAL[2],1-open*.6,2);F.px(px,py,PETAL[3])}}}
+  if(X.flo>=0&&X.flo<1){const k=X.flo;for(let i=0;i<10;i++){const an=i/10*6.283,d=5+eout(k)*15;F.dpx(sx+Math.cos(an)*d,sy-10+Math.sin(an)*d*.6+k*10,i%2?PETAL[3]:LEAF[5],1-k)}}},
+ reviveUnit(X){const k=X.form;if(k<.62)return k>=0?{hide:1}:null;const o=sm((k-.62)/.3);return{solid:[0,UH],flash:{c:G[5],a:1-o*.7-(X.flo>0?X.flo:0)}}}});
+
+// ---------- 3 · Source spirale ----------
+PROPS.push({name:'3 · Source spirale',desc:'Bassin bas où une spirale de pierres plates mène à l’œil de la source. Quatre pierres levées l’entourent, gravées de runes de Medeina qui s’allument tour à tour. Des âmes montent de l’eau en suivant la spirale.',
+ healTxt:'Anneau runique : un cercle de runes s’inscrit sur le sol sous l’unité, puis un anneau de lumière remonte des pieds à la tête et se referme en étincelle.',
+ revTxt:'Les quatre runes s’allument l’une après l’autre et lancent un rayon vers l’œil de la source ; le nœud de lumière file vers l’emplacement de l’unité et s’y plante en colonne. L’unité s’y recompose de haut en bas, puis la colonne retombe en anneau.',
+ lore:'« Quatre pierres pour les quatre saisons ; au centre, celle qui n’en a pas. »',
+ _men:[[-30,-6,0],[30,-6,1],[-26,10,2],[27,10,3]],
+ _runeA(i,t,X){const base=Math.max(0,1-Math.abs(((t*1.1)%4)-i)*1.4,i===0?Math.max(0,1-Math.abs(((t*1.1)%4)-4)*1.4):0);const r=X.r;const lit=r>=0&&r<RE?sm((r-i*.15)/.2)*(r<RF?1:1-sm((r-RF)/(RE-RF))):0;return Math.max(base*.6,lit)},
+ well(P,t,X){const[cx,cy]=WELL,rx=24,ry=13,h=4,top=cy-h;
+  const men=(i,front)=>{const[mx,my]=this._men[i],x=cx+mx,y=cy+my,hh=20+(i%2)*3,z=front?8:1;
+   fill(P,[[x-3.5,y],[x+3.5,y],[x+3,y-hh+3],[x+1,y-hh],[x-2,y-hh+1],[x-3.2,y-hh+4]],STONE,z,{v:.66,tex:7,lx:.5});
+   if(fbm(i,1,3)>.3)for(let k=0;k<5;k++)P.set(x-3+k%3,y-1-Math.floor(k/3),MOSS[2+(k%2)],z+.1);
+   const a=this._runeA(i,t,X),rc=a>.75?G[6]:a>.45?G[5]:a>.2?G[4]:STONE[1],gl=[[[0,0],[0,1],[0,2],[0,3],[-1,1],[1,1]],[[0,0],[1,1],[0,2],[-1,1],[0,3]],[[-1,0],[0,1],[1,0],[0,2],[0,3]],[[0,0],[0,1],[1,2],[-1,2],[0,3]]][i];
+   for(const[dx,dy]of gl)P.set(x+dx,y-hh+6+dy,rc,z+.2)};
+  men(0,0);men(1,0);
+  sideP(P,cx,cy,rx,ry,h,(x,y,dx,vy)=>blocks(STONE,x,y,dx,vy,13,{rows:1,bw:5}),5);
+  ellP(P,cx,top,rx,ry,(x,y,nx,ny)=>{const r=Math.hypot(nx,ny);if(r>.84)return Px.prototype.ramp(STONE,.8-nx*.2-ny*.3+(H3(x>>1,y,4)-.5)*.1,x,y);
+   const wx=nx/.84,wy=ny/.84,wr=Math.hypot(wx,wy);if(wy<-.6&&wr>.7)return G[1];let v=.38+(1-wr)*.3+X.act*.22+.06*Math.sin(wr*14-t*3);if(wr<.16)v=.85+X.act*.15;if(H3(x,y,Math.floor(t*5))>.975)v=.95;return Px.prototype.ramp(G,v,x,y)},5.5);
+  // spirale de pierres plates
+  for(let k=0;k<8;k++){const a=k*.95+.4,d=.82-k*.085,x=cx+Math.cos(a)*rx*d,y=top+Math.sin(a)*ry*d;ellP(P,x,y,2.6,1.6,(px,py,nx,ny)=>Px.prototype.ramp(STONE,.72-nx*.2-ny*.35,px,py),6);P.set(x-1,y+1,STONE[1],6.1);P.set(x,y+1,STONE[1],6.1)}
+  men(2,1);men(3,1);
+  for(let i=0;i<6;i++)P.set(cx-6+i*3,cy+15+(i%2),LEAF[4+(i%2)],7)},
+ lights(t,X){const L=[{x:WX,y:WY-4,r:42+X.act*14,i:.65+X.act*.35}];this._men.forEach(([mx,my],i)=>{const a=this._runeA(i,t,X);if(a>.15)L.push({x:WX+mx,y:WY+my-14,r:14,i:.4*a})});return L},
+ idle(F,t,X){for(let j=0;j<3;j++){const per=3.3,ph=((t+j*1.1)%per)/per,a=ph*7+j*2.1,d=(1-ph)*16,x=WX+Math.cos(a)*d,y=WY-4+Math.sin(a)*d*.5-ph*22;F.dpx(x,y,G[6],1-ph);F.dpx(x,y+1,G[4],(1-ph)*.8);F.dpx(x,y+2,G[3],(1-ph)*.5)}},
+ healBack(F,g,X,fx,fy){for(const{a}of X.ticks){if(a>1)continue;const v=a<.15?sm(a/.15):1-sm((a-.55)/.4);F.ring(fx,fy,9,G[4],v,4);for(let i=0;i<6;i++){const an=i/6*6.283+a;F.dpx(fx+Math.cos(an)*6.5,fy+Math.sin(an)*2.8,G[5],v)}
+   const hy=sm(a/.6)*30;if(a<.75)F.ring(fx,fy-hy,8-hy*.12,G[4],1-a,(8-hy*.12)*.42,an=>Math.sin(an)<0)}},
+ heal(F,g,X,fx,fy){for(const{a}of X.ticks){if(a>1)continue;const hy=sm(a/.6)*30;if(a<.75)F.ring(fx,fy-hy,8-hy*.12,G[5],1-a,(8-hy*.12)*.42,an=>Math.sin(an)>=0);
+   if(a>.55&&a<.95){const k=(a-.55)/.4;F.plus(fx,fy-UNIT_TOP-2-k*4,G[6],1-k);for(let i=0;i<4;i++){const an=i*1.57+.78;F.dpx(fx+Math.cos(an)*k*6,fy-UNIT_TOP-2+Math.sin(an)*k*4,G[5],1-k)}}}},
+ revive(F,g,X,t){const[sx,sy]=SPN,r=X.r,knot=[WX,WY-18];
+  if(r>=0&&r<RA+.2){this._men.forEach(([mx,my],i)=>{const a=sm((r-i*.15)/.2)*(1-sm((r-RA)/.2));if(a<=0)return;const hh=20+(i%2)*3,p=[WX+mx,WY+my-hh+7];F.line(p[0],p[1],knot[0],knot[1],G[5],a*.9);F.line(p[0],p[1]+1,knot[0],knot[1]+1,G[3],a*.6)});
+   F.glow(knot[0],knot[1],1.5+sm(r/RA)*1.5)}
+  if(X.trav>=0){const k=sm(X.trav),x=mix(knot[0],sx,k),y=mix(knot[1],sy-26,k)-Math.sin(Math.PI*k)*16;for(let j=1;j<10;j++){const kk=Math.max(0,k-j*.03);F.dpx(mix(knot[0],sx,kk),mix(knot[1],sy-26,kk)-Math.sin(Math.PI*kk)*16,G[5],1-j/10)}F.glow(x,y,3)}
+  const col=X.form>=0?(X.form<.15?sm(X.form/.15):X.r<RF?1:1-sm((X.r-RF)/.35)):0;
+  if(col>0){const w=Math.round(5*col);for(let y=0;y<=sy+1;y++)for(let x=-w-2;x<=w+2;x++){const ax=Math.abs(x),a=(ax<=w*.4?.95:ax<=w?.55:.22)*col*(y>sy-40||ax<=w*.4?1:.7);F.dpx(sx+x,y,ax<=w*.4?G[6]:ax<=w?G[5]:G[4],a)}
+   F.ring(sx,sy,w+4,G[5],col,(w+4)*.42)}
+  if(X.flo>=0&&X.flo<1){const k=X.flo;F.ring(sx,sy,6+k*20,G[5],1-k,(6+k*20)*.42);F.ring(sx,sy,3+k*12,G[6],(1-k)*.8,(3+k*12)*.42);for(let i=0;i<8;i++){const an=i/8*6.283;F.dpx(sx+Math.cos(an)*(4+k*14),sy-10-k*14+Math.sin(an)*3,G[6],1-k)}}},
+ reviveUnit(X){const k=X.form;if(k<0)return null;if(k<.15)return{hide:1};const q=(k-.15)/.85,silK=sm(q/.55),solK=sm((q-.45)/.55);
+  return{sil:G[5],silRange:[0,silK*UH],solid:[0,solK*UH],scan:q<1?{y:Math.round(silK*UH),c:G[6]}:null,flash:q>=1&&X.flo<.35?{c:G[6],a:1-X.flo/.35}:null}}});
+
+// ---------- 4 · Ossuaire bourgeonnant ----------
+PROPS.push({name:'4 · Ossuaire bourgeonnant',desc:'La version « mort » du cycle : margelle de pierres sombres empilées, deux crânes de cerf fixés à l’avant dont les bois bourgeonnent. Une brume verte déborde du puits et coule sur l’ardoise ; des lucioles dansent au-dessus.',
+ healTxt:'Spores : une bouffée de spores lumineuses s’ouvre autour de l’unité puis remonte lentement ; une nappe de brume passe à ses pieds.',
+ revTxt:'Les orbites des crânes s’allument, la brume roule vers l’emplacement de l’unité. Un esprit-cerf (une tête de cerf faite de lumière) sort du puits et vient s’y poser ; la brume y prend la forme d’un fantôme translucide, puis la couleur monte des pieds à la tête. L’esprit s’efface en feuilles.',
+ lore:'« Le cerf porte ses bois comme l’arbre ses feuilles : il les perd, et ils repoussent. »',
+ _skull(P,x,y,z,eye,bud){ // crâne de cerf face, 7 px de large
+  fill(P,[[x-3,y],[x+3,y],[x+2,y+5],[x+1,y+7],[x-1,y+7],[x-2,y+5]],BONE,z,{v:.75});P.set(x-1,y+2,eye,z+.1);P.set(x+1,y+2,eye,z+.1);P.set(x,y+5,BONE[1],z+.1);
+  for(const s of[-1,1]){const pts=[[s*3,0],[s*4,-1],[s*5,-2],[s*5,-3],[s*6,-4],[s*6,-5],[s*7,-6],[s*4,-3],[s*3,-4],[s*7,-3],[s*8,-4]];for(const[dx,dy]of pts)P.set(x+dx,y+dy,BONE[dy<-4?4:3],z)
+   P.set(x+s*7,y-7,bud>.5?LEAF[6]:LEAF[4],z+.1);P.set(x+s*8,y-5,LEAF[5],z+.1);if(bud>.3)P.set(x+s*6,y-7,LEAF[5],z+.1)}},
+ well(P,t,X){const[cx,cy]=WELL,rx=19,ry=10,h=11,top=cy-h;
+  sideP(P,cx,cy,rx,ry,h,(x,y,dx,vy)=>{const row=Math.floor(vy*4),o=(row*5)%7,bx=Math.floor((x+o)/5);let v=.6-dx*.3-vy*.15+(H3(bx,row,21)-.5)*.25;const ly=vy*4-row;if(ly<.2||(x+o)%5===0)return DSTONE[0];
+   if(fbm(x/3,y/2,22)>.62)return Px.prototype.ramp(MOSS,.5-dx*.3,x,y);return Px.prototype.ramp(DSTONE,v,x,y)},5);
+  ellP(P,cx,top,rx,ry,(x,y,nx,ny)=>{const r=Math.hypot(nx,ny);if(r>.72){const a=Math.atan2(ny,nx),bk=Math.floor((a+3.2)*3.2);if(Math.abs(Math.sin((a+3.2)*3.2))<.14)return DSTONE[0];return Px.prototype.ramp(DSTONE,.85-nx*.2-ny*.3+(H3(bk,2,23)-.5)*.2,x,y)}
+   const wx=nx/.72,wy=ny/.72,wr=Math.hypot(wx,wy);if(wy<-.5&&wr>.55)return G[0];let v=.22+(1-wr)*.2+.12*fbm(x/4+t*.5,y/3,24)+X.act*.25;return Px.prototype.ramp(G,v,x,y)},6);
+  const eye=X.act>.2?(X.act>.6?G[6]:G[5]):(Math.sin(t*2)>.6?G[3]:'#14100c'),bud=.5+.5*Math.sin(t*.8);
+  this._skull(P,cx-8,cy-2,7,eye,bud);this._skull(P,cx+8,cy-2,7,eye,1-bud);
+  // tas d'os
+  const bx=cx+27,by=cy+5;for(const[a,b,c,d]of[[-5,0,4,-2],[-4,-2,5,1],[-3,1,3,-3]])seg(P,[bx+a,by+b],[bx+c,by+d],1.6,BONE,7.5,{v:.75});ell(P,bx,by-4,2.4,2,BONE,7.6,{v:.8});P.set(bx-1,by-4,'#2a2418',7.7);P.set(bx+3,by-7,LEAF[5],7.7);P.set(bx+3,by-8,LEAF[6],7.7);
+  for(let i=0;i<4;i++)P.set(cx-28+i*2,cy+6-(i%2),LEAF[3+(i%2)],7)},
+ lights(t,X){return[{x:WX,y:WY-8,r:38+X.act*10,i:.55+X.act*.3},{x:WX-14,y:WY+10,r:26,i:.3}]},
+ _mist(F,t,X,front){const r=X.r,toward=r>=0&&r<RT+.4?sm(r/RA)*(1-sm((r-RT)/.4)):0;
+  for(let j=0;j<26;j++){const per=4+H3(j,1,31)*3,ph=((t+H3(j,2,31)*per)%per)/per,side=H3(j,3,31)<.5?-1:1,a=side<0?Math.PI*(.55+H3(j,4,31)*.35):Math.PI*(.1+H3(j,4,31)*.35);
+   let x=WX+Math.cos(a)*(14+ph*22),y=WY+2+Math.sin(a)*(6+ph*10)+ph*4;if(toward>0){x=mix(x,SPN[0]+(H3(j,5,31)-.5)*20,toward*ph);y=mix(y,SPN[1]+(H3(j,6,31)-.5)*6,toward*ph)}
+   if((y>WY+4)!==front)continue;const al=Math.sin(Math.PI*ph)*(.35+toward*.3);F.disc(x,y,3+ph*3,G[2],al,(3+ph*3)*.5);F.disc(x,y-.5,1.5+ph*2,G[3],al*.7,(1.5+ph*2)*.5)}},
+ back(F,t,X){this._mist(F,t,X,false)},
+ idle(F,t,X){this._mist(F,t,X,true);for(let j=0;j<5;j++){const x=WX+Math.sin(t*.7+j*2.3)*26+Math.sin(t*1.9+j)*4,y=WY-24+Math.cos(t*.9+j*1.7)*10,on=Math.sin(t*3+j*1.9)>.1;if(on){F.px(x,y,G[6]);F.dpx(x+1,y,G[4],.5);F.dpx(x-1,y,G[4],.5)}}},
+ healBack(F,g,X,fx,fy){for(const{a}of X.ticks){if(a>1.2)continue;const k=a/1.2;F.disc(fx,fy+1,7+k*4,G[2],(1-k)*.5,(7+k*4)*.4)}},
+ heal(F,g,X,fx,fy){for(const{k:kk,a}of X.ticks){if(a>1.3)continue;for(let i=0;i<14;i++){const an=H3(i,kk,41)*6.283,sp=8+H3(i,2,41)*7,ox=Math.cos(an)*sp*eout(a/.4),oy=Math.sin(an)*sp*.6*eout(a/.4)-a*10,x=fx+ox,y=fy-14+oy,al=1-a/1.3;
+   F.dpx(x,y,(i+Math.floor(a*10))%3?G[5]:G[6],al);if(i%4===0)F.dpx(x,y+1,G[3],al*.6)}}},
+ revive(F,g,X,t){const[sx,sy]=SPN,r=X.r,sp=[sx,sy-UNIT_TOP-6];
+  let pos=null,al=0;if(r>=.3&&r<RA){const k=sm((r-.3)/(RA-.3));pos=[WX,WY-14-k*10];al=k}else if(X.trav>=0){const k=sm(X.trav);pos=[mix(WX,sp[0],k),mix(WY-24,sp[1],k)-Math.sin(Math.PI*k)*10];al=1}
+  else if(X.form>=0&&r<RF+.2){pos=sp;al=1}else if(X.flo>=0&&X.flo<.5){pos=sp;al=1-X.flo/.5}
+  if(pos){const[x,y]=[Math.round(pos[0]),Math.round(pos[1])],c=G[5];F.disc(x,y+1,5,G[3],.3*al);
+   const pts=[[-1,0],[0,0],[1,0],[-1,1],[0,1],[1,1],[0,2],[-1,2],[1,2],[0,3],[-2,-1],[-3,-2],[-3,-3],[-4,-4],[-2,-3],[-5,-3],[-4,-5],[2,-1],[3,-2],[3,-3],[4,-4],[2,-3],[5,-3],[4,-5]];
+   for(const[dx,dy]of pts)F.dpx(x+dx,y+dy,dy<-3?G[6]:c,al);F.dpx(x-1,y,G[1],al);F.dpx(x+1,y,G[1],al)}
+  if(X.flo>=0&&X.flo<1){const k=X.flo;for(let i=0;i<12;i++){const an=i/12*6.283,d=3+eout(k)*14;F.leaf(sp[0]+Math.cos(an)*d,sp[1]+Math.sin(an)*d*.6+k*14,an,i%2?LEAF[5]:LEAF[6],LEAF[3])}}},
+ reviveUnit(X){const k=X.form;if(k<0)return null;const gh=sm(k/.45),sol=sm((k-.45)/.55);return{ghost:.25+gh*.6,ghostC:G[4],solid:[UH-sol*UH,UH],scan:sol>0&&sol<1?{y:Math.round(UH-sol*UH),c:G[6]}:null,flash:k>=1&&X.flo<.3?{c:G[5],a:1-X.flo/.3}:null,noGhostAfter:k>=1}}});
+
+// ---------- 5 · Lotus de pierre ----------
+PROPS.push({name:'5 · Lotus de pierre',desc:'Une vasque taillée en lotus : huit pétales de pierre moussue s’ouvrent autour d’un bassin, et un bouton central fait jaillir une eau verte lumineuse qui retombe en gouttes. Les pétales respirent lentement.',
+ healTxt:'Gouttes : une goutte lumineuse jaillit de la fontaine en arc et éclate sur l’unité ; l’éclaboussure retombe le long de l’armure et une onde s’ouvre à ses pieds.',
+ revTxt:'Les pétales s’ouvrent en grand et le jet monte ; une grosse bulle d’eau verte se forme au sommet, flotte jusqu’à l’emplacement de l’unité, grossit à sa taille et laisse voir l’unité qui s’y forme. La bulle éclate en gouttes.',
+ lore:'« Ce qui coule finit toujours par revenir à la source. »',
+ _open(t,X){return .85+.06*Math.sin(t*1.1)+X.act*.3},
+ well(P,t,X){const[cx,cy]=WELL,o=this._open(t,X),bcy=cy-5,N=8;
+  const petal=i=>{const a=i/N*6.283+.2,ca=Math.cos(a),sa=Math.sin(a),bx=cx+ca*15,by=bcy+sa*8,tx=cx+ca*(25+o*6),ty=bcy+sa*(13+o*3)-(17-o*9),
+   lx=-sa*6.8,ly=ca*3.6,z=sa<0?2:7+sa;
+   fill(P,[[bx-lx*.9,by-ly*.9],[bx+(tx-bx)*.5-lx,by+(ty-by)*.5-ly],[tx,ty],[bx+(tx-bx)*.5+lx,by+(ty-by)*.5+ly],[bx+lx*.9,by+ly*.9],[bx,by+3]],STONE,z,{v:.7-ca*.1+(sa<0?-.08:.05),tex:9,lx:.3});
+   for(let k=0;k<5;k++){const q=.3+k*.14;P.set(mix(bx,tx,q),mix(by,ty,q),STONE[sa<0?2:3],z+.05)}
+   P.set(tx,ty,MOSS[4],z+.1);P.set(mix(bx,tx,.85),mix(by,ty,.85),MOSS[3],z+.1)};
+  for(let i=0;i<N;i++)if(Math.sin(i/N*6.283+.2)<0)petal(i);
+  // socle et bassin
+  sideP(P,cx,cy,16,8.5,6,(x,y,dx,vy)=>blocks(STONE,x,y,dx,vy,17,{rows:2,bw:4}),3);
+  ellP(P,cx,bcy,17,9,(x,y,nx,ny)=>{const r=Math.hypot(nx,ny);if(r>.86)return STONE[2];let v=.45+(1-r)*.2+X.act*.2+.08*Math.sin(r*12-t*4);if(H3(x,y,Math.floor(t*6))>.96)v=.95;return Px.prototype.ramp(G,v,x,y)},4);
+  // bouton central
+  ellP(P,cx,bcy-1,5,3,(x,y,nx,ny)=>Px.prototype.ramp(MOSS,.75-nx*.3-ny*.3,x,y),5);for(let i=0;i<5;i++){const a=i/5*6.283;P.set(cx+Math.cos(a)*2.6,bcy-2+Math.sin(a)*1.3,G[4],5.1)}P.set(cx,bcy-4,G[6],5.2);
+  for(let i=0;i<N;i++)if(Math.sin(i/N*6.283+.2)>=0)petal(i);
+  for(let i=0;i<5;i++)P.set(cx+22+i*2,cy+8-(i%2),LEAF[4+(i%2)],9)},
+ lights(t,X){return[{x:WX,y:WY-8,r:42+X.act*14,i:.7+X.act*.35}]},
+ _jet(t,X){return 9+Math.sin(t*5)*1+X.act*9},
+ idle(F,t,X){const jt=this._jet(t,X),cx=WX,top=WY-9;for(let y=0;y<jt;y++){F.px(cx,top-y,y>jt-2?G[6]:G[5]);if(y<jt-2)F.dpx(cx+((y+Math.floor(t*12))%2?1:-1),top-y,G[4],.7)}
+  for(let j=0;j<10;j++){const per=.9,ph=((t+j*.09)%per)/per,an=j/10*6.283,vx=Math.cos(an)*9,x=cx+vx*ph,y=top-jt+ph*(jt+3)-Math.sin(Math.PI*ph)*4+Math.sin(an)*ph*3;F.dpx(x,y,ph<.5?G[6]:G[5],1-ph*.5)}},
+ healBack(F,g,X,fx,fy){for(const{a}of X.ticks){if(a<.45||a>1.2)continue;const k=(a-.45)/.75;F.ring(fx,fy,3+k*9,G[4],1-k,(3+k*9)*.4);F.ring(fx,fy,1+k*5,G[5],(1-k)*.7,(1+k*5)*.4)}},
+ heal(F,g,X,fx,fy){const s=[WX,WY-20];for(const{a}of X.ticks){if(a<.45){const k=a/.45,x=mix(s[0],fx,k),y=mix(s[1],fy-20,k)-Math.sin(Math.PI*k)*22;F.disc(x,y,1.6,G[5]);F.px(x-.5,y-.5,G[6]);for(let j=1;j<5;j++){const kk=Math.max(0,k-j*.05);F.dpx(mix(s[0],fx,kk),mix(s[1],fy-20,kk)-Math.sin(Math.PI*kk)*22,G[4],1-j/5)}continue}
+   const k=(a-.45)/.6;if(k>1)continue;for(let i=0;i<9;i++){const an=-Math.PI+i/8*Math.PI,d=eout(k)*9,x=fx+Math.cos(an)*d,y=fy-20+Math.sin(an)*d*.7+ein(k)*16;F.dpx(x,y,i%2?G[5]:G[6],1-k)}
+   if(k<.6)F.plus(fx+5,fy-UNIT_TOP-2-k*8,G[6],1-k/.6)}},
+ revive(F,g,X,t){const[sx,sy]=SPN,r=X.r,jtop=[WX,WY-9-this._jet(t,X)];let b=null,br=0;
+  if(r>=.25&&r<RA){const k=sm((r-.25)/(RA-.25));br=k*5;b=[jtop[0],jtop[1]-br]}
+  else if(X.trav>=0){const k=sm(X.trav);br=5;b=[mix(WX,sx,k),mix(WY-27,sy-22,k)-Math.sin(Math.PI*k)*12+Math.sin(t*9)*.6]}
+  else if(X.form>=0&&X.form<1){const k=X.form;br=mix(5,13,eout(k/.3));b=[sx,sy-mix(22,16,eout(k/.3))+Math.sin(t*7)*.5]}
+  if(b){const ry=br*(X.form>=0?1.25:1),rx=br;this._bub=[b[0],b[1],rx,ry];
+   for(let y=Math.floor(b[1]-ry);y<=b[1]+ry;y++)for(let x=Math.floor(b[0]-rx);x<=b[0]+rx;x++){const d=Math.hypot((x+.5-b[0])/rx,(y+.5-b[1])/ry);if(d>1)continue;if(d>.84)F.px(x,y,d>.94?G[3]:G[5]);else F.dpx(x,y,G[3],.18)}
+   F.px(b[0]-rx*.45,b[1]-ry*.5,G[6]);F.px(b[0]-rx*.45+1,b[1]-ry*.5,G[6]);F.px(b[0]-rx*.45,b[1]-ry*.5+1,G[5]);}
+  if(X.flo>=0&&X.flo<1){const k=X.flo;for(let i=0;i<16;i++){const an=i/16*6.283,d=8+eout(k)*12,x=sx+Math.cos(an)*d,y=sy-16+Math.sin(an)*d*1.1+ein(k)*16;F.dpx(x,y,i%2?G[5]:G[6],1-k)}F.ring(sx,sy,4+k*16,G[4],1-k,(4+k*16)*.4)}},
+ reviveUnit(X){const k=X.form;if(k<0)return null;if(k<.3)return{hide:1};const q=(k-.3)/.7;return{ghost:sm(q/.5)*.9,ghostC:G[5],solid:q>.5?[0,UH]:[0,0],flash:q>.5?{c:G[5],a:1-sm((q-.5)/.5)*.7-(X.flo>0?.3:0)}:null,noGhostAfter:q>.5}}});
+
+// ================= RENDU D'UNE SCÈNE =================
+const WCACHE=new Map();
+function wellCanvas(pi,tq,X){const key=pi+':'+tq;let c=WCACHE.get(key);if(c)return c;if(WCACHE.size>400)WCACHE.clear();
+ const P=new Px(120,96,true);PROPS[pi].well(P,tq,X);outlineAll(P);P.flush();WCACHE.set(key,P.c);return P.c}
+function render(g,pi,u){const p=PROPS[pi],X=ctxT(u),t=u,F=FX(g),tq=Math.floor(u*20)/20;
+ drawFloor(g,p.lights(t,X));
+ F.dark(WX+4,WY+4,28,12,.55);
+ if(p.back)p.back(F,t,X);
+ g.drawImage(wellCanvas(pi,tq,ctxT(tq)),WOX,WOY);
+ if(p.idle)p.idle(F,t,X);
+ // Paladin blessé, soigné
+ const[px,py]=PALF;F.dark(px,py,7,2.5,.5);if(p.healBack)p.healBack(F,g,X,px,py);
+ const fl=X.ticks.filter(o=>o.a<.3).map(o=>1-o.a/.3);drawUnit(g,'paladin',px,py,t,{flash:fl.length?{c:G[5],a:fl[0]*.85}:null});
+ p.heal(F,g,X,px,py);hpBar(F,px,py-UNIT_TOP-1,X.hp);
+ // Tireur rappelé
+ const[sx,sy]=SPN,ru=p.reviveUnit(X);
+ if(ru&&!ru.hide&&X.r<L){F.dark(sx,sy,7,2.5,.5);const fade=X.fade;
+  if(fade>0)drawUnit(g,'shooter',sx,sy,t,{ghost:1-fade,ghostC:G[4]});
+  else{const o=Object.assign({},ru);if(o.noGhostAfter)delete o.ghost;drawUnit(g,'shooter',sx,sy,t,o)}
+  if(X.form>=1)hpBar(F,sx,sy-UNIT_TOP-1,1,1-fade)}
+ p.revive(F,g,X,t);
+ return X}
+// ================= PAGE =================
+const KEYS=[[HS+.12,'Soin · impulsion'],[HS+.5,'Soin · effet'],[RS+.6,'Rappel · éveil'],[RS+1.35,'Trajet de l’âme'],[RS+2.4,'Recomposition'],[RS+3.5,'Retour']];
+const grid=document.getElementById('grid'),scenes=[];
+PROPS.forEach((p,i)=>{const f=document.createElement('figure');
+ f.innerHTML=`<div class="stage"><canvas width="${W}" height="${H}"></canvas><span class="tag"></span></div><div class="keys">${KEYS.map(k=>`<div><canvas width="${W}" height="${H}"></canvas>${k[1]}</div>`).join('')}</div>
+ <figcaption><b>${p.name}</b><p>${p.desc}</p><dl><dt>Soin</dt><dd>${p.healTxt}</dd><dt>Résurrection</dt><dd>${p.revTxt}</dd></dl><p class="lore">${p.lore}</p></figcaption>`;
+ grid.appendChild(f);const cv=f.querySelector('.stage canvas');scenes.push({i,g:cv.getContext('2d'),tag:f.querySelector('.tag'),keys:[...f.querySelectorAll('.keys canvas')].map(c=>c.getContext('2d'))})});
+let u=0,last=performance.now(),paused=false,speed=1,acc=0;const scrub=document.getElementById('scrub'),clock=document.getElementById('clock');
+document.getElementById('pause').onclick=e=>{paused=!paused;e.target.textContent=paused?'Lecture':'Pause'};
+document.getElementById('speed').onclick=e=>{speed=speed===1?.5:speed===.5?.25:1;e.target.textContent='Vitesse ×'+String(speed).replace('.',',')};
+scrub.oninput=()=>{u=+scrub.value;draw()};
+function draw(){for(const s of scenes){const X=render(s.g,s.i,u);s.tag.textContent=PROPS[s.i].name.split(' · ')[1]+' · '+X.phase}scrub.value=u;clock.textContent=u.toFixed(1).replace('.',',')+' s'}
+function loop(now){const dt=Math.min(.1,(now-last)/1000);last=now;if(!paused){u=(u+dt*speed)%L;acc+=dt;if(acc>=1/30){acc=0;draw()}}requestAnimationFrame(loop)}
+Promise.all(Object.values(IMG).map(im=>im.complete?1:new Promise(r=>{im.onload=r;im.onerror=r}))).then(()=>{
+ for(const s of scenes)KEYS.forEach(([kt],j)=>render(s.keys[j],s.i,kt));draw();requestAnimationFrame(loop)});
+</script></body></html>

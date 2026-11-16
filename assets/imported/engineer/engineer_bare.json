@@ -38,5 +38,23 @@
   "count": 24,
   "fps": 10,
   "note": "agenouillement de l’incantation : mains jointes en (7, −15) depuis les pieds, 24 images à 10 i/s"
+ },
+ "settle": {
+  "frame_w": 40,
+  "frame_h": 42,
+  "cols": 12,
+  "rows": 1,
+  "count": 10,
+  "fps": 10,
+  "note": "s’assoit en tailleur : debout → accroupi → lotus, 10 images à 10 i/s (jouées à l’envers pour se relever)"
+ },
+ "lotus": {
+  "frame_w": 40,
+  "frame_h": 42,
+  "cols": 12,
+  "rows": 2,
+  "count": 24,
+  "fps": 10,
+  "note": "méditation en tailleur, yeux clos, respiration sur 2,4 s (24 images à 10 i/s) ; lévitation ajoutée en jeu"
  }
 }

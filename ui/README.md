@@ -36,3 +36,8 @@ La résurrection au Puits des Âmes coûte le coût initial total de recrutement
 Chaque entrée de formation de la caserne produit une escouade indivisible de quatre soldats du même type (100 Discipline et 6 secondes pour l’escouade). Clic, rectangle et ordres s’appliquent à tous les survivants ; le HUD affiche leur effectif sur 4. Les membres éloignés rallient leur escouade.
 
 Après des pertes, « Renforts » (R) rappelle tous les membres manquants depuis un Puits des Âmes achevé : le coût affiché est la somme des coûts de résurrection individuels (100 × niveau Vie par soldat). Le paiement n’est lancé que si la totalité est disponible. Le Puits permet aussi de rappeler un membre individuellement. Les ressuscités apparaissent au Puits, gardent niveau et expérience, puis rallient les survivants même en déplacement. Une escouade sans aucun survivant perd définitivement ses âmes et ne peut plus être ressuscitée.
+
+L’infobulle de Menace affiche le palier courant (100 points par palier), ses
+bonus de vague et les paramètres des portails. Le compteur garde sa valeur
+brute pour conserver la largeur du bandeau. Les statistiques d’une vague sont
+figées au lancement ; celles des nouveaux rejetons suivent la menace courante.

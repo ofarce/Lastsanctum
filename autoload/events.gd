@@ -10,5 +10,8 @@ signal notice(text: String, seconds: float)
 ## La partie vient d'être (ré)initialisée (équivalent de init(), Index.html:75).
 signal game_reset
 
+## Demande d'ouverture de l'inventaire (clic droit sur le coffre antique déjà ouvert).
+signal inventory_requested
+
 ## Fin de partie (end(won), Index.html) : la simulation est figée et la bannière s'affiche.
 signal game_over(won: bool)

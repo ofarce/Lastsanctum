@@ -13,6 +13,17 @@ const CAVE_Z1 := -96.0
 const CAVE_GATE := 7.0
 ## Centre de l'Ancre (core).
 const CORE := Vector2(0.0, -154.0)
+## Réserve du coffre antique : petite pièce scellée à l'est de la salle, derrière la roche (x 56–64,
+## une case et demie) qu'il faut miner ; au nord de la rangée z −140 (tunnel de référence de test_dig).
+## Paroi ouest droite (x = 64, raccord exact avec la case creusée), angles est arrondis. Hors des
+## galeries (gallery_allowed exclut |x| < 76 près de la salle).
+const VAULT_X0 := 64.0
+const VAULT_X1 := 76.0
+const VAULT_Z0 := -156.0
+const VAULT_Z1 := -144.0
+## Coffre : milieu de la face avant (au sol) ; l'Ingénieur se tient à sa droite pour l'ouvrir.
+const CHEST := Vector2(70.0, -149.0)
+const CHEST_SPOT := Vector2(74.0, -149.2)
 
 
 static func mountain_edge(x: float) -> float:
@@ -45,6 +56,21 @@ static func in_cave(x: float, z: float) -> bool:
 	if x < -66.0 or x > 66.0 or z < -171.0 or z > -85.0:
 		return false
 	return z > cave_n(x) and z < cave_s(x) and x > cave_w(z) and x < cave_e(z)
+
+
+## Volume de la réserve (qu'elle soit encore scellée ou non).
+static func in_vault(x: float, z: float) -> bool:
+	if x < VAULT_X0 or x >= VAULT_X1 or z < VAULT_Z0 or z >= VAULT_Z1:
+		return false
+	# Angles est arrondis (rayon 2,5), légère irrégularité de la paroi nord.
+	var r := 2.5
+	var cx := VAULT_X1 - r
+	var dx := x - cx
+	if dx > 0.0:
+		var cz := clampf(z, VAULT_Z0 + r, VAULT_Z1 - r)
+		if dx * dx + (z - cz) * (z - cz) > r * r:
+			return false
+	return z >= VAULT_Z0 + 0.6 + 0.6 * sin(x * 0.9)
 
 
 static func in_tunnel(x: float, z: float) -> bool:

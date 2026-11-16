@@ -11,7 +11,7 @@ canvas{image-rendering:pixelated;background:#23282f;display:block;margin:4px 0 1
 <p>Sprites générés depuis <code>assets/engineer-bare.js</code> (proposition 5 de <code>ancre-surcharge-propositions.html</code>), au même gabarit que l’Ingénieur du jeu (40 × 42, pieds en (15, 40)). <code>exportSheets()</code> renvoie les planches PNG et leurs métadonnées pour <code>assets/imported/engineer/</code>.</p>
 <div class="row"><div>Comparaison (armure / sans)<canvas id="cmp"></canvas></div></div>
 <div id="out"></div>
-<script src="assets/decor.js?v=6"></script><script src="assets/units.js?v=10"></script><script src="assets/engineer.js?v=3"></script><script src="assets/engineer-bare.js?v=2"></script>
+<script src="assets/decor.js?v=6"></script><script src="assets/units.js?v=10"></script><script src="assets/engineer.js?v=3"></script><script src="assets/engineer-bare.js?v=3"></script><script src="assets/engineer-pray.js?v=2"></script>
 <script>
 'use strict';
 const K=.5,FW=40,FH=42,COLS=12;
@@ -19,7 +19,10 @@ const SHEETS={
  idle:{count:24,frame:i=>EngineerBare.stand({},i*2.4/24,K),note:'repos : image floor(t·24/2,4) mod 24, comme le repos armé'},
  walk:{count:12,frame:i=>EngineerBare.stand({walk:i/12},0,K),note:'marche : phase += distance / stride'},
  kneel:{count:36,fps:10,frame:i=>EngineerBare.kneel({style:'push',pose:'push',per:3.6,breath:1.8},i/10,K),note:'à genoux, souffle court : tente de se relever toutes les 3,6 s (36 images à 10 i/s)'},
- pray:{count:24,fps:10,frame:i=>EngineerBare.kneel({style:'calm',pose:'pray'},i/10,K),note:'agenouillement de l’incantation : mains jointes en (7, −15) depuis les pieds, 24 images à 10 i/s'}};
+ pray:{count:24,fps:10,frame:i=>EngineerBare.kneel({style:'calm',pose:'pray'},i/10,K),note:'agenouillement de l’incantation : mains jointes en (7, −15) depuis les pieds, 24 images à 10 i/s'},
+ // Méditation en lévitation (planche ingenieur-priere-propositions.html, proposition 5) : la lévitation est un décalage appliqué en jeu.
+ settle:{count:10,fps:10,frame:i=>{const P=EngineerPray.POSES;return EngineerPray.draw(EngineerPray.keys([[P.stand,0],[P.crouch,.4],[P.lotus,1]],i/9),i/10,K,{open:i<5?1:0})},note:'s’assoit en tailleur : debout → accroupi → lotus, 10 images à 10 i/s (jouées à l’envers pour se relever)'},
+ lotus:{count:24,fps:10,frame:i=>{const P=EngineerPray.POSES,b=.5+.5*Math.sin(i/24*Math.PI*2),p={...P.lotus,S:[P.lotus.S[0],P.lotus.S[1]-b*.9],ha:.15+.05*b};return EngineerPray.draw(p,i/24*Math.PI*2/2.2,K,{open:0})},note:'méditation en tailleur, yeux clos, respiration sur 2,4 s (24 images à 10 i/s) ; lévitation ajoutée en jeu'}};
 // Pose de tir du lance-pitons : 19 angles (−90° à +90°) × 4 lignes (recul 0 / 1,5 / 3, suspension), comme engineer_aim.
 const AIM={pad:4,fw:44,fh:46,angles:Array.from({length:19},(_,i)=>-90+i*10),rows:[{recoil:0,pulse:.5},{recoil:1.5,pulse:.5},{recoil:3,pulse:.5},{recoil:0,pulse:1}]};
 function buildAim(){const c=document.createElement('canvas');c.width=AIM.fw*19;c.height=AIM.fh*4;const g=c.getContext('2d');

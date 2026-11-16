@@ -3,6 +3,18 @@ extends Unit
 ## Ennemi (spawn, Index.html ; rejeton : updateEvilPortals, galleries.js, 73b410f). Le rôle porte le type
 ## (creep, spitter, brute, beast) pour le rendu.
 
+## Ordres de groupe, uniquement pour les ennemis issus des vagues.
+var tactical_group: Dictionary = {}
+var tactical_role := ""
+var tactical_slot := 0
+var tactical_goal: Variant = null
+var tactical_speed := 0.0
+var tactical_target_id := -1
+var tactical_target_until := -INF
+var tactical_retreat := 0.0
+var tactical_retreating := false
+var tactical_last_hp := INF
+
 var kind := ""
 var speed := 0.0
 var reach := 0.0
@@ -18,7 +30,7 @@ var died_at := INF
 var portal: Variant = null
 
 
-static func make(k: String, px: float, pz: float, cd: float) -> Enemy:
+static func make(k: String, px: float, pz: float, cd: float, scaling: Dictionary = {}) -> Enemy:
 	var e := Enemy.new()
 	var E: Dictionary = Catalog.ENEMY[k]
 	e.id = -1
@@ -28,12 +40,13 @@ static func make(k: String, px: float, pz: float, cd: float) -> Enemy:
 	e.z = pz
 	e.tx = px
 	e.tz = pz
-	e.hp = E["hp"]
+	e.hp = E["hp"] * scaling.get("hp", 1.0)
+	e.tactical_last_hp = e.hp
 	e.max_hp = e.hp
 	e.speed = E["speed"]
 	e.reach = E["range"]
-	e.damage = E["damage"]
-	e.armor = E.get("armor", 0.0)
+	e.damage = E["damage"] * scaling.get("damage", 1.0)
+	e.armor = E.get("armor", 0.0) + scaling.get("armor", 0.0)
 	e.name = Catalog.ENEMY_INFO[k]["name"]
 	e.cooldown = cd
 	e.beast = k == "beast"

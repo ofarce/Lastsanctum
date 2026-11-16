@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Autels des dieux</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0b120e;--panel:#111b14;--line:#2a3a2c;--txt:#dcd8bc;--mut:#93a08a;--acc:#e8c870}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--txt);font:15px/1.5 'Pixelify Sans',system-ui,sans-serif}
+header,main{max-width:1320px;margin:auto;padding:18px 16px}h1{margin:0;font-weight:600;letter-spacing:.08em;font-size:26px;color:var(--acc)}
+header p{color:var(--mut);margin:6px 0 0;max-width:920px}nav{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+nav a,button{font:inherit;color:var(--txt);background:#1a2a1d;border:1px solid var(--line);padding:5px 11px;text-decoration:none;cursor:pointer}nav a:hover,button:hover,button[aria-pressed=true]{border-color:var(--acc)}
+.clock{position:sticky;top:0;z-index:5;background:rgba(11,18,14,.94);border-bottom:1px solid var(--line);backdrop-filter:blur(4px)}
+.clock div{max-width:1320px;margin:auto;padding:8px 16px;display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+.clock input{flex:1;min-width:160px;accent-color:var(--acc)}.clock output{min-width:120px;color:var(--acc)}
+section{margin:34px 0}h2{font-weight:600;letter-spacing:.06em;margin:0 0 4px;font-size:22px;display:flex;align-items:center;gap:10px}h2 i{width:14px;height:14px;border:1px solid #000;display:inline-block}
+section>p{color:var(--mut);margin:0 0 14px;max-width:920px}section>p b{color:var(--txt);font-weight:600}
+.grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:16px}.grid figure{grid-column:span 2}.grid figure:nth-child(4){grid-column:2/span 2}
+figure{margin:0;background:var(--panel);border:1px solid var(--line)}figure canvas{display:block;width:100%;height:auto;image-rendering:pixelated}
+figcaption{padding:10px 14px 14px}figcaption b{color:var(--acc);font-weight:600}figcaption p{margin:4px 0 0;color:var(--mut);font-size:14px}
+.zoom{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:6px}.zoom figure{display:flex;flex-direction:column;align-items:center;padding-top:10px}.zoom canvas{width:auto}
+.chosen{display:inline-block;margin-left:8px;font-size:12px;color:#0b120e;background:var(--acc);padding:0 6px;vertical-align:2px}.grid.one figure{grid-column:2/span 4}
+.note{border:1px solid var(--line);background:var(--panel);padding:12px 16px;color:var(--mut);max-width:920px}.note b{color:var(--txt)}
+@media(max-width:900px){.grid{grid-template-columns:1fr}.grid figure,.grid figure:nth-child(4){grid-column:auto}.zoom{grid-template-columns:repeat(2,minmax(0,1fr))}}
+</style></head><body>
+<header><h1>AUTELS DES DIEUX · CHOIX</h1>
+<p>Les temples deviennent des autels simples : un socle géométrique, un piton au centre et, au sommet, la statue du dieu d’après son icône. Medeina a son autel (Cercle de pierres) ; Aether, Indra et Sigil reçoivent cinq nouvelles propositions, à l’échelle et dans la vue des bâtiments du jeu (emprise 3 × 3 cases), dans les matériaux et la couleur de chaque culte. Les anciens temples sont mis en réserve dans <code>assets/reserve/temples-v1/</code>.</p>
+<nav id="nav"><a href="#statues">Statues</a></nav></header>
+<div class="clock"><div><button id="play" aria-pressed="false">▶ Cycle</button><input id="hour" type="range" min="0" max="24" step="0.05" value="11" aria-label="Heure de la journée"><output id="hl">11 h 00</output>
+<button data-h="11">Midi</button><button data-h="19">Crépuscule</button><button data-h="0.5">Nuit</button></div></div>
+<main>
+<section id="statues"><h2>Les quatre statues</h2><p>Agrandies ×5, sans éclairage. Tour 2 : Indra resserré (bouclier plus petit contre le corps, cape étroite), Sigil debout sur ses pieds, sans lévitation.</p><div class="zoom" id="zoom"></div></section>
+<div id="sets"></div>
+<section id="choix"><h2>À trancher</h2><p class="note"><b>Choix faits</b> : Aether 1 (Disque des sphères), Indra 5 (Foyer des guerriers), Medeina (Cercle de pierres), Sigil 2 (Rotonde). Ils sont intégrés au jeu par <code>autels-export.html</code> et <code>tools/autels/serve.py</code>.</p></section>
+</main>
+<script src="assets/autels-planches.js?v=5"></script>
+<script>
+'use strict';
+const views=[];
+for(const[id,g]of Object.entries(AUT.GODS)){
+ const z=document.createElement('figure'),c=document.createElement('canvas'),sp=AUT.statue(id,id);c.width=sp.P.w;c.height=sp.P.h;c.style.height=sp.P.h*5+'px';
+ const im=c.getContext('2d').createImageData(sp.P.w,sp.P.h);sp.P.c.forEach((v,i)=>{if(v<0)return;im.data[i*4]=v>>16&255;im.data[i*4+1]=v>>8&255;im.data[i*4+2]=v&255;im.data[i*4+3]=255});c.getContext('2d').putImageData(im,0,0);
+ z.append(c);const fc=document.createElement('figcaption');fc.innerHTML=`<b>${g.name}</b><p>${g.statue}</p>`;z.append(fc);document.querySelector('#zoom').append(z);
+ const sec=document.createElement('section');sec.id=id;
+ sec.innerHTML=`<h2 style="color:${g.color}"><i style="background:${g.color}"></i>${g.name} · ${g.epithet}</h2><p><b>Statue :</b> ${g.statue}</p><p>${g.intro||''}</p><div class="grid${g.items.length===1?' one':''}"></div>`;document.querySelector('#sets').append(sec);
+ const a=document.createElement('a');a.href='#'+id;a.textContent=g.name;document.querySelector('#nav').append(a);
+ g.items.forEach((it,i)=>{const f=document.createElement('figure');f.innerHTML=`<canvas width="${AUT.W}" height="${AUT.H}"></canvas><figcaption><b>${g.items.length===1?'':(i+1)+' · '}${it.name}</b>${it.chosen?'<span class="chosen">Retenu</span>':''}<p>${it.desc}</p></figcaption>`;sec.querySelector('.grid').append(f);
+  views.push({cv:f.querySelector('canvas'),g:f.querySelector('canvas').getContext('2d'),make:()=>AUT.vignette(id,i),S:null,vis:false})})}
+const io=new IntersectionObserver(es=>{for(const e of es){const v=views.find(v=>v.cv===e.target);v.vis=e.isIntersecting;if(v.vis&&!v.S)v.S=v.make()}},{rootMargin:'200px'});views.forEach(v=>io.observe(v.cv));
+const hourIn=document.querySelector('#hour'),hl=document.querySelector('#hl'),playB=document.querySelector('#play');let hour=11,playing=false,t=0,last,acc=0;
+const fmt=h=>{h=((h%24)+24)%24;return`${Math.floor(h)} h ${String(Math.floor(h%1*60)).padStart(2,'0')}`};
+hourIn.oninput=()=>{hour=+hourIn.value};document.querySelectorAll('[data-h]').forEach(b=>b.onclick=()=>{hour=+b.dataset.h;hourIn.value=hour});
+playB.onclick=()=>{playing=!playing;playB.setAttribute('aria-pressed',playing);playB.textContent=playing?'❚❚ Cycle':'▶ Cycle'};
+const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+function loop(now){const dt=last===undefined?0:Math.min((now-last)/1000,.1);last=now;t+=reduce?0:dt;if(playing){hour=(hour+dt*1.2)%24;hourIn.value=hour}
+ acc+=dt;if(acc>1/20){acc=0;hl.textContent=fmt(hour);for(const v of views)if(v.vis&&v.S)v.S.render(v.g,hour,t)}requestAnimationFrame(loop)}
+requestAnimationFrame(loop);
+</script></body></html>

@@ -93,6 +93,11 @@ func _draw() -> void:
 	_draw_build_preview()
 	_draw_pray_feedback()
 	_draw_anchor()
+	var b := HudModel.selected_building()
+	if b and b.rally_point != null:
+		var p := _project(b.rally_point.x, 0, b.rally_point.y)
+		draw_line(p, p + Vector2(0, -22), Color("#ffe095"), 2)
+		draw_colored_polygon(PackedVector2Array([p + Vector2(0, -22), p + Vector2(14, -17), p + Vector2(0, -12)]), Color("#5ce8ff"))
 
 
 # ---------------------------------------------------------------- Bâtiments
@@ -127,11 +132,13 @@ func _draw_building_labels() -> void:
 			_text_c(_bold, Vector2(p.x, y + 13.0), "%d ÂME%s EN ATTENTE" % [n, "S" if n > 1 else ""], 10, Color("#9be27a"))
 		if b.is_temple():
 			var n := 0
+			var rate := 0
 			for u in GameState.units:
 				if u.alive() and u.working and u.job != null and u.job["type"] == "pray" and u.job["temple"] == b:
 					n += 1
+					rate += Simulation.pray_rate(u)
 			if n:
-				_text_c(_bold, Vector2(p.x, y + 13.0), "%d EN PRIÈRE · +%d %s / s" % [n, n, String(Catalog.RES_INFO[Catalog.DEITY_RES[D["deity"]]]["name"]).to_upper()], 10, Color("#bfe8ff"))
+				_text_c(_bold, Vector2(p.x, y + 13.0), "%d EN PRIÈRE · +%d %s / s" % [n, rate, String(Catalog.RES_INFO[Catalog.DEITY_RES[D["deity"]]]["name"]).to_upper()], 10, Color("#bfe8ff"))
 
 
 ## drawPrayFeedback : « +5 Savoir » qui monte et s'efface au-dessus du temple.

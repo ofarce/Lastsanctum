@@ -2,26 +2,38 @@ extends Node2D
 ## Surimpression à la résolution écran, au-dessus de l'éclairage et sous le HUD.
 var world: World
 var cell: Variant = null
+var selected_cells: Array[Dictionary] = []
 
 
 func _draw() -> void:
-	if cell == null or world == null:
+	if world == null:
 		return
+	for selected: Dictionary in selected_cells:
+		_draw_cell(selected, Color("#f3c96b"), Color("#f3c96b22"))
+	if cell != null:
+		_draw_cell(cell, Color("#75eef5"), Color("#46ddec2e"), true)
+
+
+func _draw_cell(target: Dictionary, line_color: Color, fill_color: Color, show_info := false) -> void:
 	var px := float(world.camera.px)
-	var origin := world.camera.project(cell["i"] * 4, 0, cell["j"] * 4).round()
+	var origin := world.camera.project(target["i"] * 4, 0, target["j"] * 4).round()
 	var rect := Rect2(origin, Vector2.ONE * 32 * px)
-	draw_rect(rect, Color("#46ddec2e"))
+	draw_rect(rect, fill_color)
 	draw_rect(rect.grow(px), Color("#081b22"), false, 3 * px)
-	draw_rect(rect, Color("#75eef5"), false, px)
+	draw_rect(rect, line_color, false, px)
 	for point: Vector2 in [rect.position, Vector2(rect.end.x, rect.position.y), rect.end, Vector2(rect.position.x, rect.end.y)]:
 		var sx := 1 if point.x == rect.position.x else -1
 		var sy := 1 if point.y == rect.position.y else -1
-		draw_line(point, point + Vector2(sx * 6 * px, 0), Color("#dcffff"), 2 * px)
-		draw_line(point, point + Vector2(0, sy * 6 * px), Color("#dcffff"), 2 * px)
-	var block := world.terrain_state.block_definition(cell["i"], cell["j"])
+		draw_line(point, point + Vector2(sx * 6 * px, 0), line_color.lightened(0.25), 2 * px)
+		draw_line(point, point + Vector2(0, sy * 6 * px), line_color.lightened(0.25), 2 * px)
+	if not show_info:
+		return
+	var block := world.terrain_state.block_definition(target["i"], target["j"])
 	var font := ThemeDB.fallback_font
 	var title := "Miner : " + str(block.get("material_name", ""))
 	var detail := "Clic droit · Case 4 × 4"
+	if world.terrain_state.permanent_ores.has(Vector2i(cell["i"], cell["j"])):
+		detail = "Gisement inépuisable"
 	var width := maxf(font.get_string_size(title, HORIZONTAL_ALIGNMENT_LEFT, -1, 17).x, font.get_string_size(detail, HORIZONTAL_ALIGNMENT_LEFT, -1, 14).x) + 26
 	var screen := get_viewport_rect().size
 	var pos := Vector2(rect.end.x + 14, rect.position.y)

@@ -4,6 +4,12 @@ const Blocks := preload("res://data/mineable_blocks.gd")
 
 
 static func draw_item(canvas: CanvasItem, item: String, center: Vector2, scale_factor: float) -> void:
+	var ore := Blocks.ORES.find(item)
+	if ore >= 0:
+		var size := Vector2.ONE * 32 * scale_factor
+		canvas.draw_texture_rect_region(preload("res://assets/ardoise/world/nodules.png"),
+				Rect2(center - size * 0.5, size), Rect2(ore * 32, 64, 32, 32))
+		return
 	var color: Color = Blocks.ITEMS.get(item, {}).get("color", Color.MAGENTA)
 	var points := PackedVector2Array()
 	for p: Vector2 in [Vector2(-7, 3), Vector2(-5, -3), Vector2(0, -6), Vector2(6, -3), Vector2(8, 4), Vector2(2, 6), Vector2(-7, 3)]:

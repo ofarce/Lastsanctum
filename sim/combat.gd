@@ -11,6 +11,7 @@ extends RefCounted
 const VOLLEY := [0.0, 0.13, 0.26]
 
 var sim: Simulation
+var tactics: RefCounted
 ## Journal d'événements (vagues, morts, niveaux) pour les parties scriptées ; vide si log_events est faux.
 var log_events := false
 var events: PackedStringArray = []
@@ -18,6 +19,7 @@ var events: PackedStringArray = []
 
 func _init(s: Simulation) -> void:
 	sim = s
+	tactics = preload("res://sim/enemy_tactics.gd").new(s)
 
 
 func _rand() -> float:
@@ -86,7 +88,7 @@ func gain_xp(u: Unit, n: int) -> void:
 
 ## afterArmor : dégâts subis après la défense, au moins 15 % des dégâts d'origine.
 static func after_armor(u: Unit, dmg: float) -> float:
-	return maxf(dmg * 0.15, dmg - Catalog.lvl_bonus(u))
+	return maxf(dmg * 0.15, dmg - Catalog.armor(u))
 
 
 # ---------------------------------------------------------------- Effets (données)
@@ -181,7 +183,7 @@ func sword_strike(u: Unit, e: Variant) -> void:
 func barracks_strike(u: Unit, e: Enemy) -> void:
 	var F: Dictionary = Catalog.FIGHT[u.role]
 	var k := 1.5 if u.buff > 0.0 else 1.0
-	var dmg: float = (F["dmg"] + Catalog.lvl_bonus(u)) * k
+	var dmg: float = (Catalog.attack_damage(u) + Catalog.lvl_bonus(u)) * k
 	u.attack = F["cd"]
 	u.face = -1 if e.x - u.x < 0.0 else 1
 	# D15 : le lance-flammes n'a plus de sillon de feu ; en jeu, il tire en continu (flame_tick).
@@ -318,7 +320,7 @@ func update_fire_walls(dt: float) -> void:
 func flame_tick(u: Unit, e: Enemy, dt: float) -> void:
 	var F: Dictionary = Catalog.FIGHT["flammes"]
 	var k := 1.5 if u.buff > 0.0 else 1.0
-	var dmg: float = (F["dmg"] + Catalog.lvl_bonus(u)) * k / F["cd"] * dt
+	var dmg: float = (Catalog.attack_damage(u) + Catalog.lvl_bonus(u)) * k / F["cd"] * dt
 	u.attack = 0.1
 	u.face = -1 if e.x - u.x < 0.0 else 1
 	for o: Enemy in GameState.enemies.duplicate():
@@ -362,6 +364,8 @@ func update_units(dt: float, alive: Array[Unit]) -> void:
 			or (Catalog.is_adept(u) and u.job != null)
 		if not u.force_move and not busy:
 			var seek: float = Catalog.FIGHT[u.role]["seek"] if Catalog.FIGHT.has(u.role) else Catalog.HERO.get(u.role, {"seek": 10.0})["seek"]
+			if u.role == "engineer" and not u.unarmored:
+				seek = 250.0
 			enemy = target_closest(u, GameState.enemies, seek)
 		if u.role == "archer" and archer_tick(u, enemy, dt):
 			continue
@@ -402,6 +406,7 @@ func update_units(dt: float, alive: Array[Unit]) -> void:
 			if not hurt.is_empty():
 				var target: Unit = hurt[0]
 				target.hp = minf(target.max_hp, target.hp + 10.0)
+				target.healed_at = GameState.sim_time
 				u.attack = 1.0
 				zone(target.x, target.z, 0.9, Color("#80ddb8"))
 
@@ -409,6 +414,7 @@ func update_units(dt: float, alive: Array[Unit]) -> void:
 # ---------------------------------------------------------------- Ennemis
 
 func update_enemies(dt: float, alive: Array[Unit]) -> void:
+	tactics.update(dt, alive)
 	var core := {"x": CaveShape.CORE.x, "z": CaveShape.CORE.y}
 	for e: Enemy in GameState.enemies:
 		if e.hp <= 0.0:
@@ -418,22 +424,32 @@ func update_enemies(dt: float, alive: Array[Unit]) -> void:
 			continue
 		var espd := e.speed * (Catalog.SILLON["slow"] if e.slow_until > GameState.sim_time else 1.0)
 		e.cooldown -= dt
-		var target: Variant = target_closest(e, alive, e.reach if e.kind == "archer" else 4.5)
+		var coordinated := not e.tactical_group.is_empty()
+		var target: Variant = tactics.target(e, alive) if coordinated else target_closest(e, alive, e.reach if e.kind == "archer" else 4.5)
 		var is_core := target == null
 		var tx: float = core["x"] if is_core else target.x
 		var tz: float = core["z"] if is_core else target.z
 		var d := Combat.hyp(e.x - tx, e.z - tz)
-		if d > e.reach:
-			var s := sim.steer(e, Vector2(tx, tz))
-			var dx := s.x - e.x
-			var dz := s.y - e.z
-			var l := Combat.hyp(dx, dz)
-			if l == 0.0:
-				l = 1.0
-			e.x += dx / l * espd * dt
-			e.z += dz / l * espd * dt
-			sim.clamp_world(e)
-		elif e.cooldown <= 0.0:
+		var ordered: bool = coordinated and e.tactical_goal != null
+		# Au contact, la mêlée se défend même pendant le rassemblement ou la réserve.
+		var in_contact: bool = not is_core and d <= e.reach
+		var retreating: bool = e.tactical_retreating
+		if ordered and (not in_contact or retreating):
+			_move_enemy(e, e.tactical_goal, minf(espd, e.tactical_speed), dt)
+		elif d > e.reach:
+			if coordinated:
+				_move_enemy(e, Vector2(tx, tz), espd, dt)
+			else:
+				var next := sim.steer(e, Vector2(tx, tz))
+				var dx := next.x - e.x
+				var dz := next.y - e.z
+				var length := Combat.hyp(dx, dz)
+				if length == 0.0:
+					length = 1.0
+				e.x += dx / length * espd * dt
+				e.z += dz / length * espd * dt
+				sim.clamp_world(e)
+		if d <= e.reach and e.cooldown <= 0.0 and not retreating:
 			e.attack_started = GameState.sim_time
 			e.face = -1 if tx < e.x else 1
 			var dmg := e.damage
@@ -454,25 +470,60 @@ func update_enemies(dt: float, alive: Array[Unit]) -> void:
 			e.cooldown = Catalog.ENEMY[e.kind]["cd"]
 
 
+func _move_enemy(e: Enemy, goal: Vector2, speed: float, dt: float) -> void:
+	var next := sim.steer(e, goal)
+	var direction := next - e.pos()
+	var separation := Vector2.ZERO
+	for other: Enemy in GameState.enemies:
+		if other == e or other.hp <= 0.0:
+			continue
+		var away := e.pos() - other.pos()
+		var distance := away.length()
+		if distance < 1.25:
+			if distance < 0.001:
+				away = Vector2(-1 if e.tactical_slot < other.tactical_slot else 1, 0)
+			else:
+				away /= distance
+			separation += away * (1.25 - distance)
+	var movement := direction.limit_length(speed * dt)
+	if direction.length() > 0.1:
+		movement = (movement + separation.limit_length(1.0) * speed * dt * 0.5).limit_length(speed * dt)
+	var step := e.pos() + movement
+	# Les corrections de formation ne doivent jamais pousser dans la roche.
+	if sim.state().walkable(step.x, step.y):
+		e.x = step.x
+		e.z = step.y
+	elif sim.state().walkable(step.x, e.z):
+		e.x = step.x
+	elif sim.state().walkable(e.x, step.y):
+		e.z = step.y
+	sim.clamp_world(e)
+
+
 # ---------------------------------------------------------------- Vagues
 
-## startWave : 4 + 3w ennemis, au sud, à intervalle max(0,35 ; 1,5 − 0,14w).
+## Menace figée au lancement : effectif, composition et statistiques de toute la vague.
 func start_wave() -> void:
 	GameState.wave += 1
 	var w := GameState.wave
-	var n := 4 + w * 3
 	var menace := GameState.menace
+	var tier := Catalog.menace_tier(menace)
+	var n: int = 4 + w * 3 + Catalog.MENACE_WAVE["count"] * tier
 	GameState.spawn_queue = []
 	for i in n:
 		var kind := wave_kind(w, i, n, menace)
-		GameState.spawn_queue.append({"at": GameState.sim_time + 2.0 + i * maxf(0.35, 1.5 - w * 0.14), "x": -2.0 if i % 2 == 0 else 2.0, "kind": kind})
+		GameState.spawn_queue.append({"at": GameState.sim_time + 2.0 + i * maxf(0.35, 1.5 - w * 0.14), "x": -2.0 if i % 2 == 0 else 2.0, "kind": kind, "menace_tier": tier})
+	tactics.plan(GameState.spawn_queue)
 	_log("vague %d (%d ennemis)" % [w, n])
 	sim.say("Assaut %d : des créatures remontent la jungle par le sud." % w, 3.0)
 
 
-## Introduction progressive des cinq renforts, à effectif et cadence inchangés.
+## Renforts avancés par la menace ; champions supplémentaires aux paliers 15, 20…
 static func wave_kind(w: int, i: int, _n: int, menace: int = 0) -> String:
-	if (w >= 8 or menace >= Catalog.STRAZHAR_MENACE) and i == 0:
+	var tier := Catalog.menace_tier(menace)
+	w += floori(float(tier) / Catalog.MENACE_WAVE["composition_step"])
+	var champions := 1 + maxi(0, floori(float(tier - Catalog.MENACE_WAVE["champion_start"]) / Catalog.MENACE_WAVE["champion_step"]))
+	if (w >= 8 or menace >= Catalog.STRAZHAR_MENACE) and i < champions:
 		return "strazhar"
 	if w >= 5 and i % 7 == 5:
 		return "shield"
@@ -489,26 +540,32 @@ static func wave_kind(w: int, i: int, _n: int, menace: int = 0) -> String:
 func spawn_enemy(s: Dictionary) -> Enemy:
 	var x: float = s["x"] + (_rand() * 3.2 - 1.6)
 	var z := 62.0 + _rand() * 4.0
-	var e := Enemy.make(s["kind"], x, z, 0.3 + _rand() * 0.7)
+	var e := Enemy.make(s["kind"], x, z, 0.3 + _rand() * 0.7, Catalog.menace_stats(s.get("menace_tier", 0)))
+	if s.has("group"):
+		e.tactical_group = s["group"]
+		e.tactical_group["spawned"] += 1
+		e.tactical_role = tactics.role_for(e.kind)
+		e.tactical_slot = s["slot"]
 	GameState.enemies.append(e)
 	return e
 
 
-## updateEvilPortals : un rejeton toutes les 7 s par portail actif, 8 au plus.
+## Chaque apparition relit la menace ; les créatures déjà présentes gardent leurs statistiques.
 func update_evil_portals() -> void:
 	if GameState.ended:
 		return
 	for p: Dictionary in sim.state().portals:
 		if not p["active"] or GameState.sim_time < p["next"]:
 			continue
-		p["next"] = GameState.sim_time + Catalog.EVIL["interval"]
+		var tier := Catalog.menace_tier(GameState.menace)
+		p["next"] = GameState.sim_time + Catalog.menace_portal_interval(tier)
 		var n := 0
 		for e: Enemy in GameState.enemies:
 			if e.portal == p and e.hp > 0.0:
 				n += 1
-		if n >= Catalog.EVIL["cap"]:
+		if n >= Catalog.menace_portal_cap(tier):
 			continue
-		var e := Enemy.make("beast", p["x"] + (_rand() - 0.5) * 2.0, p["z"] + 2.0 + _rand(), 0.0)
+		var e := Enemy.make("beast", p["x"] + (_rand() - 0.5) * 2.0, p["z"] + 2.0 + _rand(), 0.0, Catalog.menace_stats(tier, true))
 		e.cooldown = 0.3 + _rand() * 0.7
 		e.portal = p
 		if not sim.state().walkable(e.x, e.z):

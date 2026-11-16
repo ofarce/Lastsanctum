@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Export du Puits des Âmes</title>
+<style>body{margin:0;padding:16px;background:#0b120e;color:#dcd8bc;font:14px/1.4 system-ui,sans-serif}canvas{image-rendering:pixelated;background:#1a2a1d;display:block}
+.row{display:flex;gap:16px;flex-wrap:wrap;align-items:flex-end;margin-top:12px}figure{margin:0}figcaption{color:#93a08a;font-size:12px}</style></head><body>
+<h1 style="font-size:18px;margin:0">Export du Puits des Âmes · Lotus de pierre</h1>
+<p>Sprite des bâtiments du jeu : 320 × 240, ancre (160, 168) au centre de l’emprise, rendu à l’échelle native (<code>scale: 1</code> dans le manifeste : le Lotus est dessiné à la taille des unités, sans la réduction size/3). Boucle de 72 images à 12 i/s (6 s), portrait 128 × 128 du HUD. Avec <code>?save=1</code> servi par <code>tools/puits/serve.py</code>, les fichiers sont écrits dans <code>assets/baked/</code>.</p>
+<p id="log"></p><div id="out"></div>
+<script src="assets/decor.js?v=6"></script><script src="assets/units.js?v=10"></script><script src="assets/lotus.js?v=1"></script>
+<script>
+'use strict';
+const SW=320,SH=240,AX=160,AY=168,FR=72,FPS=12,COLS=12;
+function frame(t){const P=new Px(SW,SH,true);LOTUS.draw(P,AX,AY,t,0);UnitKit.outlineAll(P);P.flush();
+ const c=document.createElement('canvas');c.width=SW;c.height=SH;const g=c.getContext('2d');
+ // ombre portée tramée (alpha 0,37), sous le lotus
+ const sh=g.createImageData(SW,SH);for(let y=0;y<SH;y++)for(let x=0;x<SW;x++){const d=((x-AX-3)/31)**2+((y-AY-2)/11)**2;if(d<1&&BAYER[y%4][x%4]<.95-d*.5)sh.data[(y*SW+x)*4+3]=95}
+ g.putImageData(sh,0,0);g.drawImage(P.c,0,0);
+ const F={px(x,y,col){g.fillStyle=col;g.fillRect(Math.round(x),Math.round(y),1,1)},dpx(x,y,col,a=1){x=Math.round(x);y=Math.round(y);if(a>=1||a>BAYER[(y%4+4)%4][(x%4+4)%4])F.px(x,y,col)}};
+ LOTUS.fountain(F,AX,AY,t,0);return c}
+(async()=>{const save=new URLSearchParams(location.search).has('save'),log=document.querySelector('#log');
+ const sheet=document.createElement('canvas');sheet.width=SW*COLS;sheet.height=SH*Math.ceil(FR/COLS);const g=sheet.getContext('2d');let top=SH,bot=0;
+ for(let f=0;f<FR;f++){const c=frame(f/FPS);g.drawImage(c,(f%COLS)*SW,((f/COLS)|0)*SH);const d=c.getContext('2d').getImageData(0,0,SW,SH).data;
+  for(let k=0;k<SW*SH;k++)if(d[k*4+3]===255){const y=(k/SW)|0;if(y<top)top=y;if(y>bot)bot=y}}
+ const base=document.createElement('canvas');base.width=SW;base.height=SH;base.getContext('2d').drawImage(sheet,0,0,SW,SH,0,0,SW,SH);
+ const bd=base.getContext('2d').getImageData(0,0,SW,SH).data;let x0=SW,x1=0,y0=SH,y1=0;for(let y=0;y<SH;y++)for(let x=0;x<SW;x++)if(bd[(y*SW+x)*4+3]===255){if(x<x0)x0=x;if(x>x1)x1=x;if(y<y0)y0=y;if(y>y1)y1=y}
+ const por=document.createElement('canvas');por.width=por.height=128;const pg=por.getContext('2d'),w=x1-x0+1,h=y1-y0+1,k=Math.min(1.5,120/w,124/h);pg.imageSmoothingEnabled=false;
+ pg.drawImage(base,x0,y0,w,h,Math.round(64-w*k/2),Math.round(128-h*k),Math.round(w*k),Math.round(h*k));
+ const meta={anchor:[AX,AY],top,bottom:bot,scale:1,anim:{frame_w:SW,frame_h:SH,cols:COLS,rows:Math.ceil(FR/COLS),count:FR,seconds:FR/FPS,fps:FPS,exact:true,seam_pixels:0}};
+ const row=document.createElement('div');row.className='row';const fig=(c,cap,z)=>{const f=document.createElement('figure');c.style.width=c.width*z+'px';f.append(c);const fc=document.createElement('figcaption');fc.textContent=cap;f.append(fc);row.append(f)};
+ fig(base,`base · haut ${top}, bas ${bot}`,2);fig(por,'portrait du HUD',2);const sm=document.createElement('canvas');sm.width=sheet.width;sm.height=sheet.height;sm.getContext('2d').drawImage(sheet,0,0);fig(sm,'planche animée (72 images)',.25);
+ document.querySelector('#out').append(row);
+ if(save){const post=(n,b)=>fetch('/out/'+n,{method:'POST',body:b}).then(x=>{if(!x.ok)throw new Error(n+' '+x.status)});
+  await post('da-soulwell_anim.png',sheet.toDataURL('image/png'));await post('da-soulwell_base.png',base.toDataURL('image/png'));
+  await post('bld-soulwell.png',por.toDataURL('image/png'));await post('meta-soulwell.json',JSON.stringify(meta))}
+ log.textContent=save?'Écrit : da-soulwell (planche, base, portrait, manifeste).':'Aperçu seulement (ajouter ?save=1 avec tools/puits/serve.py pour écrire).';document.body.dataset.done='1'})().catch(e=>{document.querySelector('#log').textContent='Erreur : '+e.message;throw e});
+</script></body></html>

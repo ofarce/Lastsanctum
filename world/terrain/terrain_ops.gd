@@ -19,7 +19,7 @@ func _init(terrain_state: TerrainState, decor: DecorRegistry, terrain_painter: T
 ## digCell(i, j).
 func dig_cell(i: int, j: int) -> void:
 	var key := Vector2i(i, j)
-	if state.dug.has(key):
+	if state.dug.has(key) or state.permanent_ores.has(key):
 		return
 	state.dug[key] = true
 	state.dig_hits.erase(key)
@@ -36,11 +36,43 @@ func dig_cell(i: int, j: int) -> void:
 		registry.add({"s": "face5_%d" % v, "runtime": true, "x": x, "z": z, "d": z, "bx": x, "bz": z})
 	state.version += 1
 	Combat.zone(x + 2.0, z + 2.0, 2.0, Color("#a89c86"))
+	# La case touche la réserve scellée du coffre antique : elle s'ouvre.
+	var vault := not state.vault_open and TerrainState.cell_touches_vault(i, j)
+	if vault:
+		open_vault()
 	# Une galerie touche la case : elle est découverte.
-	if not reveal_galleries_near(x - 1.5, z - 1.5, x + 5.5, z + 5.5):
+	if not reveal_galleries_near(x - 1.5, z - 1.5, x + 5.5, z + 5.5) and not vault:
 		Events.notice.emit("Roche creusée : la grotte s’agrandit.", 1.5)
 	if painter:
 		painter.terrain.flush()
+
+
+## Réserve du coffre antique : devient creuse, sol repeint, décor de roche retiré, parois au nord.
+func open_vault() -> void:
+	if state.vault_open:
+		return
+	state.vault_open = true
+	var X0 := CaveShape.VAULT_X0
+	var X1 := CaveShape.VAULT_X1
+	var Z0 := CaveShape.VAULT_Z0
+	var Z1 := CaveShape.VAULT_Z1
+	registry.remove_in_rect(X0, Z0, X1, Z1, func(e: Dictionary) -> bool:
+		return not DecorRegistry.is_fixed(e) and CaveShape.in_vault(e["x"], e["z"]))
+	if painter:
+		painter.paint_region(X0 - 4.0, Z0 - 4.0, X1 + 4.0, Z1 + 4.0)
+	# Paroi vue de face au-dessus de chaque colonne (comme au nord d'une galerie).
+	var x := X0
+	while x < X1:
+		var cx := x + 2.0
+		var bz := Z0
+		while bz < Z1 and not CaveShape.in_vault(cx, bz):
+			bz += 0.5
+		if not state.walkable(cx, Z0 - 2.0):
+			registry.add({"s": "face5_%d" % (floori(x / 4.0) % 6), "runtime": true, "x": x, "z": bz, "d": bz, "bx": x, "bz": bz})
+		x += 4.0
+	state.version += 1
+	Combat.zone(CaveShape.CHEST.x, CaveShape.CHEST.y, 6.0, Color("#5ce8ff"))
+	Events.notice.emit("Une réserve tyrienne scellée ! Un coffre antique y repose.", 4.0)
 
 
 func reveal_galleries_near(x0: float, z0: float, x1: float, z1: float) -> bool:

@@ -125,4 +125,4 @@ function stand(sp,t,k=.5){
  // cou et tête
  const hd=[cx+1,19];seg(H2,[cx+1,29],[hd[0]-1,hd[1]+5],4.6,SKN,24,{v:.55});head(H2,hd,o,{open:1});
  outlineAll(P0);P0.flush();return P0.c}
-return{stand,kneel,OUTFIT,kState,aimArm}})();
+return{stand,kneel,OUTFIT,kState,aimArm,parts:{shirt,head,scarf,ik,off,canvasFor}}})();

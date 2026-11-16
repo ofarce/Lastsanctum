@@ -70,6 +70,45 @@
         "planches"
       ],
       "port": 8133
+    },
+    {
+      "name": "planches-puits",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8137",
+        "--bind",
+        "127.0.0.1",
+        "--directory",
+        "planches"
+      ],
+      "port": 8137
+    },
+    {
+      "name": "autels-export",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "tools/autels/serve.py"
+      ],
+      "port": 8141
+    },
+    {
+      "name": "puits-export",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "tools/puits/serve.py"
+      ],
+      "port": 8143
+    },
+    {
+      "name": "coffre-export",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "tools/coffre/serve.py",
+        "8145"
+      ],
+      "port": 8145
     }
   ]
 }

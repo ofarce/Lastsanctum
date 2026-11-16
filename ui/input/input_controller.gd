@@ -1,8 +1,8 @@
 class_name InputController
 extends Node
 ## Entrées du joueur (Index.html et hud.js, 73b410f) : sélection au clic gauche, Maj+clic, cadre de
-## sélection, clic sur l'Ancre ; clic droit (sans glisser) pour réactiver l'Ancre, creuser ou se
-## déplacer ; touches 1–9, Ctrl+A (D2), Échap, Maj+R, et les raccourcis du panneau d'actions (hudKey, HudModel).
+## sélection, clic sur l'Ancre ; clic droit pour réactiver, creuser ou se déplacer ; glisser droit sur la
+## roche pour mettre plusieurs cases en file. Touches 1–9, Ctrl+A, Échap, Maj+R et raccourcis HUD.
 
 const BOX_FILL := Color("#ead08c22")
 const BOX_LINE := Color("#f8df93")
@@ -18,6 +18,10 @@ var _layer := CanvasLayer.new()
 var _box := _SelectBox.new()
 var _mining_hover := preload("res://ui/input/mining_hover.gd").new()
 var _pointer_inside := true
+var _mining_drag_on := false
+var _mining_drag_cells: Array[Dictionary] = []
+var _mining_drag_keys: Dictionary = {}
+var _mining_drag_last := Vector2.ZERO
 
 
 func _ready() -> void:
@@ -57,6 +61,7 @@ func _process(_delta: float) -> void:
 	var pointer := get_viewport().get_mouse_position()
 	var blocked := not _pointer_inside or get_viewport().gui_get_hovered_control() != null or _box_on 		or Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT)
 	_mining_hover.cell = mining_hover_cell(pointer, blocked)
+	_mining_hover.selected_cells = _visible_mining_cells()
 	_mining_hover.queue_redraw()
 	var orb: Sprite2D = world.special("orb")
 	if not is_instance_valid(orb):
@@ -66,6 +71,66 @@ func _process(_delta: float) -> void:
 		and get_viewport().gui_get_hovered_control() == null
 		and hit_orb(get_viewport().get_mouse_position()))
 	(orb.material as ShaderMaterial).set_shader_parameter("hovered", hovered)
+
+
+func _visible_mining_cells() -> Array[Dictionary]:
+	var cells := _mining_drag_cells.duplicate()
+	var seen: Dictionary = _mining_drag_keys.duplicate()
+	for u: Unit in GameState.units:
+		if u.role != "engineer" or u.job == null or u.job.get("type") != "dig":
+			continue
+		var queue: Array = u.job.get("cells", [u.job.get("cell")])
+		for i in queue.size():
+			var cell: Dictionary = queue[i]
+			var key := Vector2i(cell["i"], cell["j"])
+			if not seen.has(key):
+				seen[key] = true
+				cells.append(cell)
+	return cells
+
+
+func _input(event: InputEvent) -> void:
+	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_RIGHT and event.pressed:
+		if _pointer_inside and get_viewport().gui_get_hovered_control() == null and not _box_on:
+			var first: Variant = mining_hover_cell(event.position)
+			if first != null:
+				_mining_drag_on = true
+				_mining_drag_cells.clear()
+				_mining_drag_keys.clear()
+				_mining_drag_last = event.position
+				_add_mining_cell(first)
+				get_viewport().set_input_as_handled()
+	elif event is InputEventMouseMotion and _mining_drag_on and (event.button_mask & MOUSE_BUTTON_MASK_RIGHT):
+		_collect_mining_segment(_mining_drag_last, event.position)
+		_mining_drag_last = event.position
+		get_viewport().set_input_as_handled()
+	elif event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_RIGHT and not event.pressed and _mining_drag_on:
+		_collect_mining_segment(_mining_drag_last, event.position)
+		_mining_drag_on = false
+		if not _mining_drag_cells.is_empty():
+			sim.order_mining_cells(_mining_drag_cells)
+		_mining_drag_cells.clear()
+		_mining_drag_keys.clear()
+		get_viewport().set_input_as_handled()
+
+
+func _collect_mining_segment(from: Vector2, to: Vector2) -> void:
+	var steps := maxi(1, ceili(from.distance_to(to) / 8.0))
+	for i in range(1, steps + 1):
+		var pointer := from.lerp(to, float(i) / steps)
+		if get_viewport().gui_get_hovered_control() != null:
+			continue
+		var cell: Variant = mining_hover_cell(pointer)
+		if cell != null:
+			_add_mining_cell(cell)
+
+
+func _add_mining_cell(cell: Dictionary) -> void:
+	var key := Vector2i(cell["i"], cell["j"])
+	if _mining_drag_keys.has(key):
+		return
+	_mining_drag_keys[key] = true
+	_mining_drag_cells.append(cell.duplicate())
 
 
 ## Même résolution de cible que le clic droit, recalculée même si seule la caméra bouge.
@@ -214,15 +279,25 @@ func _right_click(p: Vector2) -> void:
 	if GameState.hud_mode == "build":
 		GameState.hud_mode = ""
 		return
+	var selected := HudModel.selected_building()
+	if selected and selected.produces_units():
+		var point := ground(p)
+		if sim.state().walkable(point.x, point.y):
+			selected.rally_point = point
+		return
 	var eng := sim.builder()
 	if eng and not GameState.orb_active and hit_orb(p):
 		sim.order_orb(eng)
+		return
+	if hit_chest(p) and sim.order_chest(eng):
 		return
 	var turret: Variant = hit_turret(p)
 	if turret != null:
 		sim.combat.order_turret(turret)
 		return
 	if sim.order_adepts(ground(p)):
+		return
+	if sim.order_pray(hit_building(ground(p))):
 		return
 	# Ennemi proche du clic (moins de max(20, 1,2·Z) pixels) : ordre d'attaque, sinon déplacement.
 	var nearest: Enemy = null
@@ -237,6 +312,15 @@ func _right_click(p: Vector2) -> void:
 		sim.say("Ordre : attaquer la cible.", 1.0)
 	else:
 		sim.issue_move(ground(p))
+
+
+## Coffre antique sous le pointeur (silhouette de 40 × 44 pixels natifs au-dessus de sa face avant).
+func hit_chest(p: Vector2) -> bool:
+	if not sim.state().vault_open:
+		return false
+	var k := float(world.camera.px)
+	var q := project(CaveShape.CHEST.x, 0.0, CaveShape.CHEST.y)
+	return absf(p.x - q.x) < 20.0 * k and p.y > q.y - 40.0 * k and p.y < q.y + 4.0 * k
 
 
 ## hitTurret : baliste sous le pointeur (silhouette de 88 × 124 pixels natifs autour de la base).

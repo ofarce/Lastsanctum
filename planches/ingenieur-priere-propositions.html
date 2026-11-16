@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Ingénieur · prière</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0b120e;--panel:#111b14;--line:#2a3a2c;--txt:#dcd8bc;--mut:#93a08a;--acc:#e8c870;--cy:#5ce8ff}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--txt);font:15px/1.45 'Pixelify Sans',system-ui,sans-serif}
+header,main{max-width:1360px;margin:auto;padding:18px 16px}h1{margin:0;font-weight:600;letter-spacing:.08em;font-size:26px;color:var(--acc)}
+header p{color:var(--mut);margin:6px 0 0;max-width:940px}
+button{font:inherit;color:var(--txt);background:#1a2a1d;border:1px solid var(--line);padding:6px 12px;cursor:pointer}button:hover{border-color:var(--acc)}
+button.on{border-color:var(--acc);color:var(--acc)}
+.bar{display:flex;gap:8px;align-items:center;margin-top:12px;flex-wrap:wrap}.bar span{color:var(--mut);margin-left:10px}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-top:18px}figure{margin:0;background:var(--panel);border:1px solid var(--line);min-width:0}
+.stage{position:relative;background:#070b08;padding:8px;display:flex;justify-content:center}
+.stage canvas{image-rendering:pixelated;display:block;width:100%;max-width:640px;height:auto;aspect-ratio:4/3}
+.tag{position:absolute;left:14px;top:12px;font-size:12px;padding:2px 8px;background:#0b120ecc;border:1px solid var(--line);color:var(--mut)}
+.keys{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:4px;padding:8px;border-top:1px solid var(--line);background:#0e1711}
+.keys div{text-align:center;font-size:11px;color:var(--mut)}.keys canvas{image-rendering:pixelated;width:100%;height:auto;display:block}
+figcaption{padding:10px 14px 14px}figcaption b{color:var(--acc);font-weight:600;font-size:17px}figcaption p{margin:4px 0 0;color:var(--mut);font-size:14px}
+figcaption .lore{color:#9fd6dc;font-size:13px;border-left:2px solid #1f9fb8;padding-left:8px;margin-top:8px}
+.why{border:1px solid var(--line);background:var(--panel);padding:12px 16px;color:var(--mut)}.why b{color:var(--txt)}
+@media(max-width:1000px){.grid{grid-template-columns:1fr}}
+</style></head><body>
+<header><h1>INGÉNIEUR · ANIMATIONS DE PRIÈRE</h1>
+<p>Clic droit sur un temple avec l’Ingénieur sélectionné : il marche jusqu’au parvis, entre en prière et rapporte +5 de la ressource du dieu chaque seconde. Cinq façons de prier, en tenue sans armure, devant les sprites de temple de la charte. Rendu à la résolution du jeu (personnage ×0,5), affiché ×5. Images clés en dessous.</p>
+<div class="bar"><button id="pause">Pause</button><button id="speed">Vitesse ×1</button><span>Temple :</span><span id="temples" style="margin:0;display:flex;gap:6px;flex-wrap:wrap"></span></div></header>
+<main><div class="why"><b>Boucle :</b> arrivée en marchant → entrée en prière → 5 secondes de prière (5 gains de +5, popup au-dessus du temple comme en jeu) → relève → départ (uniquement pour faire boucler la planche ; en jeu, il prie jusqu’à recevoir un autre ordre). La prière part toujours de l’Ingénieur vers le temple : la lumière porte la couleur du culte. Le cyan n’apparaît que là où intervient la technologie ou l’Énonciation des Exilés.</div>
+<div class="grid" id="grid"></div></main>
+<script src="assets/decor.js?v=6"></script><script src="assets/units.js?v=10"></script><script src="assets/engineer-bare.js?v=3"></script><script src="assets/engineer-pray.js?v=1"></script><script src="assets/da-planches.js?v=14"></script>
+<script>
+'use strict';
+const EP=EngineerPray,PO=EP.POSES;
+const SW=240,SH=180,VW=176,VH=132,SC=5,K=.5,PAD=6,OUTC='#0a0a0c';
+const CY=['#0a2a33','#12596b','#1f9fb8','#5ce8ff','#c8fbff','#ffffff'];
+const RES={medeina:'Vie',indra:'Discipline',sigil:'Savoir',aether:'Forge'};
+const cl=(v,a=0,b=1)=>Math.max(a,Math.min(b,v)),mix=(a,b,t)=>a+(b-a)*t,mix2=(a,b,t)=>[mix(a[0],b[0],t),mix(a[1],b[1],t)];
+const sm=t=>{t=cl(t);return t*t*(3-2*t)},eio=t=>.5-.5*Math.cos(Math.PI*cl(t)),ein=t=>{t=cl(t);return t*t*t},eout=t=>{t=1-cl(t);return 1-t*t*t};
+const bump=(x,a,b)=>x<a||x>b?0:Math.sin(Math.PI*(x-a)/(b-a));
+const bay=(x,y)=>BAYER[y&3][x&3],rampc=(r,v,x,y)=>Px.prototype.ramp(r,v,x,y);
+const bez=(a,c,b,t)=>[(1-t)*(1-t)*a[0]+2*(1-t)*t*c[0]+t*t*b[0],(1-t)*(1-t)*a[1]+2*(1-t)*t*c[1]+t*t*b[1]];
+const WIN=1.6,PRAY=5.35,WOUT=1.5,GAP=.35,STRIDE=34;
+
+// ---------- temples (sprites de jeu de la charte, cadrés sur leurs pixels opaques) ----------
+const TEMPLES={};
+function temple(k){if(TEMPLES[k])return TEMPLES[k];const sp=DA.templeSprite(k),c=sp.img,g=c.getContext('2d'),d=g.getImageData(0,0,c.width,c.height).data;
+ let x0=1e9,x1=-1,y0=1e9,y1=-1;for(let y=0;y<c.height;y++)for(let x=0;x<c.width;x++)if(d[(y*c.width+x)*4+3]>200){x0=Math.min(x0,x);x1=Math.max(x1,x);y0=Math.min(y0,y);y1=Math.max(y1,y)}
+ const w=x1-x0+1,h=y1-y0+1,cx=150,bot=126,ox=Math.round(cx-(sp.anchor[0])),oy=Math.round(bot-(y1));
+ const T={k,img:c,ox,oy,cx:ox+(x0+x1)/2,top:oy+y0,bot:oy+y1,left:ox+x0,right:ox+x1,w,h,L:DA.DEITIES[k].portal,res:RES[k]};
+ T.heart=[T.cx,T.bot-34];T.base=[T.cx,T.bot-3];T.spot=[Math.round(T.cx-24),Math.round(T.bot+16)];T.vx=Math.round(T.cx-100);T.vy=T.spot[1]+24-VH;T.ptop=Math.max(T.top,T.vy+22);T.heart[1]=Math.max(T.heart[1],T.vy+34);return TEMPLES[k]=T}
+
+// ---------- sol de jungle (jour) : herbe, parvis de terre battue, sentier d'arrivée ----------
+const GROUND={};
+function ground(T){if(GROUND[T.k])return GROUND[T.k];const img=new ImageData(SW,SH),d=img.data;
+ for(let y=0;y<SH;y++)for(let x=0;x<SW;x++){let v=.32+fbm(x/9,y/6,3)*.5+(hash(x,y,5)-.5)*.08,c=rampc(C.grass,v,x,y);
+  const e=((x-T.cx)/(T.w*.62))**2+((y-T.bot-8)/16)**2,p=Math.abs(y-T.spot[1]-1+(x-T.spot[0])*.04)/4.5+(x>T.spot[0]?9:0);
+  const dirt=Math.min(e,p)+(fbm(x/4,y/3,9)-.5)*.45;if(dirt<1)c=rampc(C.dirt,.3+fbm(x/7,y/5,2)*.45-(dirt>.8?.12:0),x,y);
+  else if(hash(x,y,11)>.985){c=C.blade?C.blade[2]:C.grass[6]}
+  const h=hex(c),i=(y*SW+x)*4;d[i]=h[0];d[i+1]=h[1];d[i+2]=h[2];d[i+3]=255}
+ return GROUND[T.k]=img}
+
+// ---------- effets en pixels tramés ----------
+const FX=g=>{const F={px(x,y,c){g.fillStyle=c;g.fillRect(Math.round(x),Math.round(y),1,1)},
+ dpx(x,y,c,a=1){x=Math.round(x);y=Math.round(y);if(x<0||y<0||x>=SW||y>=SH||a<=0)return;if(a>=1||a>bay(x,y)){g.fillStyle=c;g.fillRect(x,y,1,1)}},
+ line(x0,y0,x1,y1,c,a=1){const n=Math.max(1,Math.ceil(Math.max(Math.abs(x1-x0),Math.abs(y1-y0))));for(let k=0;k<=n;k++)F.dpx(x0+(x1-x0)*k/n,y0+(y1-y0)*k/n,c,a)},
+ disc(cx,cy,r,c,a=1){for(let y=Math.floor(cy-r);y<=cy+r;y++)for(let x=Math.floor(cx-r);x<=cx+r;x++){const dd=Math.hypot(x+.5-cx,y+.5-cy)/r;if(dd<=1)F.dpx(x,y,c,a*(1-dd*dd*.6))}},
+ halo(cx,cy,r,L,a=1,ry=r){// halo en paliers : trois anneaux de densité décroissante
+  for(let y=Math.floor(cy-ry);y<=cy+ry;y++)for(let x=Math.floor(cx-r);x<=cx+r;x++){const dd=Math.hypot((x+.5-cx)/r,(y+.5-cy)/ry);if(dd>1)continue;const tier=dd<.35?.75:dd<.7?.45:.2;F.dpx(x,y,dd<.35?L[3]:L[2],a*tier)}},
+ ring(cx,cy,r,c,a=1,ry=r){const n=Math.max(10,Math.ceil(r*7));for(let k=0;k<n;k++){const t=k/n*6.283;F.dpx(cx+Math.cos(t)*r,cy+Math.sin(t)*ry,c,a)}},
+ mote(x,y,L,a=1,r=1.6){r+=.6;F.disc(x,y,r+3,L[2],.4*a);F.disc(x,y,r+1.2,L[3],.75*a);F.disc(x,y,r,L[4],a);F.dpx(x,y,L[5],a);F.dpx(x+1,y,L[5],a);F.dpx(x,y+1,L[5],a*.8)},
+ trail(path,t,L,n=6,step=.025,a=1){n=Math.round(n*1.6);step*=.8;for(let j=n;j>=1;j--){const q=path(Math.max(0,t-j*step)),k=1-j/(n+1);F.dpx(q[0],q[1],j<4?L[4]:L[3],a*k);if(j<n*.6){F.dpx(q[0]+1,q[1],L[3],a*k*.8);F.dpx(q[0],q[1]+1,L[2],a*k*.7)}}}};return F};
+// repère du gabarit (80×84, pieds en (30,80)) → écran, pour un ingénieur aux pieds en (ex, ey)
+const T2S=(ex,ey,q)=>[ex+(q[0]-30)*K,ey+(q[1]-80)*K];
+// le temple répond à chaque gain : éclat au cœur et liseré sur le parvis
+function templeFlash(F,T,age){if(age<0||age>.5)return;const k=age/.5;F.halo(T.heart[0],T.heart[1],4+eout(k)*9,T.L,1-k);F.ring(T.heart[0],T.heart[1],3+eout(k)*14,T.L[4],(1-k)*.8,(3+eout(k)*14)*.7);
+ for(let x=T.left+6;x<T.right-6;x++)F.dpx(x,T.bot+1,T.L[3],(1-k)*.7*(.5+.5*Math.sin(x*.7)))}
+
+// ================= propositions =================
+// chaque proposition : base (pose de prière), settle (images clés depuis la station debout), pray(w) → {p, open}, fx(F, ctx)
+// w = temps passé en prière ; un gain tombe à chaque seconde entière (w = 1 … 5).
+const GLY=[[[[0,0],[4,0],[4,4],[0,4],[0,0]],[[0,0],[4,4]]],[[[2,0],[4,4],[0,4],[2,0]],[[2,2],[2,4]]],[[[1,0],[3,0],[4,2],[3,4],[1,4],[0,2],[1,0]],[[0,2],[4,2]]],[[[0,0],[2,2],[4,0]],[[0,2],[2,4],[4,2]],[[2,2],[2,4]]]];
+const strokes=g=>{const segs=[];let tot=0;for(const pl of g)for(let k=1;k<pl.length;k++){const a=pl[k-1],b=pl[k],l=Math.hypot(b[0]-a[0],b[1]-a[1]);segs.push({a,b,l,s:tot});tot+=l}return{segs,tot}};
+const GS=GLY.map(strokes);
+const pen=(i,w)=>{const{segs,tot}=GS[i],L=w*tot;for(const s of segs)if(L<=s.s+s.l)return mix2(s.a,s.b,cl((L-s.s)/s.l));return segs[segs.length-1].b};
+
+const STYLES=[
+{id:'recueil',name:'1 · Recueillement à genoux',deity:'medeina',set:.9,rise:.8,
+ desc:'Il s’agenouille sur les deux genoux, assis sur les talons, mains jointes contre la poitrine et tête inclinée. À chaque seconde, les mains s’ouvrent à peine et laissent monter une petite lueur qui file en arc jusqu’au cœur du temple : le temple s’éclaire, +5.',
+ lore:'La plus sobre : une prière que n’importe quel adepte reconnaîtrait. Lisible à petite taille grâce au trajet de la lueur, et calme à l’œil même avec plusieurs gains par seconde.',
+ settle:[[PO.stand,0],[PO.crouch,.45],[PO.seiza,1]],
+ pray(w,u){const b=.5+.5*Math.sin(w*2.4),cyc=w%1,o=w<.1?0:bump(cyc,.05,.35);let p=EP.shift(PO.seiza,0,-1.1*b,['S']);p=EP.shift(p,1*o,-3.5*o,['fH','bH']);p.ha=.32+.06*b-.12*o;return{p,open:0}},
+ fx(F,X){const{T,u,w,b0,J,ex,ey}=X,hands=T2S(ex,ey,mix2(J.fH,J.bH,.5));
+  if(X.ph==='pray'){F.halo(hands[0]+.5,hands[1],3.2,T.L,.55+.25*Math.sin(u*3));
+   for(let k=1;k<=5;k++){const t0=b0+k-.8,age=u-t0;if(age<0||age>.8)continue;const q=age/.8,c=[mix(hands[0],T.heart[0],.4),Math.min(hands[1],T.heart[1])-14],path=t=>bez(hands,c,T.heart,sm(t));
+    const P=path(q);F.trail(path,q,T.L,7,.03);F.mote(P[0],P[1],T.L,1,1.3+q*.5)}}
+  for(let k=1;k<=5;k++)templeFlash(F,T,u-(b0+k))}},
+
+{id:'prostr',name:'2 · Prosternation rythmée',deity:'indra',set:.9,rise:.8,
+ desc:'À genoux, il se prosterne une fois par seconde : buste à l’horizontale, front et paumes au sol, puis se redresse. Au contact, une onde de la couleur du culte court sur le sol jusqu’au parvis ; quand elle l’atteint, le temple répond, +5.',
+ lore:'Le gain est rythmé par le geste : on « compte » les +5 en regardant le dos de l’Ingénieur. Mouvement le plus ample : il se lit de loin, même quand le temple sort de l’écran.',
+ settle:[[PO.stand,0],[PO.crouch,.45],[PO.seiza,1]],
+ bv:w=>{const c=w%1;return c<.4?eio(c/.4):c<.55?1:1-eio((c-.55)/.45)},
+ pray(w,u){const v=this.bv(w),p=EP.blend(PO.seiza,PO.prostrate,v);return{p,open:0}},
+ fx(F,X){const{T,u,b0,ex,ey}=X,o=T2S(ex,ey,[57,78]);
+  for(let k=1;k<=5;k++){const t0=b0+k-.6,age=u-t0;if(age<0||age>.62)continue;const q=age/.6,rx=2+eout(q)*(T.cx-o[0]+T.w*.35);
+   if(age<.12)F.halo(o[0],o[1]-1,3,T.L,1-age/.12);F.ring(o[0],o[1],rx,T.L[3],.9*(1-q*.6),rx*.32);F.ring(o[0],o[1],rx*.8,T.L[2],.5*(1-q),rx*.26)}
+  for(let k=1;k<=5;k++)templeFlash(F,T,u-(b0+k))}},
+
+{id:'bras',name:'3 · Invocation bras levés',deity:'aether',set:.7,rise:.6,
+ desc:'Debout, pieds écartés, les deux bras tendus vers le temple, paumes ouvertes, visage levé. Un filet continu de lueur relie ses mains au temple ; à chaque seconde il se cambre légèrement et un éclat plus vif remonte le filet : +5.',
+ lore:'La seule prière debout : la silhouette reste haute et ne se confond pas avec les adeptes à genoux. Le filet permanent montre d’un coup d’œil qui prie quel temple quand plusieurs unités prient ensemble.',
+ settle:[[PO.stand,0],[PO.raise,1]],
+ pray(w,u){const cyc=w%1,a=w<.3?0:bump(cyc,.6,.98),b=.5+.5*Math.sin(w*2.2);let p=EP.shift(PO.raise,-1.2*a,-.6*b,['S']);p=EP.shift(p,-.5*a,-1.5*a-.6*b,['fH','bH']);p.ha=-.3-.12*a;p.hb=[-.5-.6*a,-1];return{p,open:1}},
+ fx(F,X){const{T,u,b0,J,ex,ey,ph,q}=X;const vis=ph==='pray'?cl((u-b0)/.4):ph==='rise'?1-cl(q*2):0;if(vis<=0)return;
+  const hands=T2S(ex,ey,mix2(J.fH,J.bH,.5)),c=[mix(hands[0],T.heart[0],.5),Math.min(hands[1],T.heart[1])-10],path=t=>bez(hands,c,T.heart,t);
+  F.halo(hands[0],hands[1],3.6,T.L,vis*(.6+.3*Math.sin(u*5)));
+  for(let j=0;j<22;j++){const s=(j/22+u*.55)%1,P=path(s),wob=Math.sin(s*14-u*6)*1.2;F.dpx(P[0],P[1]+wob,s>.85?T.L[4]:T.L[3],vis*(.35+.4*Math.sin(s*Math.PI)))}
+  for(let k=1;k<=5;k++){const t0=b0+k-.3,age=u-t0;if(age<0||age>.3)continue;const s=sm(age/.3),P=path(s);F.trail(path,s,T.L,6,.05);F.mote(P[0],P[1],T.L,1,1.6)}
+  for(let k=1;k<=5;k++)templeFlash(F,T,u-(b0+k))}},
+
+{id:'enonc',name:'4 · Énonciation traduite',deity:'sigil',set:.8,rise:.7,
+ desc:'Un genou à terre, l’autre main posée sur la cuisse, il trace du doigt un glyphe d’Énonciation dans l’air, trait par trait, en cyan. Le glyphe achevé s’embrase, prend la couleur du culte et s’envole vers le temple, où il se dissout : +5. Un nouveau glyphe chaque seconde.',
+ lore:'L’Ingénieur ne partage pas la foi des cultes : il énonce sa prière dans la langue des Exilés, et c’est le temple qui la traduit. Seule proposition où le cyan apparaît — le passage du cyan à la couleur du dieu raconte cette traduction.',
+ settle:[[PO.stand,0],[PO.crouch,.5],[PO.kneel,1]],G:[56,30],GS:4.6,
+ hand(w){const cyc=w%1,i=Math.floor(w)%4,rest=[46,55];if(cyc<.08)return mix2(rest,this.gp(i,0),eio(cyc/.08));if(cyc<.5)return this.gp(i,(cyc-.08)/.42);if(cyc<.64)return mix2(this.gp(i,1),rest,eio((cyc-.5)/.14));return rest},
+ gp(i,s){const g=pen(i,s);return[this.G[0]+(g[0]-2)*this.GS,this.G[1]+(g[1]-2)*this.GS]},
+ pray(w,u){const p={...PO.kneel,fH:this.hand(w)},cyc=w%1;p.ha=.05-.08*bump(cyc,.08,.5);p.S=[p.S[0],p.S[1]-.8*bump(cyc,.5,.7)];return{p,open:1}},
+ fx(F,X){const{T,u,w,b0,ex,ey,ph}=X;if(ph==='pray'){const n=Math.floor(w),cyc=w%1;
+   // glyphe en cours (tracé cyan) puis glyphes en vol
+   for(let k=Math.max(0,n-1);k<=n;k++){const age=w-k,i=k%4;if(age<.08||age>1)continue;const G0=T2S(ex,ey,this.G);
+    let ctr=G0,sc=this.GS*K,col=CY[3],a=1;const drawn=cl((age-.08)/.42);
+    if(age>=.5&&age<.64){const f=(age-.5)/.14;col=f<.5?CY[5]:T.L[4];F.halo(G0[0],G0[1],5,f<.5?CY:T.L,1-f*.5)}
+    if(age>=.64){const f=(age-.64)/.36,c=[mix(G0[0],T.heart[0],.5),Math.min(G0[1],T.heart[1])-14],path=t=>bez(G0,c,T.heart,t);ctr=path(sm(f));sc*=mix(1,.35,f);col=T.L[4];a=1-f*.3;F.trail(path,sm(f),T.L,6,.05,.8)}
+    const{segs,tot}=GS[i],L=drawn*tot;for(const s of segs){if(s.s>L)break;const e=Math.min(1,(L-s.s)/s.l),b=mix2(s.a,s.b,e);F.line(ctr[0]+(s.a[0]-2)*sc,ctr[1]+(s.a[1]-2)*sc,ctr[0]+(b[0]-2)*sc,ctr[1]+(b[1]-2)*sc,col,a)}
+    if(age<.5){const tip=T2S(ex,ey,this.gp(i,drawn));F.dpx(tip[0],tip[1],CY[5]);F.disc(tip[0],tip[1],1.6,CY[3],.5)}}}
+  for(let k=1;k<=5;k++)templeFlash(F,T,u-(b0+k))}},
+
+{id:'lotus',name:'5 · Méditation en lévitation',deity:'medeina',set:1,rise:.8,
+ desc:'Il s’assoit en tailleur, mains sur les genoux, yeux clos, puis décolle de quelques pixels et flotte en oscillant. Trois lueurs gravitent autour de lui ; chaque seconde, l’une d’elles quitte l’orbite et file vers le temple (+5), une autre naît à sa place. Un halo en paliers bat sous lui au rythme des gains.',
+ lore:'La plus « surnaturelle » : l’Exilé qui flotte montre que la foi agit sur lui. Le halo au sol reste lisible de nuit, et l’orbite des lueurs donne un repère d’état même sans popup.',
+ settle:[[PO.stand,0],[PO.crouch,.4],[PO.lotus,1]],
+ lift:w=>sm(w/.7)*(5+Math.sin(w*2.4)*1.4),
+ pray(w,u){const p={...PO.lotus,lift:this.lift(w)},b=.5+.5*Math.sin(w*2);p.S=[p.S[0],p.S[1]-b*.9];p.ha=.15+.05*b;return{p,open:0}},
+ orb(X,j,u){const{ex,ey,J}=X,c=T2S(ex,ey,J.chest),a=u*1.8+j*2.094;return{x:c[0]+Math.cos(a)*11,y:c[1]+2+Math.sin(a)*3.5,front:Math.sin(a)>0}},
+ vis(X,j){const{ph,u,b0,q}=X;if(ph==='set')return 0;if(ph==='rise'||ph==='out')return ph==='rise'?1-cl(q*1.6):0;let v=cl((u-b0-.3)/.4);
+  for(let k=1;k<=5;k++){if(k%3!==j)continue;const t0=b0+k-.3;if(u>=t0&&u<t0+.55)v=0;else if(u>=t0+.55&&u<t0+.95)v=Math.min(v,(u-t0-.55)/.4)}return v},
+ under(F,X){const{T,u,b0,ex,ey,ph,q}=X;const on=ph==='pray'?cl((u-b0)/.5):ph==='rise'?1-q:0;if(on<=0)return;let pulse=0;for(let k=1;k<=5;k++){const a=u-(b0+k);if(a>=0&&a<.6)pulse=Math.max(pulse,1-a/.6)}
+  F.halo(ex+1,ey,10+pulse*4,T.L,on*(.45+.4*pulse),3.4+pulse*1.2);for(let j=0;j<3;j++){const o=this.orb(X,j,u);if(!o.front)F.mote(o.x,o.y,T.L,this.vis(X,j),1.1)}},
+ fx(F,X){const{T,u,b0}=X;for(let j=0;j<3;j++){const o=this.orb(X,j,u);if(o.front)F.mote(o.x,o.y,T.L,this.vis(X,j),1.2)}
+  for(let k=1;k<=5;k++){const t0=b0+k-.3,age=u-t0;if(age<0||age>.3)continue;const o=this.orb(X,k%3,t0),c=[mix(o.x,T.heart[0],.5),Math.min(o.y,T.heart[1])-12],path=t=>bez([o.x,o.y],c,T.heart,t),s=ein(age/.3)*.7+age/.3*.3,P=path(s);F.trail(path,s,T.L,6,.05);F.mote(P[0],P[1],T.L,1,1.5)}
+  for(let k=1;k<=5;k++)templeFlash(F,T,u-(b0+k))}}];
+
+// ---------- chronologie de la boucle ----------
+function timeline(st,u){const a=WIN,b=a+st.set,c=b+PRAY,d=c+st.rise,e=d+WOUT;
+ if(u<a)return{ph:'in',q:u/a,b0:b};if(u<b)return{ph:'set',q:(u-a)/st.set,b0:b};if(u<c)return{ph:'pray',w:u-b,b0:b};if(u<d)return{ph:'rise',q:(u-c)/st.rise,b0:b};if(u<e)return{ph:'out',q:(u-d)/WOUT,b0:b};return{ph:'gone',b0:b}}
+const loopLen=st=>WIN+st.set+PRAY+st.rise+WOUT+GAP;
+function poseAt(st,S,u){const T=S.T;let ex=T.spot[0],ey=T.spot[1],flip=false,p,open=1;
+ if(S.ph==='in'){const dist=58*(1-S.q);ex-=dist;p=EP.walkPose((58-dist)*2/STRIDE%1)}
+ else if(S.ph==='set')p=EP.keys(st.settle,S.q);
+ else if(S.ph==='pray'){const r=st.pray(S.w,u);p=r.p;open=r.open}
+ else if(S.ph==='rise'){const end=st.pray(PRAY,u);p=EP.blend(end.p,EP.keys([...st.settle].reverse().map(([pp,t])=>[pp,1-t]),S.q),eio(S.q));open=S.q>.5?1:end.open}
+ else if(S.ph==='out'){const dist=64*S.q;ex-=dist;flip=true;p=EP.walkPose(dist*2/STRIDE%1)}
+ return{p,open,ex,ey,flip}}
+const phaseTxt=(st,S)=>S.ph==='in'?'Clic droit : marche vers le temple':S.ph==='set'?'Entrée en prière':S.ph==='pray'?`Prière · ${Math.floor(S.w)} × +5 ${S.T.res}`:S.ph==='rise'?'Relève (boucle de planche)':S.ph==='out'?'Départ (boucle de planche)':'—';
+
+function render(st,u,sc,deity){const T=temple(deity),S=timeline(st,u);S.T=T;const g=sc.g;g.putImageData(ground(T),0,0);g.drawImage(T.img,T.ox,T.oy);
+ const F=FX(g);if(S.ph==='gone')return S;const E=poseAt(st,S,u),J=EP.joints(E.p),X={...S,u,T,J,ex:E.ex,ey:E.ey,w:S.w??0};
+ // ombre au sol (reste au sol pendant la lévitation)
+ const sx=E.ex+(E.flip?-1:1)*((E.p.Hp[0]-30)*K),sw=E.p===undefined?6:Math.max(6,Math.abs(E.p.ft[0]-E.p.bt[0])*K*.6+5);
+ for(let y=-2;y<=2;y++)for(let x=-Math.ceil(sw);x<=sw;x++){const d=(x/sw)**2+(y/2.2)**2;if(d<1&&bay(Math.round(sx+x),E.ey+y)<.8-d*.5){const px=Math.round(sx+x),py=E.ey+y;const id=g.getImageData(px,py,1,1).data;g.fillStyle=`rgb(${id[0]*.55|0},${id[1]*.55|0},${id[2]*.55|0})`;g.fillRect(px,py,1,1)}}
+ if(st.under)st.under(F,X);
+ const im=EP.draw(E.p,u,K,{pad:PAD,open:E.open}),ax=(30+PAD)*K,ay=(80+PAD)*K;
+ if(E.flip){g.save();g.translate(E.ex,0);g.scale(-1,1);g.drawImage(im,-ax,E.ey-ay);g.restore()}else g.drawImage(im,E.ex-ax,E.ey-ay);
+ st.fx(F,X);return S}
+// popups « +5 » au-dessus du temple, à l'échelle d'affichage (même courbe d'opacité et de montée qu'en jeu)
+function popups(g,st,u,S,s,ox=0,oy=0){const T=S.T;g.font=`bold ${Math.round(7*s)}px Georgia,serif`;g.textAlign='center';
+ for(let k=1;k<=5;k++){const a=u-(S.b0+k);if(a<0||a>1.8)continue;const al=a<.3?a/.3:a<1.3?1:Math.max(0,1-(a-1.3)/.5),y=(T.ptop-3-6*Math.min(1,a/.6)-oy)*s;
+  g.globalAlpha=al;g.fillStyle='#0a0a0c';g.fillText(`+5 ${T.res}`,(T.cx-ox)*s+2,y+2);g.fillStyle='#f8e5b7';g.fillText(`+5 ${T.res}`,(T.cx-ox)*s,y)}g.globalAlpha=1}
+
+// ---------- planche ----------
+const views=[],mkScene=()=>{const c=document.createElement('canvas');c.width=SW;c.height=SH;return{c,g:c.getContext('2d',{willReadFrequently:true})}};
+let override=null;const deityOf=st=>override||st.deity;
+const KEYS=st=>{const b=WIN+st.set;return[['Arrivée',WIN*.6],['Entrée en prière',WIN+st.set*.55],['Prière',b+.45],['Gain +5',b+2.05],['Relève',b+PRAY+st.rise*.5]]};
+function drawKeys(v){v.keys.innerHTML='';for(const[label,u]of KEYS(v.st)){const S=render(v.st,u,v.sc,deityOf(v.st)),T=S.T,ox=T.spot[0]-52,oy=T.ptop-10,cw=120,ch=T.spot[1]+14-oy,cv=document.createElement('canvas');cv.width=cw*2;cv.height=ch*2;const g=cv.getContext('2d');g.imageSmoothingEnabled=false;g.drawImage(v.sc.c,ox,oy,cw,ch,0,0,cv.width,cv.height);popups(g,v.st,u,S,2,ox,oy);const d=document.createElement('div');d.append(cv,label);v.keys.append(d)}}
+for(const st of STYLES){st.L=loopLen(st);const f=document.createElement('figure');
+ f.innerHTML=`<div class="stage"><canvas class="big" width="${VW*SC}" height="${VH*SC}"></canvas><span class="tag"></span></div><div class="keys"></div><figcaption><b>${st.name}</b><p>${st.desc}</p><p class="lore">${st.lore}</p></figcaption>`;
+ document.getElementById('grid').append(f);const v={st,sc:mkScene(),g:f.querySelector('.big').getContext('2d'),tag:f.querySelector('.tag'),keys:f.querySelector('.keys')};drawKeys(v);views.push(v)}
+const tb=document.getElementById('temples'),opts=[['Varié',null],...Object.keys(RES).map(k=>[DA.DEITIES[k].name,k])];
+for(const[label,k]of opts){const b=document.createElement('button');b.textContent=label;if(k===null)b.className='on';b.onclick=()=>{override=k;for(const x of tb.children)x.classList.toggle('on',x===b);views.forEach(drawKeys)};tb.append(b)}
+let paused=matchMedia('(prefers-reduced-motion: reduce)').matches,speed=1,t=0,last;const SP=[1,.5,.25,2];
+const pb=document.getElementById('pause'),sb=document.getElementById('speed');pb.textContent=paused?'Lecture':'Pause';
+pb.onclick=()=>{paused=!paused;pb.textContent=paused?'Lecture':'Pause'};
+sb.onclick=()=>{speed=SP[(SP.indexOf(speed)+1)%SP.length];sb.textContent='Vitesse ×'+String(speed).replace('.',',')};
+function loop(now){const dt=last===undefined?0:Math.min((now-last)/1000,.1);last=now;if(!paused)t+=dt*speed;
+ for(const v of views){const u=t%v.st.L,S=render(v.st,u,v.sc,deityOf(v.st));v.g.imageSmoothingEnabled=false;v.g.drawImage(v.sc.c,S.T.vx,S.T.vy,VW,VH,0,0,VW*SC,VH*SC);popups(v.g,v.st,u,S,SC,S.T.vx,S.T.vy);v.tag.textContent=phaseTxt(v.st,S)}
+ requestAnimationFrame(loop)}
+requestAnimationFrame(loop);
+</script></body></html>

@@ -41,8 +41,16 @@ static var _atk: Dictionary
 var _sword: Array = []
 var _xbow: Array[AtlasTexture] = []
 var _body := Sprite2D.new()
+var _mining_seal: Node2D
 var _under := _UnitDecal.new()
+## Méditation de l'Ingénieur (Meditation) : halo et lueurs derrière le sprite, puis devant.
+var _med_back := _MedFx.new()
+var _med_front := _MedFx.new()
+var _med_on := false
 var _over := _UnitBar.new()
+## Soin reçu (« + » verts) et rappel par le Puits des Âmes (bulle qui devient l'unité), alliés seulement.
+var _heal: HealFx
+var _revive: ReviveFx
 # État d'animation (u._lx, u._lz, u._wp, u._still, u._face).
 var _lx := NAN
 var _lz := NAN
@@ -71,7 +79,7 @@ func setup(u: Unit, meta: Dictionary, sim: Simulation, w: World = null) -> void:
 	if not enemy and u.role == "engineer" and _bare.is_empty():
 		var bm: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(BARE + ".json"))
 		_bare = {"meta": bm}
-		for anim: String in ["idle", "walk", "kneel", "pray"]:
+		for anim: String in ["idle", "walk", "kneel", "pray", "settle", "lotus"]:
 			_bare[anim] = _frames(BARE + "_%s.png" % anim, bm[anim])
 	if enemy:
 		if not _enemy_sheets.has(u.role):
@@ -92,9 +100,31 @@ func setup(u: Unit, meta: Dictionary, sim: Simulation, w: World = null) -> void:
 	use_parent_material = true
 	_under.view = self
 	add_child(_under)
+	if not enemy and u.role == "engineer":
+		_med_back.view = self
+		_med_back.use_parent_material = true
+		add_child(_med_back)
+		_mining_seal = preload("res://entities/unit/mining_seal_fx.gd").new()
+		_mining_seal.view = self
+		_mining_seal.use_parent_material = true
+		add_child(_mining_seal)
 	_body.centered = false
 	_body.use_parent_material = true
 	add_child(_body)
+	if not enemy and u.role == "engineer":
+		_med_front.view = self
+		_med_front.front = true
+		_med_front.use_parent_material = true
+		add_child(_med_front)
+	if not enemy:
+		_revive = ReviveFx.new()
+		_revive.view = self
+		_revive.use_parent_material = true
+		add_child(_revive)
+		_heal = HealFx.new()
+		_heal.view = self
+		_heal.use_parent_material = true
+		add_child(_heal)
 	_over.view = self
 	add_child(_over)
 	_update()
@@ -219,10 +249,44 @@ func _update() -> void:
 			ay = aim["ay"]
 			kick = 0
 			_face = aim["face"]
+	# Méditation en lévitation : assise en tailleur, puis lotus flottant tourné vers le temple.
+	var med := Meditation.state(u) if u.role == "engineer" and not enemy else {}
+	if not med.is_empty():
+		var age: float = med["age"]
+		var tb: Building = med["temple"]
+		_face = 1 if tb.x >= u.x else -1
+		kick = 0
+		bob = 0
+		if bare:
+			if age < Meditation.SETTLE:
+				var se: Array = _bare["settle"]
+				frame = se[mini(se.size() - 1, floori(age * float(_bare["meta"]["settle"]["fps"])))]
+			else:
+				var lo: Array = _bare["lotus"]
+				frame = lo[floori((age - Meditation.SETTLE) * float(_bare["meta"]["lotus"]["fps"])) % lo.size()]
+		elif not _kneel.is_empty():
+			frame = _kneel[floori(t * _kneel_fps) % _kneel.size()]
+		ax = float(_meta["ax"])
+		ay = float(_meta["ay"])
+		drop = -roundf(Meditation.lift(age))
+	if not med.is_empty() or _med_on:
+		_med_on = not med.is_empty()
+		_med_back.queue_redraw()
+		_med_front.queue_redraw()
 	_body.texture = frame
 	_body.offset = Vector2(-ax - kick, -ay)
 	_body.position = Vector2(0, -bob + roundf(drop))
 	_body.scale = Vector2(-1 if _face < 0 else 1, 1)
+	if _mining_seal:
+		_mining_seal.tick(_face, _body.position, ReviveFx.body_shown(u))
+	if _revive:
+		# Rappel : sprite, ombre et barre de vie masqués tant que la bulle n'a pas pris la forme de l'unité.
+		var shown := ReviveFx.body_shown(u)
+		_body.visible = shown
+		_under.visible = shown
+		_over.visible = shown
+		_revive.tick()
+		_heal.tick()
 	# Ombre, sélection, barre de vie et badge : redessinés seulement quand leur état change.
 	var under_key := selected()
 	if under_key != _under_key:
@@ -309,3 +373,15 @@ class _UnitBar extends Node2D:
 			_bold.variation_embolden = 0.7
 		var w := _bold.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, 10).x
 		draw_string(_bold, at - Vector2(w / 2.0, 0), text, HORIZONTAL_ALIGNMENT_LEFT, -1, 10, c)
+
+
+## Calques de la méditation (Meditation.draw_back / draw_front), aux pieds de l'unité.
+class _MedFx extends Node2D:
+	var view: UnitView
+	var front := false
+
+	func _draw() -> void:
+		if front:
+			Meditation.draw_front(self, view.unit, view._face, view.position)
+		else:
+			Meditation.draw_back(self, view.unit, view._face)

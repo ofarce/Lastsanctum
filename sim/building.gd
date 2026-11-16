@@ -21,6 +21,11 @@ var complete := false
 ## File d'entraînement de la caserne (identifiants d'adeptes combattants).
 var queue: Array[String] = []
 var train := 0.0
+var rally_point: Variant = null
+
+
+func produces_units() -> bool:
+	return type == "caserne" or is_temple()
 ## Point où l'Ingénieur se tient pendant l'Énonciation (b.spot, workSpot).
 var spot := Vector2.ZERO
 ## Instant d'achèvement (b.finishedAt), INF tant que le chantier n'est pas fini.

@@ -82,6 +82,7 @@ Légende de la colonne Auto :
 |---|---|---|---|
 | Rampant, cracheur, brute, rejeton : statistiques, chemins | ✅ `test_waves`, `etape8_ennemis` | — | [ ] |
 | Vagues : premier assaut à +20 s, sans fin, 4 + 3w ennemis, intervalles, apparition au sud, pause de 4 s | ✅ `test_waves` (6 vagues) ; ◐ `test_full_game` (8 vagues) | Tenir 5 vagues. | [ ] |
+| Approche stratégique (écart voulu) : rassemblement, front et appui, réserve, débordement praticable, colonne et rupture après pertes ; composition et cadence conservées | ◐ `test_enemy_tactics`, `test_waves` | Cohésion, passage des goulets, réaction aux attaques et réserve de Strazhar. | [ ] |
 | Balistes (±11, −71) : éveil avec l'Ancre, portée 70, 40 dégâts, cycle de 3,6 s | ✅ `test_fight`, `etape8_balistes_*` | Les balistes pivotent et tirent. | [ ] |
 | Défaite : Ancre à 0, plus d'allié, Ingénieur tombé ; Maj+R | ✅ `test_defeat`, `test_restart` ; MCP `redemarrage` | Perdre une fois, Maj+R. | [ ] |
 

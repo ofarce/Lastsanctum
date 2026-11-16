@@ -45,6 +45,11 @@ var anchor_spark: AnchorSpark
 var anchor_overload: AnchorOverload
 ## Emprises au sol des bâtiments (drawBuildGrid), sous le décor.
 var build_grid: BuildGrid
+var soulwell_halo: SoulwellHalo
+## Coffre antique de la réserve scellée (visible une fois la réserve découverte).
+var chest_view: ChestView
+## Glyphe tyrien qui trahit la réserve scellée sur la paroi est de la salle.
+var vault_hint: VaultHint
 
 var _snap := ShaderMaterial.new()
 var _sprites_mat := ShaderMaterial.new()
@@ -74,6 +79,11 @@ func _ready() -> void:
 	build_grid.world = self
 	add_child(build_grid)
 	move_child(build_grid, ysort.get_index())
+	soulwell_halo = SoulwellHalo.new()
+	soulwell_halo.name = "SoulwellHalo"
+	soulwell_halo.world = self
+	add_child(soulwell_halo)
+	move_child(soulwell_halo, ysort.get_index())
 	overlay = WorldOverlay.new()
 	overlay.name = "Overlay"
 	overlay.world = self
@@ -94,6 +104,7 @@ func _ready() -> void:
 	lighting.providers.append(_combat_lights)
 	lighting.providers.append(anchor_spark.lights)
 	lighting.providers.append(anchor_overload.lights)
+	lighting.providers.append(_vault_lights)
 	add_child(lighting)
 	reset_world(randi())
 
@@ -119,8 +130,20 @@ func reset_world(seed: int) -> void:
 	_special = _loader.special
 	for e: Dictionary in decor.entries():
 		_attach_visuals(e)
-	terrain_state.generate_galleries(seed)
 	terrain_state.reset_digging()
+	terrain_state.generate_galleries(seed)
+	for key: Vector2i in terrain_state.block_types:
+		var ore := preload("res://world/terrain/ore_view.gd").new()
+		ore.setup(terrain_state, key)
+		ysort.add_child(ore)
+	chest_view = ChestView.new()
+	chest_view.name = "Chest"
+	chest_view.setup(terrain_state)
+	ysort.add_child(chest_view)
+	vault_hint = VaultHint.new()
+	vault_hint.name = "VaultHint"
+	vault_hint.setup(terrain_state)
+	ysort.add_child(vault_hint)
 	terrain_ops = TerrainOps.new(terrain_state, decor, TerrainPainter.new(terrain, terrain_state))
 	print("Graine des galeries : %d (%d réseaux)" % [seed, terrain_state.count])
 	apply_view()
@@ -349,12 +372,29 @@ func _building_lights() -> Array[Dictionary]:
 	var t := GameState.sim_time
 	for b in GameState.buildings:
 		var c: String = Lighting.CULT_OF.get(b.type, "")
-		if c == "indra":
+		if b.type == "soulwell" and b.complete:
+			# Le Lotus irradie toute sa zone de soin (halo diffus, SoulwellHalo).
+			out.append({"x": b.x, "z": b.z, "r": float(b.def()["heal_radius"]), "rgb": Lighting.CULT[c], "glow": 0.1})
+		elif c == "indra":
 			out.append({"x": b.x, "z": b.z, "r": 8.5 * Lighting.flick(t, b.x, 0.08), "rgb": Lighting.CULT[c], "glow": 0.18})
 		elif c != "":
 			out.append({"x": b.x, "z": b.z, "r": 8.0, "rgb": Lighting.CULT[c], "glow": 0.14})
 		else:
 			out.append({"x": b.x, "z": b.z, "r": 7.5, "rgb": Lighting.WARM, "glow": 0.12})
+	return out
+
+
+## Lueur cyan des glyphes du coffre antique, plus vive une fois le couvercle ouvert.
+func _vault_lights() -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	if not terrain_state.vault_open:
+		# Faible lueur du glyphe de la paroi, au rythme de son éclat.
+		var g := VaultHint.glow(3, GameState.sim_time)
+		out.append({"x": vault_hint.edge_x() + 0.75, "z": VaultHint.ROW_Z, "r": 2.5 + 1.5 * g, "rgb": Color8(92, 232, 255), "glow": 0.06 + 0.08 * g})
+	if terrain_state.vault_open:
+		var opened := GameState.sim_time >= GameState.chest_opened_at
+		out.append({"x": CaveShape.CHEST.x, "z": CaveShape.CHEST.y - 1.0, "r": 9.0 if opened else 5.5,
+			"rgb": Color8(92, 232, 255), "glow": 0.22 if opened else 0.12})
 	return out
 
 

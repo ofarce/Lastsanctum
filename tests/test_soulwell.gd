@@ -102,3 +102,36 @@ func test_affordability_is_individual_and_payment_exact() -> void:
 	check(a.alive() and GameState.fallen.has(b), "seule unité abordable ressuscitée")
 	sim.revive_unit(well, a)
 	check_eq(GameState.res["vie"], 0, "pas de paiement en double")
+
+
+## Planche « Puits des Âmes · Lotus de pierre » : instants qui pilotent les « + » du soin et la bulle du rappel.
+func test_heal_and_revive_fx_markers() -> void:
+	var sim := game()
+	var well := built("soulwell", -30.0, -104.0)
+	var near := sim.spawn("Archer", well.x + 6.0, well.z, "archer")
+	var full := sim.spawn("Archer", well.x - 6.0, well.z, "archer")
+	near.hp = near.max_hp - 20.0
+	GameState.sim_time = 12.5
+	sim.update_buildings(0.1)
+	check_eq(near.healed_at, 12.5, "soin du Puits : instant du soin")
+	check_eq(full.healed_at, -INF, "PV pleins : pas de soin affiché")
+	var a := sim.spawn("Adepte archer", 0.0, -120.0, "archer")
+	a.hp = 0.0
+	sim.on_unit_death(a)
+	GameState.res["vie"] = 1000.0
+	GameState.sim_time = 20.0
+	sim.revive_unit(well, a)
+	check_eq(a.revived_at, 20.0, "rappel : instant")
+	check_eq(a.revived_from, Vector2(well.x, well.z), "rappel : position du Puits")
+	check(ReviveFx.active(a) and not ReviveFx.body_shown(a), "bulle en cours, sprite masqué")
+	GameState.sim_time = 20.0 + ReviveFx.MORPH + 0.01
+	check(ReviveFx.body_shown(a), "sprite visible dès la métamorphose")
+	GameState.sim_time = 20.0 + ReviveFx.END
+	check(not ReviveFx.active(a), "effet terminé")
+
+
+func test_lotus_art_native_scale() -> void:
+	var m: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://assets/baked/manifest.json"))
+	var art: Dictionary = m["buildings"]["arts"]["da-soulwell"]
+	check_eq(float(art.get("scale", 0.0)), 1.0, "Lotus dessiné à l'échelle native")
+	check_eq(int(art["anim"]["count"]), 72, "boucle de 72 images (6 s à 12 i/s)")

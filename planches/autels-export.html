@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Export des autels</title>
+<style>
+:root{--bg:#0b120e;--panel:#111b14;--line:#2a3a2c;--txt:#dcd8bc;--mut:#93a08a;--acc:#e8c870}
+body{margin:0;background:var(--bg);color:var(--txt);font:15px/1.5 system-ui,sans-serif;padding:16px}h1{color:var(--acc);font-size:22px;margin:0 0 6px}p{color:var(--mut);max-width:900px}
+.row{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;margin:14px 0}figure{margin:0;background:var(--panel);border:1px solid var(--line);padding:8px}
+canvas{display:block;image-rendering:pixelated;background:repeating-conic-gradient(#1a2a1d 0 25%,#142018 0 50%) 0 0/16px 16px}figcaption{color:var(--mut);font-size:13px;margin-top:4px}
+#log{color:var(--acc)}
+</style></head><body>
+<h1>Export des autels vers le jeu</h1>
+<p>Rend les autels retenus au format des bâtiments du jeu : sprite 320 × 240, ancre (160, 168) au centre de l’emprise, 24 px par unité (3 × 3 cases = 96 px), boucle de 24 images à 12 i/s, plus le portrait 128 × 128 du HUD. Avec <code>?save=1</code> servi par <code>tools/autels/serve.py</code>, les fichiers sont écrits dans <code>assets/baked/</code>.</p>
+<p id="log"></p><div id="out"></div>
+<script src="assets/autels-planches.js?v=4"></script>
+<script>
+'use strict';
+(async()=>{const save=new URLSearchParams(location.search).has('save'),log=document.querySelector('#log'),done=[];
+ for(const god of ['aether','indra','medeina','sigil']){const r=AUT.exportSprite(god),row=document.createElement('div');row.className='row';
+  const fig=(c,cap,z=2)=>{const f=document.createElement('figure');c.style.width=c.width*z+'px';f.append(c);const fc=document.createElement('figcaption');fc.textContent=cap;f.append(fc);row.append(f)};
+  fig(r.base,`${god} · ${r.pick} · haut ${r.meta.top}, bas ${r.meta.bottom}`);fig(r.portrait,'portrait du HUD');
+  const sm=document.createElement('canvas');sm.width=r.sheet.width;sm.height=r.sheet.height;sm.getContext('2d').drawImage(r.sheet,0,0);fig(sm,'planche animée (24 images)',.35);
+  document.querySelector('#out').append(row);
+  if(save){const post=(n,b)=>fetch('/out/'+n,{method:'POST',body:b}).then(x=>{if(!x.ok)throw new Error(n+' '+x.status)});
+   await post(`da-${god}_anim.png`,r.sheet.toDataURL('image/png'));await post(`da-${god}_base.png`,r.base.toDataURL('image/png'));
+   await post(`bld-${god}.png`,r.portrait.toDataURL('image/png'));await post(`meta-${god}.json`,JSON.stringify(r.meta));done.push(god)}}
+ log.textContent=save?`Écrit : ${done.join(', ')}`:'Aperçu seulement (ajouter ?save=1 avec tools/autels/serve.py pour écrire).';document.body.dataset.done='1'})().catch(e=>{document.querySelector('#log').textContent='Erreur : '+e.message;throw e});
+</script></body></html>

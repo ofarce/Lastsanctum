@@ -28,6 +28,10 @@ var _wave_card := _Panel.new()
 var _wave_icon := TextureRect.new()
 var _wave_label := HudStyle.label(20, HudStyle.IVORY)
 var _res_panel := _Panel.new()
+## Panneau d'objectif sous la carte de vague (Rapport de l'Ingénieur).
+var objective := ObjectivePanel.new()
+## Quêtes de l'Ingénieur, affichées par le panneau d'objectif.
+var quests := Quests.new()
 var _res_items := {}
 var _resource_boost := Button.new()
 var _fast_construction := Button.new()
@@ -138,6 +142,8 @@ func _build_top() -> void:
 	_wave_icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_wave_card.add_child(_wave_icon)
 	_wave_card.add_child(_wave_label)
+	_root.add_child(objective)
+	objective.resized.connect(_layout_debug)
 	_res_panel.kind = "metal"
 	_res_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_root.add_child(_res_panel)
@@ -353,13 +359,20 @@ func _layout() -> void:
 	_layout_selection(_modules[1].size)
 	_layout_details(_modules[2].size)
 	_layout_actions(_modules[3].size)
-	_resource_boost.position = Vector2(16, 80)
-	_resource_boost.size = Vector2(100, 38)
-	_fast_construction.position = Vector2(16, 124)
+	objective.position = Vector2(TOP_INSET.x, TOP_INSET.y + 56.0 + 10.0)
+	_layout_debug()
 	_fast_construction.size = Vector2(230, 38)
 	_restart.position = Vector2(s.x - 16.0 - _restart.size.x, 80.0)
 	_layout_notice()
 	_layout_banner()
+
+
+## Boutons de debug : sous le panneau d'objectif, dont la hauteur suit le nombre d'objectifs affichés.
+func _layout_debug() -> void:
+	var dbg_y := objective.position.y + maxf(ObjectivePanel.HEIGHT, objective.size.y) + 10.0
+	_resource_boost.position = Vector2(16, dbg_y)
+	_resource_boost.size = Vector2(100, 38)
+	_fast_construction.position = Vector2(16, dbg_y + 44.0)
 
 
 func _layout_top(s: Vector2) -> void:
@@ -557,6 +570,8 @@ func _process(delta: float) -> void:
 
 ## updateHUD : textes, ordres, portrait ; minicarte au plus toutes les 0,1 s de simulation.
 func refresh(force_map := false) -> void:
+	quests.update()
+	objective.push(quests.objective())
 	var v := HudModel.view(sim)
 	var relayout := false
 	if v != _view:
@@ -591,6 +606,10 @@ func _apply_view(v: Dictionary) -> void:
 		_res_items[k]["value"].text = v["res"][k] + " (+ %s/s)" % HudModel.num_fr(v["resource_rates"][k])
 	_res_items["population"]["value"].text = v["population"]
 	_res_items["menace"]["value"].text = v["menace"]
+	for part: String in ["icon", "name", "value"]:
+		var control: Control = _res_items["menace"][part]
+		control.mouse_filter = Control.MOUSE_FILTER_PASS
+		control.tooltip_text = v["menace_tooltip"]
 	_kind.text = v["kind"]
 	_chosen.text = v["chosen"]
 	_health.set_target(v["health_pct"])
@@ -662,6 +681,8 @@ func _on_reset() -> void:
 	_fast_construction.set_pressed_no_signal(GameState.fast_construction)
 	_fast_construction.text = "Construction rapide : ON" if GameState.fast_construction else "Construction rapide : OFF"
 	dialogue.close()
+	quests.reset()
+	objective.reset()
 	_banner.visible = false
 	_last_map = -INF
 

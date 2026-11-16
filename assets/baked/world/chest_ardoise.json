@@ -1,0 +1,18 @@
+{
+ "frame": [
+  56,
+  72
+ ],
+ "anchor": [
+  28,
+  64
+ ],
+ "count": 16,
+ "rows": {
+  "closed": 0,
+  "opening": 1,
+  "open": 2
+ },
+ "loop_fps": 5.602253996834716,
+ "open_time": 1.2
+}

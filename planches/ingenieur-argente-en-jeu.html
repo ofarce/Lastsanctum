@@ -1,0 +1,21 @@
+<!doctype html><html lang="fr"><meta charset="utf-8"><title>Ingénieur argenté — en jeu</title><style>
+*{box-sizing:border-box}body{margin:0;background:#0b120e;color:#ddd9bd;font:15px system-ui}header{padding:20px 26px 14px}h1{font-size:23px;color:#e8c870;margin:0 0 8px}p{margin:0;color:#98aa95}main{padding:0 24px 24px;display:grid;grid-template-columns:repeat(3,1fr);gap:16px}figure{margin:0;border:1px solid #354634;background:#142016}canvas{display:block;width:100%;height:auto;image-rendering:pixelated}figcaption{padding:12px 14px}b{color:#e8c870}figcaption p{margin-top:6px;font-size:13px}.controls{position:absolute;right:26px;top:24px}button{background:#253629;color:#eee3c9;border:1px solid #68765c;padding:7px 12px;cursor:pointer} @media(max-width:900px){main{grid-template-columns:repeat(2,1fr)}}
+</style><header><h1>INGÉNIEUR — 5 COMBINAISONS ARGENTÉES EN JEU</h1><p>Sprites à la résolution du jeu · Tête droite, regard horizontal · À côté de l’Ancre · Sans armure</p><div class="controls"><button id="pause">Pause</button></div></header><main></main>
+<script src="assets/decor.js"></script><script src="assets/units.js"></script><script src="assets/engineer-bare.js"></script><script src="assets/engineer-silver.js?v=2"></script><script>
+const names=['01 · Fermeture centrale','02 · Tenue d’atelier','03 · Coupe croisée','04 · Empiècements sombres','05 · Combinaison rapiécée'];
+const notes=['Col droit, coutures fines et ceinture discrète.','Manches retroussées, poches et outils à la taille.','Fermeture diagonale et taille sans ceinture.','Flancs anthracite, manches longues et poches.','Pièces de reprise et foulard cramoisi.'];
+const ground=new Image(),anchor=new Image();ground.src='assets/objectif/sol.png';anchor.src='../assets/baked/world/decor_atlas.png';
+const views=names.map((name,id)=>{const f=document.createElement('figure');f.innerHTML=`<canvas width="240" height="180"></canvas><figcaption><b>${name}</b><p>${notes[id]}</p></figcaption>`;document.querySelector('main').append(f);return f.querySelector('canvas')});
+let paused=false,time=0,last=0;document.querySelector('#pause').onclick=()=>{paused=!paused;document.querySelector('#pause').textContent=paused?'Reprendre':'Pause'};
+function draw(t){views.forEach((c,id)=>{const g=c.getContext('2d');g.imageSmoothingEnabled=false;g.clearRect(0,0,240,180);g.drawImage(ground,600,5,240,180,0,0,240,180);
+// Autel et orbe de l’Ancre : sprites exacts du jeu, aux dimensions natives.
+g.drawImage(anchor,352,86,40,51,132,91,40,51);
+g.drawImage(anchor,634,2,64,64,120,51+Math.round(Math.sin(t*1.7)),64,64);
+const ex=110,ey=140;g.fillStyle='#0b161599';g.beginPath();g.ellipse(ex,ey,11,4,0,0,Math.PI*2);g.fill();
+g.strokeStyle='#f8df93';g.fillStyle='#ead08c33';g.beginPath();g.ellipse(ex,ey,12,5,0,0,Math.PI*2);g.fill();g.stroke();
+g.drawImage(EngineerSilver.sprite(id,t),ex-15,ey-40);
+// Barre de vie : mêmes proportions que le personnage en jeu.
+g.fillStyle='#191b1d';g.fillRect(ex-10,ey-40,20,3);g.fillStyle='#85d6b1';g.fillRect(ex-9,ey-39,18,1);
+});document.documentElement.dataset.ready='true'}
+Promise.all([ground.decode(),anchor.decode()]).then(()=>{draw(0);requestAnimationFrame(function loop(ms){if(!paused)time+=last?Math.min(.05,(ms-last)/1000):0;last=ms;draw(time);requestAnimationFrame(loop)})}).catch(e=>{document.body.append(String(e));throw e});
+</script></html>

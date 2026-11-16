@@ -60,3 +60,39 @@ func test_prayer_stops_when_temple_removed() -> void:
 	GameState.buildings.erase(t)
 	sim.tick(DT)
 	check(a.job == null, "temple disparu : tâche annulée")
+
+
+## Clic droit sur un temple, Ingénieur sélectionné : méditation en lévitation, +5 par seconde entière après l'assise.
+func test_engineer_meditates_at_temple() -> void:
+	var sim := game()
+	var t := built("medeina", -26.0, -118.0)
+	var e := engineer()
+	GameState.selected = [e]
+	check(sim.order_pray(t), "ordre de prière accepté")
+	check(e.job != null and e.job["type"] == "pray" and e.job["temple"] == t, "part méditer au temple")
+	var spot := sim.prayer_spot(e, t)
+	e.x = spot.x
+	e.z = spot.y
+	sim.tick(DT)
+	check(e.working and e.job.has("since"), "médite dès l'arrivée")
+	check_eq(Simulation.resource_rates()["vie"], 1 * int(GameState.orb_active) + 5, "+5 Vie par seconde")
+	var v0: float = GameState.res["vie"]
+	run(sim, Simulation.MEDITATE_SETTLE - 0.1)
+	check_near(GameState.res["vie"], v0 + (Simulation.MEDITATE_SETTLE - 0.1) * (1.0 if GameState.orb_active else 0.0), 0.2, "rien pendant l'assise")
+	var v1: float = GameState.res["vie"]
+	run(sim, 3.2)
+	check_eq(e.job["ticks"], 3, "trois gains en 3 s")
+	check_near(GameState.res["vie"] - v1, 15.0 + 3.2 * (1.0 if GameState.orb_active else 0.0), 0.2, "+15 Vie en trois gains")
+	check(GameState.pray_popups.size() >= 1, "popup « +5 » au dernier gain")
+	check_eq(GameState.pray_popups[-1]["amount"], 5, "popup de 5")
+	check_eq(GameState.pray_popups[-1]["res"], "vie", "ressource du dieu du temple")
+
+
+func test_engineer_right_click_ignores_unfinished_temple() -> void:
+	var sim := game()
+	var t := built("sigil", -26.0, -118.0)
+	t.complete = false
+	GameState.selected = [engineer()]
+	check(not sim.order_pray(t), "temple en chantier : pas de prière")
+	var lib := built("library", 10.0, -118.0)
+	check(not sim.order_pray(lib), "bâtiment sans dieu : pas de prière")

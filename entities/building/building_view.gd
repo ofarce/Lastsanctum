@@ -38,7 +38,9 @@ func setup(b: Building) -> void:
 		_meta = m["buildings"]
 		_footprint_meta = m["overlay"]["footprints"]["build"]
 	_art = b.def()["art"]
-	_f = int(b.def()["size"]) / 3.0
+	# Échelle du repère 320×240 : size/3 pour les sprites du prototype ; « scale » explicite pour un art
+	# dessiné directement à l'échelle native (Puits des Âmes · Lotus de pierre : scale 1).
+	_f = float(_meta["arts"][_art].get("scale", int(b.def()["size"]) / 3.0))
 	_anim = load("res://assets/baked/buildings/%s_anim.png" % _art)
 	_footprint = load("res://assets/baked/overlay/footprint_build.png")
 	_site = site(_art)
@@ -98,7 +100,7 @@ class _Footprint extends Node2D:
 		var fi := floori(GameState.sim_time * 12.0) % int(F["count"])
 		var cols := int(F["cols"])
 		var src := Rect2((fi % cols) * float(F["frame_w"]), (fi / cols) * float(F["frame_h"]), F["frame_w"], F["frame_h"])
-		var fs := 8.0 / 0.86 / 16.0 * view._f / 2.0
+		var fs := 8.0 / 0.86 / 16.0 * (int(view.building.def()["size"]) / 3.0) / 2.0
 		draw_set_transform(-Vector2(F["ax"], F["ay"]) * fs, 0.0, Vector2(fs, fs))
 		draw_texture_rect_region(view._footprint, Rect2(0, 0, src.size.x, src.size.y), src)
 

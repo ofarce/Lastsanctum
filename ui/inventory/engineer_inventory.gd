@@ -12,6 +12,7 @@ const SIL := [".........aaaaaa.........","........abbbbbba........",".......abcc
 ".abccba..abbbba..abccba.",".abffba..aaaaaa..abffba.",".abccba.aabbbbaa.abccba.","..aaaa..abbbbbba..aaaa..","........abbaabba........",".......abba..abba.......",".......abca..acba.......",".......abca..acba.......",".......abfa..afba.......",
 ".......abca..acba.......",".......abba..abba.......",".......abca..acba.......",".......abca..acba.......","......abbba..abbba......",".....abbbba..abbbba.....",".....aaaaaa..aaaaaa....."]
 var opened := false
+var _drag_slot := {}
 var _font: Font = SystemFont.new()
 var _scale := 1.0
 var _origin := Vector2.ZERO
@@ -40,11 +41,16 @@ func _ready() -> void:
 	visible = false
 	texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	Events.game_reset.connect(close)
+	Events.inventory_requested.connect(func() -> void:
+		if not opened and available():
+			opened = true
+			show())
 	Events.game_over.connect(func(_won: bool) -> void: close())
 
 
 func close() -> void:
 	opened = false
+	_drag_slot = {}
 	visible = false
 
 
@@ -66,10 +72,18 @@ func _input(event: InputEvent) -> void:
 			get_viewport().set_input_as_handled()
 			return
 	if opened:
-		if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+		if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
 			var p: Vector2 = (event.position - _origin) / _scale
-			if Rect2(1010, 12, 150, 40).has_point(p):
-				close()
+			if event.pressed:
+				if Rect2(1010, 12, 150, 40).has_point(p):
+					close()
+				else:
+					_drag_slot = slot_at(p)
+			else:
+				var target := slot_at(p)
+				if not _drag_slot.is_empty() and not target.is_empty():
+					Storage.move_stack(_drag_slot["items"], _drag_slot["index"], target["items"], target["index"], target["capacity"])
+				_drag_slot = {}
 		get_viewport().set_input_as_handled()
 
 
@@ -102,7 +116,7 @@ func _slot(rect: Rect2, filled: bool = false, disabled: bool = false) -> void:
 
 func _draw() -> void:
 	draw_rect(Rect2(Vector2.ZERO, size), Color("#02080de8"))
-	_scale = minf(size.x / 1200.0, size.y / 840.0)
+	_scale = minf(0.8, minf(size.x / 1500.0, size.y / 1050.0))
 	_origin = (size - Vector2(1180, 820) * _scale) * 0.5
 	draw_set_transform(_origin, 0, Vector2.ONE * _scale)
 	_text(Vector2(20, 35), "// INVENTAIRE · INGÉNIEUR EXILÉ", CYAN, 20)
@@ -113,7 +127,7 @@ func _draw() -> void:
 		for col in range(10):
 			var index := row * 10 + col
 			var rect := Rect2(40 + col * 56, 108 + row * 54, 51, 49)
-			var filled := index < GameState.base_inventory.size()
+			var filled := index < GameState.base_inventory.size() and not GameState.base_inventory[index].is_empty()
 			_slot(rect, filled, not GameState.base_inventory_unlocked)
 			if GameState.base_inventory_unlocked and filled:
 				_draw_item(rect, GameState.base_inventory[index])
@@ -151,7 +165,7 @@ func _draw() -> void:
 	var u := engineer()
 	for i in range(10):
 		var rect := Rect2(268 + i * 65, 727, 58, 58)
-		var filled := u != null and i < u.inventory.size()
+		var filled := u != null and i < u.inventory.size() and not u.inventory[i].is_empty()
 		_slot(rect, filled)
 		if filled:
 			_draw_item(rect, u.inventory[i])
@@ -168,3 +182,16 @@ func _draw_item(rect: Rect2, stack: Dictionary) -> void:
 	var position := rect.position + Vector2(rect.size.x - width - 3, 12)
 	draw_rect(Rect2(position - Vector2(2, 10), Vector2(width + 4, 13)), Color("#06121aee"))
 	_text(position, quantity, CYAN, 11)
+
+
+func slot_at(p: Vector2) -> Dictionary:
+	if GameState.base_inventory_unlocked:
+		for i in range(100):
+			if Rect2(40 + (i % 10) * 56, 108 + (i / 10) * 54, 51, 49).has_point(p):
+				return {"items": GameState.base_inventory, "index": i, "capacity": 100}
+	var u := engineer()
+	if u:
+		for i in range(10):
+			if Rect2(268 + i * 65, 727, 58, 58).has_point(p):
+				return {"items": u.inventory, "index": i, "capacity": u.inventory_capacity}
+	return {}

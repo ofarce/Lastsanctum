@@ -28,9 +28,17 @@ var portals: Array[Dictionary] = []
 var dug := {}
 ## Les cellules sans entrée sont en roche ; un type inconnu n'est pas minable.
 var block_types: Dictionary = {}
+## Gisements qui restent en place après chaque cycle de récolte.
+var permanent_ores := {}
+const VAULT_COPPER := Vector2i(16, -37)
+const ORE_BANDS := [Vector2(55, 85), Vector2(90, 125), Vector2(135, 175), Vector2(185, 260)]
+const VEIN_COUNTS := [16, 10, 6, 3]
 var dig_hits := {}
 ## Instant (sim_time) du dernier piton tiré sur chaque case en cours : rendu des pitons plantés.
 var dig_hit_at := {}
+
+## Réserve du coffre antique (CaveShape.in_vault) découverte : elle devient creuse et praticable.
+var vault_open := false
 
 ## Incrémenté à chaque changement de praticabilité (WALK.version) : invalide les chemins en cache.
 var version := 0
@@ -69,12 +77,13 @@ func is_dug(x: float, z: float) -> bool:
 
 func walkable(x: float, z: float) -> bool:
 	return CaveShape.outdoors(x, z) or CaveShape.in_cave(x, z) or CaveShape.in_tunnel(x, z) \
-		or is_dug(x, z) or is_gallery_open(x, z)
+		or is_dug(x, z) or is_gallery_open(x, z) or (vault_open and CaveShape.in_vault(x, z))
 
 
 ## Creux de la montagne (hol, galleries.js : paintRegion) : galerie ouverte, case creusée, salle, couloir.
 func hollow(x: float, z: float) -> bool:
-	return is_gallery_open(x, z) or is_dug(x, z) or CaveShape.in_cave(x, z) or CaveShape.in_tunnel(x, z)
+	return is_gallery_open(x, z) or is_dug(x, z) or CaveShape.in_cave(x, z) or CaveShape.in_tunnel(x, z) \
+		or (vault_open and CaveShape.in_vault(x, z))
 
 
 ## intoCave (Index.html) : rapproche un point de la salle, pas à pas.
@@ -124,8 +133,10 @@ func push_out_of_rock(p: Vector2) -> Vector2:
 func reset_digging() -> void:
 	dug.clear()
 	block_types.clear()
+	permanent_ores.clear()
 	dig_hits.clear()
 	dig_hit_at.clear()
+	vault_open = false
 	version += 1
 
 
@@ -161,6 +172,56 @@ func generate_galleries(new_seed: int) -> void:
 		var radius := 2.1 + r.next() * 1.4
 		_worm(r, x, z, a, steps, radius)
 	_label_networks()
+	_generate_ores()
+
+
+func _generate_ores() -> void:
+	block_types.clear()
+	permanent_ores.clear()
+	var rng := RandomNumberGenerator.new()
+	rng.seed = seed
+	# Une paire de cellules adjacentes par filon. La marge protège toute la salle initiale.
+	var candidates: Array = [[], [], [], []]
+	for j in range(-81, -21):
+		for i in range(-55, 55, 2):
+			var key := Vector2i(i, j)
+			var center := Vector2(key * 4) + Vector2(2, 2)
+			if center.x > -70 and center.x < 82 and center.y > -176 and center.y < -82:
+				continue
+			if absf(center.x) < 58 and center.y < CaveShape.CAVE_Z0 + 6:
+				continue
+			if center.y + 3 >= minf(CaveShape.mountain_edge(center.x), CaveShape.mountain_edge(center.x + 4)) - 8:
+				continue
+			var distance := center.distance_to(CaveShape.CORE)
+			var next_distance := (center + Vector2(4, 0)).distance_to(CaveShape.CORE)
+			for tier in ORE_BANDS.size():
+				var band: Vector2 = ORE_BANDS[tier]
+				if minf(distance, next_distance) >= band.x and maxf(distance, next_distance) <= band.y and _solid_pair(key):
+					candidates[tier].append(key)
+					break
+	for tier in candidates.size():
+		var pool: Array = candidates[tier]
+		for n in mini(VEIN_COUNTS[tier], pool.size()):
+			var index := rng.randi_range(n, pool.size() - 1)
+			var key: Vector2i = pool[index]
+			pool[index] = pool[n]
+			var item: String = Blocks.ORES[tier]
+			block_types[key] = item
+			block_types[key + Vector2i.RIGHT] = item
+			if n % 3 == 0:
+				permanent_ores[key] = true
+	# Le premier filon affleure juste après la paroi ouest, en terrain sans galerie.
+	block_types[Vector2i(-17, -39)] = "copper"
+	block_types[VAULT_COPPER] = "copper"
+	permanent_ores[VAULT_COPPER] = true
+
+
+func _solid_pair(key: Vector2i) -> bool:
+	for dz in 4:
+		for dx in 8:
+			if is_gallery(key.x * 4 + dx + 0.5, key.y * 4 + dz + 0.5):
+				return false
+	return true
 
 
 func _stamp(cx: float, cz: float, r: float) -> void:
@@ -282,7 +343,10 @@ func dig_cell_at(i: int, j: int, p: Vector2) -> Variant:
 		return null
 	var x := i * 4.0
 	var z := j * 4.0
-	if dug.has(Vector2i(i, j)) or (walkable(x + 2.0, z + 2.0) and walkable(x + 0.5, z + 0.5) and walkable(x + 3.5, z + 3.5)):
+	var key := Vector2i(i, j)
+	if key == VAULT_COPPER and permanent_ores.has(key) and not vault_open:
+		return null
+	if dug.has(key) or (not permanent_ores.has(key) and walkable(x + 2.0, z + 2.0) and walkable(x + 0.5, z + 0.5) and walkable(x + 3.5, z + 3.5)):
 		return null
 	if x < CaveShape.WORLD_X0 + 8.0 or x + 4.0 > CaveShape.WORLD_X1 - 8.0 or z < CaveShape.WORLD_Z0 + 8.0 \
 			or (absf(x + 2.0) < 52.0 and z < CaveShape.CAVE_Z0 + 1.0):
@@ -302,6 +366,9 @@ func dig_cell_at(i: int, j: int, p: Vector2) -> Variant:
 
 ## diggableCell : case la plus pertinente autour d'un point de roche cliqué.
 func diggable_cell(p: Vector2) -> Variant:
+	var target := Vector2i((p / 4.0).floor())
+	if permanent_ores.has(target):
+		return dig_cell_at(target.x, target.y, p)
 	if walkable(p.x, p.y):
 		return null
 	var i0 := floori(p.x / 4.0)
@@ -333,6 +400,13 @@ func next_dig_cell(cell: Dictionary, from: Vector2) -> Variant:
 			bd = d
 			best = n
 	return best
+
+
+## La case (i, j), une fois creusée, touche la réserve : recouvrement ou bord commun (pas un simple coin).
+static func cell_touches_vault(i: int, j: int) -> bool:
+	var ox := minf(i * 4.0 + 4.0, CaveShape.VAULT_X1) - maxf(i * 4.0, CaveShape.VAULT_X0)
+	var oz := minf(j * 4.0 + 4.0, CaveShape.VAULT_Z1) - maxf(j * 4.0, CaveShape.VAULT_Z0)
+	return (ox > 0.0 and oz >= 0.0) or (oz > 0.0 and ox >= 0.0)
 
 
 ## Point de la case (i, j) le plus proche de p.

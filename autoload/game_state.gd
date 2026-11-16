@@ -32,7 +32,7 @@ var deity_active: Dictionary = {}
 ## Unité qui réactive l'Ancre (ORB.owner), ou null.
 var orb_owner: Unit = null
 ## Intégrité de l'Ancre en % (coreHP).
-var core_hp: float = 100.0
+var core_hp: float = 1.0
 ## Prochain assaut (nextWave), 0 si aucun n'est programmé.
 var next_wave: float = 0.0
 
@@ -46,6 +46,10 @@ var research_done: Dictionary = {}
 var research_jobs: Dictionary = {}
 ## Coffre antique : le système qui le débloque positionne ce drapeau.
 var base_inventory_unlocked := false
+## L'Ingénieur a déjà remarqué le glyphe de la paroi est (réplique dite une seule fois par partie).
+var vault_hint_said := false
+## Instant où l'Ingénieur a ouvert le coffre antique (animation du couvercle), INF avant.
+var chest_opened_at: float = INF
 ## Une pile {item, quantity} par case, limitée à 9 999 objets.
 var base_inventory: Array[Dictionary] = []
 ## Objets persistants au sol : {item: identifiant, position: Vector2(x, z)}.
@@ -104,13 +108,15 @@ func reset() -> void:
 	portal_start = 0.0
 	deity_active = {}
 	orb_owner = null
-	core_hp = 100.0
+	core_hp = 1.0
 	next_wave = 0.0
 	res = {"forge": 0.0, "vie": 0.0, "discipline": 0.0, "savoir": 0.0}
 	menace = 0
 	research_done.clear()
 	research_jobs.clear()
 	base_inventory_unlocked = false
+	chest_opened_at = INF
+	vault_hint_said = false
 	base_inventory.clear()
 	ground_items.clear()
 	units.clear()

@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Puits des Âmes · Lotus</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0b120e;--panel:#111b14;--line:#2a3a2c;--txt:#dcd8bc;--mut:#93a08a;--acc:#7ae070}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--txt);font:15px/1.45 'Pixelify Sans',system-ui,sans-serif}
+header,main{max-width:1240px;margin:auto;padding:18px 16px}h1{margin:0;font-weight:600;letter-spacing:.08em;font-size:26px;color:var(--acc)}
+header p{color:var(--mut);margin:6px 0 0;max-width:980px}
+button{font:inherit;color:var(--txt);background:#1a2a1d;border:1px solid var(--line);padding:6px 12px;cursor:pointer}button:hover{border-color:var(--acc)}
+.bar{display:flex;gap:8px;align-items:center;margin-top:12px;flex-wrap:wrap}.bar input{flex:1;min-width:160px;max-width:520px;accent-color:var(--acc)}.bar output{min-width:60px;color:var(--mut)}
+.why{border:1px solid var(--line);background:var(--panel);padding:12px 16px;color:var(--mut)}.why b{color:var(--txt)}
+figure{margin:18px 0 0;background:var(--panel);border:1px solid var(--line)}
+.stage{position:relative;background:#050806;padding:8px;display:flex;justify-content:center}
+.stage canvas{image-rendering:pixelated;display:block;width:100%;max-width:1000px;height:auto;aspect-ratio:200/128}
+.tag{position:absolute;left:14px;top:12px;font-size:13px;padding:2px 8px;background:#0b120ecc;border:1px solid var(--line);color:var(--mut)}
+.zooms{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;padding:8px;border-top:1px solid var(--line);background:#0e1711}
+.zooms div{font-size:12px;color:var(--mut);text-align:center}.zooms canvas{image-rendering:pixelated;width:100%;height:auto;display:block;background:#050806}
+.keys{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;padding:8px;border-top:1px solid var(--line);background:#0e1711}
+.keys div{text-align:center;font-size:12px;color:var(--mut)}.keys canvas{image-rendering:pixelated;width:100%;height:auto;display:block}
+figcaption{padding:12px 16px 16px}figcaption b{color:var(--acc);font-weight:600;font-size:18px}figcaption p{margin:4px 0 0;color:var(--mut)}
+figcaption dl{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;margin:10px 0 0;font-size:14px}figcaption dt{color:var(--txt)}figcaption dd{margin:0;color:var(--mut)}
+@media(max-width:620px){.zooms{grid-template-columns:1fr}.keys{grid-template-columns:repeat(2,minmax(0,1fr))}}
+</style></head><body>
+<header><h1>PUITS DES ÂMES · LOTUS DE PIERRE</h1>
+<p>Piste 5 retenue, retravaillée. Le soin ne part plus du puits vers l’unité : le puits irradie un halo diffus, et toute unité qui s’y trouve remonte en vie, avec de petits « + » verts qui apparaissent en fondu, montent un peu et s’effacent tant qu’elle est soignée. La résurrection garde la bulle, qui se déforme jusqu’à prendre la forme de l’unité, puis devient l’unité. Boucle de 13 secondes, résolution du jeu, affichée ×5.</p>
+<div class="bar"><button id="pause">Pause</button><button id="speed">Vitesse ×1</button><input id="scrub" type="range" min="0" max="13" step="0.01" value="0" aria-label="Temps de la boucle"><output id="clock">0,0 s</output></div></header>
+<main>
+<figure><div class="stage"><canvas id="main" width="200" height="128"></canvas><span class="tag" id="tag"></span></div>
+<div class="zooms"><div><canvas id="zh" width="64" height="56"></canvas>Soin · gros plan</div><div><canvas id="zr" width="64" height="56"></canvas>Résurrection · gros plan</div></div>
+<div class="keys" id="keys"></div>
+<figcaption><b>Lotus de pierre</b><p>Huit pétales de pierre moussue autour d’un bassin ; un bouton central fait jaillir une eau verte lumineuse qui retombe en gouttes. Les pétales respirent lentement.</p>
+<dl><dt>Halo</dt><dd>Une lueur verte diffuse s’étale sur l’ardoise autour du puits, sans bord net ; quelques spores dérivent dedans. Elle respire avec les pétales. Elle couvre la zone de soin du puits.</dd>
+<dt>Soin</dt><dd>Le Paladin entre dans le halo : sa vie remonte en continu. Tant qu’il n’est pas plein, de petits « + » verts naissent sur lui en fondu, montent de quelques pixels et s’effacent ; ils s’arrêtent dès que la vie est pleine. Même effet pour le soin du Soigneur.</dd>
+<dt>Résurrection</dt><dd>Les pétales s’ouvrent, le jet monte et une bulle se forme à son sommet. Elle flotte jusque devant le puits, se pose et gonfle à la taille d’une unité, puis se déforme jusqu’à prendre la silhouette de l’unité : une unité d’eau. L’eau se change ensuite en l’unité, quelques gouttes retombent au sol, et sa barre de vie apparaît.</dd></dl></figcaption></figure>
+<section><p class="why"><b>Pour la suite :</b> dis-moi ce qu’il faut ajuster (taille ou intensité du halo, fréquence des « + », durée de la métamorphose…). Une fois validé, j’intègre le puits et les deux effets dans Godot.</p></section>
+</main>
+<script src="assets/decor.js?v=6"></script><script src="assets/units.js?v=10"></script><script src="assets/lotus.js?v=1"></script>
+<script>
+'use strict';
+const {fill,outlineAll}=UnitKit;
+{const _s=Px.prototype.set;Px.prototype.set=function(x,y,c,z){if(c)_s.call(this,x,y,c,z)}}
+const SLATE=['#0d0f13','#14171c','#1b1f25','#23282f','#2c323a','#373e47','#444c56','#535c67','#66707b'];
+const QZ=['#7c7a72','#a8a498','#d0ccc0','#eeeae0'];
+const G=['#0a2412','#0f3a1a','#1f6a2a','#3fa83a','#7ae070','#b8f0a0','#e8ffe0'];
+const STONE=['#232a35','#313a47','#424d5b','#55626f','#6b7885','#86929e','#a2acb6'];
+const MOSS=['#1e3a22','#2c5230','#41703c','#5c8c48','#78a85a'];
+const LEAF=['#0f2a18','#163a20','#1f4c28','#2b6131','#3b783b','#529248','#71ac58'];
+const OUTC='#0a0a0c';
+// ================= SCÈNE ET TEMPS =================
+const W=200,H=128,L=13,WX=100,WY=70,WELL=[60,82],WOX=WX-WELL[0],WOY=WY-WELL[1];
+const HALO={rx:86,ry:52};
+const PX0=216,PX1=150,PY=106,WALK=[0,1.9],SPN=[58,102];
+const RS=6.2,R_ACT=.9,R_TRAV=2.0,R_GROW=2.6,R_MORPH=3.7,R_SOLID=4.5,R_END=5.1,FO=12.4;
+const cl=(v,a=0,b=1)=>Math.max(a,Math.min(b,v)),mix=(a,b,t)=>a+(b-a)*t,sm=t=>{t=cl(t);return t*t*(3-2*t)},eout=t=>{t=1-cl(t);return 1-t*t*t},ein=t=>{t=cl(t);return t*t*t};
+const bay=(x,y)=>BAYER[(y%4+4)%4][(x%4+4)%4],H3=(a,b,s)=>hash(a|0,b|0,s|0);
+const inHalo=(x,y)=>((x-WX)/HALO.rx)**2+((y-WY)/HALO.ry)**2<1;
+// Paladin : marche jusqu'au halo, soigné dès qu'il y entre
+const palX=u=>mix(PX0,PX1,sm((u-WALK[0])/(WALK[1]-WALK[0])));
+const T_IN=(()=>{for(let u=0;u<WALK[1];u+=.005)if(inHalo(palX(u),PY))return u;return WALK[1]})();
+const HEAL_RATE=.7/3.4,T_FULL=T_IN+.7/HEAL_RATE;
+function ctxT(u){const X={u};X.px=palX(u);X.walking=u<WALK[1];X.hp=u<T_IN?.3:Math.min(1,.3+(u-T_IN)*HEAL_RATE);X.healing=u>=T_IN&&X.hp<1;
+ X.r=u-RS;X.act=X.r<0?0:X.r<R_ACT?sm(X.r/R_ACT):X.r<R_GROW?1:X.r<R_SOLID?1-sm((X.r-R_GROW)/(R_SOLID-R_GROW)):0;
+ X.fade=u>=FO?(u-FO)/(L-FO):0;
+ X.phase=u<T_IN?'Le Paladin approche':X.healing?'Soin dans le halo':u<RS?'Vie pleine':X.r<R_ACT?'Une bulle se forme':X.r<R_TRAV?'La bulle flotte':X.r<R_GROW?'La bulle gonfle':X.r<R_MORPH?'Métamorphose':X.r<R_SOLID?'L’eau devient l’unité':'Retour';return X}
+// ================= SOL D'ARDOISE (trois paliers d'éclairage vert) =================
+const FLOOR=(()=>{const base=new Float32Array(W*H*3),put=(x,y,c)=>{const h=hex(c),i=(y*W+x)*3;base[i]=h[0];base[i+1]=h[1];base[i+2]=h[2]};
+ for(let y=0;y<H;y++)for(let x=0;x<W;x++){let c;
+  if(y<18){let v=.26+fbm(x/8,y/6,41)*.3;if(((y+Math.floor(fbm(x/12,0,43)*6))%7)===0)v-=.12;if(y>=15)v-=.16;c=Px.prototype.ramp(SLATE,v,x,y);if(fbm(x/5,y/3,77)>.76&&H3(x,y,5)>.75)c=QZ[H3(x,y,6)>.7?1:0]}
+  else{const uu=x/2+y,vv=y-x/2,cell=Math.floor(uu/16)*7+Math.floor(vv/16)*13;let v=.42+(H3(cell,1,4)-.5)*.12+(fbm(x/9,y/6,21)-.5)*.26;
+   if(((uu%16)+16)%16<1||((vv%16)+16)%16<1)v-=.14;if(y<22)v-=(22-y)*.07;v-=Math.hypot((x-100)/130,(y-70)/90)*.16;c=Px.prototype.ramp(SLATE,v,x,y)}
+  put(x,y,c)}
+ const mk=(m,a)=>{const d=new ImageData(W,H);for(let i=0;i<W*H;i++){for(let c=0;c<3;c++)d.data[i*4+c]=cl(base[i*3+c]*m[c]+a[c],0,255);d.data[i*4+3]=255}return d};
+ return[mk([.74,.76,.8],[0,0,0]),mk([.74,1.08,.8],[0,6,2]),mk([.78,1.3,.84],[2,14,6]),mk([.9,1.6,.95],[8,28,12])]})();
+const fImg=new ImageData(W,H);
+function drawFloor(g,lights){const d=fImg.data;
+ for(let y=0;y<H;y++)for(let x=0;x<W;x++){let I=0;for(const l of lights){const dx=(x-l.x)/l.r,dy=(y-l.y)/(l.r*(l.ry||.62)),dd=Math.sqrt(dx*dx+dy*dy);if(dd<1)I+=l.i*Math.pow(1-dd,l.p||1)}
+  let v=cl(I,0,1.3)*2.4,k=Math.floor(v);if(v-k>bay(x,y))k++;k=Math.min(3,k);const i=(y*W+x)*4,s=FLOOR[k].data;d[i]=s[i];d[i+1]=s[i+1];d[i+2]=s[i+2];d[i+3]=255}
+ g.putImageData(fImg,0,0)}
+// ================= OUTILS =================
+const FX=g=>{const F={
+ px(x,y,c){x=Math.round(x);y=Math.round(y);if(x<0||y<0||x>=W||y>=H)return;g.fillStyle=c;g.fillRect(x,y,1,1)},
+ dpx(x,y,c,a=1){x=Math.round(x);y=Math.round(y);if(x<0||y<0||x>=W||y>=H||a<=0)return;if(a>=1||a>bay(x,y)){g.fillStyle=c;g.fillRect(x,y,1,1)}},
+ disc(cx,cy,r,c,a=1,ry=r){for(let y=Math.floor(cy-ry);y<=cy+ry;y++)for(let x=Math.floor(cx-r);x<=cx+r;x++){const dd=Math.hypot((x+.5-cx)/r,(y+.5-cy)/ry);if(dd<=1)F.dpx(x,y,c,a*(1-dd*dd*.6))}},
+ ring(cx,cy,r,c,a=1,ry=r){const n=Math.max(12,Math.ceil(r*7));for(let k=0;k<n;k++){const t=k/n*6.283;F.dpx(cx+Math.cos(t)*r,cy+Math.sin(t)*ry,c,a)}},
+ dark(cx,cy,rx,ry,k=.6){for(let y=Math.floor(cy-ry);y<=cy+ry;y++)for(let x=Math.floor(cx-rx);x<=cx+rx;x++){const d=((x-cx)/rx)**2+((y-cy)/ry)**2;if(d<1&&bay(x,y)<.9-d*.6){g.globalAlpha=1-k;g.fillStyle='#000';g.fillRect(x,y,1,1);g.globalAlpha=1}}}};return F};
+// ================= UNITÉS =================
+const IMG={};for(const n of['paladin_idle','paladin_walk','shooter_idle']){const im=new Image();im.src=`assets/puits/${n}.png`;IMG[n]=im}
+const UW=40,UH=42,UFX=16,UFY=41,UNIT_TOP=38;
+const oc=document.createElement('canvas');oc.width=UW;oc.height=UH;const ocg=oc.getContext('2d');
+const patC={};function dpat(col,lv){const k=col+lv;if(patC[k])return patC[k];const c=document.createElement('canvas');c.width=c.height=4;const q=c.getContext('2d');q.fillStyle=col;
+ for(let y=0;y<4;y++)for(let x=0;x<4;x++)if(BAYER[y][x]<lv)q.fillRect(x,y,1,1);return patC[k]=ocg.createPattern(c,'repeat')}
+function drawUnit(g,sheet,fx,fy,frame,o={}){const x0=Math.round(fx-UFX),y0=Math.round(fy-UFY);ocg.clearRect(0,0,UW,UH);ocg.drawImage(IMG[sheet],frame*UW,0,UW,UH,0,0,UW,UH);
+ if(o.dissolve!=null&&o.dissolve<1){ocg.globalCompositeOperation='destination-in';ocg.fillStyle=dpat('#fff',cl(o.dissolve));ocg.fillRect(0,0,UW,UH);ocg.globalCompositeOperation='source-over'}
+ g.drawImage(oc,x0,y0)}
+function hpBar(F,x,y,v,a=1){if(a<=0)return;x=Math.round(x)-7;y=Math.round(y);for(let i=-1;i<=14;i++){F.dpx(x+i,y-1,OUTC,a);F.dpx(x+i,y+2,OUTC,a)}F.dpx(x-1,y,OUTC,a);F.dpx(x-1,y+1,OUTC,a);F.dpx(x+14,y,OUTC,a);F.dpx(x+14,y+1,OUTC,a);
+ for(let i=0;i<14;i++){const on=i<Math.round(v*14);F.dpx(x+i,y,on?G[4]:'#24282e',a);F.dpx(x+i,y+1,on?G[3]:'#1a1d22',a)}}
+// Champ de distance signé de la silhouette du Tireur (image 0), pour la métamorphose bulle → unité
+let SDF=null;
+function buildSDF(){const c=document.createElement('canvas');c.width=UW;c.height=UH;const q=c.getContext('2d');q.drawImage(IMG.shooter_idle,0,0,UW,UH,0,0,UW,UH);let a;
+ try{a=q.getImageData(0,0,UW,UH).data}catch(e){a=null}
+ const M=new Uint8Array(UW*UH);for(let y=0;y<UH;y++)for(let x=0;x<UW;x++)M[y*UW+x]=a?a[(y*UW+x)*4+3]>0:(((x-17)/10)**2+((y-24)/17)**2<1);
+ const ins=[],out=[];for(let i=0;i<UW*UH;i++)(M[i]?ins:out).push(i);SDF=new Float32Array(UW*UH);
+ for(let i=0;i<UW*UH;i++){const x=i%UW,y=(i/UW)|0,set=M[i]?out:ins;let b=1e9;for(const j of set){const dx=j%UW-x,dy=((j/UW)|0)-y,d=dx*dx+dy*dy;if(d<b)b=d}SDF[i]=(M[i]?-1:1)*(Math.sqrt(b)-.5)}}
+// ================= LE LOTUS (repère local Px) =================
+const jetH=(t,X)=>LOTUS.jetH(t,X.act);
+const WC=new Map();function lotusCanvas(tq,X){let c=WC.get(tq);if(c)return c;if(WC.size>500)WC.clear();const P=new Px(120,96,true);LOTUS.draw(P,WELL[0],WELL[1],tq,X.act);outlineAll(P);P.flush();WC.set(tq,P.c);return P.c}
+// ================= EFFETS =================
+const fountain=(F,t,X)=>LOTUS.fountain(F,WX,WY,t,X.act);
+// spores qui dérivent dans le halo
+function spores(F,t){for(let j=0;j<16;j++){const per=4+H3(j,1,7)*3,ph=((t+H3(j,2,7)*per)%per)/per,a=H3(j,3,7)*6.283,d=.25+H3(j,4,7)*.7,x=WX+Math.cos(a)*HALO.rx*d+Math.sin(ph*5+j)*2,y=WY+Math.sin(a)*HALO.ry*d-ph*10;
+ F.dpx(x,y,ph>.3&&ph<.6?G[5]:G[4],Math.sin(Math.PI*ph)*.9)}}
+// petits « + » : naissent en fondu, montent, s'effacent
+const PLUS=[[0,-2],[0,-1],[-2,0],[-1,0],[0,0],[1,0],[2,0],[0,1],[0,2]];
+function pluses(F,X,fx,fy){const u=X.u,step=.38,life=1.2,tEnd=T_FULL;
+ for(let j=0;;j++){const t0=T_IN+.05+j*step;if(t0>u||t0>tEnd)break;const a=u-t0;if(a>life)continue;const k=a/life,al=k<.3?sm(k/.3):1-sm((k-.55)/.45);
+  const ox=Math.round((H3(j,1,13)-.5)*18),oy=Math.round(-8-H3(j,2,13)*24),x=fx+ox,y=fy+oy-Math.round(eout(k)*7);
+  // fondu en paliers de couleur (le « + » garde sa forme) : sombre → vif → sombre
+  const lv=al>.8?3:al>.55?2:al>.3?1:al>.1?0:-1;if(lv<0)continue;const body=[G[2],G[3],G[4],G[4]][lv],core=[G[2],G[4],G[5],G[6]][lv];
+  if(lv>=2)for(const[dx,dy]of PLUS)for(const[ex,ey]of[[1,0],[-1,0],[0,1],[0,-1]])if(!PLUS.some(([qx,qy])=>qx===dx+ex&&qy===dy+ey))F.px(x+dx+ex,y+dy+ey,OUTC);
+  for(const[dx,dy]of PLUS)F.px(x+dx,y+dy,dx===0&&dy===0?core:body);if(lv===3){F.px(x,y-1,G[5]);F.px(x-1,y,G[5])}}}
+// bulle simple (en vol)
+function bubble(F,cx,cy,rx,ry){for(let y=Math.floor(cy-ry);y<=cy+ry;y++)for(let x=Math.floor(cx-rx);x<=cx+rx;x++){const d=Math.hypot((x+.5-cx)/rx,(y+.5-cy)/ry);if(d>1)continue;if(d>.8)F.px(x,y,d>.92?G[3]:G[5]);else F.dpx(x,y,G[3],.2)}
+ F.px(cx-rx*.4,cy-ry*.45,G[6]);F.px(cx-rx*.4+1,cy-ry*.45,G[6]);F.px(cx-rx*.4,cy-ry*.45+1,G[5])}
+// bulle qui se déforme vers la silhouette (repère de l'image de l'unité) ; k = 0 bulle, 1 silhouette ; fade = opacité de l'eau
+const BCX=17,BCY=23;
+function morph(F,t,sx,sy,k,rx,ry,fade=1){const x0=Math.round(sx-UFX),y0=Math.round(sy-UFY),mr=Math.min(rx,ry);
+ const D=(x,y)=>{const nx=(x+.5-BCX)/rx,ny=(y+.5-BCY)/ry,an=Math.atan2(ny,nx),wob=Math.sin(an*3+t*7)*.7*(1-k)+Math.sin(an*5-t*9)*.4*Math.sin(Math.PI*k);
+  const dE=(Math.hypot(nx,ny)-1)*mr+wob,dU=SDF[y*UW+x];return mix(dE,dU,sm(k))};
+ for(let y=0;y<UH;y++)for(let x=0;x<UW;x++){const d=D(x,y);if(d>=0)continue;const up=y>0?D(x,y-1):1,lf=x>0?D(x-1,y):1;
+  let c,a=fade;if(d>-1){c=(up>=0||lf>=0)?G[5]:G[3];}else if(d>-2.2&&(up>=0||lf>=0))c=G[4];
+  else{const sh=.18+.5*sm(k)*(1-ein(1-fade))+((y+Math.floor(t*10))%9===0?.15:0);c=G[3];a=fade*sh;if(sm(k)>.6&&(x+y*2+Math.floor(t*14))%11===0){c=G[5];a=fade*.7}}
+  F.dpx(x0+x,y0+y,c,a)}
+ // reflet
+ const hx=x0+mix(BCX-rx*.4,11,sm(k)),hy=y0+mix(BCY-ry*.45,7,sm(k));F.dpx(hx,hy,G[6],fade);F.dpx(hx+1,hy,G[6],fade*(1-k));F.dpx(hx,hy+1,G[5],fade)}
+// ================= RENDU =================
+function render(g,u){const X=ctxT(u),t=u,F=FX(g);
+ const breath=.04*Math.sin(t*1.1);
+ drawFloor(g,[{x:WX,y:WY-2,r:HALO.rx*(1+breath*.5),ry:HALO.ry/HALO.rx,i:.42+breath+X.act*.1,p:.7},{x:WX,y:WY-6,r:36,i:.5+X.act*.35}]);
+ F.dark(WX+4,WY+3,26,10,.55);
+ spores(F,t);
+ g.drawImage(lotusCanvas(Math.floor(u*20)/20,ctxT(Math.floor(u*20)/20)),WOX,WOY);
+ fountain(F,t,X);
+ // Paladin
+ const px=Math.round(X.px);F.dark(px,PY,7,2.5,.5);
+ drawUnit(g,X.walking?'paladin_walk':'paladin_idle',px,PY,X.walking?Math.floor(t*9)%6:Math.floor(t*8)%12);
+ hpBar(F,px,PY-UNIT_TOP-3,X.hp);pluses(F,X,px,PY);
+ // Résurrection
+ const r=X.r,[sx,sy]=SPN,jtop=[WX,WY-9-jetH(t,X)],land=[sx-UFX+BCX,sy-UFY+BCY];
+ if(r>=.2&&r<R_ACT){const k=sm((r-.2)/(R_ACT-.2)),br=k*5;bubble(F,jtop[0],jtop[1]-br,br,br)}
+ else if(r>=R_ACT&&r<R_TRAV){const k=sm((r-R_ACT)/(R_TRAV-R_ACT));bubble(F,mix(jtop[0],land[0],k),mix(jtop[1]-5,land[1]-6,k)-Math.sin(Math.PI*k)*14+Math.sin(t*9)*.6,5,5)}
+ else if(r>=R_TRAV&&r<R_SOLID){const g1=eout((r-R_TRAV)/(R_GROW-R_TRAV)),rx=mix(5,12,g1),ry=mix(5,17,g1),k=r<R_GROW?0:sm((r-R_GROW)/(R_MORPH-R_GROW));
+  if(r>=R_GROW+.4*(R_MORPH-R_GROW)){F.dark(sx,sy,7,2.5,.5)}
+  const lift=r<R_GROW?(1-g1)*6:0;
+  if(r>=R_MORPH){const s=sm((r-R_MORPH)/(R_SOLID-R_MORPH));drawUnit(g,'shooter_idle',sx,sy,0,{dissolve:s});morph(F,t,sx,sy,1,rx,ry,1-s)}
+  else morph(F,t,sx,sy-lift,k,rx,ry,1)}
+ if(r>=R_SOLID&&u<L){const fa=X.fade;F.dark(sx,sy,7,2.5,.5);drawUnit(g,'shooter_idle',sx,sy,r<R_END?0:Math.floor(t*8)%12,{dissolve:1-fa});hpBar(F,sx,sy-UNIT_TOP-3,1,sm((r-R_SOLID)/.4)*(1-fa))}
+ // gouttes qui retombent pendant la transformation, flaque qui s'évapore
+ if(r>=R_MORPH-.1&&r<R_END+.4){const a=r-(R_MORPH-.1);for(let j=0;j<9;j++){const t0=H3(j,1,21)*.9,age=a-t0;if(age<0||age>.5)continue;const x=sx-9+H3(j,2,21)*20,y0=sy-30+H3(j,3,21)*24,y=Math.min(sy+1,y0+age*age*160);F.px(x,y,y>=sy+1?G[4]:G[5]);if(y<sy+1)F.dpx(x,y-1,G[4],.6)}
+  const pk=cl(a/.5)*(1-sm((r-R_SOLID)/.9));F.disc(sx,sy+1,9,G[3],.55*pk,3);F.ring(sx,sy+1,7+(1-pk)*5,G[5],pk*.8,(7+(1-pk)*5)*.4)}
+ return X}
+// ================= PAGE =================
+const KEYS=[[T_IN+.2,'Entrée dans le halo'],[T_IN+1.4,'Soin en cours'],[T_FULL+.6,'Vie pleine'],[RS+1.5,'La bulle flotte'],[RS+2.45,'La bulle gonfle'],[RS+3.15,'Métamorphose'],[RS+3.9,'L’eau devient l’unité'],[RS+4.9,'Retour']];
+const kd=document.getElementById('keys');kd.innerHTML=KEYS.map(k=>`<div><canvas width="${W}" height="${H}"></canvas>${k[1]}</div>`).join('');
+const mg=document.getElementById('main').getContext('2d'),zh=document.getElementById('zh').getContext('2d'),zr=document.getElementById('zr').getContext('2d'),tag=document.getElementById('tag');
+let u=0,last=performance.now(),paused=false,speed=1,acc=0;const scrub=document.getElementById('scrub'),clock=document.getElementById('clock');
+document.getElementById('pause').onclick=e=>{paused=!paused;e.target.textContent=paused?'Lecture':'Pause'};
+document.getElementById('speed').onclick=e=>{speed=speed===1?.5:speed===.5?.25:1;e.target.textContent='Vitesse ×'+String(speed).replace('.',',')};
+scrub.oninput=()=>{u=+scrub.value;draw()};
+function draw(){const X=render(mg,u);tag.textContent=X.phase;const cv=mg.canvas;
+ zh.drawImage(cv,Math.round(X.px)-32,PY-48,64,56,0,0,64,56);zr.drawImage(cv,SPN[0]-32,SPN[1]-48,64,56,0,0,64,56);scrub.value=u;clock.textContent=u.toFixed(1).replace('.',',')+' s'}
+function loop(now){const dt=Math.min(.1,(now-last)/1000);last=now;if(!paused){u=(u+dt*speed)%L;acc+=dt;if(acc>=1/30){acc=0;draw()}}requestAnimationFrame(loop)}
+Promise.all(Object.values(IMG).map(im=>im.complete?1:new Promise(r=>{im.onload=r;im.onerror=r}))).then(()=>{buildSDF();
+ [...kd.querySelectorAll('canvas')].forEach((c,j)=>render(c.getContext('2d'),KEYS[j][0]));draw();requestAnimationFrame(loop)});
+</script></body></html>

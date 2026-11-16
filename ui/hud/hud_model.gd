@@ -252,6 +252,11 @@ static func unit_status(sim: Simulation, u: Unit) -> String:
 			return "Réactivation de l’Ancre · %d %%" % floori(GameState.orb_progress / ORB_TIME * 100.0)
 		if u.job != null and u.job["type"] == "dig":
 			return dig_status(sim, u.job["cell"])
+		if u.job != null and u.job["type"] == "pray":
+			var t: Building = u.job["temple"]
+			if u.working:
+				return "Médite au %s · +%d %s / s" % [t.def()["name"], Simulation.pray_rate(u), Catalog.RES_INFO[Catalog.DEITY_RES[t.def()["deity"]]]["name"]]
+			return "Se rend au " + t.def()["name"]
 		if GameState.hud_menu == "build":
 			return "Choisissez un bâtiment à construire"
 		if not GameState.orb_active:
@@ -271,10 +276,12 @@ static func building_status(b: Building) -> String:
 	if not deity.is_empty():
 		var r: String = Catalog.RES_INFO[Catalog.DEITY_RES[deity]]["name"]
 		var n := 0
+		var rate := 0
 		for u in GameState.units:
 			if u.alive() and u.working and u.job != null and u.job.get("temple") == b:
 				n += 1
-		return "Adepte de %s · %d %s · %d en prière (+%d %s / s)" % [Catalog.DEITY_NAMES[deity], Catalog.SUMMON_COST, r, n, n, r]
+				rate += Simulation.pray_rate(u)
+		return "Adepte de %s · %d %s · %d en prière (+%d %s / s)" % [Catalog.DEITY_NAMES[deity], Catalog.SUMMON_COST, r, n, rate, r]
 	if b.type == "caserne":
 		return "Entraînement · %s · %s s · file %d / %d" % [Catalog.cost_text(Catalog.CASERNE_COST), num(Catalog.CASERNE_TIME), b.queue.size(), Catalog.CASERNE_QUEUE]
 	if b.type == "soulwell":
@@ -303,6 +310,14 @@ static func view(sim: Simulation) -> Dictionary:
 	v["res"] = res
 	v["resource_rates"] = Simulation.resource_rates()
 	v["menace"] = str(GameState.menace)
+	var tier := Catalog.menace_tier(GameState.menace)
+	var wave_stats := Catalog.menace_stats(tier)
+	var portal_stats := Catalog.menace_stats(tier, true)
+	v["menace_tooltip"] = ("Menace %d · palier %d\nVagues : +%d ennemis · composition +%d vagues\nPV ×%.2f · dégâts ×%.2f · armure +%d\nStrazhar : dès la vague effective 8 ou %d menace ; +1 tous les %d paliers après %d\nPortails : toutes les %.2f s · %d créatures vivantes maximum\nPV ×%.2f · dégâts ×%.2f\nVagues : menace figée au lancement. Portails : menace relue à chaque apparition." % [
+		GameState.menace, tier, Catalog.MENACE_WAVE["count"] * tier,
+		floori(float(tier) / Catalog.MENACE_WAVE["composition_step"]), wave_stats["hp"], wave_stats["damage"], wave_stats["armor"],
+		Catalog.STRAZHAR_MENACE, Catalog.MENACE_WAVE["champion_step"], Catalog.MENACE_WAVE["champion_start"],
+		Catalog.menace_portal_interval(tier), Catalog.menace_portal_cap(tier), portal_stats["hp"], portal_stats["damage"]])
 	v["population"] = str(GameState.units.filter(func(o: Unit) -> bool: return o.alive() and not o.hidden).size())
 	if anchor:
 		v["chosen"] = "Ancre tyrienne"
@@ -368,9 +383,9 @@ static func view(sim: Simulation) -> Dictionary:
 	v["assault"] = format_assault() if anchor else ""
 	var base := 0
 	if u:
-		base = Catalog.FIGHT[u.role]["dmg"] if Catalog.FIGHT.has(u.role) else Catalog.BASE_DAMAGE.get(u.role, 0)
+		base = Catalog.attack_damage(u)
 	v["damage"] = "—" if u == null or B or base == 0 else str(base + Catalog.lvl_bonus(u))
-	v["armor"] = str(Catalog.lvl_bonus(u)) if u and not B else "—"
+	v["armor"] = str(Catalog.armor(u)) if u and not B else "—"
 	var speed := 3.45 if u and u.role == "guard" else (7.6 if Catalog.is_adept(u) else 15.2)
 	v["speed"] = num_fr(speed) if u and not B else "—"
 	if B:

@@ -70,7 +70,15 @@ const HERO_COST := {"forge": 100, "vie": 100, "discipline": 100, "savoir": 100}
 ## DEITY_LOOK[id].glow[3] (Index.html:295) : éclair de sortie d'un adepte au portail de son dieu.
 ## Écart voulu D16 (charte graphique) : Indra orange, Sigil blanc, Medeina vert, Aether bleu-violet.
 const DEITY_GLOW := {"indra": Color("#ff8a2a"), "sigil": Color("#dde2ee"), "medeina": Color("#7ae070"), "aether": Color("#7a80ff")}
-const DEITY_NAMES := {"indra": "Indra", "sigil": "Sigil", "medeina": "Medeina", "aether": "Aether"}
+## Rampe du portail de chaque dieu (DA.DEITIES[id].portal, da-planches.js), du plus sombre au plus clair :
+## lueurs de la méditation de l'Ingénieur.
+const DEITY_RAMP := {
+	"medeina": [Color("#0d3010"), Color("#1f6420"), Color("#3fa83a"), Color("#7ae070"), Color("#c8f5b0"), Color("#f4fff0")],
+	"indra": [Color("#3a1404"), Color("#7a3008"), Color("#c85a10"), Color("#ff8a2a"), Color("#ffc890"), Color("#fff4e8")],
+	"sigil": [Color("#3a3e4a"), Color("#6a7080"), Color("#a8b0c0"), Color("#dde2ee"), Color("#f4f6ff"), Color("#ffffff")],
+	"aether": [Color("#140f40"), Color("#2c2690"), Color("#4a48d0"), Color("#7a80ff"), Color("#c0c4ff"), Color("#f0f0ff")],
+}
+const DEITY_NAMES :={"indra": "Indra", "sigil": "Sigil", "medeina": "Medeina", "aether": "Aether"}
 
 ## ADEPT (adepts.js:5-14).
 const ADEPT := {
@@ -108,6 +116,30 @@ const SILLON := {"cd": 4.0, "len": 8.0, "w": 0.9, "dmg": 12, "wall": 2.0, "burn"
 const KILL_XP := {"creep": 10, "spitter": 15, "brute": 35, "beast": 6, "scout": 12, "soldier": 22, "shield": 28, "archer": 15, "strazhar": 60}
 ## Un champion ouvre les assauts dès ce seuil, même avant la vague 8.
 const STRAZHAR_MENACE := 1000
+## Difficulté par paliers de menace ; coefficients partagés par le combat et le HUD.
+const MENACE_STEP := 100
+const MENACE_WAVE := {"count": 2, "composition_step": 2, "hp": 0.04, "damage": 0.02, "armor_step": 5, "champion_start": 10, "champion_step": 5}
+const MENACE_PORTAL := {"interval_step": 0.35, "min_interval": 3.5, "max_cap": 16, "hp": 0.08, "damage": 0.05}
+
+
+static func menace_tier(menace: int) -> int:
+	return floori(float(maxi(0, menace)) / MENACE_STEP)
+
+
+static func menace_stats(tier: int, portal: bool = false) -> Dictionary:
+	var rules: Dictionary = MENACE_PORTAL if portal else MENACE_WAVE
+	return {"hp": 1.0 + rules["hp"] * tier, "damage": 1.0 + rules["damage"] * tier,
+		"armor": 0 if portal else floori(float(tier) / MENACE_WAVE["armor_step"])}
+
+
+static func menace_portal_interval(tier: int) -> float:
+	return maxf(MENACE_PORTAL["min_interval"], EVIL["interval"] - MENACE_PORTAL["interval_step"] * tier)
+
+
+static func menace_portal_cap(tier: int) -> int:
+	return mini(MENACE_PORTAL["max_cap"], EVIL["cap"] + tier)
+
+
 ## Ennemis (spawn, Index.html ; rejetons : updateEvilPortals, galleries.js).
 const ENEMY := {
 	"creep": {"hp": 35, "speed": 2.7, "range": 1.5, "damage": 6, "cd": 1.15},
@@ -118,7 +150,7 @@ const ENEMY := {
 	"soldier": {"hp": 75, "speed": 2.1, "range": 1.5, "damage": 9, "cd": 1.3, "armor": 3},
 	"shield": {"hp": 85, "speed": 1.7, "range": 1.5, "damage": 8, "cd": 1.5, "armor": 9},
 	"archer": {"hp": 45, "speed": 2.8, "range": 10.0, "damage": 6, "cd": 1.4, "armor": 1},
-	"strazhar": {"hp": 450, "speed": 8.4, "range": 1.7, "damage": 16, "cd": 0.85, "armor": 6},
+	"strazhar": {"hp": 600, "speed": 8.4, "range": 1.7, "damage": 64.0 / 3.0, "cd": 0.85, "armor": 8},
 }
 ## Portails maléfiques (EVIL) : un rejeton toutes les 7 s, 8 au plus par portail.
 const EVIL := {"interval": 7.0, "cap": 8}
@@ -164,6 +196,16 @@ static func lvl(u: Unit) -> int:
 	return u.level if u and u.level > 0 else 1
 
 
+static func armor(u: Unit) -> int:
+	return lvl_bonus(u) + (500 if u.role == "engineer" and not u.unarmored else 0)
+
+
+static func attack_damage(u: Unit) -> int:
+	if u.role == "engineer" and not u.unarmored:
+		return 1000
+	return FIGHT[u.role]["dmg"] if FIGHT.has(u.role) else BASE_DAMAGE.get(u.role, 0)
+
+
 static func lvl_bonus(u: Unit) -> int:
 	return lvl(u) - 1
 
@@ -203,6 +245,8 @@ static func refund(cost: Dictionary) -> void:
 
 ## Portée d'attaque d'une unité alliée (FIGHT, sinon HERO) : partagée par le combat et le HUD.
 static func unit_reach(u: Unit) -> float:
+	if u.role == "engineer" and not u.unarmored:
+		return 250.0
 	return Catalog.FIGHT[u.role]["reach"] if Catalog.FIGHT.has(u.role) else Catalog.HERO.get(u.role, {"reach": 8.6})["reach"]
 
 

@@ -24,6 +24,7 @@ var _face := 1
 var _moving := false
 var _bold: FontVariation
 var _key: Array = []
+var _revive: ReviveFx
 
 
 func setup(u: Unit, w: World) -> void:
@@ -44,6 +45,11 @@ func setup(u: Unit, w: World) -> void:
 	_bold = FontVariation.new()
 	_bold.base_font = load("res://assets/fonts/DejaVuSans.ttf")
 	_bold.variation_embolden = 0.7
+	# L'effet est un calque enfant : le rendu standard de l'adepte reste intact.
+	_revive = ReviveFx.new()
+	_revive.view = self
+	_revive.scale = Vector2(SCALE, SCALE)
+	add_child(_revive)
 	_update()
 
 
@@ -54,6 +60,8 @@ func _process(_delta: float) -> void:
 func _update() -> void:
 	var u := unit
 	visible = not u.hidden and u.alive()
+	if _revive:
+		_revive.tick()
 	position = Proj.nat(u.x, 0.0, u.z)
 	if is_nan(_lx):
 		_lx = u.x

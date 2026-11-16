@@ -1,0 +1,51 @@
+{
+  "version": 2,
+  "reference": "propositions-v2-strazhar.png (rightmost Strazhar)",
+  "preview": "../strazhar-deplacements.html",
+  "columns": 6,
+  "rows": 8,
+  "directions": [
+    "E",
+    "SE",
+    "S",
+    "SW",
+    "W",
+    "NW",
+    "N",
+    "NE"
+  ],
+  "frames_per_direction": 6,
+  "contact_order": "both forelimbs, then both hindlimbs",
+  "variants": [
+    {
+      "id": "01-lourde",
+      "file": "strazhar-01-lourde-8directions.png",
+      "cycle_seconds": 1.2,
+      "fps": 5.0
+    },
+    {
+      "id": "02-bond",
+      "file": "strazhar-02-bond-8directions.png",
+      "cycle_seconds": 0.85,
+      "fps": 7.0588235294117645
+    },
+    {
+      "id": "03-basse",
+      "file": "strazhar-03-basse-8directions.png",
+      "cycle_seconds": 1.4,
+      "fps": 4.285714285714286
+    },
+    {
+      "id": "04-charge",
+      "file": "strazhar-04-charge-8directions.png",
+      "cycle_seconds": 0.65,
+      "fps": 9.23076923076923
+    },
+    {
+      "id": "05-royale",
+      "file": "strazhar-05-royale-8directions.png",
+      "cycle_seconds": 1.1,
+      "fps": 5.454545454545454
+    }
+  ]
+}

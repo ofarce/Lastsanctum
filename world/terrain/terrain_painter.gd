@@ -185,7 +185,9 @@ func _hollow_mask(x: float, z: float) -> PackedByteArray:
 	mask.resize(M * M)
 	var near_cave := x + 4.5 > -66.0 and x - 0.5 < 66.0 and z + 4.5 > -171.0 and z - 0.5 < -85.0
 	var near_tunnel := x + 4.5 > -CaveShape.CAVE_GATE and x - 0.5 < CaveShape.CAVE_GATE
-	if near_cave or near_tunnel:
+	var near_vault := state.vault_open and x + 4.5 > CaveShape.VAULT_X0 and x - 0.5 < CaveShape.VAULT_X1 \
+		and z + 4.5 > CaveShape.VAULT_Z0 and z - 0.5 < CaveShape.VAULT_Z1
+	if near_cave or near_tunnel or near_vault:
 		for py in range(-3, 35):
 			for px in range(-3, 35):
 				mask[(py + 3) * M + px + 3] = 1 if state.hollow(x + px / 8.0, z + py / 8.0) else 0

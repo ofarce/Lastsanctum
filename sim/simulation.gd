@@ -29,7 +29,11 @@ const SPEED_ENGINEER := 15.2
 const SPEED_ADEPT := 7.6
 const SPEED_GUARD := 3.45
 const ADEPT_ROLES := ["sigil", "medeina", "aether", "indra", "flammes", "archer", "lame"]
-const DIG_MSG := "Creusement · l’Ingénieur ancre quatre pitons à distance (une case de portée), la roche est suspendue puis effacée ; il attaque ensuite la case voisine."
+## Prière de l'Ingénieur (méditation en lévitation, planche ingenieur-priere-propositions.html, proposition 5) :
+## +5 de la ressource du dieu par seconde, après le temps de s'asseoir en tailleur (planche « settle » : 1 s).
+const ENGINEER_PRAY := 5.0
+const MEDITATE_SETTLE := 1.0
+const DIG_MSG :="Creusement · l’Ingénieur ancre quatre pitons à distance (une case de portée), la roche est suspendue puis effacée."
 
 var world: World
 var paused := false
@@ -83,6 +87,8 @@ func new_game(seed: int = -1) -> void:
 		spawn("Tireur", 3.0, 12.0, "shooter")
 	var eng := spawn("Ingénieur Exilé", PORTAL.x, PORTAL.y + 0.8, "engineer")
 	eng.hidden = true
+	if world:
+		world.camera.set_view(eng.pos(), world.camera.px)
 	# selected = [units[0]] : le Paladin quand les héros sont présents.
 	GameState.selected = [GameState.units[0]]
 	say("L’Ancre s’est éteinte. Sélectionnez l’Ingénieur, puis clic droit sur l’Ancre (ou R) pour la réactiver.", 7.0)
@@ -250,6 +256,7 @@ func update_buildings(dt: float) -> void:
 				if unit.alive() and not unit.hidden and unit.hp < unit.max_hp \
 						and Vector2(unit.x - b.x, unit.z - b.z).length_squared() <= float(D["heal_radius"]) ** 2:
 					unit.hp = minf(unit.max_hp, unit.hp + float(D["heal_per_second"]) * dt)
+					unit.healed_at = GameState.sim_time
 		if b.type == "caserne" and not b.queue.is_empty():
 			b.train += dt
 			if b.train >= Catalog.CASERNE_TIME:
@@ -288,6 +295,7 @@ func update_orb(dt: float) -> void:
 	if GameState.orb_progress < ORB_TIME:
 		return
 	GameState.orb_active = true
+	GameState.core_hp = 100.0
 	GameState.orb_finished_at = GameState.sim_time
 	u.orb_job = false
 	Combat.zone(CaveShape.CORE.x, CaveShape.CORE.y, 7.0, Color("#bba7ff"))
@@ -408,13 +416,12 @@ func update_adepts(_dt: float) -> void:
 			var key := Vector2i(c["i"], c["j"])
 			var block := st.block_definition(key.x, key.y)
 			if block.is_empty():
-				u.job = null
+				_advance_dig(u)
 				continue
 			var resistance: int = block["resistance"]
 			var eng := u.role == "engineer"
 			if st.dug.has(key):
-				if not (eng and _next_dig(u)):
-					u.job = null
+				_advance_dig(u)
 				continue
 			var at: Vector2 = j["at"]
 			# L'Ingénieur tire ses pitons à distance : il s'arrête dès que la case est à portée.
@@ -438,13 +445,27 @@ func update_adepts(_dt: float) -> void:
 				else:
 					Combat.flash(key.x * 4 + 2, key.y * 4 + 2, Color("#a89c86"))
 				if h >= resistance:
+					if st.permanent_ores.has(key):
+						st.dig_hits.erase(key)
+						st.dig_hit_at.erase(key)
+						ItemStorage.deposit(block["drop_item"], u, u.pos())
+						_advance_dig(u)
+						break
 					if eng:
 						Combat.suspend(u, key, world.cell_image(key.x, key.y))
 					world.dig_cell(key.x, key.y)
 					ItemStorage.deposit(block["drop_item"], u, Vector2(key.x * 4 + 2, key.y * 4 + 2))
-					if not (eng and _next_dig(u)):
-						u.job = null
+					_advance_dig(u)
 					break
+			continue
+		if j["type"] == "chest":
+			var spot := CaveShape.CHEST_SPOT
+			u.tx = spot.x
+			u.tz = spot.y
+			if Combat.hyp(u.x - spot.x, u.z - spot.y) >= 0.7:
+				continue
+			open_chest(u)
+			u.job = null
 			continue
 		if j["type"] == "pray":
 			var t: Building = j["temple"]
@@ -455,9 +476,21 @@ func update_adepts(_dt: float) -> void:
 			u.tx = spot.x
 			u.tz = spot.y
 			if Combat.hyp(u.x - spot.x, u.z - spot.y) >= 0.7:
+				j.erase("since")
 				continue
 			u.working = true
-			var r: String = Catalog.DEITY_RES[u.role]
+			var r: String = Catalog.DEITY_RES[t.def()["deity"]]
+			if u.role == "engineer":
+				# Méditation en lévitation : il s'assoit (MEDITATE_SETTLE), puis +5 à chaque seconde entière.
+				if not j.has("since"):
+					j["since"] = GameState.sim_time
+					j["ticks"] = 0
+				var n := floori(GameState.sim_time - j["since"] - MEDITATE_SETTLE)
+				while j["ticks"] < n:
+					j["ticks"] += 1
+					GameState.res[r] += ENGINEER_PRAY
+					GameState.pray_popups.append({"x": t.x, "z": t.z, "amount": int(ENGINEER_PRAY), "res": r, "at": GameState.sim_time})
+				continue
 			GameState.res[r] += dt
 			t.acc += dt
 			if t.acc >= 5.0:
@@ -467,17 +500,60 @@ func update_adepts(_dt: float) -> void:
 		u.job = null
 	for id: String in Catalog.DEITY_NAMES:
 		GameState.deity_active[id] = GameState.sim_time < GameState.deity_until.get(id, 0.0)
+	_vault_hint()
 
 
-## nextDig : enchaîne sur une case de roche voisine de celle qui vient d'être déblayée.
-func _next_dig(u: Unit) -> bool:
-	var n: Variant = state().next_dig_cell(u.job["cell"], u.pos())
-	if n == null:
+## Distance à laquelle l'Ingénieur remarque le glyphe de la paroi est (unités de monde).
+const VAULT_HINT_RANGE := 9.0
+
+
+## L'Ingénieur muni du Sceau de minage passe près du glyphe : il le remarque, une fois par partie.
+func _vault_hint() -> void:
+	if GameState.vault_hint_said or state().vault_open or not GameState.research_done.has("mining_artifact"):
+		return
+	var at := Vector2(CaveShape.VAULT_X0 - 6.0, -146.0)
+	for u in GameState.units:
+		if u.role == "engineer" and u.alive() and not u.hidden and u.pos().distance_to(at) < VAULT_HINT_RANGE:
+			GameState.vault_hint_said = true
+			engineer_spoke.emit(u, "Un glyphe tyrien dans la roche, encore alimenté. Il y a quelque chose de scellé derrière cette paroi.")
+			return
+
+
+## Coffre antique (réserve scellée à l'est de la salle) : clic droit dessus. Fermé, l'Ingénieur (sélectionné,
+## sinon le premier disponible) va l'ouvrir ; ouvert, l'inventaire s'affiche. Faux si la réserve est scellée.
+func order_chest(u: Unit = null) -> bool:
+	if GameState.ended or not state().vault_open:
 		return false
-	u.job["cell"] = n
-	u.job["at"] = n["at"]
-	u.job["work"] = 0.0
+	if GameState.base_inventory_unlocked:
+		Events.inventory_requested.emit()
+		return true
+	if u == null:
+		u = builder()
+	if u == null:
+		for o in GameState.units:
+			if o.role == "engineer" and o.alive() and not o.hidden:
+				u = o
+				break
+	if u == null:
+		say("Seul l’Ingénieur sait ouvrir ce reliquaire.", 2.0)
+		return true
+	set_job(u, {"type": "chest"})
+	u.tx = CaveShape.CHEST_SPOT.x
+	u.tz = CaveShape.CHEST_SPOT.y
+	GameState.selected = [u]
+	say("L’Ingénieur rejoint le coffre antique.", 2.0)
 	return true
+
+
+## L'Ingénieur arrive devant le coffre : le couvercle s'ouvre et la réserve de la base (100 cases) se débloque.
+func open_chest(u: Unit) -> void:
+	if GameState.base_inventory_unlocked:
+		return
+	GameState.base_inventory_unlocked = true
+	GameState.chest_opened_at = GameState.sim_time
+	Combat.zone(CaveShape.CHEST.x, CaveShape.CHEST.y - 1.0, 4.0, Color("#5ce8ff"))
+	engineer_spoke.emit(u, "Un reliquaire tyrien. Il tient bien plus que sa taille : cent emplacements.")
+	say("Coffre antique ouvert · la réserve de la base (100 cases) reçoit désormais les objets minés (touche C).", 4.0)
 
 
 ## orderAdepts : clic droit de l'Ingénieur sur la roche (creuser). Prière au temple : étape 7.
@@ -489,14 +565,54 @@ func order_adepts(p: Vector2) -> bool:
 	if not engs.is_empty():
 		var cell: Variant = state().diggable_cell(p)
 		if cell != null:
-			for u in engs:
-				if not can_mine(u):
-					engineer_spoke.emit(u, "Impossible. Je n'ai pas mon sceau de minage.")
-					continue
-				set_job(u, {"type": "dig", "cell": cell, "at": cell["at"]})
-			if engs.any(func(u: Unit) -> bool: return can_mine(u)):
-				say(DIG_MSG, 2.0)
+			order_mining_cells([cell])
 			return true
+	return false
+
+
+## Ordonne une file de cases au(x) Ingénieur(s) sélectionné(s), dans l'ordre du glisser.
+func order_mining_cells(cells: Array) -> bool:
+	if cells.is_empty():
+		return false
+	var ordered: Array[Dictionary] = []
+	var seen: Dictionary = {}
+	for cell: Dictionary in cells:
+		var key := Vector2i(cell["i"], cell["j"])
+		if not seen.has(key):
+			seen[key] = true
+			ordered.append(cell.duplicate())
+	if ordered.is_empty():
+		return false
+	var engs := GameState.selected.filter(func(u: Unit) -> bool: return u.role == "engineer" and u.alive() and not u.hidden)
+	if engs.is_empty():
+		return false
+	var issued := false
+	for u: Unit in engs:
+		if not can_mine(u):
+			engineer_spoke.emit(u, "Impossible. Je n'ai pas mon sceau de minage.")
+			continue
+		var queue := ordered.duplicate(true)
+		set_job(u, {"type": "dig", "cells": queue, "index": 0, "cell": queue[0], "at": queue[0]["at"]})
+		issued = true
+	if issued:
+		say(DIG_MSG, 2.0)
+	return true
+
+
+## Passe à la case suivante de la sélection, ou termine la tâche.
+func _advance_dig(u: Unit) -> bool:
+	var j: Dictionary = u.job
+	j["index"] = int(j.get("index", 0)) + 1
+	var cells: Array = j.get("cells", [])
+	while int(j["index"]) < cells.size():
+		var cell: Dictionary = cells[j["index"]]
+		if not state().block_definition(cell["i"], cell["j"]).is_empty() and not state().dug.has(Vector2i(cell["i"], cell["j"])):
+			j["cell"] = cell
+			j["at"] = cell["at"]
+			j["work"] = 0.0
+			return true
+		j["index"] = int(j["index"]) + 1
+	u.job = null
 	return false
 
 
@@ -570,6 +686,8 @@ func ability() -> void:
 		Combat.zone(source.x, source.z, 7.0, Color("#83e5bf"))
 		for u in GameState.units:
 			if Combat.dist(u, source) < 7.0:
+				if u.hp < u.max_hp:
+					u.healed_at = GameState.sim_time
 				u.hp = minf(u.max_hp, u.hp + 55.0)
 				if u.hp <= 0.0:
 					u.hp = 25.0
@@ -677,6 +795,19 @@ func pray_selected() -> void:
 	say("Les adeptes rejoignent leur temple pour prier." if n else "Aucun temple de leur dieu n’est achevé.", 2.0)
 
 
+## Clic droit sur un temple avec l'Ingénieur sélectionné : il rejoint le parvis et médite en lévitation.
+func order_pray(b: Building) -> bool:
+	if b == null or not b.complete or not b.is_temple():
+		return false
+	var engs := GameState.selected.filter(func(u: Unit) -> bool: return u.role == "engineer" and u.alive() and not u.hidden)
+	if engs.is_empty():
+		return false
+	for u: Unit in engs:
+		set_job(u, {"type": "pray", "temple": b})
+	say("L’Ingénieur rejoint le %s pour méditer · +%d %s / s." % [b.def()["name"], int(ENGINEER_PRAY), Catalog.RES_INFO[Catalog.DEITY_RES[b.def()["deity"]]]["name"]], 2.0)
+	return true
+
+
 func send_to_pray(u: Unit, t: Building = null) -> bool:
 	if not Catalog.prays(u):
 		return false
@@ -718,13 +849,9 @@ static func snap_for(type: String, p: Vector2) -> Vector2:
 	return Vector2(js_round(p.x / CELL) * CELL, js_round(p.y / CELL) * CELL)
 
 
-## buildableGround : praticable, hors couloir, chemin de la jungle, allée centrale et rangée des portails.
+## Tout sol praticable est constructible, y compris les allées et les galeries.
 func buildable_ground(x: float, z: float) -> bool:
-	if not state().walkable(x, z) or CaveShape.in_tunnel(x, z) or CaveShape.in_path(x, z):
-		return false
-	if CaveShape.in_cave(x, z) and (absf(x) < 12.0 or z < -140.0):
-		return false
-	return true
+	return state().walkable(x, z)
 
 
 ## validSite : sol constructible sous toute l'emprise, à l'écart des bâtiments, des balistes, de l'Ancre
@@ -740,7 +867,7 @@ func valid_site(type: String, p: Vector2) -> bool:
 			z += 2.0
 		x += 2.0
 	for b in GameState.buildings:
-		if absf(b.x - p.x) < b.half() + h and absf(b.z - p.y) < b.half() + h:
+		if absf(b.x - p.x) < b.half() + h + CELL and absf(b.z - p.y) < b.half() + h + CELL:
 			return false
 	for t in TURRET_SPOTS:
 		if absf(t.x - p.x) < h + 5.0 and absf(t.y - p.y) < h + 5.0:
@@ -817,7 +944,12 @@ func summon_adept(b: Building) -> void:
 	u.max_hp = u.hp
 	u.radius = 0.55
 	Combat.flash(DEITY_X[id], PORTAL.y + 1.0, Catalog.DEITY_GLOW[id])
-	set_job(u, {"type": "pray", "temple": b})
+	if b.rally_point != null:
+		u.tx = b.rally_point.x
+		u.tz = b.rally_point.y
+		u.force_move = true
+	else:
+		set_job(u, {"type": "pray", "temple": b})
 	say("%s franchit le portail et rejoint son temple pour prier." % A["name"], 2.0)
 
 
@@ -850,6 +982,10 @@ func spawn_trained(b: Building, id: String) -> void:
 		u.tx = u.x
 		u.tz = u.z + 3.0
 		clamp_world(u)
+		if b.rally_point != null:
+			u.tx = b.rally_point.x
+			u.tz = b.rally_point.y
+			u.force_move = true
 	GameState.menace += 4
 	say("Escouade de 4 · %s sort de la caserne." % Catalog.ADEPT[id]["name"], 2.0)
 
@@ -901,8 +1037,9 @@ func revive_unit(b: Building, u: Unit) -> void:
 		if GameState.selected.any(func(member: Unit) -> bool: return member.squad == u.squad):
 			GameState.selected.append(u)
 		update_squads()
-	Combat.zone(u.x, u.z, 2.5, Color("#9be27a"))
-	Combat.flash(u.x, u.z, Color("#effde0"))
+	# Retour visuel : bulle du Puits qui devient l'unité (ReviveFx), à la place de l'onde et de l'éclair.
+	u.revived_at = GameState.sim_time
+	u.revived_from = Vector2(b.x, b.z)
 	say("%s revient du Puits des Âmes · niveau %d." % [u.name, Catalog.lvl(u)], 3.0)
 
 
@@ -974,9 +1111,14 @@ static func resource_rates() -> Dictionary:
 		if not u.alive() or u.hidden or not u.working or u.job == null or u.job.get("type") != "pray":
 			continue
 		var temple: Building = u.job.get("temple")
-		if temple != null and temple.complete and GameState.buildings.has(temple) and Catalog.DEITY_RES.has(u.role):
-			rates[Catalog.DEITY_RES[u.role]] += 1
+		if temple != null and temple.complete and GameState.buildings.has(temple) and temple.is_temple():
+			rates[Catalog.DEITY_RES[temple.def()["deity"]]] += pray_rate(u)
 	return rates
+
+
+## Ressource par seconde d'une unité en prière : 1 pour un adepte, 5 pour l'Ingénieur.
+static func pray_rate(u: Unit) -> int:
+	return int(ENGINEER_PRAY) if u.role == "engineer" else 1
 
 
 static func squad_survivors(u: Unit) -> Array[Unit]:

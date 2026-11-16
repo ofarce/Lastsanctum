@@ -57,6 +57,11 @@ var inventory: Array[Dictionary] = []
 var inventory_capacity := 10
 var unarmored := false
 var winded_at := INF
+## Dernier soin reçu (Puits des Âmes, Soigneur) : petits « + » verts tant qu'il dure (HealFx).
+var healed_at := -INF
+## Rappel par le Puits des Âmes : instant et position du puits (bulle qui devient l'unité, ReviveFx).
+var revived_at := -INF
+var revived_from := Vector2.ZERO
 var sw_t0 := -INF
 var sw := -1
 var sh_t0 := -INF
