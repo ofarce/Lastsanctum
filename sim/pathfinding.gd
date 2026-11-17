@@ -4,15 +4,27 @@ extends RefCounted
 ## findPath, steer). Grille de 2 unités, A* à 8 directions (heuristique octile, pas de diagonale entre
 ## deux murs), budget de 60 000 nœuds, lissage par ligne de vue. Le tas binaire est porté à l'identique
 ## pour que les égalités soient départagées comme dans le prototype.
+## Ajouts (réserve du coffre) : le long des parois, pas entre deux cases dont le bord ou le coin commun est
+## de la roche ; début de ligne testé finement (clear_near) ; steer contourne un coin où l'unité est arrêtée.
 
 const CELL := 2.0
 const W := 232  # (WORLD.x1 − WORLD.x0) / 2
 const H := 204  # (WORLD.z1 − WORLD.z0) / 2
 const BUDGET := 60000
+## Longueur du début de ligne vérifiée au pas fin (0,2) dans clear_line / clear_near.
+const NEAR := 0.6
+## Directions essayées (degrés depuis la visée) quand le début de la ligne est bloqué (steer).
+const SIDESTEP: Array[float] = [25.0, -25.0, 50.0, -50.0, 75.0, -75.0, 100.0, -100.0]
 
 var state: TerrainState
 ## 0 = inconnu, 1 = praticable, 2 = roche ; invalidé quand state.version change.
 var _cache := PackedByteArray()
+## Passages entre cases voisines, même codage : 3 par case k (bord est, bord sud, coin sud-est), testés au
+## point milieu du bord ou au coin. Deux cases praticables au centre peuvent être séparées par une arête de
+## roche (raccord en biais salle / case creusée devant la réserve du coffre) : l'A* n'y passe pas.
+var _edges := PackedByteArray()
+## Case praticable dont une voisine (8 directions) est de la roche : 0 inconnu, 1 non, 2 oui.
+var _walled := PackedByteArray()
 var _version := -1
 # Tables de l'A*, réutilisées d'une recherche à l'autre : une case n'est valable que si son tampon
 # vaut celui de la recherche en cours (évite de tout réinitialiser).
@@ -34,6 +46,8 @@ const NCOST: Array[float] = [1.414, 1.0, 1.414, 1.0, 1.0, 1.414, 1.0, 1.414]
 func _init(terrain_state: TerrainState) -> void:
 	state = terrain_state
 	_cache.resize(W * H)
+	_edges.resize(W * H * 3)
+	_walled.resize(W * H)
 	_stamp.resize(W * H)
 	_closed_stamp.resize(W * H)
 	_g.resize(W * H)
@@ -43,6 +57,8 @@ func _init(terrain_state: TerrainState) -> void:
 func _sync() -> void:
 	if _version != state.version:
 		_cache.fill(0)
+		_edges.fill(0)
+		_walled.fill(0)
 		_version = state.version
 
 
@@ -78,6 +94,12 @@ func clear_line(a: Vector2, b: Vector2) -> bool:
 	var dx := float(b.x) - ax
 	var dz := float(b.y) - az
 	var d := sqrt(dx * dx + dz * dz)
+	# Début de la ligne au pas fin : un coin de roche rogné de quelques dixièmes échappe aux échantillons de
+	# 0,6 et, contre une paroi en biais (raccord salle / case creusée devant la réserve du coffre), le
+	# glissement axe par axe de Simulation.move s'y coince. Seul le début compte : steer revérifie la ligne à
+	# chaque image depuis la position courante, un coin plus lointain est vu avant d'être atteint.
+	if not clear_near(a, b):
+		return false
 	var n := ceili(d / 0.6)
 	var last := -1
 	for s in range(1, n + 1):
@@ -98,6 +120,22 @@ func clear_line(a: Vector2, b: Vector2) -> bool:
 		if v == 0:
 			v = _fill(k, i, j)
 		if v != 1:
+			return false
+	return true
+
+
+## Début de la ligne a → b (NEAR unités) praticable point par point, au pas de 0,2.
+func clear_near(a: Vector2, b: Vector2) -> bool:
+	var dx := float(b.x) - float(a.x)
+	var dz := float(b.y) - float(a.y)
+	var d := sqrt(dx * dx + dz * dz)
+	if d == 0.0:
+		return true
+	var fine := minf(d, NEAR)
+	var m := ceili(fine / 0.2)
+	for s in range(1, m + 1):
+		var t := fine / d * float(s) / m
+		if not state.walkable(float(a.x) + dx * t, float(a.y) + dz * t):
 			return false
 	return true
 
@@ -148,6 +186,21 @@ func find_path(from: Vector2, to: Vector2) -> Variant:
 		var j := (k - i) / W
 		var base: float = _g[k]
 		var inner := i > 0 and j > 0 and i < W - 1 and j < H - 1
+		# Une voisine est de la roche : on longe une paroi, les passages entre cases sont à vérifier.
+		var wl := _walled[k]
+		if wl == 0:
+			wl = 1 if inner else 2
+			if inner:
+				for n in 8:
+					var wk := (j + NDJ[n]) * W + i + NDI[n]
+					var wv := _cache[wk]
+					if wv == 0:
+						wv = _fill(wk, i + NDI[n], j + NDJ[n])
+					if wv != 1:
+						wl = 2
+						break
+			_walled[k] = wl
+		var walled := wl == 2
 		for n in 8:
 			var di: int = NDI[n]
 			var dj: int = NDJ[n]
@@ -174,6 +227,19 @@ func find_path(from: Vector2, to: Vector2) -> Variant:
 				if v2 == 0:
 					v2 = _fill(k2, i, nj)
 				if v2 != 1:
+					continue
+			if walled:
+				# Passage entre les deux cases : coin commun (diagonale), sinon milieu du bord commun.
+				var mi := mini(i, ni)
+				var mj := mini(j, nj)
+				var kind := 2 if di != 0 and dj != 0 else 0 if di != 0 else 1
+				var e := (mj * W + mi) * 3 + kind
+				var ve := _edges[e]
+				if ve == 0:
+					ve = 1 if state.walkable(CaveShape.WORLD_X0 + mi * 2 + (1 if kind == 1 else 2), \
+							CaveShape.WORLD_Z0 + mj * 2 + (1 if kind == 0 else 2)) else 2
+					_edges[e] = ve
+				if ve != 1:
 					continue
 			var cost: float = base + NCOST[n]
 			if _stamp[nk] != cur or cost < _g[nk]:
@@ -276,9 +342,36 @@ func steer(pos: Vector2, goal: Vector2, memo: Dictionary) -> Vector2:
 	if not memo.has("path") or memo.get("version") != state.version or (memo["goal"] as Vector2).distance_to(goal) > 2.0:
 		memo["goal"] = goal
 		memo["version"] = state.version
+		memo["from"] = pos
 		var p: Variant = find_path(pos, goal)
 		memo["path"] = p if p != null else []
 	var path: Array = memo["path"]
 	while not path.is_empty() and ((path[0] as Vector2).distance_to(pos) < 0.6 or (path.size() > 1 and clear_line(pos, path[1]))):
 		path.pop_front()
-	return path[0] if not path.is_empty() else goal
+	var target: Vector2 = path[0] if not path.is_empty() else goal
+	# Unité immobile depuis l'appel précédent : le point visé, vu depuis plus loin (lissage, raccourci vers
+	# path[1]), est bloqué juste devant elle par un coin de roche contre une paroi en biais, où le glissement
+	# de Simulation.move ne passe pas. Testé seulement à l'arrêt (le cas courant ne coûte rien de plus).
+	var stuck := memo.has("at") and (memo["at"] as Vector2).distance_squared_to(pos) < 1e-8
+	memo["at"] = pos
+	if not stuck or clear_near(pos, target):
+		return target
+	# Chemin recalculé d'ici (au plus une fois par 0,5 unité parcourue)…
+	if (memo["from"] as Vector2).distance_to(pos) > 0.5:
+		memo["from"] = pos
+		var p2: Variant = find_path(pos, goal)
+		path = p2 if p2 != null else []
+		memo["path"] = path
+		while not path.is_empty() and (path[0] as Vector2).distance_to(pos) < 0.6:
+			path.pop_front()
+		target = path[0] if not path.is_empty() else goal
+		if clear_near(pos, target):
+			return target
+	# … sinon (deux cases praticables séparées par une arête de roche) on longe l'obstacle par la direction
+	# dégagée la plus proche de la visée, le temps de passer le coin.
+	var dir := (target - pos).normalized()
+	for deg: float in SIDESTEP:
+		var probe := pos + dir.rotated(deg_to_rad(deg))
+		if clear_near(pos, probe):
+			return probe
+	return target

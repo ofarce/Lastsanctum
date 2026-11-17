@@ -303,15 +303,18 @@ function shadowAt(g,x,y,k){const rx=Math.round(8*k*2),ry=Math.round(2.6*k*2);for
 // ================= ÉQUIPEMENT VISIBLE (une couche par emplacement, id de calque = GEAR[slot].id) =================
 // O.gear = {head, eye, chest, hands, feet, back, rhand, lhand} ; chaque pièce n'habille que sa partie du corps.
 const IRON=['#121418','#1f2228','#2e323a','#424750','#5c626b','#7f868f','#aab1b8'];
+// Creuset des Exilés : cuivre chaud (rivets, vert-de-gris) contre fer froid aux arêtes nettes.
+const COPPER=['#1c0d06','#3a1c0d','#5e3018','#8a4a26','#b8683a','#d98c4f','#f0b27a'];
+const VERD=['#12241e','#1f3a30','#2f5446','#41705d','#5e9c80','#7fbfa0','#a6dcc0'];
 const GEAR={
  head:{label:'Tête',id:20,opts:[['','Rien'],['helm','Casque de fer'],['hood','Capuche de toile'],['circlet','Bandeau tyrien']]},
  eye:{label:'Capteur oculaire',id:21,opts:[['','Rien'],['lens','Monocle-capteur']]},
- chest:{label:'Torse',id:22,opts:[['','Rien'],['iron','Plastron de fer'],['mail','Cotte de mailles'],['leather','Cuirasse de cuir']]},
+ chest:{label:'Torse',id:22,opts:[['','Rien'],['iron','Plastron de fer'],['mail','Cotte de mailles'],['leather','Cuirasse de cuir'],['copperarmor','Armure en cuivre'],['ironarmor','Armure en fer']]},
  hands:{label:'Gants',id:23,opts:[['','Rien'],['gauntlets','Gantelets de fer'],['gloves','Gants de cuir']]},
  feet:{label:'Bottes',id:24,opts:[['','Rien (sandales)'],['greaves','Grèves de fer'],['boots','Bottes de cuir']]},
  back:{label:'Dos',id:25,opts:[['','Rien'],['cape','Cape'],['pack','Sac de toile']]},
- rhand:{label:'Main droite',id:26,opts:[['','Rien'],['hammer','Marteau de forge'],['blade','Lame courte']]},
- lhand:{label:'Main gauche',id:27,opts:[['','Rien'],['shield','Bouclier rond'],['lantern','Lanterne à quartz']]}};
+ rhand:{label:'Main droite',id:26,opts:[['','Rien'],['hammer','Marteau de forge'],['blade','Lame courte'],['coppersword','Épée en cuivre'],['ironsword','Épée en fer'],['coppergreat','Épée à deux mains en cuivre'],['irongreat','Épée à deux mains en fer'],['cannon','Canon à projection']]},
+ lhand:{label:'Main gauche',id:27,opts:[['','Rien'],['shield','Bouclier rond'],['lantern','Lanterne à quartz'],['coppershield','Bouclier en cuivre'],['ironshield','Bouclier en fer']]}};
 function drawGear(F,O,P,X){const G=O.gear,{sh,up,yTop,uy,trunk,cap,onTrunk,hc,HR,onHead,seed}=X,handC=r=>add(r.W,[r.sd*.2,-1.9,.4]);
  const armShell=(r,e,mat)=>{F.tube(r.S,r.E,2.6+e,2.2+e,s=>mat(s,s.t*.5));F.ell(r.E,2.2+e,2.2+e,2.2+e,s=>mat(s,.5));F.tube(r.E,r.W,2.2+e,1.8+e,s=>mat(s,.5+s.t*.5))};
  // ---- tête ----
@@ -335,6 +338,16 @@ function drawGear(F,O,P,X){const G=O.gear,{sh,up,yTop,uy,trunk,cap,onTrunk,hc,HR
   else if(G.chest==='mail'){const mm=(s,y)=>[IRON,((Math.floor((s.phi+4)*12)+Math.floor(y*1.6))&1)?-.2:.08];
    trunk(1.3,30.5,yTop+.3,s=>{const y=uy(s.P[1]);if(y<30.5+H(Math.floor((s.phi+4)*6),1,seed)*2)return null;return mm(s,y)});cap(1.3,s=>Math.hypot(s.P[0],s.P[2])<4.2?null:mm(s,uy(s.P[1])));
    for(const r of P.arms)armShell(r,1.1,(s,u)=>u<.27?mm(s,uy(s.P[1])):null)}
+  else if(G.chest==='copperarmor'){const cm=(s,isCap)=>{const y=uy(s.P[1]);if(isCap&&(Math.hypot(s.P[0],s.P[2])<4.6||Math.abs(s.P[0])>6.2))return null;if(!isCap&&y>53.5&&Math.abs(Math.sin(s.phi))>.7)return null;
+    const row=Math.floor((y-35)/2),col=Math.floor((s.phi+4)*4+(row&1)*.5),hh=H(col,row,seed+7);if(hh>.86)return[VERD,.05];let off=(((y-35)%2)<.55)?-.28:.06;if(hh<.18)off+=.12;return[COPPER,off]};
+   trunk(1.5,35,yTop+.3,s=>cm(s,false));cap(1.5,s=>cm(s,true));
+   F.part=GEAR.chest.id;trunk(1.9,34.6,36.4,s=>[PAL.leath,.08]);{const[p,n]=onTrunk(35.5,2.1,'front');F.dec(p,n,COPPER[6],2,1.2)}}
+  else if(G.chest==='ironarmor'){const pm=(s,isCap)=>{const y=uy(s.P[1]);if(isCap&&(Math.hypot(s.P[0],s.P[2])<4.5))return null;
+    let off=.06;if(Math.abs(s.phi)<.12)off+=.24;if(!isCap&&y<38.4)off-=.24;if(Math.abs(Math.sin(s.phi))>.92)off-=.14;return[IRON,off]};
+   trunk(2,37.4,yTop+.3,s=>pm(s,false));cap(2,s=>pm(s,true));
+   trunk(2.6,28.5,37.2,s=>{const y=uy(s.P[1]),l=(y-28.5)%2.9;if(Math.abs(s.P[0])<1.2&&s.P[2]>0)return null;return[IRON,l>2.3?-.3:l<.7?.18:.02]});
+   for(const r of P.arms){F.ell(add(r.S,[r.sd*.6,1,0]),3.6,2.8,3.8,s=>[IRON,s.q[1]>1.4?.2:s.q[1]<-1.6?-.25:.04]);F.dec(add(r.S,[r.sd*.6,3.4,3.6]),[0,.3,1],IRON[6],1,1.2)}
+   for(const y of[52,45])for(const sd of[-1,1]){const[p,n]=onTrunk(y,2.1,'front');F.dec(add(p,[sd*5.4,0,-1]),n,IRON[6],1,1)}}
   else if(G.chest==='leather'){const lm=(s,isCap)=>{const y=uy(s.P[1]);if(isCap&&(Math.hypot(s.P[0],s.P[2])<4.4||Math.abs(s.P[0])>7))return null;const row=Math.floor((y-36)/2.4);
     let off=((Math.floor((s.phi+4)*5+row*.5))&1)?.05:-.05;if(((y-36)%2.4)<.6)off-=.25;return[PAL.leath,off+.08]};trunk(1.7,35.6,yTop+.3,s=>lm(s,false));cap(1.7,s=>lm(s,true))}}
  // ---- mains ----
@@ -355,7 +368,26 @@ function drawGear(F,O,P,X){const G=O.gear,{sh,up,yTop,uy,trunk,cap,onTrunk,hc,HR
  const R=P.arms.find(r=>r.sd>0),L=P.arms.find(r=>r.sd<0);
  if(G.rhand){F.part=GEAR.rhand.id;const c=handC(R);
   if(G.rhand==='hammer'){F.tube(add(c,[0,2.2,-.4]),add(c,[0,-10.5,2.2]),.75,.75,M(PAL.leath,.1));F.ell(add(c,[0,-11,2.3]),1.7,1.7,3.4,s=>[IRON,s.q[2]>2.6?.15:0])}
+  else if(G.rhand==='coppersword'||G.rhand==='ironsword'){const cu=G.rhand==='coppersword',Rm=cu?COPPER:IRON,dir=nrm([.42,-1,.62]),at=t=>add(c,mul(dir,t));
+   // lame tenue en avant et vers l'extérieur, pour sortir de derrière le corps en vue ¾
+   F.tube(at(-2.4),at(1.4),.8,.8,M(PAL.leath));F.ell(at(-2.8),1,1,1,M(Rm,.15));F.ell(at(1.8),cu?3:4.4,.8,1.2,M(Rm,.18));
+   const L=cu?11:15,w0=cu?1.9:1.4,w1=cu?2.4:1.1;F.tube(at(2),at(2+L*.7),w0,w1,s=>[Rm,s.sn>0?.3:.02]);F.tube(at(2+L*.7),at(2+L),w1,.35,s=>[Rm,s.sn>0?.3:.02]);
+   if(cu)F.dec(at(6),[1,0,0],VERD[4],1,1)}
+  else if(G.rhand==='coppergreat'||G.rhand==='irongreat'){const cu=G.rhand==='coppergreat',Rm=cu?COPPER:IRON,dir=nrm([.18,-1,.3]),at=t=>add(c,mul(dir,t));
+   // tenue pointe en bas le long de la jambe : poignée longue au-dessus de la main, lame jusqu'au sol
+   F.tube(at(-2.6),at(2.6),.8,.8,M(PAL.leath,.05));F.ell(at(-3),1.1,1.1,1.1,M(Rm,.1));
+   F.ell(at(3),cu?3.4:4.8,.9,1.3,s=>[Rm,.1]);if(!cu){F.ell(add(at(3),[3.6,.8,0]),.6,1,.6,M(Rm,.1));F.ell(add(at(3),[-3.6,.8,0]),.6,1,.6,M(Rm,.1))}
+   const L0=cu?18:22,w0=cu?2.4:1.8,w1=cu?2.9:1.4;F.tube(at(3.4),at(3.4+L0*.75),w0,w1,s=>[Rm,s.sn>0?.22:-.06]);F.tube(at(3.4+L0*.75),at(3.4+L0),w1,.3,s=>[Rm,s.sn>0?.22:-.06]);
+   if(cu)F.dec(at(10),[1,0,0],VERD[4],1,1)}
+  else if(G.rhand==='cannon'){const dir=nrm([.55,-.15,1]),c2=add(c,[1.5,2,2]),a=add(c2,mul(dir,-4)),b=add(c2,mul(dir,13));
+   F.tube(a,b,2.9,2.6,s=>[IRON,s.t>.96?-.4:s.sn>0?.3:.04]);F.ell(b,1.8,1.8,1.8,s=>[IRON,-.55]);
+   for(const t of[.25,.75])F.tube(lerp3(a,b,t-.05),lerp3(a,b,t+.05),3.4,3.4,s=>[COPPER,s.sn>0?.24:.04]);
+   const hp=lerp3(a,b,.45),up=nrm([R.sd*.6,.2,.8]);F.ell(add(hp,mul(up,3.4)),2,2,2,s=>[COPPER,.08]);F.dec(add(hp,mul(up,5.2)),up,IRON[1],1,1);F.dec(b,dir,'#ff9a3a',1,.4)}
   else{F.tube(add(c,[0,1.6,-.3]),add(c,[0,-1.4,.6]),.8,.8,M(PAL.leath));F.ell(add(c,[0,-1.8,.7]),2.4,.6,.9,M(IRON,.05));F.tube(add(c,[0,-2,.8]),add(c,[0,-12.5,3.4]),1,.35,s=>[IRON,s.sn>0?.2:-.05])}}
  if(G.lhand){F.part=GEAR.lhand.id;const c=handC(L);
   if(G.lhand==='shield'){const sc=add(lerp3(L.E,L.W,.55),[-3.4,0,.8]);F.ell(sc,1.1,6.4,6.4,s=>{const d=Math.hypot(s.q[1],s.q[2]);if(d<1.7)return[IRON,.2];if(d>5.4)return[IRON,-.02];return[PAL.leath,((Math.floor((s.q[2]+8)*.7))&1)?.06:-.04]})}
+  else if(G.lhand==='coppershield'){const sc=add(lerp3(L.E,L.W,.55),[-3.4,0,.8]);F.ell(sc,1.1,6,6,s=>{const d=Math.hypot(s.q[1],s.q[2]);if(d<1.8)return[COPPER,.22];if(d>4.9)return[COPPER,H(Math.floor(s.phi*6),2,seed)>.8?-.3:.02];
+    if(Math.abs(d-3.3)<.4&&((Math.floor((Math.atan2(s.q[1],s.q[2])+4)*2.5))&1))return[COPPER,.12];return[PAL.leath,((Math.floor((s.q[2]+8)*.9))&1)?.08:-.02]})}
+  else if(G.lhand==='ironshield'){const sc=add(lerp3(L.E,L.W,.5),[-3.6,-1,.8]);F.ell(sc,1.1,8.2,6.4,s=>{const y=s.q[1],z=s.q[2],w=y>1.5?6.4:6.4*Math.max(0,(y+8.2)/9.7);if(Math.abs(z)>w)return null;
+    if(Math.abs(z)>w-.9||y>7.4)return[IRON,.2];if(Math.abs(z)<.7||Math.abs(y-2)<.7)return[IRON,.12];return[IRON,-.1]})}
   else{F.tube(c,add(c,[0,-2.2,.3]),.35,.35,M(IRON));const lc=add(c,[0,-5.2,.5]);F.ell(lc,1.8,2.6,1.8,s=>[Math.abs(s.q[1])>1.9||((Math.floor((s.phi+4)*2.2))&1)===0&&Math.abs(Math.sin(s.phi*2))<.25?IRON:QZ,.1]);F.dec(add(lc,[0,0,1.9]),[0,0,1],QZ[3],1,1)}}}

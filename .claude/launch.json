@@ -212,6 +212,34 @@
         "planches"
       ],
       "port": 8163
+    },
+    {
+      "name": "defenses-export",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "tools/defenses/serve.py"
+      ],
+      "port": 8146
+    },
+    {
+      "name": "martyre-export",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "tools/martyre/serve.py"
+      ],
+      "port": 8165
+    },
+    {
+      "name": "planches-broutefer",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8171",
+        "--bind",
+        "127.0.0.1"
+      ],
+      "port": 8171
     }
   ]
 }

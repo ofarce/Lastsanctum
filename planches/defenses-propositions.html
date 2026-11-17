@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Défenses de l’Atelier</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0b0f12;--panel:#111a1e;--line:#23343a;--txt:#dcd8bc;--mut:#8fa0a0;--acc:#5ce8ff;--hot:#ffbc58}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--txt);font:15px/1.5 'Pixelify Sans',system-ui,sans-serif}
+header,main{max-width:1320px;margin:auto;padding:18px 16px}h1{margin:0;font-weight:600;letter-spacing:.08em;font-size:26px;color:var(--acc)}
+header p{color:var(--mut);margin:6px 0 0;max-width:940px}header p b{color:var(--txt);font-weight:600}
+button{font:inherit;color:var(--txt);background:#16252b;border:1px solid var(--line);padding:5px 11px;cursor:pointer}button:hover,button[aria-pressed=true]{border-color:var(--acc)}
+.clock{position:sticky;top:0;z-index:5;background:rgba(11,15,18,.94);border-bottom:1px solid var(--line);backdrop-filter:blur(4px)}
+.clock div{max-width:1320px;margin:auto;padding:8px 16px;display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+.clock input{flex:1;min-width:160px;accent-color:var(--acc)}.clock output{min-width:120px;color:var(--acc)}
+.grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-top:12px}
+figure{margin:0;background:var(--panel);border:1px solid var(--line)}figure canvas{display:block;width:100%;height:auto;image-rendering:pixelated}
+figcaption{padding:10px 14px 14px}figcaption b{color:var(--hot);font-weight:600;font-size:17px}figcaption p{margin:4px 0 0;color:var(--mut);font-size:14px}
+.note{border:1px solid var(--line);background:var(--panel);padding:12px 16px;color:var(--mut);max-width:940px}.note b{color:var(--txt)}
+section{margin:34px 0}h2{color:var(--acc);font-weight:600;letter-spacing:.06em;margin:0 0 6px;font-size:22px}
+@media(max-width:1000px){.grid{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:560px){.grid{grid-template-columns:1fr}}
+section p.sub{color:var(--mut);margin:0}
+</style></head><body>
+<header><h1>DÉFENSES DE L’ATELIER · PROPOSITIONS</h1>
+<p>Quatre pistes pour chacun des trois objets de l’Atelier qui se posent au sol : <b>poste de tir</b>, <b>barricade</b>, <b>chausse-trappe</b>. Vue 3/4 et échelle du jeu (24 px par unité, une case de 32 px ; les traits du sol marquent la grille, les cases de pose sont un peu plus claires), affichage agrandi. Un archer à l’échelle des unités montre la hauteur des postes. Le curseur règle l’heure.</p></header>
+<div class="clock"><div><button id="play" aria-pressed="false">▶ Cycle</button><input id="hour" type="range" min="0" max="24" step="0.05" value="11" aria-label="Heure de la journée"><output id="hl">11 h 00</output>
+<button data-h="11">Midi</button><button data-h="19">Crépuscule</button><button data-h="0.5">Nuit</button></div></div>
+<main>
+<div class="note"><b>Charte :</b> ce sont des objets de bricolage des Exilés, faits à l’Atelier avec les matières de la recette : <b>bois</b> (écorce sombre, pointes taillées claires), <b>roche</b> de la caverne pour la barricade, un peu de fer cerclé. Tous restent <b>bas ou ajourés</b>, puisqu’aucun ne bloque les lignes de vue. Le cyan n’apparaît que comme repère des Exilés. Ni or, ni rouge, ni pourpre.</div>
+<div id="groups"></div>
+<section><h2>Choix</h2><p class="note"><b>Retenus le 17/11/2026 :</b> poste de tir 3 (Créneau de rondins), barricade 2 (Muret hérissé), chausse-trappe 3 (Planches hérissées).</p></section>
+</main>
+<script src="assets/defenses-planches.js?v=4"></script>
+<script>
+'use strict';
+const views=[];
+DEF.GROUPS.forEach(g=>{const sec=document.createElement('section');sec.innerHTML=`<h2>${g.name}</h2><p class="sub">${g.note}</p><div class="grid"></div>`;document.querySelector('#groups').append(sec);
+ let n=0;DEF.ITEMS.forEach((it,i)=>{if(it.group!==g.id)return;n++;const f=document.createElement('figure');f.innerHTML=`<canvas width="${DEF.W}" height="${DEF.H}"></canvas><figcaption><b>${n} · ${it.name}</b><p>${it.desc}</p></figcaption>`;
+  sec.querySelector('.grid').append(f);const cv=f.querySelector('canvas');views.push({cv,g:cv.getContext('2d'),make:()=>DEF.vignette(i),S:null,vis:false})})});
+const io=new IntersectionObserver(es=>{for(const e of es){const v=views.find(v=>v.cv===e.target);v.vis=e.isIntersecting;if(v.vis&&!v.S)v.S=v.make()}},{rootMargin:'200px'});views.forEach(v=>io.observe(v.cv));
+const hourIn=document.querySelector('#hour'),hl=document.querySelector('#hl'),playB=document.querySelector('#play');let hour=11,playing=false,t=0,last,acc=0;
+const fmt=h=>{h=((h%24)+24)%24;return`${Math.floor(h)} h ${String(Math.floor(h%1*60)).padStart(2,'0')}`};
+hourIn.oninput=()=>{hour=+hourIn.value};document.querySelectorAll('[data-h]').forEach(b=>b.onclick=()=>{hour=+b.dataset.h;hourIn.value=hour});
+playB.onclick=()=>{playing=!playing;playB.setAttribute('aria-pressed',playing);playB.textContent=playing?'❚❚ Cycle':'▶ Cycle'};
+const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+function loop(now){const dt=last===undefined?0:Math.min((now-last)/1000,.1);last=now;t+=reduce?0:dt;if(playing){hour=(hour+dt*1.2)%24;hourIn.value=hour}
+ acc+=dt;if(acc>1/20){acc=0;hl.textContent=fmt(hour);for(const v of views)if(v.vis&&v.S)v.S.render(v.g,hour,t)}requestAnimationFrame(loop)}
+requestAnimationFrame(loop);
+</script></body></html>

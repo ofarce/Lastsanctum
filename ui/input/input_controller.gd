@@ -58,6 +58,7 @@ func hit_orb(p: Vector2) -> bool:
 
 
 func _process(_delta: float) -> void:
+	_engineer_keys()
 	var pointer := get_viewport().get_mouse_position()
 	var blocked := not _pointer_inside or get_viewport().gui_get_hovered_control() != null or _box_on 		or Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT)
 	_mining_hover.cell = mining_hover_cell(pointer, blocked)
@@ -71,6 +72,49 @@ func _process(_delta: float) -> void:
 		and get_viewport().gui_get_hovered_control() == null
 		and hit_orb(get_viewport().get_mouse_position()))
 	(orb.material as ShaderMaterial).set_shader_parameter("hovered", hovered)
+
+
+## ZQSD (lettres imprimées : Z haut, Q gauche, S bas, D droite à l'écran) : déplacement direct de
+## l'ingénieur. La direction écran est convertie en direction monde via la projection de la caméra.
+var _eng_driving := false
+
+func _engineer_keys() -> void:
+	if GameState.ended or Input.is_key_pressed(KEY_CTRL) or Input.is_key_pressed(KEY_META) \
+			or get_viewport().gui_get_focus_owner() is LineEdit:
+		_eng_driving = false
+		return
+	var s := Vector2(
+		float(_label_down(KEY_D)) - float(_label_down(KEY_Q)),
+		float(_label_down(KEY_S)) - float(_label_down(KEY_Z)))
+	var eng: Unit = null
+	for u: Unit in GameState.units:
+		if u.role == "engineer" and u.alive() and not u.hidden:
+			eng = u
+			break
+	if eng == null:
+		return
+	if s == Vector2.ZERO:
+		if _eng_driving:
+			eng.tx = eng.x
+			eng.tz = eng.z
+			_eng_driving = false
+		return
+	var c := get_viewport().get_visible_rect().size * 0.5
+	var dir := ground(c + s.normalized() * 100.0) - ground(c)
+	if dir.length() < 0.001:
+		return
+	if not _eng_driving:
+		sim.cancel_work(eng)
+	_eng_driving = true
+	var t := eng.pos() + dir.normalized() * 1.5
+	eng.tx = t.x
+	eng.tz = t.y
+	eng.stance = "attack"
+	eng.force_move = true
+
+
+static func _label_down(k: Key) -> bool:
+	return Input.is_key_label_pressed(k) or Input.is_key_pressed(k)
 
 
 func _visible_mining_cells() -> Array[Dictionary]:
@@ -158,6 +202,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		GameState.build_pointer = ground(event.position)
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
 		if event.pressed:
+			if _armed_attack(event.position, event.shift_pressed):
+				return
 			_left_click(event.position, event.shift_pressed)
 			if GameState.hud_mode.is_empty():
 				_box_on = true
@@ -186,12 +232,29 @@ func _unhandled_input(event: InputEvent) -> void:
 		_key(event)
 
 
+## Ingénieur armé sélectionné : le clic gauche attaque (une arme de tir part en direction du curseur),
+## sauf sur l'Ancre ou une unité alliée (sélection), avec Maj (sélection) ou en mode construction/déplacement.
+func _armed_attack(p: Vector2, shift: bool) -> bool:
+	if shift or GameState.ended or not GameState.hud_mode.is_empty() or hit_orb(p):
+		return false
+	var eng := sim.builder()
+	if eng == null or Catalog.gear_weapon(eng).is_empty():
+		return false
+	for u in GameState.units:
+		if u.alive() and not u.hidden and project(u.x, 1.0, u.z).distance_to(p) < maxf(18.0, 1.3 * zoom_k()):
+			return false
+	return sim.combat.aimed_attack(eng, ground(p))
+
+
 ## Clic gauche (pointerdown, Index.html).
 func _left_click(p: Vector2, shift: bool) -> void:
 	if GameState.hud_mode.is_empty():
 		GameState.hud_building = null
 	if GameState.hud_mode == "build":
 		sim.place_building(ground(p))
+		return
+	if GameState.hud_mode == "place":
+		sim.place_item(ground(p))
 		return
 	if GameState.hud_mode == "move":
 		sim.issue_move(ground(p))
@@ -287,7 +350,7 @@ func _box_select(shift: bool) -> void:
 func _right_click(p: Vector2) -> void:
 	if GameState.ended:
 		return
-	if GameState.hud_mode == "build":
+	if GameState.hud_mode == "build" or GameState.hud_mode == "place":
 		GameState.hud_mode = ""
 		return
 	var selected := HudModel.selected_building()
@@ -322,10 +385,18 @@ func _right_click(p: Vector2) -> void:
 		return
 	if _mining_cell(ground(p)) != null and sim.order_adepts(ground(p)):
 		return
+	# Poste de tir sous le clic : la sélection se place entre les rondins.
+	var post := preload("res://sim/placeables.gd").firing_post_at(ground(p))
+	if not post.is_empty() and not GameState.selected.is_empty() and world.fog.visible_at(Vector2(post["x"], post["z"])):
+		preload("res://sim/placeables.gd").order_post(sim, post)
+		return
 	if sim.order_pray(hit_building(ground(p))):
 		return
 	# Bâtiment servi par des adeptes : l'unité sélectionnée y prend un poste.
 	if sim.order_staff(hit_building(ground(p))):
+		return
+	# Ingénieur armé : le clic droit attaque (une arme de tir part en direction du curseur).
+	if eng and sim.combat.aimed_attack(eng, ground(p)):
 		return
 	# Ennemi proche du clic (moins de max(20, 1,2·Z) pixels) : ordre d'attaque, sinon déplacement.
 	var nearest: Enemy = null

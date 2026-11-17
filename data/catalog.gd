@@ -6,6 +6,7 @@ extends RefCounted
 
 const GearItems := preload("res://data/gear_items.gd")
 const ItemStorage := preload("res://sim/item_storage.gd")
+const Placeables := preload("res://sim/placeables.gd")
 
 ## RES_INFO, RES_ORDER, DEITY_RES (buildings.js:9-11).
 const RES_ORDER: Array[String] = ["forge", "vie", "discipline", "savoir"]
@@ -44,7 +45,7 @@ const BUILDINGS := {
 	## Écart voulu (fabrication, 2026-11-17) : absent du prototype ; dessin de la Forge en attendant le sien.
 	"creuset": {"name": "Creuset des Exilés", "cost": {"forge": 300}, "deity": "", "requires": "forge", "art": "da-creuset", "key": "k", "icon": "sword", "time": 8.0, "size": 2,
 		"lore": "On y coule les armes et armures que portent les Exilés."},
-	"warehouse": {"name": "Entrepôt logistique", "cost": {"savoir": 50}, "deity": "", "requires": "sigil", "art": "da-library", "key": "p", "icon": "wood", "time": 8.0, "size": 2,
+	"warehouse": {"name": "Entrepôt logistique", "cost": {"savoir": 50}, "deity": "", "requires": "sigil", "art": "da-warehouse", "key": "p", "icon": "wood", "time": 8.0, "size": 2,
 		"lore": "Les adeptes de Sigil y reçoivent le bois et les minerais pour les ateliers voisins."},
 }
 
@@ -116,13 +117,13 @@ const ADEPT := {
 ## brûlure (lance-flammes) ; guard = part des dégâts subis (épée et bouclier) ; melee = mêlée de l'archer après
 ## sa charge ; ranged = tir à distance.
 ## Écart voulu D13 (après 73b410f) : portée du lance-flammes ×2 (4,5 → 9, détection 9 → 18) et de l'archer ×4
-## (14 → 56, détection 17 → 68).
+## (14 → 56, détection 17 → 68). 2026-11-17 : portées encore ×2 (lance-flammes 24/36, archer 112/136).
 ## Écart voulu D15 : lance-flammes à portée 12, tir continu (dmg / cd par seconde, soit 20/s au niveau 1, dans
 ## `splash` autour de la cible), sans sillon de feu ; il explose à sa mort (FLAME_DEATH).
 const MELEE_ADEPT := {"seek": 6.0, "reach": 1.9, "dmg": 4, "cd": 1.1, "status": "En attente · petite attaque au corps à corps"}
 const FIGHT := {
-	"flammes": {"seek": 18.0, "reach": 12.0, "dmg": 6, "cd": 0.3, "splash": 2.2, "continuous": true, "status": "Garde l’Ancre · flammes en continu ; explose à sa mort"},
-	"archer": {"seek": 68.0, "reach": 56.0, "dmg": 11, "cd": 0.95, "melee": {"reach": 2.3, "dmg": 13, "cd": 0.6}, "status": "Garde l’Ancre · arc, puis Charge du Lac au contact"},
+	"flammes": {"seek": 36.0, "reach": 24.0, "dmg": 6, "cd": 0.3, "splash": 2.2, "continuous": true, "status": "Garde l’Ancre · flammes en continu ; explose à sa mort"},
+	"archer": {"seek": 136.0, "reach": 112.0, "dmg": 11, "cd": 0.95, "melee": {"reach": 2.3, "dmg": 13, "cd": 0.6}, "status": "Garde l’Ancre · arc, puis Charge du Lac au contact"},
 	"lame": {"seek": 7.0, "reach": 2.2, "dmg": 16, "cd": 0.85, "guard": 0.55, "status": "Garde l’Ancre · mêlée ; moulinet d’orage toutes les 3 frappes"},
 	"sigil": MELEE_ADEPT, "medeina": MELEE_ADEPT, "aether": MELEE_ADEPT, "indra": MELEE_ADEPT,
 	"engineer": {"seek": 6.0, "reach": 1.9, "dmg": 5, "cd": 1.15, "ranged": false, "status": "Prêt à recevoir vos ordres · corps à corps"},
@@ -134,7 +135,7 @@ const MOULINET := {"charges": 3, "r": 2.8, "dmg": 24}
 const FLAME_DEATH := {"dmg": 45, "r": 3.0}
 const SILLON := {"cd": 4.0, "len": 8.0, "w": 0.9, "dmg": 12, "wall": 2.0, "burn": 3.0, "slow": 0.6}
 ## Expérience gagnée en achevant un ennemi (KILL_XP).
-const KILL_XP := {"creep": 10, "spitter": 15, "brute": 35, "beast": 6, "scout": 12, "soldier": 22, "shield": 28, "archer": 15, "strazhar": 60}
+const KILL_XP := {"creep": 10, "spitter": 15, "brute": 35, "beast": 6, "scout": 12, "soldier": 22, "shield": 28, "archer": 15, "strazhar": 60, "martyre": 200}
 ## Un champion ouvre les assauts dès ce seuil, même avant la vague 8.
 const STRAZHAR_MENACE := 1000
 ## Difficulté par paliers de menace ; coefficients partagés par le combat et le HUD.
@@ -172,6 +173,8 @@ const ENEMY := {
 	"shield": {"hp": 85, "speed": 1.7, "range": 1.5, "damage": 8, "cd": 1.5, "armor": 9},
 	"archer": {"hp": 45, "speed": 2.8, "range": 10.0, "damage": 6, "cd": 1.4, "armor": 1},
 	"strazhar": {"hp": 600, "speed": 8.4, "range": 1.7, "damage": 64.0 / 3.0, "cd": 0.85, "armor": 8},
+	## Premier boss (sim/martyre.gd) : jamais dans les vagues ; dégâts fixes à l'Ingénieur, impact différé.
+	"martyre": {"hp": 500, "speed": 2.2, "range": 2.4, "damage": 10, "cd": 3.0},
 }
 ## Portails maléfiques (EVIL) : un rejeton toutes les 7 s, 8 au plus par portail.
 const EVIL := {"interval": 7.0, "cap": 8}
@@ -194,6 +197,7 @@ const ENEMY_INFO := {
 	"creep": {"name": "Fanatique du Credo", "kind": "ENNEMI · CREDO SOUILLÉ", "lore": "Robe ivoire trempée d’ichor noir : il frappe au contact pour son maître caché."},
 	"spitter": {"name": "Thuriféraire de Fortuna", "kind": "ENNEMI · CREDO SOUILLÉ", "lore": "Il projette de loin une lumière souillée par la Bête."},
 	"brute": {"name": "Automate doré de Byrsa", "kind": "ENNEMI · CREDO SOUILLÉ", "lore": "Un automate d’or fêlé ; ses coups lourds brisent les lignes."},
+	"martyre": {"name": "Martyre de Byrsa", "kind": "BOSS · CHAMPIONNE DE BYRSA", "lore": "L’armure d’un automate d’or s’est soudée à son corps. Sous son bouclier, elle n’accepte que le combat singulier."},
 	"beast": {"name": "Aberration du Dévoreur", "kind": "ENNEMI · CHAIR DU DÉVOREUR", "lore": "Chair pâle et gueules multiples, vomie par les galeries."},
 }
 ## Dégâts de base des unités hors FIGHT (updateHUD, hud.js).
@@ -218,7 +222,7 @@ static func lvl(u: Unit) -> int:
 
 
 static func armor(u: Unit) -> int:
-	return lvl_bonus(u) + (500 if u.role == "engineer" and not u.unarmored else 0) + GearItems.total(u, "armor")
+	return int((lvl_bonus(u) + GearItems.total(u, "armor")) * u.power) + (500 if u.role == "engineer" and not u.unarmored else 0)
 
 
 ## Arme portée par l'Ingénieur sans armure, si elle peut frapper (une arme à munitions en demande une au stock).
@@ -284,14 +288,21 @@ static func refund(cost: Dictionary) -> void:
 		GameState.res[k] += cost[k]
 
 
-## Portée d'attaque d'une unité alliée (FIGHT, sinon HERO) : partagée par le combat et le HUD.
-static func unit_reach(u: Unit) -> float:
+## Portée d'attaque sans bonus de poste de tir.
+static func base_reach(u: Unit) -> float:
 	if u.role == "engineer" and not u.unarmored:
 		return 250.0
 	var w := gear_weapon(u)
-	if w.has("reach"):
-		return float(w["reach"])
-	return Catalog.FIGHT[u.role]["reach"] if Catalog.FIGHT.has(u.role) else Catalog.HERO.get(u.role, {"reach": 8.6})["reach"]
+	return float(w["reach"]) if w.has("reach") else (Catalog.FIGHT[u.role]["reach"] if Catalog.FIGHT.has(u.role) else Catalog.HERO.get(u.role, {"reach": 8.6})["reach"])
+
+
+## Portée d'attaque d'une unité alliée (FIGHT, sinon HERO) : partagée par le combat et le HUD.
+static func unit_reach(u: Unit) -> float:
+	var base := base_reach(u)
+	if u.role == "engineer" and not u.unarmored:
+		return base
+	# Poste de tir posé à côté : portée doublée (sim/placeables.gd).
+	return base * Placeables.reach_factor(u, base) if not GameState.placed.is_empty() else base
 
 
 static func is_adept(u: Unit) -> bool:

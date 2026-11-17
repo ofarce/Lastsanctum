@@ -2,8 +2,9 @@ extends "res://tests/econ_case.gd"
 ## Étape 10, revue des touches (D2) : table des touches identique au prototype (keydown, Index.html:509 ;
 ## caméra keys.d/q/a/z/w/s et flèches, Index.html:510 ; flèches de hud.js:34).
 
-const CAMERA := {"cam_left": [KEY_Q, KEY_A, KEY_LEFT], "cam_right": [KEY_D, KEY_RIGHT],
-	"cam_up": [KEY_Z, KEY_W, KEY_UP], "cam_down": [KEY_S, KEY_DOWN]}
+## ZQSD déplacent l'ingénieur (input_controller._engineer_keys), plus la caméra.
+const CAMERA := {"cam_left": [KEY_A, KEY_LEFT], "cam_right": [KEY_RIGHT],
+	"cam_up": [KEY_W, KEY_UP], "cam_down": [KEY_DOWN]}
 
 
 func _ev(k: Key, shift := false, ctrl := false) -> InputEventKey:
@@ -25,7 +26,7 @@ func test_camera_keys_match_js() -> void:
 		var any := false
 		for action: String in CAMERA:
 			any = any or InputMap.event_is_action(_ev(k as Key), action)
-		var expected := [KEY_Q, KEY_A, KEY_D, KEY_Z, KEY_W, KEY_S].has(k)
+		var expected := [KEY_A, KEY_W].has(k)
 		check_eq(any, expected, "%s déplace la caméra : %s" % [OS.get_keycode_string(k), expected])
 
 
@@ -54,10 +55,13 @@ func test_ctrl_a_selects_all_visible() -> void:
 	check_eq(GameState.selected.size(), 0, "A seule : aucune sélection (caméra uniquement)")
 	ic._key(_ev(KEY_A, false, true))
 	check_eq(GameState.selected.size(), 2, "Ctrl+A : Ingénieur et archer sélectionnés, pas l'unité cachée")
-	# P : sans effet (mode non pixel retiré, D3).
+	# P : plus de mode non pixel (retiré, D3) ; ouvre le menu Poser de l'Ingénieur (sim/placeables.gd).
 	var px := sim.world.camera.px
 	ic._key(_ev(KEY_P))
-	check(sim.world.camera.px == px and GameState.selected.size() == 2 and GameState.hud_menu == "", "P : sans effet")
+	check(sim.world.camera.px == px and GameState.selected.size() == 2, "P : caméra inchangée")
+	check_eq(GameState.hud_menu, "place", "P : menu Poser")
+	ic._key(_ev(KEY_P))
+	check_eq(GameState.hud_menu, "", "P : retour aux ordres")
 	# Maj+R : nouvelle partie ; Échap : annule le mode et le menu.
 	GameState.hud_menu = "build"
 	GameState.hud_mode = "build"

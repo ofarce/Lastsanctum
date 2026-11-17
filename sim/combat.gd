@@ -49,7 +49,7 @@ static func target_closest(source: Variant, list: Array, range_ := 1e9, observer
 	var best: Variant = null
 	var d := range_
 	for t: Variant in list:
-		if t.hp <= 0.0 or t.hidden:
+		if t.hp <= 0.0 or t.hidden or Martyre.blocks(source, t):
 			continue
 		var nd := dist(t, source)
 		if nd < d and (observer_world == null or observer_world.fog.visible_at(t.pos())):
@@ -62,7 +62,12 @@ static func target_closest(source: Variant, list: Array, range_ := 1e9, observer
 
 ## damage : `src` gagne l'expérience du monstre qu'il achève.
 func damage(t: Unit, amount: float, src: Unit = null) -> void:
+	# Bouclier de la Martyre : seul l'Ingénieur, sous le bouclier, l'atteint.
+	if t is Enemy and (t as Enemy).kind == Martyre.KIND and not Martyre.can_hurt(src):
+		return
 	var was := t.hp
+	if src and not src.is_enemy():
+		amount *= src.power
 	if t is Enemy and amount > 0.0:
 		amount = maxf(amount * 0.15, amount - (t as Enemy).armor)
 	t.hp = maxf(0.0, t.hp - amount)
@@ -215,7 +220,10 @@ func barracks_strike(u: Unit, e: Enemy) -> void:
 	# Arme à munitions du Creuset (canon) : une munition prise au stock par tir.
 	var w := Catalog.gear_weapon(u)
 	if w.has("ammo"):
-		Catalog.ItemStorage.take({w["ammo"]: 1})
+		Catalog.ItemStorage.take_ammo(w["ammo"])
+	# Chaque tir d'archer prend une flèche à la réserve globale ; sans flèche, il ne tire pas.
+	if u.role == "archer" and not Catalog.ItemStorage.take_ammo("arrows"):
+		return
 	damage(e, dmg, u)
 	if u.role == "archer":
 		arrow(u, e)
@@ -225,6 +233,57 @@ func barracks_strike(u: Unit, e: Enemy) -> void:
 	else:
 		flash(e.x, e.z, Color("#f0dba4"))
 		sword_strike(u, e)
+
+
+## Attaque visée de l'Ingénieur armé (clic droit) : une arme de tir part vers `point` et touche le premier
+## ennemi sur sa trajectoire ; une arme de mêlée frappe les ennemis à portée dans un arc vers `point`.
+## Vrai si l'Ingénieur porte une arme utilisable (le clic est alors consommé, même en recharge).
+func aimed_attack(u: Unit, point: Vector2) -> bool:
+	var w := Catalog.gear_weapon(u)
+	if w.is_empty():
+		return false
+	if u.attack > 0.0:
+		return true
+	var d := point - Vector2(u.x, u.z)
+	if d.length() < 0.01:
+		d = Vector2(float(u.face), 0.0)
+	d = d.normalized()
+	u.face = -1 if d.x < 0.0 else 1
+	u.attack = Catalog.FIGHT["engineer"]["cd"]
+	var dmg: float = (Catalog.attack_damage(u) + Catalog.lvl_bonus(u)) * (1.5 if u.buff > 0.0 else 1.0)
+	var visible := func(e: Enemy) -> bool:
+		return e.hp > 0.0 and not e.hidden and (sim.world == null or sim.world.fog.visible_at(e.pos()))
+	if w.has("reach"):
+		var reach := float(w["reach"])
+		if w.has("ammo"):
+			Catalog.ItemStorage.take_ammo(w["ammo"])
+		var hit: Enemy = null
+		var best := reach
+		for e: Enemy in GameState.enemies:
+			if not visible.call(e):
+				continue
+			var rel := Vector2(e.x - u.x, e.z - u.z)
+			var t := rel.dot(d)
+			if t < 0.0 or t > best or absf(rel.cross(d)) > 0.9:
+				continue
+			best = t
+			hit = e
+		var end := Vector2(u.x, u.z) + d * best
+		blast(u, {"x": end.x, "z": end.y}, Color("#bed7df"))
+		flash(end.x, end.y, Color("#bed7df"))
+		if hit:
+			damage(hit, dmg, u)
+		return true
+	var reach := maxf(2.2, Catalog.unit_reach(u))
+	for e: Enemy in GameState.enemies.duplicate():
+		if not visible.call(e):
+			continue
+		var rel := Vector2(e.x - u.x, e.z - u.z)
+		if rel.length() <= reach and (rel.length() < 0.3 or rel.normalized().dot(d) > 0.5):
+			damage(e, dmg, u)
+			flash(e.x, e.z, Color("#f0dba4"))
+	sword_strike(u, {"x": u.x + d.x, "z": u.z + d.y})
+	return true
 
 
 ## archerTick : Charge du Lac. Renvoie vrai si l'archer a agi (charge, mêlée, approche).
@@ -444,6 +503,9 @@ func update_enemies(dt: float, alive: Array[Unit]) -> void:
 	for e: Enemy in GameState.enemies:
 		if e.hp <= 0.0:
 			continue
+		if e.kind == Martyre.KIND:
+			Martyre.act(sim, e, dt)
+			continue
 		if e.stun > 0.0:
 			e.stun -= dt
 			continue
@@ -451,6 +513,9 @@ func update_enemies(dt: float, alive: Array[Unit]) -> void:
 		e.cooldown -= dt
 		var coordinated := not e.tactical_group.is_empty()
 		var target: Variant = tactics.target(e, alive) if coordinated else target_closest(e, alive, e.reach if e.kind == "archer" else 4.5)
+		# Rien ne frappe à travers le bouclier de la Martyre.
+		if target != null and Martyre.blocks(e, target):
+			target = null
 		var is_core := target == null
 		var tx: float = core["x"] if is_core else target.x
 		var tz: float = core["z"] if is_core else target.z

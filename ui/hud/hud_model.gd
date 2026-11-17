@@ -156,7 +156,7 @@ static func panel_actions(sim: Simulation) -> Array[Dictionary]:
 		if B.type == "caserne":
 			for t: Dictionary in Catalog.CASERNE_UNITS:
 				var id: String = t["id"]
-				var title := "Former une escouade de 4 · %s · %s · %s s" % [String(Catalog.ADEPT[id]["name"]).to_lower(), Catalog.cost_text(Catalog.CASERNE_COST), num(Catalog.CASERNE_TIME)]
+				var title := "Former un %s · %s · %s s" % [String(Catalog.ADEPT[id]["name"]).to_lower(), Catalog.cost_text(Catalog.CASERNE_COST), num(Catalog.CASERNE_TIME)]
 				var items := Simulation.Recipes.caserne_cost(id, 4)
 				if not items.is_empty():
 					title += " · " + _stock_text(items)
@@ -192,13 +192,31 @@ static func panel_actions(sim: Simulation) -> Array[Dictionary]:
 			A.append(_act("b-" + type, D["icon"], _temple_prefix.sub(D["name"], "T. ") + " · " + Catalog.short_cost(D["cost"]), D["key"], title,
 				func() -> void: sim.arm_build(type), not ok or not Catalog.can_pay(D["cost"]),
 				GameState.hud_mode == "build" and GameState.hud_build_type == type))
+			A[-1]["build_type"] = type
+			A[-1]["locked"] = not ok
 		A.append(_act("back", "restart", "Retour", "b", "Revenir aux ordres de l’Ingénieur (B ou Échap)", func() -> void:
+			GameState.hud_menu = ""
+			GameState.hud_mode = ""))
+		return A
+	if u.role == "engineer" and GameState.hud_menu == "place":
+		var keys := "123"
+		for i in Simulation.Placeables.ITEMS.size():
+			var item: String = Simulation.Placeables.ITEMS[i]
+			var n := Simulation.ItemStorage.count(item)
+			var R := Simulation.Recipes
+			A.append(_act("place-" + item, CRAFT_ICON.get(item, "hammer"), "%s · %d" % [R.name_of(item), n], keys[i],
+				"%s · %d en stock · %s" % [R.name_of(item), n, R.desc_of(item)], func() -> void: sim.arm_place(item), n <= 0,
+				GameState.hud_mode == "place" and GameState.hud_place_item == item))
+		A.append(_act("back", "restart", "Retour", "p", "Revenir aux ordres de l’Ingénieur (P ou Échap)", func() -> void:
 			GameState.hud_menu = ""
 			GameState.hud_mode = ""))
 		return A
 	if u.role == "engineer":
 		A.append(_act("menu-build", "hammer", "Construire", "b", "Construire un temple ou un bâtiment", func() -> void:
 			GameState.hud_menu = "build"))
+		var stock: int = Simulation.Placeables.ITEMS.reduce(func(acc: int, it: String) -> int: return acc + Simulation.ItemStorage.count(it), 0)
+		A.append(_act("menu-place", "flag", "Poser · %d" % stock, "p", "Poser une défense de l’Atelier : poste de tir, barricade, chausse-trappe",
+			func() -> void: GameState.hud_menu = "place"))
 		if GameState.orb_active:
 			A.append(_act("repair", "repair", "Réparer", "r", "Réparer l’Ancre · +15 % d’intégrité", sim.run_ability, u.ability > 0.0, false,
 				"%d s" % ceili(u.ability) if u.ability > 0.0 else ""))
@@ -396,6 +414,10 @@ static func unit_status(sim: Simulation, u: Unit) -> String:
 			return "Se rend au " + t.def()["name"]
 		if GameState.hud_menu == "build":
 			return "Choisissez un bâtiment à construire"
+		if GameState.hud_mode == "place":
+			return "Cliquez une case pour poser : %s · clic droit pour arrêter" % Simulation.Recipes.name_of(GameState.hud_place_item)
+		if GameState.hud_menu == "place":
+			return "Choisissez une défense à poser"
 		if not GameState.orb_active:
 			return "L’Ancre est éteinte · clic droit dessus (ou R) pour la réactiver"
 	if GameState.hud_mode == "move":

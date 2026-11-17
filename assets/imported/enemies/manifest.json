@@ -355,6 +355,46 @@
         "count": 45,
         "fps": 24
       }
+    },
+    "martyre": {
+      "ax": 44,
+      "ay": 100,
+      "h": 76,
+      "stride": 2.4,
+      "self_bob": true,
+      "idle": {
+        "frame_w": 96,
+        "frame_h": 108,
+        "cols": 12,
+        "rows": 2,
+        "count": 24,
+        "fps": 10
+      },
+      "walk": {
+        "frame_w": 96,
+        "frame_h": 108,
+        "cols": 12,
+        "rows": 1,
+        "count": 12,
+        "fps": 12
+      },
+      "attack": {
+        "frame_w": 96,
+        "frame_h": 108,
+        "cols": 12,
+        "rows": 2,
+        "count": 24,
+        "fps": 24,
+        "duration": 1
+      },
+      "death": {
+        "frame_w": 96,
+        "frame_h": 108,
+        "cols": 12,
+        "rows": 4,
+        "count": 45,
+        "fps": 24
+      }
     }
   }
 }

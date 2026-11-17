@@ -222,6 +222,14 @@
    "slot": "lhand",
    "name": "Lanterne à quartz"
   },
+  "coppershield": {
+   "slot": "lhand",
+   "name": "Bouclier en cuivre"
+  },
+  "ironshield": {
+   "slot": "lhand",
+   "name": "Bouclier en fer"
+  },
   "greaves": {
    "slot": "feet",
    "name": "Grèves de fer"
@@ -241,6 +249,14 @@
   "leather": {
    "slot": "chest",
    "name": "Cuirasse de cuir"
+  },
+  "copperarmor": {
+   "slot": "chest",
+   "name": "Armure en cuivre"
+  },
+  "ironarmor": {
+   "slot": "chest",
+   "name": "Armure en fer"
   },
   "gauntlets": {
    "slot": "hands",
@@ -273,6 +289,26 @@
   "blade": {
    "slot": "rhand",
    "name": "Lame courte"
+  },
+  "coppersword": {
+   "slot": "rhand",
+   "name": "Épée en cuivre"
+  },
+  "ironsword": {
+   "slot": "rhand",
+   "name": "Épée en fer"
+  },
+  "coppergreat": {
+   "slot": "rhand",
+   "name": "Épée à deux mains en cuivre"
+  },
+  "irongreat": {
+   "slot": "rhand",
+   "name": "Épée à deux mains en fer"
+  },
+  "cannon": {
+   "slot": "rhand",
+   "name": "Canon à projection"
   }
  }
 }

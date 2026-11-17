@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rendus manquants — 3 propositions</title>
+<style>
+  :root { --bg:#14171c; --panel:#1d2128; --ink:#d5c7a9; --dim:#8b8676; --line:#2c323b; --cyan:#5fe0f0; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:14px/1.45 system-ui, sans-serif; }
+  header { padding:24px 24px 8px; }
+  h1 { margin:0 0 4px; font-size:22px; }
+  header p { margin:0; color:var(--dim); max-width:900px; }
+  section { margin:18px 24px; padding:16px; background:var(--panel); border:1px solid var(--line); border-radius:6px; }
+  h2 { margin:0 0 2px; font-size:18px; }
+  h2 small { color:var(--dim); font-weight:400; font-size:13px; }
+  .intent { color:var(--dim); margin:0 0 12px; max-width:900px; }
+  .row { display:flex; gap:18px; align-items:flex-start; flex-wrap:wrap; }
+  .bld { text-align:center; }
+  .bld canvas { background:#262b32; border:1px solid var(--line); }
+  .grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(112px, 1fr)); gap:10px; flex:1; min-width:300px; }
+  .cell { text-align:center; font-size:12px; color:var(--dim); }
+  .cell canvas { display:block; margin:0 auto 4px; }
+  .scales { display:flex; gap:6px; align-items:end; justify-content:center; margin-top:2px; }
+  .inv { background:#0f1216; padding:4px; border-radius:3px; }
+  canvas { image-rendering:pixelated; }
+  .lbl { font-size:12px; color:var(--dim); margin-top:4px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Rendus manquants — 3 propositions</h1>
+  <p>Tout ce qui s'affiche encore en lettre (initiale blanche dans l'inventaire) ou sous l'art d'un autre bâtiment : l'Entrepôt logistique (il reprend celui de la Bibliothèque), le bois, la roche, les 15 objets de l'Atelier et de la Forge. Icônes dessinées sur 32 × 32 (taille du dessus des nodules), montrées ×4, puis ×1 et ×2 sur fond de case d'inventaire. Entrepôt à 24 px/unité, emprise 2 × 2.</p>
+</header>
+<div id="root"></div>
+<script>
+const OUT = '#0b090b';
+const M = {
+  wood:['#3e2617','#6e4830','#9c7048','#c49a68'], bark:['#2e2016','#4e3826','#6e5238','#8e7050'],
+  iron:['#3c4550','#6a7784','#9aa8b4','#d0dae0'], copper:['#5e2e1c','#a45a34','#d4885e','#f2b890'],
+  gold:['#6a4614','#b8862a','#e8c060','#fff0a8'], rock:['#1e232b','#333a46','#4e5866','#6e7a88'],
+  fiber:['#6a5634','#a08a5c','#c8b080','#ecdcb0'], flame:['#a8401a','#e07a20','#f8c040','#fff4c8'],
+  cord:['#6a5a40','#a8946c','#d8c8a0','#f0e4c4'], blue:['#1c2c4c','#2e4c80','#4c76b0','#7ea4d8'],
+  red:['#4c1a18','#802c24','#b04a3a','#d87a64'], marble:['#4a4c50','#6e7074','#94969a','#bcbcb8'],
+  moss:['#22301e','#34482a','#4e6a3a','#6e8a4e'], cyan:['#1f6a74','#35a8b8','#5fe0f0','#c8f8ff'],
+};
+
+/* ---------- Petit raster ---------- */
+function R(w,h){ return {w,h,p:new Array(w*h).fill(null)}; }
+function px(r,x,y,c){ x=Math.round(x); y=Math.round(y); if(x>=0&&y>=0&&x<r.w&&y<r.h) r.p[y*r.w+x]=c; }
+function get(r,x,y){ return (x>=0&&y>=0&&x<r.w&&y<r.h)? r.p[y*r.w+x] : null; }
+function rect(r,x,y,w,h,c){ for(let j=0;j<h;j++) for(let i=0;i<w;i++) px(r,x+i,y+j,c); }
+function line(r,x0,y0,x1,y1,c){ const n=Math.max(Math.abs(x1-x0),Math.abs(y1-y0))||1; for(let i=0;i<=n;i++) px(r,x0+(x1-x0)*i/n,y0+(y1-y0)*i/n,c); }
+function disc(r,cx,cy,rad,c){ for(let y=Math.floor(cy-rad);y<=cy+rad;y++) for(let x=Math.floor(cx-rad);x<=cx+rad;x++) if((x-cx)**2+(y-cy)**2<=rad*rad+0.3) px(r,x,y,c); }
+function poly(r,pts,c){ let x0=1e9,x1=-1e9,y0=1e9,y1=-1e9; pts.forEach(([x,y])=>{x0=Math.min(x0,x);x1=Math.max(x1,x);y0=Math.min(y0,y);y1=Math.max(y1,y);});
+  for(let y=Math.floor(y0);y<=y1;y++) for(let x=Math.floor(x0);x<=x1;x++){ let ins=false; for(let i=0,j=pts.length-1;i<pts.length;j=i++){ const [xi,yi]=pts[i],[xj,yj]=pts[j]; if(((yi>y+.5)!=(yj>y+.5))&&(x+.5<(xj-xi)*(y+.5-yi)/(yj-yi)+xi)) ins=!ins; } if(ins) px(r,x,y,c);} }
+/* Bâton épais modelé : ombre dessous, lumière dessus. */
+function rod(r,x0,y0,x1,y1,rad,m){ const n=Math.ceil(Math.hypot(x1-x0,y1-y0)*2)||1;
+  for(let i=0;i<=n;i++){ const t=i/n; disc(r,x0+(x1-x0)*t,y0+(y1-y0)*t+0.6,rad,m[0]); }
+  for(let i=0;i<=n;i++){ const t=i/n; disc(r,x0+(x1-x0)*t,y0+(y1-y0)*t,rad,m[1]); }
+  if(rad>=1) for(let i=0;i<=n;i++){ const t=i/n; px(r,x0+(x1-x0)*t-0.4,y0+(y1-y0)*t-rad+0.4,m[2]); } }
+function outline(r,c=OUT){ const add=[]; for(let y=0;y<r.h;y++) for(let x=0;x<r.w;x++) if(!get(r,x,y)&&(get(r,x+1,y)||get(r,x-1,y)||get(r,x,y+1)||get(r,x,y-1))) add.push([x,y]); add.forEach(([x,y])=>px(r,x,y,c)); }
+
+/* ---------- Objets (32 × 32) ---------- */
+function ingot(r,m,glyph){
+  poly(r,[[5,20],[27,20],[29,25],[3,25]],m[0]);          // flanc avant
+  poly(r,[[3,25],[29,25],[28,27],[4,27]],m[0]);
+  poly(r,[[8,12],[24,12],[27,20],[5,20]],m[1]);          // face oblique avant
+  poly(r,[[10,9],[22,9],[24,12],[8,12]],m[2]);           // dessus
+  line(r,10,9,22,9,m[3]); line(r,8,12,24,12,m[3]); px(r,6,19,m[2]); line(r,9,13,7,18,m[2]);
+  if(glyph){ line(r,14,15,18,15,m[0]); line(r,16,14,16,18,m[0]); }
+}
+const DRAW = {
+  wood(r){ rod(r,6,22,24,10,4,M.bark); rod(r,9,25,27,17,3.5,M.bark);
+    [[24,10,4],[27,17,3.5]].forEach(([x,y,s])=>{ disc(r,x,y,s,M.wood[2]); disc(r,x,y,s-1.4,M.wood[3]); disc(r,x,y,s-2.6,M.wood[1]); px(r,x,y,M.wood[2]); }); },
+  rock(r){ poly(r,[[6,20],[9,11],[17,7],[25,10],[28,19],[22,26],[10,26]],M.rock[1]); poly(r,[[9,11],[17,7],[25,10],[20,15],[12,15]],M.rock[3]); poly(r,[[20,15],[25,10],[28,19],[22,26]],M.rock[2]); poly(r,[[6,20],[12,15],[20,15],[22,26],[10,26]],M.rock[1]); line(r,12,15,20,15,M.rock[0]); line(r,20,15,22,25,M.rock[0]); px(r,14,10,'#e8e4da'); px(r,15,10,'#bcb8ae'); },
+  torch(r){ rod(r,10,27,19,13,1.6,M.wood); rect(r,17,10,5,5,M.fiber[1]); line(r,17,11,21,11,M.fiber[3]); line(r,17,13,21,13,M.fiber[0]);
+    poly(r,[[16,10],[23,10],[22,5],[20,1],[18,4]],M.flame[1]); poly(r,[[17,10],[22,10],[21,6],[20,3],[19,6]],M.flame[2]); rect(r,19,7,2,3,M.flame[3]); },
+  pickaxe(r){ rod(r,8,27,21,9,1.6,M.wood);
+    const pts=[]; for(let a=-1.15;a<=1.15;a+=0.08) pts.push([18+Math.sin(a)*11-Math.cos(a)*1, 11-Math.cos(a)*4+Math.sin(a)*4]);
+    pts.forEach(([x,y],i)=>disc(r,x,y+0.7,1.7,M.iron[0])); pts.forEach(([x,y])=>disc(r,x,y,1.5,M.iron[2])); pts.forEach(([x,y])=>px(r,x,y-1,M.iron[3])); rect(r,19,9,3,4,M.iron[1]); },
+  arrows(r){ [[0,0],[3,3],[-3,3]].forEach(([dx,dy])=>{ line(r,6+dx,26+dy-3,22+dx,7+dy,M.wood[2]); line(r,7+dx,26+dy-3,23+dx,7+dy,M.wood[1]);
+      poly(r,[[21+dx,6+dy],[26+dx,3+dy],[24+dx,9+dy]],M.iron[2]); px(r,24+dx,5+dy,M.iron[3]);
+      poly(r,[[5+dx,22+dy],[3+dx,25+dy],[7+dx,26+dy],[9+dx,24+dy]],M.red[2]); px(r,5+dx,24+dy,M.red[3]); }); },
+  bow(r){ const pts=[]; for(let a=-1.2;a<=1.2;a+=0.05) pts.push([9+Math.cos(a)*11, 16+Math.sin(a)*12]);
+    line(r,pts[0][0],pts[0][1],pts[pts.length-1][0],pts[pts.length-1][1],M.cord[3]);
+    pts.forEach(([x,y])=>disc(r,x,y,1.3,M.wood[1])); pts.forEach(([x,y])=>px(r,x+0.5,y,M.wood[3])); rect(r,18,14,3,5,M.fiber[1]); line(r,18,15,20,15,M.fiber[3]); },
+  sword(r){ poly(r,[[25,3],[28,4],[14,19],[12,17]],M.iron[2]); line(r,26,4,13,18,M.iron[3]); line(r,27,5,14,19,M.iron[1]);
+    rod(r,9,15,17,23,1.2,M.gold); rod(r,11,21,6,26,1.3,M.wood); disc(r,5,27,1.8,M.gold[2]); },
+  shield(r){ disc(r,16,17,11.5,M.wood[0]); disc(r,16,16,11,M.iron[1]); disc(r,16,16,9.5,M.wood[1]); for(let x=8;x<=24;x+=4) line(r,x,8,x,25,M.wood[0]);
+    disc(r,16,16,3.3,M.iron[1]); disc(r,15.5,15.5,2.2,M.iron[2]); px(r,15,15,M.iron[3]); for(let a=0;a<6.28;a+=0.4) px(r,16+Math.cos(a)*10.3-0.4,16+Math.sin(a)*10.3-0.6,a>3.6&&a<5.8?M.iron[3]:M.iron[2]); },
+  chest(r){ rect(r,5,15,22,11,M.wood[1]); rect(r,5,24,22,2,M.wood[0]); poly(r,[[5,15],[27,15],[26,8],[6,8]],M.wood[2]); line(r,6,8,26,8,M.wood[3]);
+    for(let x=6;x<27;x+=5) line(r,x,16,x,23,M.wood[0]); [8,22].forEach(x=>{ rect(r,x,8,2,18,M.iron[1]); line(r,x,8,x,25,M.iron[2]); }); rect(r,14,14,4,5,M.iron[2]); px(r,15,16,OUT); px(r,16,16,OUT); },
+  wood_fiber(r){ for(let i=0;i<7;i++){ const y=9+i*2.2; const c=M.fiber[i%2?1:2]; line(r,5,y+3,27,y-1,c); line(r,5,y+4,27,y,M.fiber[0]); }
+    rect(r,11,7,3,16,M.cord[0]); line(r,11,7,11,22,M.cord[2]); rect(r,19,5,3,16,M.cord[0]); line(r,19,5,19,20,M.cord[2]); },
+  firing_post(r){ for(let i=0;i<5;i++){ const x=6+i*4; poly(r,[[x,10],[x+4,9],[x+4,26],[x,26]],M.wood[i%2?1:2]); line(r,x,10,x,26,M.wood[0]); poly(r,[[x,10],[x+2,6],[x+4,9]],M.wood[3]); }
+    rect(r,6,15,20,2,M.wood[0]); rect(r,6,21,20,2,M.wood[0]); rect(r,14,12,4,2,OUT); },
+  barricade(r){ rod(r,4,25,26,8,1.8,M.wood); rod(r,6,8,28,24,1.8,M.wood); rod(r,3,17,29,17,1.6,M.bark);
+    poly(r,[[9,27],[13,22],[20,22],[24,27]],M.rock[2]); line(r,13,22,20,22,M.rock[3]); line(r,9,27,24,27,M.rock[0]); },
+  fishing_rod(r){ line(r,4,28,27,4,M.wood[1]); line(r,5,28,27,5,M.wood[2]); rod(r,4,28,8,24,1.4,M.bark); disc(r,9,23,2.2,M.iron[1]); px(r,9,22,M.iron[3]);
+    for(let y=5;y<22;y++) px(r,27+Math.sin(y*0.4)*0.6,y,M.cord[3]); disc(r,27,23,1.5,M.red[2]); px(r,26,22,M.red[3]); line(r,27,25,27,27,M.iron[2]); px(r,26,28,M.iron[2]); px(r,25,27,M.iron[2]); },
+  caltrops(r){ [[10,20],[21,23],[18,12]].forEach(([x,y])=>{ line(r,x,y,x-4,y+3,M.iron[1]); line(r,x,y,x+4,y+3,M.iron[1]); line(r,x,y,x,y+4,M.iron[0]); line(r,x,y,x+1,y-5,M.iron[2]); px(r,x+1,y-5,M.iron[3]); disc(r,x,y,1,M.iron[2]); }); },
+  copper_ingot(r){ ingot(r,M.copper,true); }, iron_ingot(r){ ingot(r,M.iron,true); }, gold_ingot(r){ ingot(r,M.gold,true); },
+};
+const NAMES = {wood:'Bois',rock:'Roche',torch:'Torche',pickaxe:'Pioche',arrows:'Flèches',bow:'Arc',sword:'Épée',shield:'Bouclier',chest:'Coffre',
+  wood_fiber:'Fibre de bois',firing_post:'Poste de tir',barricade:'Barricade',fishing_rod:'Canne à pêche',caltrops:'Chausse-trappe',
+  copper_ingot:'Lingot de cuivre',iron_ingot:'Lingot de fer',gold_ingot:'Lingot d’or'};
+const FAMILY = {wood:'wood',rock:'rock',torch:'wood',pickaxe:'iron',arrows:'wood',bow:'wood',sword:'iron',shield:'iron',chest:'wood',wood_fiber:'wood',
+  firing_post:'wood',barricade:'wood',fishing_rod:'wood',caltrops:'iron',copper_ingot:'copper',iron_ingot:'iron',gold_ingot:'gold'};
+
+function lum(h){ const n=parseInt(h.slice(1),16); return ((n>>16)*0.3+((n>>8)&255)*0.59+(n&255)*0.11)/255; }
+
+/* ---------- Trois styles ---------- */
+const STYLES = [
+  { id:'A', name:'Objet franc', sub:'contour noir, 4 valeurs, rien autour',
+    intent:'La charte telle quelle : l’objet seul, contour #0b090b, modelé en quatre valeurs et lumière en haut à gauche, comme les nodules et le Tyrien. Lisible au sol comme dans le sac, aucun cadre à gérer.',
+    icon(k){ const r=R(32,32); DRAW[k](r); outline(r); return r; } },
+  { id:'B', name:'Tablette d’ardoise', sub:'l’objet posé sur une plaquette d’inventaire tyrienne',
+    intent:'Chaque objet repose sur une plaquette d’ardoise à angles coupés (la matière de la caverne), avec un liseré de la couleur de sa famille. On reconnaît la catégorie avant l’objet ; au sol, la plaquette disparaît et l’objet reste.',
+    icon(k){ const r=R(32,32); const fam=M[FAMILY[k]];
+      poly(r,[[3,1],[28,1],[31,4],[31,28],[28,31],[3,31],[0,28],[0,4]],'#2a3039'); poly(r,[[4,2],[27,2],[30,5],[30,27],[27,30],[4,30],[1,27],[1,5]],'#333a46');
+      line(r,4,2,27,2,'#4a5361'); line(r,1,5,1,27,'#4a5361'); line(r,4,30,27,30,fam[1]); line(r,30,5,30,27,fam[1]); px(r,28,28,fam[2]);
+      const o=R(32,32); DRAW[k](o); outline(o); o.p.forEach((c,i)=>{ if(c) r.p[i]=c; }); return r; } },
+  { id:'C', name:'Jeton gravé', sub:'emblème bicolore frappé sur un jeton de métal',
+    intent:'L’objet devient une gravure à deux tons sur un jeton rond, dont le métal dit la famille (bois → bronze, métal → étain, minerai → sa couleur). Très homogène et sobre à côté du HUD ; moins détaillé, mais ne se confond jamais avec un objet du décor.',
+    icon(k){ const r=R(32,32); const fam=M[FAMILY[k]];
+      disc(r,15.5,16.5,15,OUT); disc(r,15.5,15.5,14.4,fam[0]); disc(r,15.5,15.5,13.4,fam[1]); disc(r,15,15,12.2,fam[2]);
+      const o=R(32,32); DRAW[k](o);
+      o.p.forEach((c,i)=>{ if(!c) return; const x=i%32,y=(i/32)|0; const sx=Math.round(15.5+(x-15.5)*0.78), sy=Math.round(15.5+(y-15.5)*0.78);
+        px(r,sx,sy, lum(c)>0.42? fam[3] : fam[0]); });
+      for(let a=0;a<6.28;a+=0.05) px(r,15.5+Math.cos(a)*13.4,15.5+Math.sin(a)*13.4, a>3.3&&a<5.5? fam[3]:fam[0]);
+      return r; } },
+];
+
+/* ---------- Entrepôt logistique (3 pistes, 96 × 100) ---------- */
+function slab(r,cx,cy,hw,hh,top,side){ poly(r,[[cx-hw,cy],[cx,cy-hh],[cx+hw,cy],[cx,cy+hh]],top); poly(r,[[cx-hw,cy],[cx,cy+hh],[cx,cy+hh+4],[cx-hw,cy+4]],side[0]); poly(r,[[cx,cy+hh],[cx+hw,cy],[cx+hw,cy+4],[cx,cy+hh+4]],side[1]); }
+function crate(r,x,y,s,m){ rect(r,x,y,s,s,m[1]); line(r,x,y,x+s-1,y,m[3]); line(r,x,y,x,y+s-1,m[2]); line(r,x,y+s-1,x+s-1,y+s-1,m[0]); line(r,x+s-1,y,x+s-1,y+s-1,m[0]); line(r,x+1,y+1,x+s-2,y+s-2,m[0]); }
+function chestSmall(r,x,y,m){ rect(r,x,y+3,9,5,m[1]); rect(r,x,y,9,3,m[2]); line(r,x,y,x+8,y,m[3]); rect(r,x+4,y+2,1,3,M.iron[3]); line(r,x,y+7,x+8,y+7,m[0]); }
+const WAREHOUSE = [
+  { name:'Halle des rayonnages', d:'Plancher de marbre gris veiné (Sigil), mur du fond à étagères chargées de caisses, sacs et rondins, deux colonnes trapues devant. Lecture : « stock ordonné ».',
+    draw(r){ slab(r,48,66,44,24,M.marble[2],[M.marble[1],M.marble[0]]); for(let i=0;i<6;i++) line(r,20+i*9,58+i,28+i*9,72-i,M.marble[3]);
+      poly(r,[[10,58],[48,38],[48,10],[10,30]],M.marble[1]); poly(r,[[48,38],[86,58],[86,30],[48,10]],M.marble[0]);
+      for(let s=0;s<3;s++){ line(r,12,36+s*9,46,17+s*9,M.wood[2]); line(r,50,17+s*9,84,36+s*9,M.wood[1]); }
+      [[16,26],[24,22],[34,17],[17,35],[30,28],[40,24]].forEach(([x,y],i)=>crate(r,x,y,6,i%2?M.wood:M.bark));
+      [[56,20],[66,26],[76,31],[60,30],[72,36]].forEach(([x,y],i)=> i%2? chestSmall(r,x,y,i==1?M.blue:M.red) : crate(r,x,y,6,M.wood));
+      [[24,62],[72,62]].forEach(([x,y])=>{ rect(r,x-4,y-30,8,32,M.marble[2]); line(r,x-4,y-30,x-4,y+1,M.marble[3]); line(r,x+3,y-30,x+3,y+1,M.marble[0]); rect(r,x-6,y-33,12,4,M.marble[3]); rect(r,x-6,y+1,12,3,M.marble[1]); });
+      crate(r,42,62,8,M.wood); crate(r,46,57,6,M.bark); outline(r); } },
+  { name:'Quai de transbordement', d:'Plateforme de planches sur pilotis de pierre, portique à palan avec une caisse suspendue, coffres bleu et rouge en attente au bord. Lecture : « ça entre et ça sort ».',
+    draw(r){ slab(r,48,68,44,22,M.wood[2],[M.wood[0],M.bark[0]]); for(let i=-4;i<=4;i++) line(r,48+i*10-22,68-i*5-11+11,48+i*10+22,68-i*5+11-11,M.wood[1]);
+      rod(r,18,66,18,20,2,M.bark); rod(r,78,66,78,20,2,M.bark); rod(r,16,20,80,20,2,M.wood); disc(r,48,20,3,M.iron[2]); px(r,47,19,M.iron[3]);
+      line(r,48,23,48,36,M.cord[2]); crate(r,43,36,11,M.wood);
+      chestSmall(r,22,62,M.blue); chestSmall(r,64,62,M.red); crate(r,30,54,8,M.wood); crate(r,34,50,6,M.bark); crate(r,58,52,7,M.wood);
+      poly(r,[[8,72],[16,72],[14,80],[10,80]],M.rock[2]); poly(r,[[80,72],[88,72],[86,80],[82,80]],M.rock[2]); rect(r,45,84,6,6,M.rock[2]); outline(r); } },
+  { name:'Réserve voûtée', d:'Une voûte d’ardoise basse à moitié enterrée, frise de glyphes gris-blanc de Sigil au-dessus de l’arche ; on voit les racks dans l’ombre et une caisse sur le seuil.',
+    draw(r){ slab(r,48,70,42,20,M.rock[2],[M.rock[1],M.rock[0]]);
+      for(let y=0;y<=44;y++){ const w=Math.round(38*Math.sqrt(1-(y/44)**2)); line(r,48-w,70-y,48+w,70-y, y%7==0? M.rock[1] : (y<8? M.rock[1]:M.rock[2])); px(r,48-w,70-y,M.rock[3]); }
+      for(let y=0;y<=26;y++){ const w=Math.round(16*Math.sqrt(1-(y/26)**2)); line(r,48-w,72-y,48+w,72-y,'#121419'); }
+      for(let s=0;s<3;s++) line(r,36,66-s*7,60,66-s*7,M.wood[0]); [[38,56],[50,56],[42,62],[54,49]].forEach(([x,y])=>crate(r,x,y,5,M.bark));
+      for(let i=0;i<9;i++){ const a=Math.PI*(0.15+i*0.0875); const x=48-Math.cos(a)*31, y=70-Math.sin(a)*36; rect(r,x-1,y-1,3,3,M.marble[3]); px(r,x,y,M.marble[1]); }
+      crate(r,44,74,8,M.wood); chestSmall(r,24,70,M.blue); chestSmall(r,63,70,M.red); poly(r,[[16,52],[20,46],[24,52]],M.moss[2]); poly(r,[[74,48],[79,44],[82,50]],M.moss[2]); outline(r); } },
+];
+
+function toCanvas(r,scale){ const c=document.createElement('canvas'); c.width=r.w*scale; c.height=r.h*scale; const g=c.getContext('2d');
+  r.p.forEach((col,i)=>{ if(col){ g.fillStyle=col; g.fillRect((i%r.w)*scale,((i/r.w)|0)*scale,scale,scale);} }); return c; }
+
+const root=document.getElementById('root');
+STYLES.forEach((st,si)=>{
+  const s=document.createElement('section');
+  s.innerHTML=`<h2>${st.id} · ${st.name} <small>— ${st.sub}</small></h2><p class="intent">${st.intent}</p>`;
+  const row=document.createElement('div'); row.className='row';
+  const w=WAREHOUSE[si], r=R(96,100); w.draw(r);
+  const b=document.createElement('div'); b.className='bld'; b.appendChild(toCanvas(r,3));
+  b.insertAdjacentHTML('beforeend',`<div class="lbl"><b>Entrepôt · ${w.name}</b><br>${w.d}</div>`); b.style.maxWidth='300px';
+  row.appendChild(b);
+  const grid=document.createElement('div'); grid.className='grid';
+  Object.keys(DRAW).forEach(k=>{ const ic=st.icon(k); const cell=document.createElement('div'); cell.className='cell';
+    cell.appendChild(toCanvas(ic,3)); const sc=document.createElement('div'); sc.className='scales';
+    [1,2].forEach(z=>{ const w2=document.createElement('span'); w2.className='inv'; w2.appendChild(toCanvas(ic,z)); sc.appendChild(w2); });
+    cell.appendChild(sc); cell.insertAdjacentHTML('beforeend',`<div>${NAMES[k]}</div>`); grid.appendChild(cell); });
+  row.appendChild(grid); s.appendChild(row); root.appendChild(s);
+});
+</script>
+</body>
+</html>

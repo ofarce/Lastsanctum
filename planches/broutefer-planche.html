@@ -1,0 +1,203 @@
+<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Broutefer — planche</title><style>
+*{box-sizing:border-box}body{margin:0;background:#0b120e;color:#ddd9bd;font:15px system-ui}header{padding:20px 26px 10px}h1{font-size:23px;color:#e8c870;margin:0 0 8px}header p{margin:0;color:#98aa95;max-width:1000px}
+.controls{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}button{background:#253629;color:#eee3c9;border:1px solid #68765c;padding:6px 12px;cursor:pointer}button.on{background:#4a5e3a;border-color:#e8c870}
+main{padding:10px 24px 28px;display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:16px}figure{margin:0;border:1px solid #354634;background:#142016}figure.wide{grid-column:span 2}
+canvas{display:block;width:100%;height:auto;image-rendering:pixelated}figcaption{padding:10px 14px}b{color:#e8c870}figcaption p{margin:6px 0 0;font-size:13px;color:#98aa95}
+@media(max-width:760px){figure.wide{grid-column:auto}main{padding:10px 16px}}
+</style></head><body>
+<header><h1>BROUTEFER — PLANCHE À L’ÉCHELLE DU JEU</h1>
+<p>Les sprites sont à la résolution native : 24 px par case, avec l’Ingénieur, l’autel et le puits du jeu. L’affichage est agrandi sans lissage. Le bouton « Sol » bascule entre la zone principale et l’éclairage du temple pour vérifier la lisibilité.</p>
+<div class="controls"><button id="pause">Pause</button><button data-bg="zone" class="on">Sol : zone principale</button><button data-bg="temple">Sol : temple</button><button id="slow">Ralenti ×¼</button></div></header>
+<main></main>
+<script src="assets/decor.js"></script><script src="assets/units.js"></script><script src="assets/engineer-bare.js"></script><script src="assets/engineer-silver.js?v=2"></script>
+<script>
+'use strict';{
+const TAU=Math.PI*2,img=s=>{const i=new Image();i.src=s;return i};
+const SOL=img('assets/objectif/sol.png'),ALTAR=img('../assets/baked/buildings/da-medeina_base.png'),WELL=img('../assets/baked/buildings/da-soulwell_base.png');
+let BG='zone';
+// ---------- Palette du Broutefer ----------
+const C={ink:'#24140c',plate:'#9c4a26',plateHi:'#c8703c',plateLo:'#62301a',skin:'#7a6448',skinLo:'#54432f',belly:'#a28a62',horn:'#d8c9a0',eye:'#f2e2a0',collar:'#3d7fa6',collarHi:'#9fd8ee',rune:'#e8c870'};
+const ell=(g,x,y,rx,ry,f)=>{g.fillStyle=f;g.beginPath();g.ellipse(x,y,rx,ry,0,0,TAU);g.fill()};
+const px=(g,x,y,w,h,f)=>{g.fillStyle=f;g.fillRect(Math.round(x),Math.round(y),w,h)};
+function shadow(g,x,y,rx,ry=rx*.35,a=.45){ell(g,x,y,rx,ry,`rgba(8,14,12,${a})`)}
+
+/* Broutefer, origine aux pieds, face à droite (dir=-1 : à gauche).
+   o.tail : angle de la queue (0 = horizontale derrière, + vers le bas), o.body : soulèvement, o.lean : inclinaison,
+   o.legs : phase de marche, o.head : abaissement de la tête, o.curl : recroquevillé, o.collar, o.rock : roc tenu. */
+function broute(g,x,y,o={}){
+  const d=o.dir||1;g.save();g.translate(Math.round(x),Math.round(y));g.scale(d,1);
+  if(o.weak)g.filter='saturate(.35) brightness(.78)';
+  const lift=o.body||0,lean=o.lean||0;
+  if(o.curl){ // boule protégée : plaques visibles, tête et queue repliées
+    ell(g,0,-6,12,7,C.ink);ell(g,0,-6.5,11,6,C.plateLo);ell(g,-1,-8,9,4.5,C.plate);
+    for(let i=-2;i<=2;i++){px(g,i*4-1,-12+Math.abs(i),2,2,C.plateHi)}
+    px(g,7,-4,4,3,C.skin);px(g,9,-4,1,1,C.ink); // museau caché
+    ell(g,-10,-3,3,2.2,C.skinLo);px(g,-13,-4,2,1,C.horn); // massue rentrée
+    g.restore();return}
+  const legPh=o.legs||0;
+  // pattes (arrière puis avant), courtes et épaisses
+  const leg=(lx,ph,far)=>{const up=Math.max(0,Math.sin(ph))*2,fw=Math.cos(ph)*1.5;px(g,lx+fw-1.5,-5-up,4,5,far?C.skinLo:C.skin);px(g,lx+fw-2,-1-up,5,1,C.ink)};
+  leg(-6,legPh+Math.PI,1);leg(6,legPh,1);
+  g.save();g.translate(0,-lift);g.rotate(lean);
+  // queue : segments puis massue à deux ergots
+  const ta=o.tail??.1,L=13;let tx=-9,ty=-7;const seg=4;
+  for(let i=1;i<=seg;i++){const a=ta*(i/seg)*1.25,nx=-9-Math.cos(a)*L*i/seg,ny=-7+Math.sin(a)*L*i/seg;
+    g.strokeStyle=C.ink;g.lineWidth=5-i*.6;g.lineCap='round';g.beginPath();g.moveTo(tx,ty);g.lineTo(nx,ny);g.stroke();
+    g.strokeStyle=i%2?C.plateLo:C.skin;g.lineWidth=3.6-i*.6;g.beginPath();g.moveTo(tx,ty);g.lineTo(nx,ny);g.stroke();tx=nx;ty=ny}
+  const ca=ta*1.25;g.save();g.translate(tx,ty);g.rotate(-ca);
+  ell(g,-2,0,4.2,3.2,C.ink);ell(g,-2,-.3,3.4,2.4,C.plateLo);ell(g,-2.6,-1,2,1.2,C.plate);
+  // ergots sous la massue (ils passent sous la pierre)
+  px(g,-5,2,2,2,C.horn);px(g,-6,3,1,1,C.horn);px(g,0,2,2,2,C.horn);px(g,1,3,1,1,C.horn);
+  if(o.rock)rock(g,-2,5+(o.rockDy||0),o.rock);
+  g.restore();
+  // corps : dôme de plaques couleur rouille
+  ell(g,0,-8,12.5,7.2,C.ink);ell(g,0,-7,11.5,5,C.belly);ell(g,0,-8.8,11.5,6,C.plateLo);ell(g,-.5,-10,10,4.5,C.plate);
+  for(let i=-3;i<=3;i++){const sx=i*3,sy=-14+Math.abs(i)*.8;px(g,sx-1,sy,2,2,C.plateHi);px(g,sx-1,sy+2,2,1,C.plateLo)}
+  for(let i=-2;i<=2;i++)px(g,i*4,-6,2,1,C.plateHi); // rangée latérale
+  px(g,-12,-9,2,2,C.horn);px(g,10,-9,2,2,C.horn); // pointes de flanc
+  // tête basse, bec de brouteur
+  const hd=o.head||0;g.save();g.translate(11,-7+hd);
+  ell(g,2.5,0,4.6,3.6,C.ink);ell(g,2.5,-.3,3.8,2.8,C.skin);px(g,0,-3,5,2,C.plateLo);px(g,1,-3,2,1,C.plateHi);
+  px(g,6,0,2,2,C.horn);px(g,3,-1,1,1,o.weak?'#6b6a5a':C.eye);px(g,3,1,3,1,C.skinLo);
+  g.restore();
+  if(o.collar){ // collier lié à Medeina : cuir bleu et rune dorée
+    px(g,7,-11,3,8,C.ink);px(g,7.5,-10,2,6,C.collar);px(g,8,-9,1,2,C.collarHi);
+    px(g,9,-5,3,3,C.ink);px(g,9.5,-4.5,2,2,C.rune)}
+  g.restore();g.restore()}
+function rock(g,x,y,s=1){const r=3*s;ell(g,x,y,r+1,r*.85+1,C.ink);ell(g,x,y,r,r*.85,'#7b7466');px(g,x-r*.5,y-r*.6,2,1,'#b4ad9a');px(g,x+r*.2,y+r*.2,1,1,'#4f4a41')}
+
+// ---------- Fonds ----------
+function ground(g,w,h,ox=600,oy=5){g.imageSmoothingEnabled=false;
+  if(BG==='zone'){g.drawImage(SOL,ox,oy,w,h,0,0,w,h)}
+  else{g.drawImage(SOL,ox,Math.min(oy,1024-h),w,h,0,0,w,h);g.fillStyle='rgba(18,20,38,.62)';g.fillRect(0,0,w,h);
+    const r=g.createRadialGradient(w/2,h*.55,8,w/2,h*.55,w*.6);r.addColorStop(0,'rgba(140,210,150,.22)');r.addColorStop(1,'rgba(0,0,0,0)');g.fillStyle=r;g.fillRect(0,0,w,h)}}
+function engineer(g,x,y,t,dir=1){shadow(g,x,y,9);g.save();g.translate(x,0);g.scale(dir,1);g.drawImage(EngineerSilver.sprite(0,t),-15,y-40);g.restore()}
+function hpBar(g,x,y,f,col='#85d6b1'){px(g,x-10,y,20,3,'#191b1d');px(g,x-9,y+1,Math.round(18*f),1,col)}
+function label(g,x,y,s){g.font='7px monospace';g.fillStyle='#e8c870cc';g.fillText(s,x,y)}
+
+// ---------- Scènes ----------
+const scenes=[
+ {w:240,h:150,t:'01 · Animal affaibli dans le coffre',p:'Recroquevillé, couleurs ternies, souffle lent. L’icône d’affaiblissement flotte au-dessus. Le coffre est provisoire et ne reprend pas le sprite du jeu.',
+  f(g,t){ground(g,240,150);const cx=120,cy=104;
+   px(g,cx-26,cy-14,52,18,'#2b1c12');px(g,cx-24,cy-12,48,14,'#4a3220');px(g,cx-26,cy-14,52,2,'#7a5a34');px(g,cx-28,cy-30,56,4,'#5c4128'); // coffre ouvert
+   px(g,cx-28,cy-30,56,1,'#9a7a48');
+   const br=Math.sin(t*1.6)*.6;shadow(g,cx,cy-1,13,3,.6);broute(g,cx,cy-1+br*.4,{curl:1,weak:1});
+   iconWeak(g,cx-5,cy-34+Math.round(Math.sin(t*2)))}},
+ {w:240,h:150,t:'02 · Réveil au puits',p:'Revitalisation : spirales vertes et dorées, la boule se déroule, la tête se relève, les couleurs reviennent. Boucle de 4 s.',
+  f(g,t){ground(g,240,150,300,500);g.drawImage(WELL,160-120,168-118,240,150,0,0,240,150);
+   const p=(t%4)/4,cx=120,cy=142,k=Math.min(1,Math.max(0,(p-.25)/.45));
+   revit(g,cx,cy-8,t,Math.min(1,p*2.5)*(1-Math.max(0,(p-.85)/.15)));shadow(g,cx,cy,13);
+   if(k<.3)broute(g,cx,cy,{curl:1,weak:1});else broute(g,cx,cy-(k<.7?Math.sin((k-.3)/.4*Math.PI)*3:0),{weak:k<.75,head:3-k*3,tail:.5-k*.4,legs:0})}},
+ {w:240,h:150,t:'03 · Repos et gambade en liberté',p:'Libre, sans collier : il broute (tête basse), puis gambade par petits bonds, avec une queue qui balance.',
+  f(g,t){ground(g,240,150);
+   const a=80,cy=112;shadow(g,a,cy,13);broute(g,a,cy,{head:2+Math.round(Math.sin(t*3)),tail:.15+Math.sin(t*1.2)*.08,body:Math.sin(t*1.5)*.4});label(g,a-12,cy+14,'repos');
+   const ph=(t*1.8)%1,bx=150+((t*22)%60),hop=Math.abs(Math.sin(ph*Math.PI))*6;shadow(g,bx,cy,13-hop*.6);
+   broute(g,bx,cy-hop,{legs:ph*TAU*2,tail:.1+Math.sin(ph*TAU)*.35,lean:-.06+Math.sin(ph*TAU)*.08});label(g,145,cy+14,'gambade')}},
+ {w:240,h:150,t:'04 · Attente avant la capture',p:'Il se tient à distance de l’Ingénieur et le regarde. Le texte de survol indique l’action.',
+  f(g,t){ground(g,240,150);engineer(g,70,116,t);const bx=160,by=114,turn=Math.sin(t*.8)>.6?-1:1;shadow(g,bx,by,13);
+   broute(g,bx,by,{dir:-turn,head:Math.sin(t*2)>.9?1:0,tail:.12+Math.sin(t*2.2)*.05});tooltip(g,bx-54,by-50,'Broutefer','Approcher avec le collier')}},
+ {w:240,h:150,t:'05 · Pose du collier (liaison)',p:'L’Ingénieur approche, s’accroupit et tend le collier. Le Broutefer baisse la tête au même moment, puis un éclat bleu scelle la liaison. Boucle de 4 s.',
+  f(g,t){ground(g,240,150);const p=(t%4)/4,bx=150,by=114;const ex=60+Math.min(1,p/.35)*56;
+   engineer(g,ex,116,t*(p<.35?1:0));const reach=p>.35&&p<.7,lock=p>=.55;
+   if(!lock){const ax=ex+(reach?14:9),ay=116-(reach?20:22);g.strokeStyle='#d2d8de';g.lineWidth=2;g.beginPath();g.moveTo(ex+4,96);g.lineTo(ax,ay);g.stroke();collarIcon(g,ax-2,ay-3,.6)}
+   shadow(g,bx,by,13);broute(g,bx,by,{dir:-1,head:p>.3&&p<.75?3:0,collar:lock,tail:.12});
+   if(p>.55&&p<.8){const r=(p-.55)/.25;g.strokeStyle=`rgba(159,216,238,${1-r})`;g.lineWidth=1;g.beginPath();g.arc(bx-9,by-8,4+r*16,0,TAU);g.stroke()}
+   if(p>.7)thumb(g,bx-6,by-36-Math.min(4,(p-.7)*30))}},
+ {w:240,h:150,t:'06 · Marche de suivi (lié)',p:'Collier visible. Le Broutefer suit l’Ingénieur d’un pas lourd à un peu plus d’une case derrière lui.',
+  f(g,t){ground(g,240,150);const x=((t*18)%300)-40,y=116;engineer(g,x+36,y,t);shadow(g,x,y-2,13);
+   broute(g,x,y-2-Math.abs(Math.sin(t*6))*.8,{legs:t*12,collar:1,tail:.1+Math.sin(t*6)*.06,lean:Math.sin(t*6)*.03});hpBar(g,x,y-24,1,'#7fc0e0')}},
+ {w:480,h:170,wide:1,t:'07 · Lancer de roc — appui, extraction, pivot, lâcher, récupération',p:'Cycle de 1,6 s. Les ergots passent sous une pierre, la queue l’arrache, le corps pivote et la pierre part au geste de lâcher. Le roc vole avec son ombre au sol et les dégâts sont résolus à l’impact. Le terrain reste intact : la pierre est purement visuelle.',
+  f(g,t){ground(g,480,170,400,200);const cyc=1.6,p=(t%cyc)/cyc,bx=110,by=126,tx=390,ty=128;
+   // cible
+   ell(g,tx,ty,10,3.5,'rgba(8,14,12,.45)');px(g,tx-6,ty-22,12,22,'#3a2a3a');px(g,tx-4,ty-28,8,7,'#5a3d55');px(g,tx-2,ty-26,1,1,'#ff6040');px(g,tx+1,ty-26,1,1,'#ff6040');
+   let o={tail:.1,body:0,lean:0,rock:0},phase='';
+   if(p<.18){const k=p/.18;o.body=-k*1.5;o.lean=k*.06;o.tail=.1+k*.9;phase='appui'}
+   else if(p<.36){const k=(p-.18)/.18;o.body=-1.5;o.lean=.06;o.tail=1+k*.2;o.rock=1;o.rockDy=-k*2;phase='extraction';if(k<.4)dust(g,bx-24,by,k)}
+   else if(p<.52){const k=(p-.36)/.16;o.body=-1.5+k*2;o.lean=.06-k*.2;o.tail=1.2-k*2.6;o.rock=1;phase='pivot'}
+   else if(p<.6){o.body=.5;o.lean=-.14;o.tail=-1.4;phase='lâcher'}
+   else{const k=(p-.6)/.4;o.body=.5-k*.5;o.lean=-.14+k*.14;o.tail=-1.4+k*1.5;phase='récupération'}
+   shadow(g,bx,by,13);broute(g,bx,by,{...o,collar:1});label(g,bx-24,by+16,phase);
+   if(p<.36)px(g,bx-22,by-1,6,2,'#3a3226'); // creux visuel temporaire, sans effet sur le terrain
+   if(p>=.55&&p<.92){const k=(p-.55)/.37,sx=bx-4,sy=by-30,rx=sx+(tx-sx)*k,ry=sy+(ty-14-sy)*k-Math.sin(k*Math.PI)*46;
+     ell(g,sx+(tx-sx)*k,by+(ty-by)*k,4-Math.sin(k*Math.PI)*1.5,1.5,'rgba(8,14,12,.5)');rock(g,rx,ry,1.15);
+     g.fillStyle='rgba(200,190,160,.35)';for(let i=1;i<4;i++){const kk=Math.max(0,k-i*.04);g.fillRect(sx+(tx-sx)*kk,sy+(ty-14-sy)*kk-Math.sin(kk*Math.PI)*46,1,1)}}
+   if(p>=.92){const k=(p-.92)/.08;impact(g,tx,ty-12,k);label(g,tx-14,ty+14,'impact')}
+   // frise des 6 poses-clés
+   const keys=[[.09,'appui'],[.3,'extraction'],[.44,'pivot'],[.56,'lâcher'],[.8,'récup.']];
+   keys.forEach(([kp],i)=>{px(g,190+i*34,10,30,26,'rgba(0,0,0,.25)')});
+   keys.forEach(([kp,n],i)=>{const s=g;s.save();s.translate(205+i*34,30);s.scale(.55,.55);const tt=kp*cyc;const q=kp;let oo={collar:1,tail:.1};
+     if(q<.18)oo={collar:1,body:-1,tail:.6,lean:.04};else if(q<.36)oo={collar:1,body:-1.5,tail:1.1,rock:1,lean:.06};else if(q<.52)oo={collar:1,tail:-.3,rock:1,lean:-.04};else if(q<.6)oo={collar:1,tail:-1.4,body:.5,lean:-.14};
+     broute(s,0,0,oo);s.restore()})}},
+ {w:240,h:150,t:'08 · Balayage de queue (contact)',p:'Prioritaire au contact. Il se campe sur ses pattes, fouette sa queue en arc et repousse un petit ennemi d’environ une demi-case. Cycle de 1 s.',
+  f(g,t){ground(g,240,150);const p=t%1,bx=120,by=116;engineer(g,186,118,t);
+   const sw=p<.3?p/.3:p<.5?1:1-(p-.5)/.5,ta=.2-Math.sin(sw*Math.PI)*1.6*(p<.5?1:0)+(p<.3?.5*(p/.3):0);
+   const kb=p>.32?Math.min(1,(p-.32)/.2)*12*(1-Math.max(0,(p-.7)/.3)):0,ex=bx-34-kb;
+   ell(g,ex,by,7,2.5,'rgba(8,14,12,.45)');px(g,ex-4,by-13+(kb>0&&kb<10?-2:0),8,13,'#4a3a2a');px(g,ex-3,by-17,6,5,'#6a5034');px(g,ex-1,by-15,1,1,'#ff6040');
+   if(p>.28&&p<.4){g.strokeStyle='rgba(240,220,170,.8)';g.lineWidth=1.5;g.beginPath();g.arc(bx-8,by-6,22,Math.PI*.7,Math.PI*1.25);g.stroke()}
+   shadow(g,bx,by,13);broute(g,bx,by,{dir:1,tail:ta,body:-.5,lean:p<.3?.05:-.05,collar:1})}},
+ {w:320,h:240,wide:1,t:'09 · Medeina au-dessus de son autel',p:'Sprite original d’environ 3 cases de haut, ancré au centre de l’autel du jeu à 64 px au-dessus du socle. Elle apparaît dans une pluie de feuilles, lévite pendant le dialogue puis se dissout. Boucle de 8 s. À vérifier avec « Sol : temple ».',
+  f(g,t){ground(g,320,240,300,500);g.drawImage(ALTAR,0,0);const p=(t%8)/8;let a=1,rise=0;
+   if(p<.14){a=p/.14;rise=(1-a)*10}else if(p>.8&&p<.92){a=1-(p-.8)/.12}else if(p>=.92)a=0;
+   const mx=160,my=104-Math.round(Math.sin(t*1.6)*2)+rise;
+   if(a>0){g.save();g.globalAlpha=a;aura(g,mx,my,t);medeina(g,mx,my,t);g.restore()}
+   leaves(g,mx,my,t,p);engineer(g,226,206,t,-1);
+   if(p>.18&&p<.78){const tx=168,ty=24;g.fillStyle='#0d1510e6';g.fillRect(tx,ty,140,26);g.strokeStyle='#e8c870';g.strokeRect(tx+.5,ty+.5,139,25);g.font='7px monospace';g.fillStyle='#e8c870';g.fillText('MEDEINA',tx+6,ty+10);g.fillStyle='#ddd9bd';g.fillText('Prends-en soin, Ingénieur.',tx+6,ty+20)}}},
+ {w:240,h:150,t:'10 · Interface et effets',p:'Icônes en taille réelle : animal affaibli, collier inutilisé, portrait du compagnon (32 px), pouce levé vert, texte de survol et étincelle de revitalisation.',
+  f(g,t){g.fillStyle='#111b14';g.fillRect(0,0,240,150);
+   const slot=(x,y,n)=>{px(g,x,y,26,26,'#1c2a1e');g.strokeStyle='#4b5e48';g.strokeRect(x+.5,y+.5,25,25);label(g,x-1,y+34,n)};
+   slot(10,10,'affaibli');iconWeak(g,18,16);slot(56,10,'collier');collarIcon(g,62,15,1);slot(102,10,'pouce');thumb(g,108,16);
+   slot(148,10,'revital.');revit(g,161,30,t,1,.5);
+   px(g,194,8,36,36,'#1c2a1e');g.strokeStyle='#e8c870';g.strokeRect(194.5,8.5,35,35);g.save();g.beginPath();g.rect(196,10,32,32);g.clip();g.translate(212,44);g.scale(1.6,1.6);broute(g,-6,0,{collar:1,head:0});g.restore();label(g,194,54,'portrait');
+   tooltip(g,10,70,'Broutefer affaibli','Amener au puits pour le soigner');tooltip(g,10,108,'Collier de Medeina','Lier un animal revitalisé')}},
+];
+
+// ---------- Personnages et effets ----------
+function medeina(g,x,y,t){ // déesse des forêts : robe de mousse, couronne de bois de cerf, arc dans le dos
+  const sway=Math.sin(t*1.6)*1;
+  g.fillStyle='#2a1a10';g.fillRect(x+7,y-56,2,40);g.strokeStyle='#8a6a3a';g.lineWidth=1.2;g.beginPath();g.arc(x+4,y-36,20,-1.2,1.2);g.stroke(); // arc
+  // robe qui s'effile en lianes (pas de pieds : lévitation)
+  g.fillStyle='#173826';g.beginPath();g.moveTo(x-9,y-40);g.lineTo(x+9,y-40);g.lineTo(x+14+sway,y-6);g.lineTo(x+4,y+2+sway);g.lineTo(x-2,y-4);g.lineTo(x-8,y+3-sway);g.lineTo(x-15+sway,y-6);g.closePath();g.fill();
+  g.fillStyle='#2f6b3e';g.beginPath();g.moveTo(x-6,y-40);g.lineTo(x+6,y-40);g.lineTo(x+8,y-10);g.lineTo(x-9,y-10);g.closePath();g.fill();
+  for(let i=0;i<5;i++)px(g,x-8+i*4,y-12-(i%2)*3,2,2,'#7fbf68');
+  px(g,x-6,y-42,12,4,'#c8a95a');px(g,x-1,y-41,2,2,'#e8f0a0'); // ceinture et pierre verte
+  g.fillStyle='#e8d6b8';g.fillRect(x-12,y-38,4,14);g.fillRect(x+8,y-38,4,12); // bras
+  px(g,x-13,y-26,4,3,'#e8d6b8');ell(g,x-11,y-28,3,3,'rgba(190,240,150,.7)'); // paume ouverte, lueur
+  // torse, cou, tête
+  g.fillStyle='#2f6b3e';g.fillRect(x-8,y-52,16,12);px(g,x-2,y-56,4,4,'#e8d6b8');
+  g.fillStyle='#4a2c18';g.beginPath();g.ellipse(x,y-58,8,7,0,0,TAU);g.fill();g.fillRect(x-9,y-58,4,20);g.fillRect(x+5,y-58,4,18); // chevelure
+  ell(g,x,y-60,5,6,'#eedcbc');px(g,x-3,y-61,2,1,'#2a5030');px(g,x+1,y-61,2,1,'#2a5030');px(g,x-1,y-57,2,1,'#b07a62');
+  g.strokeStyle='#c8b080';g.lineWidth=1.3;g.beginPath(); // bois de cerf
+  g.moveTo(x-3,y-66);g.lineTo(x-8,y-76);g.lineTo(x-13,y-80);g.moveTo(x-8,y-76);g.lineTo(x-7,y-83);g.moveTo(x-6,y-71);g.lineTo(x-11,y-72);
+  g.moveTo(x+3,y-66);g.lineTo(x+8,y-76);g.lineTo(x+13,y-80);g.moveTo(x+8,y-76);g.lineTo(x+7,y-83);g.moveTo(x+6,y-71);g.lineTo(x+11,y-72);g.stroke();
+  for(const [lx,ly] of [[-5,-67],[0,-68],[5,-67]])ell(g,x+lx,y+ly,2,1.2,'#5aa04a')}
+function aura(g,x,y,t){const r=g.createRadialGradient(x,y-36,4,x,y-36,46);r.addColorStop(0,'rgba(170,240,150,.35)');r.addColorStop(1,'rgba(170,240,150,0)');g.fillStyle=r;g.fillRect(x-50,y-90,100,110);
+  ell(g,x,y+30,16,4,'rgba(170,240,150,'+(.18+Math.sin(t*1.6)*.06)+')')}
+function leaves(g,x,y,t,p){for(let i=0;i<14;i++){const s=(i*0.137+t*.25)%1;let lx,ly,al;
+  if(p<.14){lx=x+Math.cos(i)*30*(1-p/.14);ly=y-36+Math.sin(i*2)*30*(1-p/.14);al=p/.14}
+  else if(p>.8){const k=Math.min(1,(p-.8)/.15);lx=x+Math.cos(i)*k*40;ly=y-40+Math.sin(i*3)*20-k*30;al=1-k}
+  else{lx=x+Math.cos(i+t)*18;ly=y-30-s*50;al=.5*(1-s)}
+  g.globalAlpha=Math.max(0,al);px(g,lx,ly,2,1,i%3?'#7fbf68':'#c8d070');g.globalAlpha=1}}
+function revit(g,x,y,t,a,sc=1){if(a<=0)return;for(let i=0;i<10;i++){const s=(i/10+t*.6)%1,ang=i*2.4+t*3,r=(8+s*4)*sc;
+  g.globalAlpha=a*(1-s);px(g,x+Math.cos(ang)*r,y-s*26*sc,i%2?2:1,i%2?2:1,i%3?'#8fe08a':'#f0d870')}g.globalAlpha=1}
+function iconWeak(g,x,y){ // cœur fêlé gris-rouge
+  const H=['.##.##.','#######','#######','.#####.','..###..','...#...'];H.forEach((r,j)=>[...r].forEach((c,i)=>{if(c==='#')px(g,x+i*1.5,y+j*1.5,2,2,'#8a3a32')}));
+  px(g,x+4,y,1,3,'#1a0e0c');px(g,x+5,y+3,1,3,'#1a0e0c');px(g,x+1,y+1,2,1,'#c06a5a')}
+function collarIcon(g,x,y,s){g.save();g.translate(x,y);g.scale(s,s);g.strokeStyle=C.ink;g.lineWidth=4;g.beginPath();g.ellipse(7,7,6,5,0,0,TAU);g.stroke();
+  g.strokeStyle=C.collar;g.lineWidth=2.4;g.stroke();px(g,5,10,4,4,C.ink);px(g,6,11,2,2,C.rune);g.restore()}
+function thumb(g,x,y){const T=['...##...','...##...','..###...','#######.','#.######','#.######','#.#####.','#.####..'];
+  T.forEach((r,j)=>[...r].forEach((c,i)=>{if(c==='#')px(g,x+i*1.5,y+j*1.5,2,2,'#4fc05a')}));px(g,x+4,y,2,1,'#a8f0a0')}
+function tooltip(g,x,y,a,b){g.font='7px monospace';const w=Math.max(g.measureText(a).width,g.measureText(b).width)+10;g.fillStyle='#0d1510ee';g.fillRect(x,y,w,24);g.strokeStyle='#68765c';g.strokeRect(x+.5,y+.5,w-1,23);
+  g.fillStyle='#e8c870';g.fillText(a,x+5,y+10);g.fillStyle='#c8ccb0';g.fillText(b,x+5,y+19)}
+function dust(g,x,y,k){for(let i=0;i<6;i++)px(g,x+Math.cos(i)*k*12,y-2-Math.abs(Math.sin(i*1.7))*k*8,1,1,'rgba(180,160,120,.8)')}
+function impact(g,x,y,k){g.strokeStyle=`rgba(240,220,170,${1-k})`;g.lineWidth=1;g.beginPath();g.arc(x,y,3+k*10,0,TAU);g.stroke();
+  for(let i=0;i<7;i++){const a=i*.9;px(g,x+Math.cos(a)*(3+k*12),y+Math.sin(a)*(2+k*6)-k*4,2,2,'#7b7466')}}
+
+// ---------- Montage ----------
+const views=scenes.map(s=>{const f=document.createElement('figure');if(s.wide)f.className='wide';f.innerHTML=`<canvas width="${s.w}" height="${s.h}"></canvas><figcaption><b>${s.t}</b><p>${s.p}</p></figcaption>`;document.querySelector('main').append(f);return [s,f.querySelector('canvas').getContext('2d')]});
+let paused=false,slow=1,time=0,last=0;
+document.querySelector('#pause').onclick=e=>{paused=!paused;e.target.textContent=paused?'Reprendre':'Pause'};
+document.querySelector('#slow').onclick=e=>{slow=slow===1?.25:1;e.target.classList.toggle('on',slow<1)};
+document.querySelectorAll('[data-bg]').forEach(b=>b.onclick=()=>{BG=b.dataset.bg;document.querySelectorAll('[data-bg]').forEach(x=>x.classList.toggle('on',x===b))});
+function draw(){for(const [s,g] of views){g.imageSmoothingEnabled=false;g.clearRect(0,0,s.w,s.h);s.f(g,time)}document.documentElement.dataset.ready='true'}
+Promise.all([SOL.decode(),ALTAR.decode(),WELL.decode()]).then(()=>{draw();requestAnimationFrame(function loop(ms){if(!paused)time+=last?Math.min(.05,(ms-last)/1000)*slow:0;last=ms;draw();requestAnimationFrame(loop)})}).catch(e=>{document.body.append(String(e));throw e});}
+</script></body></html>

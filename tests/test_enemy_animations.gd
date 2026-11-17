@@ -1,8 +1,8 @@
 extends "res://tests/fight_case.gd"
 
 
-func test_all_nine_enemies_have_complete_atlases() -> void:
-	check_eq(EnemyArt.all().size(), 9)
+func test_all_enemies_have_complete_atlases() -> void:
+	check_eq(EnemyArt.all().size(), Catalog.ENEMY.size())
 	for kind: String in Catalog.ENEMY:
 		var meta: Dictionary = EnemyArt.all()[kind]
 		for action: String in ["idle", "walk", "attack", "death"]:
@@ -78,8 +78,9 @@ func test_progressive_roster() -> void:
 			if w < 8:
 				check(spawn["kind"] != "strazhar", "champion à partir du huitième assaut")
 	for kind: String in Catalog.ENEMY:
-		if kind != "beast":
+		if kind != "beast" and kind != Martyre.KIND:
 			check(seen.has(kind), "renfort présent : " + kind)
+	check(not seen.has(Martyre.KIND), "le boss ne vient jamais en vague")
 
 
 func test_menace_unlocks_strazhar_before_wave_eight() -> void:

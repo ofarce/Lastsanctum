@@ -133,3 +133,35 @@ static func give(cost: Dictionary, position: Vector2) -> void:
 	for k: String in cost:
 		for i in int(cost[k]):
 			deposit(k, engineer, position)
+
+
+## Munitions (flèches, obus) : le stock habituel, puis les coffres rouges des bâtiments (un archer tire
+## directement dans la production de l'Atelier sans attendre qu'on la rapporte).
+static func ammo_sources() -> Array:
+	var out := sources()
+	for b: Building in GameState.buildings:
+		out.append(b.output_box)
+	return out
+
+
+static func count_ammo(item: String) -> int:
+	var n := 0
+	for items: Array in ammo_sources():
+		for stack: Dictionary in items:
+			if not stack.is_empty() and stack["item"] == item:
+				n += int(stack["quantity"])
+	return n
+
+
+## Retire une munition `item` ; faux s'il n'y en a nulle part.
+static func take_ammo(item: String) -> bool:
+	for items: Array in ammo_sources():
+		for i in items.size():
+			var stack: Dictionary = items[i]
+			if stack.is_empty() or stack["item"] != item:
+				continue
+			stack["quantity"] -= 1
+			if stack["quantity"] <= 0:
+				items[i] = {}
+			return true
+	return false

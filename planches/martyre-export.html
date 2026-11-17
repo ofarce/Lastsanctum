@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><title>Export Martyre de Byrsa</title>
+<style>body{margin:0;padding:16px;background:#0c0d10;color:#e2dccb;font:14px system-ui}canvas{image-rendering:pixelated;background:#2b323d;margin:4px 0;display:block;max-width:100%}h2{font-size:15px;margin:14px 0 4px;color:#d84a3a}</style></head><body>
+<p>Export de la Martyre de Byrsa (piste 4 de <code>boss-propositions.html</code>) au format des ennemis du jeu : repos 24 images (boucle 2,4 s), marche 12, frappe du bâton 24 (1 s, impact à 0,5 s), chute 45. Cadre 96 × 108, ancre (44, 100). Avec <code>?save=1</code> (servie par <code>tools/martyre/serve.py</code>), écrit <code>assets/imported/enemies/martyre_*.png</code> et l’entrée du manifeste.</p>
+<div id="out"></div>
+<script src="assets/boss/boss-planches.js?v=5"></script>
+<script>
+'use strict';
+const P=Boss.PROPS.find(p=>p.id==='martyre'),X0=26,Y0=4,FW=96,FH=108,COLS=12,TAU=Math.PI*2;
+const ACTIONS={
+ idle:{count:24,fps:10,f:i=>Boss.render(P,i/24*2.5,null,{by:Math.round(Math.sin(TAU*i/24)*.6),sw:Math.sin(TAU*i/24)*.8})},
+ walk:{count:12,fps:12,f:i=>{const w=i/12;return Boss.render(P,w*1.25,null,{walk:w,by:-Math.round(Math.abs(Math.sin(w*TAU))),sw:Math.sin(w*TAU)*1.2})}},
+ attack:{count:24,fps:24,duration:1.0,f:i=>Boss.render(P,i/24,i/24,{by:0,sw:0})},
+ death:{count:45,fps:24,f:i=>Boss.martyreDeath(i/44)},
+};
+const OUT={strips:{}},meta={ax:Boss.CX-X0,ay:Boss.FY-Y0,h:76,stride:2.4,self_bob:true},root=document.getElementById('out');
+for(const[name,A]of Object.entries(ACTIONS)){const rows=Math.ceil(A.count/COLS),c=document.createElement('canvas');c.width=FW*COLS;c.height=FH*rows;const g=c.getContext('2d');
+ for(let i=0;i<A.count;i++)g.drawImage(A.f(i),-X0+(i%COLS)*FW,-Y0+Math.floor(i/COLS)*FH);
+ // une image ne déborde jamais sur la suivante
+ OUT.strips[name]=c.toDataURL('image/png');
+ meta[name]={frame_w:FW,frame_h:FH,cols:COLS,rows,count:A.count,fps:A.fps};if(A.duration)meta[name].duration=A.duration;
+ const h=document.createElement('h2');h.textContent=`${name} : ${A.count} images`;root.appendChild(h);c.style.width=c.width*1.5+'px';root.appendChild(c)}
+OUT.meta=meta;window.OUT=OUT;
+const SAVE=new URLSearchParams(location.search).get('save');
+if(SAVE!=null)(async()=>{const base=SAVE.startsWith('http')?SAVE:'',post=(n,b)=>fetch(base+'/out/'+n,{method:'POST',body:b}).then(r=>{if(!r.ok)throw new Error(n+' '+r.status)});
+ for(const n in OUT.strips)await post(`martyre_${n}.png`,OUT.strips[n]);await post('meta-martyre.json',JSON.stringify(meta));
+ document.title='EXPORT OK';window.SAVED=true})().catch(e=>{document.title='EXPORT ÉCHEC';console.error(e)});
+</script></body></html>

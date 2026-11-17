@@ -3,6 +3,7 @@ extends Node
 
 const ItemStorage := preload("res://sim/item_storage.gd")
 const Recipes := preload("res://data/recipes.gd")
+const Placeables := preload("res://sim/placeables.gd")
 const Blocks := preload("res://data/mineable_blocks.gd")
 ## Boucle de simulation (frame() et update(), Index.html, 73b410f) et ordres du joueur.
 ## Ordre des systèmes identique au prototype (R14) : portail, bâtiments et Ancre, tâches des adeptes,
@@ -136,7 +137,9 @@ func tick(dt: float) -> void:
 		u.ability = maxf(0.0, u.ability - dt)
 		u.shield = maxf(0.0, u.shield - dt)
 		u.buff = maxf(0.0, u.buff - dt)
-	while not GameState.spawn_queue.is_empty() and GameState.spawn_queue[0]["at"] <= GameState.sim_time:
+	Martyre.tick(self)
+	# Aucune vague tant que la Martyre de Byrsa est debout.
+	while not Martyre.active() and not GameState.spawn_queue.is_empty() and GameState.spawn_queue[0]["at"] <= GameState.sim_time:
 		combat.spawn_enemy(GameState.spawn_queue.pop_front())
 	if Overload.tick():
 		overload_finished.emit(GameState.overload_unit)
@@ -157,6 +160,9 @@ func tick(dt: float) -> void:
 	if profiling:
 		t = _prof("balistes", t)
 	combat.update_enemies(dt, alive)
+	if not GameState.placed.is_empty():
+		Placeables.tick(self, dt)
+	Martyre.enforce(self)
 	if profiling:
 		t = _prof("ennemis", t)
 	combat.finish_tick(dt, alive)
@@ -991,6 +997,23 @@ func site_visible(type: String, center: Vector2) -> bool:
 	return true
 
 
+## Mode pose : l'objet `item` (défense de l'Atelier) suivra le prochain clic gauche.
+func arm_place(item: String) -> void:
+	GameState.hud_place_item = item
+	GameState.hud_mode = "place"
+
+
+## Clic en mode pose : l'objet est posé sur la case visée et retiré du stock. Le mode reste armé tant qu'il
+## en reste (barricades à la chaîne), clic droit ou Échap pour sortir.
+func place_item(p: Vector2) -> void:
+	var item := GameState.hud_place_item
+	if GameState.ended or builder() == null or item.is_empty() or GameState.hud_mode != "place":
+		return
+	world.fog.refresh(state())
+	if Placeables.place(self, item, p) and ItemStorage.count(item) <= 0:
+		GameState.hud_mode = ""
+
+
 ## placeBuilding : clic en mode construction. Paie, crée le chantier et envoie l'Ingénieur sur son point.
 func place_building(p: Vector2) -> void:
 	var u := builder()
@@ -1101,24 +1124,19 @@ func order_staff(b: Building) -> bool:
 
 ## spawnTrained : le combattant sort devant la caserne.
 func spawn_trained(b: Building, id: String) -> void:
-	var squad_id := 1
-	for member: Unit in GameState.units:
-		squad_id = maxi(squad_id, member.squad + 1)
-	for i in range(4):
-		var u := spawn(Catalog.ADEPT[id]["name"], b.x + (i % 2 - 0.5) * 1.5,
-			b.z + b.half() + 1.0 + (i / 2) * 1.5, id, squad_id)
-		u.squad_capacity = 4
-		u.hp = Catalog.ADEPT[id]["hp"]
-		u.max_hp = u.hp
-		u.tx = u.x
-		u.tz = u.z + 3.0
-		clamp_world(u)
-		if b.rally_point != null:
-			u.tx = b.rally_point.x
-			u.tz = b.rally_point.y
-			u.force_move = true
+	var u := spawn(Catalog.ADEPT[id]["name"], b.x, b.z + b.half() + 1.0, id)
+	u.power = 4.0
+	u.hp = Catalog.ADEPT[id]["hp"] * 4.0
+	u.max_hp = u.hp
+	u.tx = u.x
+	u.tz = u.z + 3.0
+	clamp_world(u)
+	if b.rally_point != null:
+		u.tx = b.rally_point.x
+		u.tz = b.rally_point.y
+		u.force_move = true
 	GameState.menace += 4
-	say("Escouade de 4 · %s sort de la caserne." % Catalog.ADEPT[id]["name"], 2.0)
+	say("%s sort de la caserne." % Catalog.ADEPT[id]["name"], 2.0)
 
 
 ## onUnitDeath : une unité tombée (hors Ingénieur) rejoint les âmes que le Puits peut rappeler.

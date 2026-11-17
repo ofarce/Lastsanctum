@@ -7,7 +7,8 @@ func test_generation_bands_and_safe_start() -> void:
 		st.generate_galleries(map_seed)
 		var counts := [0, 0, 0, 0]
 		for key: Vector2i in st.block_types:
-			if st.block_types[key] == st.Blocks.WOOD:
+			# Bosquets et filons illimités au sol : couverts par test_wood et test_lodes.
+			if st.block_types[key] == st.Blocks.WOOD or st.lode_cells.has(key):
 				continue
 			var tier := st.Blocks.ORES.find(st.block_types[key])
 			counts[tier] += 1

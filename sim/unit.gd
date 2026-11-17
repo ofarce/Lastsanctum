@@ -12,6 +12,8 @@ var role := ""
 var squad := 0
 ## Escouades de caserne : effectif initial et ralliement depuis le Puits.
 var squad_capacity := 0
+## Unité de caserne unique : ×4 dégâts, ×4 armure (et ×4 PV à la sortie).
+var power := 1.0
 var rejoining := false
 var x := 0.0
 var z := 0.0

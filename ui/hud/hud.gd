@@ -40,6 +40,12 @@ var _notice := _Panel.new()
 var _notice_label := HudStyle.label(14, Color("#e8d2a7"))
 var _notice_end := 0.0
 var _restart := _RestartButton.new()
+## Munitions de la réserve globale (haut à droite) : flèches × quantité, carburant × ∞ (pas encore géré).
+var _ammo_panel := _Panel.new()
+var _ammo_arrow := _ItemGlyph.new()
+var _ammo_arrow_l := HudStyle.label(20, HudStyle.IVORY)
+var _ammo_fuel := TextureRect.new()
+var _ammo_fuel_l := HudStyle.label(20, HudStyle.IVORY)
 var _banner := _Panel.new()
 var _banner_title := HudStyle.label(25, HudStyle.IVORY)
 var _banner_small := HudStyle.label(15, Color("#b8c9bb"))
@@ -68,6 +74,10 @@ var _assault_label := HudStyle.label(13, Color("#e9c784"))
 var _assault_time := HudStyle.label(19, Color("#e9c784"))
 var _anchor_lore := HudStyle.label(12, Color("#ddcfaf"), HudStyle.italic())
 var _actions_box := Control.new()
+## Menu « Construire » : rangée de grands carrés au-dessus du bandeau, bulle « nom · coût » au survol.
+var _build_row := Control.new()
+var _build_buttons: Array[BuildButton] = []
+var _build_bubble := _Bubble.new()
 var _buttons: Array[ActionButton] = []
 var _sig := ""
 var _portrait_key := ""
@@ -189,6 +199,20 @@ func _build_top() -> void:
 		GameState.fast_construction = active
 		_fast_construction.text = "Construction rapide : ON" if active else "Construction rapide : OFF")
 	_root.add_child(_fast_construction)
+	_ammo_panel.name = "AmmoPanel"
+	_ammo_panel.kind = "metal"
+	_ammo_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_root.add_child(_ammo_panel)
+	_ammo_arrow.item = "arrows"
+	_ammo_arrow.tooltip_text = "Flèches (réserve globale) : une par tir d’archer"
+	_ammo_arrow.mouse_filter = Control.MOUSE_FILTER_PASS
+	_ammo_fuel.texture = HudStyle.icon("flame", 26)
+	_ammo_fuel.modulate = Color("#e69354")
+	_ammo_fuel.tooltip_text = "Carburant (réserve globale) : illimité pour le moment"
+	_ammo_fuel.mouse_filter = Control.MOUSE_FILTER_PASS
+	_ammo_fuel_l.text = "× ∞"
+	for n: Control in [_ammo_arrow, _ammo_arrow_l, _ammo_fuel, _ammo_fuel_l]:
+		_ammo_panel.add_child(n)
 
 
 func _add_resources() -> void:
@@ -277,6 +301,11 @@ func _build_bar() -> void:
 	# Panneau d'ordres.
 	_actions_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_modules[3].add_child(_actions_box)
+	_build_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_root.add_child(_build_row)
+	_build_bubble.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_build_bubble.visible = false
+	_root.add_child(_build_bubble)
 
 
 func _build_overlays() -> void:
@@ -359,10 +388,12 @@ func _layout() -> void:
 	_layout_selection(_modules[1].size)
 	_layout_details(_modules[2].size)
 	_layout_actions(_modules[3].size)
+	_layout_build_row()
 	objective.position = Vector2(TOP_INSET.x, TOP_INSET.y + 56.0 + 10.0)
 	_layout_debug()
 	_fast_construction.size = Vector2(230, 38)
-	_restart.position = Vector2(s.x - 16.0 - _restart.size.x, 80.0)
+	_layout_ammo(s)
+	_restart.position = Vector2(s.x - 16.0 - _restart.size.x, _ammo_panel.position.y + _ammo_panel.size.y + 10.0)
 	_layout_notice()
 	_layout_banner()
 
@@ -418,6 +449,25 @@ func _layout_top(s: Vector2) -> void:
 	var fit := minf(1.0, (right - left) / total)
 	_res_panel.scale = Vector2.ONE * fit
 	_res_panel.position.x = left + maxf(0.0, (right - left - total * fit) / 2.0)
+
+
+## Bandeau des munitions : aligné à droite, sous le bandeau des ressources.
+func _layout_ammo(s: Vector2) -> void:
+	var aw := HudStyle.text_width(_ammo_arrow_l.text, 20) + 4.0
+	var fw := HudStyle.text_width(_ammo_fuel_l.text, 20) + 4.0
+	var x := 18.0
+	_ammo_arrow.position = Vector2(x, 9.0)
+	_ammo_arrow.size = Vector2(30, 30)
+	_ammo_arrow_l.position = Vector2(x + 36.0, 9.0)
+	_ammo_arrow_l.size = Vector2(aw, 28.0)
+	x += 36.0 + aw + 24.0
+	_ammo_fuel.position = Vector2(x, 11.0)
+	_ammo_fuel.size = Vector2(26, 26)
+	_ammo_fuel_l.position = Vector2(x + 34.0, 9.0)
+	_ammo_fuel_l.size = Vector2(fw, 28.0)
+	_ammo_panel.size = Vector2(x + 34.0 + fw + 18.0, 48.0)
+	var bottom := TOP_INSET.y + 52.0 * _res_panel.scale.y + 8.0
+	_ammo_panel.position = Vector2(s.x - TOP_INSET.x - _ammo_panel.size.x, bottom)
 
 
 func _layout_map(m: Vector2) -> void:
@@ -517,6 +567,44 @@ func _layout_actions(m: Vector2) -> void:
 		b.size = Vector2(cw, rh)
 
 
+func _layout_build_row() -> void:
+	var gap := 8.0
+	var n := _build_buttons.size()
+	var w := n * BuildButton.SIZE + maxf(0.0, n - 1) * gap
+	_build_row.size = Vector2(w, BuildButton.SIZE)
+	_build_row.position = Vector2((_screen().x - w) / 2.0, _bar.position.y - 12.0 - BuildButton.SIZE)
+	for i in n:
+		_build_buttons[i].position = Vector2(i * (BuildButton.SIZE + gap), 0.0)
+
+
+## Bulle au-dessus du carré survolé (ou, à défaut, du bâtiment armé) : « Nom · 20 Savoir ».
+func _update_bubble() -> void:
+	var target: BuildButton = null
+	for b in _build_buttons:
+		if b.is_hovered():
+			target = b
+	if target == null:
+		for b in _build_buttons:
+			if b.action.get("active", false):
+				target = b
+	for b in _build_buttons:
+		b.queue_redraw()
+	if target == null:
+		_build_bubble.visible = false
+		return
+	var D: Dictionary = Catalog.BUILDINGS[target.action["build_type"]]
+	var why := ""
+	if target.action.get("locked", false):
+		why = "nécessite un " + Catalog.BUILDINGS[D["requires"]]["name"]
+	_build_bubble.set_text(D["name"], Catalog.cost_text(D["cost"]), Catalog.can_pay(D["cost"]), why)
+	var c := target.global_position + Vector2(BuildButton.SIZE / 2.0, 0.0)
+	var x := clampf(c.x - _build_bubble.size.x / 2.0, 8.0, _screen().x - 8.0 - _build_bubble.size.x)
+	_build_bubble.position = Vector2(x, c.y - 10.0 - _build_bubble.size.y)
+	_build_bubble.tip_x = c.x - x
+	_build_bubble.visible = true
+	_build_bubble.queue_redraw()
+
+
 func _layout_notice() -> void:
 	var s := _screen()
 	var maxw := s.x - 32.0
@@ -578,7 +666,23 @@ func refresh(force_map := false) -> void:
 		relayout = true
 		_apply_view(v)
 		_view = v
-	var actions := HudModel.panel_actions(sim)
+	var all_actions := HudModel.panel_actions(sim)
+	var actions: Array[Dictionary] = all_actions.filter(func(a: Dictionary) -> bool: return not a.has("build_type"))
+	var builds: Array[Dictionary] = all_actions.filter(func(a: Dictionary) -> bool: return a.has("build_type"))
+	if builds.size() != _build_buttons.size():
+		for b in _build_buttons:
+			b.queue_free()
+		_build_buttons.clear()
+		for a in builds:
+			var bb := BuildButton.new()
+			bb.mouse_entered.connect(_update_bubble)
+			bb.mouse_exited.connect(_update_bubble)
+			_build_row.add_child(bb)
+			_build_buttons.append(bb)
+		relayout = true
+	for i in builds.size():
+		_build_buttons[i].set_action(builds[i])
+	_update_bubble()
 	var sig := "|".join(actions.map(func(a: Dictionary) -> String: return a["id"]))
 	if sig != _sig:
 		_sig = sig
@@ -605,6 +709,10 @@ func _apply_view(v: Dictionary) -> void:
 	for k in Catalog.RES_ORDER:
 		_res_items[k]["value"].text = v["res"][k] + " (+ %s/s)" % HudModel.num_fr(v["resource_rates"][k])
 	_res_items["population"]["value"].text = v["population"]
+	var arrows := "× %d" % Catalog.ItemStorage.count_ammo("arrows")
+	if _ammo_arrow_l.text != arrows:
+		_ammo_arrow_l.text = arrows
+		_layout_ammo(_screen())
 	_res_items["menace"]["value"].text = v["menace"]
 	for part: String in ["icon", "name", "value"]:
 		var control: Control = _res_items["menace"][part]
@@ -906,3 +1014,40 @@ class _RestartButton extends BaseButton:
 		HudStyle.ring(self, kr, 1.0, Color("#8c744b"))
 		var kb := kr.position.y + (kr.size.y + f.get_ascent(10) - f.get_descent(10)) / 2.0
 		draw_string(f, Vector2(kr.position.x, kb), "⇧ R", HORIZONTAL_ALIGNMENT_CENTER, kr.size.x, 10, HudStyle.IVORY)
+
+
+## Bulle dorée du menu « Construire » : nom (ivoire) · coût (or, ou rouge si insuffisant) · prérequis.
+class _Bubble extends Control:
+	var tip_x := 0.0
+	var _parts: Array = []
+
+	func set_text(name: String, cost: String, ok: bool, why: String) -> void:
+		_parts = [[name, HudStyle.IVORY], ["  ·  ", HudStyle.MUTED], [cost, Color("#e8c35a") if ok else Color("#d36a52")]]
+		if why:
+			_parts += [["  ·  ", HudStyle.MUTED], [why, HudStyle.MUTED]]
+		var w := 0.0
+		for p in _parts:
+			w += HudStyle.text_width(p[0], 15)
+		size = Vector2(w + 28.0, 32.0)
+
+	func _draw() -> void:
+		var r := Rect2(Vector2.ZERO, size)
+		draw_rect(r, Color("#0d0f0bf2"))
+		HudStyle.ring(self, r, 1.0, Color("#e8c35a"))
+		var t := clampf(tip_x, 10.0, size.x - 10.0)
+		draw_colored_polygon(PackedVector2Array([Vector2(t - 7, size.y), Vector2(t + 7, size.y), Vector2(t, size.y + 7)]), Color("#e8c35a"))
+		draw_colored_polygon(PackedVector2Array([Vector2(t - 5.5, size.y - 1), Vector2(t + 5.5, size.y - 1), Vector2(t, size.y + 4.5)]), Color("#0d0f0b"))
+		var f := HudStyle.font()
+		var x := 14.0
+		for p in _parts:
+			draw_string(f, Vector2(x, 21.0), p[0], HORIZONTAL_ALIGNMENT_LEFT, -1, 15, p[1])
+			x += HudStyle.text_width(p[0], 15)
+
+
+## Icône d'objet de l'inventaire (bande items.png), dessinée au centre du contrôle.
+class _ItemGlyph extends Control:
+	const Icon := preload("res://ui/inventory/item_icon.gd")
+	var item := ""
+
+	func _draw() -> void:
+		Icon.draw_item(self, item, size * 0.5, size.x / 32.0)

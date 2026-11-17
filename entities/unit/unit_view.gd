@@ -229,7 +229,8 @@ func _update() -> void:
 		kick = 0
 	if enemy:
 		var age := t - (u as Enemy).attack_started
-		if age >= 0.0 and age < float(Catalog.ENEMY[u.role]["cd"]):
+		# Durée propre de l'animation si elle est plus courte que la recharge (Martyre de Byrsa).
+		if age >= 0.0 and age < float(_meta["attack"].get("duration", Catalog.ENEMY[u.role]["cd"])):
 			frame = _enemy_attack[mini(_enemy_attack.size() - 1, floori(age * float(_meta["attack"]["fps"])))]
 			ax = float(_meta["ax"])
 			ay = float(_meta["ay"])
@@ -309,7 +310,7 @@ func _update() -> void:
 	if under_key != _under_key:
 		_under_key = under_key
 		_under.queue_redraw()
-	var over_key := Vector4(u.hp, u.max_hp, Catalog.lvl(u) * 100 + u.squad, world.camera.px if world else 1)
+	var over_key := Vector4(u.hp, u.max_hp, Catalog.lvl(u) * 100 + u.squad + (100000 if preload("res://sim/placeables.gd").posted(u) else 0), world.camera.px if world else 1)
 	if over_key != _over_key:
 		_over_key = over_key
 		_over.queue_redraw()
@@ -400,6 +401,12 @@ class _UnitBar extends Node2D:
 			var text := "★%d" % lvl
 			_text(text, Vector2(1, 1), Color("#0b0a09cc"))
 			_text(text, Vector2.ZERO, Color("#ffe08a"))
+		# Bonus de poste de tir : pastille du créneau de rondins au-dessus de l'unité.
+		if preload("res://sim/placeables.gd").posted(u):
+			var at := Vector2(0, (-10.0 if lvl >= 2 or u.squad else -2.0) - 9.0)
+			draw_circle(at, 9.0, Color("#0b0a09b0"))
+			draw_arc(at, 9.0, 0.0, TAU, 20, Color("#ffe08a"), 1.0, true)
+			preload("res://ui/inventory/item_icon.gd").draw_item(self, "firing_post", at, 0.5)
 		draw_set_transform(Vector2.ZERO)
 
 	func _text(text: String, at: Vector2, c: Color) -> void:

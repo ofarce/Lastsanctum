@@ -11,7 +11,7 @@ const Blocks := preload("res://data/mineable_blocks.gd")
 const DIG_HITS: int = Blocks.TYPES["rock"]["resistance"]
 const HIT_TIME := 1.0
 ## Vitesse de l'Ingénieur : cases déblayées par seconde (ENGINEER_DIG) ; un piton d'ancrage par coup.
-const ENGINEER_DIG := 1.0
+const ENGINEER_DIG := 3.0
 ## Portée du lance-pitons de l'Ingénieur : au plus une case (4 unités) entre lui et la case visée.
 const DIG_REACH := 4.0
 
@@ -35,6 +35,13 @@ var permanent_ores := {}
 var wood_left := {}
 ## Chacune des 4 cases d'un bosquet → sa case d'origine.
 var grove_cells := {}
+## Filons illimités posés au sol (2 × 2 cases infranchissables, calqués sur les bosquets) : case d'origine
+## (haut gauche) → minerai. Ils ne s'épuisent jamais.
+var lodes := {}
+## Chacune des 4 cases d'un filon → sa case d'origine.
+var lode_cells := {}
+## Cases fermées par une barricade (sim/placeables.gd) → vrai : infranchissables, ne masquent pas la vue.
+var walls := {}
 ## Bosquet de la salle de départ (bas à droite) et clairières semées dans les galeries.
 const START_GROVE_AT := Vector2(46.0, -104.0)
 const GALLERY_GROVES := 6
@@ -44,6 +51,8 @@ var groves := true
 const VAULT_COPPER := Vector2i(16, -37)
 const ORE_BANDS := [Vector2(55, 85), Vector2(90, 125), Vector2(135, 175), Vector2(185, 260)]
 const VEIN_COUNTS := [16, 10, 6, 3]
+## Filons illimités au sol par palier (cuivre, fer, quartz, or) ; le quartz garde ses gisements en paroi.
+const LODE_COUNTS := [3, 2, 0, 1]
 var dig_hits := {}
 ## Instant (sim_time) du dernier piton tiré sur chaque case en cours : rendu des pitons plantés.
 var dig_hit_at := {}
@@ -87,12 +96,17 @@ func is_dug(x: float, z: float) -> bool:
 
 
 func walkable(x: float, z: float) -> bool:
-	return ground(x, z) and not grove_at(x, z)
+	return ground(x, z) and not grove_at(x, z) and not lode_at(x, z) and (walls.is_empty() or not walls.has(Vector2i(floori(x / 4.0), floori(z / 4.0))))
 
 
 ## Un bosquet pétrifié occupe ce point.
 func grove_at(x: float, z: float) -> bool:
 	return not grove_cells.is_empty() and grove_cells.has(Vector2i(floori(x / 4.0), floori(z / 4.0)))
+
+
+## Un filon illimité occupe ce point.
+func lode_at(x: float, z: float) -> bool:
+	return not lode_cells.is_empty() and lode_cells.has(Vector2i(floori(x / 4.0), floori(z / 4.0)))
 
 
 ## Sol découvert (salle, galerie, case creusée…), bosquets compris : ce que peignent le sol et le brouillard.
@@ -157,9 +171,12 @@ func reset_digging() -> void:
 	permanent_ores.clear()
 	wood_left.clear()
 	grove_cells.clear()
+	lodes.clear()
+	lode_cells.clear()
 	dig_hits.clear()
 	dig_hit_at.clear()
 	vault_open = false
+	walls.clear()
 	version += 1
 
 
@@ -197,6 +214,7 @@ func generate_galleries(new_seed: int) -> void:
 	_clearings.clear()
 	if groves:
 		_carve_clearings(Rng.new(new_seed ^ 0x5eed))
+		_carve_lode_clearings(Rng.new(new_seed ^ 0x10de))
 	_label_networks()
 	_generate_ores()
 
@@ -206,6 +224,8 @@ func _generate_ores() -> void:
 	permanent_ores.clear()
 	wood_left.clear()
 	grove_cells.clear()
+	lodes.clear()
+	lode_cells.clear()
 	var rng := RandomNumberGenerator.new()
 	rng.seed = seed
 	# Une paire de cellules adjacentes par filon. La marge protège toute la salle initiale.
@@ -236,13 +256,14 @@ func _generate_ores() -> void:
 			var item: String = Blocks.ORES[tier]
 			block_types[key] = item
 			block_types[key + Vector2i.RIGHT] = item
-			if n % 3 == 0:
+			if n % 3 == 0 and LODE_COUNTS[tier] == 0:
 				permanent_ores[key] = true
 	# Le premier filon affleure juste après la paroi ouest, en terrain sans galerie.
 	block_types[Vector2i(-17, -39)] = "copper"
 	block_types[VAULT_COPPER] = "copper"
 	permanent_ores[VAULT_COPPER] = true
 	if groves:
+		_generate_lodes()
 		_generate_groves()
 
 
@@ -251,7 +272,7 @@ func _grove_fits(origin: Vector2i) -> bool:
 	for dj in range(-1, 3):
 		for di in range(-1, 3):
 			var key := origin + Vector2i(di, dj)
-			if block_types.has(key) or grove_cells.has(key):
+			if block_types.has(key) or grove_cells.has(key) or lode_cells.has(key):
 				return false
 			var x := key.x * 4.0
 			var z := key.y * 4.0
@@ -270,6 +291,61 @@ func _plant_grove(origin: Vector2i) -> void:
 		grove_cells[origin + o] = origin
 		block_types[origin + o] = Blocks.WOOD
 		permanent_ores[origin + o] = true
+
+
+func _plant_lode(origin: Vector2i, item: String) -> void:
+	lodes[origin] = item
+	for o: Vector2i in [Vector2i(0, 0), Vector2i(1, 0), Vector2i(0, 1), Vector2i(1, 1)]:
+		lode_cells[origin + o] = origin
+		block_types[origin + o] = item
+		permanent_ores[origin + o] = true
+
+
+## Un filon au cœur de chaque clairière de filon (emplacement déjà validé au creusement).
+func _generate_lodes() -> void:
+	for spot: Array in _lode_spots:
+		_plant_lode(spot[0], Blocks.ORES[spot[1]])
+
+
+## Clairières des filons : dans les galeries, à la distance du cœur propre à chaque palier de minerai.
+func _carve_lode_clearings(r: Rng) -> void:
+	_lode_spots.clear()
+	# _grove_fits lit ces tables : celles de la carte précédente ne doivent pas gêner.
+	block_types.clear()
+	grove_cells.clear()
+	lode_cells.clear()
+	for tier in LODE_COUNTS.size():
+		var band: Vector2 = ORE_BANDS[tier]
+		var placed := 0
+		var tries := 0
+		while placed < LODE_COUNTS[tier] and tries < 6000:
+			tries += 1
+			var x := CaveShape.WORLD_X0 + 20.0 + r.next() * (GAL_W - 40)
+			var z := CaveShape.WORLD_Z0 + 20.0 + r.next() * (GAL_H - 40)
+			var d := Vector2(x, z).distance_to(CaveShape.CORE)
+			# Palier trop étroit pour les galeries de cette carte : on élargit après 3000 essais.
+			var slack := -6.0 if tries < 3000 else 24.0
+			if d < band.x - slack or d > band.y + slack:
+				continue
+			if not is_gallery(x, z) or not gallery_allowed(x, z) or z > CaveShape.mountain_edge(x) - 24.0:
+				continue
+			var p := Vector2(x, z)
+			# Loin de la réserve scellée du coffre antique : la clairière ne doit pas l'ouvrir.
+			if p.distance_to(Vector2((CaveShape.VAULT_X0 + CaveShape.VAULT_X1) / 2.0, (CaveShape.VAULT_Z0 + CaveShape.VAULT_Z1) / 2.0)) < 30.0:
+				continue
+			if _clearings.any(func(c: Vector2) -> bool: return c.distance_to(p) < 32.0) \
+					or _lode_spots.any(func(s: Array) -> bool: return Vector2((s[0] as Vector2i) * 4).distance_to(p) < 32.0):
+				continue
+			_stamp(x, z, CLEARING_RADIUS)
+			var center := Vector2i(floori(x / 4.0) - 1, floori(z / 4.0) - 1)
+			for o: Vector2i in [Vector2i.ZERO, Vector2i(1, 0), Vector2i(0, 1), Vector2i(-1, 0), Vector2i(0, -1), Vector2i(1, 1), Vector2i(-1, -1)]:
+				if _grove_fits(center + o) and not _lode_spots.any(func(s: Array) -> bool: return (s[0] as Vector2i).distance_to(center + o) < 4.0):
+					_lode_spots.append([center + o, tier])
+					placed += 1
+					break
+
+
+var _lode_spots: Array = []
 
 
 ## Abat le bosquet : ses cases redeviennent du sol libre.

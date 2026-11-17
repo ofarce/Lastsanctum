@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Export des défenses</title>
+<style>body{margin:0;padding:16px;background:#0b120e;color:#dcd8bc;font:14px/1.4 system-ui,sans-serif}
+canvas{image-rendering:pixelated;display:block;background:repeating-conic-gradient(#1a2a1d 0 25%,#142018 0 50%) 0 0/16px 16px}
+.row{display:flex;gap:16px;flex-wrap:wrap;align-items:flex-end;margin-top:12px}figure{margin:0}figcaption{color:#93a08a;font-size:12px}</style></head><body>
+<h1 style="font-size:18px;margin:0">Export des défenses de l’Atelier</h1>
+<p>Poste de tir (Créneau de rondins), barricade (Muret hérissé), chausse-trappe (Planches hérissées) : sprite 320 × 240, ancre (160, 168) au centre de la case, échelle native (<code>scale: 1</code>, une case = 32 px), une image, plus un portrait 128 × 128. Avec <code>?save=1</code> servi par <code>tools/defenses/serve.py</code>, les fichiers sont écrits dans <code>assets/baked/</code>.</p>
+<p id="log"></p><div id="out"></div>
+<script src="assets/defenses-planches.js?v=4"></script>
+<script>
+'use strict';
+(async()=>{const save=new URLSearchParams(location.search).has('save'),log=document.querySelector('#log'),done=[];
+ for(const id of ['firing_post','barricade','caltrops']){const r=DEF.exportSprite(id),row=document.createElement('div');row.className='row';
+  const fig=(c,cap,z)=>{const f=document.createElement('figure');c.style.width=c.width*z+'px';f.append(c);const fc=document.createElement('figcaption');fc.textContent=cap;f.append(fc);row.append(f)};
+  fig(r.base,`${id} · ${r.pick} · haut ${r.meta.top}, bas ${r.meta.bottom}`,1.5);fig(r.portrait,'portrait',1.5);document.querySelector('#out').append(row);
+  if(save){const post=(n,b)=>fetch('/out/'+n,{method:'POST',body:b}).then(x=>{if(!x.ok)throw new Error(n+' '+x.status)});const png=r.base.toDataURL('image/png');
+   await post(`da-${id}_anim.png`,png);await post(`da-${id}_base.png`,png);await post(`bld-${id}.png`,r.portrait.toDataURL('image/png'));await post(`meta-${id}.json`,JSON.stringify(r.meta));done.push(id)}}
+ log.textContent=save?`Écrit : ${done.join(', ')}`:'Aperçu seulement (ajouter ?save=1 avec tools/defenses/serve.py pour écrire).';document.body.dataset.done='1'})().catch(e=>{document.querySelector('#log').textContent='Erreur : '+e.message;throw e});
+</script></body></html>

@@ -93,6 +93,8 @@ func _input(event: InputEvent) -> void:
 					close()
 				else:
 					_drag_slot = slot_at(p)
+					if _slot_content(_drag_slot).is_empty():
+						_drag_slot = {}
 			else:
 				var target := slot_at(p)
 				if not _drag_slot.is_empty() and not target.is_empty():
@@ -202,7 +204,54 @@ func _draw() -> void:
 		_slot(rect, filled)
 		if filled:
 			_draw_item(rect, u.inventory[i])
+	_draw_drag()
 	draw_set_transform(Vector2.ZERO)
+
+
+## Contenu d'une case : {"item", "quantity"} ou {} si vide.
+func _slot_content(slot: Dictionary) -> Dictionary:
+	if slot.has("box"):
+		var box := _box()
+		return box[slot["box"]] if slot["box"] < box.size() else {}
+	if slot.has("equip"):
+		var u := _owner if _owner else engineer()
+		var worn: String = u.equipment.get(slot["equip"], "") if u else ""
+		return {} if worn.is_empty() else {"item": worn, "quantity": 1}
+	if slot.has("items"):
+		var items: Array = slot["items"]
+		return items[slot["index"]] if slot["index"] < items.size() else {}
+	return {}
+
+
+func _slot_rect(slot: Dictionary) -> Rect2:
+	if slot.has("box"):
+		return _box_rect(slot["box"])
+	if slot.has("equip"):
+		return equip_rect(SLOTS.find(slot["equip"]))
+	if slot.has("items"):
+		var i: int = slot["index"]
+		if slot["capacity"] == 100:
+			return Rect2(40 + (i % 10) * 56, 108 + (i / 10) * 54, 51, 49)
+		return Rect2(268 + i * 65, 727, 58, 58)
+	return Rect2()
+
+
+## Objet en cours de glisser-déposer : case d'origine estompée, cible surlignée, icône sous le curseur.
+func _draw_drag() -> void:
+	if _drag_slot.is_empty():
+		return
+	var stack := _slot_content(_drag_slot)
+	if stack.is_empty():
+		_drag_slot = {}
+		return
+	draw_rect(_slot_rect(_drag_slot), Color("#02080dc0"))
+	var p := (get_local_mouse_position() - _origin) / _scale
+	var target := slot_at(p)
+	if not target.is_empty() and target != _drag_slot:
+		draw_rect(_slot_rect(target).grow(2), Color.WHITE, false, 2)
+	ItemIcon.draw_item(self, stack["item"], p, 1.8)
+	if stack["quantity"] > 1:
+		_text(p + Vector2(14, 26), str(stack["quantity"]), CYAN, 12)
 
 
 func _draw_base() -> void:

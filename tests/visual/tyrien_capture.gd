@@ -7,6 +7,11 @@ extends Node
 const MAIN := preload("res://main/main.tscn")
 const OUT := "res://tests/visual/out/tyrien/"
 const SETS := [
+	{"Torse": "copper_armor", "Main gauche": "copper_shield", "Main droite": "copper_sword"},
+	{"Torse": "iron_armor", "Main gauche": "iron_shield", "Main droite": "iron_sword"},
+	{"Torse": "copper_armor", "Main droite": "copper_greatsword"},
+	{"Torse": "iron_armor", "Main droite": "iron_greatsword"},
+	{"Torse": "iron_armor", "Main droite": "cannon"},
 	{},
 	{"Torse": "gear_iron"},
 	{"Tête": "gear_helm", "Torse": "gear_iron", "Gants": "gear_gauntlets", "Bottes": "gear_greaves", "Main gauche": "gear_shield", "Main droite": "gear_blade"},

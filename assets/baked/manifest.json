@@ -1324,6 +1324,86 @@
      "exact": true,
      "seam_pixels": 0
     }
+   },
+   "da-warehouse": {
+    "anchor": [
+     160,
+     168
+    ],
+    "top": 96,
+    "bottom": 202,
+    "scale": 1,
+    "anim": {
+     "frame_w": 320,
+     "frame_h": 240,
+     "cols": 1,
+     "rows": 1,
+     "count": 1,
+     "seconds": 0.08333333333333333,
+     "fps": 12,
+     "exact": true,
+     "seam_pixels": 0
+    }
+   },
+   "da-firing_post": {
+    "anchor": [
+     160,
+     168
+    ],
+    "top": 148,
+    "bottom": 181,
+    "scale": 1,
+    "anim": {
+     "frame_w": 320,
+     "frame_h": 240,
+     "cols": 1,
+     "rows": 1,
+     "count": 1,
+     "seconds": 0.08333333333333333,
+     "fps": 12,
+     "exact": true,
+     "seam_pixels": 0
+    }
+   },
+   "da-barricade": {
+    "anchor": [
+     160,
+     168
+    ],
+    "top": 149,
+    "bottom": 173,
+    "scale": 1,
+    "anim": {
+     "frame_w": 320,
+     "frame_h": 240,
+     "cols": 1,
+     "rows": 1,
+     "count": 1,
+     "seconds": 0.08333333333333333,
+     "fps": 12,
+     "exact": true,
+     "seam_pixels": 0
+    }
+   },
+   "da-caltrops": {
+    "anchor": [
+     160,
+     168
+    ],
+    "top": 151,
+    "bottom": 181,
+    "scale": 1,
+    "anim": {
+     "frame_w": 320,
+     "frame_h": 240,
+     "cols": 1,
+     "rows": 1,
+     "count": 1,
+     "seconds": 0.08333333333333333,
+     "fps": 12,
+     "exact": true,
+     "seam_pixels": 0
+    }
    }
   },
   "constants": {

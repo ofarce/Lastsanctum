@@ -12,6 +12,7 @@ const SPRITE_SHADER := preload("res://shaders/world_sprite.gdshader")
 ## Minerai vu sur le flanc d'une case de roche (piste « Nodules affleurants », tools/minerais/minerais_v4.py) :
 ## 4 colonnes (cuivre, fer, quartz, or) × 2 lignes (filon, gisement inépuisable) de 32 × 49, comme face5_*.
 const ORE_FACES := preload("res://assets/ardoise/world/ore_faces.png")
+const ROCK_TOP := preload("res://assets/ardoise/world/tiles/rock.png")
 const OreBlocks := preload("res://data/mineable_blocks.gd")
 
 ## 0 fige le vent (captures de validation).
@@ -40,6 +41,9 @@ var simulation: Simulation
 var _unit_views := {}
 var _unit_meta := {}
 var _building_views := {}
+## Défenses posées (GameState.placed) → PlacedView, et aperçu de pose sous le pointeur.
+var _placed_views := {}
+var _place_preview: PlacedView
 ## Coffres de production et silhouette « poste vide » de chaque bâtiment servi (ProductionView).
 var _production_views := {}
 var _enemy_views := {}
@@ -62,6 +66,9 @@ var vault_hint: VaultHint
 var _snap := ShaderMaterial.new()
 var _sprites_mat := ShaderMaterial.new()
 var _special := {}
+## Dessus de roche posés au-dessus des parois : [Sprite2D, x, z de la paroi], et version du terrain vue.
+var _caps: Array = []
+var _caps_version := -1
 
 @onready var camera: WorldCamera = $Camera
 @onready var terrain: Terrain = $Terrain
@@ -92,6 +99,14 @@ func _ready() -> void:
 	soulwell_halo.world = self
 	add_child(soulwell_halo)
 	move_child(soulwell_halo, ysort.get_index())
+	# Bouclier de la Martyre de Byrsa : moitié arrière sous les sprites, moitié avant par-dessus.
+	for is_front: bool in [false, true]:
+		var dome := MartyreDome.new()
+		dome.name = "MartyreDomeFront" if is_front else "MartyreDome"
+		dome.world = self
+		dome.front = is_front
+		add_child(dome)
+		move_child(dome, ysort.get_index() + (1 if is_front else 0))
 	overlay = WorldOverlay.new()
 	overlay.name = "Overlay"
 	overlay.world = self
@@ -137,6 +152,8 @@ func reset_world(seed: int) -> void:
 		child.free()
 	_unit_views.clear()
 	_building_views.clear()
+	_placed_views.clear()
+	_place_preview = null
 	_production_views.clear()
 	_enemy_views.clear()
 	_turret_views.clear()
@@ -154,13 +171,18 @@ func reset_world(seed: int) -> void:
 	terrain_state.generate_galleries(seed)
 	fog.reset_exploration()
 	fog.refresh(terrain_state)
+	_update_caps()
 	_fog_material.set_shader_parameter("fog", fog.texture)
 	for origin: Vector2i in terrain_state.wood_left:
 		var grove := GroveView.new()
 		grove.setup(terrain_state, origin)
 		ysort.add_child(grove)
+	for origin: Vector2i in terrain_state.lodes:
+		var lode := LodeView.new()
+		lode.setup(terrain_state, origin)
+		ysort.add_child(lode)
 	for key: Vector2i in terrain_state.block_types:
-		if terrain_state.grove_cells.has(key):
+		if terrain_state.grove_cells.has(key) or terrain_state.lode_cells.has(key):
 			continue
 		var ore := preload("res://world/terrain/ore_view.gd").new()
 		ore.setup(terrain_state, key)
@@ -190,6 +212,7 @@ func _build_runtime_node(e: Dictionary) -> Node:
 ## La paroi est retirée avec la case quand on la creuse (TerrainOps.dig) ; le calque part avec elle.
 func _attach_ore_face(e: Dictionary, slot: Node2D) -> void:
 	var cell := Vector2i(floori(float(e["bx"]) / 4.0), floori(float(e["bz"]) / 4.0) - 1)
+	_attach_rock_cap(e, slot)
 	var column := OreBlocks.ORES.find(terrain_state.block_types.get(cell, ""))
 	if column < 0 or terrain_state.dug.has(cell) or slot.get_child_count() == 0:
 		return
@@ -205,6 +228,47 @@ func _attach_ore_face(e: Dictionary, slot: Node2D) -> void:
 	ore.offset = face.offset
 	ore.use_parent_material = true
 	face.add_child(ore)
+
+
+## Dessus texturé d'une roche d'une seule case de profondeur : la paroi (49 px) cache toute
+## l'emprise de la case au sol ; sans roche derrière, on verrait le sol de la galerie au-dessus.
+func _attach_rock_cap(e: Dictionary, slot: Node2D) -> void:
+	var face := slot.get_child(0) as Sprite2D if slot.get_child_count() > 0 else null
+	if face == null:
+		return
+	var bx := float(e["bx"])
+	var bz := float(e["bz"])
+	var cap := Sprite2D.new()
+	cap.name = "RockCap"
+	cap.texture = ROCK_TOP
+	cap.texture_repeat = CanvasItem.TEXTURE_REPEAT_ENABLED
+	cap.region_enabled = true
+	var gx := posmod(int(bx * 8.0) + terrain.origin.x, ROCK_TOP.get_width())
+	var gy := posmod(int((floorf(bz / 4.0) * 4.0 - 4.0) * 8.0) + terrain.origin.y, ROCK_TOP.get_height())
+	cap.region_rect = Rect2(gx, gy, 32, 32)
+	cap.centered = false
+	cap.offset = face.offset + Vector2(0, -32)
+	cap.use_parent_material = true
+	cap.show_behind_parent = true
+	face.add_child(cap)
+	_caps.append([cap, bx, bz])
+	_caps_version = -1
+
+
+## Le dessus n'est montré que si la case au nord de la roche est creuse (roche isolée).
+func _update_caps() -> void:
+	if _caps_version == terrain_state.version:
+		return
+	_caps_version = terrain_state.version
+	var keep: Array = []
+	for c: Array in _caps:
+		var cap: Sprite2D = c[0]
+		if not is_instance_valid(cap):
+			continue
+		var top := floorf(float(c[2]) / 4.0) * 4.0 - 4.0
+		cap.visible = terrain_state.ground(float(c[1]) + 2.0, top - 2.0)
+		keep.append(c)
+	_caps = keep
 
 
 ## Ajoute aux emplacements spéciaux leur rendu de l'étape 4 : arcs de l'orbe, portails, effets divins.
@@ -301,6 +365,7 @@ func _process(_delta: float) -> void:
 		GameState.hud_enemy = null
 	_sync_units()
 	_sync_buildings()
+	_sync_placed()
 	_sync_enemies()
 	_sync_turrets()
 	_update_dynamic()
@@ -337,6 +402,35 @@ func _sync_units() -> void:
 			if is_instance_valid(v):
 				v.queue_free()
 			_unit_views.erase(u)
+
+
+## Crée ou retire les nœuds des défenses posées (sim/placeables.gd) ; aperçu de pose en mode « place ».
+func _sync_placed() -> void:
+	if _place_preview == null and GameState.hud_mode == "place":
+		_place_preview = PlacedView.new()
+		_place_preview.name = "PlacePreview"
+		_place_preview.ghost = true
+		_place_preview.world = self
+		ysort.add_child(_place_preview)
+	if GameState.placed.is_empty() and _placed_views.is_empty():
+		return
+	var live := {}
+	# Clé : objet et case (un dictionnaire changeant ne peut pas servir de clé).
+	for o: Dictionary in GameState.placed:
+		var key := "%s@%d,%d" % [o["item"], o["cell"].x, o["cell"].y]
+		live[key] = true
+		if not _placed_views.has(key):
+			var v := PlacedView.new()
+			v.name = "Placed_%s_%d_%d" % [o["item"], o["cell"].x, o["cell"].y]
+			v.setup(o)
+			ysort.add_child(v)
+			_placed_views[key] = v
+	for key: String in _placed_views.keys():
+		if not live.has(key):
+			var v: Node = _placed_views[key]
+			if is_instance_valid(v):
+				v.queue_free()
+			_placed_views.erase(key)
 
 
 ## Crée ou retire les nœuds des bâtiments pour suivre GameState.buildings.
@@ -440,6 +534,8 @@ func building_view(b: Building) -> BuildingView:
 func _grove_lights() -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	for origin: Vector2i in terrain_state.wood_left:
+		out.append({"x": origin.x * 4.0 + 4.0, "z": origin.y * 4.0 + 4.0, "r": 10.0, "rgb": Color8(255, 241, 210), "glow": 0.12})
+	for origin: Vector2i in terrain_state.lodes:
 		out.append({"x": origin.x * 4.0 + 4.0, "z": origin.y * 4.0 + 4.0, "r": 10.0, "rgb": Color8(255, 241, 210), "glow": 0.12})
 	return out
 

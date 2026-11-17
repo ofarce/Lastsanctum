@@ -15,7 +15,11 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 PLANCHES = ROOT / "planches"
 PORT = 8159
-TARGETS = {"bosquet.png": ROOT / "assets" / "ardoise" / "world" / "bosquet.png"}
+TARGETS = {
+    "bosquet.png": ROOT / "assets" / "ardoise" / "world" / "bosquet.png",
+    # filons-illimites.html?save=1 : cuivre, fer, or (3 × 96 × 104 px, même cadrage que le bosquet).
+    "filons.png": ROOT / "assets" / "ardoise" / "world" / "filons.png",
+}
 
 
 class Handler(http.server.SimpleHTTPRequestHandler):

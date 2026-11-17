@@ -32,7 +32,8 @@ func test_panel_actions_match_js() -> void:
 		Ctx.apply(sim, c, false)
 		# Creuset des Exilés : bâtiment ajouté après le prototype (fabrication). « Vider le coffre » : coffre rouge des
 		# bâtiments servis par des adeptes (2026-11-17).
-		var got := HudModel.panel_actions(sim).filter(func(a: Dictionary) -> bool: return not a["id"].begins_with("research-") and a["id"] != "offering" and a["id"] not in ["b-creuset", "b-warehouse"] and a["id"] != "collect")
+		# Poser (défenses de l’Atelier, sim/placeables.gd) : ordre ajouté après le prototype.
+		var got := HudModel.panel_actions(sim).filter(func(a: Dictionary) -> bool: return not a["id"].begins_with("research-") and a["id"] != "offering" and a["id"] not in ["b-creuset", "b-warehouse"] and a["id"] != "collect" and a["id"] != "menu-place")
 		var want: Array = results[k]["hud"]["actions"]
 		if got.size() != want.size():
 			check(false, "%s : %d actions au lieu de %d (%s)" % [c["name"], got.size(), want.size(), _ids(got)])
@@ -54,7 +55,7 @@ func test_panel_actions_match_js() -> void:
 					if f == "label":
 						expected = str(expected).replace(" · ", " ×4 · ")
 					elif f == "title":
-						expected = str(expected).replace("Entraîner un ", "Former une escouade de 4 · ")
+						expected = str(expected).replace("Entraîner un ", "Former un ")
 					# Fabrication : archers et Épée et bouclier demandent leurs objets, affichés avec le stock.
 					var role: String = got[i]["id"].substr(6)
 					var items: Dictionary = Simulation.Recipes.caserne_cost(role, 4)

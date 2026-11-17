@@ -46,3 +46,27 @@ func test_steer_goes_straight_when_clear() -> void:
 	var next := pf.steer(Vector2(0, -130), goal, memo)
 	check(next != goal and state.walkable(next.x, next.y), "contournement par un point praticable : %s" % next)
 	check(absf(next.x) < CaveShape.CAVE_GATE + 2.0, "le premier point vise le couloir : %s" % next)
+
+
+## Réserve du coffre ouverte : l'entrée (couloir creusé d'une case, raccord en biais avec la paroi est de
+## la salle) a des coins de roche où la ligne droite passe entre deux échantillons et où le glissement axe
+## par axe de Simulation.move se coinçait (vers (57, −143,5)). Aller et retour depuis plusieurs points.
+func test_reaches_chest_reserve() -> void:
+	var sim: Simulation = preload("res://tests/econ_case.gd").new().game()
+	sim.world.dig_cell(14, -37)
+	sim.world.dig_cell(15, -37)
+	check(sim.state().vault_open, "réserve ouverte")
+	var u: Unit = GameState.units[0]
+	var dt := 1.0 / 60.0
+	for start: Vector2 in [Vector2(24, -104), Vector2(50, -120), Vector2(58, -135), Vector2(4, -99), Vector2(-32, -99)]:
+		for leg in 2:
+			var from := start if leg == 0 else CaveShape.CHEST_SPOT
+			var to := CaveShape.CHEST_SPOT if leg == 0 else start
+			u.x = from.x
+			u.z = from.y
+			u.memo = {}
+			var t := 0.0
+			while u.pos().distance_to(to) > 0.5 and t < 20.0:
+				sim.move(u, sim.steer(u, to), dt)
+				t += dt
+			check(t < 20.0, "%s → %s en moins de 20 s (arrêt en %s)" % [from, to, u.pos()])

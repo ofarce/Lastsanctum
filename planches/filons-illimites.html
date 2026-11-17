@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Filons illimités</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0b0d10;--panel:#12151a;--line:#2a2f38;--txt:#dcd8cc;--mut:#939aa4;--acc:#e0a860}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--txt);font:15px/1.45 'Pixelify Sans',system-ui,sans-serif}
+header,main{max-width:1400px;margin:auto;padding:18px 16px}h1{margin:0;font-weight:600;letter-spacing:.08em;font-size:26px;color:var(--acc)}
+header p{color:var(--mut);margin:6px 0 0;max-width:980px}
+button{font:inherit;color:var(--txt);background:#1a1e26;border:1px solid var(--line);padding:6px 12px;cursor:pointer}button:hover{border-color:var(--acc)}
+label{color:var(--mut);display:flex;gap:8px;align-items:center}
+.bar{display:flex;gap:14px;align-items:center;margin-top:12px;flex-wrap:wrap}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,560px),1fr));gap:16px}
+figure{margin:0;background:var(--panel);border:1px solid var(--line);min-width:0}
+.stage{position:relative;background:#050608;padding:8px}
+.stage canvas{image-rendering:pixelated;display:block;width:100%;height:auto;aspect-ratio:192/144}
+.tag{position:absolute;left:14px;top:12px;font-size:12px;padding:2px 8px;background:#0b0d10cc;border:1px solid var(--line);color:var(--mut)}
+.cap{padding:12px 14px 14px;border-top:1px solid var(--line)}
+.cap b{color:var(--acc);font-weight:600;font-size:17px}.cap p{margin:4px 0 0;color:var(--mut);font-size:14px}
+.cap dl{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;margin:8px 0 0;font-size:13px}.cap dt{color:var(--txt)}.cap dd{margin:0;color:var(--mut)}
+.x1{display:flex;gap:10px;align-items:flex-end;margin-top:8px}.x1 canvas{image-rendering:pixelated;background:#050608;border:1px solid var(--line)}
+.x1 span{font-size:11px;color:var(--mut)}
+</style></head><body>
+<header><h1>MINERAI · FILONS ILLIMITÉS</h1>
+<p>Calqués sur le bosquet : un affleurement de trois aiguilles de roche posé sur le sol de la grotte, sur une emprise de 2 × 2 cases (64 × 64 px), éclairé par le même rai tombant d’une fissure du plafond. Même moteur (calque de pixels, contour #0b090b, palette ardoise, rai par paliers tramés). Le filon ne s’épuise jamais : pas d’états d’usure, mais un éclat et des étincelles à chaque coup de pioche. Rendu à 8 px par unité, agrandi ×4 ; sous chaque scène, le filon à ×1.</p>
+<div class="bar"><button id="pause">Pause</button><button id="hit">Coup de pioche</button>
+<label><input id="foot" type="checkbox" checked> Emprise 2 × 2</label>
+<label><input id="auto" type="checkbox" checked> Minage continu</label></div></header>
+<main><div class="grid" id="grid"></div></main>
+<script>
+'use strict';
+const W=192,H=144,SC=4;
+const BAYER=[[0,8,2,10],[12,4,14,6],[3,11,1,9],[15,7,13,5]].map(r=>r.map(v=>(v+.5)/16));
+const bay=(x,y)=>BAYER[(y%4+4)%4][(x%4+4)%4];
+function hash(x,y,s){let h=(x*374761393+y*668265263+s*1442695041)|0;h=(h^(h>>>13))*1274126177|0;return((h^(h>>>16))>>>0)/4294967296}
+function vn(x,y,s){const xi=Math.floor(x),yi=Math.floor(y),xf=x-xi,yf=y-yi,u=xf*xf*(3-2*xf),v=yf*yf*(3-2*yf);
+ const a=hash(xi,yi,s),b=hash(xi+1,yi,s),c=hash(xi,yi+1,s),d=hash(xi+1,yi+1,s);return a+(b-a)*u+(c-a)*v+(a-b-c+d)*u*v}
+const lerp=(a,b,t)=>a+(b-a)*t,cl=(v,a,b)=>Math.max(a,Math.min(b,v));
+const hexC={};const rgb=c=>hexC[c]||(hexC[c]=[1,3,5].map(i=>parseInt(c.substr(i,2),16)));
+function rng(seed){return()=>{seed=(1664525*seed+1013904223)>>>0;return seed/4294967296}}
+
+// Palettes (charte : ardoise #272d37/#333a46/#404955, contour #0b090b, quartz laiteux, vert Medeina)
+const SL=['#0f1217','#161a21','#1d222a','#232933','#2a313c','#333a46','#404955','#4f5866','#626b79','#7a8290','#969ca6'];
+const WD=['#1a1612','#272019','#372d23','#4a3e30','#61523f','#7a6a53','#958469','#b2a184','#cdbfa2','#e6dcc4'];
+const QZ=['#8a877e','#b4b0a4','#d6d2c6','#f0ece2','#ffffff'];
+const MS=['#1b2c1e','#24402a','#2f5634','#3f6e3e','#55884c','#72a35e'];
+const LF=['#1f6420','#3fa83a','#7ae070','#c8f5b0'];
+const OUT='#0b090b',BEAM='#fff1d2';
+
+// Rai de lumière : de la fissure (haut droite) vers le centre de l'emprise.
+const FOOT={x:64,y:72,w:64,h:64},POOL={x:96,y:106,rx:46,ry:24};
+const beamC=y=>lerp(128,96,cl(y/POOL.y,0,1)),beamHW=y=>lerp(9,40,cl(y/POOL.y,0,1));
+function beamBand(x,y,pulse){ // 0..3
+ if(y>POOL.y+POOL.ry)return 0;
+ let d=Math.abs(x-beamC(y))/beamHW(y);
+ if(y>POOL.y-6){const e=Math.hypot((x-POOL.x)/POOL.rx,(y-POOL.y)/POOL.ry);d=Math.min(d,e)}
+ const v=(1-d)*3.1+pulse;return cl(Math.floor(v+bay(x,y)-.5),0,3)}
+
+// Calque : chaque pixel = [palette, indice] (le rai éclaircit l'indice) ou contour.
+class Layer{constructor(){this.p=new Array(W*H).fill(null);this.z=new Float32Array(W*H).fill(-1e9)}
+ set(x,y,pal,i,z=y){x=Math.round(x);y=Math.round(y);if(x<0||y<0||x>=W||y>=H)return;const k=y*W+x;if(z<this.z[k])return;this.z[k]=z;this.p[k]=[pal,cl(Math.round(i),0,pal.length-1)]}
+ has(x,y){return x>=0&&y>=0&&x<W&&y<H&&this.p[y*W+x]!==null}
+ outline(){const add=[];for(let y=0;y<H;y++)for(let x=0;x<W;x++){if(this.p[y*W+x])continue;
+  if(this.has(x-1,y)||this.has(x+1,y)||this.has(x,y-1)||this.has(x,y+1))add.push(y*W+x)}
+  for(const k of add)this.p[k]=[null,0]}}
+
+
+// ---------- palettes des métaux ----------
+const CU=['#3a1a10','#6b3018','#a2502a','#d47a42','#f2a868','#ffd6a4'];
+const VG=['#143430','#1e5248','#2e7a66','#4fa88a','#8ad6b6'];           // vert-de-gris
+const FE=['#1a1d22','#30363e','#4c5661','#6f7c88','#9eaab4','#d4dce2'];
+const RU=['#3a1a12','#5e2a18','#8a4224','#b4643a'];                     // rouille
+const AU=['#3a2808','#6e4e12','#a8801e','#dcb43a','#f6dc78','#fff6c8'];
+const QR=['#6a6e72','#9a9ea2','#cfd2d0','#f2f2ec'];                     // gangue de quartz (or)
+
+// ---------- primitives ----------
+function disc(L,cx,cy,r,pal,i,z){for(let y=Math.floor(cy-r);y<=cy+r;y++)for(let x=Math.floor(cx-r);x<=cx+r;x++)if((x-cx)**2+(y-cy)**2<=r*r+.3)L.set(x,y,pal,i+((x-cx)>0?1:0)-((y-cy)>r*.4?1:0),z??cy)}
+// Aiguille de roche : base (bx,by), largeur w, hauteur h, dévers lean. Profil en dents (facettes),
+// ombre à gauche, lumière à droite (côté rai), arête sommitale éclaircie. Renvoie les pixels de surface.
+function crag(L,bx,by,w,h,lean,sd,pal=SL){const surf=[];
+ for(let xx=0;xx<w;xx++){const t=xx/(w-1),u=Math.abs(t-.5)*2;
+  const top=h*(1-u*u*.85)*(.82+vn(xx/3,sd,sd)*.36)-(hash(xx>>1,sd,4)<.3?2:0);
+  for(let yy=0;yy<top;yy++){const f=yy/top,x=Math.round(bx-w/2+xx+lean*f),y=by-yy;
+   const facet=hash(Math.floor((xx+yy*.6)/4),Math.floor(yy/5),sd)<.35?-1:0;
+   let i=5+t*3.6+facet-(f<.1?1:0)+(yy>top-2?1.4:0);
+   L.set(x,y,pal,i,by+.01);if(yy>top-3)surf.push([x,y,t])}}
+ // éboulis au pied
+ const r=rng(sd);for(let k=0;k<4;k++){const x=bx+(r()-.5)*w*1.3,y=by+r()*2;disc(L,x,y,.8+r()*1.2,pal,6+r()*2,y)}
+ return surf}
+// Veine : marche aléatoire montante dans la roche.
+function vein(L,x,y,len,pal,sd,base=2){let vx=x;for(let k=0;k<len;k++){vx+=hash(k,sd,1)<.35?(hash(sd,k,2)<.5?-1:1):0;
+ const p=L.p[Math.round(y-k)*W+Math.round(vx)];if(p&&p[0]===SL){L.set(vx,y-k,pal,base+hash(k,sd,3)*2,y+.05);if(hash(k,sd,5)<.3)L.set(vx+1,y-k,pal,base+1,y+.05)}}}
+// Pépite / cristal en saillie, éclairé en haut à droite.
+function nugget(L,cx,cy,r,pal,z){for(let y=Math.floor(cy-r);y<=cy+r;y++)for(let x=Math.floor(cx-r);x<=cx+r;x++){const dx=x-cx,dy=y-cy;
+ if(Math.abs(dx)+Math.abs(dy)*1.1>r+.3)continue;L.set(x,y,pal,2+(dx>0?1:0)+(dy<0?1:0)+(dx>0&&dy<0&&Math.abs(dx)+Math.abs(dy)<r*.6?1:0),z)}}
+function prism(L,x,y,h,pal,lean,z){for(let k=0;k<h;k++){const cx=x+lean*k/h;L.set(cx,y-k,pal,1+(k>h-3?2:1),z);L.set(cx+1,y-k,pal,3+(k>h-3?1:0),z)}L.set(x+lean+.5,y-h,pal,pal.length-1,z)}
+
+const CRAGS=[[82,122,22,30,-3,21],[104,126,20,24,3,22],[110,108,24,40,2,23]];
+function drawBase(L,sd){const sh=[],surf=[];
+ for(const[x,y,w,h,ln,s]of CRAGS){surf.push(...crag(L,x,y,w,h,ln,s+sd).map(p=>[...p,y]));sh.push([x-3,y,w*.6,3])}
+ return{sh,surf}}
+
+const PROPS=[
+{name:'Cuivre',key:'copper',lore:'Roche ardoise fendue de veines cuivrées ; des rognons de cuivre natif percent les arêtes, et le vert-de-gris coule dans les creux à l’ombre.',
+ dl:[['Métal','cuivre natif orange, rognons arrondis'],['Accent','coulures vert-de-gris côté ombre'],['Lumière','rognons qui s’embrasent dans le rai']],
+ spark:'#ffb070',glintPal:CU,
+ draw(L){const{sh,surf}=drawBase(L,0);const r=rng(301);
+  for(const[x,y,w,h]of CRAGS)for(let v=0;v<3;v++)vein(L,x-w/3+v*w/3,y-2,h*.7,CU,v+x,2);
+  for(let k=0;k<7;k++){const p=surf[Math.floor(r()*surf.length)];nugget(L,p[0],p[1]+1,1.8+r()*1.4,CU,p[3]+20)}
+  for(let k=0;k<9;k++){const p=surf[Math.floor(r()*surf.length)];if(p[2]<.45)vein(L,p[0],p[1]+6,4+r()*5,VG,k+40,1)}
+  return sh}},
+{name:'Fer',key:'iron',lore:'Bancs feuilletés d’hématite gris-bleu empilés dans la roche, avec des lames métalliques en saillie ; la rouille saigne au pied du filon.',
+ dl:[['Métal','strates gris acier, lames anguleuses'],['Accent','traînées de rouille au sol et dans les fentes'],['Lumière','reflets froids et nets sur les lames']],
+ spark:'#e8f0ff',glintPal:FE,
+ draw(L){const{sh,surf}=drawBase(L,7);const r=rng(302);
+  for(const[x,y,w,h]of CRAGS)for(let b=4;b<h-2;b+=5+Math.floor(hash(b,x,1)*3))for(let xx=-w/2;xx<w/2;xx++){const yy=y-b-Math.round(xx*.18);
+   const p=L.p[yy*W+Math.round(x+xx)];if(p&&p[0]===SL&&hash(xx,b,x)<.85){L.set(x+xx,yy,FE,2+(xx/w+.5)*2.5,y+.05);if(hash(b,xx,9)<.4)L.set(x+xx,yy-1,FE,1,y+.05)}}
+  for(let k=0;k<6;k++){const p=surf[Math.floor(r()*surf.length)];prism(L,p[0],p[1]+2,3+r()*4,FE,(r()-.5)*4,p[3]+20)}
+  for(let k=0;k<10;k++){const x=78+r()*40,y=120+r()*10;L.set(x,y,RU,1+r()*2.5,y-50);L.set(x+1,y,RU,1+r()*1.5,y-50)}
+  for(const[x,y,w]of CRAGS)vein(L,x-w/4,y,8,RU,x,0);
+  return sh}},
+{name:'Or',key:'gold',lore:'Le filon d’or court dans une gangue de quartz laiteux : pépites et paillettes serties dans le blanc, qui scintillent sans cesse dans le rai.',
+ dl:[['Métal','pépites jaune vif dans le quartz'],['Accent','gangue de quartz blanc, veines larges'],['Lumière','paillettes qui scintillent en continu']],
+ spark:'#fff2a0',glintPal:AU,twinkle:true,
+ draw(L){const{sh,surf}=drawBase(L,13);const r=rng(303);
+  for(const[x,y,w,h]of CRAGS){vein(L,x-2,y-1,h*.85,QR,x,1);vein(L,x+3,y-3,h*.6,QR,x+1,1);vein(L,x-w/3,y-2,h*.4,QR,x+2,1)}
+  for(let k=0;k<5;k++){const p=surf[Math.floor(r()*surf.length)];nugget(L,p[0],p[1]+2,1.6+r()*1.2,QR,p[3]+19)}
+  for(let k=0;k<26;k++){const x=78+Math.floor(r()*44),y=88+Math.floor(r()*38),q=L.p[y*W+x];if(q&&(q[0]===QR||(q[0]===SL&&r()<.3)))L.set(x,y,AU,2+r()*3,y+40)}
+  for(let k=0;k<4;k++){const p=surf[Math.floor(r()*surf.length)];nugget(L,p[0],p[1]+3,1.5+r(),AU,p[3]+21)}
+  return sh}},
+];
+// ---------- sol de grotte (ardoise) ----------
+function floor(){const f=new Array(W*H);for(let y=0;y<H;y++)for(let x=0;x<W;x++){
+ const n=vn(x/14,y/10,2)*.6+vn(x/5,y/4,3)*.4;let i=2.6+n*2.4;
+ // dalles fendues
+ const cx=vn(x/9,y/7,9);if(Math.abs(cx-.5)<.025)i-=1.4;
+ if(hash(x,y,5)<.03)i+=1;f[y*W+x]=i}
+ for(let k=0;k<40;k++){const x=Math.floor(hash(k,1,8)*W),y=Math.floor(hash(k,2,8)*H);f[y*W+x]+=2;if(x+1<W)f[y*W+x+1]+=1}
+ return f}
+const FLOOR=floor();
+
+
+// ---------- rendu ----------
+function build(p){const L=new Layer();const sh=p.draw(L);L.outline();return{L,sh}}
+function shadowAt(sh,x,y){for(const[sx,sy,rx,ry]of sh){const e=((x-sx+4)/rx)**2+((y-sy-1)/ry)**2;if(e<1)return e<.55?2:1}return 0}
+function render(ctx,img,p,st,t,showFoot,hitT){
+ const d=img.data,pulse=.35*Math.sin(t*1.3)+.15*Math.sin(t*3.1),flash=hitT<.12?1-hitT/.12:0;
+ for(let y=0;y<H;y++)for(let x=0;x<W;x++){const k=y*W+x,o=k*4;const b=beamBand(x,y,pulse);let col;
+  const px=st.L.p[k];
+  if(px){if(px[0]===null)col=OUT;else{let i=px[1]-1+(b>0?b*.55:0);const metal=px[0]!==SL;
+    if(metal&&b>0&&hash(x,y,Math.floor(t*(p.twinkle?7:3)))<(p.twinkle?.16:.06))i=px[0].length-1;
+    if(metal&&flash)i+=flash*2;
+    col=px[0][cl(Math.round(i),0,px[0].length-1)]}}
+  else{let i=FLOOR[k];const inPool=Math.hypot((x-POOL.x)/POOL.rx,(y-POOL.y)/POOL.ry);
+   if(inPool<1.2)i+=Math.max(0,Math.floor((1.2-inPool)*3+bay(x,y)-.5+pulse))*1.1;
+   i-=shadowAt(st.sh,x,y)*1.3;col=SL[cl(Math.round(i),0,SL.length-1)]}
+  let [r,g,bb]=rgb(col);
+  if(b>0&&y<POOL.y+4){const a=[0,.05,.1,.17][b]*(1+pulse*.4);const[br,bg,bbb]=rgb(BEAM);r=lerp(r,br,a);g=lerp(g,bg,a);bb=lerp(bb,bbb,a)}
+  const v=Math.hypot((x-96)/120,(y-90)/95);const dark=cl(1-(v-.55)*1.1,.35,1);
+  d[o]=r*dark;d[o+1]=g*dark;d[o+2]=bb*dark;d[o+3]=255}
+ // étincelles du coup de pioche : gerbe en arc depuis le point d'impact
+ if(hitT<.7){for(let k=0;k<14;k++){const a=-Math.PI*(.15+hash(k,1,p.key.length)*.7),sp=30+hash(k,2,9)*40,tt=hitT;
+  const x=Math.round(HIT.x+Math.cos(a)*sp*tt),y=Math.round(HIT.y+Math.sin(a)*sp*tt+60*tt*tt);
+  if(hash(k,3,9)<1-tt*1.2){put(d,x,y,p.spark);put(d,x-1,y+1,p.glintPal[3],.5)}}
+  for(let k=0;k<5;k++){const x=Math.round(HIT.x+(hash(k,4,9)-.5)*10),y=Math.round(HIT.y+hitT*30*hash(k,5,9));if(hitT<.5)put(d,x,y,p.glintPal[2])}}
+ for(let k=0;k<22;k++){const yy=(hash(k,3,70)*POOL.y+t*(4+hash(k,4,70)*5))%POOL.y,xx=beamC(yy)+(hash(k,5,70)*2-1)*beamHW(yy)*.75+Math.sin(t+k)*1.5;
+  if(Math.sin(t*2+k*1.7)>-.2)put(d,Math.round(xx),Math.round(yy),hash(k,6,70)<.4?'#ffffff':'#f2e4c0',.85)}
+ for(let x=114;x<142;x++){const y=Math.round(1+Math.sin(x*.7)*1.2);put(d,x,y,'#fff6e0',.9);put(d,x,y+1,'#cdbf9e',.5)}
+ if(showFoot){for(let x=FOOT.x;x<FOOT.x+FOOT.w;x++)for(const y of[FOOT.y,FOOT.y+FOOT.h-1])if((x>>1)%2)put(d,x,y,'#7ae070',.55);
+  for(let y=FOOT.y;y<FOOT.y+FOOT.h;y++)for(const x of[FOOT.x,FOOT.x+FOOT.w-1,FOOT.x+32])if((y>>1)%2)put(d,x,y,'#7ae070',x===FOOT.x+32?.25:.55);
+  for(let x=FOOT.x;x<FOOT.x+FOOT.w;x++)if((x>>1)%2)put(d,x,FOOT.y+32,'#7ae070',.25)}
+ ctx.putImageData(img,0,0)}
+function put(d,x,y,c,a=1){if(x<0||y<0||x>=W||y>=H)return;const o=(y*W+x)*4,[r,g,b]=rgb(c);d[o]=lerp(d[o],r,a);d[o+1]=lerp(d[o+1],g,a);d[o+2]=lerp(d[o+2],b,a)}
+const HIT={x:90,y:104};
+
+// ---------- page ----------
+const grid=document.getElementById('grid'),cards=[];let paused=false,showFoot=true,auto=true,hit0=-9,tNow=0;
+for(const p of PROPS){const f=document.createElement('figure');
+ f.innerHTML=`<div class="stage"><canvas width="${W}" height="${H}"></canvas><span class="tag">${p.name} · illimité</span></div>
+ <div class="cap"><b>${p.name}</b><p>${p.lore}</p><dl>${p.dl.map(([a,b])=>`<dt>${a}</dt><dd>${b}</dd>`).join('')}</dl>
+ <div class="x1"><canvas width="72" height="72"></canvas><span>×1 · emprise 64 × 64 px</span></div></div>`;
+ grid.appendChild(f);const[c,c1]=f.querySelectorAll('canvas');const ctx=c.getContext('2d');
+ cards.push({p,ctx,img:ctx.createImageData(W,H),c1,st:build(p)})}
+function frame(ts){const t=ts/1000;if(!paused){tNow=t;if(auto&&t-hit0>1.4)hit0=t;
+ for(const k of cards){render(k.ctx,k.img,k.p,k.st,t,showFoot,t-hit0);
+  const g=k.c1.getContext('2d');g.clearRect(0,0,72,72);g.drawImage(k.ctx.canvas,FOOT.x-4,FOOT.y-28,72,72,0,0,72,72)}}
+ requestAnimationFrame(frame)}
+document.getElementById('pause').onclick=e=>{paused=!paused;e.target.textContent=paused?'Lecture':'Pause'};
+document.getElementById('hit').onclick=()=>{hit0=tNow};
+document.getElementById('foot').onchange=e=>{showFoot=e.target.checked};
+document.getElementById('auto').onchange=e=>{auto=e.target.checked};
+requestAnimationFrame(frame);
+// Export vers le jeu (?save=1) : filons.png, 3 cadres 96 × 104 (cuivre, fer, or), même cadrage que bosquet.png.
+function exportLodes(){const X0=48,Y0=32,CW=96,CH=104,N=PROPS.length;const c=document.createElement('canvas');c.width=CW*N;c.height=CH;
+ const g=c.getContext('2d'),img=g.createImageData(CW*N,CH),d=img.data;
+ PROPS.forEach((p,n)=>{const st=build(p);
+  for(let y=0;y<CH;y++)for(let x=0;x<CW;x++){const sx=x+X0,sy=y+Y0,px=st.L.p[sy*W+sx],o=(y*CW*N+n*CW+x)*4;
+   if(px){const col=px[0]===null?OUT:px[0][cl(Math.round(px[1]-1+beamBand(sx,sy,0)*.55),0,px[0].length-1)];const[r,gg,bb]=rgb(col);d[o]=r;d[o+1]=gg;d[o+2]=bb;d[o+3]=255}
+   else{const sh=shadowAt(st.sh,sx,sy);if(sh)d[o+3]=sh===2?110:60}}});
+ g.putImageData(img,0,0);return c.toDataURL('image/png')}
+if(new URLSearchParams(location.search).has('save'))fetch('/out/filons.png',{method:'POST',body:exportLodes()}).then(r=>document.title=r.ok?'Export OK':'Export refusé');
+</script></body></html>

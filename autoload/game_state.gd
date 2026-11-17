@@ -52,6 +52,10 @@ var vault_hint_said := false
 var chest_opened_at: float = INF
 ## Une pile {item, quantity} par case, limitée à 9 999 objets.
 var base_inventory: Array[Dictionary] = []
+## Défenses de l'Atelier posées (sim/placeables.gd) : {item, cell: Vector2i, x, z, tick}.
+var placed: Array[Dictionary] = []
+## Objet à poser en mode « place » (HUD.mode), choisi dans le menu Poser de l'Ingénieur.
+var hud_place_item: String = ""
 ## Objets persistants au sol : {item: identifiant, position: Vector2(x, z)}.
 var ground_items: Array[Dictionary] = []
 
@@ -76,6 +80,14 @@ var spawn_queue: Array = []
 var enemies: Array = []
 ## Corps purement visuels : ne bloquent ni les assauts ni le ciblage.
 var enemy_corpses: Array[Enemy] = []
+## Premier boss, la Martyre de Byrsa (sim/martyre.gd) : "" pas encore venue, "waiting" bouclier levé,
+## "duel" Ingénieur sous le bouclier, "defeated" tombée. Centre du bouclier, apparition, chute, impact attendu.
+var martyre: Enemy = null
+var martyre_state := ""
+var martyre_center := Vector2.ZERO
+var martyre_at: float = INF
+var martyre_down_at: float = INF
+var martyre_hit_at: float = INF
 ## Bâtiments du sanctuaire (buildings) et unités tombées que le Puits des Âmes peut rappeler (FALLEN).
 var buildings: Array[Building] = []
 var fallen: Array[Unit] = []
@@ -123,6 +135,7 @@ func reset() -> void:
 	vault_hint_said = false
 	base_inventory.clear()
 	ground_items.clear()
+	placed.clear()
 	units.clear()
 	selected.clear()
 	next_uid = 0
@@ -130,11 +143,18 @@ func reset() -> void:
 	hud_mode = ""
 	hud_menu = ""
 	hud_build_type = ""
+	hud_place_item = ""
 	hud_building = null
 	hud_enemy = null
 	wave = 0
 	spawn_queue = []
 	enemies = []
+	martyre = null
+	martyre_state = ""
+	martyre_center = Vector2.ZERO
+	martyre_at = INF
+	martyre_down_at = INF
+	martyre_hit_at = INF
 	enemy_corpses.clear()
 	buildings.clear()
 	fallen.clear()

@@ -178,6 +178,7 @@ const PROPS=[
   cloakBack(P,this,st,p.ichor,{short:-2});
   horn(P,[[hx-4,hy-4],[hx-9,hy-14],[hx-17,hy-15],[hx-21,hy-9]],2.8,.8,p.horn);
   skirt(P,this,st,p.robe,{v:.55});
+  if(st.walk!=null)for(const k of[0,1]){const ph=st.walk*6.283+k*Math.PI;ell(P,65+k*10+Math.cos(ph)*2,FY-1+(Math.sin(ph)>0?-1:0),2.6,1.7,p.gold,{v:.5})}
   // taches d'ichor au bas de la robe
   for(let i=0;i<22;i++){const x=58+(i*7%27),y=FY-1-(i*5%7);P.set(x,y,p.ichor[1+(i%2)])}
   torso(P,this,st,p.gold,{v:.46,fold:0});
@@ -235,16 +236,39 @@ PROPS[0].pal={...PAL};PROPS[1].pal={...PAL};PROPS[2].pal={...PAL,skin:PAL.ash,ha
 
 /* ---------- rendu ---------- */
 const RGB={};const rgb=h=>RGB[h]||(RGB[h]=[1,3,5].map(i=>parseInt(h.slice(i,i+2),16)));
-function render(prop,t,a){const P=new Px(),lift=prop.float?prop.float+Math.sin(t*1.8)*1.5:0;
- const st={t,by:Math.round(Math.sin(t*2)*.6),sw:Math.sin(t*1.3),a,lift:Math.round(lift)};
+function render(prop,t,a,o={}){const P=new Px(),lift=prop.float?prop.float+Math.sin(t*1.8)*1.5:0;
+ const st={t,by:o.by??Math.round(Math.sin(t*2)*.6),sw:o.sw??Math.sin(t*1.3),a,lift:Math.round(lift),walk:o.walk??null};
  prop.draw(P,st);
+ const F=new Px();prop.fx&&prop.fx(F,st);
+ const c=raster(P,F);c.lift=lift;return c}
+function raster(P,F){
  const c=document.createElement('canvas');c.width=W;c.height=H;const g=c.getContext('2d'),im=g.createImageData(W,H),d=im.data;
  for(let y=0;y<H;y++)for(let x=0;x<W;x++){const i=y*W+x;let col=P.c[i];
   if(!col){const nb=[[1,0],[-1,0],[0,1],[0,-1]].some(([dx,dy])=>{const X=x+dx,Y=y+dy;return X>=0&&Y>=0&&X<W&&Y<H&&P.c[Y*W+X]&&!P.n[Y*W+X]});if(nb)col=OUT}
   if(col){const[r,gg,b]=rgb(col);d[i*4]=r;d[i*4+1]=gg;d[i*4+2]=b;d[i*4+3]=255}}
- const F=new Px();prop.fx&&prop.fx(F,st);
- for(let i=0;i<W*H;i++){const col=F.fx[i];if(!col)continue;const[r,gg,b]=rgb(col);d[i*4]=r;d[i*4+1]=gg;d[i*4+2]=b;d[i*4+3]=255}
- g.putImageData(im,0,0);c.lift=lift;return c}
+ if(F)for(let i=0;i<W*H;i++){const col=F.fx[i];if(!col)continue;const[r,gg,b]=rgb(col);d[i*4]=r;d[i*4+1]=gg;d[i*4+2]=b;d[i*4+3]=255}
+ g.putImageData(im,0,0);return c}
+/* ---------- Martyre de Byrsa : chute (jeu) ---------- */
+// d ∈ [0,1] : genoux qui cèdent (tassement), le corps se défait en braises, il reste l'armure, la robe et le bâton.
+function martyreHeap(P,k){const p=PAL;if(k<=0)return;
+ ell(P,70,FY-3,15*k+1,4*k+1,p.robe,{v:.55});for(let i=0;i<9;i++){const x=58+(i*7%25),y=FY-2-(i*3%4);P.set(x,y,p.ichor[1+(i%2)])}
+ ell(P,63,FY-5,4*k+.5,3*k+.5,p.gold,{v:.55});ell(P,77,FY-4,4*k+.5,2.6*k+.5,p.gold,{v:.5});ell(P,70,FY-6,5*k+.5,3*k+.5,p.gold,{v:.46});
+ P.set(70,FY-6,p.blood[4]);
+ seg(P,[50,FY-1],[96,FY-4],2.4,p.horn,{v:.5,edge:.1});ell(P,99,FY-5,4.5*k+.5,3.5*k+.5,p.gold,{v:.66});P.set(99,FY-5,p.blood[3]);
+ horn(P,[[57,FY-4],[54,FY-7],[50,FY-7],[48,FY-5]],2.2*k+.4,.7,p.horn,{bands:6})}
+function martyreDeath(d){const prop=PROPS.find(q=>q.id==='martyre');
+ const A=new Px();prop.draw(A,{t:0,by:0,sw:0,a:null,lift:0,walk:null});
+ const P=new Px(),F=new Px(),ease=x=>x*x*(3-2*x);
+ const fall=ease(cl(d/.45)),s=1-.42*fall,lean=fall*6,gone=cl((d-.3)/.45);
+ martyreHeap(P,ease(cl((d-.35)/.4)));
+ for(let y=0;y<H;y++)for(let x=0;x<W;x++){const sy=FY-(FY-y)/s,sx=x-lean*(FY-y)/(FY*.6);if(sy<0||sy>=H)continue;
+  const col=A.c[Math.round(sy)*W+Math.round(sx)];if(!col)continue;
+  // dissolution tramée, du haut vers le bas
+  const th=gone*1.25-(y/H)*.25;if(th>bay(x,y))continue;P.set(x,y,col,gone>0)}
+ const R=rng(97);for(let i=0;i<40;i++){const u=cl((d-.25-R()*.3)/.5);if(u<=0||u>=1)continue;const x=56+R()*28+Math.sin(u*6+i)*3,y=FY-10-R()*40*(1-fall*.5)-u*34;F.fxs(x,y,PAL.blood[u<.5?5:4],1-u)}
+ if(d>.3&&d<.6){const u=(d-.3)/.3;ring(F,70,FY-1,6+u*26,2+u*7,PAL.gold[4],(1-u)*.7)}
+ return raster(P,F)}
+
 // sol d'ardoise tyrienne
 function ground(w,h,seed){const c=document.createElement('canvas');c.width=w;c.height=h;const g=c.getContext('2d'),im=g.createImageData(w,h),d=im.data,S=PAL.slate;
  const n=(x,y)=>{const v=Math.sin(x*12.9898+y*78.233+seed)*43758.5453;return v-Math.floor(v)};
@@ -252,4 +276,4 @@ function ground(w,h,seed){const c=document.createElement('canvas');c.width=w;c.h
   let v=base+(n(x,y)-.5)*.18;if(edge)v-=.22;const f=cl(v)*(S.length-1),i=Math.floor(f),col=S[Math.min(S.length-1,f-i>bay(x,y)?i+1:i)],[r,gg,b]=rgb(col),k=(y*w+x)*4;d[k]=r;d[k+1]=gg;d[k+2]=b;d[k+3]=255}
  g.putImageData(im,0,0);return c}
 function shadow(g,cx,cy,rx,ry){for(let y=Math.floor(cy-ry);y<=cy+ry;y++)for(let x=Math.floor(cx-rx);x<=cx+rx;x++){const dx=(x+.5-cx)/rx,dy=(y+.5-cy)/ry,q=dx*dx+dy*dy;if(q<=1&&(q<.55||bay(x,y)>.5)){g.fillStyle='rgba(6,6,10,.55)';g.fillRect(x,y,1,1)}}}
-return{PROPS,PAL,render,ground,shadow,W,H,CX,FY}})();
+return{PROPS,PAL,render,martyreDeath,ground,shadow,W,H,CX,FY}})();

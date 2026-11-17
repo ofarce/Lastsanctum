@@ -5,9 +5,10 @@ extends "res://tests/fight_case.gd"
 
 ## Écarts voulus après 73b410f, le reste reste identique : D13, portées relevées (archer ×4) ; D15, lance-flammes
 ## à portée 12, tir continu, sans sillon de feu (statut réécrit).
-const D13 := {"flammes": {"seek": 18.0, "reach": 12.0, "status": "Garde l’Ancre · flammes en continu ; explose à sa mort"},
-	"archer": {"seek": 68.0, "reach": 56.0},
+const D13 := {"flammes": {"seek": 36.0, "reach": 24.0, "status": "Garde l’Ancre · flammes en continu ; explose à sa mort"},
+	"archer": {"seek": 136.0, "reach": 112.0},
 	"engineer": {"seek": 6.0, "reach": 1.9, "dmg": 5, "ranged": false, "status": "Prêt à recevoir vos ordres · corps à corps"}}
+const ItemStorage := preload("res://sim/item_storage.gd")
 
 
 func test_fight_table_matches_js() -> void:
@@ -45,6 +46,11 @@ func test_strikes_match_js() -> void:
 		if sc["role"] in ["flammes", "engineer"]:
 			continue  # D15 : tir continu sans sillon, vérifié par test_flamethrower.gd
 		var u := setup(sc["role"], int(sc["level"]))
+		if sc["role"] == "archer":
+			# Une flèche par tir, prise à la réserve globale.
+			GameState.base_inventory_unlocked = true
+			for k in sc["strikes"].size():
+				ItemStorage.store(GameState.base_inventory, ItemStorage.BASE_CAPACITY, "arrows")
 		foe("brute", 1.0, -120.0, 400.0)
 		foe("creep", 2.0, -121.0, 400.0)
 		foe("creep", 1.5, -119.0, 400.0)

@@ -102,7 +102,7 @@ func test_caserne_waits_for_items_in_blue_chest() -> void:
 	check(b.queue.is_empty(), "objets apportés : escouade formée")
 	check_eq(Storage.count("bow"), 0, "4 arcs consommés")
 	check_eq(Storage.count("arrows"), 0, "4 flèches consommées")
-	check_eq(GameState.units.filter(func(u: Unit) -> bool: return u.role == "archer").size(), 4, "4 archers")
+	check_eq(GameState.units.filter(func(u: Unit) -> bool: return u.role == "archer").size(), 1, "un archer")
 
 
 func test_creuset_gear_stats() -> void:

@@ -10,6 +10,7 @@ extends Control
 ## Quand l'identifiant change ou que l'objectif est marqué « done », le panneau joue l'état accompli
 ## (réplique de conclusion, éclat cyan), le garde DONE_HOLD secondes, sort, puis entre le suivant.
 ## « soon » : quête annoncée mais pas encore jouable (panneau grisé, « Bientôt ! »).
+## « interrupt » : objectif prioritaire ; l'objectif affiché sort sans jouer son état accompli.
 
 const WIDTH := 340.0
 ## Hauteur avec une seule ligne d'objectif ; la liste ajoute ROW_H par objectif.
@@ -99,7 +100,11 @@ func push(data: Dictionary) -> void:
 			if not data.is_empty():
 				_enter(data)
 		"in", "run":
-			if data.is_empty() or data["id"] != _cur["id"]:
+			if not data.is_empty() and data["id"] != _cur["id"] and data.get("interrupt", false):
+				# Objectif prioritaire (premier boss) : la quête affichée sort sans être validée.
+				_phase = "out"
+				_t = 0.0
+			elif data.is_empty() or data["id"] != _cur["id"]:
 				_complete()
 			else:
 				var quote_changed: bool = data.get("quote", "") != _cur.get("quote", "")

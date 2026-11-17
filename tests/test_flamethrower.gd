@@ -32,12 +32,12 @@ func test_continuous_fire_at_range_12() -> void:
 
 func test_out_of_range_walks_closer() -> void:
 	var u := _flamer()
-	foe("creep", u.x + 14.0, u.z, 400.0)
+	foe("creep", u.x + 26.0, u.z, 400.0)
 	var alive: Array[Unit] = [u]
 	var x0 := u.x
 	game_sim().combat.update_units(0.1, alive)
-	check(u.x > x0, "au-delà de 12 : il s'approche")
-	check_eq(GameState.enemies[0].hp, 400.0, "au-delà de 12 : aucun dégât")
+	check(u.x > x0, "au-delà de 24 : il s'approche")
+	check_eq(GameState.enemies[0].hp, 400.0, "au-delà de 24 : aucun dégât")
 
 
 func test_explodes_on_death() -> void:

@@ -32,8 +32,14 @@ func _ready() -> void:
 	_key(KEY_B)
 	await _wait(0.2)
 	_check(GameState.hud_menu == "build", "B ouvre le menu de construction")
-	_check(hud._buttons.size() == 11, "11 boutons dans le menu (%d)" % hud._buttons.size())
+	_check(hud._buttons.size() == 1 and hud._build_buttons.size() == 12, "rangée de 12 bâtiments + Retour (%d, %d)" % [hud._build_buttons.size(), hud._buttons.size()])
 	await _shot("menu_construire")
+	var mv := InputEventMouseMotion.new()
+	mv.position = hud._build_buttons[1].get_global_rect().get_center()
+	Input.parse_input_event(mv)
+	await _wait(0.2)
+	_check(hud._build_bubble.visible, "survol d'un bâtiment : bulle nom · coût")
+	await _shot("menu_construire_survol")
 	_key(KEY_ESCAPE)  # ferme d'abord la bulle d'accueil si elle est encore ouverte
 	await _wait(0.1)
 	if GameState.hud_menu == "build":
@@ -44,7 +50,7 @@ func _ready() -> void:
 	var b := hud._buttons[0]
 	await _click(b.get_global_rect().get_center(), MOUSE_BUTTON_LEFT)
 	_check(GameState.hud_menu == "build", "clic sur Construire")
-	await _click(hud._buttons[10].get_global_rect().get_center(), MOUSE_BUTTON_LEFT)
+	await _click(hud._buttons[0].get_global_rect().get_center(), MOUSE_BUTTON_LEFT)
 	_check(GameState.hud_menu == "", "clic sur Retour")
 	# Clic gauche sur l'Ancre : panneau de l'Ancre.
 	var orb := world.camera.project(CaveShape.CORE.x, 2.6, CaveShape.CORE.y)

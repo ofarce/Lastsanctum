@@ -8,6 +8,8 @@ extends RefCounted
 ##   3. Le Coffre Antique : Sceau de Minage fabriqué (recherche mining_artifact), Ingénieur entré dans la
 ##      réserve scellée (CaveShape.in_vault), coffre ouvert (GameState.base_inventory_unlocked).
 ##   4. Un mystérieux compagnon : annoncée « Bientôt ! », jamais active.
+## Objectif prioritaire : « Éliminer la Martyre de Byrsa en combat singulier » tant que le boss vit
+## (sim/martyre.gd) ; il interrompt la quête affichée sans la valider.
 ## Chaque étape validée reste acquise, même si l'état qui l'a validée disparaît ensuite (temple détruit…).
 ## objective() rend le dictionnaire attendu par ObjectivePanel.push().
 
@@ -74,6 +76,10 @@ func update() -> void:
 func objective() -> Dictionary:
 	if GameState.ended:
 		return {}
+	# Le premier boss interrompt la quête en cours, qui reprend à sa chute.
+	var boss := Martyre.objective()
+	if not boss.is_empty():
+		return boss
 	match quest:
 		"anchor":
 			var p := clampf(GameState.orb_progress / Simulation.ORB_TIME, 0.0, 1.0)
