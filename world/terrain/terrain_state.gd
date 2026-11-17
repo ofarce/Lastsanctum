@@ -30,6 +30,17 @@ var dug := {}
 var block_types: Dictionary = {}
 ## Gisements qui restent en place après chaque cycle de récolte.
 var permanent_ores := {}
+## Bosquets pétrifiés posés au sol, 2 × 2 cases infranchissables : case d'origine (haut gauche) → bois
+## restant, entamé par tout mineur sauf un adepte de Medeina.
+var wood_left := {}
+## Chacune des 4 cases d'un bosquet → sa case d'origine.
+var grove_cells := {}
+## Bosquet de la salle de départ (bas à droite) et clairières semées dans les galeries.
+const START_GROVE_AT := Vector2(46.0, -104.0)
+const GALLERY_GROVES := 6
+const CLEARING_RADIUS := 10.0
+## Écart voulu avec le prototype : clairières et bosquets. Les tests de parité JS le désactivent.
+var groves := true
 const VAULT_COPPER := Vector2i(16, -37)
 const ORE_BANDS := [Vector2(55, 85), Vector2(90, 125), Vector2(135, 175), Vector2(185, 260)]
 const VEIN_COUNTS := [16, 10, 6, 3]
@@ -76,6 +87,16 @@ func is_dug(x: float, z: float) -> bool:
 
 
 func walkable(x: float, z: float) -> bool:
+	return ground(x, z) and not grove_at(x, z)
+
+
+## Un bosquet pétrifié occupe ce point.
+func grove_at(x: float, z: float) -> bool:
+	return not grove_cells.is_empty() and grove_cells.has(Vector2i(floori(x / 4.0), floori(z / 4.0)))
+
+
+## Sol découvert (salle, galerie, case creusée…), bosquets compris : ce que peignent le sol et le brouillard.
+func ground(x: float, z: float) -> bool:
 	return CaveShape.outdoors(x, z) or CaveShape.in_cave(x, z) or CaveShape.in_tunnel(x, z) \
 		or is_dug(x, z) or is_gallery_open(x, z) or (vault_open and CaveShape.in_vault(x, z))
 
@@ -134,6 +155,8 @@ func reset_digging() -> void:
 	dug.clear()
 	block_types.clear()
 	permanent_ores.clear()
+	wood_left.clear()
+	grove_cells.clear()
 	dig_hits.clear()
 	dig_hit_at.clear()
 	vault_open = false
@@ -171,6 +194,9 @@ func generate_galleries(new_seed: int) -> void:
 		var steps := 34 + floori(r.next() * 46.0)
 		var radius := 2.1 + r.next() * 1.4
 		_worm(r, x, z, a, steps, radius)
+	_clearings.clear()
+	if groves:
+		_carve_clearings(Rng.new(new_seed ^ 0x5eed))
 	_label_networks()
 	_generate_ores()
 
@@ -178,6 +204,8 @@ func generate_galleries(new_seed: int) -> void:
 func _generate_ores() -> void:
 	block_types.clear()
 	permanent_ores.clear()
+	wood_left.clear()
+	grove_cells.clear()
 	var rng := RandomNumberGenerator.new()
 	rng.seed = seed
 	# Une paire de cellules adjacentes par filon. La marge protège toute la salle initiale.
@@ -214,6 +242,87 @@ func _generate_ores() -> void:
 	block_types[Vector2i(-17, -39)] = "copper"
 	block_types[VAULT_COPPER] = "copper"
 	permanent_ores[VAULT_COPPER] = true
+	if groves:
+		_generate_groves()
+
+
+## Les 4 cases (origine + 1 en i et j) et leur pourtour sont du sol libre : le bosquet ne ferme aucun passage.
+func _grove_fits(origin: Vector2i) -> bool:
+	for dj in range(-1, 3):
+		for di in range(-1, 3):
+			var key := origin + Vector2i(di, dj)
+			if block_types.has(key) or grove_cells.has(key):
+				return false
+			var x := key.x * 4.0
+			var z := key.y * 4.0
+			# Les 4 cases du bosquet entièrement libres ; le pourtour, au moins en son centre.
+			var inner := di >= 0 and di <= 1 and dj >= 0 and dj <= 1
+			var probes: Array = [Vector2(x + 0.5, z + 0.5), Vector2(x + 3.5, z + 0.5), Vector2(x + 0.5, z + 3.5), Vector2(x + 3.5, z + 3.5)] if inner else [Vector2(x + 2.0, z + 2.0)]
+			for p: Vector2 in probes:
+				if not (CaveShape.in_cave(p.x, p.y) or is_gallery(p.x, p.y)) or CaveShape.in_vault(p.x, p.y):
+					return false
+	return true
+
+
+func _plant_grove(origin: Vector2i) -> void:
+	wood_left[origin] = Blocks.WOOD_YIELD
+	for o: Vector2i in [Vector2i(0, 0), Vector2i(1, 0), Vector2i(0, 1), Vector2i(1, 1)]:
+		grove_cells[origin + o] = origin
+		block_types[origin + o] = Blocks.WOOD
+		permanent_ores[origin + o] = true
+
+
+## Abat le bosquet : ses cases redeviennent du sol libre.
+func fell_grove(origin: Vector2i) -> void:
+	wood_left.erase(origin)
+	for o: Vector2i in [Vector2i(0, 0), Vector2i(1, 0), Vector2i(0, 1), Vector2i(1, 1)]:
+		grove_cells.erase(origin + o)
+		block_types.erase(origin + o)
+		permanent_ores.erase(origin + o)
+		dig_hits.erase(origin + o)
+		dig_hit_at.erase(origin + o)
+	version += 1
+
+
+## Clairières des galeries : élargit le masque autour de points tirés au hasard (avant l'étiquetage des réseaux).
+func _carve_clearings(r: Rng) -> void:
+	_clearings.clear()
+	var tries := 0
+	while _clearings.size() < GALLERY_GROVES and tries < 4000:
+		tries += 1
+		var x := CaveShape.WORLD_X0 + 20.0 + r.next() * (GAL_W - 40)
+		var z := CaveShape.WORLD_Z0 + 20.0 + r.next() * (GAL_H - 40)
+		if not is_gallery(x, z) or not gallery_allowed(x, z) or z > CaveShape.mountain_edge(x) - 24.0:
+			continue
+		if _clearings.any(func(c: Vector2) -> bool: return c.distance_to(Vector2(x, z)) < 40.0):
+			continue
+		_stamp(x, z, CLEARING_RADIUS)
+		_clearings.append(Vector2(x, z))
+
+
+var _clearings: Array[Vector2] = []
+
+
+func _generate_groves() -> void:
+	# Salle de départ : l'emplacement libre le plus proche du coin bas-droit.
+	var best := Vector2i.ZERO
+	var bd := INF
+	for j in range(-40, -22):
+		for i in range(0, 14):
+			var origin := Vector2i(i, j)
+			var d := (Vector2(origin * 4) + Vector2(4, 4)).distance_to(START_GROVE_AT)
+			if d < bd and _grove_fits(origin):
+				bd = d
+				best = origin
+	if bd < INF:
+		_plant_grove(best)
+	# Un bosquet au cœur de chaque clairière creusée dans les galeries.
+	for c in _clearings:
+		var center := Vector2i(floori(c.x / 4.0) - 1, floori(c.y / 4.0) - 1)
+		for o: Vector2i in [Vector2i.ZERO, Vector2i(1, 0), Vector2i(0, 1), Vector2i(-1, 0), Vector2i(0, -1), Vector2i(1, 1), Vector2i(-1, -1)]:
+			if _grove_fits(center + o):
+				_plant_grove(center + o)
+				break
 
 
 func _solid_pair(key: Vector2i) -> bool:

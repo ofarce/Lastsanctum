@@ -12,6 +12,10 @@ const SHADOW := Color("#0b1615a0")
 const SEL := Color("#ead08c55")
 
 static var _meta: Dictionary
+## Caisse portée (production_crate.png) et couleurs des objets transportés (matériaux, objets fabriqués).
+static var _crate: Texture2D
+const _ITEMS_A := preload("res://data/mineable_blocks.gd").ITEMS
+const _ITEMS_B := preload("res://data/recipes.gd").ITEMS
 
 var unit: Unit
 var world: World
@@ -76,7 +80,7 @@ func _update() -> void:
 	_lz = u.z
 	# Redessin seulement si l'image, l'orientation, la sélection, les PV, le niveau ou PX changent.
 	var key := [_mode(), _frame_index(), _face, GameState.selected.has(u), u.hp, u.max_hp, Catalog.lvl(u),
-		world.camera.px if world else 1]
+		world.camera.px if world else 1, u.carrying.get("item", "")]
 	if key != _key:
 		_key = key
 		queue_redraw()
@@ -93,6 +97,8 @@ func _draw() -> void:
 	var i := _frame_index()
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2(SCALE * _face, SCALE))
 	draw_texture_rect_region(F["tex"], Rect2(-_ax, -_ay, rects[i].size.x, rects[i].size.y), rects[i])
+	if not u.carrying.is_empty():
+		_draw_crate(String(u.carrying["item"]))
 	# Barre de vie et badge : pixels d'écran, au-dessus de la tête (project(x, 3,9, z)).
 	var px := float(world.camera.px) if world else 1.0
 	var head := Proj.nat(u.x, 3.9, u.z) - position
@@ -107,6 +113,20 @@ func _draw() -> void:
 		draw_string(_bold, Vector2(-w / 2.0 + 1.0, -3.0 + 1.0), text, HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color("#0b0a09cc"))
 		draw_string(_bold, Vector2(-w / 2.0, -3.0), text, HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color("#ffe08a"))
 	draw_set_transform(Vector2.ZERO)
+
+
+## Port 2 retenu (planches/coffres-production-propositions.html) : caisse tenue à deux mains devant le ventre, le lot
+## visible dessus (trois éclats de la couleur de l'objet). Dessinée dans le repère du personnage (×SCALE).
+func _draw_crate(item: String) -> void:
+	if _crate == null:
+		_crate = load("res://assets/baked/world/production_crate.png")
+	var c: Color = _ITEMS_A.get(item, _ITEMS_B.get(item, {})).get("color", Color("#9da2a9"))
+	var top := Vector2(-6.0, -_ay + 13.0)
+	draw_texture(_crate, top)
+	for k in 3:
+		var p := top + Vector2(3.0 + k * 2.0, 0.0 - (k % 2))
+		draw_rect(Rect2(p, Vector2(2, 1)), c.darkened(0.25))
+		draw_rect(Rect2(p + Vector2(0, -1), Vector2(1, 1)), c.lightened(0.25))
 
 
 func _mode() -> String:

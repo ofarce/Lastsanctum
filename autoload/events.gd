@@ -15,3 +15,5 @@ signal inventory_requested
 
 ## Fin de partie (end(won), Index.html) : la simulation est figée et la bannière s'affiche.
 signal game_over(won: bool)
+
+signal production_chest_requested(building: Building, kind: String, engineer: Unit)

@@ -4,6 +4,9 @@ extends RefCounted
 ## Chaque valeur cite sa source. tests/test_catalog.gd vérifie l'égalité avec les valeurs extraites
 ## du jeu d'origine (assets/baked/hud/hud_texts.json, produit par tools/baker/hud.js).
 
+const GearItems := preload("res://data/gear_items.gd")
+const ItemStorage := preload("res://sim/item_storage.gd")
+
 ## RES_INFO, RES_ORDER, DEITY_RES (buildings.js:9-11).
 const RES_ORDER: Array[String] = ["forge", "vie", "discipline", "savoir"]
 const RES_INFO := {
@@ -15,29 +18,47 @@ const RES_INFO := {
 const DEITY_RES := {"sigil": "savoir", "aether": "forge", "medeina": "vie", "indra": "discipline"}
 
 ## BUILDINGS (buildings.js:20-30), dans l'ordre d'origine. size : côté en cases de 4 unités.
+## Tous en 2 × 2 (planche batiments-2x2 ; le prototype en avait la plupart en 3 × 3).
 const BUILDINGS := {
-	"sigil": {"name": "Temple de Sigil", "cost": {"savoir": 20}, "deity": "sigil", "requires": "", "art": "da-sigil", "key": "g", "icon": "rune", "time": 4.0, "size": 3,
+	"sigil": {"name": "Temple de Sigil", "cost": {"savoir": 20}, "deity": "sigil", "requires": "", "art": "da-sigil", "key": "g", "icon": "rune", "time": 4.0, "size": 2,
 		"lore": "Ses adeptes y prient pour le Savoir."},
-	"aether": {"name": "Temple d’Aether", "cost": {"forge": 20}, "deity": "aether", "requires": "", "art": "da-aether", "key": "e", "icon": "iron", "time": 4.0, "size": 3,
+	"aether": {"name": "Temple d’Aether", "cost": {"forge": 20}, "deity": "aether", "requires": "", "art": "da-aether", "key": "e", "icon": "iron", "time": 4.0, "size": 2,
 		"lore": "Ses adeptes y prient pour la Forge."},
-	"medeina": {"name": "Temple de Medeina", "cost": {"vie": 20}, "deity": "medeina", "requires": "", "art": "da-medeina", "key": "v", "icon": "wood", "time": 4.0, "size": 3,
+	"medeina": {"name": "Temple de Medeina", "cost": {"vie": 20}, "deity": "medeina", "requires": "", "art": "da-medeina", "key": "v", "icon": "wood", "time": 4.0, "size": 2,
 		"lore": "Ses adeptes y prient pour la Vie."},
-	"indra": {"name": "Temple d’Indra", "cost": {"discipline": 20}, "deity": "indra", "requires": "", "art": "da-indra", "key": "i", "icon": "sword", "time": 4.0, "size": 3,
+	"indra": {"name": "Temple d’Indra", "cost": {"discipline": 20}, "deity": "indra", "requires": "", "art": "da-indra", "key": "i", "icon": "sword", "time": 4.0, "size": 2,
 		"lore": "Ses adeptes y prient pour la Discipline."},
-	"library": {"name": "Bibliothèque", "cost": {"savoir": 200}, "deity": "", "requires": "sigil", "art": "da-library", "key": "l", "icon": "book", "time": 8.0, "size": 3,
+	"library": {"name": "Bibliothèque", "cost": {"savoir": 50}, "deity": "", "requires": "sigil", "art": "da-library", "key": "l", "icon": "book", "time": 8.0, "size": 2,
 		"lore": "Les rouleaux de Sigil y sont rassemblés."},
-	"forge": {"name": "Forge", "cost": {"forge": 200}, "deity": "", "requires": "aether", "art": "da-forge", "key": "f", "icon": "hammer", "time": 8.0, "size": 3,
+	"forge": {"name": "Forge", "cost": {"forge": 50}, "deity": "", "requires": "aether", "art": "da-forge", "key": "f", "icon": "hammer", "time": 8.0, "size": 2,
 		"lore": "L’enclume d’Aether y résonne."},
-	"workshop": {"name": "Atelier", "cost": {"forge": 200}, "deity": "", "requires": "aether", "art": "da-workshop", "key": "t", "icon": "repair", "time": 8.0, "size": 3,
+	"workshop": {"name": "Atelier", "cost": {"forge": 50}, "deity": "", "requires": "aether", "art": "da-workshop", "key": "t", "icon": "repair", "time": 8.0, "size": 2,
 		"lore": "Établis et outils des artisans d’Aether."},
-	"bedroom": {"name": "Chambre à coucher", "cost": {"vie": 200}, "deity": "", "requires": "medeina", "art": "da-bedroom", "key": "n", "icon": "people", "time": 8.0, "size": 2,
+	"bedroom": {"name": "Chambre à coucher", "cost": {"vie": 50}, "deity": "", "requires": "medeina", "art": "da-bedroom", "key": "n", "icon": "people", "time": 8.0, "size": 2,
 		"lore": "Le repos que Medeina accorde aux Exilés."},
-	"soulwell": {"name": "Puits des Âmes", "cost": {"vie": 200}, "deity": "", "requires": "medeina", "art": "da-soulwell", "key": "u", "icon": "spirit", "time": 8.0, "size": 2,
+	"soulwell": {"name": "Puits des Âmes", "cost": {"vie": 50}, "deity": "", "requires": "medeina", "art": "da-soulwell", "key": "u", "icon": "spirit", "time": 8.0, "size": 2,
 		"heal_radius": 12.0, "heal_per_second": 5.0,
 		"lore": "Soigne les unités proches de 5 PV par seconde dans un rayon de 12. Medeina y rend aussi leur souffle aux défunts, avec toute leur expérience."},
-	"caserne": {"name": "Caserne", "cost": {"discipline": 200}, "deity": "", "requires": "indra", "art": "da-caserne", "key": "c", "icon": "shield", "time": 8.0, "size": 3,
+	"caserne": {"name": "Caserne", "cost": {"discipline": 50}, "deity": "", "requires": "indra", "art": "da-caserne", "key": "c", "icon": "shield", "time": 8.0, "size": 2,
 		"lore": "Les disciples d’Indra y forment les combattants."},
+	## Écart voulu (fabrication, 2026-11-17) : absent du prototype ; dessin de la Forge en attendant le sien.
+	"creuset": {"name": "Creuset des Exilés", "cost": {"forge": 300}, "deity": "", "requires": "forge", "art": "da-creuset", "key": "k", "icon": "sword", "time": 8.0, "size": 2,
+		"lore": "On y coule les armes et armures que portent les Exilés."},
+	"warehouse": {"name": "Entrepôt logistique", "cost": {"savoir": 50}, "deity": "", "requires": "sigil", "art": "da-library", "key": "p", "icon": "wood", "time": 8.0, "size": 2,
+		"lore": "Les adeptes de Sigil y reçoivent le bois et les minerais pour les ateliers voisins."},
 }
+
+## Personnel des bâtiments (2026-11-17, sim/production.gd) : un bâtiment non-temple ne fonctionne qu'avec au moins
+## un travailleur au poste (adepte du culte indiqué, ou l'Ingénieur) ; la vitesse est proportionnelle au nombre de
+## travailleurs présents. Un seul culte par bâtiment.
+const STAFF_ROLE := {"warehouse": "sigil", "library": "sigil", "forge": "aether", "workshop": "aether", "creuset": "aether",
+	"bedroom": "medeina", "soulwell": "medeina", "caserne": "indra"}
+const STAFF_MAX := 5
+## Mineurs d'un bâtiment : adeptes d'Aether qui exploitent un gisement inépuisable et rapportent des lots au dépôt.
+## Ils ne comptent pas dans la vitesse ; limite distincte de celle des postes.
+const MINER_ROLE := "aether"
+const MINERS_MAX := 5
+const MINE_BATCH := 5
 
 ## Recherches uniques du sceau de minage, partagées entre tous les bâtiments.
 const MINING_COST := {"forge": 10, "vie": 10, "discipline": 10, "savoir": 10}
@@ -54,7 +75,7 @@ const ANCHOR_MENACE_GAIN := 50
 
 
 ## SUMMON_COST, CASERNE_COST, CASERNE_TIME, CASERNE_QUEUE, CASERNE_UNITS (buildings.js:36-37).
-const SUMMON_COST := 50
+const SUMMON_COST := 10
 const CASERNE_COST := {"discipline": 100}
 const CASERNE_TIME := 6.0
 const CASERNE_QUEUE := 5
@@ -197,13 +218,33 @@ static func lvl(u: Unit) -> int:
 
 
 static func armor(u: Unit) -> int:
-	return lvl_bonus(u) + (500 if u.role == "engineer" and not u.unarmored else 0)
+	return lvl_bonus(u) + (500 if u.role == "engineer" and not u.unarmored else 0) + GearItems.total(u, "armor")
+
+
+## Arme portée par l'Ingénieur sans armure, si elle peut frapper (une arme à munitions en demande une au stock).
+static func gear_weapon(u: Unit) -> Dictionary:
+	if u == null or u.role != "engineer" or not u.unarmored:
+		return {}
+	var w := GearItems.weapon(u)
+	if not w.has("damage"):
+		return {}
+	if w.has("ammo") and ItemStorage.count(w["ammo"]) <= 0:
+		return {}
+	return w
 
 
 static func attack_damage(u: Unit) -> int:
 	if u.role == "engineer" and not u.unarmored:
 		return 1000
+	var w := gear_weapon(u)
+	if not w.is_empty():
+		return int(w["damage"])
 	return FIGHT[u.role]["dmg"] if FIGHT.has(u.role) else BASE_DAMAGE.get(u.role, 0)
+
+
+## Les adeptes d'Indra frappent deux fois plus fort.
+static func damage_mult(u: Unit) -> float:
+	return 2.0 if u != null and u.role == "indra" else 1.0
 
 
 static func lvl_bonus(u: Unit) -> int:
@@ -247,6 +288,9 @@ static func refund(cost: Dictionary) -> void:
 static func unit_reach(u: Unit) -> float:
 	if u.role == "engineer" and not u.unarmored:
 		return 250.0
+	var w := gear_weapon(u)
+	if w.has("reach"):
+		return float(w["reach"])
 	return Catalog.FIGHT[u.role]["reach"] if Catalog.FIGHT.has(u.role) else Catalog.HERO.get(u.role, {"reach": 8.6})["reach"]
 
 

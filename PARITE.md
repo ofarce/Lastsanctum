@@ -44,7 +44,7 @@ Légende de la colonne Auto :
 | Point | Auto | À regarder en jeu | Playtest |
 |---|---|---|---|
 | Introduction : Ancre éteinte, Ingénieur sorti du portail à 3 s, accueil à (−13, core.z + 7) | ✅ `test_simulation`, `etape4_portail_*`, `test_dialogue` ; MCP `introduction_et_reactivation` | Ouverture de la partie et bulle d'accueil. | [ ] |
-| Réactivation : clic droit, R ou bouton ; 8 s au point ; +1/s ; balistes ; premier assaut à +20 s | ✅ `test_simulation`, `test_waves` ; ◐ `test_full_game` | Réactiver, regarder le compteur de ressources et le décompte de l'assaut. | [ ] |
+| Réactivation : clic droit, R ou bouton ; 8 s au point ; prière de l’Ingénieur à l’Ancre éveillée (+3 de chaque mana/s) ; balistes ; premier assaut à +20 s | ✅ `test_simulation`, `test_waves` ; ◐ `test_full_game` | Réactiver, regarder le compteur de ressources et le décompte de l'assaut. | [ ] |
 | Arcs de l'Ancre et crépitement pendant la réactivation | ✅ `etape4_ancre_*` | — | [ ] |
 | Portails divins actifs 3,5 s à chaque invocation, effets propres au dieu | ✅ `etape4_indra_actif`, `test_ambiance` | Invoquer un adepte de chaque dieu. | [ ] |
 | Portails maléfiques : un rejeton toutes les 7 s, 8 vivants au plus | ✅ `test_evil_portals` | Laisser un portail maléfique ouvert une minute. | [ ] |

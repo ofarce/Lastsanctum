@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Silhouettes d’Indra</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0b120e;--panel:#111b14;--line:#2a3a2c;--txt:#dcd8bc;--mut:#93a08a;--acc:#ee8e34}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--txt);font:15px/1.45 'Pixelify Sans',system-ui,sans-serif}
+header,main{max-width:1240px;margin:auto;padding:18px 16px}h1{margin:0;font-weight:600;letter-spacing:.08em;font-size:26px;color:var(--acc)}
+header p{color:var(--mut);margin:6px 0 0;max-width:960px}
+button{font:inherit;color:var(--txt);background:#1a2a1d;border:1px solid var(--line);padding:6px 12px;cursor:pointer}button:hover{border-color:var(--acc)}
+.bar{display:flex;gap:8px;align-items:center;margin-top:12px;flex-wrap:wrap}
+figure{margin:0 0 18px;background:var(--panel);border:1px solid var(--line);min-width:0}
+canvas{image-rendering:pixelated;display:block;width:100%;height:auto}
+.big{background:#070b08;padding:6px}
+.row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:0;border-top:1px solid var(--line)}
+.game{background:#070b08;padding:6px;border-right:1px solid var(--line)}.game small{display:block;color:var(--mut);font-size:12px;margin:0 0 4px}
+figcaption{padding:10px 14px 14px}figcaption b{color:var(--acc);font-weight:600;font-size:18px}figcaption p{margin:4px 0 0;color:var(--mut);font-size:14px}
+figcaption ul{margin:6px 0 0;padding-left:18px;color:var(--txt);font-size:14px}figcaption li span{color:var(--acc)}
+.ref{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+@media(max-width:860px){.row,.ref{grid-template-columns:1fr}.game{border-right:0;border-bottom:1px solid var(--line)}}
+.ref4{opacity:.92}.ref4 figcaption b{color:var(--mut)}
+</style></head><body>
+<header><h1>SILHOUETTES FRANCHES · 5 AFFINAGES</h1>
+<p>Base retenue : la proposition 4 (chaque classe reconnaissable à sa forme). Cinq façons de l’affiner, toujours les trois soldats ensemble, en boucle repos → attaque. En haut ×1, en bas taille jeu (~36 px) agrandie ×3. Le bouton Nuit passe la scène sous l’éclairage bleuté de la charte (le feu et les flèches restent lumineux) : c’est là que les silhouettes doivent tenir.</p>
+<div class="bar"><button id="pause">Pause</button><button id="speed">Vitesse ×1</button><button id="night">Nuit</button></div></header>
+<main><div id="list"></div></main>
+<script src="assets/decor.js?v=6"></script><script src="assets/units.js?v=10"></script><script src="assets/soldats-planches.js?v=5"></script>
+<script>
+'use strict';
+const {K}=UnitKit,S=Soldats,SR=S.R;
+const KINDS=['lame','archer','flammes'];
+const B4={torso:K.steel,arms:K.steel,fore:K.steel,legs:K.gun,boots:K.gun,hands:K.gun,tabard:K.saff,tabY:66,cross:S.sunTab,seed:41};
+const PROPS=[
+ {ref:1,name:'Base · 4 Silhouettes franches',desc:'Telle que présentée dans la première planche, pour comparer.',
+  pts:['Cimier en « oreilles » ambigu, épée cachée au repos derrière l’épaulière.','Archer et lance-flammes déjà très lisibles.'],
+  base:B4,
+  lame:{head:'hornHelm',crest:K.saff,pauld:1.05,lames:2,pr:K.steel,pr2:K.steel,left:'kiteS',shS:1.25,sh:K.steel,rim:K.saff,emb:'sun',bulk:1.2,seed:41},
+  archer:{head:'hoodLong',hc:K.saff,peak:1,torso:K.leath,arms:K.leath,fore:K.leath,tabard:null,under:['capeS','quiverS'],capeC:K.saff,fl:K.ivory,over:['bowS'],bow:K.leath,bowT:'long',bowH:26,bulk:.85,seed:42},
+  flammes:{head:'maskHelm',hr:K.steel,band:K.saff,pauld:1,lames:2,pr:K.steel,pr2:K.steel,under:['tankBack'],tankShape:'sphere',tankC:K.saff,gauge:K.steel,over:['flamer'],noz:'pipe',bulk:1.35,seed:43}},
+ {name:'4.1 · Affinage direct',desc:'La 4 corrigée sans changer d’esprit : chaque défaut relevé est réglé, le reste ne bouge pas.',
+  pts:['<span>Épée</span> : cimier en éventail orange (plus de lecture « oreilles »), épée tenue pointe en bas, visible au repos.','<span>Archer</span> : inchangé, pointe de capuche un peu plus haute.','<span>Lance-flammes</span> : sphère un peu réduite et cerclée d’acier, sangles visibles.'],
+  base:B4,
+  lame:{head:'fanHelm',crest:K.saff,pauld:1,lames:2,pr:K.steel,pr2:K.steel,left:'kiteS',shS:1.25,sh:K.steel,rim:K.saff,emb:'sun',restAng:1.95,bulk:1.2,seed:41},
+  archer:{head:'hoodLong',hc:K.saff,peak:1.4,torso:K.leath,arms:K.leath,fore:K.leath,tabard:null,under:['capeS','quiverS'],capeC:K.saff,fl:K.ivory,over:['bowS'],bow:K.leath,bowT:'long',bowH:26,bulk:.85,seed:42},
+  flammes:{head:'maskHelm',hr:K.steel,band:K.saff,pauld:.95,lames:2,pr:K.steel,pr2:K.steel,under:['tankBack'],tankShape:'sphere',tankR:10,straps:1,tankC:K.saff,bandC:K.steel,gauge:K.steel,over:['flamer'],noz:'pipe',bulk:1.3,seed:43}},
+ {name:'4.2 · Deux valeurs',desc:'Armure sombre presque uniforme ; l’orange n’est posé que sur la forme-signature de chaque classe. À distance, on ne voit que cette forme claire sur une masse sombre.',
+  pts:['<span>Épée</span> : l’écu en amande, entièrement orange.','<span>Archer</span> : la capuche pointue et la cape.','<span>Lance-flammes</span> : la sphère du réservoir.'],
+  base:{...B4,torso:K.gun,arms:K.gun,fore:K.gun,tabard:null,pr:K.gun,pr2:K.gun},
+  lame:{head:'fanHelm',hr:K.gun,crest:K.steel,pauld:1,lames:2,left:'kiteS',shS:1.25,sh:K.saff,rim:K.steel,emb:'sun',embC:SR.lacq,restAng:1.95,bulk:1.2,seed:41},
+  archer:{head:'hoodLong',hc:K.saff,peak:1.4,torso:K.gun,arms:K.gun,fore:K.leath,under:['capeS','quiverS'],capeC:K.saff,qC:K.gun,fl:K.ivory,over:['bowS'],bow:K.gun,bowT:'long',bowH:26,bulk:.85,seed:42},
+  flammes:{head:'maskHelm',hr:K.gun,pauld:.95,lames:2,under:['tankBack'],tankShape:'sphere',tankR:10,straps:1,tankC:K.saff,bandC:K.gun,gauge:K.gun,over:['flamer'],noz:'pipe',lanceC:K.gun,bulk:1.3,seed:43}},
+ {name:'4.3 · Proportions poussées',desc:'On exagère ce qui distingue déjà les trois : le large, le fin, le massif. Même avec la même couleur, on ne peut plus les confondre.',
+  pts:['<span>Épée</span> : plus large encore, écu qui descend jusqu’aux genoux.','<span>Archer</span> : très mince, capuche en pointe haute, arc nettement plus grand que lui.','<span>Lance-flammes</span> : trapu et massif, réservoir énorme qui coiffe la silhouette.'],
+  base:B4,
+  lame:{head:'fanHelm',crest:K.saff,fanR:9,pauld:1.15,lames:2,pr:K.steel,pr2:K.steel,left:'kiteS',shS:1.45,sh:K.steel,rim:K.saff,emb:'sun',restAng:1.95,bulk:1.32,seed:41},
+  archer:{head:'hoodLong',hc:K.saff,peak:2,torso:K.leath,arms:K.leath,fore:K.leath,tabard:null,under:['capeS','quiverS'],capeC:K.saff,capeY:76,fl:K.ivory,over:['bowS'],bow:K.leath,bowT:'long',bowH:30,bulk:.74,seed:42},
+  flammes:{head:'maskHelm',hr:K.steel,band:K.saff,pauld:1.05,lames:2,pr:K.steel,pr2:K.steel,under:['tankBack'],tankShape:'sphere',tankR:13,straps:1,tankC:K.saff,bandC:K.steel,gauge:K.steel,over:['flamer'],noz:'pipe',bulk:1.48,seed:43}},
+ {name:'4.4 · Bannières de classe',desc:'Chaque soldat porte au dos une bannière orange (sashimono) frappée du glyphe de sa classe : bouclier, arc, flamme. La bannière dépasse au-dessus de la mêlée et se lit même quand le corps est caché.',
+  pts:['<span>Épée</span> : glyphe bouclier, cimier en éventail.','<span>Archer</span> : glyphe arc ; la cape cède la place à la bannière.','<span>Lance-flammes</span> : glyphe flamme ; réservoir passé en cylindres pour libérer le dos.'],
+  base:{...B4,tabard:K.saff},
+  lame:{head:'fanHelm',crest:K.steel,pauld:1,lames:2,pr:K.steel,pr2:K.steel,under:['banner'],glyph:'shield',left:'kiteS',shS:1.2,sh:K.steel,rim:K.saff,emb:'sun',restAng:1.95,bulk:1.2,seed:41},
+  archer:{head:'hoodLong',hc:K.saff,peak:1.4,torso:K.leath,arms:K.leath,fore:K.leath,tabard:null,under:['banner','quiverS'],glyph:'bow',fl:K.ivory,over:['bowS'],bow:K.leath,bowT:'long',bowH:26,bulk:.85,seed:42},
+  flammes:{head:'maskHelm',hr:K.steel,band:K.saff,pauld:.95,lames:2,pr:K.steel,pr2:K.steel,under:['banner','tankBack'],glyph:'flame',tanks:2,tankC:K.steel,bandC:K.saff,over:['flamer'],noz:'pipe',bulk:1.3,seed:43}},
+ {name:'4.5 · Laque d’Indra',desc:'L’inverse de 4.2 : armure laquée orange (la couleur du culte domine), l’acier ne sert plus que d’accent sur la forme-signature. L’escouade se repère de loin comme « les orange ».',
+  pts:['<span>Épée</span> : plaques orange, écu d’acier au soleil sombre, cimier d’acier.','<span>Archer</span> : capuche et cape laque sombre sur corps orange.','<span>Lance-flammes</span> : sphère d’acier poli sur armure orange.'],
+  base:{...B4,torso:K.saff,arms:K.saff,fore:K.saff,legs:SR.lacq,boots:K.gun,tabard:null,pr:K.saff,pr2:K.steel,lace:SR.lacq,under:['lamellar']},
+  lame:{head:'fanHelm',hr:K.saff,crest:K.steel,pauld:1,lames:2,under:['lamellar'],left:'kiteS',shS:1.25,sh:K.steel,rim:SR.lacq,emb:'sun',embC:SR.lacq,restAng:1.95,bulk:1.2,seed:41},
+  archer:{head:'hoodLong',hc:SR.lacq,peak:1.4,under:['capeS','lamellar','quiverS'],capeC:SR.lacq,fl:K.saff,over:['bowS'],bow:SR.lacq,bowT:'long',bowH:26,bulk:.85,seed:42},
+  flammes:{head:'maskHelm',hr:K.saff,band:K.steel,pauld:.95,lames:2,under:['lamellar','tankBack'],tankShape:'sphere',tankR:10,straps:1,tankC:K.polish,bandC:SR.lacq,gauge:SR.lacq,over:['flamer'],noz:'pipe',bulk:1.3,seed:43}},
+];
+// ---------- scène ----------
+const LOOP=2.5,FPS=12,NF=Math.round(LOOP*FPS),SLOT=124,GY=88,W1=SLOT*3+4,H1=94;
+const bay=(x,y)=>BAYER[y&3][x&3];
+function groundCanvas(w,h,k,seed){const P=new Px(w,h);for(let y=0;y<h;y++)for(let x=0;x<w;x++){const v=.12+fbm(x/(10*k),y/(6*k),seed)*.42;P.set(x,y,P.ramp(C.grass,v,x,y),0)}
+ for(let i=0;i<3;i++)shadow(P,(i*SLOT+4+30)*k,GY*k,11*k,3*k,1);P.flush();return P.c}
+function dpx(g,x,y,c,a=1){x=Math.round(x);y=Math.round(y);if(a<1&&a<=bay(x,y))return;g.fillStyle=c;g.fillRect(x,y,1,1)}
+function disc(g,cx,cy,r,c,a=1){for(let y=Math.floor(cy-r);y<=cy+r;y++)for(let x=Math.floor(cx-r);x<=cx+r;x++){const d=Math.hypot(x+.5-cx,y+.5-cy)/r;if(d<=1)dpx(g,x,y,c,a*(1-d*d*.5))}}
+function jet(g,tip,dir,amt,k,t,hot){const L=46*k*amt,px=-dir[1],py=dir[0],F=SR.fire,parts=[];
+ for(let j=0;j<46;j++){const u=(j*.618+t*2.2)%1;if(u*46*k>L)continue;parts.push([u,j])}
+ parts.sort((a,b)=>b[0]-a[0]);
+ for(const[u,j]of parts){const d=u*L,w=Math.sin(j*2.3+t*13)*u*5*k+Math.sin(j*.9-t*7)*u*2*k,x=tip[0]+dir[0]*d+px*w,y=tip[1]+dir[1]*d+py*w-u*u*4*k,r=Math.max(.8,(1+u*4.5)*k);
+  const c=u>.82?SR.smoke[1+(j%2)]:u>.62?F[1]:u>.38?F[2]:u>.18?F[3]:F[4+(hot&&j%2?1:0)];disc(g,x,y,r,c,u>.82?.55:.95)}
+ for(let i=0;i<L*.35;i++)dpx(g,tip[0]+dir[0]*i,tip[1]+dir[1]*i-.2,F[5]);
+ if(amt>.9){const e=[tip[0]+dir[0]*L,tip[1]+dir[1]*L];for(let j=0;j<6;j++){const a=j*1.05+t*5;disc(g,e[0]+Math.cos(a)*4*k,e[1]+Math.sin(a)*2*k,1.4*k+.4,F[2+(j%2)],.7)}}}
+function arrow(g,o,f,k,s){const x=o[0]+f*48*k,y=o[1]-Math.sin(f*Math.PI)*3*k,l=Math.max(4,9*k);
+ for(let i=0;i<l;i++)dpx(g,x-i,y,i<1.5?'#d6d9dc':(i>l-2?(s.fl||K.ivory)[4]:K.leath[4]));
+ if(s.fireTip){for(let i=0;i<5;i++)dpx(g,x-l-i*1.6*k-1,y+(i%2)-.5,SR.ember[5-Math.min(3,i)],.9-i*.15);disc(g,x,y,1.4*k+.6,SR.ember[4],.7)}}
+let NIGHT=false;
+function frame(P,k,fi){const key=k+'|'+fi+'|'+NIGHT;P.cache=P.cache||{};if(P.cache[key])return P.cache[key];
+ const w=Math.ceil(W1*k),h=Math.ceil(H1*k),c=document.createElement('canvas');c.width=w;c.height=h;const g=c.getContext('2d');
+ P.ground=P.ground||{};g.drawImage(P.ground[k]||(P.ground[k]=groundCanvas(w,h,k,P.base.seed||3)),0,0);
+ const t=fi/FPS,u=fi/NF;const fxs=[];
+ KINDS.forEach((kind,i)=>{const spec={...P.base,...P[kind]};spec.under=P[kind].under||P.base.under;spec.over=P[kind].over||P.base.over;
+  const ui=(u+1-i*.08)%1,{s,fx}=S.anim(kind,spec,ui,t);const fc=UnitKit.figure(s,t,k),ox=Math.round((i*SLOT+4)*k),oy=Math.round(GY*k-80*k-(fx.bob&&k>=1?1:0));
+  g.drawImage(fc,ox,oy);const toS=q=>[ox+q[0]*k,oy+q[1]*k];
+  if(fx.jet&&s._tip)fxs.push(()=>jet(g,toS(s._tip),s._dir,fx.jet,k,t,s.noz==='dragon'));
+  if(fx.arrow!=null){const o=toS([30+22+16,32-1]);fxs.push(()=>arrow(g,o,fx.arrow,k,s))}});
+ if(NIGHT){g.globalCompositeOperation='multiply';g.fillStyle='#7686b6';g.fillRect(0,0,w,h);g.globalCompositeOperation='source-over'}
+ fxs.forEach(f=>f());return P.cache[key]=c}
+
+// ---------- cartes ----------
+const list=document.getElementById('list'),stages=[];
+PROPS.forEach(P=>{const f=document.createElement('figure');if(P.ref)f.className='ref4';f.innerHTML=`<div class="big"><canvas></canvas></div><div class="row"><div class="game"><small>Taille jeu (~36 px), ×3</small><canvas></canvas></div><figcaption><b>${P.name}</b><p>${P.desc}</p><ul>${P.pts.map(x=>`<li>${x}</li>`).join('')}</ul></figcaption></div>`;
+ list.appendChild(f);const[c1,c2]=f.querySelectorAll('canvas');c1.width=Math.ceil(W1);c1.height=H1;c2.width=Math.ceil(W1*.5);c2.height=Math.ceil(H1*.5);stages.push([P,c1,1],[P,c2,.5])});
+
+let fi=0,paused=false,speed=1,acc=0,last=performance.now();
+function draw(){for(const[P,c,k]of stages)c.getContext('2d').drawImage(frame(P,k,fi),0,0)}
+function tick(now){const dt=(now-last)/1000;last=now;if(!paused){acc+=dt*speed;while(acc>=1/FPS){acc-=1/FPS;fi=(fi+1)%NF}draw()}requestAnimationFrame(tick)}
+draw();requestAnimationFrame(tick);
+document.getElementById('pause').onclick=e=>{paused=!paused;e.target.textContent=paused?'Lecture':'Pause'};
+document.getElementById('night').onclick=e=>{NIGHT=!NIGHT;e.target.textContent=NIGHT?'Jour':'Nuit';draw()};
+document.getElementById('speed').onclick=e=>{speed=speed===1?.5:speed===.5?.25:1;e.target.textContent='Vitesse ×'+speed};
+</script></body></html>

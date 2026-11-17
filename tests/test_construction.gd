@@ -18,7 +18,7 @@ func test_place_pays_and_sends_engineer() -> void:
 	sim.place_building(Vector2(-27.0, -119.0))
 	check_eq(GameState.buildings.size(), 1, "chantier créé")
 	var b: Building = GameState.buildings[0]
-	check_eq(Vector2(b.x, b.z), Vector2(-26.0, -118.0), "aligné sur la grille (centre de case)")
+	check_eq(Vector2(b.x, b.z), Vector2(-28.0, -120.0), "aligné sur la grille (nœud : temple 2 × 2)")
 	check_near(GameState.res["savoir"], 5.0, 1e-9, "20 Savoir payés")
 	check(engineer().build_job == b and b.owner == engineer(), "Ingénieur affecté")
 	check_eq(Vector2(engineer().tx, engineer().tz), b.spot, "envoyé au point de travail")
@@ -27,13 +27,15 @@ func test_place_pays_and_sends_engineer() -> void:
 
 func test_invalid_site_and_cost() -> void:
 	var sim := game()
+	engineer().x = -12.0
+	engineer().z = -119.0
 	give(25.0)
 	_arm("sigil")
-	sim.place_building(Vector2(0.0, -120.0))  # allée centrale
-	check(GameState.buildings.is_empty(), "allée centrale refusée")
+	sim.place_building(Vector2(0.0, -120.0))  # allée centrale : désormais constructible
+	check_eq(GameState.buildings.size(), 1, "allée centrale acceptée")
 	_arm("library")
 	sim.place_building(Vector2(-27.0, -119.0))
-	check(GameState.buildings.is_empty(), "coût insuffisant : rien n'est construit")
+	check_eq(GameState.buildings.size(), 1, "coût insuffisant : rien de plus n'est construit")
 	check_eq(GameState.hud_mode, "", "mode construction quitté faute de ressources")
 
 

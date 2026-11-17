@@ -1,0 +1,278 @@
+{
+ "source": "planches/assets/engineer-volume.js (tenue « Le Tyrien »), vue ¾ 45°, k=0.5 — planches/tyrien-export.html",
+ "frame_w": 48,
+ "frame_h": 48,
+ "ax": 24,
+ "ay": 45,
+ "h": 42,
+ "stride": 2.1,
+ "self_bob": true,
+ "anims": {
+  "idle": {
+   "y": 0,
+   "cols": 12,
+   "rows": 2,
+   "count": 24,
+   "note": "repos : image floor(t·24/2,4) mod 24"
+  },
+  "walk": {
+   "y": 96,
+   "cols": 12,
+   "rows": 1,
+   "count": 12,
+   "note": "marche : phase += distance / stride"
+  },
+  "kneel": {
+   "y": 144,
+   "cols": 12,
+   "rows": 3,
+   "count": 36,
+   "fps": 10,
+   "note": "à genoux, souffle court : tente de se relever toutes les 3,6 s"
+  },
+  "pray": {
+   "y": 288,
+   "cols": 12,
+   "rows": 2,
+   "count": 24,
+   "fps": 10,
+   "note": "agenouillé, mains jointes (incantation)"
+  },
+  "settle": {
+   "y": 384,
+   "cols": 12,
+   "rows": 1,
+   "count": 10,
+   "fps": 10,
+   "note": "s’assoit en tailleur : debout → accroupi → lotus (jouée à l’envers pour se relever)"
+  },
+  "lotus": {
+   "y": 432,
+   "cols": 12,
+   "rows": 2,
+   "count": 24,
+   "fps": 10,
+   "note": "méditation en tailleur, yeux clos ; lévitation ajoutée en jeu"
+  },
+  "aim": {
+   "y": 528,
+   "cols": 19,
+   "rows": 4,
+   "count": 76,
+   "note": "visée du lance-pitons : 19 angles (−90° à +90°) × 4 lignes (recul 0 / 1,5 / 3, suspension)"
+  }
+ },
+ "aim": {
+  "angles": [
+   -90,
+   -80,
+   -70,
+   -60,
+   -50,
+   -40,
+   -30,
+   -20,
+   -10,
+   0,
+   10,
+   20,
+   30,
+   40,
+   50,
+   60,
+   70,
+   80,
+   90
+  ],
+  "rows_def": [
+   {
+    "recoil": 0,
+    "pulse": 0.5
+   },
+   {
+    "recoil": 1.5,
+    "pulse": 0.5
+   },
+   {
+    "recoil": 3,
+    "pulse": 0.5
+   },
+   {
+    "recoil": 0,
+    "pulse": 1
+   }
+  ],
+  "muzzle": [
+   [
+    27.5,
+    7.5
+   ],
+   [
+    29.5,
+    8.5
+   ],
+   [
+    31.5,
+    8.5
+   ],
+   [
+    33.5,
+    9.5
+   ],
+   [
+    34.5,
+    10.5
+   ],
+   [
+    36.5,
+    11.5
+   ],
+   [
+    37.5,
+    13.5
+   ],
+   [
+    38.5,
+    14.5
+   ],
+   [
+    39.5,
+    16.5
+   ],
+   [
+    39.5,
+    18.5
+   ],
+   [
+    39.5,
+    21.5
+   ],
+   [
+    38.5,
+    23.5
+   ],
+   [
+    37.5,
+    24.5
+   ],
+   [
+    36.5,
+    26.5
+   ],
+   [
+    34.5,
+    27.5
+   ],
+   [
+    33.5,
+    28.5
+   ],
+   [
+    31.5,
+    29.5
+   ],
+   [
+    29.5,
+    29.5
+   ],
+   [
+    27.5,
+    30.5
+   ]
+  ],
+  "shoulder": [
+   27.5,
+   18.5
+  ]
+ },
+ "order": [
+  "back",
+  "lhand",
+  "feet",
+  "chest",
+  "hands",
+  "head",
+  "eye",
+  "rhand"
+ ],
+ "slots": {
+  "back": "Dos",
+  "lhand": "Main gauche",
+  "feet": "Bottes",
+  "chest": "Torse",
+  "hands": "Gants",
+  "head": "Tête",
+  "eye": "Capteur oculaire",
+  "rhand": "Main droite"
+ },
+ "pieces": {
+  "cape": {
+   "slot": "back",
+   "name": "Cape"
+  },
+  "pack": {
+   "slot": "back",
+   "name": "Sac de toile"
+  },
+  "shield": {
+   "slot": "lhand",
+   "name": "Bouclier rond"
+  },
+  "lantern": {
+   "slot": "lhand",
+   "name": "Lanterne à quartz"
+  },
+  "greaves": {
+   "slot": "feet",
+   "name": "Grèves de fer"
+  },
+  "boots": {
+   "slot": "feet",
+   "name": "Bottes de cuir"
+  },
+  "iron": {
+   "slot": "chest",
+   "name": "Plastron de fer"
+  },
+  "mail": {
+   "slot": "chest",
+   "name": "Cotte de mailles"
+  },
+  "leather": {
+   "slot": "chest",
+   "name": "Cuirasse de cuir"
+  },
+  "gauntlets": {
+   "slot": "hands",
+   "name": "Gantelets de fer"
+  },
+  "gloves": {
+   "slot": "hands",
+   "name": "Gants de cuir"
+  },
+  "helm": {
+   "slot": "head",
+   "name": "Casque de fer"
+  },
+  "hood": {
+   "slot": "head",
+   "name": "Capuche de toile"
+  },
+  "circlet": {
+   "slot": "head",
+   "name": "Bandeau tyrien"
+  },
+  "lens": {
+   "slot": "eye",
+   "name": "Monocle-capteur"
+  },
+  "hammer": {
+   "slot": "rhand",
+   "name": "Marteau de forge"
+  },
+  "blade": {
+   "slot": "rhand",
+   "name": "Lame courte"
+  }
+ }
+}

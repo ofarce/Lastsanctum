@@ -4,6 +4,7 @@ extends Control
 const Storage := preload("res://sim/item_storage.gd")
 const ItemIcon := preload("res://ui/inventory/item_icon.gd")
 const Blocks := preload("res://data/mineable_blocks.gd")
+const Gear := preload("res://data/gear_items.gd")
 const CYAN := Color("#5ce8ff")
 const MUTED := Color("#5aa6b4")
 const SLOTS := ["Tête", "Torse", "Gants", "Main droite", "Bottes", "Capteur oculaire", "Dos", "Anneau", "Main gauche", "Minage"]
@@ -11,6 +12,9 @@ const SIL := [".........aaaaaa.........","........abbbbbba........",".......abcc
 "....aaaaabbbbbbaaaaa....","...abbbbaccccccabbbba...","..abccbbacffffcabbccba..","..abcba.acccccca.abcba..","..abcba.abcffcba.abcba..","..abcba.abccccba.abcba..","..abcba.aabbbbaa.abcba..","..abcba.abbbbbba.abcba..",
 ".abccba..abbbba..abccba.",".abffba..aaaaaa..abffba.",".abccba.aabbbbaa.abccba.","..aaaa..abbbbbba..aaaa..","........abbaabba........",".......abba..abba.......",".......abca..acba.......",".......abca..acba.......",".......abfa..afba.......",
 ".......abca..acba.......",".......abba..abba.......",".......abca..acba.......",".......abca..acba.......","......abbba..abbba......",".....abbbba..abbbba.....",".....aaaaaa..aaaaaa....."]
+var _chest: Building
+var _kind: String
+var _owner: Unit
 var opened := false
 var _drag_slot := {}
 var _font: Font = SystemFont.new()
@@ -40,6 +44,14 @@ func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	visible = false
 	texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	Events.production_chest_requested.connect(func(b: Building, kind: String, u: Unit) -> void:
+		if Storage.character_available(u):
+			_chest = b
+			_kind = kind
+			_owner = u
+			_drag_slot = {}
+			opened = true
+			show())
 	Events.game_reset.connect(close)
 	Events.inventory_requested.connect(func() -> void:
 		if not opened and available():
@@ -49,6 +61,8 @@ func _ready() -> void:
 
 
 func close() -> void:
+	_chest = null
+	_owner = null
 	opened = false
 	_drag_slot = {}
 	visible = false
@@ -82,14 +96,37 @@ func _input(event: InputEvent) -> void:
 			else:
 				var target := slot_at(p)
 				if not _drag_slot.is_empty() and not target.is_empty():
-					Storage.move_stack(_drag_slot["items"], _drag_slot["index"], target["items"], target["index"], target["capacity"])
+					_drop(_drag_slot, target)
 				_drag_slot = {}
 		get_viewport().set_input_as_handled()
 
 
+## Glisser-déposer entre stock, paquetage et emplacements d'équipement (objets de data/gear_items.gd).
+func _drop(from: Dictionary, to: Dictionary) -> void:
+	if from.has("box"):
+		if to == from:
+			_withdraw(from["box"])
+		elif to.has("items") and is_same(to["items"], _owner.inventory):
+			Storage.move_stack(_box(), from["box"], _owner.inventory, to["index"], _owner.inventory_capacity)
+		return
+	if to.has("box"):
+		return
+	var u := _owner if _owner else engineer()
+	if to.has("equip") and not from.has("equip"):
+		Gear.equip(u, from["items"], from["index"], to["equip"])
+	elif from.has("equip") and not to.has("equip"):
+		Gear.unequip(u, from["equip"], to["items"], to["index"], to["capacity"])
+	elif not from.has("equip") and not to.has("equip"):
+		Storage.move_stack(from["items"], from["index"], to["items"], to["index"], to["capacity"])
+
+
+static func equip_rect(i: int) -> Rect2:
+	return Rect2(1060.0 if i >= 5 else 664.0, 156.0 + (i % 5) * 87, 68, 64)
+
+
 func _process(_delta: float) -> void:
 	if opened:
-		if not available():
+		if not available() or (_chest and (not GameState.buildings.has(_chest) or not Storage.character_available(_owner))):
 			close()
 		else:
 			queue_redraw()
@@ -121,6 +158,54 @@ func _draw() -> void:
 	draw_set_transform(_origin, 0, Vector2.ONE * _scale)
 	_text(Vector2(20, 35), "// INVENTAIRE · INGÉNIEUR EXILÉ", CYAN, 20)
 	_text(Vector2(1015, 35), "C / ÉCHAP · FERMER", MUTED, 12)
+	if _chest:
+		_draw_chest()
+	else:
+		_draw_base()
+	_panel(Rect2(640, 64, 520, 604))
+	_text(Vector2(658, 92), "// DIAGNOSTIC EXO")
+	_text(Vector2(788, 119), "INGÉNIEUR · ARMURE BRISÉE", MUTED, 12)
+	# Silhouette filaire pixel de la planche C.
+	for y in range(SIL.size()):
+		for x in range(SIL[y].length()):
+			if SIL[y][x] == ".":
+				continue
+			var edge: bool = x == 0 or x == SIL[y].length() - 1 or y == 0 or y == SIL.size() - 1
+			if not edge:
+				edge = SIL[y][x-1] == "." or SIL[y][x+1] == "." or SIL[y-1][x] == "." or SIL[y+1][x] == "."
+			draw_rect(Rect2(792 + x * 9, 172 + y * 12, 9, 12), CYAN if edge else (Color("#12596b") if (x + y) % 2 else Color("#0a2a33")))
+	var u_eq := _owner if _owner else engineer()
+	for i in range(10):
+		var right := i >= 5
+		var row := i % 5
+		var x := 1060.0 if right else 664.0
+		var y := 156.0 + row * 87
+		var worn: String = u_eq.equipment.get(SLOTS[i], "") if u_eq else ""
+		var filled := (i == 9 and not mining_item().is_empty()) or worn != ""
+		var target := Vector2(932 if right else 868, 192 + row * 75)
+		draw_line(Vector2(x + (0 if right else 68), y + 34), target, CYAN if filled else Color("#1f9fb8"), 1, true)
+		_slot(Rect2(x, y, 68, 64), filled)
+		_text(Vector2(x - 4, y + 80), SLOTS[i], MUTED, 11)
+		if filled:
+			# Même prisme de forage que dans les quatre recherches.
+			if i == 9:
+				draw_texture_rect(HudStyle.icon("mining_seal", 64), Rect2(x + 2, y, 64, 64), false)
+			else:
+				ItemIcon.draw_item(self, worn, Vector2(x + 34, y + 32), 1.8)
+	_text(Vector2(662, 637), "MINAGE · " + ("SCEAU DE MINAGE ÉQUIPÉ" if not mining_item().is_empty() else "AUCUN SCEAU"), CYAN if not mining_item().is_empty() else MUTED, 13)
+	_panel(Rect2(250, 688, 680, 120))
+	_text(Vector2(268, 708), "// PAQUETAGE · 10", MUTED, 11)
+	var u := _owner if _owner else engineer()
+	for i in range(10):
+		var rect := Rect2(268 + i * 65, 727, 58, 58)
+		var filled := u != null and i < u.inventory.size() and not u.inventory[i].is_empty()
+		_slot(rect, filled)
+		if filled:
+			_draw_item(rect, u.inventory[i])
+	draw_set_transform(Vector2.ZERO)
+
+
+func _draw_base() -> void:
 	_panel(Rect2(20, 64, 600, 604), Color("#586063"))
 	_text(Vector2(38, 92), "// STOCK BASE · 10×10", Color("#788589"))
 	for row in range(10):
@@ -134,48 +219,50 @@ func _draw() -> void:
 	if not GameState.base_inventory_unlocked:
 		draw_rect(Rect2(30, 312, 580, 72), Color("#10181af5"))
 		_text(Vector2(184, 355), "Coffre antique nécessaire", Color("#b6bfc0"), 20)
-	_panel(Rect2(640, 64, 520, 604))
-	_text(Vector2(658, 92), "// DIAGNOSTIC EXO")
-	_text(Vector2(788, 119), "INGÉNIEUR · ARMURE BRISÉE", MUTED, 12)
-	# Silhouette filaire pixel de la planche C.
-	for y in range(SIL.size()):
-		for x in range(SIL[y].length()):
-			if SIL[y][x] == ".":
-				continue
-			var edge: bool = x == 0 or x == SIL[y].length() - 1 or y == 0 or y == SIL.size() - 1
-			if not edge:
-				edge = SIL[y][x-1] == "." or SIL[y][x+1] == "." or SIL[y-1][x] == "." or SIL[y+1][x] == "."
-			draw_rect(Rect2(792 + x * 9, 172 + y * 12, 9, 12), CYAN if edge else (Color("#12596b") if (x + y) % 2 else Color("#0a2a33")))
-	for i in range(10):
-		var right := i >= 5
-		var row := i % 5
-		var x := 1060.0 if right else 664.0
-		var y := 156.0 + row * 87
-		var filled := i == 9 and not mining_item().is_empty()
-		var target := Vector2(932 if right else 868, 192 + row * 75)
-		draw_line(Vector2(x + (0 if right else 68), y + 34), target, CYAN if filled else Color("#1f9fb8"), 1, true)
-		_slot(Rect2(x, y, 68, 64), filled)
-		_text(Vector2(x - 4, y + 80), SLOTS[i], MUTED, 11)
-		if filled:
-			# Même prisme de forage que dans les quatre recherches.
-			draw_texture_rect(HudStyle.icon("mining_seal", 64), Rect2(x + 2, y, 64, 64), false)
-	_text(Vector2(662, 637), "MINAGE · " + ("SCEAU DE MINAGE ÉQUIPÉ" if not mining_item().is_empty() else "AUCUN SCEAU"), CYAN if not mining_item().is_empty() else MUTED, 13)
-	_panel(Rect2(250, 688, 680, 120))
-	_text(Vector2(268, 708), "// PAQUETAGE · 10", MUTED, 11)
-	var u := engineer()
-	for i in range(10):
-		var rect := Rect2(268 + i * 65, 727, 58, 58)
-		var filled := u != null and i < u.inventory.size() and not u.inventory[i].is_empty()
+
+
+func _box() -> Array[Dictionary]:
+	return _chest.input_box if _kind == "in" else _chest.output_box
+
+
+func _box_rect(i: int) -> Rect2:
+	return Rect2(40 + (i % 4) * 140, 135 + (i / 4) * 125, 132, 116)
+
+
+func _draw_chest() -> void:
+	var tint := Color("#62adff") if _kind == "in" else Color("#ff817a")
+	_panel(Rect2(20, 64, 600, 604), tint)
+	_text(Vector2(38, 92), "Coffre bleu" if _kind == "in" else "Coffre rouge", tint, 20)
+	_text(Vector2(38, 117), "Cliquez sur une pile pour la transférer au paquetage.", MUTED)
+	var box := _box()
+	for i in Production.BOX_CAPACITY:
+		var rect := _box_rect(i)
+		var filled := i < box.size() and not box[i].is_empty()
 		_slot(rect, filled)
 		if filled:
-			_draw_item(rect, u.inventory[i])
-	draw_set_transform(Vector2.ZERO)
+			_draw_item(rect, box[i])
+
+
+func _withdraw(index: int) -> void:
+	var box := _box()
+	if index >= box.size() or box[index].is_empty():
+		return
+	var bag := _owner.inventory
+	for i in bag.size():
+		if not bag[i].is_empty() and bag[i]["item"] == box[index]["item"]:
+			Storage.move_stack(box, index, bag, i, _owner.inventory_capacity)
+			if box[index].is_empty():
+				return
+	for i in _owner.inventory_capacity:
+		if i >= bag.size() or bag[i].is_empty():
+			Storage.move_stack(box, index, bag, i, _owner.inventory_capacity)
+			return
 
 
 func _draw_item(rect: Rect2, stack: Dictionary) -> void:
 	var item: String = stack["item"]
 	ItemIcon.draw_item(self, item, rect.get_center() - Vector2(0, 5), 1.8)
-	_text(rect.position + Vector2(4, rect.size.y - 5), Blocks.ITEMS.get(item, {}).get("name", item), CYAN, 10)
+	_text(rect.position + Vector2(4, rect.size.y - 5), preload("res://data/recipes.gd").name_of(item), CYAN, 10)
 
 	var quantity := str(stack["quantity"])
 	var width := _font.get_string_size(quantity, HORIZONTAL_ALIGNMENT_LEFT, -1, 11).x
@@ -185,12 +272,19 @@ func _draw_item(rect: Rect2, stack: Dictionary) -> void:
 
 
 func slot_at(p: Vector2) -> Dictionary:
-	if GameState.base_inventory_unlocked:
+	if _chest:
+		for i in Production.BOX_CAPACITY:
+			if _box_rect(i).has_point(p):
+				return {"box": i}
+	elif GameState.base_inventory_unlocked:
 		for i in range(100):
 			if Rect2(40 + (i % 10) * 56, 108 + (i / 10) * 54, 51, 49).has_point(p):
 				return {"items": GameState.base_inventory, "index": i, "capacity": 100}
-	var u := engineer()
+	var u := _owner if _owner else engineer()
 	if u:
+		for i in range(9):
+			if equip_rect(i).has_point(p):
+				return {"equip": SLOTS[i]}
 		for i in range(10):
 			if Rect2(268 + i * 65, 727, 58, 58).has_point(p):
 				return {"items": u.inventory, "index": i, "capacity": u.inventory_capacity}

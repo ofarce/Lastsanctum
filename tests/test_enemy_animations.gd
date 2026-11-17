@@ -89,8 +89,11 @@ func test_menace_unlocks_strazhar_before_wave_eight() -> void:
 		GameState.menace = menace
 		sim.combat.start_wave()
 		var champions := GameState.spawn_queue.filter(func(s: Dictionary) -> bool: return s["kind"] == "strazhar")
-		check_eq(champions.size(), 1 if menace >= Catalog.STRAZHAR_MENACE else 0, "Menace %d" % menace)
-		check_eq(GameState.spawn_queue.size(), 7, "effectif inchangé")
+		# Effectif et champions supplémentaires suivent les paliers de menace (détaillés dans test_menace).
+		var tier := Catalog.menace_tier(menace)
+		var extra := maxi(0, floori(float(tier - Catalog.MENACE_WAVE["champion_start"]) / Catalog.MENACE_WAVE["champion_step"]))
+		check_eq(champions.size(), 1 + extra if menace >= Catalog.STRAZHAR_MENACE else 0, "Menace %d" % menace)
+		check_eq(GameState.spawn_queue.size(), 7 + Catalog.MENACE_WAVE["count"] * tier, "effectif de la vague 1 au palier %d" % tier)
 		if menace >= Catalog.STRAZHAR_MENACE:
 			check_eq(GameState.spawn_queue[0]["kind"], "strazhar", "champion en tête d’assaut")
 			var e := sim.combat.spawn_enemy(GameState.spawn_queue[0])
@@ -106,8 +109,9 @@ func test_menace_unlocks_strazhar_before_wave_eight() -> void:
 func test_views_play_attacks_then_hold_final_corpse_frame() -> void:
 	var sim := game()
 	var world: World = sim.get_node("../World")
+	world.fog.refresh(sim.state())
 	for kind: String in Catalog.ENEMY:
-		var e := Enemy.make(kind, 0, -110, 0)
+		var e := Enemy.make(kind, -3, -130, 0)
 		e.attack_started = GameState.sim_time - 0.2
 		var v := UnitView.new()
 		world.ysort.add_child(v)

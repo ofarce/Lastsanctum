@@ -30,7 +30,9 @@ func test_panel_actions_match_js() -> void:
 	for k in results.size():
 		var c: Dictionary = data["contexts"][k]
 		Ctx.apply(sim, c, false)
-		var got := HudModel.panel_actions(sim).filter(func(a: Dictionary) -> bool: return not a["id"].begins_with("research-") and a["id"] != "offering")
+		# Creuset des Exilés : bâtiment ajouté après le prototype (fabrication). « Vider le coffre » : coffre rouge des
+		# bâtiments servis par des adeptes (2026-11-17).
+		var got := HudModel.panel_actions(sim).filter(func(a: Dictionary) -> bool: return not a["id"].begins_with("research-") and a["id"] != "offering" and a["id"] not in ["b-creuset", "b-warehouse"] and a["id"] != "collect")
 		var want: Array = results[k]["hud"]["actions"]
 		if got.size() != want.size():
 			check(false, "%s : %d actions au lieu de %d (%s)" % [c["name"], got.size(), want.size(), _ids(got)])
@@ -38,6 +40,8 @@ func test_panel_actions_match_js() -> void:
 		for i in want.size():
 			for f: String in ACTION_FIELDS:
 				var expected: Variant = want[i][f]
+				if f == "title" and got[i]["id"].begins_with("b-") and not str(expected).ends_with(" · 2 × 2"):
+					expected = str(expected) + " · 2 × 2"
 				# Règle demandée : coût initial × niveau, en remplacement des 200 Vie fixes.
 				if got[i]["id"].begins_with("revive-"):
 					var unit: Unit = GameState.fallen.filter(func(u: Unit) -> bool: return "revive-%d" % u.id == got[i]["id"])[0]
@@ -51,6 +55,15 @@ func test_panel_actions_match_js() -> void:
 						expected = str(expected).replace(" · ", " ×4 · ")
 					elif f == "title":
 						expected = str(expected).replace("Entraîner un ", "Former une escouade de 4 · ")
+					# Fabrication : archers et Épée et bouclier demandent leurs objets, affichés avec le stock.
+					var role: String = got[i]["id"].substr(6)
+					var items: Dictionary = Simulation.Recipes.caserne_cost(role, 4)
+					if not items.is_empty():
+						if f == "title":
+							expected = str(expected) + " · " + HudModel._stock_text(items)
+						elif f == "disabled":
+							# Les contextes de référence ne contiennent aucun équipement.
+							expected = true
 				check_eq(got[i][f], expected, "%s, action %d, %s" % [c["name"], i, f])
 
 
@@ -62,13 +75,22 @@ func test_hud_texts_match_js() -> void:
 		Ctx.apply(sim, c, false)
 		var got := HudModel.view(sim)
 		var want: Dictionary = data["results"][k]["hud"]
+		var shown: Unit = GameState.selected[0] if not GameState.selected.is_empty() else null
+		var armored := shown != null and shown.role == "engineer" and not shown.unarmored
 		for f: String in TEXT_FIELDS:
 			var expected: Variant = want[f]
-			# Ingénieur : dégâts de base réduits de 80 à 5.
+			# Ingénieur : dégâts de base réduits de 80 à 5 ; en armure, 1 000 de dégâts et +500 de défense.
 			if f == "damage" and str(expected) in ["80", "82"]:
-				expected = str(int(expected) - 75)
+				expected = str(int(expected) - 80 + (1000 if armored else 5))
+			if f == "armor" and armored:
+				expected = str(int(expected) + 500)
 			if f == "status" and c["name"] == "puits_des_ames":
 				expected = "3 âmes à rappeler · coût initial × niveau en Vie"
+			# Bâtiment servi par des adeptes (2026-11-17) : statut des postes tant que personne n'y travaille.
+			var shown_b := HudModel.selected_building()
+			if f == "status" and shown == null and shown_b != null and Production.idle(shown_b):
+				expected = HudModel.building_status(shown_b)
+				check(str(expected).begins_with("À l’arrêt"), "%s : signalé à l'arrêt" % c["name"])
 			if f == "lore" and c["name"] in ["puits_des_ames", "puits_des_ames_vide"]:
 				expected = Catalog.BUILDINGS["soulwell"]["lore"]
 			check_eq(got[f], expected, "%s, %s" % [c["name"], f])

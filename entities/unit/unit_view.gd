@@ -19,7 +19,7 @@ const HP_BG := Color("#191b1d")
 const HP_ALLY := Color("#85d6b1")
 const HP_GUARD := Color("#9db88f")
 const HP_ENEMY := Color("#db7772")
-const BARE := "res://assets/imported/engineer/engineer_bare"
+const Gear := preload("res://data/gear_items.gd")
 
 var unit: Unit
 var simulation: Simulation
@@ -33,8 +33,11 @@ var _corpse_shadow_ready := false
 static var _enemy_sheets: Dictionary = {}
 var _kneel: Array[AtlasTexture] = []
 var _kneel_fps := 12.0
-## Ingénieur sans armure (surcharge de l'Ancre) : repos, marche et agenouillement à bout de souffle.
+## Ingénieur sans armure (surcharge de l'Ancre), tenue « Le Tyrien » (TyrienArt) : repos, marche, agenouillement à
+## bout de souffle, incantation, méditation ; "meta" = cadences des animations.
 static var _bare: Dictionary
+## Calques des pièces d'équipement portées, enfants de _body (même image, même orientation).
+var _gear: Array[Sprite2D] = []
 var enemy := false
 ## Animations d'attaque (ATK.sword[0..4], ATK.xbow) : 12 images, ancre propre.
 static var _atk: Dictionary
@@ -77,10 +80,10 @@ func setup(u: Unit, meta: Dictionary, sim: Simulation, w: World = null) -> void:
 		else:
 			_xbow = _frames("res://assets/baked/attacks/xbow.png", _atk["xbow"]["sheet"])
 	if not enemy and u.role == "engineer" and _bare.is_empty():
-		var bm: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(BARE + ".json"))
-		_bare = {"meta": bm}
+		TyrienArt.load_all()
+		_bare = {"meta": TyrienArt.meta["anims"]}
 		for anim: String in ["idle", "walk", "kneel", "pray", "settle", "lotus"]:
-			_bare[anim] = _frames(BARE + "_%s.png" % anim, bm[anim])
+			_bare[anim] = TyrienArt.anim(anim)
 	if enemy:
 		if not _enemy_sheets.has(u.role):
 			var sheets := {}
@@ -148,6 +151,8 @@ func _process(_delta: float) -> void:
 func _update() -> void:
 	var u := unit
 	visible = not u.hidden and (u.alive() or (enemy and u.dead)) and not Overload.hidden_in_blast(u)
+	if enemy and world and not world.fog.visible_at(u.pos()):
+		visible = false
 	position = Proj.nat(u.x, 0.0, u.z)
 	if enemy and u.dead:
 		var age := maxf(0.0, GameState.sim_time - (u as Enemy).died_at)
@@ -176,7 +181,7 @@ func _update() -> void:
 		_still += 1
 	var walking := _still < 4
 	# Orientation : alliés vers l'ennemi le plus proche (20 pour le Tireur, 10 sinon), sinon sens de la marche.
-	var foe: Variant = null if enemy else Combat.target_closest(u, GameState.enemies, 20.0 if u.role == "shooter" else 10.0)
+	var foe: Variant = null if enemy else Combat.target_closest(u, GameState.enemies, 20.0 if u.role == "shooter" else 10.0, world)
 	var dxs: float = foe.x - u.x if foe else u.x - _lx
 	# u._face est partagé avec les frappes (swordStrike, volley) : une orientation imposée tient tant
 	# qu'aucun ennemi n'est visé et que l'unité ne bouge pas.
@@ -201,6 +206,10 @@ func _update() -> void:
 		frame = (_bare["idle"] if bare else _idle)[(floori(t * SPR_FRAMES / SPR_LOOP) + (key & 7) * 3) % SPR_FRAMES]
 	var ax := float(_meta["ax"])
 	var ay := float(_meta["ay"])
+	# Marche ennemie dans un cadre propre (Strazhar à quatre pattes) : ancre de la marche.
+	if enemy and walking and _meta["walk"].has("ax"):
+		ax = float(_meta["walk"]["ax"])
+		ay = float(_meta["walk"]["ay"])
 	# attackFrame : coup d'épée (0,8 s) ou salve d'arbalète (0,7 s), sur 12 images.
 	var atk: Array = []
 	var atk_meta: Dictionary = {}
@@ -222,6 +231,8 @@ func _update() -> void:
 		var age := t - (u as Enemy).attack_started
 		if age >= 0.0 and age < float(Catalog.ENEMY[u.role]["cd"]):
 			frame = _enemy_attack[mini(_enemy_attack.size() - 1, floori(age * float(_meta["attack"]["fps"])))]
+			ax = float(_meta["ax"])
+			ay = float(_meta["ay"])
 			bob = 0
 	if not _kneel.is_empty() and simulation and simulation.kneeling(u):
 		if bare:
@@ -254,7 +265,7 @@ func _update() -> void:
 	if not med.is_empty():
 		var age: float = med["age"]
 		var tb: Building = med["temple"]
-		_face = 1 if tb.x >= u.x else -1
+		_face = 1 if (tb.x if tb else CaveShape.CORE.x) >= u.x else -1
 		kick = 0
 		bob = 0
 		if bare:
@@ -273,8 +284,14 @@ func _update() -> void:
 		_med_on = not med.is_empty()
 		_med_back.queue_redraw()
 		_med_front.queue_redraw()
+	# Tyrien : planches au gabarit propre (cadre plus large pour l'équipement).
+	var tyrien := bare and TyrienArt.is_tyrien(frame)
+	if tyrien:
+		ax = float(TyrienArt.meta["ax"])
+		ay = float(TyrienArt.meta["ay"])
 	_body.texture = frame
 	_body.offset = Vector2(-ax - kick, -ay)
+	_sync_gear(frame if tyrien else null)
 	_body.position = Vector2(0, -bob + roundf(drop))
 	_body.scale = Vector2(-1 if _face < 0 else 1, 1)
 	if _mining_seal:
@@ -298,6 +315,25 @@ func _update() -> void:
 		_over.queue_redraw()
 
 
+## Empile sur _body les calques des pièces portées par l'Ingénieur (aucun hors tenue tyrienne).
+func _sync_gear(frame: Texture2D) -> void:
+	var layers: Array[AtlasTexture] = []
+	if frame != null and not unit.equipment.is_empty():
+		layers = TyrienArt.overlays(frame, Gear.pieces(unit))
+	while _gear.size() < layers.size():
+		var s := Sprite2D.new()
+		s.centered = false
+		s.use_parent_material = true
+		_body.add_child(s)
+		_gear.append(s)
+	for i in _gear.size():
+		var s := _gear[i]
+		s.visible = i < layers.size()
+		if s.visible:
+			s.texture = layers[i]
+			s.offset = _body.offset
+
+
 func selected() -> bool:
 	if enemy:
 		return GameState.hud_enemy == unit and unit.alive()
@@ -306,7 +342,7 @@ func selected() -> bool:
 
 func radius() -> float:
 	if enemy:
-		return 0.85 if unit.role == "brute" else 0.6
+		return 0.85 if unit.role == "brute" or unit.role == "strazhar" else 0.6
 	return 0.75 if unit.role == "paladin" else 0.54
 
 

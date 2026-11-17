@@ -874,26 +874,26 @@
     }
    },
    "flammes": {
-    "ax": 9,
-    "ay": 25,
+    "ax": 12,
+    "ay": 37,
     "modes": {
      "idle": {
-      "frame_w": 22,
-      "frame_h": 26,
+      "frame_w": 29,
+      "frame_h": 38,
       "cols": 1,
       "rows": 1,
       "count": 1
      },
      "walk": {
-      "frame_w": 22,
-      "frame_h": 26,
+      "frame_w": 29,
+      "frame_h": 38,
       "cols": 2,
       "rows": 1,
       "count": 2
      },
      "work": {
-      "frame_w": 22,
-      "frame_h": 26,
+      "frame_w": 29,
+      "frame_h": 38,
       "cols": 4,
       "rows": 1,
       "count": 4
@@ -901,26 +901,26 @@
     }
    },
    "archer": {
-    "ax": 8,
-    "ay": 26,
+    "ax": 10,
+    "ay": 39,
     "modes": {
      "idle": {
-      "frame_w": 21,
-      "frame_h": 27,
+      "frame_w": 30,
+      "frame_h": 40,
       "cols": 1,
       "rows": 1,
       "count": 1
      },
      "walk": {
-      "frame_w": 21,
-      "frame_h": 27,
+      "frame_w": 30,
+      "frame_h": 40,
       "cols": 2,
       "rows": 1,
       "count": 2
      },
      "work": {
-      "frame_w": 21,
-      "frame_h": 27,
+      "frame_w": 30,
+      "frame_h": 40,
       "cols": 4,
       "rows": 1,
       "count": 4
@@ -928,26 +928,26 @@
     }
    },
    "lame": {
-    "ax": 9,
-    "ay": 27,
+    "ax": 15,
+    "ay": 40,
     "modes": {
      "idle": {
-      "frame_w": 21,
-      "frame_h": 28,
+      "frame_w": 33,
+      "frame_h": 41,
       "cols": 1,
       "rows": 1,
       "count": 1
      },
      "walk": {
-      "frame_w": 21,
-      "frame_h": 28,
+      "frame_w": 33,
+      "frame_h": 41,
       "cols": 2,
       "rows": 1,
       "count": 2
      },
      "work": {
-      "frame_w": 21,
-      "frame_h": 28,
+      "frame_w": 33,
+      "frame_h": 41,
       "cols": 4,
       "rows": 1,
       "count": 4
@@ -975,7 +975,7 @@
     "verse": "templeJob",
     "time": 4,
     "lore": "Ses adeptes y prient pour le Savoir.",
-    "size": 3
+    "size": 2
    },
    "aether": {
     "name": "Temple d’Aether",
@@ -989,7 +989,7 @@
     "verse": "foundryJob",
     "time": 4,
     "lore": "Ses adeptes y prient pour la Forge.",
-    "size": 3
+    "size": 2
    },
    "medeina": {
     "name": "Temple de Medeina",
@@ -1003,7 +1003,7 @@
     "verse": "sawmillJob",
     "time": 4,
     "lore": "Ses adeptes y prient pour la Vie.",
-    "size": 3
+    "size": 2
    },
    "indra": {
     "name": "Temple d’Indra",
@@ -1017,12 +1017,12 @@
     "verse": "barracksJob",
     "time": 4,
     "lore": "Ses adeptes y prient pour la Discipline.",
-    "size": 3
+    "size": 2
    },
    "library": {
     "name": "Bibliothèque",
     "cost": {
-     "savoir": 200
+     "savoir": 50
     },
     "requires": "sigil",
     "art": "da-library",
@@ -1031,12 +1031,12 @@
     "verse": "templeJob",
     "time": 8,
     "lore": "Les rouleaux de Sigil y sont rassemblés.",
-    "size": 3
+    "size": 2
    },
    "forge": {
     "name": "Forge",
     "cost": {
-     "forge": 200
+     "forge": 50
     },
     "requires": "aether",
     "art": "da-forge",
@@ -1045,12 +1045,12 @@
     "verse": "foundryJob",
     "time": 8,
     "lore": "L’enclume d’Aether y résonne.",
-    "size": 3
+    "size": 2
    },
    "workshop": {
     "name": "Atelier",
     "cost": {
-     "forge": 200
+     "forge": 50
     },
     "requires": "aether",
     "art": "da-workshop",
@@ -1059,12 +1059,12 @@
     "verse": "foundryJob",
     "time": 8,
     "lore": "Établis et outils des artisans d’Aether.",
-    "size": 3
+    "size": 2
    },
    "bedroom": {
     "name": "Chambre à coucher",
     "cost": {
-     "vie": 200
+     "vie": 50
     },
     "requires": "medeina",
     "art": "da-bedroom",
@@ -1078,7 +1078,7 @@
    "soulwell": {
     "name": "Puits des Âmes",
     "cost": {
-     "vie": 200
+     "vie": 50
     },
     "requires": "medeina",
     "art": "da-soulwell",
@@ -1092,7 +1092,7 @@
    "caserne": {
     "name": "Caserne",
     "cost": {
-     "discipline": 200
+     "discipline": 50
     },
     "requires": "indra",
     "art": "da-caserne",
@@ -1101,7 +1101,7 @@
     "verse": "barracksJob",
     "time": 8,
     "lore": "Les disciples d’Indra y forment les combattants.",
-    "size": 3
+    "size": 2
    }
   },
   "arts": {
@@ -1110,8 +1110,8 @@
      160,
      168
     ],
-    "top": 98,
-    "bottom": 216,
+    "top": 121,
+    "bottom": 201,
     "anim": {
      "frame_w": 320,
      "frame_h": 240,
@@ -1122,15 +1122,16 @@
      "fps": 12,
      "exact": true,
      "seam_pixels": 0
-    }
+    },
+    "scale": 1
    },
    "da-aether": {
     "anchor": [
      160,
      168
     ],
-    "top": 91,
-    "bottom": 216,
+    "top": 117,
+    "bottom": 201,
     "anim": {
      "frame_w": 320,
      "frame_h": 240,
@@ -1141,15 +1142,16 @@
      "fps": 12,
      "exact": true,
      "seam_pixels": 0
-    }
+    },
+    "scale": 1
    },
    "da-medeina": {
     "anchor": [
      160,
      168
     ],
-    "top": 98,
-    "bottom": 213,
+    "top": 121,
+    "bottom": 201,
     "anim": {
      "frame_w": 320,
      "frame_h": 240,
@@ -1160,15 +1162,16 @@
      "fps": 12,
      "exact": true,
      "seam_pixels": 0
-    }
+    },
+    "scale": 1
    },
    "da-indra": {
     "anchor": [
      160,
      168
     ],
-    "top": 94,
-    "bottom": 211,
+    "top": 119,
+    "bottom": 198,
     "anim": {
      "frame_w": 320,
      "frame_h": 240,
@@ -1179,15 +1182,16 @@
      "fps": 12,
      "exact": true,
      "seam_pixels": 0
-    }
+    },
+    "scale": 1
    },
    "da-library": {
     "anchor": [
      160,
      168
     ],
-    "top": 103,
-    "bottom": 208,
+    "top": 125,
+    "bottom": 196,
     "anim": {
      "frame_w": 320,
      "frame_h": 240,
@@ -1198,15 +1202,16 @@
      "fps": 12,
      "exact": true,
      "seam_pixels": 0
-    }
+    },
+    "scale": 1
    },
    "da-forge": {
     "anchor": [
      160,
      168
     ],
-    "top": 77,
-    "bottom": 202,
+    "top": 110,
+    "bottom": 193,
     "anim": {
      "frame_w": 320,
      "frame_h": 240,
@@ -1217,15 +1222,16 @@
      "fps": 12,
      "exact": true,
      "seam_pixels": 0
-    }
+    },
+    "scale": 1
    },
    "da-workshop": {
     "anchor": [
      160,
      168
     ],
-    "top": 111,
-    "bottom": 214,
+    "top": 130,
+    "bottom": 199,
     "anim": {
      "frame_w": 320,
      "frame_h": 240,
@@ -1236,15 +1242,16 @@
      "fps": 12,
      "exact": true,
      "seam_pixels": 0
-    }
+    },
+    "scale": 1
    },
    "da-bedroom": {
     "anchor": [
      160,
      168
     ],
-    "top": 72,
-    "bottom": 222,
+    "top": 104,
+    "bottom": 205,
     "anim": {
      "frame_w": 320,
      "frame_h": 240,
@@ -1255,7 +1262,8 @@
      "fps": 12,
      "exact": true,
      "seam_pixels": 0
-    }
+    },
+    "scale": 1
    },
    "da-soulwell": {
     "anchor": [
@@ -1282,8 +1290,8 @@
      160,
      168
     ],
-    "top": 108,
-    "bottom": 196,
+    "top": 128,
+    "bottom": 187,
     "anim": {
      "frame_w": 320,
      "frame_h": 240,
@@ -1294,12 +1302,33 @@
      "fps": 12,
      "exact": true,
      "seam_pixels": 0
+    },
+    "scale": 1
+   },
+   "da-creuset": {
+    "anchor": [
+     160,
+     168
+    ],
+    "top": 93,
+    "bottom": 198,
+    "scale": 1,
+    "anim": {
+     "frame_w": 320,
+     "frame_h": 240,
+     "cols": 12,
+     "rows": 6,
+     "count": 72,
+     "seconds": 6,
+     "fps": 12,
+     "exact": true,
+     "seam_pixels": 0
     }
    }
   },
   "constants": {
    "CELL": 4,
-   "SUMMON_COST": 50,
+   "SUMMON_COST": 10,
    "CASERNE_COST": {
     "discipline": 100
    },

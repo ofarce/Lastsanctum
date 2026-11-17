@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Coffres de production · export</title>
+<style>body{margin:0;background:#0b120e;color:#dcd8bc;font:14px/1.4 system-ui,sans-serif;padding:16px}canvas{image-rendering:pixelated;background:#4a3a2a;display:block;margin-top:8px;max-width:100%}p{color:#93a08a}</style></head><body>
+<h1>Coffres de production · export</h1>
+<p>Coffres A (coffrets d’ardoise émaillés) : rangée 0 bleu (entrée), rangée 1 grenat (sortie), 8 images d’ouverture (0 fermé → 7 ouvert), 26 × 30 px, repère (13, 27).
+Caisse portée (port 2) : 12 × 8 px, repère (6, 7). Avec <code>?save=1</code> (servi par <code>tools/production/serve.py</code>), écrit dans <code>assets/baked/world/</code>.</p>
+<canvas id="sheet"></canvas><canvas id="crate"></canvas><p id="st"></p>
+<script src="assets/production-kit.js?v=1"></script>
+<script>
+'use strict';
+const K=ProdKit,N=8,cv=document.querySelector('#sheet'),g=cv.getContext('2d');cv.width=K.W*N;cv.height=K.H*2;cv.style.width=cv.width*4+'px';
+const tmp=document.createElement('canvas'),tg=tmp.getContext('2d');
+const put=(ctx,P,x,y)=>{tmp.width=P.w;tmp.height=P.h;tg.putImageData(K.toImage(P,tg),0,0);ctx.drawImage(tmp,x,y)};
+['in','out'].forEach((k,row)=>{for(let i=0;i<N;i++)put(g,K.chest(k,K.eio(i/(N-1))),i*K.W,row*K.H)});
+const cc=document.querySelector('#crate'),cg=cc.getContext('2d');cc.width=K.CRW;cc.height=K.CRH;cc.style.width=K.CRW*8+'px';put(cg,K.crate(),0,0);
+const meta={frame:[K.W,K.H],anchor:[K.AX,K.AY],count:N,rows:{in:0,out:1},crate:{size:[K.CRW,K.CRH],anchor:[K.CRX,K.CRY]}};
+document.querySelector('#st').textContent=JSON.stringify(meta);
+if(new URLSearchParams(location.search).has('save')){
+ fetch('/out/production_chests.png',{method:'POST',body:cv.toDataURL('image/png')})
+ .then(()=>fetch('/out/production_crate.png',{method:'POST',body:cc.toDataURL('image/png')}))
+ .then(()=>fetch('/out/production_chests.json',{method:'POST',body:JSON.stringify(meta)}))
+ .then(r=>{document.querySelector('#st').textContent+=r.ok?' · écrit':' · échec '+r.status})}
+</script></body></html>

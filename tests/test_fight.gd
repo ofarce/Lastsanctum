@@ -60,6 +60,7 @@ func test_strikes_match_js() -> void:
 func test_archer_charge_matches_js() -> void:
 	var u := setup("archer", 1)
 	var e := foe("creep", 4.0, -120.0, 200.0)
+	game_sim().world.fog.refresh(game_sim().state())
 	var i := 0
 	for want: Dictionary in js()["charge_run"]:
 		u.attack -= 0.05
@@ -71,6 +72,7 @@ func test_archer_charge_matches_js() -> void:
 
 func test_engineer_only_attacks_in_melee() -> void:
 	var u := setup("engineer", 1)
+	u.unarmored = true  # en armure, l'Ingénieur frappe à 1 000 et à 250 de portée (test_requested_changes)
 	var e := foe("brute", 5.0, -120.0, 100.0)
 	game_sim().combat.update_units(0.0, [u])
 	check_near(e.hp, 100.0, 1e-9, "aucune attaque à distance")

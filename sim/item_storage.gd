@@ -1,11 +1,21 @@
 extends RefCounted
 ## Piles de 9 999 objets identiques par case. Le coffre débloqué est la destination exclusive.
+const PICKUP_RADIUS := 2.0
 const BASE_CAPACITY := 100
 const MAX_STACK := 9999
 
 
 static func character_available(u: Unit) -> bool:
 	return u != null and u.alive() and u.role == "engineer" and u.unarmored and u.inventory_capacity > 0
+
+
+static func has_room(items: Array[Dictionary], capacity: int, item: String) -> bool:
+	if items.size() < capacity:
+		return true
+	for stack: Dictionary in items:
+		if stack.is_empty() or (stack["item"] == item and stack["quantity"] < MAX_STACK):
+			return true
+	return false
 
 
 static func store(items: Array[Dictionary], capacity: int, item: String) -> bool:
@@ -22,6 +32,17 @@ static func store(items: Array[Dictionary], capacity: int, item: String) -> bool
 		items.append({"item": item, "quantity": 1})
 		return true
 	return false
+
+
+static func collect_nearby(u: Unit) -> void:
+	if u.hidden or not character_available(u):
+		return
+	var position := u.pos()
+	for i in range(GameState.ground_items.size() - 1, -1, -1):
+		var drop := GameState.ground_items[i]
+		if position.distance_squared_to(drop["position"]) <= PICKUP_RADIUS * PICKUP_RADIUS:
+			if store(u.inventory, u.inventory_capacity, drop["item"]):
+				GameState.ground_items.remove_at(i)
 
 
 static func deposit(item: String, u: Unit, position: Vector2) -> void:
@@ -51,3 +72,64 @@ static func move_stack(source: Array[Dictionary], from: int, target: Array[Dicti
 	else:
 		source[from] = target[to]
 		target[to] = stack
+
+
+## Réserves où la fabrication et la caserne puisent : le coffre de base (s'il est débloqué), puis le sac de
+## chaque Ingénieur vivant.
+static func sources() -> Array:
+	var out: Array = []
+	if GameState.base_inventory_unlocked:
+		out.append(GameState.base_inventory)
+	for u: Unit in GameState.units:
+		if u.role == "engineer" and u.alive():
+			out.append(u.inventory)
+	return out
+
+
+static func count(item: String) -> int:
+	var n := 0
+	for items: Array in sources():
+		for stack: Dictionary in items:
+			if not stack.is_empty() and stack["item"] == item:
+				n += int(stack["quantity"])
+	return n
+
+
+static func has_all(cost: Dictionary) -> bool:
+	for k: String in cost:
+		if count(k) < int(cost[k]):
+			return false
+	return true
+
+
+## Retire `cost` du stock, tout ou rien ; renvoie faux sans rien retirer s'il manque un objet.
+static func take(cost: Dictionary) -> bool:
+	if not has_all(cost):
+		return false
+	for k: String in cost:
+		var left := int(cost[k])
+		for items: Array in sources():
+			for i in items.size():
+				if left == 0:
+					break
+				var stack: Dictionary = items[i]
+				if stack.is_empty() or stack["item"] != k:
+					continue
+				var n := mini(left, int(stack["quantity"]))
+				stack["quantity"] -= n
+				left -= n
+				if stack["quantity"] <= 0:
+					items[i] = {}
+	return true
+
+
+## Rend `cost` au stock (annulation) : coffre, sac de l'Ingénieur ou sol à `position`.
+static func give(cost: Dictionary, position: Vector2) -> void:
+	var engineer: Unit = null
+	for u: Unit in GameState.units:
+		if u.role == "engineer" and u.alive():
+			engineer = u
+			break
+	for k: String in cost:
+		for i in int(cost[k]):
+			deposit(k, engineer, position)

@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Bosquet pétrifié</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0b0d10;--panel:#12151a;--line:#2a2f38;--txt:#dcd8cc;--mut:#939aa4;--acc:#7ae070}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--txt);font:15px/1.45 'Pixelify Sans',system-ui,sans-serif}
+header,main{max-width:1400px;margin:auto;padding:18px 16px}h1{margin:0;font-weight:600;letter-spacing:.08em;font-size:26px;color:var(--acc)}
+header p{color:var(--mut);margin:6px 0 0;max-width:980px}
+button{font:inherit;color:var(--txt);background:#1a1e26;border:1px solid var(--line);padding:6px 12px;cursor:pointer}button:hover{border-color:var(--acc)}
+label{color:var(--mut);display:flex;gap:8px;align-items:center}
+.bar{display:flex;gap:14px;align-items:center;margin-top:12px;flex-wrap:wrap}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,560px),1fr));gap:16px}
+figure{margin:0;background:var(--panel);border:1px solid var(--line);min-width:0}
+.stage{position:relative;background:#050608;padding:8px}
+.stage canvas{image-rendering:pixelated;display:block;width:100%;height:auto;aspect-ratio:192/144}
+.tag{position:absolute;left:14px;top:12px;font-size:12px;padding:2px 8px;background:#0b0d10cc;border:1px solid var(--line);color:var(--mut)}
+.cap{padding:12px 14px 14px;border-top:1px solid var(--line)}
+.cap b{color:var(--acc);font-weight:600;font-size:17px}.cap p{margin:4px 0 0;color:var(--mut);font-size:14px}
+.cap dl{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;margin:8px 0 0;font-size:13px}.cap dt{color:var(--txt)}.cap dd{margin:0;color:var(--mut)}
+.x1{display:flex;gap:10px;align-items:flex-end;margin-top:8px}.x1 canvas{image-rendering:pixelated;background:#050608;border:1px solid var(--line)}
+.x1 span{font-size:11px;color:var(--mut)}
+</style></head><body>
+<header><h1>BOIS · BOSQUET PÉTRIFIÉ</h1>
+<p>Le bois ne sort plus d’un bloc de roche : c’est un bosquet de trois arbres pétrifiés posé sur le sol de la grotte, sur une emprise de 2 × 2 cases (64 × 64 px à l’échelle du jeu). Un rai de lumière tombe d’une fissure du plafond et l’éclaire. Les scènes sont rendues à la résolution du jeu (8 px par unité) puis agrandies ×4. Sous chaque scène, le bosquet à l’échelle ×1.</p>
+<div class="bar"><button id="pause">Pause</button>
+<label>Bois restant <input id="wood" type="range" min="0" max="20" value="20"> <span id="woodv">20 / 20</span></label>
+<label><input id="foot" type="checkbox" checked> Emprise 2 × 2</label></div>
+<p style="color:var(--mut);font-size:13px;margin-top:8px">Le curseur montre l’usure quand un autre adepte que ceux de Medeina, ou l’Ingénieur, exploite le bosquet : à 0, il ne reste que des souches. Un adepte de Medeina le laisse toujours à 20.</p></header>
+<main><div class="grid" id="grid"></div></main>
+<script>
+'use strict';
+const W=192,H=144,SC=4;
+const BAYER=[[0,8,2,10],[12,4,14,6],[3,11,1,9],[15,7,13,5]].map(r=>r.map(v=>(v+.5)/16));
+const bay=(x,y)=>BAYER[(y%4+4)%4][(x%4+4)%4];
+function hash(x,y,s){let h=(x*374761393+y*668265263+s*1442695041)|0;h=(h^(h>>>13))*1274126177|0;return((h^(h>>>16))>>>0)/4294967296}
+function vn(x,y,s){const xi=Math.floor(x),yi=Math.floor(y),xf=x-xi,yf=y-yi,u=xf*xf*(3-2*xf),v=yf*yf*(3-2*yf);
+ const a=hash(xi,yi,s),b=hash(xi+1,yi,s),c=hash(xi,yi+1,s),d=hash(xi+1,yi+1,s);return a+(b-a)*u+(c-a)*v+(a-b-c+d)*u*v}
+const lerp=(a,b,t)=>a+(b-a)*t,cl=(v,a,b)=>Math.max(a,Math.min(b,v));
+const hexC={};const rgb=c=>hexC[c]||(hexC[c]=[1,3,5].map(i=>parseInt(c.substr(i,2),16)));
+function rng(seed){return()=>{seed=(1664525*seed+1013904223)>>>0;return seed/4294967296}}
+
+// Palettes (charte : ardoise #272d37/#333a46/#404955, contour #0b090b, quartz laiteux, vert Medeina)
+const SL=['#0f1217','#161a21','#1d222a','#232933','#2a313c','#333a46','#404955','#4f5866','#626b79','#7a8290','#969ca6'];
+const WD=['#1a1612','#272019','#372d23','#4a3e30','#61523f','#7a6a53','#958469','#b2a184','#cdbfa2','#e6dcc4'];
+const QZ=['#8a877e','#b4b0a4','#d6d2c6','#f0ece2','#ffffff'];
+const MS=['#1b2c1e','#24402a','#2f5634','#3f6e3e','#55884c','#72a35e'];
+const LF=['#1f6420','#3fa83a','#7ae070','#c8f5b0'];
+const OUT='#0b090b',BEAM='#fff1d2';
+
+// Rai de lumière : de la fissure (haut droite) vers le centre de l'emprise.
+const FOOT={x:64,y:72,w:64,h:64},POOL={x:96,y:106,rx:46,ry:24};
+const beamC=y=>lerp(128,96,cl(y/POOL.y,0,1)),beamHW=y=>lerp(9,40,cl(y/POOL.y,0,1));
+function beamBand(x,y,pulse){ // 0..3
+ if(y>POOL.y+POOL.ry)return 0;
+ let d=Math.abs(x-beamC(y))/beamHW(y);
+ if(y>POOL.y-6){const e=Math.hypot((x-POOL.x)/POOL.rx,(y-POOL.y)/POOL.ry);d=Math.min(d,e)}
+ const v=(1-d)*3.1+pulse;return cl(Math.floor(v+bay(x,y)-.5),0,3)}
+
+// Calque : chaque pixel = [palette, indice] (le rai éclaircit l'indice) ou contour.
+class Layer{constructor(){this.p=new Array(W*H).fill(null);this.z=new Float32Array(W*H).fill(-1e9)}
+ set(x,y,pal,i,z=y){x=Math.round(x);y=Math.round(y);if(x<0||y<0||x>=W||y>=H)return;const k=y*W+x;if(z<this.z[k])return;this.z[k]=z;this.p[k]=[pal,cl(Math.round(i),0,pal.length-1)]}
+ has(x,y){return x>=0&&y>=0&&x<W&&y<H&&this.p[y*W+x]!==null}
+ outline(){const add=[];for(let y=0;y<H;y++)for(let x=0;x<W;x++){if(this.p[y*W+x])continue;
+  if(this.has(x-1,y)||this.has(x+1,y)||this.has(x,y-1)||this.has(x,y+1))add.push(y*W+x)}
+  for(const k of add)this.p[k]=[null,0]}}
+
+// ---------- primitives ----------
+function disc(L,cx,cy,r,pal,i,z){for(let y=Math.floor(cy-r);y<=cy+r;y++)for(let x=Math.floor(cx-r);x<=cx+r;x++)if((x-cx)**2+(y-cy)**2<=r*r+.3)L.set(x,y,pal,i+((x-cx)>0?1:0)-((y-cy)>r*.4?1:0),z??cy)}
+// Tronc : base (bx,by), hauteur h, largeurs w0→w1, dévers lean ; renvoie le sommet.
+function trunk(L,bx,by,h,w0,w1,lean,o={}){
+ const pal=o.pal||WD,seed=o.seed||1,top=[];
+ for(let yy=0;yy<=h;yy++){const f=yy/h,w=lerp(w0,w1,Math.sqrt(f)),cx=bx+lean*f;
+  for(let xx=-w/2;xx<=w/2;xx+=1){const t=(xx+w/2)/Math.max(1,w),x=Math.round(cx+xx);
+   // fût strié verticalement ; ombre à gauche, lumière à droite (rai)
+   const str=hash(Math.round(xx+ w/2),Math.floor(yy/3),seed)<.25?-1:0;
+   let i=(o.base??3)+t*3.2+str-(f<.08?1:0);
+   if(o.broken&&yy>h-4&&hash(x,seed,7)<(yy-(h-4))/4)continue;
+   L.set(x,by-yy,pal,i,by+.01)}
+  if(yy===h)top.push(cx)}
+ // racines en contreforts
+ for(const s of [-1,1]){const n=o.roots??2;for(let r=0;r<n;r++){const len=3+hash(r,s,seed)*4,ang=s*(.25+r*.35);
+  for(let k=0;k<len;k++)L.set(bx+s*(w0/2-1+k*Math.cos(ang)),by-1+k*Math.sin(Math.abs(ang))*.35,pal,(s>0?4:2)-k*.2,by+.02)}}
+ return[bx+lean,by-h]}
+function branch(L,x,y,ang,len,th,depth,r,o={}){
+ const pal=o.pal||WD;let px=x,py=y;
+ for(let k=0;k<len;k++){ang+=(r()-.5)*.35;px+=Math.cos(ang);py+=Math.sin(ang);const tt=Math.max(.5,th*(1-k/len*.6));
+  for(let a=-tt/2;a<=tt/2;a+=.7){const qx=px+Math.cos(ang+Math.PI/2)*a,qy=py+Math.sin(ang+Math.PI/2)*a;
+   L.set(qx,qy,pal,(o.base??4)+(a<0?1.2:-.4),o.z??y)}}
+ if(depth>0){branch(L,px,py,ang-.5-r()*.3,len*.68,th*.65,depth-1,r,o);branch(L,px,py,ang+.4+r()*.3,len*.62,th*.6,depth-1,r,o)}
+ return[px,py]}
+function crack(L,x,y,len,seed){let cx=x;for(let k=0;k<len;k++){cx+=hash(k,seed,3)<.5?-1:1;if(L.has(Math.round(cx),y-k)){const p=L.p[(y-k)*W+Math.round(cx)];if(p&&p[0])L.p[(y-k)*W+Math.round(cx)]=[p[0],0]}}}
+function rubble(L,cx,cy,n,seed,pal=WD){const r=rng(seed);for(let k=0;k<n;k++){const x=cx+(r()-.5)*24,y=cy+(r()-.3)*8,s=1+r()*1.6;disc(L,x,y,s,pal,4+r()*2,y)}}
+function ring(L,cx,cy,rx,ry,pal,z){for(let y=-ry;y<=ry;y++)for(let x=-rx;x<=rx;x++){const e=(x/rx)**2+(y/ry)**2;if(e>1)continue;
+ const band=Math.floor(Math.sqrt(e)*4);L.set(cx+x,cy+y,pal,band%2?6:8,z)}}
+
+// ---------- 5 propositions ----------
+// s = bois restant (0..1) ; chaque fonction dessine dans L et renvoie les ombres à projeter [x,y,rx,ry].
+const PROPS=[
+{name:'1 · Souches calcifiées',lore:'Trois troncs courts et massifs, cassés net à hauteur d’homme. Le dessus montre les cernes devenus pierre : on lit tout de suite « bois ».',
+ dl:[['Silhouette','basse et large, lisible même derrière des unités'],['Matière','bois-pierre brun gris, cernes clairs sur les coupes'],['Lumière','le rai frappe les trois coupes, qui deviennent les points les plus clairs']],
+ draw(L,s){const sh=[];const T=[[82,118,22,13,10,-1],[104,124,17,12,9,1],[110,100,25,14,11,2]];
+  for(const[x,y,h,w0,w1,ln]of T){const hh=Math.max(3,h*(.25+.75*s));const[tx,ty]=trunk(L,x,y,hh,w0,w1,ln,{seed:x,roots:2});
+   ring(L,Math.round(tx),Math.round(ty),Math.floor(w1/2),2,WD,ty+.2);
+   if(s>.3){const r=rng(x);branch(L,tx+w1/2-1,ty+4,-.5,5,2,0,r)}
+   for(let c=0;c<Math.floor((1-s)*4);c++)crack(L,x-3+c*2,y-1,Math.floor(hh*.7),c+x);
+   sh.push([x-3,y,w0*.9,4])}
+  if(s<1)rubble(L,96,124,Math.floor((1-s)*14),5);return sh}},
+{name:'2 · Bosquet veiné de quartz',lore:'Trois arbres nus aux branches ramifiées ; des veines de quartz laiteux courent dans le bois pétrifié et scintillent quand le rai les touche.',
+ dl:[['Silhouette','ramure fine, haute (≈ 44 px), se détache bien du sol'],['Matière','bois-pierre + quartz, la « lumière » de l’ardoise tyrienne'],['Lumière','scintillement des veines au rythme du rai']],
+ quartz:true,
+ draw(L,s){const sh=[];const T=[[80,120,36,8,4,-4,11],[100,126,30,7,4,3,12],[112,104,42,8,4,5,13]];
+  for(const[x,y,h,w0,w1,ln,sd]of T){const hh=Math.max(4,h*(.2+.8*s));const[tx,ty]=trunk(L,x,y,hh,w0,w1,ln,{seed:sd,broken:s<.6});
+   const r=rng(sd);if(s>.25){const d=s>.6?2:1;branch(L,tx,ty+2,-1.9,9,2.4,d,r);branch(L,tx,ty+6,-.9,8,2,d-1,r);branch(L,tx-1,ty+8,-2.4,7,2,d-1,r)}
+   // veines de quartz
+   for(let v=0;v<3;v++){let vx=x-2+v*2;for(let k=2;k<hh-2;k++){vx+=hash(k,v,sd)<.3?(hash(v,k,sd)<.5?-1:1):0;if(hash(k,v+9,sd)<.75)L.set(vx,y-k,QZ,1+hash(k,v,1)*1.5,y+.05)}}
+   for(let c=0;c<Math.floor((1-s)*3);c++)crack(L,x-2+c*2,y-2,Math.floor(hh*.6),c+sd);
+   sh.push([x-4,y,10,3])}
+  if(s<1)rubble(L,96,122,Math.floor((1-s)*12),6);return sh}},
+{name:'3 · Grands fûts silicifiés',lore:'Trois fûts hauts qui penchent les uns vers les autres, écorce striée, sommets brisés en éclats. Le plus monumental : on le repère de loin dans une galerie.',
+ dl:[['Silhouette','verticale, la plus haute (≈ 58 px), sommets en dents'],['Matière','silice gris-beige, stries d’écorce verticales'],['Lumière','le rai glisse le long des fûts, comme une colonne de temple']],
+ draw(L,s){const sh=[];const T=[[78,118,52,10,6,8,21],[98,128,46,9,6,0,22],[116,108,58,10,6,-9,23]];
+  for(const[x,y,h,w0,w1,ln,sd]of T){const hh=Math.max(5,h*(.18+.82*s));trunk(L,x,y,hh,w0,w1,ln*(hh/h),{seed:sd,broken:true,roots:3,base:2.6});
+   for(let c=0;c<Math.floor((1-s)*4);c++)crack(L,x-3+c*2,y-2,Math.floor(hh*.5),c+sd);
+   sh.push([x-5,y,11,3.5])}
+  if(s<1)rubble(L,96,124,Math.floor((1-s)*16),7);return sh}},
+{name:'4 · Tertre de Medeina',lore:'Un tertre moussu porte trois arbres tordus. Au pied, des pousses vertes : là où tombe la lumière, Medeina fait revenir la vie. Signale qui l’exploite sans l’épuiser.',
+ dl:[['Silhouette','tertre rond + ramures tordues, emprise bien remplie'],['Matière','bois-pierre, mousse, pousses vert Medeina (#7ae070)'],['Lumière','les pousses respirent avec le rai (lueur verte légère)']],
+ sprouts:true,
+ draw(L,s){const sh=[];
+  // tertre
+  for(let y=-12;y<=6;y++)for(let x=-30;x<=30;x++){const e=(x/30)**2+((y+3)/10)**2;if(e>1)continue;
+   const moss=vn(x*.3,y*.4,4)>.45;L.set(96+x,118+y,moss?MS:SL,(moss?2:4)+(1-e)*2+(y<-4?1:0),100)}
+  const T=[[84,112,32,7,3,-6,31],[100,116,26,7,3,4,32],[110,106,36,8,3,7,33]];
+  for(const[x,y,h,w0,w1,ln,sd]of T){const hh=Math.max(4,h*(.25+.75*s));const r=rng(sd);
+   const[tx,ty]=trunk(L,x,y,hh,w0,w1,ln,{seed:sd,roots:2});
+   if(s>.3){branch(L,tx,ty+1,-1.2-(ln>0?0:.8),9,2.2,s>.7?2:1,r);branch(L,tx,ty+5,ln>0?-.4:-2.7,7,1.8,1,r)}
+   for(let c=0;c<Math.floor((1-s)*3);c++)crack(L,x-2+c*2,y-1,Math.floor(hh*.6),c+sd)}
+  sh.push([94,122,32,6]);return sh}},
+{name:'5 · Chablis pétrifié',lore:'Un tronc couché en travers, sa coupe annelée tournée vers la lumière, et deux arbres encore debout. Le bosquet raconte une chute ancienne ; les éclats au sol disent « récoltable ».',
+ dl:[['Silhouette','horizontale + deux verticales, très différente des rochers'],['Matière','bois-pierre, coupe annelée, éclats au sol'],['Lumière','la coupe du tronc couché sert de point focal']],
+ draw(L,s){const sh=[];
+  // tronc couché
+  const len=Math.round(44*(.35+.65*s)),y0=120;
+  for(let k=0;k<len;k++){const x=70+k,yy=y0-k*.18;for(let a=-5;a<=5;a++){const str=hash(k>>2,a,41)<.2?-1:0;L.set(x,yy+a,WD,4-a*.32+str,yy+6)}}
+  ring(L,70+len,Math.round(y0-len*.18),3,5,WD,y0+7);
+  const T=[[84,108,34,8,4,-3,42],[114,112,40,9,4,4,43]];
+  for(const[x,y,h,w0,w1,ln,sd]of T){const hh=Math.max(4,h*(.2+.8*s));const r=rng(sd);const[tx,ty]=trunk(L,x,y,hh,w0,w1,ln,{seed:sd,broken:s<.7});
+   if(s>.35)branch(L,tx,ty+2,-1.6+ln*.08,8,2,s>.7?2:1,r);
+   for(let c=0;c<Math.floor((1-s)*3);c++)crack(L,x-2+c*2,y-1,Math.floor(hh*.6),c+sd);sh.push([x-4,y,9,3])}
+  sh.push([90,124,24,4]);rubble(L,98,128,4+Math.floor((1-s)*12),8);return sh}},
+];
+
+// ---------- sol de grotte (ardoise) ----------
+function floor(){const f=new Array(W*H);for(let y=0;y<H;y++)for(let x=0;x<W;x++){
+ const n=vn(x/14,y/10,2)*.6+vn(x/5,y/4,3)*.4;let i=2.6+n*2.4;
+ // dalles fendues
+ const cx=vn(x/9,y/7,9);if(Math.abs(cx-.5)<.025)i-=1.4;
+ if(hash(x,y,5)<.03)i+=1;f[y*W+x]=i}
+ for(let k=0;k<40;k++){const x=Math.floor(hash(k,1,8)*W),y=Math.floor(hash(k,2,8)*H);f[y*W+x]+=2;if(x+1<W)f[y*W+x+1]+=1}
+ return f}
+const FLOOR=floor();
+
+// ---------- rendu ----------
+function build(p,s){const L=new Layer();const sh=p.draw(L,s);L.outline();return{L,sh}}
+function shadowAt(sh,x,y){for(const[sx,sy,rx,ry]of sh){const e=((x-sx+4)/rx)**2+((y-sy-1)/ry)**2;if(e<1)return e<.55?2:1}return 0}
+function render(ctx,img,p,st,t,showFoot){
+ const d=img.data,pulse=.35*Math.sin(t*1.3)+.15*Math.sin(t*3.1);
+ for(let y=0;y<H;y++)for(let x=0;x<W;x++){const k=y*W+x,o=k*4;const b=beamBand(x,y,pulse);let col;
+  const px=st.L.p[k];
+  if(px){if(px[0]===null)col=OUT;else{let i=px[1]-1+(b>0?b*.55:0);
+    if(p.quartz&&px[0]===QZ&&b>0&&hash(x,y,Math.floor(t*4))<.15)i=4;
+    col=px[0][cl(Math.round(i),0,px[0].length-1)]}}
+  else{let i=FLOOR[k];const inPool=Math.hypot((x-POOL.x)/POOL.rx,(y-POOL.y)/POOL.ry);
+   if(inPool<1.2)i+=Math.max(0,Math.floor((1.2-inPool)*3+bay(x,y)-.5+pulse))*1.1;
+   i-=shadowAt(st.sh,x,y)*1.3;col=SL[cl(Math.round(i),0,SL.length-1)]}
+  let [r,g,bb]=rgb(col);
+  // volume du rai (au-dessus du bassin) : voile chaud tramé
+  if(b>0&&y<POOL.y+4){const a=[0,.05,.1,.17][b]*(1+pulse*.4);const[br,bg,bbb]=rgb(BEAM);r=lerp(r,br,a);g=lerp(g,bg,a);bb=lerp(bb,bbb,a)}
+  // vignette de grotte
+  const v=Math.hypot((x-96)/120,(y-90)/95);const dark=cl(1-(v-.55)*1.1,.35,1);
+  d[o]=r*dark;d[o+1]=g*dark;d[o+2]=bb*dark;d[o+3]=255}
+ // pousses de Medeina : respirent avec la lumière
+ if(p.sprouts){const gl=.5+.5*Math.sin(t*2);for(let k=0;k<11;k++){const x=Math.round(72+hash(k,1,50)*48),y=Math.round(110+hash(k,2,50)*14);
+  if(st.L.p[y*W+x]&&st.L.p[y*W+x][0]===WD)continue;
+  put(d,x,y,LF[1]);put(d,x-1,y-1,LF[2]);put(d,x+1,y-1,LF[gl>.6?3:2]);put(d,x,y+1,OUT)}}
+ // poussières dans le rai
+ for(let k=0;k<22;k++){const yy=(hash(k,3,70)*POOL.y+t*(4+hash(k,4,70)*5))%POOL.y,xx=beamC(yy)+(hash(k,5,70)*2-1)*beamHW(yy)*.75+Math.sin(t+k)*1.5;
+  if(Math.sin(t*2+k*1.7)>-.2)put(d,Math.round(xx),Math.round(yy),hash(k,6,70)<.4?'#ffffff':'#f2e4c0',.85)}
+ // fissure du plafond (origine du rai)
+ for(let x=114;x<142;x++){const y=Math.round(1+Math.sin(x*.7)*1.2);put(d,x,y,'#fff6e0',.9);put(d,x,y+1,'#cdbf9e',.5)}
+ if(showFoot){for(let x=FOOT.x;x<FOOT.x+FOOT.w;x++)for(const y of[FOOT.y,FOOT.y+FOOT.h-1])if((x>>1)%2)put(d,x,y,'#7ae070',.55);
+  for(let y=FOOT.y;y<FOOT.y+FOOT.h;y++)for(const x of[FOOT.x,FOOT.x+FOOT.w-1,FOOT.x+32])if((y>>1)%2)put(d,x,y,'#7ae070',x===FOOT.x+32?.25:.55);
+  for(let x=FOOT.x;x<FOOT.x+FOOT.w;x++)if((x>>1)%2)put(d,x,FOOT.y+32,'#7ae070',.25)}
+ ctx.putImageData(img,0,0)}
+function put(d,x,y,c,a=1){if(x<0||y<0||x>=W||y>=H)return;const o=(y*W+x)*4,[r,g,b]=rgb(c);d[o]=lerp(d[o],r,a);d[o+1]=lerp(d[o+1],g,a);d[o+2]=lerp(d[o+2],b,a)}
+
+// ---------- page ----------
+const grid=document.getElementById('grid'),cards=[];let wood=20,paused=false,showFoot=true;
+for(const p of PROPS){const f=document.createElement('figure');
+ f.innerHTML=`<div class="stage"><canvas width="${W}" height="${H}"></canvas><span class="tag">${p.name}</span></div>
+ <div class="cap"><b>${p.name}</b><p>${p.lore}</p><dl>${p.dl.map(([a,b])=>`<dt>${a}</dt><dd>${b}</dd>`).join('')}</dl>
+ <div class="x1"><canvas width="72" height="72"></canvas><span>×1 · emprise 64 × 64 px</span></div></div>`;
+ grid.appendChild(f);const[c,c1]=f.querySelectorAll('canvas');const ctx=c.getContext('2d');
+ cards.push({p,ctx,img:ctx.createImageData(W,H),c1,st:null})}
+function rebuild(){for(const k of cards){k.st=build(k.p,wood/20)}}
+function frame(ts){const t=ts/1000;if(!paused||!frame.done){for(const k of cards){render(k.ctx,k.img,k.p,k.st,t,showFoot);
+ const g=k.c1.getContext('2d');g.clearRect(0,0,72,72);g.drawImage(k.ctx.canvas,FOOT.x-4,FOOT.y-4-24,72,72+0,0,0,72,72)}frame.done=true}
+ requestAnimationFrame(frame)}
+document.getElementById('pause').onclick=e=>{paused=!paused;frame.done=false;e.target.textContent=paused?'Lecture':'Pause'};
+document.getElementById('wood').oninput=e=>{wood=+e.target.value;document.getElementById('woodv').textContent=wood+' / 20';rebuild();frame.done=false};
+document.getElementById('foot').onchange=e=>{showFoot=e.target.checked;frame.done=false};
+rebuild();requestAnimationFrame(frame);
+</script></body></html>

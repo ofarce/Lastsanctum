@@ -3,6 +3,10 @@ extends "res://tests/econ_case.gd"
 
 func test_hover_requires_seal_selected_visible_engineer_and_valid_rock() -> void:
 	var sim := game()
+	sim.world.dig_cell(15, -35)
+	engineer().x = 62.0
+	engineer().z = -138.0
+	sim.world.fog.refresh(sim.state())
 	var input: InputController = sim.get_node("../Input")
 	input.world.camera.set_view(Vector2(66, -138), 2)
 	var pointer := input.project(66, 0, -138)
@@ -32,6 +36,10 @@ func test_hover_requires_seal_selected_visible_engineer_and_valid_rock() -> void
 
 func test_hover_updates_after_mining_camera_change_and_reset() -> void:
 	var sim := game()
+	sim.world.dig_cell(15, -35)
+	engineer().x = 62.0
+	engineer().z = -138.0
+	sim.world.fog.refresh(sim.state())
 	var input: InputController = sim.get_node("../Input")
 	input.world.camera.set_view(Vector2(66, -138), 2)
 	GameState.selected = [engineer()]

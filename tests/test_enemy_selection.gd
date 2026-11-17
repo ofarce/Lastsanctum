@@ -10,13 +10,18 @@ func test_reach_d13_and_hud_range() -> void:
 	check_eq(Catalog.FIGHT["archer"]["reach"], 56.0, "archer : portée 14 × 4")
 	check(Catalog.FIGHT["flammes"]["seek"] > Catalog.FIGHT["flammes"]["reach"], "lance-flammes : détection au-delà de la portée")
 	check(Catalog.FIGHT["archer"]["seek"] > Catalog.FIGHT["archer"]["reach"], "archer : détection au-delà de la portée")
-	var want := {"engineer": "86", "flammes": "12", "archer": "56", "lame": "2,2", "paladin": "2,2", "shooter": "17,2", "healer": "8,6", "guard": "8,6"}
+	# Ingénieur : 250 en armure (test_requested_changes), 1,9 sans armure, corps à corps seul (vérifié plus bas).
+	var want := {"engineer": "250", "flammes": "12", "archer": "56", "lame": "2,2", "paladin": "2,2", "shooter": "17,2", "healer": "8,6", "guard": "8,6"}
 	for role: String in want:
 		var u := sim.spawn("U", 0.0, -120.0, role)
 		GameState.selected = [u]
 		GameState.anchor_selected = false
 		GameState.hud_building = null
 		check_eq(HudModel.view(sim)["range"], want[role], "portée affichée : " + role)
+	var bare := sim.spawn("U", 0.0, -120.0, "engineer")
+	bare.unarmored = true
+	GameState.selected = [bare]
+	check_eq(HudModel.view(sim)["range"], "1,9", "portée affichée : Ingénieur sans armure (corps à corps)")
 	GameState.selected = []
 	check_eq(HudModel.view(sim)["range"], "—", "sans sélection : —")
 
@@ -24,10 +29,11 @@ func test_reach_d13_and_hud_range() -> void:
 func test_left_click_selects_enemy() -> void:
 	var sim := game()
 	var ic: InputController = sim.get_node("../Input")
-	var e := Enemy.make("brute", 10.0, -110.0, 1.0)
+	var e := Enemy.make("brute", -3.0, -130.0, 1.0)
 	e.hp = 100.0
 	GameState.enemies.append(e)
 	GameState.selected = [engineer()]
+	sim.world.fog.refresh(sim.state())
 	ic._left_click(ic.project(e.x, 1.0, e.z), false)
 	check(GameState.hud_enemy == e, "clic gauche : l'ennemi est sélectionné")
 	check(GameState.selected.is_empty(), "les alliés sont désélectionnés")

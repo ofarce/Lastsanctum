@@ -31,7 +31,7 @@ func test_full_game_by_player_inputs() -> void:
 	for t: String in ORDER:
 		check(S["built"].has(t), "%s construit (B puis sa touche, clic sur le sol)" % Catalog.BUILDINGS[t]["name"])
 	check(S["adepts"] >= 4, "au moins 4 adeptes invoqués (%d)" % S["adepts"])
-	check(S["prayer_gain"] > 0.0, "la prière rapporte (+%.0f au-delà de l'Ancre)" % S["prayer_gain"])
+	check(S["prayer_gain"] > 0.0, "la prière rapporte (+%.0f)" % S["prayer_gain"])
 	check(S["trained"] >= 2, "au moins 2 combattants entraînés à la caserne (%d)" % S["trained"])
 	check(S["dug"] >= 1, "creusement au clic droit (%d case(s))" % S["dug"])
 	check(S["galleries"] >= 1, "au moins une galerie révélée (%d)" % S["galleries"])
@@ -54,6 +54,9 @@ func _play() -> PackedStringArray:
 	sim.combat.log_events = true
 	sim.combat.events.clear()
 	var eng: Unit = GameState.units[0]
+	var initial_mana := 0.0
+	for resource: String in Catalog.RES_ORDER:
+		initial_mana += GameState.res[resource]
 	var next_think := 0.0
 	var next_check := 1.0
 	var res_prev := 0.0
@@ -70,6 +73,7 @@ func _play() -> PackedStringArray:
 		if t < next_think:
 			continue
 		next_think = t + 0.5
+		sim.world.fog.refresh(sim.state())
 		# 1. Réactivation : l'Ingénieur sorti, touche R (bouton Réactiver du panneau).
 		if not GameState.orb_active:
 			if not eng.hidden and GameState.orb_owner == null:
@@ -80,7 +84,7 @@ func _play() -> PackedStringArray:
 		if stats["orb_at"] < 0.0:
 			stats["orb_at"] = GameState.orb_finished_at
 			_mark("Ancre active")
-		var idle := eng.alive() and eng.build_job == null and eng.job == null and not eng.orb_job
+		var idle: bool = eng.alive() and eng.build_job == null and (eng.job == null or eng.job["type"] == "anchor_pray") and not eng.orb_job
 		# 2. Bâtiments dans l'ordre, dès qu'ils sont payables.
 		var todo := ""
 		for type: String in ORDER:
@@ -98,14 +102,25 @@ func _play() -> PackedStringArray:
 					_mark("chantier %s" % todo)
 				continue
 		# 3. Creusement vers une galerie quand les temples sont posés et l'Ingénieur libre.
-		if idle and todo == "caserne" and stats["galleries"] == 0:
+		var exploring := todo.is_empty() and sim.state().found == 0
+		if idle and exploring:
 			for c: Array in dig_cells:
 				if not sim.state().dug.has(Vector2i(int(c[0]), int(c[1]))):
 					_select(eng)
-					ic._right_click(ic.project(c[0] * 4.0 + 2.0, 0.0, c[1] * 4.0 + 2.0))
+					var target := Vector2(c[0] * 4.0 + 2.0, c[1] * 4.0 + 2.0)
+					if sim.world.fog.visible_at(target):
+						ic._right_click(ic.project(target.x, 0.0, target.y))
+					else:
+						var approach: Variant = sim.state().dig_cell_at(c[0], c[1], eng.pos())
+						if approach != null:
+							var spot: Vector2 = approach["at"]
+							ic._right_click(ic.project(spot.x, 0.0, spot.y))
 					if eng.job != null:
 						_mark("clic droit : creuser %s" % [c])
 					break
+		if idle and eng.job == null and not exploring:
+			_select(eng)
+			ic._right_click(ic.project(CaveShape.CORE.x, 3.0, CaveShape.CORE.y))
 		# 4. Invocations : 2 adeptes par temple achevé.
 		for b: Building in GameState.buildings:
 			if b.complete and b.is_temple():
@@ -117,9 +132,24 @@ func _play() -> PackedStringArray:
 					if GameState.units.size() > before:
 						stats["adepts"] += 1
 						_mark("I : adepte de %s" % b.type)
+		# 4 bis. Personnel (règle du 2026-11-17) : un adepte du culte envoyé au poste par clic droit sur le bâtiment.
+		for b: Building in GameState.buildings:
+			if b.complete and Production.staffed(b) and Production.members(b, "worker").is_empty():
+				var role := Production.staff_role(b)
+				var free := GameState.units.filter(func(u: Unit) -> bool: return u.role == role and u.alive() and not u.hidden \
+					and (u.job == null or u.job.get("type") != "staff"))
+				if not free.is_empty():
+					GameState.anchor_selected = false
+					GameState.hud_building = null
+					GameState.selected.assign([free[0]])
+					ic._right_click(ic.project(b.x, 0.0, b.z))
+					if Production.is_member(free[0], b):
+						_mark("clic droit : %s au poste du %s" % [role, b.type])
 		# 5. Caserne : archer (U) et épée et bouclier (E) en alternance, file de 1.
 		for b: Building in GameState.buildings:
 			if b.type == "caserne" and b.complete and b.queue.is_empty() and Catalog.can_pay(Catalog.CASERNE_COST):
+				# Fabrication hors scénario : arcs, flèches, épées et boucliers fournis au coffre bleu.
+				_stock_caserne_items(b)
 				_click_building(b)
 				_key(KEY_U if trained_flip % 2 == 0 else KEY_E)
 				if not b.queue.is_empty():
@@ -157,12 +187,12 @@ func _play() -> PackedStringArray:
 			stats["levels"] += 1
 		elif e.contains(" abattu "):
 			stats["kills"] += 1
-	# Gain de prière : ressources totales au-delà de ce que l'Ancre seule aurait rapporté.
+	# Gain de prière cumulé depuis le début de la partie.
 	var total := 0.0
 	for k: String in Catalog.RES_ORDER:
 		total += GameState.res[k]
 	var spent := _spent()
-	stats["prayer_gain"] = snappedf(total + spent - 4.0 * (GameState.sim_time - stats["orb_at"]), 0.01)
+	stats["prayer_gain"] = snappedf(total + spent - initial_mana, 0.01)
 	stats["res"] = Catalog.RES_ORDER.map(func(k: String) -> int: return int(GameState.res[k]))
 	stats["units"] = GameState.units.filter(func(u: Unit) -> bool: return u.alive()).size()
 	stats["fallen"] = GameState.fallen.size()
@@ -214,7 +244,7 @@ func _site(type: String) -> Variant:
 	for x in range(-48, 49, 4):
 		for z in range(-146, -99, 4):
 			var p := Simulation.snap_for(type, Vector2(x, z))
-			if sim.valid_site(type, p):
+			if sim.site_visible(type, p) and sim.valid_site(type, p):
 				var d := p.distance_to(Vector2(0, -128))
 				if d < bd:
 					bd = d
@@ -252,3 +282,11 @@ func _key(k: Key) -> void:
 
 func _mark(what: String) -> void:
 	log.append("%.2f %s" % [GameState.sim_time, what])
+
+
+func _stock_caserne_items(b: Building) -> void:
+	var R := preload("res://data/recipes.gd")
+	for role: String in ["archer", "lame"]:
+		var cost: Dictionary = R.caserne_cost(role, 4)
+		for k: String in cost:
+			Production.put_into(b.input_box, k, maxi(0, int(cost[k]) - Production.count_in(b.input_box, k)))

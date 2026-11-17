@@ -109,6 +109,109 @@
         "8145"
       ],
       "port": 8145
+    },
+    {
+      "name": "planches-strazhar",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8147",
+        "--bind",
+        "127.0.0.1",
+        "--directory",
+        "planches"
+      ],
+      "port": 8147
+    },
+    {
+      "name": "planches-ingenieur",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8151",
+        "--bind",
+        "127.0.0.1",
+        "--directory",
+        "planches"
+      ],
+      "port": 8151
+    },
+    {
+      "name": "planches-production",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8157",
+        "--bind",
+        "127.0.0.1",
+        "--directory",
+        "planches"
+      ],
+      "port": 8157
+    },
+    {
+      "name": "soldats-export",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "tools/soldats/serve.py"
+      ],
+      "port": 8153
+    },
+    {
+      "name": "production-export",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "tools/production/serve.py",
+        "8167"
+      ],
+      "port": 8167
+    },
+    {
+      "name": "creuset-export",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "tools/creuset/serve.py"
+      ],
+      "port": 8144
+    },
+    {
+      "name": "planches-2x2",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8161",
+        "--bind",
+        "127.0.0.1",
+        "--directory",
+        "planches"
+      ],
+      "port": 8161
+    },
+    {
+      "name": "bosquet-export",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "tools/bosquet/serve.py"
+      ],
+      "port": 8159
+    },
+    {
+      "name": "planches-boss",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8163",
+        "--bind",
+        "127.0.0.1",
+        "--directory",
+        "planches"
+      ],
+      "port": 8163
     }
   ]
 }

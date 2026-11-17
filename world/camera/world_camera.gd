@@ -4,7 +4,7 @@ extends Node
 ## - cam = (cam.x, cam.z) en unités de monde ; px = facteur de pixel entier (zoom) ;
 ## - clavier : ZQSD / WASD / flèches à 10 unités/s, sur les axes du monde (comme le JS) ;
 ## - glisser avec le bouton droit (seuil de 5 px) ; un clic droit sans glisser reste un ordre ;
-## - molette : px ± 1, entre 1 et 6.
+## - molette : px ± 1, entre 2 et 6.
 ## La touche A ne sert qu'à la caméra ; Ctrl maintenu (Ctrl+A : tout sélectionner, décision D2) bloque le défilement.
 
 signal view_changed
@@ -18,11 +18,11 @@ const KEY_SPEED := 10.0
 ## Pas de simulation maximal du prototype (Index.html:359).
 const MAX_DT := 0.045
 const DRAG_THRESHOLD := 5.0
-const PX_MIN := 1
+const PX_MIN := 2
 const PX_MAX := 6
 
 var cam := START
-var px := 1
+var px := PX_MIN
 ## Désactivé pour les captures de validation.
 var input_enabled := true
 

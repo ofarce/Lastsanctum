@@ -1,20 +1,28 @@
 extends RefCounted
 ## Icône de roche partagée entre inventaires et objets au sol.
 const Blocks := preload("res://data/mineable_blocks.gd")
+const Gear := preload("res://data/gear_items.gd")
 
 
 static func draw_item(canvas: CanvasItem, item: String, center: Vector2, scale_factor: float) -> void:
+	var gear: Dictionary = Gear.ITEMS.get(item, {})
+	if not gear.is_empty():
+		# Pièce d'équipement : son calque de repos, recadré et agrandi (pixels entiers).
+		var tex := TyrienArt.icon(gear["piece"])
+		if tex:
+			var k := maxf(1.0, floorf(minf(28.0 / tex.region.size.x, 28.0 / tex.region.size.y) * scale_factor / 1.8))
+			var size := tex.region.size * k
+			canvas.draw_texture_rect(tex, Rect2((center - size * 0.5).round(), size), false)
+			return
 	var ore := Blocks.ORES.find(item)
 	if ore >= 0:
 		var size := Vector2.ONE * 32 * scale_factor
 		canvas.draw_texture_rect_region(preload("res://assets/ardoise/world/nodules.png"),
 				Rect2(center - size * 0.5, size), Rect2(ore * 32, 64, 32, 32))
 		return
-	var color: Color = Blocks.ITEMS.get(item, {}).get("color", Color.MAGENTA)
-	var points := PackedVector2Array()
-	for p: Vector2 in [Vector2(-7, 3), Vector2(-5, -3), Vector2(0, -6), Vector2(6, -3), Vector2(8, 4), Vector2(2, 6), Vector2(-7, 3)]:
-		points.append(center + p * scale_factor)
-	canvas.draw_colored_polygon(points, color.darkened(0.25))
-	canvas.draw_polyline(points, Color("#19262d"), scale_factor)
-	canvas.draw_line(center + Vector2(-4, -2) * scale_factor, center + Vector2(0, -4) * scale_factor, color.lightened(0.35), scale_factor)
-	canvas.draw_line(center + Vector2(0, -4) * scale_factor, center + Vector2(4, -2) * scale_factor, color, scale_factor)
+	var initial := preload("res://data/recipes.gd").name_of(item).left(1).to_upper()
+	var font := ThemeDB.fallback_font
+	var font_size := maxi(1, roundi(15 * scale_factor))
+	var width := font.get_string_size(initial, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
+	canvas.draw_string(font, center + Vector2(-width / 2, font_size * 0.35), initial,
+			HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, Color.WHITE)

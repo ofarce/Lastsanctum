@@ -19,6 +19,8 @@ func setup(role: String, level: int) -> Unit:
 	GameState.effects.clear()
 	GameState.fire_walls.clear()
 	GameState.sim_time = 10.0
+	# Les relevés du prototype partent d'une Ancre intacte (100) ; le jeu démarre désormais à 1.
+	GameState.core_hp = 100.0
 	var u := sim.spawn("U", 0.0, -120.0, role)
 	if Catalog.ADEPT.has(role):
 		u.hp = Catalog.ADEPT[role]["hp"]

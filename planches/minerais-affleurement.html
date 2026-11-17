@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="fr">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Minerais · Affleurement</title>
+<style>
+*{box-sizing:border-box}
+:root{--bg:#0c1214;--panel:#121b1e;--line:#2b383b;--ink:#e8e5d9;--mute:#9fb0ab;--cu:#e09670;--fe:#a8b6c0;--qz:#d6cbe9;--au:#f0d07a}
+body{background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,sans-serif;margin:0}
+main{max-width:1240px;margin:24px auto;padding:0 16px}
+small,.mute{color:var(--mute)}
+h1{font:400 30px/1.2 Georgia,serif;margin:6px 0 4px}
+h2{font:400 22px/1.2 Georgia,serif;margin:0}
+.lead{max-width:860px;color:#c9d2cd}
+ul.notes{max-width:860px;color:#c9d2cd;padding-left:18px;margin:10px 0 0}
+ul.notes li{margin:3px 0}
+section{margin:30px 0}
+.head{display:flex;align-items:baseline;gap:12px;margin-bottom:10px;flex-wrap:wrap}
+.sym{font:600 20px ui-monospace,monospace}
+.jeu{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:10px}
+figure{margin:0;background:var(--panel);border:1px solid var(--line);padding:8px}
+figure img{width:100%;display:block;image-rendering:pixelated}
+figcaption{font-size:13px;color:var(--mute);padding-top:6px}
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.pair span{display:block;font-size:12px;color:var(--mute);margin-bottom:3px}
+.pair .new span{color:#d7cfab}
+.scroll{overflow-x:auto;padding-bottom:6px}
+table{border-collapse:separate;border-spacing:6px;min-width:760px}
+th{font-weight:400;text-align:left;color:var(--mute);font-size:13px;padding:0 2px}
+th.st{width:110px;color:var(--ink);font-size:14px}
+th.st span{display:block;color:var(--mute);font-size:12px}
+.cell{background:url(assets/minerais-v3/masse.png) 0 0/384px;border:1px solid #303b42;image-rendering:pixelated;width:140px;height:140px;display:grid;place-items:center}
+.cell.v2{background-image:url(assets/minerais-v2/roche.png);background-size:256px}
+.cell.icon{background:#0e171b;border:1px solid #2a4950;clip-path:polygon(10px 0,100% 0,100% calc(100% - 10px),calc(100% - 10px) 100%,0 100%,0 10px)}
+.cell img{width:128px;height:128px;image-rendering:pixelated}
+.cell.wide{width:268px}
+.cell.wide img{width:128px}
+footer{margin:36px 0 20px;font-size:12px;color:#7f8f8a;display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+@media(max-width:680px){h1{font-size:24px}.pair{grid-template-columns:1fr}}
+</style>
+<body>
+<main>
+<small>EXILES DEFENSE &nbsp;/&nbsp; MINERAIS &nbsp;/&nbsp; PISTE 02 AFFINÉE</small>
+<h1>Affleurement : le minerai pris dans la roche</h1>
+<p class="lead">Base retenue : 02 · Affleurement. Le minerai n’est plus un rocher posé au sol : chaque case de minerai est un bloc de la masse rocheuse, au modelé et à la palette des rochers de décor, dans lequel le minerai est serti.</p>
+<ul class="notes">
+  <li><b>Plus d’ombre portée ni d’éclats au sol.</b> La base du bloc n’a pas de contour : elle rentre dans la masse sur deux rangées sombres.</li>
+  <li><b>Contour noir franc</b> en haut et sur les flancs, comme les rochers de décor ; grain de pierre, arêtes claires, mousse sur le dessus.</li>
+  <li><b>Minerai serti</b> : chaque amas est cerné d’une fissure d’ombre, avec une lèvre de roche claire au-dessus. Les veines suivent des tracés brisés, entre une arête claire et une fissure.</li>
+  <li><b>Forme propre à chaque minerai</b> : masses rondes pour le cuivre, cubes pour le fer, pointes de quartz qui percent le bloc, pépites pour l’or.</li>
+  <li><b>Gisement inépuisable</b> : le bloc occupe toute la case, avec un cœur de minerai plus gros, une deuxième veine et plus de mousse.</li>
+</ul>
+
+<section>
+  <div class="head"><h2>En jeu</h2><span class="mute">Captures Godot réelles, même graine, même caméra (zoom 3), atlas remplacé à la volée. En haut, un filon (paire de cases) ; en bas, un gisement inépuisable (case de gauche de la paire).</span></div>
+  <p class="mute" style="max-width:860px;margin:0 0 10px">À noter, indépendamment du rendu : des rochers de décor sont dessinés par-dessus certaines cases de minerai. Le gisement de cuivre en est presque entièrement caché, et le gisement de fer en partie.</p>
+  <div class="jeu" id="jeu"></div>
+</section>
+
+<section>
+  <div class="head"><h2>Sprites</h2><span class="mute">32 × 32 px affichés ×4. Le filon est montré par paire, comme en jeu. La colonne « 02 d’origine » rappelle la proposition de départ.</span></div>
+  <div id="sprites"></div>
+</section>
+
+<footer><span>Générateur : tools/minerais/minerais_v3.py → planches/assets/minerais-v3/atlas-affleurement.png (128 × 96, format de nodules.png) · captures : tests/visual/ore_capture.tscn</span><span>Non intégré : l’atlas du jeu n’est pas remplacé</span></footer>
+</main>
+<script>
+const D='assets/minerais-v3/';
+const ORES=[['copper','Cu','Cuivre','--cu'],['iron','Fe','Fer','--fe'],['quartz','SiO₂','Quartz','--qz'],['gold','Au','Or','--au']];
+const $=s=>document.querySelector(s);
+$('#jeu').innerHTML=ORES.map(([o,sym,name,v])=>`<figure>
+ ${['filon','gisement'].map(k=>`<div class="pair" style="margin-bottom:6px"><div><span>Actuel</span><img src="${D}jeu-${o}-${k}-actuel.png" alt="${name}, ${k}, rendu actuel en jeu"></div><div class="new"><span>Affiné</span><img src="${D}jeu-${o}-${k}-affine.png" alt="${name}, ${k}, rendu affiné en jeu"></div></div>`).join('')}
+ <figcaption><b class="sym" style="color:var(${v});font-size:14px">${sym}</b> ${name}</figcaption></figure>`).join('');
+const ST=[['vein','Filon','épuisable'],['lode','Gisement','inépuisable'],['icon','Icône','inventaire']];
+$('#sprites').innerHTML=ORES.map(([o,sym,name,v])=>`<section style="margin:18px 0"><div class="head"><span class="sym" style="color:var(${v})">${sym}</span><h2>${name}</h2></div><div class="scroll"><table>
+<tr><th></th><th>02 d’origine</th><th>Affiné</th></tr>
+${ST.map(([s,a,b])=>{
+  const cls=s==='icon'?'icon':'';
+  const nw=s==='vein'?`<div class="cell wide ${cls}"><div style="display:flex"><img src="${D}affleurement-${o}-${s}.png" alt=""><img src="${D}affleurement-${o}-${s}.png" alt="${name}, ${a.toLowerCase()} affiné, par paire"></div></div>`:`<div class="cell ${cls}"><img src="${D}affleurement-${o}-${s}.png" alt="${name}, ${a.toLowerCase()} affiné"></div>`;
+  return `<tr><th class="st">${a}<span>${b}</span></th><td><div class="cell v2 ${cls}"><img src="assets/minerais-v2/affleurement-${o}-${s}.png" alt="${name}, ${a.toLowerCase()}, proposition 02 d’origine"></div></td><td>${nw}</td></tr>`}).join('')}
+</table></div></section>`).join('');
+</script>
+</body>
+</html>

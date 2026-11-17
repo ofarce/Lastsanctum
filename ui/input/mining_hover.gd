@@ -34,6 +34,9 @@ func _draw_cell(target: Dictionary, line_color: Color, fill_color: Color, show_i
 	var detail := "Clic droit · Case 4 × 4"
 	if world.terrain_state.permanent_ores.has(Vector2i(cell["i"], cell["j"])):
 		detail = "Gisement inépuisable"
+	var wood_key := Vector2i(cell["i"], cell["j"])
+	if world.terrain_state.grove_cells.has(wood_key):
+		detail = "Bois : %d / %d · inépuisable pour Medeina" % [world.terrain_state.wood_left[world.terrain_state.grove_cells[wood_key]], preload("res://data/mineable_blocks.gd").WOOD_YIELD]
 	var width := maxf(font.get_string_size(title, HORIZONTAL_ALIGNMENT_LEFT, -1, 17).x, font.get_string_size(detail, HORIZONTAL_ALIGNMENT_LEFT, -1, 14).x) + 26
 	var screen := get_viewport_rect().size
 	var pos := Vector2(rect.end.x + 14, rect.position.y)

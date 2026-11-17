@@ -3,6 +3,8 @@ extends Node2D
 const NODULES := preload("res://assets/ardoise/world/nodules.png")
 const Blocks := preload("res://data/mineable_blocks.gd")
 
+## Atlas 128 x 96 (colonnes cuivre, fer, quartz, or ; lignes filon, gisement, icône).
+var atlas: Texture2D = NODULES
 var state: TerrainState
 var cell: Vector2i
 var region: Rect2
@@ -30,9 +32,10 @@ func _process(_delta: float) -> void:
 
 
 func _draw() -> void:
-	draw_texture_rect_region(NODULES, Rect2(-16, -16, 32, 32), region)
+	draw_texture_rect_region(atlas, Rect2(-16, -16, 32, 32), region)
 	var light := clampf((sin(GameState.sim_time * 1.65 + phase) - 0.90) * 10.0, 0.0, 1.0)
 	if light > 0.0:
 		var glint := Color(1, 0.96, 0.87, light * 0.85)
 		draw_rect(Rect2(-5, -3, 3, 1), glint)
 		draw_rect(Rect2(-4, -4, 1, 3), glint)
+

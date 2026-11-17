@@ -81,6 +81,10 @@ var buildings: Array[Building] = []
 var fallen: Array[Unit] = []
 ## Effets visuels (effects : {type, x, z, age, duration, …}) et murs de feu du lance-flammes (fireWalls).
 var effects: Array[Dictionary] = []
+## Chiffres de dégâts flottants ({target, x, z, amount, age, duration}), hors de `effects` (parité JS).
+var damage_numbers: Array[Dictionary] = []
+## Objets déjà récoltés au moins une fois dans la partie (« Nouvelle ressource : … ! »).
+var collected_items: Dictionary = {}
 var fire_walls: Array[Dictionary] = []
 ## Balistes de l'entrée (turrets : {id, x, z, complete, cycle_age, firing, target, aim, …}) et carreaux en vol.
 var turrets: Array[Dictionary] = []
@@ -136,6 +140,8 @@ func reset() -> void:
 	fallen.clear()
 	pray_popups.clear()
 	effects.clear()
+	collected_items.clear()
+	damage_numbers.clear()
 	fire_walls.clear()
 	turrets.clear()
 	turret_bolts.clear()

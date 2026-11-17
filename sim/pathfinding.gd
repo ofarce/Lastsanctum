@@ -86,6 +86,10 @@ func clear_line(a: Vector2, b: Vector2) -> bool:
 		var j := floori((az + dz * t - CaveShape.WORLD_Z0) / 2.0)
 		if i < 0 or j < 0 or i >= W or j >= H:
 			return false
+		# Point exact : une case de 2 unités dont le centre est praticable peut avoir un coin de roche (entrée de
+		# la réserve du coffre) ; sans ce test, le chemin lissé coupe l'angle et l'unité reste bloquée.
+		if not state.walkable(ax + dx * t, az + dz * t):
+			return false
 		var k := j * W + i
 		if k == last:
 			continue

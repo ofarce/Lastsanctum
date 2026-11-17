@@ -29,9 +29,9 @@ l'infobulle reste dans les limites de l'écran. Capture : `tests/visual/mining_h
 
 Les noms des bâtiments et de l’Ancre ne sont affichés dans le monde que sur sélection. Les bâtiments achevés n’ont plus d’empreinte au sol. Une recherche et la formation active affichent chacune leur icône et leur barre de progression au-dessus du sommet du bâtiment ; les deux indicateurs coexistent à la caserne. Les unités en attente prennent le relais de l’indicateur à leur entrée en formation.
 
-Le bandeau affiche chaque ressource sous la forme `500 (+ 2/s)` : +1/s de l’Ancre éveillée et +1/s par adepte effectivement en prière pour cette ressource. Le panneau s’adapte à la largeur disponible. L’Ancre éveillée propose « Offrande » (O) : 100 de chaque ressource contre +50 menace, réutilisable immédiatement tant que les fonds suffisent.
+Le bandeau affiche chaque ressource sous la forme `500 (+ 2/s)` : +3/s de chaque mana pendant que l’Ingénieur prie à l’Ancre éveillée et +1/s par adepte effectivement en prière pour cette ressource. Le panneau s’adapte à la largeur disponible. L’Ancre éveillée propose « Offrande » (O) : 100 de chaque ressource contre +50 menace, réutilisable immédiatement tant que les fonds suffisent.
 
-La résurrection au Puits des Âmes coûte le coût initial total de recrutement multiplié par le niveau, payé uniquement en Vie : 50 × niveau pour les adeptes de temple, 100 × niveau pour les combattants de caserne et 400 × niveau pour les héros. Chaque action vérifie et affiche son coût individuel ; le niveau et l’expérience sont conservés.
+La résurrection au Puits des Âmes coûte le coût initial total de recrutement multiplié par le niveau, payé uniquement en Vie : 10 × niveau pour les adeptes de temple, 100 × niveau pour les combattants de caserne et 400 × niveau pour les héros. Chaque action vérifie et affiche son coût individuel ; le niveau et l’expérience sont conservés.
 
 Chaque entrée de formation de la caserne produit une escouade indivisible de quatre soldats du même type (100 Discipline et 6 secondes pour l’escouade). Clic, rectangle et ordres s’appliquent à tous les survivants ; le HUD affiche leur effectif sur 4. Les membres éloignés rallient leur escouade.
 

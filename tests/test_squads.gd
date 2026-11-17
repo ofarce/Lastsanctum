@@ -52,6 +52,7 @@ func test_losses_revive_at_well_and_rejoin_moving_survivors() -> void:
 	var sim := game()
 	var members := squad(sim)
 	var well := built("soulwell", -30, -104)
+	staff(sim, well, 1)
 	members[1].level = 2
 	members[2].level = 3
 	members[1].xp = 17
@@ -89,6 +90,7 @@ func test_wiped_squad_cannot_revive_and_other_squad_unaffected() -> void:
 	var members := squad(sim)
 	var other := squad(sim)
 	var well := built("soulwell", -30, -104)
+	staff(sim, well, 1)
 	kill(sim, other[1])
 	for u: Unit in members:
 		kill(sim, u)
@@ -110,9 +112,25 @@ func test_well_button_revives_member_and_shortcut_requires_well() -> void:
 	var action: Dictionary = HudModel.panel_actions(sim).filter(func(a: Dictionary) -> bool: return a["id"] == "revive-squad")[0]
 	check(action["disabled"], "Puits nécessaire")
 	var well := built("soulwell", -30, -104)
+	staff(sim, well, 1)
 	GameState.selected.clear()
 	GameState.hud_building = well
 	var revive: Dictionary = HudModel.panel_actions(sim).filter(func(a: Dictionary) -> bool: return a["id"].begins_with("revive-"))[0]
 	revive["run"].call()
 	check(members[1].alive() and members[1].rejoining, "résurrection au Puits rallie aussi")
 	check_eq(members[1].squad, members[0].squad, "identité conservée")
+
+
+func test_squad_has_no_upkeep() -> void:
+	var sim := game()
+	var members := squad(sim)
+	give(10)
+	sim.tick(0.5)
+	for resource in ["vie", "discipline"]:
+		check_eq(GameState.res[resource], 10.0)
+		check_eq(Simulation.resource_rates()[resource], 0)
+	kill(sim, members[0])
+	sim.tick(1.0)
+	for resource in ["vie", "discipline"]:
+		check_eq(GameState.res[resource], 10.0)
+		check_eq(Simulation.resource_rates()[resource], 0)

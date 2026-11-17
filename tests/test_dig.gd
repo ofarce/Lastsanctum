@@ -16,6 +16,7 @@ func _registry() -> DecorRegistry:
 func test_dig_scenario_matches_js() -> void:
 	var f := Fixtures.load_json("dig_scenario")
 	var state := TerrainState.new()
+	state.groves = false
 	state.generate_galleries(int(f["seed"]))
 	var reg := _registry()
 	check_eq(reg.size(), int(f["objs_before"]), "objets du décor avant")
@@ -45,6 +46,7 @@ func test_dig_scenario_matches_js() -> void:
 
 func test_dig_cell_at_rules() -> void:
 	var state := TerrainState.new()
+	state.groves = false
 	state.generate_galleries(20261114)
 	# Une case de la salle (praticable) n'est pas creusable ; la roche voisine de la paroi est l'est.
 	check(state.dig_cell_at(0, -35, Vector2(2, -138)) == null, "case praticable")
@@ -58,6 +60,7 @@ func test_dig_cell_at_rules() -> void:
 
 func test_engineer_dig_reach() -> void:
 	var state := TerrainState.new()
+	state.groves = false
 	state.generate_galleries(20261114)
 	var c: Variant = state.diggable_cell(Vector2(64, -138))
 	check(c != null, "roche à l'est de la salle")

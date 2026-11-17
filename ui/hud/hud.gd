@@ -17,7 +17,7 @@ const RES_ICONS := {"forge": "iron", "vie": "heart", "discipline": "shield", "sa
 const RES_NAMES := {"forge": "Forge", "vie": "Vie", "discipline": "Discipline", "savoir": "Savoir", "menace": "Menace"}
 const PORTRAITS := "res://assets/baked/hud/portraits/%s.png"
 ## Portraits hors baker : Ingénieur sans armure (planches/ingenieur-sans-armure-export.html).
-const PORTRAITS_EXTRA := {"engineer-bare": "res://assets/imported/engineer/engineer_bare_portrait.png"}
+const PORTRAITS_EXTRA := {"engineer-bare": TyrienArt.PORTRAIT}
 
 var sim: Simulation
 var world: World

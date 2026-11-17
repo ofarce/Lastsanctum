@@ -27,6 +27,7 @@ func test_continuous_fire_at_range_12() -> void:
 	check_eq(GameState.fire_walls.size(), 0, "aucun sillon de feu")
 	check_eq(u.x, x0, "à portée : le porteur ne bouge pas")
 	check(GameState.effects.filter(func(f: Dictionary) -> bool: return f["type"] == "laser").size() >= 15, "jet de flammes redessiné en continu")
+	check(GameState.effects.filter(func(f: Dictionary) -> bool: return f["type"] == "laser").all(func(f: Dictionary) -> bool: return f.get("nozzle") == 1), "jet parti de la buse, tireur tourné vers la cible")
 
 
 func test_out_of_range_walks_closer() -> void:

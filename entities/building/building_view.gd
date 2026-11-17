@@ -1,7 +1,8 @@
 class_name BuildingView
 extends Node2D
 ## Rendu d'un bâtiment (drawBuilding, buildings.js, 73b410f), dans le tri en profondeur du monde.
-##  - Achevé : image de la boucle animée précalculée (PixelBuildings.draw), à l'échelle size/3.
+##  - Achevé : image de la boucle animée précalculée (PixelBuildings.draw), à l’échelle « scale » du manifeste
+##    (1 : tous les arts sont dessinés ou réduits en 2×2 natif, tools/batiments_2x2) ou size/3 à défaut.
 ##  - Chantier : empreinte animée (TempleKit.footprint), puis le site d'incantation (port de
 ##    TempleIncantation.drawSite) : le sprite est découpé en pierres de 6 px, qui se décollent d'un éboulis,
 ##    montent en arc et se tassent à leur place, assise par assise, avec des bouffées de poussière.

@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Export du Creuset</title>
+<style>body{margin:0;padding:16px;background:#0b120e;color:#dcd8bc;font:14px/1.4 system-ui,sans-serif}
+canvas{image-rendering:pixelated;display:block;background:repeating-conic-gradient(#1a2a1d 0 25%,#142018 0 50%) 0 0/16px 16px}
+.row{display:flex;gap:16px;flex-wrap:wrap;align-items:flex-end;margin-top:12px}figure{margin:0}figcaption{color:#93a08a;font-size:12px}</style></head><body>
+<h1 style="font-size:18px;margin:0">Export du Creuset des Exilés · Portique de coulée</h1>
+<p>Sprite des bâtiments du jeu : 320 × 240, ancre (160, 168) au centre de l’emprise 2 × 2 (64 px), rendu à l’échelle native (<code>scale: 1</code>). Boucle de 72 images à 12 i/s (6 s, une coulée), portrait 128 × 128 du HUD. Avec <code>?save=1</code> servi par <code>tools/creuset/serve.py</code>, les fichiers sont écrits dans <code>assets/baked/</code>.</p>
+<p id="log"></p><div id="out"></div>
+<script src="assets/creuset-planches.js?v=5"></script>
+<script>
+'use strict';
+(async()=>{const save=new URLSearchParams(location.search).has('save'),log=document.querySelector('#log'),r=CRE.exportSprite(0);
+ const row=document.createElement('div');row.className='row';const fig=(c,cap,z)=>{const f=document.createElement('figure');c.style.width=c.width*z+'px';f.append(c);const fc=document.createElement('figcaption');fc.textContent=cap;f.append(fc);row.append(f)};
+ fig(r.base,`${r.pick} · haut ${r.meta.top}, bas ${r.meta.bottom}`,2);fig(r.portrait,'portrait du HUD',2);
+ const sm=document.createElement('canvas');sm.width=r.sheet.width;sm.height=r.sheet.height;sm.getContext('2d').drawImage(r.sheet,0,0);fig(sm,'planche animée (72 images)',.25);
+ document.querySelector('#out').append(row);
+ if(save){const post=(n,b)=>fetch('/out/'+n,{method:'POST',body:b}).then(x=>{if(!x.ok)throw new Error(n+' '+x.status)});
+  await post('da-creuset_anim.png',r.sheet.toDataURL('image/png'));await post('da-creuset_base.png',r.base.toDataURL('image/png'));
+  await post('bld-creuset.png',r.portrait.toDataURL('image/png'));await post('meta-creuset.json',JSON.stringify(r.meta))}
+ log.textContent=save?'Écrit : da-creuset (planche, base, portrait, manifeste).':'Aperçu seulement (ajouter ?save=1 avec tools/creuset/serve.py pour écrire).';document.body.dataset.done='1'})().catch(e=>{document.querySelector('#log').textContent='Erreur : '+e.message;throw e});
+</script></body></html>

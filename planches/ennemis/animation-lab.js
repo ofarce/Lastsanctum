@@ -258,6 +258,17 @@ async function exportAssets(){
   for(const u of units){
     const meta={ax:u.model?20:15,ay:40,h:u.old?metadata.enemies[u.id].h:37,stride:u.old?metadata.enemies[u.id].stride:1.8,self_bob:false};
     for(const action of ['idle','walk','attack','death']){
+      // Strazhar : marche à quatre pattes « La ruée » (planches/strazhar-quadrupede-propositions.html, choix 04).
+      // Cadre plus large que le gabarit debout : ancre propre à la marche, foulée = 33 px natifs / 8 px par unité.
+      if(u.id==='strazhar'&&action==='walk'){
+        const Q=StrazharQuad,v=Q.VARIANTS.find(x=>x.id==='ruee'),cols=12,rows=Math.ceil(Q.FRAMES/cols);
+        const sheet=document.createElement('canvas');sheet.width=Q.NW*cols;sheet.height=Q.NH*rows;
+        for(let i=0;i<Q.FRAMES;i++)sheet.getContext('2d').drawImage(Q.get(v,i).canvas,(i%cols)*Q.NW,Math.floor(i/cols)*Q.NH);
+        await send('strazhar_walk.png',await new Promise(resolve=>sheet.toBlob(resolve)));
+        meta.stride=v.stride/2/8;meta.self_bob=true;
+        meta.walk={frame_w:Q.NW,frame_h:Q.NH,cols,rows,count:Q.FRAMES,fps:Q.FRAMES/v.dur,ax:Math.round((v.Hx+v.Sx)/4),ay:Q.ground};
+        continue;
+      }
       const fps=action==='idle'?10:24;
       const count=action==='idle'?24:action==='walk'?24:action==='death'?45:Math.ceil(u.cd*fps);
       const images=[];

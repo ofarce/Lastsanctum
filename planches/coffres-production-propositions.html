@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Coffres de production</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0b120e;--panel:#111b14;--line:#2a3a2c;--txt:#dcd8bc;--mut:#93a08a;--acc:#e8c870}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--txt);font:15px/1.45 'Pixelify Sans',system-ui,sans-serif}
+header,main{max-width:1360px;margin:auto;padding:18px 16px}h1{margin:0;font-weight:600;letter-spacing:.08em;font-size:26px;color:var(--acc)}
+header p{color:var(--mut);margin:6px 0 0;max-width:960px}
+button{font:inherit;color:var(--txt);background:#1a2a1d;border:1px solid var(--line);padding:6px 12px;cursor:pointer}button:hover,button[aria-pressed=true]{border-color:var(--acc)}
+.bar{display:flex;gap:8px;align-items:center;margin-top:12px;flex-wrap:wrap}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-top:14px}
+.grid.g5{grid-template-columns:repeat(5,minmax(0,1fr))}.grid.g3{grid-template-columns:repeat(3,minmax(0,1fr))}
+figure{margin:0;background:var(--panel);border:1px solid var(--line);min-width:0}
+.stage{background:#070b08;padding:8px;display:flex;justify-content:center}
+.stage canvas{image-rendering:pixelated;display:block;width:100%;height:auto}
+.keys{padding:8px;border-top:1px solid var(--line);background:#0e1711}.keys canvas{image-rendering:pixelated;width:100%;height:auto;display:block}
+.keys div{display:grid;grid-template-columns:repeat(4,1fr);text-align:center;font-size:11px;color:var(--mut)}
+figcaption{padding:10px 14px 14px}figcaption b{color:var(--acc);font-weight:600;font-size:17px}figcaption p{margin:4px 0 0;color:var(--mut);font-size:14px}
+.why{border:1px solid var(--line);background:var(--panel);padding:12px 16px;color:var(--mut)}.why b{color:var(--txt)}
+section{margin:34px 0}h2{color:var(--acc);font-weight:600;letter-spacing:.06em;margin:0 0 4px;font-size:22px}section>p{color:var(--mut);margin:0 0 12px;max-width:960px}
+@media(max-width:1100px){.grid.g5{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:900px){.grid,.grid.g3,.grid.g5{grid-template-columns:1fr}}
+</style></head><body>
+<header><h1>COFFRES DE PRODUCTION · PROPOSITIONS</h1>
+<p>Chaque bâtiment producteur a deux coffres à ses pieds : <b>bleu</b> pour les ingrédients qui arrivent, <b>rouge</b> pour les objets fabriqués. Les scènes sont dessinées à la résolution du jeu avec les vrais sprites de la Forge et de l’adepte d’Aether, sur le dallage d’ardoise de la salle, puis affichées en grand. Dans chaque scène, un adepte apporte un lot de minerai au coffre bleu puis prend son poste ; un lingot sort ensuite dans le coffre rouge.</p>
+<div class="bar"><button id="pause">Pause</button></div></header>
+<main>
+<div class="why"><b>Charte :</b> le rouge est réservé à la Bête. Les coffres « rouges » utilisent donc un <b>grenat sourd</b>, plus sombre et plus brun que le rouge vif des créatures. Le bleu est un <b>bleu de cobalt</b>, distinct du cyan des Exilés et du bleu-violet d’Aether. Le dallage étant gris-bleu, le coffre bleu se lit moins bien que le rouge : regarde surtout ce point.</div>
+
+<section><h2>1 · La paire de coffres</h2><p>Cinq pistes, de A à E. Sous chaque scène : bleu fermé, bleu ouvert, rouge fermé, rouge ouvert.</p>
+<div class="grid" id="chests"></div></section>
+
+<section><h2>2 · L’adepte porte un lot</h2><p>Comment l’adepte montre qu’il transporte quelque chose (lot de 5 minerais, ou un objet pris dans un autre coffre). Adepte d’Aether en marche, à la taille du jeu.</p>
+<div class="grid g5" id="carry"></div></section>
+
+<section><h2>3 · Bâtiment à l’arrêt</h2><p>Comment voir qu’un bâtiment n’a aucun adepte au poste. Chaque boucle : la Forge est d’abord à l’arrêt, puis un adepte d’Aether arrive et la remet en marche.</p>
+<div class="grid g3" id="idle"></div></section>
+
+<section><h2>À trancher</h2><p class="why"><b>Choisis une piste par section</b> (par exemple : « coffres C, port 1, arrêt 5 »), ou un mélange (« coffres A avec le fanion de E »).</p></section>
+</main>
+<script src="assets/production/sprites.js"></script>
+<script>
+'use strict';
+// ---------- outils pixel ----------
+const EM=0x1000000,ci=c=>typeof c==='number'?c:parseInt(c.slice(1),16),R_=a=>a.map(ci);
+const hh=(x,y,s=0)=>{let h=(Math.imul(x|0,374761393)+Math.imul(y|0,668265263)+Math.imul(s|0,982451653))|0;h=Math.imul(h^(h>>>13),1274126177);return((h^(h>>>16))>>>0)/4294967296};
+function vn(x,y,s){const xi=Math.floor(x),yi=Math.floor(y),xf=x-xi,yf=y-yi,u=xf*xf*(3-2*xf),v=yf*yf*(3-2*yf),a=hh(xi,yi,s),b=hh(xi+1,yi,s),c=hh(xi,yi+1,s),d=hh(xi+1,yi+1,s);return a+(b-a)*u+(c-a)*v+(a-b-c+d)*u*v}
+const BAY=[0,8,2,10,12,4,14,6,3,11,1,9,15,7,13,5].map(v=>(v+.5)/16),bay=(x,y)=>BAY[(y&3)*4+(x&3)];
+const rp=(R,v,x,y)=>{const n=R.length-1,i=Math.floor(v*n+bay(x,y));return R[i<0?0:i>n?n:i]};
+const cl=(v,a=0,b=1)=>Math.max(a,Math.min(b,v)),eio=t=>.5-.5*Math.cos(Math.PI*cl(t));
+const OUTL=ci('#0b0a0e');
+class Pix{constructor(w,h){this.w=w;this.h=h;this.c=new Int32Array(w*h).fill(-1)}
+ set(x,y,c){x=Math.floor(x);y=Math.floor(y);if(x<0||y<0||x>=this.w||y>=this.h||c==null)return;c=ci(c);if(c<0)return;this.c[y*this.w+x]=c}
+ get(x,y){return x<0||y<0||x>=this.w||y>=this.h?-1:this.c[y*this.w+x]}
+ rect(x,y,w,h,c){for(let j=y;j<y+h;j++)for(let i=x;i<x+w;i++)this.set(i,j,c)}
+ outline(col=OUTL){const{w,h,c:s}=this,n=new Int32Array(s);for(let y=0;y<h;y++)for(let x=0;x<w;x++){const i=y*w+x;if(s[i]!==-1)continue;if((x>0&&s[i-1]!==-1)||(x<w-1&&s[i+1]!==-1)||(y>0&&s[i-w]!==-1)||(y<h-1&&s[i+w]!==-1))n[i]=col}this.c=n}
+ blit(s,dx=0,dy=0){for(let y=0;y<s.h;y++)for(let x=0;x<s.w;x++){const v=s.c[y*s.w+x];if(v!==-1)this.set(x+dx,y+dy,v)}}}
+function canvasOf(P){const c=document.createElement('canvas');c.width=P.w;c.height=P.h;const g=c.getContext('2d'),im=g.createImageData(P.w,P.h),d=im.data;
+ for(let i=0;i<P.c.length;i++){const v=P.c[i];if(v===-1)continue;d[i*4]=v>>16&255;d[i*4+1]=v>>8&255;d[i*4+2]=v&255;d[i*4+3]=255}g.putImageData(im,0,0);return c}
+function draw(g,P,x,y){g.drawImage(canvasOf(P),Math.round(x),Math.round(y))}
+const part=(host,fn)=>{const L=new Pix(host.w,host.h);fn(L);L.outline();host.blit(L)};
+
+// ---------- palettes ----------
+const SL=R_(['#161b24','#1e2430','#2a3240','#3a4454','#4c5868','#5e6c7e','#7a8898','#98a6b4']);
+const BAS=R_(['#141312','#1c1a19','#26231f','#322e29','#403a33','#50483f','#625849']);
+const WD=R_(['#24160c','#3a2416','#52341f','#6b4629','#835a36','#9c6e44','#b48454']);
+const IRON=R_(['#1a1b20','#2a2c33','#3e414a','#575b64','#767b84','#9da2a9','#c8ccd0']);
+const BLUE=R_(['#0b1430','#13244e','#1d3872','#2a5199','#3f6fbf','#6b97dc','#a4c2f0']);
+const RED=R_(['#1e070a','#360c12','#53131b','#731d23','#93292b','#b0433a','#cc6a55']);
+const AE=R_(['#140f40','#2c2690','#4a48d0','#7a80ff','#c0c4ff']);
+const PAL={in:BLUE,out:RED};
+
+// ---------- contenus ----------
+function ore(P,x,y,s){const cols=[['#575b64','#9da2a9'],['#8a4a2c','#d4885e']];for(let k=0;k<4;k++){const c=cols[hh(s,k,3)>.5?1:0],px=x+k*3-(k>1?5:0),py=y-(k>1?1:0);P.set(px,py,c[0]);P.set(px+1,py,c[0]);P.set(px,py-1,c[1]);P.set(px+1,py-1,c[0])}}
+function ingots(P,x,y,n=2){for(let k=0;k<n;k++){const px=x+k*5-(k>1?7:0),py=y-(k>1?2:0);P.rect(px,py-1,4,2,'#6c7a86');P.rect(px,py-1,4,1,'#b4c2cc');P.set(px,py-1,'#e4ecf0')}}
+function contents(P,k,x,y,w){if(k==='in')ore(P,x+2,y,7);else ingots(P,x+2,y)}
+
+// ---------- coffres : repère 26 × 30, bas de la face avant au pixel (13, 27) ----------
+const CW=26,CH=30,AX=13,AY=27,BW=14,BD=5,BH=7,X0=AX-7,TY=AY-BH-BD+1,FY=AY-BH+1; // dessus : TY..FY-1 ; face : FY..AY
+const each=(w,h,fn)=>{for(let j=0;j<h;j++)for(let i=0;i<w;i++)fn(i,j)};
+function interior(L,k,dark){each(BW,BD,(i,j)=>{const x=X0+i,y=TY+j;if(i===0||i===BW-1||j===0||j===BD-1)L.set(x,y,dark[3]);else L.set(x,y,j<2?dark[1]:dark[0])});contents(L,k,X0+1,TY+3,BW)}
+
+const CHESTS=[
+{id:'A',name:'Coffrets d’ardoise émaillés',desc:'Petits reliquaires taillés dans la même ardoise que le coffre antique, avec un bandeau d’émail bleu ou grenat sur la face et une incrustation sur le couvercle. Le couvercle se soulève puis glisse en arrière.',
+ draw(P,k,o,t){const pal=PAL[k];
+  part(P,L=>{interior(L,k,SL);each(BW,BH,(i,j)=>{const x=X0+i,y=FY+j,n=vn(x*.5,y*.5,3)-.5;let c;
+   if(i===0||i===BW-1)c=rp(SL,.72+n*.1,x,y);else if(j===0)c=rp(SL,.8,x,y);else if(j===BH-1)c=rp(SL,.25,x,y);
+   else if(j>=2&&j<=4&&i>=2&&i<=BW-3)c=rp(pal,.55+(j===2?.3:0)-(j===4?.22:0)+n*.12,x,y);else c=rp(SL,.48+n*.15,x,y);L.set(x,y,c)})});
+  const lift=Math.round(2*eio(o/.4)),slide=Math.round(5*eio((o-.4)/.6));
+  part(P,L=>{const y0=TY-lift-slide;each(BW+2,BD,(i,j)=>{const x=X0-1+i,y=y0+j;let c=rp(SL,.68+(vn(x*.5,y*.5,4)-.5)*.2,x,y);if(i===0||i===BW+1||j===0)c=rp(SL,.82,x,y);
+    if(i>=4&&i<=BW-3&&j>=1&&j<=3)c=rp(pal,j===1?.8:.5,x,y);L.set(x,y,c)});each(BW+2,2,(i,j)=>L.set(X0-1+i,y0+BD+j,j?SL[2]:SL[5]))})}},
+{id:'B',name:'Caisses de bois peintes',desc:'Caisses en planches, entièrement peintes en bleu ou en grenat, la peinture écaillée laissant voir le bois, cerclées de fer. Couvercle à charnières qui bascule en arrière.',
+ draw(P,k,o,t){const pal=PAL[k],paint=(i,j,x,y,b)=>hh(i,j*7,k==='in'?5:9)>.86?rp(WD,.45,x,y):rp(pal,b,x,y);
+  part(P,L=>{if(o>=.5)interior(L,k,WD);else each(BW,BD,(i,j)=>L.set(X0+i,TY+j,WD[2]));
+   each(BW,BH,(i,j)=>{const x=X0+i,y=FY+j;let c;if(i===1||i===BW-2)c=rp(IRON,j===0?.8:.5,x,y);else if(j%3===0)c=rp(pal,.25,x,y);else c=paint(i,j,x,y,.5+(j%3===1?.15:0)+(vn(x*.4,y*.3,2)-.5)*.15);
+    if((i===1||i===BW-2)&&j%3===1)c=IRON[6];L.set(x,y,c)})});
+  part(P,L=>{if(o<.5){const up=Math.round(o*4);each(BW,BD,(i,j)=>{const x=X0+i,y=TY+j-up;L.set(x,y,(i===1||i===BW-2)?IRON[4]:j===BD-1?rp(pal,.3,x,y):paint(i,j+9,x,y,.62+(j===0?.12:0)))});each(BW,2,(i,j)=>{const x=X0+i,y=TY+BD+j-up;L.set(x,y,j?pal[2]:paint(i,j,x,y,.7))})}
+   else{const hgt=BD+1;each(BW,hgt,(i,j)=>{const x=X0+i,y=TY-hgt+j;L.set(x,y,(i===1||i===BW-2)?IRON[3]:j===0?rp(pal,.6,x,y):rp(WD,.42-j*.03,x,y))})}})}},
+{id:'C',name:'Auges de basalte à pastille',desc:'Bacs de basalte ouverts, sans couvercle : le contenu reste visible en permanence. Une pastille de quartz teinté s’allume sur la face, et le rebord est liseré de bleu ou de grenat. À chaque dépôt, la pastille s’éclaire.',
+ draw(P,k,o,t){const pal=PAL[k],glow=.72+.16*Math.sin(t*2.4)+o*.3;
+  part(P,L=>{each(BW,BD,(i,j)=>{const x=X0+i,y=TY+j+1;if(i===0||i===BW-1||j===0||j===BD-1)L.set(x,y,j===0?BAS[5]:BAS[4]);else L.set(x,y,BAS[j<2?1:0])});
+   const bump=Math.round(eio(o)*1.5);contents(L,k,X0+1,TY+4-bump,BW);if(k==='in')ore(L,X0+6,TY+3-bump,11);else ingots(L,X0+3,TY+2-bump,1);
+   each(BW,BH-1,(i,j)=>{const x=X0+i,y=FY+1+j,n=vn(x*.5,y*.5,6)-.5;let c=j===0?rp(pal,.55,x,y):j===BH-2?BAS[1]:rp(BAS,.5+n*.25+(i===0?.15:0)-(i===BW-1?.15:0),x,y);
+    const dx=i-6,dy=j-2.5;if(Math.abs(dx)<=1&&Math.abs(dy)<=1.5&&!(Math.abs(dx)===1&&Math.abs(dy)===1.5))c=rp(pal,cl(glow+(dx<0&&dy<0?.3:0)),x,y);L.set(x,y,c)})})}},
+{id:'D',name:'Malles sous étoffe',desc:'Malles de bois sombre et de fer, recouvertes d’une étoffe bleue ou grenat qui retombe sur la face. Pour ouvrir, l’étoffe glisse sur le côté et dégage le contenu.',
+ draw(P,k,o,t){const pal=PAL[k],s=Math.round(9*eio(o));
+  part(P,L=>{interior(L,k,WD);each(BW,BH,(i,j)=>{const x=X0+i,y=FY+j;let c=rp(WD,.3+(j%3===0?-.1:.05)+(vn(x*.4,y*.4,2)-.5)*.15,x,y);if(i===0||i===BW-1||j===BH-1)c=rp(IRON,.45,x,y);L.set(x,y,c)})});
+  part(P,L=>{for(let i=s;i<BW+1;i++){const x=X0+i,fold=(i%4===1)?.18:(i%4===3)?-.15:0,hang=3+Math.round(hh(i,2,5)*1.4)+(i===BW?2:0);
+    for(let j=0;j<BD;j++)L.set(x,TY+j,rp(pal,.62+fold+(j===0?.1:0)+(i===s?-.1:0),x,TY+j));
+    for(let j=0;j<hang;j++)L.set(x,FY+j,rp(pal,.48+fold-j*.05,x,FY+j))}
+   if(s>0)for(let j=0;j<BD+3;j++)L.set(X0+BW+1,TY+j,rp(pal,.35,X0+BW+1,TY+j))})}},
+{id:'E',name:'Caisses à fanion',desc:'Caisses de bois clair à croisillon, toutes deux identiques ; c’est un petit fanion planté à l’arrière qui porte la couleur, avec un chevron : vers le bas pour l’entrée, vers le haut pour la sortie. Lisible de loin, même par-dessus le bâtiment.',
+ draw(P,k,o,t){const pal=PAL[k];
+  part(P,L=>{const px=X0+BW-2,top=TY-12;L.rect(px,top,1,13,WD[4]);L.set(px,top-1,IRON[6]);
+   for(let i=0;i<7;i++){const wav=Math.round(Math.sin(t*5-i*.9)*.8*(i/6));const hgt=Math.max(1,6-Math.floor(i*.75));for(let j=0;j<hgt;j++){const x=px+1+i,y=top+j+Math.floor((6-hgt)/2)+wav;L.set(x,y,rp(pal,.6+(j===0?.15:0),x,y))}}
+   const cy=top+3,ch=k==='in'?[[2,-1],[3,0],[4,-1]]:[[2,0],[3,-1],[4,0]];for(const[cx,dy]of ch)L.set(px+cx,cy+dy+Math.round(Math.sin(t*5-cx*.9)*.8*(cx/6)),'#ece6d4')});
+  part(P,L=>{if(o>=.5)interior(L,k,WD);else each(BW,BD,(i,j)=>L.set(X0+i,TY+j,WD[3]));
+   each(BW,BH,(i,j)=>{const x=X0+i,y=FY+j,d1=Math.abs((i-1)/(BW-3)*(BH-3)-(j-1)),d2=Math.abs((BW-2-i)/(BW-3)*(BH-3)-(j-1));let c=rp(WD,.62+(vn(x*.4,y*.3,8)-.5)*.15,x,y);
+    if(i===0||i===BW-1||j===0||j===BH-1)c=rp(WD,.4,x,y);else if(d1<.6||d2<.6)c=rp(WD,.3,x,y);if((i===0||i===BW-1)&&(j===0||j===BH-1))c=IRON[5];L.set(x,y,c)})});
+  part(P,L=>{if(o<.5){const up=Math.round(o*4);each(BW,BD,(i,j)=>{const x=X0+i,y=TY+j-up;L.set(x,y,rp(WD,(j===0?.85:.68)-(i%4===0?.15:0),x,y))});each(BW,2,(i,j)=>L.set(X0+i,TY+BD+j-up,j?WD[2]:WD[5]))}
+   else{each(BW,BD+1,(i,j)=>L.set(X0+i,TY-BD-1+j,rp(WD,.5-j*.03-(i%4===0?.12:0),X0+i,TY-BD-1+j)))}})}},
+];
+function chestPix(def,k,o,t){const P=new Pix(CW,CH);def.draw(P,k,o,t);return P}
+
+// ---------- ressources ----------
+const IMG={};const load=n=>new Promise((r,f)=>{const i=new Image();i.onload=()=>{IMG[n]=i;r()};i.onerror=()=>f(new Error('Image introuvable : '+n));i.src=PROD_SPRITES[n]});
+let BB=null; // boîte englobante de l'adepte (image de marche)
+function bbox(img,sx,w,h){const c=document.createElement('canvas');c.width=w;c.height=h;const g=c.getContext('2d');g.drawImage(img,sx,0,w,h,0,0,w,h);const d=g.getImageData(0,0,w,h).data;let x0=w,y0=h,x1=0,y1=0;
+ for(let y=0;y<h;y++)for(let x=0;x<w;x++)if(d[(y*w+x)*4+3]>128){x0=Math.min(x0,x);y0=Math.min(y0,y);x1=Math.max(x1,x);y1=Math.max(y1,y)}return{x0,y0,x1,y1,cx:(x0+x1)/2,mask:d}}
+const FW=20,FH=27;
+function adept(g,x,y,mode,t,flip=false){const img=mode==='walk'?IMG.aether_walk:mode==='work'?IMG.aether_work:IMG.aether_idle,n=mode==='walk'?2:mode==='work'?4:1,f=Math.floor(t*(mode==='walk'?6:8))%n;
+ g.save();if(flip){g.translate(Math.round(x),0);g.scale(-1,1);g.translate(-Math.round(x),0)}g.drawImage(img,f*FW,0,FW,FH,Math.round(x)-FW/2,Math.round(y)-FH+1,FW,FH);g.restore()}
+function shadow(g,x,y,rx=5){g.fillStyle='rgba(6,8,12,.35)';g.beginPath();g.ellipse(Math.round(x),Math.round(y),rx,1.6,0,0,7);g.fill()}
+
+// ---------- port d'un lot (section 2) : dessin relatif aux pieds (x, y) ----------
+function itemIcon(P,x,y){P.rect(x,y,5,3,'#575b64');P.rect(x+1,y-1,3,1,'#9da2a9');P.set(x+1,y,'#c8ccd0');P.rect(x+3,y+1,2,2,'#8a4a2c');P.set(x+3,y+1,'#d4885e')}
+const DIG={'5':['111','100','111','001','111'],'x':['000','101','010','101','000']};
+function digits(P,x,y,s,c){[...s].forEach((ch,k)=>DIG[ch].forEach((row,j)=>[...row].forEach((b,i)=>{if(b==='1')P.set(x+k*4+i,y+j,c)})))}
+const CARRY=[
+ {id:'1',name:'Sac sur l’épaule',desc:'Un sac de toile jeté sur l’épaule, d’où dépassent deux morceaux de minerai. Discret, naturel.',back:false,
+  draw(P,ax,ay,t,b){const x=ax+5,y=ay-FH+b.y0+9;part(P,L=>{for(let j=-3;j<=3;j++)for(let i=-4;i<=4;i++){if((i/4.4)**2+(j/3.4)**2>1)continue;L.set(x+i,y+j,rp(WD,.62-j*.06+(i<0?.08:-.05),x+i,y+j))}L.set(x-1,y-4,'#9da2a9');L.set(x+1,y-4,'#d4885e');L.set(x,y-4,'#575b64')})}},
+ {id:'2',name:'Caisse portée devant',desc:'Une petite caisse tenue à deux mains devant le ventre, le lot visible dessus. Très lisible, l’adepte paraît chargé.',back:false,
+  draw(P,ax,ay,t,b){const x=ax-5,y=ay-FH+b.y0+13;part(P,L=>{L.rect(x,y,10,6,WD[4]);L.rect(x,y,10,1,WD[6]);L.rect(x,y+5,10,1,WD[2]);L.rect(x+3,y+1,1,4,WD[3]);ore(L,x+2,y-1,4)})}},
+ {id:'3',name:'Hotte dans le dos',desc:'Une hotte d’osier sur le dos, chargée de minerai, qui dépasse au-dessus des épaules et sur les côtés. L’adepte garde les mains libres.',back:true,
+  draw(P,ax,ay,t,b){const x=ax-6,y=ay-FH+b.y0-3;part(P,L=>{for(let j=0;j<14;j++)for(let i=0;i<12;i++){const xx=x+i,yy=y+j;L.set(xx,yy,j===0?WD[5]:(i+j)%2?WD[4]:WD[3])}ore(L,x+3,y,9);ore(L,x+6,y-1,3)})}},
+ {id:'4',name:'Panier sur la tête',desc:'Le lot porté dans un panier plat posé sur la tête. Silhouette haute, reconnaissable de loin, même dans la foule.',back:false,
+  draw(P,ax,ay,t,b){const x=ax-5,y=ay-FH+b.y0-2;part(P,L=>{L.rect(x,y,10,2,WD[4]);L.rect(x,y+1,10,1,WD[2]);L.rect(x+1,y+2,8,1,WD[3]);ore(L,x+2,y-1,6)})}},
+ {id:'5',name:'Icône au-dessus de la tête',desc:'Pas de dessin sur l’adepte : l’icône de l’objet flotte au-dessus de sa tête avec la quantité. Le plus clair pour le joueur, le moins « dans le monde ».',back:false,
+  draw(P,ax,ay,t,b){const bob=Math.round(Math.sin(t*3)*1),x=ax-7,y=ay-FH+b.y0-9+bob;part(P,L=>{itemIcon(L,x,y)});digits(P,x+7,y-1,'x5','#ece6d4')}},
+];
+
+// ---------- indicateurs d'arrêt (section 3) ----------
+function aetherGlyph(P,x,y,c1,c2){for(let j=-4;j<=4;j++)for(let i=-4;i<=4;i++){const d=Math.hypot(i,j);if(Math.abs(d-3.6)<.55)P.set(x+i,y+j,c1);if(d<1.3)P.set(x+i,y+j,c2)}P.set(x+3,y-2,c2);P.set(x-3,y+2,c2)}
+const IDLE=[
+ {id:'1',name:'Glyphe du culte éteint',desc:'Le glyphe d’Aether flotte au-dessus du toit, gris et pulsant lentement : « il manque un adepte d’Aether ». Il disparaît dès qu’un adepte prend son poste.',
+  over(g,s,t,on,F){if(on)return;const P=new Pix(13,13),a=.55+.45*Math.sin(t*2.5);part(P,L=>{for(let j=-5;j<=5;j++)for(let i=-5;i<=5;i++)if(Math.hypot(i,j)<5.6)L.set(6+i,6+j,SL[1]);aetherGlyph(L,6,6,a>.6?AE[2]:SL[5],a>.6?AE[3]:SL[6])});g.globalAlpha=.6+.4*a;draw(g,P,F.x-6,F.top-14);g.globalAlpha=1}},
+ {id:'2',name:'Place vide en pointillé',desc:'La silhouette d’un adepte, en pointillé clair, marque le poste vide devant la porte. Le joueur voit tout de suite où et qui envoyer.',
+  over(g,s,t,on,F){if(on)return;const m=BB.idle,step=Math.floor(t*6);const P=new Pix(FW,FH);for(let y=0;y<FH;y++)for(let x=0;x<FW;x++){const i=(y*FW+x)*4;if(m[i+3]>128)continue;
+   const nb=[[1,0],[-1,0],[0,1],[0,-1]].some(([dx,dy])=>{const xx=x+dx,yy=y+dy;return xx>=0&&yy>=0&&xx<FW&&yy<FH&&m[(yy*FW+xx)*4+3]>128});if(nb&&(x+y+step)%3!==0)P.set(x,y,'#c4cad8')}
+   g.globalAlpha=.55+.3*Math.sin(t*3);draw(g,P,F.wx-FW/2,F.wy-FH+1);g.globalAlpha=1}},
+ {id:'3',name:'Forge éteinte',desc:'Rien n’est ajouté : le bâtiment s’assombrit et se désature quand personne n’y travaille, et reprend ses couleurs quand un adepte arrive. Le plus discret, le plus « dans le monde ».',
+  dim:true,over(){}},
+ {id:'4',name:'Bulle d’appel',desc:'Une petite bulle d’ardoise au-dessus du bâtiment, avec une tête d’adepte d’Aether et un « + » : « il faut quelqu’un ici ». Même langage que les répliques.',
+  over(g,s,t,on,F){if(on)return;const P=new Pix(17,16),b=Math.round(Math.sin(t*2.5));part(P,L=>{L.rect(0,0,17,12,SL[2]);L.rect(1,1,15,10,SL[1]);L.rect(7,12,3,1,SL[2]);L.set(8,13,SL[2]);
+   for(let j=0;j<6;j++)for(let i=0;i<6;i++)if(Math.hypot(i-2.5,j-2.5)<3)L.set(3+i,3+j,j<2?AE[3]:AE[2]);L.rect(4,6,4,2,'#c8a888');L.rect(11,4,1,5,'#ece6d4');L.rect(9,6,5,1,'#ece6d4')});draw(g,P,F.x-8,F.top-18+b)}},
+ {id:'5',name:'Jauge de postes',desc:'Cinq crans sous le bâtiment, un par poste. Vides et clignotants à l’arrêt ; chaque adepte au travail en remplit un, couleur de son culte. Montre aussi la vitesse de production.',
+  over(g,s,t,on,F){const P=new Pix(29,6),n=on?1:0,blink=Math.floor(t*2)%2;part(P,L=>{for(let k=0;k<5;k++){const x=1+k*6;L.rect(x,1,4,3,k<n?AE[3]:SL[1]);if(k<n)L.rect(x,1,4,1,AE[4]);if(!on&&k===0&&blink)L.rect(x,1,4,3,SL[4])}});draw(g,P,F.x-14,F.base+3)}},
+];
+
+// ---------- scènes ----------
+const TL=6.4; // boucle de la section 1
+function forgeAt(g,ox,oy,dim){if(dim){g.filter='brightness(.5) saturate(.35)'}g.drawImage(IMG['da-forge_base'],ox,oy);g.filter='none'}
+function floor(g,w,h,ox=0,oy=0){g.drawImage(IMG.sol,ox,oy,w,h,0,0,w,h)}
+const SW=176,SH=146,FOX=-72,FOY=-76; // forge : ancre (160,168) → (88,84)
+function sceneChests(g,def,t){floor(g,SW,SH);forgeAt(g,FOX,FOY);
+ const u=t%TL,BX=52,RX=126,CY=138,WX=72,WY=133;
+ const ob=u<2?0:u<2.9?Math.sin(Math.PI*(u-2)/.9):0,orr=u>=4.6&&u<5.6?Math.sin(Math.PI*(u-4.6)):0;
+ let ax,ay,mode='walk',carry=false;
+ if(u<2){ax=-10+(BX-9+10)*u/2;ay=CY;carry=true}else if(u<2.9){ax=BX-9;ay=CY;mode='idle';carry=u<2.35}else if(u<3.9){const p=(u-2.9);ax=BX-9+(WX-BX+9)*p;ay=CY+(WY-CY)*p}else{ax=WX;ay=WY;mode='work'}
+ const items=[{y:CY,f:()=>draw(g,chestPix(def,'in',ob,t),BX-AX,CY-AY)},{y:CY,f:()=>draw(g,chestPix(def,'out',orr,t),RX-AX,CY-AY)},
+  {y:ay,f:()=>{shadow(g,ax,ay);adept(g,ax,ay,mode,t);if(carry){const P=new Pix(SW,SH);CARRY[0].draw(P,Math.round(ax),Math.round(ay),t,BB.walk);draw(g,P,0,0)}}}];
+ items.sort((a,b)=>a.y-b.y).forEach(o=>o.f());
+ if(u>=2.35&&u<2.75){const p=(u-2.35)/.4,P=new Pix(6,4);ore(P,1,3,2);draw(g,P,BX-3,CY-22+p*12)}
+ if(u>=4.4&&u<4.9){const p=(u-4.4)/.5,P=new Pix(6,4);ingots(P,1,3,1);draw(g,P,86+(RX-89)*p,104-Math.sin(Math.PI*p)*10+p*14)}}
+function sceneKeys(g,def,t){g.clearRect(0,0,4*CW,CH);[['in',0],['in',1],['out',0],['out',1]].forEach(([k,o],i)=>draw(g,chestPix(def,k,o,t),i*CW,0))}
+function sceneCarry(g,def,t){floor(g,48,48,40,60);shadow(g,24,42,5);const P=new Pix(48,48);if(def.back){def.draw(P,24,42,t,BB.walk);draw(g,P,0,0)}adept(g,24,42,'walk',t);if(!def.back){def.draw(P,24,42,t,BB.walk);draw(g,P,0,0)}}
+const IW=140,IH=166,IOX=-90,IOY=-62;
+function sceneIdle(g,def,t){const u=t%7,on=u>=4.5;floor(g,IW,IH,20,0);forgeAt(g,IOX,IOY,def.dim&&!on);
+ const F={x:160+IOX,top:96+IOY,base:212+IOY,wx:160+IOX-16,wy:206+IOY};
+ if(u>=3.5){const p=cl((u-3.5)/1);const ax=on?F.wx:IW+10+(F.wx-IW-10)*p;shadow(g,ax,F.wy);adept(g,ax,F.wy,on?'work':'walk',t,!on)}
+ def.over(g,null,t,on,F)}
+
+// ---------- montage ----------
+const LIVE=[];let paused=false,T0=performance.now(),TP=0;
+function card(host,def,w,h,sc,fn,keysFn){const f=document.createElement('figure'),st=document.createElement('div');st.className='stage';const c=document.createElement('canvas');c.width=w;c.height=h;c.style.maxWidth=(w*sc)+'px';st.appendChild(c);f.appendChild(st);
+ const g=c.getContext('2d');g.imageSmoothingEnabled=false;LIVE.push(t=>{g.clearRect(0,0,w,h);fn(g,def,t)});
+ if(keysFn){const k=document.createElement('div');k.className='keys';const kc=document.createElement('canvas');kc.width=4*CW;kc.height=CH;const kg=kc.getContext('2d');k.appendChild(kc);
+  const lab=document.createElement('div');lab.innerHTML='<span>bleu fermé</span><span>bleu ouvert</span><span>rouge fermé</span><span>rouge ouvert</span>';k.appendChild(lab);f.appendChild(k);LIVE.push(t=>keysFn(kg,def,t))}
+ const cap=document.createElement('figcaption');cap.innerHTML=`<b>${def.id} · ${def.name}</b><p>${def.desc}</p>`;f.appendChild(cap);host.appendChild(f)}
+function loop(now){const t=paused?TP:(now-T0)/1000;if(!paused)TP=t;for(const f of LIVE)f(t);requestAnimationFrame(loop)}
+document.getElementById('pause').onclick=e=>{paused=!paused;if(!paused)T0=performance.now()-TP*1000;e.target.textContent=paused?'Lecture':'Pause';e.target.setAttribute('aria-pressed',paused)};
+Promise.all(['da-forge_base','aether_idle','aether_walk','aether_work','sol'].map(load)).then(()=>{
+ BB={walk:bbox(IMG.aether_walk,0,FW,FH),idle:bbox(IMG.aether_idle,0,FW,FH).mask};
+ for(const d of CHESTS)card(document.getElementById('chests'),d,SW,SH,4,sceneChests,sceneKeys);
+ for(const d of CARRY)card(document.getElementById('carry'),d,48,48,6,sceneCarry);
+ for(const d of IDLE)card(document.getElementById('idle'),d,IW,IH,3,sceneIdle);
+ requestAnimationFrame(loop)}).catch(e=>{const p=document.createElement('p');p.className='why';p.textContent='Erreur de rendu : '+e.message;document.querySelector('main').prepend(p);console.error(e)});
+</script></body></html>

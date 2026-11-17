@@ -1,0 +1,393 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Propositions de HUD</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;600&family=Noto+Serif:ital,wght@0,400;0,600;1,400&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0b120e;--panel:#111b14;--line:#2a3a2c;--txt:#dcd8bc;--mut:#93a08a;--acc:#e8c870;
+ --gold:#ae8546;--goldl:#e6c889;--ivory:#eee3c9;--hmut:#b8ad93;--cy:#5ce8ff;--cyd:#1f9fb8;--quartz:#efe9da;
+ --anc:#9b5cff;--med:#5fbf5a;--ind:#e88a3a;--sig:#b9b6ae;--aet:#7d7cf0;--beast:#d8433a}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--txt);font:15px/1.45 'Pixelify Sans',system-ui,sans-serif}
+header,main{max-width:1400px;margin:auto;padding:18px 16px}h1{margin:0;font-weight:600;letter-spacing:.08em;font-size:26px;color:var(--acc)}
+header p{color:var(--mut);margin:6px 0 0;max-width:980px}
+.why{border:1px solid var(--line);background:var(--panel);padding:12px 16px;color:var(--mut);display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap}
+.why b{color:var(--txt)}.why img{width:300px;max-width:100%;border:1px solid var(--line);cursor:zoom-in}.why div{flex:1;min-width:260px}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;margin-top:18px}
+figure{margin:0;background:var(--panel);border:1px solid var(--line);min-width:0}
+.frame{position:relative;overflow:hidden;background:#070b08;cursor:zoom-in;aspect-ratio:1440/900}
+figcaption{padding:10px 14px 14px}figcaption b{color:var(--acc);font-weight:600;font-size:17px}figcaption p{margin:4px 0 0;color:var(--mut);font-size:14px}
+figcaption .pro{color:#a9c39a;font-size:13px}figcaption .con{color:#c9a58a;font-size:13px}
+@media(max-width:1000px){.grid{grid-template-columns:1fr}}
+#zoom{position:fixed;inset:0;background:#000d;display:none;z-index:50;cursor:zoom-out;align-items:center;justify-content:center}
+#zoom.on{display:flex}#zoom .frame{width:min(100vw,160vh);cursor:zoom-out}
+
+/* ================= écran reconstitué : 1440 × 900, 1 px = 1 px écran ================= */
+.stage{position:absolute;left:0;top:0;width:1440px;height:900px;transform-origin:0 0;font-family:'Noto Serif',serif;color:var(--ivory);
+ background:url(assets/hud/fond.png) 0 0/1440px 900px;image-rendering:pixelated;overflow:hidden}
+.stage *{image-rendering:auto}.stage .px{image-rendering:pixelated}
+svg.ic{fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;display:block;flex:none}
+.num{font-variant-numeric:tabular-nums}
+.ab{position:absolute}
+.pf{background:#152019 center/cover no-repeat;image-rendering:pixelated}
+/* laiton du HUD actuel */
+.metal{position:absolute;background:linear-gradient(110deg,#111610f5,#0b0e0df7);border:1px solid var(--gold);
+ box-shadow:inset 0 0 0 3px #0c100f,inset 0 0 0 4px #7c603138,0 6px 16px #0007}
+.metal::before,.metal::after{content:'';position:absolute;width:3px;height:3px;background:var(--goldl);clip-path:polygon(0 0,100% 0,0 100%);left:6px;top:6px}
+.metal::after{left:auto;top:auto;right:6px;bottom:6px;background:var(--gold);clip-path:polygon(100% 100%,0 100%,100% 0)}
+.eb{font-size:10px;letter-spacing:2px;color:var(--hmut)}
+.lore{font-style:italic;font-size:12px;color:#ddcfaf}
+.key{font:10px/1 'Noto Serif',serif;border:1px solid #7c6031;padding:1px 4px;color:var(--hmut);background:#0b0e0d}
+
+/* ---------- 1 · Laiton resserré ---------- */
+.a-top{left:16px;top:14px;height:46px;display:flex;align-items:center;padding:0 18px;gap:0}
+.a-top .wv{display:flex;align-items:center;gap:9px;padding-right:18px;border-right:1px solid #7c603166;font-size:17px}
+.a-top .wv small{font-size:12px;color:var(--goldl);margin-left:4px}
+.a-top i{display:flex;align-items:center;gap:7px;font-style:normal;padding:0 15px;font-size:13px;color:var(--hmut);border-right:1px solid #7c603133}
+.a-top i:last-child{border:0}.a-top i em{font-style:normal;color:var(--ivory);font-size:17px}
+.a-bar{left:12px;right:12px;bottom:10px;height:96px;display:grid;grid-template-columns:160px 300px 1fr 300px;gap:0;padding:8px}
+.a-bar>div{position:relative;border-right:1px solid #7c603155;padding:0 14px}.a-bar>div:last-child{border:0}
+.a-bar .mm{padding:0 10px 0 0}.a-bar .mm img{width:150px;height:78px;object-fit:cover;border:1px solid #3a3020;image-rendering:pixelated}
+.a-bar .id{display:flex;gap:12px;align-items:center}.a-bar .id .pf{width:72px;height:72px;border:1px solid var(--gold)}
+.a-bar .nm{font-size:19px;margin:2px 0 4px}
+.hp{position:relative;height:13px;background:#1b1f17;border:1px solid #3d4a2c}.hp i{position:absolute;inset:0 auto 0 0;background:linear-gradient(#5f9a3c,#3d7426)}
+.hp span{position:absolute;inset:0;text-align:center;font-size:10px;line-height:12px;color:#eef}
+.a-bar .st{display:flex;gap:26px;padding-top:6px}.a-bar .st div{display:flex;gap:8px;align-items:center;font-size:12px;color:var(--hmut)}.a-bar .st b{display:block;font-weight:400;font-size:17px;color:var(--ivory)}
+.a-bar .ac{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;align-content:center}
+.a-ac{height:72px;border:1px solid #7c6031;background:linear-gradient(#171c15,#0d110f);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:11px;color:var(--ivory);position:relative}
+.a-ac .key{position:absolute;right:3px;top:3px}.a-ac.on{border-color:var(--goldl);box-shadow:inset 0 0 0 1px #e6c88955,0 0 10px #e6c88933}
+.a-obj{left:16px;top:72px;width:330px;padding:10px 12px;display:flex;gap:11px}
+.a-obj .pf{width:52px;height:52px;border:1px solid var(--gold)}
+.seg{display:flex;gap:2px;margin-top:5px}.seg i{flex:1;height:4px;background:#0f2a30;border:1px solid #12596b}.seg i.on{background:var(--cy);border-color:#c8fbff;box-shadow:0 0 4px #5ce8ff99}
+.rd{font:12px/1 'Share Tech Mono',monospace;color:var(--cy);letter-spacing:.06em;display:flex;margin-top:7px;text-shadow:0 0 6px #5ce8ff66}.rd b{margin-left:auto;font-weight:400}
+
+/* ---------- 2 · Coins d'état-major ---------- */
+.b-tl{left:16px;top:14px;width:270px;padding:12px 14px}
+.b-tl .wv{display:flex;align-items:center;gap:10px;font-size:18px}.b-tl .wv b{margin-left:auto;font-weight:400;font-size:15px;color:#e9c784}
+.b-tl hr{border:0;height:1px;background:linear-gradient(90deg,#7c6031aa,#0000);margin:9px 0}
+.b-tr{right:16px;top:14px;width:176px;padding:10px 14px}
+.b-tr i{display:flex;align-items:center;gap:9px;font-style:normal;font-size:13px;color:var(--hmut);height:27px}.b-tr i em{margin-left:auto;font-style:normal;font-size:16px;color:var(--ivory)}
+.b-tr .mn{border-top:1px solid #7c603155;margin-top:4px;padding-top:6px}
+.b-tr .mn .tr{height:4px;background:#2a1a12;margin-top:2px}.b-tr .mn .tr i{display:block;height:4px;background:#df936f;width:34%}
+.b-med{left:22px;bottom:22px;width:132px;height:132px;border-radius:50%;border:2px solid var(--gold);box-shadow:0 0 0 4px #0c100f,0 0 0 5px #7c6031,0 8px 20px #000a;overflow:hidden;background-size:120px}
+.b-arc{left:10px;bottom:10px;width:156px;height:156px}
+.b-name{left:170px;bottom:26px;padding:8px 16px 9px 14px;min-width:250px}
+.b-name .nm{font-size:20px}.b-name .s{font-size:11px;color:var(--hmut);margin-top:2px}
+.b-sel{left:180px;bottom:108px;display:flex;gap:6px}.b-sel span{width:38px;height:38px;border:1px solid #7c6031;box-shadow:0 0 0 2px #0c100f}.b-sel span.on{border-color:var(--goldl)}
+.b-mm{right:16px;bottom:184px;width:218px;height:150px;padding:6px}.b-mm img{width:100%;height:100%;object-fit:cover;image-rendering:pixelated}
+.b-ac{right:16px;bottom:16px;width:218px;padding:9px;display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.b-ac .a-ac{height:62px}.b-ac .a-ac.off{opacity:.35}
+
+/* ---------- 3 · Console d'exosquelette ---------- */
+.c-glass{position:absolute;background:linear-gradient(160deg,#0b1a1fd9,#060c10e6);border:1px solid #1f6f80;color:#bfeff7;font-family:'Share Tech Mono',monospace;
+ clip-path:polygon(12px 0,100% 0,100% calc(100% - 12px),calc(100% - 12px) 100%,0 100%,0 12px);box-shadow:inset 0 0 24px #5ce8ff14}
+.c-glass::before{content:'';position:absolute;inset:0;background:repeating-linear-gradient(0deg,#5ce8ff08 0 1px,#0000 1px 3px);pointer-events:none}
+.c-lbl{font-size:10px;letter-spacing:.2em;color:#5aa9b8}
+.c-top{left:50%;transform:translateX(-50%);top:12px;height:44px;display:flex;align-items:center;gap:0;padding:0 8px}
+.c-top i{font-style:normal;display:flex;gap:8px;align-items:center;padding:0 14px;font-size:12px;color:#5aa9b8;border-right:1px solid #1f6f8055}.c-top i:last-child{border:0}
+.c-top i em{font-style:normal;font-size:17px;color:#dffaff}.c-top svg{color:var(--cy)}
+.c-wv{left:16px;top:12px;padding:8px 16px 10px;width:220px}.c-wv .v{font-size:22px;color:#dffaff}.c-wv .t{color:#e9c784;float:right;font-size:18px;margin-top:3px}
+.c-obj{left:16px;top:84px;width:300px;padding:10px 14px 12px}.c-obj .q{font-size:12px;color:#9fd6e0;margin:4px 0}
+.c-bot{left:50%;transform:translateX(-50%);bottom:14px;width:980px;height:138px;display:grid;grid-template-columns:200px 1fr 330px;gap:14px;padding:12px 16px}
+.c-schem{position:relative;border-right:1px solid #1f6f8055}
+.c-schem svg{position:absolute;left:4px;top:0;width:120px;height:96px;stroke:var(--cy);stroke-width:1;fill:none;opacity:.85}
+.c-schem .pf{position:absolute;right:10px;top:8px;width:56px;height:56px;border:1px solid var(--cy);clip-path:polygon(8px 0,100% 0,100% 100%,0 100%,0 8px)}
+.c-schem .lv{position:absolute;right:10px;top:70px;font-size:11px;color:#5aa9b8}
+.c-mid .nm{font-size:20px;color:#dffaff;letter-spacing:.06em}
+.c-bars{display:grid;grid-template-columns:70px 1fr 64px;gap:4px 10px;font-size:11px;color:#5aa9b8;margin-top:8px;align-items:center}
+.c-bars .g{display:flex;gap:2px}.c-bars .g i{flex:1;height:7px;border:1px solid #12596b;background:#0f2a30}.c-bars .g i.on{background:var(--cy);border-color:#c8fbff}
+.c-bars .g.w i.on{background:#e9c784;border-color:#ffe9b8}
+.c-bars b{font-weight:400;color:#dffaff;text-align:right}
+.c-ac{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;align-content:center}
+.c-ac div{height:86px;border:1px solid #1f6f80;background:#071216;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;font-size:11px;color:#bfeff7;position:relative;clip-path:polygon(7px 0,100% 0,100% calc(100% - 7px),calc(100% - 7px) 100%,0 100%,0 7px)}
+.c-ac div svg{color:var(--cy)}.c-ac div span{position:absolute;right:5px;top:4px;font-size:10px;color:#5aa9b8}
+.c-ac div.on{background:#0d2a31;border-color:var(--cy);box-shadow:inset 0 0 12px #5ce8ff44}
+.c-mm{right:16px;top:12px;width:210px;height:150px;padding:8px}.c-mm img{width:100%;height:100%;object-fit:cover;filter:grayscale(1) sepia(1) hue-rotate(150deg) saturate(2.4) brightness(.8);image-rendering:pixelated}
+
+/* ---------- 4 · Stèles d'ardoise ---------- */
+.slate{position:absolute;color:#151920;
+ background:radial-gradient(ellipse at 30% 0,#56607088,#0000 70%),repeating-linear-gradient(172deg,#0000 0 7px,#00000014 7px 8px),linear-gradient(180deg,#4d5668,#363d4b);
+ border:2px solid;border-color:#69738a #1a1e26 #14171d #545e72;outline:1px solid #0a0a0c;box-shadow:0 6px 16px #0008;
+ clip-path:polygon(8px 0,calc(100% - 8px) 0,100% 8px,100% calc(100% - 8px),calc(100% - 8px) 100%,8px 100%,0 calc(100% - 8px),0 8px)}
+.eng{text-shadow:0 1px 0 #7b859acc,0 -1px 0 #0b0d12;font-weight:600}
+.lit{color:var(--quartz)!important;text-shadow:0 0 6px #efe9daaa,0 0 14px #efe9da55,0 1px 0 #0b0d12}
+.d-top{left:50%;transform:translateX(-50%);top:10px;height:50px;display:flex;align-items:center;padding:0 26px;gap:26px;font-size:13px}
+.d-top i{font-style:normal;display:flex;gap:8px;align-items:center;letter-spacing:1px}.d-top i em{font-style:normal;font-size:18px}
+.d-top .q{width:9px;height:9px;transform:rotate(45deg);background:var(--quartz);box-shadow:0 0 8px var(--quartz)}
+.d-wv{left:16px;top:10px;width:200px;height:64px;text-align:center;padding-top:9px}.d-wv .a{font-size:10px;letter-spacing:3px}.d-wv .b{font-size:21px;letter-spacing:2px}
+.d-obj{left:16px;top:86px;width:280px;padding:12px 16px}
+.gv{position:relative;height:6px;margin:8px 0 2px;background:#141820;box-shadow:inset 0 1px 1px #000,0 1px 0 #6b7486}.gv i{position:absolute;left:1px;top:1px;bottom:1px;background:linear-gradient(90deg,#b8b2a6,var(--quartz));box-shadow:0 0 6px #efe9da99}
+.d-bot{left:0;right:0;bottom:0;height:118px}
+.d-port{left:24px;bottom:12px;width:150px;height:150px;border-radius:75px 75px 6px 6px;clip-path:none;padding:12px}
+.d-port .pf{width:124px;height:124px;border-radius:62px 62px 4px 4px;box-shadow:inset 0 2px 4px #000,0 0 0 2px #1a1e26}
+.d-info{left:196px;bottom:16px;width:470px}
+.d-info .nm{font-size:22px;letter-spacing:1.5px}.d-info .s{font-size:10px;letter-spacing:3px;margin-bottom:6px}
+.d-row{display:flex;gap:24px;margin-top:9px;font-size:12px}.d-row b{font-size:17px;margin-left:5px}
+.d-ac{right:24px;bottom:14px;display:flex;gap:10px}
+.d-ac div{width:84px;height:88px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;font-size:11px;letter-spacing:1px;position:relative;
+ background:linear-gradient(180deg,#434b5c,#2d3340);box-shadow:inset 0 2px 3px #0008,inset 0 -1px 0 #69738a;border:1px solid #0a0a0c}
+.d-ac div svg{color:#151920;filter:drop-shadow(0 1px 0 #7b859a)}.d-ac div.on svg{color:var(--quartz);filter:drop-shadow(0 0 5px var(--quartz))}
+.d-ac div u{position:absolute;right:5px;top:3px;text-decoration:none;font-size:10px;color:#151920}
+.d-mm{right:24px;top:10px;width:200px;height:142px;padding:10px}.d-mm img{width:100%;height:100%;object-fit:cover;filter:grayscale(.85) brightness(.75) contrast(1.2);image-rendering:pixelated;box-shadow:inset 0 0 0 2px #0a0a0c}
+
+/* ---------- 5 · Arc de commandement ---------- */
+.e-top{left:50%;transform:translateX(-50%);top:12px;height:40px;display:flex;align-items:center;padding:0 20px;gap:22px;font-size:13px;border-radius:0 0 22px 22px}
+.e-top i{font-style:normal;display:flex;gap:7px;align-items:center;color:var(--hmut)}.e-top i em{font-style:normal;color:var(--ivory);font-size:16px}
+.e-wv{left:16px;top:12px;width:170px;padding:7px 14px;display:flex;align-items:center;gap:9px;font-size:16px}
+.e-arc{left:50%;bottom:-200px;width:520px;height:400px;transform:translateX(-50%)}
+.e-hub{left:50%;bottom:16px;width:150px;height:150px;transform:translateX(-50%);border-radius:50%;border:2px solid var(--gold);box-shadow:0 0 0 5px #0c100f,0 0 0 6px #7c6031;background-size:136px}
+.e-btn{position:absolute;width:64px;height:64px;border-radius:50%;border:1px solid var(--gold);background:radial-gradient(#1a2018,#0b0e0d);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:10px;box-shadow:0 0 0 3px #0c100f,0 6px 12px #0009}
+.e-btn .key{position:absolute;bottom:-9px;padding:0 4px}.e-btn.on{border-color:var(--goldl);box-shadow:0 0 0 3px #0c100f,0 0 14px #e6c88955}
+.e-name{left:50%;bottom:252px;transform:translateX(-50%);text-align:center;width:300px;text-shadow:0 2px 4px #000,0 0 8px #000}
+.e-name .nm{font-size:20px}.e-name .eb{color:#d8ccb0}
+.e-mm{left:18px;bottom:18px;width:190px;height:190px;border-radius:50%;overflow:hidden;border:2px solid var(--gold);box-shadow:0 0 0 5px #0c100f,0 0 0 6px #7c6031}
+.e-mm img{width:100%;height:100%;object-fit:cover;image-rendering:pixelated}
+.e-mm::after{content:'N';position:absolute;top:6px;left:50%;transform:translateX(-50%);font-size:12px;color:#f5d99b}
+.e-st{right:18px;bottom:18px;width:300px;padding:12px 16px}
+.e-st .r{display:flex;justify-content:space-between;font-size:12px;color:var(--hmut);margin:3px 0}.e-st .r b{font-weight:400;color:var(--ivory)}
+
+/* ---------- 6 · Colonne de l'Ingénieur ---------- */
+.f-col{right:0;top:0;bottom:0;width:300px;border-right:0;border-top:0;border-bottom:0;padding:14px}
+.f-col .sec{border-bottom:1px solid #7c603155;padding:10px 0}.f-col .sec:first-child{padding-top:0}
+.f-col .mm{height:170px;border:1px solid #3a3020;position:relative}.f-col .mm img{width:100%;height:100%;object-fit:cover;image-rendering:pixelated}
+.f-res{display:grid;grid-template-columns:1fr 1fr;gap:6px 12px}.f-res i{display:flex;gap:8px;align-items:center;font-style:normal;font-size:12px;color:var(--hmut)}.f-res i em{margin-left:auto;font-style:normal;font-size:15px;color:var(--ivory)}
+.f-sel{display:flex;gap:10px}.f-sel .pf{width:80px;height:80px;border:1px solid var(--gold)}.f-sel .nm{font-size:18px}
+.f-ac{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}.f-ac .a-ac{height:74px}.f-ac .a-ac.off{opacity:.3}
+.f-wv{left:16px;top:14px;padding:8px 16px;display:flex;gap:10px;align-items:center;font-size:17px}
+.f-wv b{font-weight:400;color:#e9c784;margin-left:8px}
+
+/* ---------- 7 · Cadran de l'Ancre ---------- */
+.g-dial{left:50%;top:8px;width:150px;height:150px;transform:translateX(-50%)}
+.g-wing{top:18px;height:52px;display:flex;align-items:center;gap:22px;padding:0 26px;font-size:13px}
+.g-wing i{font-style:normal;display:flex;gap:8px;align-items:center;color:var(--hmut)}.g-wing i em{font-style:normal;font-size:18px;color:var(--ivory)}
+.g-l{right:calc(50% + 70px);clip-path:polygon(0 0,100% 0,100% 100%,22px 100%,0 calc(100% - 22px))}
+.g-r{left:calc(50% + 70px);clip-path:polygon(0 0,100% 0,100% calc(100% - 22px),calc(100% - 22px) 100%,0 100%)}
+.g-lbl{left:50%;top:162px;transform:translateX(-50%);text-align:center;text-shadow:0 2px 4px #000;width:260px}
+.g-lbl .a{font-size:10px;letter-spacing:3px;color:#c9b2ff}.g-lbl .b{font-size:15px;color:#e9c784}
+.g-bot{left:50%;transform:translateX(-50%);bottom:12px;height:78px;width:900px;display:flex;align-items:center;gap:16px;padding:0 14px}
+.g-bot .pf{width:58px;height:58px;border:1px solid var(--gold)}
+.g-bot .nm{font-size:18px}.g-bot .vs{width:1px;height:52px;background:#7c603166}
+.g-bot .ac{display:flex;gap:6px;margin-left:auto}.g-bot .ac .a-ac{width:64px;height:58px}
+.g-mm{left:16px;bottom:12px;width:170px;height:118px;padding:5px}.g-mm img{width:100%;height:100%;object-fit:cover;image-rendering:pixelated}
+.g-obj{left:16px;top:84px;width:300px;padding:10px 12px;display:flex;gap:10px}.g-obj .pf{width:48px;height:48px;border:1px solid var(--gold)}
+
+/* ---------- 8 · Autels des cultes ---------- */
+.h-alt{position:absolute;top:12px;width:120px;height:122px;text-align:center}
+.h-alt .disc{width:74px;height:74px;margin:0 auto;border-radius:50%;position:relative;background:radial-gradient(circle at 50% 35%,#24292a,#0c0f0e 70%);border:2px solid;box-shadow:0 0 0 3px #0c100f,0 6px 14px #000a}
+.h-alt .disc svg{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%)}
+.h-alt .ring{position:absolute;inset:-7px;border-radius:50%}
+.h-alt .v{font-size:20px;margin-top:5px;text-shadow:0 2px 3px #000}.h-alt .n{font-size:10px;letter-spacing:2px;text-shadow:0 1px 2px #000}
+.h-alt .ad{position:absolute;right:16px;top:52px;font-size:10px;background:#0c0f0e;border:1px solid;border-radius:9px;padding:0 5px;line-height:15px}
+.h-ex{right:16px;top:14px;padding:8px 14px;display:flex;gap:16px;font-size:13px;color:var(--hmut)}.h-ex i{font-style:normal;display:flex;gap:7px;align-items:center}.h-ex em{font-style:normal;color:var(--ivory);font-size:16px}
+.h-wv{left:16px;top:14px;padding:8px 14px;display:flex;gap:9px;align-items:center;font-size:17px}
+.h-bar{left:50%;transform:translateX(-50%);bottom:12px;width:880px;height:100px;display:grid;grid-template-columns:96px 1fr auto;gap:16px;padding:10px 14px;align-items:center}
+.h-bar .pf{width:80px;height:80px;border:1px solid var(--gold)}
+.h-cost{display:flex;gap:6px;margin-top:4px}.h-cost span{font-size:10px;padding:1px 6px;border-radius:8px;border:1px solid}
+.h-ac{display:flex;gap:6px}.h-ac .a-ac{width:96px;height:76px}.h-ac .a-ac small{font-size:9px;display:flex;gap:4px}
+
+/* ---------- 9 · Diégétique ---------- */
+.i-ring{left:743px;top:384px;width:0;height:0}
+.i-ring svg.o{position:absolute;left:-60px;top:-60px;width:120px;height:120px;overflow:visible}
+.i-rb{position:absolute;width:42px;height:42px;border-radius:50%;background:#0b0e0dd9;border:1px solid #e6c889aa;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 8px #0009}
+.i-rb .key{position:absolute;bottom:-8px;right:-6px;font-size:9px;padding:0 3px}
+.i-rb.on{border-color:var(--goldl);box-shadow:0 0 12px #e6c88988}
+.i-tag{position:absolute;left:24px;top:-74px;white-space:nowrap;font-size:13px;text-shadow:0 1px 2px #000,0 0 6px #000}
+.i-tag small{display:block;font-size:10px;letter-spacing:2px;color:#d8ccb0}
+.sh{text-shadow:0 1px 2px #000,0 0 8px #000c,0 0 2px #000}
+.i-res{left:18px;top:14px;display:flex;gap:18px;font-size:13px;color:#d8ccb0}.i-res i{font-style:normal;display:flex;gap:6px;align-items:center}.i-res em{font-style:normal;font-size:16px;color:var(--ivory)}
+.i-res svg{filter:drop-shadow(0 1px 2px #000)}
+.i-wv{right:18px;top:12px;text-align:right}.i-wv .a{font-size:24px}.i-wv .b{font-size:13px;color:#e9c784}
+.i-obj{left:18px;top:50px;font-size:13px}.i-obj .q{font-style:italic;color:#e6dcc0;max-width:420px}
+.i-obj .rd{margin-top:5px;max-width:240px}
+.i-mm{right:18px;bottom:18px;width:180px;height:120px;opacity:.75;border:1px solid #e6c88955;-webkit-mask:radial-gradient(#000 60%,#0000 100%);mask:radial-gradient(#000 60%,#0000 100%)}
+.i-mm img{width:100%;height:100%;object-fit:cover;image-rendering:pixelated}
+.i-bot{left:18px;bottom:16px;font-size:12px;color:#d8ccb0;max-width:420px}
+.i-hint{position:absolute;left:820px;top:440px;font-size:11px;color:#d8ccb0;font-style:italic}
+
+/* ---------- 10 · Cartes de troupe ---------- */
+.card{position:absolute;width:150px;height:206px;border:1px solid var(--gold);border-radius:6px;background:linear-gradient(#141a14,#0b0e0d);box-shadow:inset 0 0 0 3px #0c100f,inset 0 0 0 4px #7c603138,0 8px 18px #000b;padding:8px;transform-origin:50% 120%}
+.card .pf{height:104px;border:1px solid #7c6031;border-radius:3px}
+.card .nm{font-size:14px;margin-top:6px;text-align:center}.card .eb{text-align:center;font-size:8px;margin-top:1px}
+.card .hp{margin-top:6px;height:10px}.card .hp span{font-size:8px;line-height:9px}
+.card .row{display:flex;justify-content:space-around;font-size:11px;color:var(--hmut);margin-top:6px}.card .row b{color:var(--ivory);font-weight:400}
+.card.on{border-color:var(--goldl);box-shadow:inset 0 0 0 3px #0c100f,0 0 0 1px #e6c88966,0 0 18px #e6c88944,0 10px 20px #000c}
+.acard{position:absolute;width:96px;height:132px;border:1px solid #7c6031;border-radius:6px;background:linear-gradient(#171c15,#0d110f);box-shadow:0 6px 12px #000b,inset 0 0 0 2px #0c100f;display:flex;flex-direction:column;align-items:center;padding-top:20px;gap:10px;font-size:12px;transform-origin:50% 140%}
+.acard .key{position:absolute;left:6px;top:6px}.acard small{font-size:10px;color:var(--hmut);text-align:center;padding:0 6px}
+.acard.on{border-color:var(--goldl);transform:translateY(-14px)!important}
+.j-tabs{left:50%;transform:translateX(-50%);top:0;display:flex;gap:4px}
+.j-tab{position:relative;padding:14px 16px 10px;background:linear-gradient(#0b0e0df5,#141a14f0);border:1px solid var(--gold);border-top:0;border-radius:0 0 8px 8px;display:flex;gap:8px;align-items:center;font-size:13px;color:var(--hmut);box-shadow:0 6px 12px #0008}
+.j-tab em{font-style:normal;font-size:17px;color:var(--ivory)}
+.j-tab.w{color:var(--ivory);font-size:16px;padding-top:16px}.j-tab.w b{color:#e9c784;font-weight:400;font-size:14px}
+.j-mm{right:16px;top:14px;width:196px;height:134px;padding:5px}.j-mm img{width:100%;height:100%;object-fit:cover;image-rendering:pixelated}
+</style></head><body>
+<header><h1>HUD · DIX PROPOSITIONS</h1>
+<p>Dix façons de réorganiser tout le HUD (bandeau de ressources, vague, objectif, minicarte, sélection, ordres), montées sur la même scène de jeu en 1440 × 900 : 1 px de maquette = 1 px d’écran, comme le HUD Godot. Même situation partout : l’Ingénieur est sélectionné près de l’Ancre éteinte, avec Tireur à côté, vague 2 dans 0:48. Cliquer une maquette l’affiche en grand.</p></header>
+<main><div class="why"><img src="assets/menace/hud-reference.png" alt="HUD actuel" id="ref"><div><b>Référence : HUD actuel.</b> Bandeau de commandement de 135 px en bas (minicarte, portrait, détails, ordres), carte de vague et bandeau de ressources en haut, panneau « Rapport de l’Ingénieur » sous la vague. Règles de la charte respectées dans toutes les propositions : cyan réservé à la technologie exilée, pourpre réservé à l’Ancre, rouge à la Bête ; le laiton reste la couleur du HUD seulement là où il l’est déjà, et n’apparaît pas sur des unités alliées. Les propositions 1, 2, 5, 6, 7 et 10 gardent le laiton et le charbon ; la 3 reprend l’interface d’exosquelette retenue pour l’inventaire ; la 4 l’ardoise tyrienne de la caverne ; la 8 les couleurs des cultes ; la 9 retire presque tous les cadres.</div></div>
+<div class="grid" id="grid"></div></main>
+<div id="zoom"></div>
+<script>
+'use strict';
+const IC={skull:'<path d="M8 19v-4c-3-1-4-3-4-6a8 8 0 0 1 16 0c0 3-1 5-4 6v4zM10 19v-3m4 3v-3"/><circle cx="8.5" cy="9" r="1.5"/><circle cx="15.5" cy="9" r="1.5"/><path d="m11 13 1-2 1 2"/>',
+ iron:'<path d="m3 10 12-6 6 4-12 6zM3 10v6l6 4 12-6V8M9 14v6"/>',heart:'<path d="M12 21 3 12C-4 3 8-1 12 6c4-7 16-3 9 6z"/>',
+ shield:'<path d="M12 2 3 6v7c0 5 9 9 9 9s9-4 9-9V6zM12 5v13"/>',book:'<path d="M4 4h6a3 3 0 0 1 2 1 3 3 0 0 1 2-1h6v15h-6a2 2 0 0 0-2 2 2 2 0 0 0-2-2H4zM12 5v16M7 8h2m-2 3h2m6-3h2m-2 3h2"/>',
+ people:'<circle cx="12" cy="5" r="3"/><path d="M6 21v-6a6 6 0 0 1 12 0v6zM3 21H1v-6a4 4 0 0 1 3-4m17 10h2v-6a4 4 0 0 0-3-4"/><path d="M3 5a2 2 0 0 0 0 4m18-4a2 2 0 0 1 0 4"/>',
+ menace:'<path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Z"/><path d="m12 8 2 4-2 4-2-4Z M5 3l2 3m10 0 2-3"/>',
+ hammer:'<path d="m3 21 12-12m-9 13 12-12M10 4l4-3 9 8-4 4zM2 20l2 3M9 5l4 4"/>',rune:'<circle cx="12" cy="12" r="7"/><path d="M12 0v24M0 12h24m-12-9 3 9-3 9-3-9z"/>',
+ flag:'<path d="M5 23V2m0 1c5-4 9 4 16 0v11c-7 4-11-4-16 0"/>',move:'<path d="M12 2v20M2 12h20M8 6l4-4 4 4M8 18l4 4 4-4M6 8l-4 4 4 4m12-8 4 4-4 4"/>',
+ sword:'<path d="m5 21 12-12 3-7-7 3L1 17m2-6 10 10m-9-1 3 3M10 8l6 6"/>',boot:'<path d="m10 3 9 2-3 10 5 3v3H3v-4l5-2zM9 7l8 2m-9 2 7 2M3 18h11"/>',
+ flame:'<path d="M12 22c-4 0-7-3-7-7 0-4 3-6 4-10 1 3 3 4 4 6 1-2 1-4 0-7 4 2 8 7 8 11 0 4-3 7-7 7z"/>',
+ spirit:'<path d="m12 1 2 8 8 3-8 2-2 9-2-9-8-2 8-3zM4 4l5 5m6 6 5 5M4 20l5-5m6-6 5-5"/>',restart:'<path d="M4 8a9 9 0 1 1-1 8M4 2v7h7"/>'};
+const ic=(n,s=20,c='currentColor',w=1.6)=>`<svg class="ic" viewBox="0 0 24 24" style="width:${s}px;height:${s}px;color:${c};stroke-width:${w}">${IC[n]}</svg>`;
+const RC={forge:'#d5c7a9',vie:'#ad855d',discipline:'#85d7f0',savoir:'#d5c7a9',exiles:'#d5c7a9',menace:'#df936f'};
+const RES=[['forge','iron','Forge',40],['vie','heart','Vie',12],['discipline','shield','Discipline',8],['savoir','book','Savoir',20],['exiles','people','Exilés',2]];
+const MEN=34;
+const resItems=(s=20,lab=true)=>RES.map(r=>`<i>${ic(r[1],s,RC[r[0]])}${lab?r[2]+' ':''}<em class="num">${r[3]}</em></i>`).join('');
+const P=n=>`assets/hud/${n}.png`;
+const pf=(n,cls='',st='')=>`<div class="pf ${cls}" style="background-image:url(${P(n)});${st}"></div>`;
+const ACT=[['hammer','Construire','B'],['rune','Réactiver','R',1],['flag','Position','H'],['move','Déplacer','M']];
+const aac=(a,extra='')=>`<div class="a-ac${a[3]?' on':''}${extra}"><span class="key">${a[2]}</span>${ic(a[0],22,a[3]?'#e6c889':'#d5c7a9')}${a[1]}</div>`;
+const seg=(p,n=12)=>`<div class="seg">${Array.from({length:n},(_,i)=>`<i class="${i<Math.round(p*n)?'on':''}"></i>`).join('')}</div>`;
+const QUOTE='« L’Ancre s’est éteinte. Je dois la réactiver : elle réveillera les gardes de l’entrée. »';
+const hp=(v,m,w='100%')=>`<div class="hp" style="width:${w}"><i style="width:${v/m*100}%"></i><span class="num">${v} / ${m}</span></div>`;
+// arc SVG (centre cx,cy, rayon r, de a0 à a1 en degrés, 0 = haut, sens horaire)
+function arc(cx,cy,r,a0,a1){const p=a=>[cx+r*Math.sin(a*Math.PI/180),cy-r*Math.cos(a*Math.PI/180)];const[x0,y0]=p(a0),[x1,y1]=p(a1);return `M${x0.toFixed(1)} ${y0.toFixed(1)}A${r} ${r} 0 ${a1-a0>180?1:0} 1 ${x1.toFixed(1)} ${y1.toFixed(1)}`}
+
+const V=[];
+V.push({name:'1 · Laiton resserré',
+ desc:'L’évolution douce du HUD actuel : mêmes matériaux, mais un seul bandeau de 96 px au lieu de 135, sans cases séparées (des filets suffisent). En haut, vague et ressources fusionnent en une seule plaque ; le rapport de l’Ingénieur reste dessous. Les ordres deviennent des cases carrées de taille fixe avec leur touche.',
+ pro:'+ Aucune rupture de style, 40 px de terrain regagnés, intégration rapide dans hud.gd.',con:'− Peu de surprise ; reste une interface « bandeau » classique.',
+ html:()=>`<div class="metal a-top"><div class="wv">${ic('skull',22,'#e69354')}Vague 2<small class="num">· 0:48</small></div>${resItems(18).replace(/<i>/g,'<i>')}<i>${ic('menace',18,RC.menace)}Menace <em class="num">${MEN} %</em></i></div>
+ <div class="metal a-obj">${pf('engineer','','')}<div style="flex:1"><div class="eb">INGÉNIEUR EXILÉ</div><div class="lore" style="font-size:12px;margin-top:2px">${QUOTE}</div><div class="rd">▸ RÉACTIVATION<b class="num">45 %</b></div>${seg(.45)}</div></div>
+ <div class="metal a-bar"><div class="mm"><img src="${P('minimap')}"></div>
+ <div class="id">${pf('engineer')}<div style="flex:1"><div class="eb" style="font-size:9px">EXILÉ · BÂTISSEUR · NIV. 1</div><div class="nm">Ingénieur Exilé</div>${hp(80,80)}</div></div>
+ <div><div class="st"><div>${ic('sword',20,'#d5c7a9')}<span>Dégâts<b>6</b></span></div><div>${ic('shield',20,'#d5c7a9')}<span>Armure<b>0</b></span></div><div>${ic('boot',20,'#d5c7a9')}<span>Déplacement<b>15,2</b></span></div></div><div class="lore" style="margin-top:8px">Il relève les pierres pour que demeure le serment.</div></div>
+ <div class="ac">${ACT.map(a=>aac(a)).join('')}</div></div>`});
+
+V.push({name:'2 · Coins d’état-major',
+ desc:'Le centre de l’écran est entièrement libéré : chaque information rejoint un coin. En haut à gauche, vague + objectif dans une même plaque ; en haut à droite, une colonne de ressources avec la jauge de Menace ; en bas à gauche, le portrait en médaillon cerclé par sa vie, la sélection en vignettes au-dessus ; en bas à droite, minicarte puis grille d’ordres 3 × 2.',
+ pro:'+ Tout le champ de bataille visible, surtout en bas où arrivent les assauts.',con:'− L’œil voyage d’un coin à l’autre ; les grilles de 6 ordres laissent des cases vides pour l’Ingénieur.',
+ html:()=>`<div class="metal b-tl"><div class="wv">${ic('skull',22,'#e69354')}Vague 2<b class="num">0:48</b></div><hr><div class="eb">OBJECTIF</div><div style="font-size:15px;margin:3px 0 2px">Réactiver l’Ancre</div><div class="rd" style="margin-top:4px">▸ RÉACTIVATION<b class="num">45 %</b></div>${seg(.45,10)}</div>
+ <div class="metal b-tr">${resItems(18)}<div class="mn"><i>${ic('menace',18,RC.menace)}Menace<em class="num">${MEN} %</em></i><div class="tr"><i></i></div></div></div>
+ <div class="b-sel ab"><span class="pf on" style="background-image:url(${P('engineer')})"></span><span class="pf" style="background-image:url(${P('shooter')})"></span></div>
+ <svg class="ab b-arc" viewBox="0 0 156 156"><path d="${arc(78,78,73,-140,140)}" stroke="#1b1f17" stroke-width="7" fill="none"/><path d="${arc(78,78,73,-140,140)}" stroke="#5f9a3c" stroke-width="5" fill="none" stroke-linecap="round"/></svg>
+ <div class="ab b-med pf" style="background-image:url(${P('engineer')})"></div>
+ <div class="metal b-name"><div class="eb" style="font-size:9px">EXILÉ · BÂTISSEUR · NIV. 1</div><div class="nm">Ingénieur Exilé</div><div class="s">80 / 80 · Dégâts 6 · Armure 0 · Dépl. 15,2</div></div>
+ <div class="metal b-mm"><img src="${P('minimap')}"></div>
+ <div class="metal b-ac">${ACT.map(a=>aac(a)).join('')}${aac(['sword','—',' '],' off')}${aac(['spirit','—',' '],' off')}</div>`});
+
+V.push({name:'3 · Console d’exosquelette',
+ desc:'Le HUD devient l’affichage tête haute de l’armure exilée, dans le langage retenu pour l’inventaire (proposition C) : verre sombre, angles coupés, Share Tech Mono, lignes de balayage. Le portrait est accompagné du schéma filaire de l’exo ; vie et Énonciation en jauges segmentées. La minicarte passe en relevé cyan.',
+ pro:'+ Unifie HUD et inventaire ; le cyan est justifié (c’est la technologie des Exilés).',con:'− Abandonne le laiton historique ; le cyan partout dilue son rôle de signal.',
+ html:()=>`<div class="c-glass c-wv"><div class="c-lbl">ASSAUT</div><span class="v">VAGUE 02</span><span class="t num">T-00:48</span></div>
+ <div class="c-glass c-top">${RES.map(r=>`<i>${ic(r[1],18)}${r[2].toUpperCase()}<em class="num">${String(r[3]).padStart(2,'0')}</em></i>`).join('')}<i style="color:#df936f">${ic('menace',18,'#df936f')}MENACE<em class="num" style="color:#ffc9b0">${MEN}%</em></i></div>
+ <div class="c-glass c-obj"><div class="c-lbl">DIRECTIVE · INGÉNIEUR</div><div class="q">${QUOTE}</div><div class="c-bars" style="grid-template-columns:1fr 50px;margin-top:4px"><div class="g">${Array.from({length:16},(_,i)=>`<i class="${i<7?'on':''}"></i>`).join('')}</div><b class="num">45%</b></div></div>
+ <div class="c-glass c-mm"><img src="${P('minimap')}"></div>
+ <div class="c-glass c-bot"><div class="c-schem"><svg viewBox="0 0 120 96"><circle cx="40" cy="14" r="8"/><path d="M40 22v34M24 30h32M24 30l-8 22M56 30l8 22M40 56l-10 32M40 56l10 32M30 40h20"/><path d="M64 52h20M84 52v-30h6" stroke-dasharray="2 2"/><circle cx="16" cy="52" r="2"/><circle cx="64" cy="52" r="2"/></svg>${pf('engineer')}<div class="lv">NIV.01 · 0 XP</div></div>
+ <div class="c-mid"><div class="c-lbl">EXILÉ · BÂTISSEUR</div><div class="nm">INGÉNIEUR EXILÉ</div>
+ <div class="c-bars"><span>INTÉGRITÉ</span><div class="g">${Array.from({length:20},()=>'<i class="on"></i>').join('')}</div><b class="num">80/80</b>
+ <span>ÉNONCIATION</span><div class="g w">${Array.from({length:20},(_,i)=>`<i class="${i<12?'on':''}"></i>`).join('')}</div><b class="num">60%</b>
+ <span>DÉG · ARM · VIT</span><span style="color:#dffaff">06 · 00 · 15.2</span><span></span></div></div>
+ <div class="c-ac">${ACT.map(a=>`<div class="${a[3]?'on':''}"><span>[${a[2]}]</span>${ic(a[0],24)}${a[1].toUpperCase()}</div>`).join('')}</div></div>`});
+
+V.push({name:'4 · Stèles d’ardoise',
+ desc:'Chaque élément est une tablette d’ardoise tyrienne, texte gravé dans la pierre et lumière de quartz laiteux pour ce qui est actif (la lumière retenue pour la caverne). Le portrait est serti dans une niche en arc, les ordres sont des touches de pierre creusées ; l’ordre en cours s’allume en quartz.',
+ pro:'+ Le HUD appartient au monde : ruines tyriennes, même matière que la caverne.',con:'− Lisibilité moindre du texte gravé en petit ; beaucoup de gris sur un décor déjà sombre.',
+ html:()=>`<div class="slate d-wv"><div class="a eng">ASSAUT DANS 0:48</div><div class="b eng lit">VAGUE II</div></div>
+ <div class="slate d-top">${RES.map(r=>`<i class="eng">${ic(r[1],18,'#151920')}${r[2].toUpperCase()} <em class="num">${r[3]}</em></i>`).join('')}<i class="eng">${ic('menace',18,'#5a2a1c')}MENACE <em class="num">${MEN}</em></i></div>
+ <div class="slate d-obj"><div class="eng" style="font-size:10px;letter-spacing:3px;text-align:center">OBJECTIF</div><div class="eng" style="text-align:center;font-size:15px;letter-spacing:1.5px">RALLUMER L’ANCRE</div><div class="gv"><i style="width:45%"></i></div><div class="eng" style="font-size:12px;display:flex;justify-content:space-between"><span>◆ Réactivation</span><span class="num">45 %</span></div></div>
+ <div class="slate d-mm"><img src="${P('minimap')}"></div>
+ <div class="slate d-port">${pf('engineer')}</div>
+ <div class="slate d-info" style="padding:10px 16px 12px"><div class="s eng">EXILÉ · BÂTISSEUR · RANG I</div><div class="nm eng">INGÉNIEUR EXILÉ</div><div class="gv" style="height:8px"><i style="width:calc(100% - 2px);background:linear-gradient(90deg,#8fb86a,#c8e6a0);box-shadow:0 0 5px #c8e6a088"></i></div>
+ <div class="d-row eng"><span>Dégâts<b>6</b></span><span>Armure<b>0</b></span><span>Pas<b>15,2</b></span><span style="margin-left:auto">80 / 80</span></div></div>
+ <div class="slate d-ac" style="padding:10px">${ACT.map(a=>`<div class="${a[3]?'on':''}"><u class="eng">${a[2]}</u>${ic(a[0],26)}<span class="eng${a[3]?' lit':''}">${a[1].toUpperCase()}</span></div>`).join('')}</div>`});
+
+V.push({name:'5 · Arc de commandement',
+ desc:'Un pupitre circulaire au centre-bas : le portrait au cœur, la vie en arc autour, et les ordres disposés en éventail sur l’anneau (chacun avec sa touche). Minicarte ronde en bas à gauche, caractéristiques en bas à droite ; en haut, une languette de ressources pendue au bord de l’écran.',
+ pro:'+ Très identifiable ; les ordres sont à égale distance du portrait.',con:'− Le menu Construire (9 bâtiments) déborde de l’arc : il faudra un second anneau.',
+ html:()=>{const cx=720,cy=900-91,R=126,angs=[-62,-22,22,62];
+ const btns=ACT.map((a,i)=>{const t=angs[i]*Math.PI/180;const x=cx+R*Math.sin(t)-32,y=cy-R*Math.cos(t)-32;return `<div class="e-btn${a[3]?' on':''}" style="left:${x}px;top:${y}px">${ic(a[0],20,a[3]?'#e6c889':'#d5c7a9')}<span>${a[1]}</span><span class="key">${a[2]}</span></div>`}).join('');
+ return `<div class="metal e-wv">${ic('skull',20,'#e69354')}Vague 2 <span style="color:#e9c784;margin-left:auto" class="num">0:48</span></div>
+ <div class="metal e-top">${resItems(18)}<i>${ic('menace',18,RC.menace)}<em class="num">${MEN} %</em></i></div>
+ <div class="metal a-obj" style="top:62px">${pf('engineer')}<div style="flex:1"><div class="eb">INGÉNIEUR EXILÉ</div><div class="lore" style="margin-top:2px">${QUOTE}</div><div class="rd">▸ RÉACTIVATION<b class="num">45 %</b></div>${seg(.45)}</div></div>
+ <svg class="ab" style="left:0;top:0;width:1440px;height:900px;pointer-events:none"><path d="M${cx-200} 900 A200 200 0 0 1 ${cx+200} 900Z" fill="#0b0e0df2" stroke="#ae8546"/><path d="M${cx-192} 900 A192 192 0 0 1 ${cx+192} 900" fill="none" stroke="#7c603155"/>
+ <path d="${arc(cx,cy,88,-120,120)}" stroke="#1b1f17" stroke-width="8" fill="none"/><path d="${arc(cx,cy,88,-120,120)}" stroke="#5f9a3c" stroke-width="5" fill="none"/></svg>
+ <div class="ab e-hub pf" style="background-image:url(${P('engineer')})"></div>${btns}
+ <div class="ab e-name"><div class="eb">EXILÉ · BÂTISSEUR · NIV. 1</div><div class="nm">Ingénieur Exilé</div></div>
+ <div class="ab e-mm"><img src="${P('minimap')}"></div>
+ <div class="metal e-st"><div class="r"><span>Vie</span><b class="num">80 / 80</b></div><div class="r"><span>Dégâts</span><b>6</b></div><div class="r"><span>Armure</span><b>0</b></div><div class="r"><span>Déplacement</span><b>15,2</b></div><div class="lore" style="margin-top:6px">Il relève les pierres pour que demeure le serment.</div></div>`}});
+
+V.push({name:'6 · Colonne de l’Ingénieur',
+ desc:'Une colonne latérale de 300 px à droite, sur toute la hauteur, à la manière des jeux de stratégie classiques : minicarte, ressources, objectif, sélection, puis grille d’ordres 3 colonnes. Seule la vague reste flottante en haut à gauche. Le bas de l’écran redevient terrain.',
+ pro:'+ Place illimitée pour les menus (Construire, recherches, résurrections) ; rien ne bouge d’un contexte à l’autre.',con:'− Mange 20 % de la largeur ; la caméra doit être décentrée pour compenser.',
+ html:()=>`<div class="metal f-wv">${ic('skull',22,'#e69354')}Vague 2<b class="num">0:48</b></div>
+ <div class="metal f-col"><div class="sec"><div class="mm"><img src="${P('minimap')}"></div></div>
+ <div class="sec f-res">${resItems(16)}<i>${ic('menace',16,RC.menace)}Menace<em class="num">${MEN}%</em></i></div>
+ <div class="sec"><div class="eb">OBJECTIF</div><div style="font-size:15px;margin:2px 0">Réactiver l’Ancre</div><div class="lore" style="font-size:11.5px">${QUOTE}</div><div class="rd">▸ RÉACTIVATION<b class="num">45 %</b></div>${seg(.45,14)}</div>
+ <div class="sec"><div class="f-sel">${pf('engineer')}<div style="flex:1"><div class="eb" style="font-size:9px">BÂTISSEUR · NIV. 1</div><div class="nm">Ingénieur Exilé</div>${hp(80,80)}<div style="font-size:11px;color:var(--hmut);margin-top:5px">Dég. 6 · Arm. 0 · Dépl. 15,2</div></div></div>
+ <div style="display:flex;gap:4px;margin-top:8px">${['engineer','shooter'].map((n,i)=>`<span class="pf" style="width:34px;height:34px;border:1px solid ${i?'#7c6031':'#e6c889'};background-image:url(${P(n)})"></span>`).join('')}</div></div>
+ <div class="sec f-ac">${ACT.map(a=>aac(a)).join('')}${aac(['sword','',' '],' off')}${aac(['spirit','',' '],' off')}</div>
+ <div class="sec" style="border:0"><div class="eb">JOURNAL</div><div style="font-size:11.5px;color:var(--hmut);line-height:1.7;margin-top:3px">◆ Le Tireur a rejoint les Exilés.<br>◆ +5 Savoir · prière à Sigil<br>◆ Réactivation de l’Ancre commencée</div></div></div>`});
+
+V.push({name:'7 · Cadran de l’Ancre',
+ desc:'Le cœur du jeu devient le cœur du HUD : en haut au centre, la sphère noire de l’Ancre (reflets pourpres) dans un cadran qui montre son intégrité et le compte à rebours de l’assaut. Les ressources forment deux ailes de part et d’autre. En bas, un bandeau de sélection bas et étroit, sans cadres internes.',
+ pro:'+ Le joueur voit en permanence ce qu’il défend et quand ça arrive.',con:'− Le haut central est occupé, là où apparaissent les portails ; le pourpre de l’Ancre prend beaucoup de place.',
+ html:()=>`<div class="metal g-wing g-l">${RES.slice(0,3).map(r=>`<i>${ic(r[1],20,RC[r[0]])}${r[2]} <em class="num">${r[3]}</em></i>`).join('')}</div>
+ <div class="metal g-wing g-r">${RES.slice(3).map(r=>`<i>${ic(r[1],20,RC[r[0]])}${r[2]} <em class="num">${r[3]}</em></i>`).join('')}<i>${ic('menace',20,RC.menace)}Menace <em class="num">${MEN} %</em></i></div>
+ <svg class="ab g-dial" viewBox="0 0 150 150"><defs><radialGradient id="orb" cx="40%" cy="35%" r="65%"><stop offset="0" stop-color="#3a2552"/><stop offset=".35" stop-color="#140c1e"/><stop offset="1" stop-color="#030205"/></radialGradient></defs>
+ <circle cx="75" cy="75" r="72" fill="#0b0e0d" stroke="#ae8546"/><circle cx="75" cy="75" r="68" fill="none" stroke="#7c603155"/>
+ <path d="${arc(75,75,62,0,360*0.999)}" stroke="#1c1426" stroke-width="7" fill="none"/><path d="${arc(75,75,62,0,360*.45)}" stroke="#9b5cff" stroke-width="5" fill="none" stroke-linecap="round" style="filter:drop-shadow(0 0 4px #9b5cff)"/>
+ <path d="${arc(75,75,53,0,359.9)}" stroke="#2a2316" stroke-width="3" fill="none" stroke-dasharray="2 3"/><path d="${arc(75,75,53,0,360*.8)}" stroke="#e9c784" stroke-width="3" fill="none"/>
+ <circle cx="75" cy="75" r="40" fill="url(#orb)" stroke="#000" stroke-width="2"/><ellipse cx="62" cy="60" rx="10" ry="6" fill="#b48cff33"/><path d="M58 92l8-10-4-2 9-12" stroke="#7a3cff" stroke-width="1.4" fill="none" opacity=".8"/></svg>
+ <div class="ab g-lbl"><div class="a">ANCRE · RÉACTIVATION 45 %</div><div class="b">Vague 2 dans <span class="num">0:48</span></div></div>
+ <div class="metal g-obj">${pf('engineer')}<div style="flex:1"><div class="eb">INGÉNIEUR EXILÉ</div><div class="lore" style="font-size:11.5px;margin-top:2px">${QUOTE}</div></div></div>
+ <div class="metal g-mm"><img src="${P('minimap')}"></div>
+ <div class="metal g-bot">${pf('engineer')}<div><div class="eb" style="font-size:9px">BÂTISSEUR · NIV. 1</div><div class="nm">Ingénieur Exilé</div>${hp(80,80,'200px')}</div><div class="vs"></div>
+ <div style="font-size:12px;color:var(--hmut);line-height:1.6">Dégâts <b style="color:var(--ivory);font-weight:400">6</b> · Armure <b style="color:var(--ivory);font-weight:400">0</b><br>Déplacement <b style="color:var(--ivory);font-weight:400">15,2</b></div>
+ <div class="ac">${ACT.map(a=>aac(a)).join('')}</div></div>`});
+
+V.push({name:'8 · Autels des cultes',
+ desc:'Les quatre ressources sont rattachées à leur dieu : chacune s’affiche dans un médaillon à la couleur du portail (Aether bleu-violet → Forge, Medeina vert → Vie, Indra orange → Discipline, Sigil marbre gris → Savoir), avec le nombre d’adeptes en prière. Le médaillon pulse quand la ressource rentre. Les coûts des ordres reprennent ces couleurs.',
+ pro:'+ Apprend au joueur quel temple produit quoi ; relie économie et cultes.',con:'− Quatre couleurs fortes en haut de l’écran ; la Forge n’est pas intuitivement « bleu-violet ».',
+ html:()=>{const G=[['aether','Forge',40,'#7d7cf0','iron',2],['medeina','Vie',12,'#5fbf5a','heart',1],['indra','Discipline',8,'#e88a3a','shield',0],['sigil','Savoir',20,'#b9b6ae','book',3]];
+ const x0=720-2*128;return G.map((g,i)=>`<div class="h-alt" style="left:${x0+i*128+4}px"><div class="disc" style="border-color:${g[3]}"><div class="ring" style="box-shadow:0 0 0 1px ${g[3]}55,0 0 ${i===3?18:8}px ${g[3]}${i===3?'aa':'44'}"></div>${ic(g[4],30,g[3],1.4)}<span class="ad num" style="border-color:${g[3]};color:${g[3]}">${g[5]}</span></div><div class="v num">${g[2]}</div><div class="n" style="color:${g[3]}">${g[1].toUpperCase()}</div></div>`).join('')+
+ `<div class="metal h-wv">${ic('skull',22,'#e69354')}Vague 2 <span class="num" style="color:#e9c784;font-size:14px">0:48</span></div>
+ <div class="metal h-ex"><i>${ic('people',18,RC.exiles)}Exilés <em>2</em></i><i>${ic('menace',18,RC.menace)}Menace <em class="num">${MEN} %</em></i></div>
+ <div class="metal a-obj" style="top:68px;width:300px">${pf('engineer')}<div style="flex:1"><div class="eb">INGÉNIEUR EXILÉ</div><div class="lore" style="margin-top:2px">${QUOTE}</div></div></div>
+ <div class="metal g-mm"><img src="${P('minimap')}"></div>
+ <div class="metal h-bar">${pf('engineer')}<div><div class="eb" style="font-size:9px">EXILÉ · BÂTISSEUR · NIV. 1</div><div style="font-size:19px">Ingénieur Exilé</div>${hp(80,80,'260px')}<div class="lore" style="margin-top:6px">Il relève les pierres pour que demeure le serment.</div></div>
+ <div class="h-ac">${[['spirit','T. Aether',[['Forge','#7d7cf0',20]]],['spirit','T. Medeina',[['Vie','#5fbf5a',20]]],['spirit','T. Indra',[['Discipline','#e88a3a',20]]],['rune','Réactiver',[],1]].map(a=>`<div class="a-ac${a[3]?' on':''}">${ic(a[0],20,a[3]?'#e6c889':'#d5c7a9')}${a[1]}<small>${a[2].map(c=>`<span style="color:${c[1]}">● ${c[2]}</span>`).join('')}</small></div>`).join('')}</div></div>`}});
+
+V.push({name:'9 · Diégétique',
+ desc:'Presque plus de cadres : l’information vit dans le monde, près de l’unité sélectionnée. Un anneau au sol porte sa vie en arc, une étiquette flottante son nom, et les ordres apparaissent en couronne autour d’elle (clic droit maintenu ou touche). Les ressources ne sont plus qu’une ligne de texte ombré, l’objectif une réplique sous-titrée, la minicarte un médaillon fondu.',
+ pro:'+ Immersion maximale ; le terrain occupe 100 % de l’écran.',con:'− Moins lisible en plein combat (texte sur décor) ; la couronne masque l’entourage de l’unité.',
+ html:()=>{const R=64,angs=[-60,-20,20,60];
+ const btns=ACT.map((a,i)=>{const t=(angs[i]+180)*Math.PI/180;return `<div class="i-rb${a[3]?' on':''}" style="left:${R*1.2*Math.sin(t)-21}px;top:${-R*1.05*Math.cos(t)-21+4}px">${ic(a[0],20,a[3]?'#e6c889':'#e8dcc0')}<span class="key">${a[2]}</span></div>`}).join('');
+ return `<div class="ab i-res sh">${resItems(18)}<i>${ic('menace',18,RC.menace)}Menace <em class="num">${MEN} %</em></i></div>
+ <div class="ab i-wv sh"><div class="a">Vague 2</div><div class="b num">assaut dans 0:48</div></div>
+ <div class="ab i-obj sh"><div class="q"><span style="color:#d8ccb0;font-style:normal;letter-spacing:2px;font-size:10px">INGÉNIEUR — </span>L’Ancre s’est éteinte. Je dois la réactiver : elle réveillera les gardes de l’entrée.</div><div class="rd">▸ RÉACTIVATION<b class="num">45 %</b></div>${seg(.45)}</div>
+ <div class="ab i-ring"><svg class="o" viewBox="-60 -60 120 120"><ellipse cx="0" cy="8" rx="30" ry="13" fill="none" stroke="#e6c88955" stroke-width="1.5"/><path d="M-30 8A30 13 0 0 0 30 8" fill="none" stroke="#7cc24f" stroke-width="3"/><path d="M-30 8A30 13 0 0 1 30 8" fill="none" stroke="#7cc24f99" stroke-width="2"/></svg>${btns}
+ <div class="i-tag sh"><small>BÂTISSEUR · NIV. 1</small>Ingénieur Exilé <span style="color:#a9d48a;font-size:11px" class="num">80/80</span></div></div>
+ <div class="ab i-mm"><img src="${P('minimap')}"></div>
+ <div class="ab i-bot sh">Tab : fiche complète · Clic droit maintenu : ordres · Survol d’un ordre : coût et détail</div>`}});
+
+V.push({name:'10 · Cartes de troupe',
+ desc:'La sélection se présente comme une main de cartes en bas à gauche : une carte par unité (portrait, vie, caractéristiques), la carte active relevée et dorée. Les ordres sont de petites cartes en éventail en bas à droite, la carte armée sortie du lot. En haut, vague et ressources pendent du bord de l’écran comme des onglets de classeur.',
+ pro:'+ Gère naturellement les groupes et escouades (une carte par membre) ; tactile et lisible.',con:'− Prend de la hauteur en bas (≈ 220 px) ; demande une animation soignée pour ne pas paraître gadget.',
+ html:()=>{const cards=[['shooter','Tireur','COMBATTANT',110,110,'20 · 1 · 15,2'],['engineer','Ingénieur Exilé','BÂTISSEUR',80,80,'6 · 0 · 15,2',1]];
+ const cs=cards.map((c,i)=>`<div class="card${c[6]?' on':''}" style="left:${30+i*128}px;bottom:${c[6]?24:10}px;transform:rotate(${c[6]?2:-6}deg)">${pf(c[0])}<div class="nm">${c[1]}</div><div class="eb">${c[2]} · NIV. ${c[6]?1:2}</div>${hp(c[3],c[4])}<div class="row"><span>${ic('sword',13,'#d5c7a9')}</span><b class="num">${c[5]}</b></div></div>`).join('');
+ const n=ACT.length,ac=ACT.map((a,i)=>{const r=(i-(n-1)/2)*7;return `<div class="acard${a[3]?' on':''}" style="right:${24+(n-1-i)*82}px;bottom:16px;transform:rotate(${r}deg)"><span class="key">${a[2]}</span>${ic(a[0],30,a[3]?'#e6c889':'#d5c7a9',1.4)}${a[1]}<small>${['9 bâtiments','Ancre · 6 s','Tenir','Destination'][i]}</small></div>`}).join('');
+ return `<div class="ab j-tabs"><div class="j-tab w">${ic('skull',20,'#e69354')}Vague 2 <b class="num">0:48</b></div>${RES.map(r=>`<div class="j-tab">${ic(r[1],18,RC[r[0]])}<em class="num">${r[3]}</em></div>`).join('')}<div class="j-tab">${ic('menace',18,RC.menace)}<em class="num">${MEN} %</em></div></div>
+ <div class="metal a-obj" style="top:14px">${pf('engineer')}<div style="flex:1"><div class="eb">INGÉNIEUR EXILÉ</div><div class="lore" style="margin-top:2px">${QUOTE}</div><div class="rd">▸ RÉACTIVATION<b class="num">45 %</b></div>${seg(.45)}</div></div>
+ <div class="metal j-mm"><img src="${P('minimap')}"></div>${cs}${ac}`}});
+
+// ---------- montage ----------
+const grid=document.getElementById('grid'),zoom=document.getElementById('zoom'),FR=[];
+function fit(){for(const F of document.querySelectorAll('.frame')){const sc=F.clientWidth/1440;F.firstElementChild.style.transform=`scale(${sc})`}}
+V.forEach(v=>{const f=document.createElement('figure');
+ f.innerHTML=`<div class="frame"><div class="stage">${v.html()}</div></div><figcaption><b>${v.name}</b><p>${v.desc}</p><p class="pro">${v.pro}</p><p class="con">${v.con}</p></figcaption>`;
+ grid.appendChild(f);f.querySelector('.frame').onclick=()=>{zoom.innerHTML=`<div class="frame"><div class="stage">${v.html()}</div></div>`;zoom.classList.add('on');fit()}});
+document.getElementById('ref').onclick=()=>{zoom.innerHTML=`<div class="frame"><div class="stage" style="background-image:url(assets/menace/hud-reference.png)"></div></div>`;zoom.classList.add('on');fit()};
+zoom.onclick=()=>zoom.classList.remove('on');
+addEventListener('keydown',e=>{if(e.key==='Escape')zoom.classList.remove('on')});
+addEventListener('resize',fit);fit();
+// hud-propositions.html?n=3 : une seule maquette, à l'échelle 1 (captures, comparaison)
+const only=+new URLSearchParams(location.search).get('n');
+if(only>=1&&only<=V.length){document.body.innerHTML=`<div class="stage" style="position:relative">${V[only-1].html()}</div>`;document.body.style.margin='0'}
+</script></body></html>

@@ -22,12 +22,26 @@ func test_hero_fights_match_js() -> void:
 	for H: Dictionary in js()["heroes"]:
 		var u := setup(H["role"], int(H["level"]))
 		var sim := game_sim()
+		var engineer_ally: Unit = null
 		for a: Array in H["allies"]:
-			_ally(sim, a[0], a[1], a[2], a[3])
+			var ally := _ally(sim, a[0], a[1], a[2], a[3])
+			if ally.role == "engineer":
+				engineer_ally = ally
 		for f: Array in H["foes"]:
 			foe(f[0], f[1], f[2], f[3])
 		GameState.next_wave = 1e9
 		GameState.orb_active = false
+		if engineer_ally:
+			# L'Ingénieur du prototype (80 dégâts à distance) n'existe plus : en armure il frappe à 1 000, sans
+			# armure au corps à corps à 5. Pas de parité pas à pas : on vérifie que le combat a lieu.
+			engineer_ally.unarmored = true
+			var target: Enemy = GameState.enemies[0]
+			var hp0 := target.hp
+			for _k in H["steps"].size():
+				sim.tick(0.05)
+			check(target.hp < hp0, "%s niv. %d : l'ennemi est touché (%.0f → %.0f)" % [H["role"], H["level"], hp0, target.hp])
+			check(u.alive(), "%s niv. %d : le héros tient" % [H["role"], H["level"]])
+			continue
 		var i := 0
 		for want: Dictionary in H["steps"]:
 			sim.tick(0.05)

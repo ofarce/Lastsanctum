@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="fr">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Minerais v2 · Exiles Defense</title>
+<style>
+*{box-sizing:border-box}
+:root{--bg:#0c1214;--panel:#121b1e;--line:#2b383b;--ink:#e8e5d9;--mute:#9fb0ab;--cu:#e09670;--fe:#a8b6c0;--qz:#d6cbe9;--au:#f0d07a}
+body{background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,sans-serif;margin:0}
+main{max-width:1240px;margin:24px auto;padding:0 16px}
+small,.mute{color:var(--mute)}
+h1{font:400 30px/1.2 Georgia,serif;margin:6px 0 4px}
+h2{font:400 22px/1.2 Georgia,serif;margin:0}
+.lead{max-width:820px;color:#c9d2cd}
+nav{display:flex;flex-wrap:wrap;gap:6px;margin:16px 0;align-items:center}
+button{background:#182326;color:#c1ccc7;border:1px solid #465451;padding:7px 12px;cursor:pointer;font:inherit;border-radius:3px}
+button[aria-pressed=true]{color:#10191a;background:#d6d6bb}
+.pistes{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin:18px 0 28px}
+.piste{background:var(--panel);border:1px solid var(--line);padding:12px}
+.piste b{display:block;font:400 17px Georgia,serif;margin:2px 0 6px}
+.piste p{margin:0;font-size:13px;color:#b9c4bf}
+.piste img{width:100%;image-rendering:pixelated;background:url(assets/minerais-v2/roche.png) 0 0/128px;margin-top:10px;display:block}
+section.ore{margin:30px 0}
+.orehead{display:flex;align-items:baseline;gap:12px;margin-bottom:10px}
+.sym{font:600 20px ui-monospace,monospace}
+.scroll{overflow-x:auto;padding-bottom:6px}
+table{border-collapse:separate;border-spacing:6px;min-width:860px}
+th{font-weight:400;text-align:left;color:var(--mute);font-size:13px;vertical-align:bottom;padding:0 2px}
+th.st{width:120px;vertical-align:middle;color:var(--ink);font-size:14px}
+th.st span{display:block;color:var(--mute);font-size:12px}
+td{padding:0}
+.cell{position:relative;background:url(assets/minerais-v2/roche.png) 0 0/var(--tile);border:1px solid #303b42;image-rendering:pixelated;width:var(--box);height:var(--box);display:grid;place-items:center}
+.cell.icon{background:#0e171b;border:1px solid #2a4950;clip-path:polygon(10px 0,100% 0,100% calc(100% - 10px),calc(100% - 10px) 100%,0 100%,0 10px)}
+.cell img{width:var(--sp);height:var(--sp);image-rendering:pixelated}
+.cell.cur{outline:1px dashed #56645f;outline-offset:2px}
+.num{font:12px ui-monospace,monospace;color:#7f8f8a}
+body{--z:4}
+body[data-z="2"]{--box:76px;--sp:64px;--tile:128px}
+body[data-z="4"]{--box:140px;--sp:128px;--tile:256px}
+body[data-z="1"]{--box:44px;--sp:32px;--tile:64px}
+.glint::after{content:"";position:absolute;left:calc(50% - var(--sp)*.16);top:calc(50% - var(--sp)*.12);width:calc(var(--sp)*.09);height:calc(var(--sp)*.09);background:#fff5e0;clip-path:polygon(50% 0,62% 38%,100% 50%,62% 62%,50% 100%,38% 62%,0 50%,38% 38%);opacity:0;animation:eclat 3.8s infinite;animation-delay:var(--dl,0s)}
+.stop .glint::after{animation:none}
+@keyframes eclat{0%,68%,85%,100%{opacity:0}75%{opacity:.9}80%{opacity:.3}}
+.situ{display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:10px}
+.situ figure{margin:0;background:var(--panel);border:1px solid var(--line);padding:8px}
+.situ canvas{width:100%;image-rendering:pixelated;display:block}
+.situ figcaption{font-size:13px;color:var(--mute);padding-top:6px}
+footer{margin:36px 0 20px;font-size:12px;color:#7f8f8a;display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+@media(max-width:680px){h1{font-size:24px}}
+</style>
+<body data-z="4">
+<main>
+<small>EXILES DEFENSE &nbsp;/&nbsp; PLANCHE DE VALIDATION &nbsp;/&nbsp; MINERAIS v2</small>
+<h1>Cinq rendus pour chaque état des minerais</h1>
+<p class="lead">Quatre minerais (cuivre, fer, quartz, or) × trois états du jeu : <b>filon</b> (case minable qui disparaît), <b>gisement inépuisable</b> (case permanente) et <b>icône</b> d’inventaire. Sprites 32 × 32 px au format exact de l’atlas actuel, contour noir franc, lumière haut-gauche. La colonne « Actuel » rappelle les nodules en jeu. Les pistes peuvent se combiner : un choix par état est possible.</p>
+
+<div class="pistes" id="pistes"></div>
+
+<nav>
+  <span class="mute">Zoom</span>
+  <button data-z="1" aria-pressed="false">×1 taille jeu</button>
+  <button data-z="2" aria-pressed="false">×2</button>
+  <button data-z="4" aria-pressed="true">×4 détail</button>
+  <button id="pause" style="margin-left:auto">Suspendre les reflets</button>
+</nav>
+
+<div id="ores"></div>
+
+<section class="ore">
+  <div class="orehead"><h2>En situation</h2><span class="mute">Paroi d’ardoise : filons par paires (comme en jeu), un gisement inépuisable au centre, et une rangée de la réserve d’inventaire.</span></div>
+  <div class="situ" id="situ"></div>
+</section>
+
+<footer><span>Générateur : tools/minerais/minerais_v2.py · un atlas 128 × 96 par piste dans planches/assets/minerais-v2/atlas-*.png, prêt à remplacer nodules.png</span><span>Fond de roche approximatif, non extrait du jeu</span></footer>
+</main>
+<script>
+const D='assets/minerais-v2/';
+const ORES=[['copper','Cu','Cuivre','--cu'],['iron','Fe','Fer','--fe'],['quartz','SiO₂','Quartz','--qz'],['gold','Au','Or','--au']];
+const STATES=[['vein','Filon','épuisable'],['lode','Gisement','inépuisable'],['icon','Icône','inventaire']];
+const P=[
+ ['actuel','Actuel','Nodules en jeu aujourd’hui.'],
+ ['habitus','Habitus','Chaque minerai garde sa forme cristalline : cuivre natif arborescent, fer en cubes, quartz en prismes, or en pépites. Lisible à la silhouette, même sans la couleur.'],
+ ['affleurement','Affleurement','Bloc d’ardoise à facettes traversé de veines métalliques. Le gisement s’élargit, ses veines s’épaississent et débordent en éclats au pied.'],
+ ['druse','Druse fendue','La roche s’ouvre en deux sur une cavité tapissée de cristaux. Le gisement inépuisable devient une grande druse à trois pans.'],
+ ['eboulis','Éboulis','Tas de blocs de minerai détachés, mêlés de cailloux. Le gisement s’adosse à un éperon veiné qui ne s’épuise pas.'],
+ ['eclat','Éclat intérieur','Cristaux sertis qui diffusent une lueur en paliers (ni dégradé ni trame). Repérables la nuit ; le gisement a trois anneaux et des poussières en suspension.'],
+];
+const $=s=>document.querySelector(s);
+$('#pistes').innerHTML=P.slice(1).map((p,i)=>`<div class="piste"><span class="num">0${i+1}</span><b>${p[1]}</b><p>${p[2]}</p><img src="${D}atlas-${p[0]}.png" alt="Atlas ${p[1]} : quatre minerais sur trois états"></div>`).join('');
+$('#ores').innerHTML=ORES.map(([o,sym,name,v])=>`<section class="ore"><div class="orehead"><span class="sym" style="color:var(${v})">${sym}</span><h2>${name}</h2></div><div class="scroll"><table>
+<tr><th></th>${P.map((p,i)=>`<th>${i?'<span class="num">0'+i+'</span> ':''}${p[1]}</th>`).join('')}</tr>
+${STATES.map(([s,a,b])=>`<tr><th class="st">${a}<span>${b}</span></th>${P.map((p,i)=>`<td><div class="cell ${s==='icon'?'icon':''} ${i?'':'cur'} ${s!=='icon'?'glint':''}"><img src="${D}${p[0]}-${o}-${s}.png" alt="${p[1]}, ${name}, ${a.toLowerCase()} ${b}"></div></td>`).join('')}</tr>`).join('')}
+</table></div></section>`).join('');
+document.querySelectorAll('.glint').forEach((el,k)=>el.style.setProperty('--dl',`-${(k*1.37%3.8).toFixed(2)}s`));
+document.querySelectorAll('[data-z]').forEach(b=>{if(b.tagName!=='BUTTON')return;b.onclick=()=>{document.body.dataset.z=b.dataset.z;document.querySelectorAll('button[data-z]').forEach(x=>x.setAttribute('aria-pressed',x===b))}});
+const pause=$('#pause');function motion(off){document.body.classList.toggle('stop',off);pause.textContent=off?'Animer les reflets':'Suspendre les reflets'}
+motion(matchMedia('(prefers-reduced-motion: reduce)').matches);pause.onclick=()=>motion(!document.body.classList.contains('stop'));
+
+// En situation : paroi de roche 160 × 96 px rendue ×2
+const load=src=>new Promise(r=>{const i=new Image();i.onload=()=>r(i);i.src=src});
+(async()=>{
+  const rock=await load(D+'roche.png');
+  for(const [k,name] of P){
+    const c=document.createElement('canvas');c.width=192;c.height=114;
+    const g=c.getContext('2d');g.imageSmoothingEnabled=false;
+    for(let y=0;y<c.height;y+=64)for(let x=0;x<c.width;x+=64)g.drawImage(rock,x,y);
+    // sol creusé (galerie) en bas
+    g.fillStyle='#0b1215';g.fillRect(0,78,192,36);
+    const sp=async(o,s)=>load(`${D}${k}-${o}-${s}.png`);
+    // paires de filons
+    const places=[['copper',4,4],['iron',100,8],['quartz',8,44],['gold',104,48]];
+    for(const [o,x,y] of places){const im=await sp(o,'vein');g.drawImage(im,x,y);g.drawImage(im,x+32,y)}
+    const lode=await sp(k==='actuel'?'quartz':'gold','lode');g.drawImage(lode,68,8);
+    // réserve d'inventaire
+    for(let i=0;i<4;i++){const x=4+i*34,y=80;g.fillStyle='#0e171b';g.fillRect(x,y,32,32);g.strokeStyle='#2a4950';g.strokeRect(x+.5,y+.5,31,31);const im=await sp(ORES[i][0],'icon');g.drawImage(im,x,y)}
+    const f=document.createElement('figure');f.innerHTML=`<figcaption>${k==='actuel'?'':'0'+P.findIndex(p=>p[0]===k)+' · '}${name}</figcaption>`;f.prepend(c);$('#situ').append(f);
+  }
+})();
+</script>
+</body>
+</html>

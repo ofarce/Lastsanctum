@@ -11,17 +11,26 @@ func _js() -> Dictionary:
 
 func test_buildings_match_js() -> void:
 	var js: Dictionary = _js()["buildings"]
-	check_eq(Catalog.BUILDINGS.keys(), js.keys(), "ordre des bâtiments")
+	# Creuset des Exilés : bâtiment ajouté après le prototype (fabrication), placé en dernier.
+	var keys := Catalog.BUILDINGS.keys()
+	check_eq(keys.pop_back(), "warehouse", "Entrepôt logistique")
+	check_eq(keys.pop_back(), "creuset", "Creuset des Exilés en dernier")
+	check_eq(keys, js.keys(), "ordre des bâtiments")
 	for k: String in js:
 		var a: Dictionary = Catalog.BUILDINGS[k]
 		var b: Dictionary = js[k]
 		for f in ["name", "key", "icon", "lore", "art"]:
+			# Puits des Âmes : texte réécrit avec son soin de zone (écart voulu avec le prototype).
+			if k == "soulwell" and f == "lore":
+				check(String(a[f]).begins_with("Soigne les unités proches"), "soulwell.lore : soin de zone décrit")
+				continue
 			check_eq(a[f], b[f], "%s.%s" % [k, f])
 		check_eq(a["cost"], _ints(b["cost"]), "%s.cost" % k)
 		check_eq(a["deity"], b["deity"] if b["deity"] != null else "", "%s.deity" % k)
 		check_eq(a["requires"], b["requires"] if b["requires"] != null else "", "%s.requires" % k)
 		check_eq(a["time"], float(b["time"]), "%s.time" % k)
-		check_eq(a["size"], int(b["size"]), "%s.size" % k)
+		# Tous les bâtiments en 2 × 2 (planche batiments-2x2) : écart voulu avec le prototype.
+		check_eq(a["size"], 2, "%s.size" % k)
 
 
 func test_constants_match_js() -> void:
@@ -51,9 +60,12 @@ func test_adepts_and_fight_match_js() -> void:
 		check_eq(Catalog.ADEPT[k], {"name": a["name"], "task": a["task"], "hp": int(a["hp"]), "lore": a["lore"]}, "ADEPT." + k)
 	check_eq(Catalog.ADEPT.keys(), js["adept"].keys(), "ordre des adeptes")
 	for k: String in js["fight"]:
-		check_eq(Catalog.FIGHT[k]["dmg"], int(js["fight"][k]["dmg"]), "FIGHT.%s.dmg" % k)
+		# Ingénieur sans armure : 5 dégâts (au lieu de 80), au corps à corps uniquement (écarts voulus).
+		var dmg := 5 if k == "engineer" else int(js["fight"][k]["dmg"])
+		check_eq(Catalog.FIGHT[k]["dmg"], dmg, "FIGHT.%s.dmg" % k)
+		var status: String = js["fight"][k]["status"] + (" · corps à corps" if k == "engineer" else "")
 		if k != "flammes":  # D15 : statut du lance-flammes réécrit (tir continu, explosion)
-			check_eq(Catalog.FIGHT[k]["status"], js["fight"][k]["status"], "FIGHT.%s.status" % k)
+			check_eq(Catalog.FIGHT[k]["status"], status, "FIGHT.%s.status" % k)
 
 
 static func _ints(d: Dictionary) -> Dictionary:

@@ -92,8 +92,19 @@ func test_orb_reactivation() -> void:
 	check_near(GameState.turrets[0]["finished_at"] - GameState.orb_finished_at, Simulation.SPARK_ARRIVAL, 0.05, "armées à l'arrivée de l'étincelle")
 	var f0: float = GameState.res["forge"]
 	_run(sim, 2.0)
-	check_near(GameState.res["forge"] - f0, 2.0, 0.05, "+1 Forge par seconde")
+	check_near(GameState.res["forge"] - f0, 0.0, 0.05, "aucun revenu passif")
 	check_near(GameState.res["savoir"], GameState.res["forge"], 1e-6, "les 4 ressources au même rythme")
+
+	var before := GameState.res.duplicate()
+	sim.set_job(u, {"type": "anchor_pray"})
+	_run(sim, 2.0)
+	for resource: String in Catalog.RES_ORDER:
+		check_near(GameState.res[resource] - before[resource], 6.0, 0.05, "deux secondes à l’Ancre")
+		check_eq(Simulation.resource_rates()[resource], 3.0, "revenu de prière")
+	sim.issue_move(Vector2(0, -130))
+	_run(sim, 1.0)
+	for resource: String in Catalog.RES_ORDER:
+		check_near(GameState.res[resource] - before[resource], 6.0, 0.05, "prière interrompue")
 
 
 func test_order_orb_cancelled_by_move() -> void:
@@ -117,7 +128,9 @@ func test_engineer_digs_and_chains() -> void:
 	# Trajet depuis le portail jusqu'à la paroi est (environ 70 unités), puis 1 case par seconde.
 	_run(sim, 9.0)
 	check(sim.state().dug.has(first), "première case creusée")
-	check(sim.state().dug.size() >= 2, "enchaîne sur une case voisine (%d cases)" % sim.state().dug.size())
+	# Le creusement suit la file de cases sélectionnées (glisser) : un clic seul ne creuse qu'une case.
+	check_eq(sim.state().dug.size(), 1, "pas d'enchaînement automatique sur une case voisine")
+	check(u.job == null, "tâche terminée après la case demandée")
 
 
 func test_issue_move_formation_matches_js() -> void:

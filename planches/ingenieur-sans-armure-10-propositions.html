@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Ingénieur sans armure · 10 propositions</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0b0d10;--panel:#12151a;--line:#262c35;--txt:#dcd8cc;--mut:#939aa4;--acc:#c9b6e8;--cy:#5ce8ff}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--txt);font:15px/1.45 'Pixelify Sans',system-ui,sans-serif}
+header,main{max-width:1400px;margin:auto;padding:18px 16px}h1{margin:0;font-weight:600;letter-spacing:.08em;font-size:26px;color:var(--acc)}
+header p{color:var(--mut);margin:6px 0 0;max-width:980px}
+button{font:inherit;color:var(--txt);background:#1a1f27;border:1px solid var(--line);padding:6px 12px;cursor:pointer}button:hover{border-color:var(--acc)}
+button.on{border-color:var(--acc);color:var(--acc)}
+.bar{display:flex;gap:8px;align-items:center;margin-top:12px;flex-wrap:wrap}.bar span{color:var(--mut);margin:0 2px 0 10px}
+.why{border:1px solid var(--line);background:var(--panel);padding:12px 16px;color:var(--mut)}.why b{color:var(--txt)}
+.card{margin-top:18px;background:var(--panel);border:1px solid var(--line)}
+.card h2{margin:0;padding:10px 14px;font-size:19px;font-weight:600;color:var(--acc);border-bottom:1px solid var(--line);display:flex;gap:12px;align-items:baseline;flex-wrap:wrap}
+.card h2 small{color:var(--mut);font-weight:400;font-size:14px}
+.body{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.08fr);gap:0}
+.stage{position:relative;background:#060709;padding:8px;display:flex;justify-content:center;align-items:flex-start;border-right:1px solid var(--line)}
+.stage canvas{image-rendering:pixelated;display:block;width:100%;max-width:640px;height:auto;aspect-ratio:120/84}
+.tag{position:absolute;left:14px;top:12px;font-size:12px;padding:2px 8px;background:#0b0d10cc;border:1px solid var(--line);color:var(--mut)}
+.views{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;padding:8px;background:#0d1014}
+.views div{text-align:center;font-size:11px;color:var(--mut)}.views canvas{image-rendering:pixelated;width:100%;height:auto;display:block;background:#171b21}
+.views .por canvas{background:#0f1216}
+.desc{padding:10px 14px 14px;border-top:1px solid var(--line);display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:14px}
+.desc ul{margin:0;padding-left:18px;color:var(--mut);font-size:14px}.desc li b{color:var(--txt);font-weight:600}
+.lore{color:#9fd6dc;font-size:13px;border-left:2px solid #1f9fb8;padding-left:8px;align-self:start}
+@media(max-width:1000px){.body,.desc{grid-template-columns:1fr}.stage{border-right:0;border-bottom:1px solid var(--line)}}
+</style></head><body>
+<header><h1>INGÉNIEUR · SANS ARMURE · 10 PROPOSITIONS</h1>
+<p>Dix tenues pour l’Ingénieur exilé une fois l’exosquelette arraché, chacune à côté de l’Ancre. À gauche, la scène à la résolution du jeu (personnage ×0,5, ~38 px) affichée ×5 ; à droite, l’Ingénieur sous ses huit faces au gabarit (×1) ou à la taille du jeu. Le personnage est modélisé en volume puis tramé en pixels : chaque tenue est donc juste de face, de profil et de dos.</p>
+<div class="bar"><span style="margin-left:0">Scène :</span><button data-mode="pivot" class="on">Pivot</button><button data-mode="ronde">Ronde autour de l’Ancre</button><button data-mode="repos">Repos ¾</button>
+<span>Vues :</span><button data-res="1" class="on">Gabarit ×1</button><button data-res=".5">Jeu ×0,5</button>
+<button id="pause" style="margin-left:10px">Pause</button></div></header>
+<main><div class="why"><b>Charte respectée :</b> contour noir franc, pourpre et noir réservés à l’Ancre, cyan uniquement pour la technologie ou les glyphes des Exilés, aucun or (réservé aux forces de Laetan), rouge limité au lambeau d’écharpe déjà validé. Même homme d’une proposition à l’autre : peau, carrure et visage identiques, seules la tenue et la coiffure changent. En mode <b>Ronde</b>, les vues de droite passent en cycle de marche.</div>
+<div id="grid"></div></main>
+<script src="assets/decor.js?v=6"></script><script src="assets/units.js?v=10"></script><script src="assets/engineer-volume.js?v=1"></script>
+<script>
+'use strict';
+// ================= LES DIX PROPOSITIONS =================
+const OUTFITS=[
+ {id:1,name:'L’Exilé',sub:'la tenue actuelle, reprise en volume',seed:53,hair:'tousled',
+  top:{type:'tee',ramp:PAL.slate,sleeve:.3,holes:.73,hem:'torn',hemY:34},pants:{ramp:PAL.ash,len:6,torn:1,rips:['knee'],tex:1},feet:{type:'bare'},scarf:PAL.crim,
+  parts:[['Haut','t-shirt ardoise brûlé et troué par la nova, ourlet déchiqueté'],['Bas','pantalon gris effiloché aux chevilles, genou droit ouvert'],['Pieds','nus'],['Signe','lambeau d’écharpe cramoisie, une pointe devant, une dans le dos']],
+  lore:'C’est ce qui restait sous l’exo quand l’Ancre l’a arraché : rien n’a été choisi, tout a été subi.'},
+ {id:2,name:'La Sous-couche',sub:'ce que l’on porte sous un exosquelette',seed:21,hair:'crop',
+  top:{type:'tank',ramp:PAL.char,rib:1,hemY:36},pants:{ramp:PAL.char,len:3,tight:1,seam:1},feet:{type:'socks',ramp:PAL.ash},ports:1,
+  parts:[['Haut','débardeur noir côtelé, dos montant'],['Bas','pantalon moulant à coutures de renfort, genouillères piquées'],['Pieds','chaussettes renforcées'],['Tech','prises d’interface cyan éteintes : colonne vertébrale, hanches, genoux (visibles de dos)']],
+  lore:'Les prises de la colonne pulsent encore faiblement : l’exo n’est plus là, mais le corps attend toujours qu’on le rebranche.'},
+ {id:3,name:'L’Artisan',sub:'tablier et ceinture à outils',seed:12,hair:'tousled',
+  top:{type:'shirt',ramp:PAL.dusk,sleeve:.5,roll:1,hemY:37},pants:{ramp:PAL.ash,len:3,tex:1},feet:{type:'boots',ramp:PAL.leath,top:12},apron:{ramp:PAL.leath},tools:1,
+  parts:[['Haut','chemise grise à col ouvert, manches retroussées'],['Tablier','cuir brun à bavette, poche ventrale, nœud dans le dos'],['Ceinture','sacoche à droite, clé à gauche'],['Pieds','bottes de travail lacées']],
+  lore:'L’ingénieur avant le soldat : il répare d’abord, il se bat ensuite.'},
+ {id:4,name:'Le Récupérateur',sub:'tout ce qu’on trouve dans les ruines',seed:31,hair:'tousled',
+  top:{type:'tank',ramp:PAL.slate,holes:.72,hem:'torn',hemY:36},pants:{ramp:PAL.ash,len:17,torn:1,tex:1},feet:{type:'wraps',ramp:PAL.linen,top:14},sash:{ramp:PAL.ochre},bandana:PAL.olive,pack:{ramp:PAL.linen},
+  parts:[['Tête','bandana olive noué derrière'],['Haut','débardeur troué, étoffe ocre nouée sur les hanches avec un pan devant'],['Bas','pantalon coupé aux genoux, tibias et pieds bandés de toile'],['Dos','sac de toile ficelé, bretelles de corde']],
+  lore:'Chaque bout de tissu vient d’ailleurs : la caverne habille ceux qui fouillent.'},
+ {id:5,name:'Le Mécanicien',sub:'combinaison rabattue à la taille',seed:44,hair:'swept',
+  top:{type:'tank',ramp:PAL.bone,hemY:37},pants:{ramp:PAL.navy,len:3,waist:40.5,tex:1},feet:{type:'boots',ramp:PAL.char,top:11},tiedSleeves:{ramp:PAL.navy},rag:PAL.linen,
+  parts:[['Haut','maillot de corps clair'],['Combinaison','bleu nuit, haut rabattu, manches nouées devant'],['Détail','chiffon dans la poche arrière'],['Pieds','bottines noires']],
+  lore:'Il a juste défait le haut de la combinaison pour respirer : il n’a jamais vraiment cessé de travailler.'},
+ {id:6,name:'L’Arpenteur',sub:'veste courte et sacoche',seed:66,hair:'tousled',
+  top:{type:'tee',ramp:PAL.ash,sleeve:.3,hemY:35},jacket:{ramp:PAL.navy,sleeve:.55,hemY:33},pants:{ramp:PAL.khaki,len:12,roll:1,tex:1},feet:{type:'bare'},strap:{ramp:PAL.leath},
+  parts:[['Haut','t-shirt gris sous une veste bleu nuit ouverte, col relevé, manches retroussées'],['Bas','pantalon kaki roulé aux mollets'],['Sacoche','cuir, bandoulière de l’épaule droite à la hanche gauche'],['Pieds','nus']],
+  lore:'Il cartographie la caverne à pied : la sacoche contient ses relevés, et rien d’autre.'},
+ {id:7,name:'Le Naufragé',sub:'poncho de toile et capuche',seed:77,hair:'shaggy',armIn:1,
+  top:{type:'tee',ramp:PAL.slate,sleeve:.3,hemY:34},poncho:{ramp:PAL.khaki,hood:1},pants:{ramp:PAL.ash,len:6,torn:1,tex:1},feet:{type:'wraps',ramp:PAL.linen,top:8},
+  parts:[['Haut','poncho kaki effiloché, cordelette au col, capuche rabattue'],['Dessous','t-shirt ardoise'],['Bas','pantalon gris déchiré'],['Pieds','bandés de toile jusqu’aux chevilles']],
+  lore:'Une bâche de bivouac découpée au couteau : la silhouette la plus lisible de dos.'},
+ {id:8,name:'Le Tyrien',sub:'tunique drapée et brassards de pierre',seed:88,hair:'bun',
+  top:{type:'tunic',ramp:PAL.bone,hemY:30},feet:{type:'sandals',ramp:PAL.leath},belt:{ramp:PAL.rope,y:37,h:1.8,braid:1},bracers:1,
+  parts:[['Haut','tunique de lin sans manches, drapé sur l’épaule gauche, fendue sur les côtés'],['Ceinture','corde tressée'],['Bras','brassards d’ardoise gravés de glyphes cyan'],['Pieds','sandales lacées jusqu’aux mollets ; cheveux en chignon']],
+  lore:'Les vêtements trouvés dans les coffres tyriens : l’Exilé porte la mode d’un peuple disparu.'},
+ {id:9,name:'Le Mineur',sub:'gilet matelassé et lampe frontale',seed:99,hair:'crop',
+  top:{type:'long',ramp:PAL.dusk,sleeve:1,hemY:35},vest:{ramp:PAL.olive},pants:{ramp:PAL.char,len:3,tex:1},feet:{type:'boots',ramp:PAL.leath,top:13},gloves:PAL.leath,lamp:1,
+  parts:[['Tête','bandeau de cuir et lampe frontale cyan'],['Haut','maillot à manches longues sous un gilet olive matelassé'],['Mains','gants de cuir'],['Pieds','bottes hautes']],
+  lore:'La tenue de celui qui creuse : c’est lui qui ouvre la caverne, case par case.'},
+ {id:10,name:'Le Rescapé',sub:'torse bandé, plaque d’identité',seed:10,hair:'shaggy',
+  pants:{ramp:PAL.khaki,len:6,torn:1,rips:['knee'],cargo:1,tex:1},feet:{type:'bare'},bandage:{ramp:PAL.bone},tag:1,scars:1,armBandage:1,belt:{ramp:PAL.leath,y:37.6,h:1.6,buckle:PAL.steel[4]},
+  parts:[['Torse','nu, bandages croisés et bande ventrale tachée'],['Bras','avant-bras gauche bandé, cicatrices de brûlure à droite'],['Bas','treillis kaki à poches cargo, ceinturon'],['Cou','plaque d’identité sur chaînette']],
+  lore:'Ce que la nova a laissé : la plaque est la seule pièce d’équipement qui a tenu.'}];
+
+// ================= CACHE DES IMAGES =================
+const FC=new Map(),DIRS=[0,45,90,135,180,225,270,315],DN=['Face','¾ face','Profil','¾ dos','Dos','¾ dos (g.)','Profil (g.)','¾ face (g.)'];
+function figure(o,mode,deg,frame,k){const key=o.id+'|'+mode+'|'+deg+'|'+frame+'|'+k;let c=FC.get(key);if(c)return c;
+ const w=Math.ceil(80*k),h=Math.ceil(84*k),F=new Fig(w,h,k,40*k,80*k,deg*Math.PI/180);drawFigure(F,o,pose(mode,frame/12));c=F.finish();FC.set(key,c);return c}
+
+// ================= PAGE =================
+let mode='pivot',res=1,paused=false,t=0,last;
+const cards=[];
+for(const o of OUTFITS){const card=document.createElement('section');card.className='card';
+ card.innerHTML=`<h2>${String(o.id).padStart(2,'0')} · ${o.name}<small>${o.sub}</small></h2><div class="body"><div class="stage"><canvas width="${SW}" height="${SH}"></canvas><span class="tag"></span></div><div class="views"></div></div>
+ <div class="desc"><ul>${o.parts.map(([a,b])=>`<li><b>${a} :</b> ${b}</li>`).join('')}</ul><div class="lore">${o.lore}</div></div>`;
+ document.getElementById('grid').append(card);
+ const vw=card.querySelector('.views'),vs=DIRS.map((d,i)=>{const div=document.createElement('div'),c=document.createElement('canvas');div.append(c,DN[i]);vw.append(div);return c});
+ const C={o,card,scene:card.querySelector('.stage canvas'),tag:card.querySelector('.tag'),vs,vis:true,lastF:-1};cards.push(C)}
+const io=new IntersectionObserver(es=>{for(const e of es){const c=cards.find(c=>c.card===e.target);if(c)c.vis=e.isIntersecting}},{rootMargin:'200px'});cards.forEach(c=>io.observe(c.card));
+
+function drawScene(C){const g=C.scene.getContext('2d'),o=C.o,k=.5;g.imageSmoothingEnabled=false;g.drawImage(FLOOR,0,0);
+ let fx,fy,deg,fm,fr;
+ if(mode==='ronde'){const sp=.38,u=t*sp,ex=29,ey=13;fx=AX+Math.cos(u)*ex;fy=PBY+2+Math.sin(u)*ey;const vx=-Math.sin(u)*ex,vy=Math.cos(u)*ey;deg=Math.round((Math.atan2(vx,vy)*180/Math.PI)/22.5)*22.5;deg=(deg+360)%360;
+  const dist=t*sp*Math.hypot(ex,ey)*.92;fm='walk';fr=Math.floor(dist/14*12)%12;C.tag.textContent='Ronde · marche · '+deg+'°'}
+ else if(mode==='repos'){fx=50;fy=70;deg=45;fm='idle';fr=Math.floor(t*5)%12;C.tag.textContent='Repos · ¾ face'}
+ else{const i=Math.floor(t/1.1)%8;fx=50;fy=70;deg=DIRS[i];fm='idle';fr=Math.floor(t*5)%12;C.tag.textContent='Pivot · '+DN[i]}
+ const fig=figure(o,fm,deg,fr,k),X=Math.round(fx),Y=Math.round(fy),drawFig=()=>{shadowAt(g,X,Y,k);g.drawImage(fig,X-20,Y-40)},drawAnchor=()=>{g.drawImage(PED,0,0);orb(g,t)};
+ if(Y<PBY){drawFig();drawAnchor()}else{drawAnchor();drawFig()}
+ if(o.lamp){const a=deg*Math.PI/180,dx=Math.sin(a),dy=Math.cos(a);if(dy>-.3)for(let s=4;s<16;s++)for(let w=-s*.35;w<=s*.35;w++){const x=Math.round(X+dx*s*1.3-dy*w),y=Math.round(Y-20+dy*s*.9+dx*w*.4+s*.6);if(bay(x,y)<.16*(1-s/16)){g.fillStyle=PAL.cy[3];g.fillRect(x,y,1,1)}}}}
+function drawViews(C){const k=res,fm=mode==='ronde'?'walk':'idle',fr=mode==='ronde'?Math.floor(t*10)%12:Math.floor(t*5)%12,key=fm+fr+k;if(key===C.lastF)return;C.lastF=key;
+ C.vs.forEach((c,i)=>{const f=figure(C.o,fm,DIRS[i],fr,k);if(c.width!==f.width){c.width=f.width;c.height=f.height}const g=c.getContext('2d');g.clearRect(0,0,c.width,c.height);g.imageSmoothingEnabled=false;
+  const sx=Math.round(40*k),sy=Math.round(80*k);g.fillStyle='rgba(0,0,0,.4)';for(let j=-2;j<=2;j++)for(let ii=-16;ii<=16;ii++){const x=Math.round(sx+ii*k),y=Math.round(sy+j*k);if(((ii/16)**2+(j/2.6)**2)<1&&bay(x,y)<.6)g.fillRect(x,y,1,1)}
+  g.drawImage(f,0,0)})}
+function loop(now){const dt=last===undefined?0:Math.min((now-last)/1000,.1);last=now;if(!paused)t+=dt;
+ for(const C of cards)if(C.vis){drawScene(C);drawViews(C)}requestAnimationFrame(loop)}
+document.querySelectorAll('[data-mode]').forEach(b=>b.onclick=()=>{mode=b.dataset.mode;document.querySelectorAll('[data-mode]').forEach(x=>x.classList.toggle('on',x===b))});
+document.querySelectorAll('[data-res]').forEach(b=>b.onclick=()=>{res=+b.dataset.res;document.querySelectorAll('[data-res]').forEach(x=>x.classList.toggle('on',x===b))});
+document.getElementById('pause').onclick=e=>{paused=!paused;e.target.textContent=paused?'Lecture':'Pause'};
+requestAnimationFrame(loop);
+</script></body></html>

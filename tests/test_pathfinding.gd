@@ -8,6 +8,7 @@ const GALLERY_SEED := 20261114
 func test_paths_match_js() -> void:
 	var f := Fixtures.load_json("paths")
 	var state := TerrainState.new()
+	state.groves = false
 	state.generate_galleries(GALLERY_SEED)
 	var pf := Pathfinder.new(state)
 	check_eq(f["paths"].size(), 30, "chemins témoins")
@@ -34,6 +35,7 @@ func test_paths_match_js() -> void:
 
 func test_steer_goes_straight_when_clear() -> void:
 	var state := TerrainState.new()
+	state.groves = false
 	state.generate_galleries(GALLERY_SEED)
 	var pf := Pathfinder.new(state)
 	var memo := {}

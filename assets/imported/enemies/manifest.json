@@ -319,8 +319,8 @@
       "ax": 15,
       "ay": 40,
       "h": 37,
-      "stride": 1.8,
-      "self_bob": false,
+      "stride": 4.125,
+      "self_bob": true,
       "idle": {
         "frame_w": 40,
         "frame_h": 42,
@@ -330,12 +330,14 @@
         "fps": 10
       },
       "walk": {
-        "frame_w": 40,
-        "frame_h": 42,
+        "frame_w": 68,
+        "frame_h": 48,
         "cols": 12,
         "rows": 2,
         "count": 24,
-        "fps": 26.666666666666664
+        "fps": 42.857142857142854,
+        "ax": 33,
+        "ay": 45
       },
       "attack": {
         "frame_w": 40,

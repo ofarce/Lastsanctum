@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Styles de HUD</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;600&family=Noto+Serif:ital,wght@0,400;0,600;1,400&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0b120e;--panel:#111b14;--line:#2a3a2c;--txt:#dcd8bc;--mut:#93a08a;--acc:#e8c870;--cy:#5ce8ff;
+ --noise:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .32 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+ --grain:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='120'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.008 .25' numOctaves='3' seed='4' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .18 0 0 0 0 .1 0 0 0 0 .04 0 0 0 .55 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E");
+ --weave:repeating-linear-gradient(0deg,#0000 0 2px,#00000010 2px 3px),repeating-linear-gradient(90deg,#0000 0 2px,#ffffff0d 2px 3px)}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--txt);font:15px/1.45 'Pixelify Sans',system-ui,sans-serif}
+header,main{max-width:1400px;margin:auto;padding:18px 16px}h1{margin:0;font-weight:600;letter-spacing:.08em;font-size:26px;color:var(--acc)}
+header p{color:var(--mut);margin:6px 0 0;max-width:980px}
+.why{border:1px solid var(--line);background:var(--panel);padding:12px 16px;color:var(--mut);display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap}
+.why b{color:var(--txt)}.why img{width:300px;max-width:100%;border:1px solid var(--line);cursor:zoom-in}.why div{flex:1;min-width:260px}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;margin-top:18px}
+figure{margin:0;background:var(--panel);border:1px solid var(--line);min-width:0}
+.frame{position:relative;overflow:hidden;background:#070b08;cursor:zoom-in;aspect-ratio:1440/900}
+.crop{position:relative;overflow:hidden;aspect-ratio:820/150;border-top:1px solid var(--line);cursor:zoom-in}
+
+figcaption{padding:10px 14px 14px}figcaption b{color:var(--acc);font-weight:600;font-size:17px}figcaption p{margin:4px 0 0;color:var(--mut);font-size:14px}
+figcaption .pro{color:#a9c39a;font-size:13px}figcaption .con{color:#c9a58a;font-size:13px}
+.sw{display:flex;gap:4px;margin-top:6px}.sw i{width:22px;height:12px;border:1px solid #0004}
+@media(max-width:1000px){.grid{grid-template-columns:1fr}}
+#zoom{position:fixed;inset:0;background:#000d;display:none;z-index:50;cursor:zoom-out;align-items:center;justify-content:center}
+#zoom.on{display:flex}#zoom .frame{width:min(100vw,160vh);cursor:zoom-out}
+
+/* ================= disposition actuelle (hud.gd), 1440 × 900 ================= */
+.stage{position:absolute;left:0;top:0;width:1440px;height:900px;transform-origin:0 0;font-family:'Noto Serif',serif;
+ background:url(assets/hud/fond.png) 0 0/1440px 900px;image-rendering:pixelated;overflow:hidden;
+ --tx:#eee3c9;--mu:#b8ad93;--ic:#d5c7a9;--hp1:#5f9a3c;--hp2:#3d7426;--hpbg:#1b1f17}
+.stage *{image-rendering:auto}
+svg.ic{fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;display:block;flex:none}
+.num{font-variant-numeric:tabular-nums}
+.pn{position:absolute;color:var(--tx)}
+.wave{left:16px;top:14px;width:166px;height:56px;display:flex;align-items:center;gap:12px;padding-left:22px;font-size:20px}
+.res{left:426px;top:14px;width:782px;height:52px;display:flex;align-items:center;justify-content:space-between;padding:0 22px;font-size:15px}
+.res i{font-style:normal;display:flex;align-items:center;gap:8px}.res em{font-style:normal;font-size:18px;margin-left:2px}
+.res .sep{width:1px;height:26px;margin:0 2px}
+.rej{right:16px;top:80px;height:32px;display:flex;align-items:center;gap:8px;padding:0 10px;font-size:13px}
+.k{font-size:10px;padding:1px 4px;border:1px solid currentColor;opacity:.7;border-radius:3px}
+.obj{left:16px;top:82px;width:340px;padding:11px 14px 12px 11px;display:flex;gap:12px}
+.obj .pf{width:58px;height:58px;flex:none}
+.obj .q{font-style:italic;font-size:12.5px;line-height:1.35;margin-top:3px}
+.rd{margin-top:7px;font:12px/1 'Share Tech Mono',monospace;color:var(--cy);letter-spacing:.06em;display:flex;text-shadow:0 0 6px #5ce8ff66}.rd b{margin-left:auto;font-weight:400}
+.seg{display:flex;gap:2px;margin-top:5px}.seg i{flex:1;height:4px;background:#0f2a30;border:1px solid #12596b}.seg i.on{background:var(--cy);border-color:#c8fbff;box-shadow:0 0 4px #5ce8ff99}
+.pf{background:var(--pfbg,#152019) center/cover no-repeat;image-rendering:pixelated!important}
+.bar{left:12px;right:12px;bottom:10px;height:124px;display:grid;grid-template-columns:206px 384px 406px 1fr;gap:6px;padding:7px}
+.mod{position:relative;padding:10px 14px;color:var(--tx)}
+.m1{padding:6px}.mm{position:absolute;inset:6px;overflow:hidden;background:var(--pfbg,#152019)}.mm img{width:100%;height:100%;object-fit:cover;image-rendering:pixelated}
+.m1 .n{position:absolute;right:12px;top:8px;font-size:13px;z-index:2}
+.m2{display:flex;gap:12px;align-items:center;padding:8px 12px 8px 8px}.m2 .pf{width:94px;height:94px}
+.eb{font-size:9px;letter-spacing:2px;color:var(--mu)}.nm{font-size:22px;margin:1px 0 4px}
+.hpw{display:flex;gap:8px;align-items:center}.hp{position:relative;flex:1;height:15px;background:var(--hpbg)}
+.hp i{position:absolute;inset:0;background:linear-gradient(var(--hp1),var(--hp2))}.hp span{position:absolute;inset:0;text-align:center;font-size:11px;line-height:15px;color:#fff;text-shadow:0 1px 1px #0008}
+.status{font-size:10.5px;color:var(--mu);margin-top:5px}
+.stats{display:flex;justify-content:space-between;padding:2px 6px 9px}.stats div{display:flex;gap:10px;align-items:center;font-size:12px;color:var(--mu)}.stats b{display:block;font-weight:400;font-size:18px;color:var(--tx)}
+.stats .vs{width:1px;height:34px}
+.lore{font-style:italic;font-size:12px;padding:8px 6px 0}
+.acts{display:flex;gap:6px}
+.ab{position:relative;width:68px;height:56px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:11px;color:var(--tx)}
+.ab .k{position:absolute;bottom:-7px;left:50%;transform:translateX(-50%);font-size:9px;line-height:10px;padding:0 4px}
+
+/* ---------- 1 · Bronze vert-de-gris ---------- */
+.t1{--pfbg:#2a4a3e;--tx:#eef0e2;--mu:#a9c8ba;--ic:#e4a77a;--hpbg:#20302a}
+.t1 .pn{background:var(--noise),linear-gradient(170deg,#4d7365,#365548 60%,#2f4b40);border-radius:12px;
+ box-shadow:inset 0 1px 0 #a8cbbb99,inset 0 -2px 0 #22382f,inset 0 0 0 2px #5d8676,inset 0 0 0 3px #2b443a66,0 5px 12px #1a2a2466}
+.t1 .mod{background:var(--noise),linear-gradient(#2c4339,#304a3f);border-radius:9px;box-shadow:inset 0 2px 5px #18271f,inset 0 -1px 0 #6a9584aa}
+.t1 .sep,.t1 .vs{background:linear-gradient(#0000,#a8cbbb88,#0000)}
+.t1 .pf,.t1 .mm{border-radius:8px;box-shadow:inset 0 0 0 2px #c27a4c,0 0 0 1px #22382f;border:2px solid #c27a4c}
+.t1 .ab{border-radius:10px;background:linear-gradient(#c98a5c,#9c5e38);box-shadow:inset 0 1px 0 #f2c49c,inset 0 -2px 0 #6e3c20,0 2px 4px #1a2a2488;color:#fff6ea}
+.t1 .ab.on{background:linear-gradient(#e6aa78,#b8703f);box-shadow:inset 0 1px 0 #ffe0c0,0 0 0 2px #f2c49c,0 0 12px #e4a77a88}
+.t1 .ab .k{background:#2f4b40;color:#eef0e2;border:0;opacity:1}
+
+/* ---------- 2 · Ardoise tendre ---------- */
+.t2{--pfbg:#3e4658;--tx:#f2eee4;--mu:#b7bccb;--ic:#efe9da;--hpbg:#2c323d;--hp1:#9cc77a;--hp2:#6c9a4e}
+.t2 .pn{background:var(--noise),repeating-linear-gradient(174deg,#0000 0 9px,#ffffff08 9px 10px),linear-gradient(180deg,#636c80,#4b5366);
+ border-radius:16px 6px 16px 6px;box-shadow:inset 0 2px 0 #8e98ae,inset 0 -3px 0 #3a4152,0 6px 14px #2a2f3a77}
+.t2 .mod{background:linear-gradient(#545c70,#5a6276);border-radius:10px 4px 10px 4px;box-shadow:inset 0 2px 4px #373d4c,inset 0 -1px 0 #8e98ae}
+.t2 .sep,.t2 .vs{background:#3a4152;box-shadow:1px 0 0 #8e98ae}
+.t2 .pf,.t2 .mm{border-radius:10px 3px 10px 3px;box-shadow:inset 0 2px 4px #0006,0 0 0 2px #3a4152,0 0 0 3px #8e98ae}
+.t2 .ab{border-radius:9px 3px 9px 3px;background:linear-gradient(#6e778c,#565e72);box-shadow:inset 0 1px 0 #9aa3b8,inset 0 -2px 0 #3a4152}
+.t2 .ab.on{color:#fff;box-shadow:inset 0 0 0 1px #efe9da,0 0 10px #efe9daaa,0 0 22px #efe9da55}.t2 .ab.on svg{filter:drop-shadow(0 0 4px #efe9da)}
+.t2 .ab .k{background:#4b5366;border:0;opacity:1}
+.t2 .wave span{text-shadow:0 0 8px #efe9da88}
+
+/* ---------- 3 · Cuir cousu et vélin ---------- */
+.t3{--pfbg:#5e4a36;--tx:#3b2a1b;--mu:#7a5d40;--ic:#7a3f22;--hpbg:#c9b48d;--hp1:#6f9a45;--hp2:#4d7a2c}
+.t3 .pn{background:var(--noise),radial-gradient(ellipse at 30% 0,#9a6c48,#0000 70%),linear-gradient(#80583a,#6a462c);border-radius:14px;color:#f3e4c8;
+ box-shadow:inset 0 0 0 4px #0000,inset 0 1px 0 #b98a62,inset 0 -2px 0 #4f331f,0 5px 12px #3a241433}
+.t3 .pn::after{content:'';position:absolute;inset:5px;border:1.5px dashed #e8c99aaa;border-radius:10px;pointer-events:none}
+.t3 .wave,.t3 .res,.t3 .rej{--mu:#e2c9a2}.t3 .res svg,.t3 .wave svg,.t3 .rej svg{color:#f0d6aa!important}
+.t3 .mod{background:var(--noise),linear-gradient(#efe1c1,#e1cea6);border-radius:6px;box-shadow:inset 0 0 12px #b8925f88,0 1px 0 #b98a62;color:#3b2a1b}
+.t3 .obj{color:#f3e4c8}.t3 .obj .eb{color:#e2c9a2}.t3 .obj .q{color:#f6e8cc}
+.t3 .rd{background:#3a2a1ccc;padding:4px 6px;border-radius:4px}.t3 .seg{background:#3a2a1ccc;padding:3px;border-radius:3px}
+.t3 .sep{background:#e8c99a66}.t3 .vs{background:#b8925f88}
+.t3 .pf,.t3 .mm{border-radius:6px;box-shadow:0 0 0 2px #6a462c,0 0 0 3px #e8c99a88}
+.t3 .ab{border-radius:8px;background:linear-gradient(#80583a,#6a462c);color:#f3e4c8;box-shadow:inset 0 1px 0 #b98a62,0 2px 3px #4f331f66}
+.t3 .ab::after{content:'';position:absolute;inset:3px;border:1px dashed #e8c99a88;border-radius:6px}
+.t3 .ab.on{background:linear-gradient(#a8704a,#80583a);box-shadow:inset 0 1px 0 #d9a77a,0 0 0 2px #e8c99a}
+.t3 .ab .k{background:#efe1c1;color:#3b2a1b;border:0;opacity:1;z-index:2}
+.t3 .lore{color:#5a412a}.t3 .hp span{color:#fff}
+
+/* ---------- 4 · Verre ambré ---------- */
+.t4{--pfbg:#5a3a2299;--tx:#fff4e2;--mu:#e8cfa8;--ic:#ffd59a;--hpbg:#ffffff22}
+.t4 .pn{background:linear-gradient(160deg,#8a5a2e66,#5a3a2266);backdrop-filter:blur(7px) saturate(1.3);-webkit-backdrop-filter:blur(7px) saturate(1.3);border-radius:18px;
+ box-shadow:inset 0 1px 0 #ffe6c088,inset 0 0 0 1px #ffd59a44,0 8px 24px #3a20104d}
+.t4 .mod{background:linear-gradient(#ffffff14,#ffffff06);border-radius:12px;box-shadow:inset 0 0 0 1px #ffe6c033}
+.t4 .sep,.t4 .vs{background:linear-gradient(#0000,#ffe6c066,#0000)}
+.t4 .pf,.t4 .mm{border-radius:12px;box-shadow:0 0 0 1px #ffe6c077,0 4px 10px #0003}
+.t4 .ab{border-radius:14px;background:#ffffff1c;box-shadow:inset 0 1px 0 #ffffff44,inset 0 0 0 1px #ffe6c044}
+.t4 .ab.on{background:#ffd59a40;box-shadow:inset 0 0 0 1px #ffe6c0,0 0 14px #ffb85c88}
+.t4 .ab .k{background:#7a4f2acc;border:0;opacity:1}
+.t4 .pn,.t4 .mod{text-shadow:0 1px 2px #3a201088}
+
+/* ---------- 5 · Bois de jungle et lianes ---------- */
+.t5{--pfbg:#4f3a26;--tx:#fbecd2;--mu:#d9b98c;--ic:#f2c98a;--hpbg:#3a2614}
+.t5 .pn{background:var(--grain),linear-gradient(#8a5e38,#6e4727);border-radius:26px;
+ box-shadow:inset 0 2px 0 #b58658,inset 0 -3px 0 #4a2f18,inset 0 0 0 3px #7a5230,0 6px 12px #2a1a0c55}
+.t5 .vine{position:absolute;pointer-events:none;overflow:visible}
+.t5 .mod{background:var(--grain),linear-gradient(#5e3d22,#674428);border-radius:18px;box-shadow:inset 0 3px 6px #3a2614,inset 0 -1px 0 #b58658}
+.t5 .sep,.t5 .vs{background:#4a2f18;box-shadow:1px 0 0 #b5865888}
+.t5 .pf,.t5 .mm{border-radius:16px;box-shadow:0 0 0 3px #4a2f18,0 0 0 4px #b58658}
+.t5 .ab{border-radius:50% 50% 14px 14px/40% 40% 14px 14px;background:var(--grain),linear-gradient(#9a6a40,#7a5230);box-shadow:inset 0 2px 0 #c9976a,inset 0 -2px 0 #4a2f18}
+.t5 .ab.on{background:linear-gradient(#6e9a46,#4f7a30);box-shadow:inset 0 2px 0 #a9d47c,0 0 0 2px #a9d47c66}
+.t5 .ab .k{background:#4a2f18;border:0;opacity:1}
+
+/* ---------- 6 · Grès tyrien moussu ---------- */
+.t6{--pfbg:#6e5a3e;--tx:#2a2014;--mu:#4a3a24;--ic:#4a3a26;--hpbg:#8a7150;--hp1:#7aa84e;--hp2:#55802f}
+.t6 .pn{background:var(--noise),radial-gradient(ellipse at 20% 10%,#d7bd8e,#0000 60%),linear-gradient(#c3a676,#a68959);border-radius:20px 8px 16px 10px/14px 10px 18px 8px;
+ box-shadow:inset 0 2px 0 #e6d1a6,inset 0 -3px 0 #7d6440,inset 2px 0 0 #d7bd8e66,0 6px 12px #3a2c1855}
+.t6 .moss{position:absolute;pointer-events:none;height:10px;border-radius:50%;background:radial-gradient(ellipse at 50% 100%,#5f8a3a,#46702a 60%,#0000 72%)}
+.t6 .mod{background:var(--noise),linear-gradient(#b39669,#bb9e70);border-radius:12px 6px 12px 6px;box-shadow:inset 0 3px 5px #7d6440,inset 0 -1px 0 #e6d1a6}
+.t6 .sep,.t6 .vs{background:#7d6440;box-shadow:1px 0 0 #e6d1a6}
+.t6 .pf,.t6 .mm{border-radius:10px 4px 10px 4px;box-shadow:inset 0 2px 4px #0005,0 0 0 2px #7d6440,0 0 0 3px #e6d1a6}
+.t6 .ab{border-radius:10px 5px 10px 5px;background:linear-gradient(#cdb181,#ad9060);box-shadow:inset 0 1px 0 #ecd9b0,inset 0 -2px 0 #7d6440;color:#2e2418}
+.t6 .ab.on{background:linear-gradient(#efe9da,#d9cfb8);box-shadow:0 0 0 2px #fff6e0,0 0 14px #efe9daaa}
+.t6 .ab .k{background:#7d6440;color:#f4e6c8;border:0;opacity:1}
+.t6 .pn,.t6 .mod{text-shadow:0 1px 0 #e6d1a699}
+.t6 .obj .q{color:#3e3020}
+
+/* ---------- 7 · Terre cuite émaillée ---------- */
+.t7{--pfbg:#2f5a4e;--tx:#fff1e4;--mu:#f2c4a4;--ic:#fbe3c8;--hpbg:#5a2c18}
+.t7 .pn{background:var(--noise),linear-gradient(#bf6e46,#9e5434);border-radius:10px;
+ box-shadow:inset 0 2px 0 #e09a72,inset 0 -3px 0 #6e3820,0 6px 12px #4a201055}
+.t7 .pn::before{content:'';position:absolute;left:10px;right:10px;bottom:4px;height:5px;border-radius:3px;
+ background:repeating-linear-gradient(135deg,#3f7a6a 0 4px,#e8d6b4 4px 8px);opacity:.9}
+.t7 .bar::before{bottom:2px}
+.t7 .mod{background:var(--noise),linear-gradient(#3e7868,#2f6556);border-radius:8px;box-shadow:inset 0 2px 0 #7fb5a3,inset 0 -2px 0 #1f4a3e,0 1px 0 #e09a72}
+.t7 .sep{background:#6e3820;box-shadow:1px 0 0 #e09a72}.t7 .vs{background:#1f4a3e;box-shadow:1px 0 0 #7fb5a3}
+.t7 .pf,.t7 .mm{border-radius:6px;box-shadow:0 0 0 2px #e8d6b4,0 0 0 4px #6e3820}
+.t7 .ab{border-radius:8px;background:linear-gradient(#e8d6b4,#cdb68e);color:#3a2418;box-shadow:inset 0 1px 0 #fff4e0,inset 0 -2px 0 #9c8460}
+.t7 .ab svg{color:#9e5434!important}.t7 .ab.on{background:linear-gradient(#f6c48a,#e09a5a);box-shadow:0 0 0 2px #fff1e4,0 0 12px #f6c48a}
+.t7 .ab .k{background:#9e5434;color:#fff;border:0;opacity:1}
+
+/* ---------- 8 · Émail et cuivre rose ---------- */
+.t8{--pfbg:#1c4249;--tx:#f1efe6;--mu:#a9c4c0;--ic:#f0b59a;--hpbg:#16323a}
+.t8 .pn{background:radial-gradient(ellipse at 30% 0,#2f6a70,#0000 70%),linear-gradient(#24535a,#1c4249);border-radius:16px;
+ box-shadow:inset 0 0 0 2px #d7987c,inset 0 0 0 4px #1c4249,inset 0 0 0 5px #d7987c77,0 5px 14px #0d222655}
+.t8 .riv{position:absolute;width:7px;height:7px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#ffd9c4,#c27c5e 60%,#7a4430);pointer-events:none}
+.t8 .mod{background:linear-gradient(#1f4a51,#235259);border-radius:11px;box-shadow:inset 0 0 0 1px #d7987c66,inset 0 2px 6px #0d2226}
+.t8 .sep,.t8 .vs{background:linear-gradient(#0000,#d7987c,#0000)}
+.t8 .pf,.t8 .mm{border-radius:50%/40%;box-shadow:0 0 0 2px #d7987c,0 0 0 4px #1c4249,0 0 0 5px #d7987c88}
+.t8 .mm{border-radius:12px}
+.t8 .ab{border-radius:14px;background:linear-gradient(#2c6068,#21494f);box-shadow:inset 0 0 0 1px #d7987c,inset 0 1px 0 #6aa4a8}
+.t8 .ab.on{background:linear-gradient(#d7987c,#b06c50);color:#fff;box-shadow:0 0 0 2px #ffd9c4,0 0 12px #d7987c99}.t8 .ab.on svg{color:#fff!important}
+.t8 .ab .k{background:#1c4249;border:1px solid #d7987c;opacity:1}
+
+/* ---------- 9 · Toile de lin et cordage ---------- */
+.t9{--pfbg:#6e5a3e;--tx:#33291c;--mu:#6e5b3e;--ic:#7a4e26;--hpbg:#bba984;--hp1:#7aa84e;--hp2:#55802f}
+.t9 .pn{background:var(--weave),var(--noise),linear-gradient(#e6d8b8,#d4c39c);border-radius:6px;
+ border:4px solid transparent;border-image:repeating-linear-gradient(45deg,#a07a48 0 4px,#d8b886 4px 7px,#7a5a32 7px 9px) 4;
+ box-shadow:0 6px 12px #3a2a1655}
+.t9 .mod{background:var(--weave),linear-gradient(#efe4c8,#e6d7b4);border-radius:4px;box-shadow:inset 0 0 0 1px #b8a27a,inset 0 2px 4px #a0865a55}
+.t9 .sep,.t9 .vs{background:repeating-linear-gradient(0deg,#a07a48 0 3px,#0000 3px 6px)}
+.t9 .pf,.t9 .mm{border-radius:3px;box-shadow:0 0 0 2px #efe4c8,0 0 0 3px #a07a48}
+.t9 .ab{border-radius:5px;background:linear-gradient(#8c6a40,#6e5030);color:#f7ecd4;box-shadow:inset 0 1px 0 #b8925f,0 2px 3px #3a2a1655}
+.t9 .ab.on{background:linear-gradient(#5f8a3a,#46702a);box-shadow:0 0 0 2px #f7ecd4}
+.t9 .ab .k{background:#e6d8b8;color:#33291c;border:1px solid #a07a48;opacity:1}
+.t9 .obj{color:#33291c;padding:8px 10px}.t9 .rd,.t9 .seg{background:#33291ce0;padding:4px 6px;border-radius:3px}.t9 .seg{padding:3px}
+
+/* ---------- 10 · Nacre et ivoire ---------- */
+.t10{--pfbg:#5a5468;--tx:#2c2a33;--mu:#6c6878;--ic:#7a6a9a;--hpbg:#d4cfd8;--hp1:#79b26a;--hp2:#4f8c42}
+.t10 .pn{background:linear-gradient(120deg,#f6f1ea,#ece6f0 30%,#e8f1ee 55%,#f4ede4 80%,#eee8f2);border-radius:20px;
+ box-shadow:inset 0 2px 0 #fff,inset 0 -2px 0 #c9c0cf,inset 0 0 0 1px #d8d0dc,0 8px 20px #2a243555}
+.t10 .mod{background:linear-gradient(135deg,#fffdfa,#f1ecf3 50%,#ecf3f0);border-radius:14px;box-shadow:inset 0 1px 3px #b9b0c088,0 1px 0 #fff}
+.t10 .sep,.t10 .vs{background:linear-gradient(#0000,#b9b0c0,#0000)}
+.t10 .pf,.t10 .mm{border-radius:14px;box-shadow:0 0 0 3px #fff,0 0 0 4px #c9c0cf,0 3px 8px #2a243533}
+.t10 .ab{border-radius:16px;background:linear-gradient(#fff,#eee8f0);box-shadow:inset 0 -2px 0 #d4cdd9,0 2px 4px #2a243522}
+.t10 .ab.on{background:linear-gradient(#e3ddf6,#d2cbef);box-shadow:inset 0 0 0 1px #9a8fd0,0 0 12px #b9aef088}
+.t10 .ab .k{background:#6c6878;color:#fff;border:0;opacity:1}
+.t10 .rd,.t10 .seg{background:#2c2a33e6;padding:4px 6px;border-radius:6px}.t10 .seg{padding:3px}
+</style></head><body>
+<header><h1>HUD · DIX MATIÈRES</h1>
+<p>Même disposition que le HUD actuel (carte de vague, bandeau de ressources, Rejouer, rapport de l’Ingénieur, bandeau de commandement en quatre modules), mais dix matières différentes : plus de liseré doré droit ni de fond noir. Angles arrondis ou irréguliers, fonds teintés, reliefs par lumière et ombre plutôt que par filets. Sous chaque maquette, un gros plan sur la moitié gauche du bandeau du bas. Cliquer pour agrandir ; <code>?n=3</code> ouvre une maquette seule.</p></header>
+<main><div class="why"><img src="assets/menace/hud-reference.png" alt="HUD actuel" id="ref"><div><b>Référence : HUD actuel.</b> Charbon presque noir, liseré doré de 1 px, coins en triangles. Constantes gardées dans toutes les propositions : le relevé cyan du rapport (technologie exilée), la jauge de vie verte, les icônes du HUD et les touches de raccourci. Pas de pourpre (réservé à l’Ancre) ni de rouge (la Bête) ; le cuivre et l’ambre remplacent l’or quand il faut une couleur chaude.</div></div>
+<div class="grid" id="grid"></div></main>
+<div id="zoom"></div>
+<script>
+'use strict';
+const IC={skull:'<path d="M8 19v-4c-3-1-4-3-4-6a8 8 0 0 1 16 0c0 3-1 5-4 6v4zM10 19v-3m4 3v-3"/><circle cx="8.5" cy="9" r="1.5"/><circle cx="15.5" cy="9" r="1.5"/><path d="m11 13 1-2 1 2"/>',
+ iron:'<path d="m3 10 12-6 6 4-12 6zM3 10v6l6 4 12-6V8M9 14v6"/>',heart:'<path d="M12 21 3 12C-4 3 8-1 12 6c4-7 16-3 9 6z"/>',
+ shield:'<path d="M12 2 3 6v7c0 5 9 9 9 9s9-4 9-9V6zM12 5v13"/>',book:'<path d="M4 4h6a3 3 0 0 1 2 1 3 3 0 0 1 2-1h6v15h-6a2 2 0 0 0-2 2 2 2 0 0 0-2-2H4zM12 5v16M7 8h2m-2 3h2m6-3h2m-2 3h2"/>',
+ people:'<circle cx="12" cy="5" r="3"/><path d="M6 21v-6a6 6 0 0 1 12 0v6zM3 21H1v-6a4 4 0 0 1 3-4m17 10h2v-6a4 4 0 0 0-3-4"/><path d="M3 5a2 2 0 0 0 0 4m18-4a2 2 0 0 1 0 4"/>',
+ menace:'<path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Z"/><path d="m12 8 2 4-2 4-2-4Z M5 3l2 3m10 0 2-3"/>',
+ hammer:'<path d="m3 21 12-12m-9 13 12-12M10 4l4-3 9 8-4 4zM2 20l2 3M9 5l4 4"/>',rune:'<circle cx="12" cy="12" r="7"/><path d="M12 0v24M0 12h24m-12-9 3 9-3 9-3-9z"/>',
+ flag:'<path d="M5 23V2m0 1c5-4 9 4 16 0v11c-7 4-11-4-16 0"/>',move:'<path d="M12 2v20M2 12h20M8 6l4-4 4 4M8 18l4 4 4-4M6 8l-4 4 4 4m12-8 4 4-4 4"/>',
+ sword:'<path d="m5 21 12-12 3-7-7 3L1 17m2-6 10 10m-9-1 3 3M10 8l6 6"/>',boot:'<path d="m10 3 9 2-3 10 5 3v3H3v-4l5-2zM9 7l8 2m-9 2 7 2M3 18h11"/>',
+ restart:'<path d="M4 8a9 9 0 1 1-1 8M4 2v7h7"/>'};
+const ic=(n,s=20,c='var(--ic)')=>`<svg class="ic" viewBox="0 0 24 24" style="width:${s}px;height:${s}px;color:${c}">${IC[n]}</svg>`;
+const RES=[['iron','Forge',40],['heart','Vie',12],['shield','Discipline',8],['book','Savoir',20],['people','Exilés',2]];
+const ACT=[['hammer','Construire','B'],['rune','Réactiver','R',1],['flag','Position','H'],['move','Déplacer','M']];
+
+// disposition du HUD actuel, identique pour tous les thèmes
+function hud(extra=''){return `
+<div class="pn wave">${ic('skull',26)}<span>Vague 2</span></div>
+<div class="pn res">${RES.map((r,i)=>`${i?'<span class="sep"></span>':''}<i>${ic(r[0],24)}${r[1]}<em class="num">${r[2]}</em></i>`).join('')}<span class="sep"></span><i>${ic('menace',24)}Menace<em class="num">34 %</em></i></div>
+<div class="pn rej">${ic('restart',15)}Rejouer <span class="k">⇧ R</span></div>
+<div class="pn obj"><div class="pf" style="background-image:url(assets/hud/engineer.png)"></div><div style="flex:1;min-width:0"><div class="eb">INGÉNIEUR EXILÉ</div>
+ <div class="q">« L’Ancre s’est éteinte. Je dois la réactiver : elle réveillera les gardes de l’entrée. »</div>
+ <div class="rd">▸ RÉACTIVATION<b class="num">45 %</b></div><div class="seg">${Array.from({length:12},(_,i)=>`<i class="${i<5?'on':''}"></i>`).join('')}</div></div></div>
+<div class="pn bar">
+ <div class="mod m1"><div class="mm"><img src="assets/hud/minimap.png"></div><span class="n">N</span></div>
+ <div class="mod m2"><div class="pf" style="background-image:url(assets/hud/engineer.png)"></div><div style="flex:1;min-width:0"><div class="eb">EXILÉ · BÂTISSEUR · NIV. 1 · 0 / 20 XP</div><div class="nm">Ingénieur Exilé</div>
+  <div class="hpw">${ic('heart',16,'#7cc24f')}<div class="hp"><i></i><span class="num">80 / 80</span></div></div><div class="status">Prêt à recevoir vos ordres</div></div></div>
+ <div class="mod m3"><div class="stats"><div>${ic('sword',22)}<span>Dégâts<b>6</b></span></div><span class="vs"></span><div>${ic('shield',22)}<span>Armure<b>0</b></span></div><span class="vs"></span><div>${ic('boot',22)}<span>Déplacement<b>15,2</b></span></div></div>
+  <div class="lore">Il relève les pierres pour que demeure le serment.</div></div>
+ <div class="mod m4"><div class="acts">${ACT.map(a=>`<div class="ab${a[3]?' on':''}">${ic(a[0],20,'currentColor')}${a[1]}<span class="k">${a[2]}</span></div>`).join('')}</div></div>
+</div>${extra}`}
+
+// ornements propres à certains thèmes
+const VINE=(x,y,w,flip)=>`<svg class="vine" style="left:${x}px;top:${y}px;width:${w}px;height:40px;${flip?'transform:scaleX(-1)':''}" viewBox="0 0 ${w} 40"><path d="M0 8C${w*.2} 2 ${w*.35} 18 ${w*.55} 10S${w*.85} 2 ${w} 12" stroke="#4f7a30" stroke-width="2.5" fill="none" stroke-linecap="round"/>${[.12,.3,.48,.66,.84].map((t,i)=>`<ellipse cx="${w*t}" cy="${i%2?14:5}" rx="6" ry="3.2" fill="${i%2?'#6e9a46':'#5f8a3a'}" transform="rotate(${i%2?30:-25} ${w*t} ${i%2?14:5})"/>`).join('')}</svg>`;
+const MOSS=(x,y,w)=>`<div class="moss" style="left:${x}px;top:${y}px;width:${w}px"></div>`;
+const RIV=pts=>pts.map(p=>`<span class="riv" style="left:${p[0]}px;top:${p[1]}px"></span>`).join('');
+
+const V=[
+ {name:'1 · Bronze vert-de-gris',sw:['#4d7365','#2c4339','#c98a5c','#eef0e2'],
+  desc:'Le métal reste, mais patiné : bronze vert-de-gris légèrement grenu, arêtes arrondies éclairées par le haut, modules creusés dans la plaque. Les ordres deviennent des boutons de cuivre bombés ; le cuivre remplace l’or comme couleur chaude.',
+  pro:'+ La continuité la plus naturelle avec l’actuel, s’accorde avec la mousse de la caverne.',con:'− Vert sur vert : la minicarte et le terrain se confondent un peu avec le cadre.'},
+ {name:'2 · Ardoise tendre',sw:['#636c80','#545c70','#efe9da','#f2eee4'],
+  desc:'L’ardoise tyrienne de la caverne, mais éclaircie et polie : gris-bleu doux, strates fines, angles adoucis en alternance (un coin arrondi, un coin vif). Pas de cadre : le relief vient d’une arête claire en haut et d’une ombre en bas. L’ordre actif s’allume en quartz laiteux.',
+  pro:'+ Matière du monde, sobre et lisible ; le quartz donne un état actif très clair.',con:'− Froid ; peut sembler terne à côté du sol orangé.'},
+ {name:'3 · Cuir cousu et vélin',sw:['#80583a','#efe1c1','#e8c99a','#3b2a1b'],
+  desc:'Des pièces de cuir tanné avec une couture pointillée, et l’intérieur des modules en vélin clair à l’encre brune, comme le carnet de terrain de l’Ingénieur. Le texte principal devient sombre sur clair.',
+  pro:'+ Chaleureux et très lisible (contraste encre/vélin), identité forte.',con:'− Plus « aventure » que « exosquelette » ; les blocs clairs attirent l’œil en bas de l’écran.'},
+ {name:'4 · Verre ambré',sw:['#8a5a2e','#ffd59a','#fff4e2','#5a3a22'],
+  desc:'Des plaques de verre fumé teinté d’ambre qui floutent le terrain derrière elles. Grands rayons, un simple reflet en haut, des boutons en verre plus clair. Le décor reste visible à travers le HUD.',
+  pro:'+ Le plus léger : le HUD semble flotter, le terrain n’est jamais masqué.',con:'− Le flou coûte en rendu dans Godot (BackBufferCopy + shader) ; lisibilité variable selon le décor dessous.'},
+ {name:'5 · Bois de jungle et lianes',sw:['#8a5e38','#5e3d22','#6e9a46','#fbecd2'],
+  desc:'Des planches de bois veiné aux extrémités très arrondies, des lianes feuillues accrochées aux angles des panneaux. Les boutons sont des plaquettes en arc ; l’ordre actif verdit comme une pousse.',
+  pro:'+ Rappelle la jungle de surface et les ruines envahies ; très organique.',con:'− Les lianes chargent le haut de l’écran ; le bois brun se rapproche du sol de la caverne.'},
+ {name:'6 · Grès tyrien moussu',sw:['#c3a676','#b39669','#5f8a3a','#2e2418'],
+  desc:'Le HUD taillé dans le grès blond des ruines, contours irréguliers comme de la pierre usée, touffes de mousse sur les arêtes. Texte gravé sombre ; l’ordre actif devient une pierre de quartz qui s’éclaire.',
+  pro:'+ Clair et chaud, aucun noir ; contraste le plus franc avec les murs sombres.',con:'− Très proche du sol en teinte ; sur le terrain clair, le bandeau du bas ressort peu.'},
+ {name:'7 · Terre cuite émaillée',sw:['#bf6e46','#3e7868','#e8d6b4','#fff1e4'],
+  desc:'Des panneaux de terre cuite avec une frise de chevrons émaillés au pied, et des modules en carreaux émaillés vert de cuivre. Les boutons sont des carreaux crème à motif brique. Un HUD artisanal, coloré mais chaud.',
+  pro:'+ Le plus coloré et festif ; frise et carreaux donnent un motif reconnaissable.',con:'− Deux couleurs fortes (terre cuite + vert) ; le vert d’émail ne doit pas glisser vers le cyan.'},
+ {name:'8 · Émail et cuivre rose',sw:['#24535a','#1f4a51','#d7987c','#f1efe6'],
+  desc:'Façon cloisonné : fond d’émail bleu-vert profond (au lieu du noir), bordé d’un double jonc de cuivre rose aux angles arrondis et de petits rivets. Portraits en cabochons, ordre actif en cuivre plein.',
+  pro:'+ Garde le côté « précieux » du laiton actuel sans or ni noir.',con:'− Encore assez sombre ; le jonc reste une bordure, seulement plus souple.'},
+ {name:'9 · Toile de lin et cordage',sw:['#e6d8b8','#a07a48','#5f8a3a','#33291c'],
+  desc:'Des panneaux de toile écrue tissée, bordés d’une cordelette torsadée en guise de cadre. Les boutons sont des pastilles de cuir sombre ; l’ordre actif passe au vert. Un campement d’expédition plutôt qu’une console.',
+  pro:'+ Très clair, la bordure-corde est arrondie et vivante sans être dorée.',con:'− Le plus éloigné de la technologie exilée ; beaucoup de surface claire.'},
+ {name:'10 · Nacre et ivoire',sw:['#f6f1ea','#ece6f0','#9a8fd0','#2c2a33'],
+  desc:'L’inverse du HUD actuel : des galets de nacre irisée aux grands rayons, texte sombre, ombres douces. L’état actif prend un reflet lavande de la nacre.',
+  pro:'+ Rupture totale avec le noir ; élégant et très lisible.',con:'− Peut paraître « application » plus que jeu ; très lumineux la nuit.'}
+];
+const EXTRA={
+ 5:VINE(30,4,110)+VINE(1060,2,140,1)+VINE(340,764,160)+VINE(1180,762,170,1)+VINE(250,76,90,1),
+ 6:MOSS(40,10,70)+MOSS(700,10,120)+MOSS(1080,10,60)+MOSS(80,762,140)+MOSS(820,762,90)+MOSS(1260,762,110)+MOSS(220,79,60),
+ 8:RIV([[22,20],[172,20],[22,58],[172,58],[432,20],[1196,20],[432,54],[1196,54],[18,770],[1416,770],[18,876],[1416,876],[22,88],[346,88]])};
+
+const grid=document.getElementById('grid'),zoom=document.getElementById('zoom');
+const stage=(i)=>`<div class="stage t${i+1}">${hud(EXTRA[i+1]||'')}</div>`;
+function fit(){for(const F of document.querySelectorAll('.frame')){F.firstElementChild.style.transform=`scale(${F.clientWidth/1440})`}
+ for(const F of document.querySelectorAll('.crop')){const sc=F.clientWidth/820,st=F.firstElementChild.style;st.transform=`scale(${sc})`;st.left=(-14*sc)+'px';st.top=(-750*sc)+'px'}}
+V.forEach((v,i)=>{const f=document.createElement('figure');
+ f.innerHTML=`<div class="frame">${stage(i)}</div><div class="crop">${stage(i)}</div><figcaption><b>${v.name}</b><div class="sw">${v.sw.map(c=>`<i style="background:${c}"></i>`).join('')}</div><p>${v.desc}</p><p class="pro">${v.pro}</p><p class="con">${v.con}</p></figcaption>`;
+ grid.appendChild(f);
+ f.querySelectorAll('.frame,.crop').forEach(el=>el.onclick=()=>{zoom.innerHTML=`<div class="frame">${stage(i)}</div>`;zoom.classList.add('on');fit()})});
+document.getElementById('ref').onclick=()=>{zoom.innerHTML=`<div class="frame"><div class="stage" style="background-image:url(assets/menace/hud-reference.png)"></div></div>`;zoom.classList.add('on');fit()};
+zoom.onclick=()=>zoom.classList.remove('on');
+addEventListener('keydown',e=>{if(e.key==='Escape')zoom.classList.remove('on')});
+addEventListener('resize',fit);fit();
+const only=+new URLSearchParams(location.search).get('n');
+if(only>=1&&only<=V.length){document.body.innerHTML=`<div style="position:relative;width:1440px;height:900px">${stage(only-1)}</div>`;document.body.style.margin='0'}
+</script></body></html>

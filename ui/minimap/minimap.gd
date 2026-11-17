@@ -16,8 +16,10 @@ var world: World
 ## Hauteur du bandeau de commandement, pour le bas du trapèze de vue.
 var command_bar_height := 120.0
 
-var _bg := Image.create(W, H, false, Image.FORMAT_RGB8)
-var _frame := Image.create(W, H, false, Image.FORMAT_RGB8)
+var _bg := Image.create(W, H, false, Image.FORMAT_RGBA8)
+var _frame := Image.create(W, H, false, Image.FORMAT_RGBA8)
+var _fog_mask: Image
+var _fog_revision := -1
 var _tex: ImageTexture
 var _bg_version := -1
 var _bg_seed := -1
@@ -140,7 +142,7 @@ func refresh() -> void:
 	var st := world.terrain_state
 	if st.version != _bg_version or st.seed != _bg_seed:
 		build_background(st)
-	_frame.copy_from(_bg)
+	_frame.blit_rect(_bg, Rect2i(0, 0, W, H), Vector2i.ZERO)
 	for b in GameState.buildings:
 		_dot(b.x, b.z, Color("#e3c685") if not b.complete else (Color("#8de8ed") if b.is_temple() else Color("#d0b376")), 4.0)
 	for p: Dictionary in st.portals:
@@ -154,7 +156,13 @@ func refresh() -> void:
 		if u.alive() and not u.hidden:
 			_dot(u.x, u.z, Color("#ffe0a0") if GameState.selected.has(u) else Color("#a8cc7b"), 3.0)
 	for e: Variant in GameState.enemies:
-		_dot(e.x, e.z, Color("#ee7055"), 3.0)
+		if not e.hidden:
+			_dot(e.x, e.z, Color("#ee7055"), 3.0)
+	if _fog_revision != world.fog.revision:
+		_fog_mask = world.fog.image.duplicate()
+		_fog_mask.resize(W, H, Image.INTERPOLATE_BILINEAR)
+		_fog_revision = world.fog.revision
+	_frame.blend_rect(_fog_mask, Rect2i(0, 0, W, H), Vector2i.ZERO)
 	_tex.update(_frame)
 	# Trapèze : coins de l'écran au-dessus du bandeau, projetés au sol.
 	var cam := world.camera
@@ -168,6 +176,8 @@ func refresh() -> void:
 
 
 func _dot(x: float, z: float, c: Color, s: float) -> void:
+	if not world.fog.visible_at(Vector2(x, z)):
+		return
 	var p := map_pt(x, z)
 	fill_rect(_frame, p.x - s / 2.0, p.y - s / 2.0, s, s, c)
 

@@ -77,7 +77,7 @@ func _visible_mining_cells() -> Array[Dictionary]:
 	var cells := _mining_drag_cells.duplicate()
 	var seen: Dictionary = _mining_drag_keys.duplicate()
 	for u: Unit in GameState.units:
-		if u.role != "engineer" or u.job == null or u.job.get("type") != "dig":
+		if u.job == null or u.job.get("type") != "dig" or Catalog.is_adept(u):
 			continue
 		var queue: Array = u.job.get("cells", [u.job.get("cell")])
 		for i in queue.size():
@@ -135,11 +135,20 @@ func _add_mining_cell(cell: Dictionary) -> void:
 
 ## Même résolution de cible que le clic droit, recalculée même si seule la caméra bouge.
 func mining_hover_cell(pointer: Vector2, ui_blocked := false) -> Variant:
-	if ui_blocked or GameState.ended or not GameState.hud_mode.is_empty() 			or not GameState.research_done.has("mining_artifact") 			or not get_viewport().get_visible_rect().has_point(pointer):
+	if ui_blocked or GameState.ended or not GameState.hud_mode.is_empty() 			or not get_viewport().get_visible_rect().has_point(pointer):
 		return null
 	for u: Unit in GameState.selected:
-		if u.role == "engineer" and u.alive() and not u.hidden:
-			return world.terrain_state.diggable_cell(ground(pointer))
+		if u.alive() and not u.hidden and (Catalog.is_adept(u) or (u.role == "engineer" and GameState.research_done.has("mining_artifact"))):
+			return _mining_cell(ground(pointer))
+	return null
+
+
+func _mining_cell(point: Vector2) -> Variant:
+	if not world.fog.visible_at(point):
+		return null
+	var target: Variant = world.terrain_state.diggable_cell(point)
+	if target != null and world.fog.visible_at(Vector2(target["i"] * 4 + 2, target["j"] * 4 + 2)):
+		return target
 	return null
 
 
@@ -238,7 +247,7 @@ func pick_enemy(p: Vector2) -> Enemy:
 	var near: Enemy = null
 	var best := INF
 	for e: Enemy in GameState.enemies:
-		if not e.alive() or e.hidden:
+		if not e.alive() or e.hidden or not world.fog.visible_at(e.pos()):
 			continue
 		var d := project(e.x, 1.0, e.z).distance_to(p)
 		if d < best:
@@ -252,6 +261,8 @@ func hit_building(p: Vector2) -> Building:
 	var list := GameState.buildings.duplicate()
 	list.sort_custom(func(a: Building, b: Building) -> bool: return a.z > b.z)
 	for b: Building in list:
+		if not world.fog.visible_at(Vector2(b.x, b.z)):
+			continue
 		var h := b.half()
 		if absf(b.x - p.x) < h and p.y > b.z - h - h * 1.1 and p.y < b.z + h:
 			return b
@@ -286,23 +297,42 @@ func _right_click(p: Vector2) -> void:
 			selected.rally_point = point
 		return
 	var eng := sim.builder()
-	if eng and not GameState.orb_active and hit_orb(p):
-		sim.order_orb(eng)
+	if eng and hit_orb(p):
+		if GameState.orb_active:
+			sim.set_job(eng, {"type": "anchor_pray"})
+		else:
+			sim.order_orb(eng)
 		return
+	if eng and preload("res://sim/item_storage.gd").character_available(eng):
+		for b: Building in GameState.buildings:
+			if not b.complete or not Production.has_chests(b):
+				continue
+			for kind: String in Production.chest_kinds(b):
+				var pos := Production.chest_pos(b, kind)
+				var origin := project(pos.x, 0.0, pos.y)
+				var k := float(world.camera.px)
+				if Rect2(origin - Vector2(13, 27) * k, Vector2(26, 30) * k).has_point(p) and world.fog.visible_at(Vector2(b.x, b.z)):
+					sim.set_job(eng, {"type": "collect", "building": b, "open_box": kind})
+					return
 	if hit_chest(p) and sim.order_chest(eng):
 		return
 	var turret: Variant = hit_turret(p)
 	if turret != null:
 		sim.combat.order_turret(turret)
 		return
-	if sim.order_adepts(ground(p)):
+	if _mining_cell(ground(p)) != null and sim.order_adepts(ground(p)):
 		return
 	if sim.order_pray(hit_building(ground(p))):
+		return
+	# Bâtiment servi par des adeptes : l'unité sélectionnée y prend un poste.
+	if sim.order_staff(hit_building(ground(p))):
 		return
 	# Ennemi proche du clic (moins de max(20, 1,2·Z) pixels) : ordre d'attaque, sinon déplacement.
 	var nearest: Enemy = null
 	var best := INF
 	for e: Enemy in GameState.enemies:
+		if not e.alive() or e.hidden or not world.fog.visible_at(e.pos()):
+			continue
 		var d := project(e.x, 1.0, e.z).distance_to(p)
 		if d < best:
 			best = d
@@ -329,6 +359,8 @@ func hit_turret(p: Vector2) -> Variant:
 	list.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return b["x"] + b["z"] < a["x"] + a["z"])
 	var k := float(world.camera.px)
 	for b: Dictionary in list:
+		if not world.fog.visible_at(Vector2(b["x"], b["z"])):
+			continue
 		var q := project(b["x"], 0.0, b["z"])
 		if absf(p.x - q.x) < 44.0 * k and p.y > q.y - 100.0 * k and p.y < q.y + 24.0 * k:
 			return b

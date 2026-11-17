@@ -45,14 +45,14 @@ static func dist(a: Variant, b: Variant) -> float:
 
 
 ## targetClosest : la cible vivante et visible la plus proche, strictement à moins de `range`.
-static func target_closest(source: Variant, list: Array, range_ := 1e9) -> Variant:
+static func target_closest(source: Variant, list: Array, range_ := 1e9, observer_world: World = null) -> Variant:
 	var best: Variant = null
 	var d := range_
 	for t: Variant in list:
 		if t.hp <= 0.0 or t.hidden:
 			continue
 		var nd := dist(t, source)
-		if nd < d:
+		if nd < d and (observer_world == null or observer_world.fog.visible_at(t.pos())):
 			d = nd
 			best = t
 	return best
@@ -66,9 +66,25 @@ func damage(t: Unit, amount: float, src: Unit = null) -> void:
 	if t is Enemy and amount > 0.0:
 		amount = maxf(amount * 0.15, amount - (t as Enemy).armor)
 	t.hp = maxf(0.0, t.hp - amount)
+	if amount > 0.0 and was > 0.0:
+		damage_number(t, amount)
 	if src and t.is_enemy() and was > 0.0 and t.hp <= 0.0:
 		_log("%s achève %s" % [src.name, (t as Enemy).kind])
 		gain_xp(src, Catalog.KILL_XP.get((t as Enemy).kind, 10))
+
+
+## Chiffre de dégâts blanc au-dessus de la cible. Les dégâts continus (lance-flammes, murs de feu) se
+## cumulent dans le chiffre de la cible tant qu'il a moins de DAMAGE_MERGE secondes.
+const DAMAGE_MERGE := 0.3
+
+
+static func damage_number(t: Unit, amount: float) -> void:
+	for i in range(GameState.damage_numbers.size() - 1, -1, -1):
+		var e: Dictionary = GameState.damage_numbers[i]
+		if e["target"] == t and e["age"] < DAMAGE_MERGE:
+			e["amount"] += amount
+			return
+	GameState.damage_numbers.append({"target": t, "x": t.x, "z": t.z, "amount": amount, "age": 0.0, "duration": 0.9})
 
 
 ## gainXP : paliers 20·1,6^(niveau−1) ; chaque niveau donne +1 dégât et +1 défense.
@@ -183,7 +199,7 @@ func sword_strike(u: Unit, e: Variant) -> void:
 func barracks_strike(u: Unit, e: Enemy) -> void:
 	var F: Dictionary = Catalog.FIGHT[u.role]
 	var k := 1.5 if u.buff > 0.0 else 1.0
-	var dmg: float = (Catalog.attack_damage(u) + Catalog.lvl_bonus(u)) * k
+	var dmg: float = (Catalog.attack_damage(u) + Catalog.lvl_bonus(u)) * k * Catalog.damage_mult(u)
 	u.attack = F["cd"]
 	u.face = -1 if e.x - u.x < 0.0 else 1
 	# D15 : le lance-flammes n'a plus de sillon de feu ; en jeu, il tire en continu (flame_tick).
@@ -196,10 +212,14 @@ func barracks_strike(u: Unit, e: Enemy) -> void:
 		return
 	if u.role == "lame" and moulinet(u, dmg):
 		return
+	# Arme à munitions du Creuset (canon) : une munition prise au stock par tir.
+	var w := Catalog.gear_weapon(u)
+	if w.has("ammo"):
+		Catalog.ItemStorage.take({w["ammo"]: 1})
 	damage(e, dmg, u)
 	if u.role == "archer":
 		arrow(u, e)
-	elif F.get("ranged", false):
+	elif F.get("ranged", false) or w.has("reach"):
 		blast(u, e, Color("#bed7df"))
 		flash(e.x, e.z, Color("#bed7df"))
 	else:
@@ -213,7 +233,7 @@ func archer_tick(u: Unit, e: Variant, dt: float) -> bool:
 	var t := GameState.sim_time
 	if u.dash != null:
 		var target: Enemy = u.dash["e"]
-		if target.hp <= 0.0:
+		if target.hp <= 0.0 or (sim.world and not sim.world.fog.visible_at(target.pos())):
 			u.dash = null
 			return false
 		var dx := target.x - u.x
@@ -320,7 +340,7 @@ func update_fire_walls(dt: float) -> void:
 func flame_tick(u: Unit, e: Enemy, dt: float) -> void:
 	var F: Dictionary = Catalog.FIGHT["flammes"]
 	var k := 1.5 if u.buff > 0.0 else 1.0
-	var dmg: float = (Catalog.attack_damage(u) + Catalog.lvl_bonus(u)) * k / F["cd"] * dt
+	var dmg: float = (Catalog.attack_damage(u) + Catalog.lvl_bonus(u)) * k * Catalog.damage_mult(u) / F["cd"] * dt
 	u.attack = 0.1
 	u.face = -1 if e.x - u.x < 0.0 else 1
 	for o: Enemy in GameState.enemies.duplicate():
@@ -329,7 +349,9 @@ func flame_tick(u: Unit, e: Enemy, dt: float) -> void:
 	var now := GameState.sim_time
 	if now >= u.flame_fx:
 		u.flame_fx = now + 0.06
-		blast(u, e, Color("#ff9a30"))
+		# « nozzle » = sens du tireur : le rendu fait partir le jet de la buse du sprite (soldat 4.1).
+		_fx({"type": "laser", "x": u.x, "z": u.z, "tx": e.x, "tz": e.z, "age": 0.0, "duration": 0.13,
+			"color": Color("#ff9a30"), "nozzle": u.face if u.face != 0 else 1})
 		flash(e.x, e.z, Color("#ffb050"))
 
 
@@ -356,6 +378,8 @@ static func fight_busy(u: Unit) -> bool:
 # ---------------------------------------------------------------- Alliés (update, Index.html)
 
 func update_units(dt: float, alive: Array[Unit]) -> void:
+	if sim.world and not GameState.enemies.is_empty():
+		sim.world.fog.refresh(sim.state())
 	for u in alive:
 		if u.force_move and Combat.hyp(u.x - u.tx, u.z - u.tz) < 0.6:
 			u.force_move = false
@@ -366,7 +390,8 @@ func update_units(dt: float, alive: Array[Unit]) -> void:
 			var seek: float = Catalog.FIGHT[u.role]["seek"] if Catalog.FIGHT.has(u.role) else Catalog.HERO.get(u.role, {"seek": 10.0})["seek"]
 			if u.role == "engineer" and not u.unarmored:
 				seek = 250.0
-			enemy = target_closest(u, GameState.enemies, seek)
+			seek = maxf(seek, Catalog.unit_reach(u))
+			enemy = target_closest(u, GameState.enemies, seek, sim.world)
 		if u.role == "archer" and archer_tick(u, enemy, dt):
 			continue
 		if u.stance != "hold" and enemy != null:
@@ -632,7 +657,7 @@ func update_turrets(dt: float) -> void:
 		b["cycle_age"] = minf(T["cycle"] * 0.73, b["cycle_age"] + dt)
 		var cands := GameState.enemies.filter(func(e: Enemy) -> bool:
 			return e.hp > 0.0 and e.hp - turret_pending(e) > 0.0 and Combat.hyp(b["x"] - e.x, b["z"] - e.z) <= T["range"])
-		var target: Variant = target_closest(b, cands, T["range"] + 0.001)
+		var target: Variant = target_closest(b, cands, T["range"] + 0.001, sim.world)
 		if target:
 			b["aim"] = target
 		if target == null or b["cycle_age"] < T["cycle"] * 0.73:
@@ -681,6 +706,9 @@ func finish_tick(dt: float, alive: Array[Unit]) -> void:
 	while GameState.enemy_corpses.size() > EnemyArt.MAX_CORPSES:
 		GameState.enemy_corpses.pop_front()
 	GameState.effects = GameState.effects.filter(func(e: Dictionary) -> bool:
+		e["age"] += dt
+		return e["age"] < e["duration"])
+	GameState.damage_numbers = GameState.damage_numbers.filter(func(e: Dictionary) -> bool:
 		e["age"] += dt
 		return e["age"] < e["duration"])
 	var engineer_down := GameState.units.any(func(u: Unit) -> bool: return u.role == "engineer" and u.hp <= 0.0)

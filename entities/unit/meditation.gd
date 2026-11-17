@@ -15,11 +15,11 @@ const BAYER := [[0, 8, 2, 10], [12, 4, 14, 6], [3, 11, 1, 9], [15, 7, 13, 5]]
 ## État de la méditation, ou {} si l'unité ne médite pas : age (depuis l'arrivée), b0 (fin de l'assise),
 ## temple, ramp (couleurs du culte).
 static func state(u: Unit) -> Dictionary:
-	if u.role != "engineer" or not u.working or u.job == null or u.job.get("type") != "pray" or not u.job.has("since"):
+	if u.role != "engineer" or not u.working or u.job == null or u.job.get("type") not in ["pray", "anchor_pray"] or not u.job.has("since"):
 		return {}
-	var t: Building = u.job["temple"]
+	var t: Building = u.job.get("temple")
 	var since: float = u.job["since"]
-	return {"age": GameState.sim_time - since, "b0": since + SETTLE, "temple": t, "ramp": Catalog.DEITY_RAMP[t.def()["deity"]]}
+	return {"age": GameState.sim_time - since, "b0": since + SETTLE, "temple": t, "ramp": Catalog.DEITY_RAMP[t.def()["deity"] if t else "sigil"]}
 
 
 ## Lévitation (pixels natifs) : monte en 0,7 s après l'assise, puis oscille.
@@ -32,6 +32,8 @@ static func lift(age: float) -> float:
 
 ## Cœur du temple (pixels natifs), point d'arrivée des lueurs.
 static func heart(t: Building) -> Vector2:
+	if t == null:
+		return Proj.nat(CaveShape.CORE.x, 3.0, CaveShape.CORE.y)
 	return Proj.nat(t.x, 2.0, t.z + t.half() * 0.5)
 
 

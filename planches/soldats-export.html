@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><title>Export soldats 4.1</title>
+<style>body{margin:0;padding:16px;background:#0b120e;color:#dcd8bc;font:14px system-ui}canvas{image-rendering:pixelated;background:#1d3b25;margin:4px;vertical-align:bottom}h2{font-size:15px;margin:12px 0 4px;color:#ee8e34}</style></head><body>
+<p>Export des soldats d'Indra (choix 4.1) au format du jeu : repos (1), marche (2), travail = attaque (4), même cadre et même ancre par rôle ; portraits 128×128. Résultat dans <code>window.OUT</code> (data URL PNG), affiché ci-dessous ×4.</p>
+<div id="out"></div>
+<script src="assets/decor.js?v=6"></script><script src="assets/units.js?v=10"></script><script src="assets/soldats-planches.js?v=5"></script>
+<script>
+'use strict';
+const S=Soldats,K=.5;
+// travail : instants de l'attaque (a ∈ [0,1] après le repos) ; t décale aussi le tremblement du jet
+const WORK={lame:[.24,.4,.52,.8],archer:[.25,.48,.62,.72],flammes:[.3,.45,.6,.75]};
+function render(kind,mode,i){const base=S.spec(S.V41,kind);
+ if(mode==='idle')return UnitKit.figure(S.anim(kind,base,0,0).s,0,K);
+ if(mode==='walk'){const s=S.anim(kind,base,0,0).s;s.walk=i?.75:.25;return UnitKit.figure(s,i*.5,K)}
+ const a=WORK[kind][i],u=S.IDLE+a*(1-S.IDLE),t=1+i*.13;return UnitKit.figure(S.anim(kind,base,u,t).s,t,K)}
+function bbox(c){const d=c.getContext('2d').getImageData(0,0,c.width,c.height).data;let x0=1e9,y0=1e9,x1=-1,y1=-1;
+ for(let y=0;y<c.height;y++)for(let x=0;x<c.width;x++)if(d[(y*c.width+x)*4+3]){x0=Math.min(x0,x);x1=Math.max(x1,x);y0=Math.min(y0,y);y1=Math.max(y1,y)}return[x0,y0,x1,y1]}
+const MODES={idle:1,walk:2,work:4},OUT={},root=document.getElementById('out');
+for(const kind of['lame','archer','flammes']){const fr={};let B=[1e9,1e9,-1,-1];
+ for(const m in MODES){fr[m]=[];for(let i=0;i<MODES[m];i++){const c=render(kind,m,i),b=bbox(c);fr[m].push(c);B=[Math.min(B[0],b[0]),Math.min(B[1],b[1]),Math.max(B[2],b[2]),Math.max(B[3],b[3])]}}
+ const fw=B[2]-B[0]+1,fh=B[3]-B[1]+1,R={ax:Math.round(30*K)-B[0],ay:Math.round(80*K)-B[1],fw,fh,strips:{}};
+ const h=document.createElement('h2');h.textContent=`${kind} : ${fw}×${fh}, ancre (${R.ax}, ${R.ay})`;root.appendChild(h);
+ for(const m in MODES){const c=document.createElement('canvas');c.width=fw*MODES[m];c.height=fh;const g=c.getContext('2d');fr[m].forEach((f,i)=>g.drawImage(f,-B[0]+i*fw,-B[1]));
+  R.strips[m]=c.toDataURL('image/png');c.style.width=c.width*4+'px';root.appendChild(c)}
+ // portrait : personnage ×1 au repos, pieds en (64, 112)
+ const p=document.createElement('canvas');p.width=p.height=128;p.getContext('2d').drawImage(UnitKit.figure(S.anim(kind,S.spec(S.V41,kind),0,0).s,0,1),64-30,112-80);
+ R.portrait=p.toDataURL('image/png');p.style.width='256px';root.appendChild(p);OUT[kind]=R}
+window.OUT=OUT;
+// ?save=1 (servie par tools/soldats/serve.py) : envoie bandes, portraits et métadonnées au jeu
+const SAVE=new URLSearchParams(location.search).get('save');
+if(SAVE!=null)(async()=>{const base=SAVE.startsWith('http')?SAVE:'',post=(n,b)=>fetch(base+'/out/'+n,{method:'POST',body:b}).then(r=>{if(!r.ok)throw new Error(n+' '+r.status)});
+ for(const kind in OUT){const R=OUT[kind];for(const m in R.strips)await post(`${kind}_${m}.png`,R.strips[m]);await post(`portrait-${kind}.png`,R.portrait);
+  const modes={};for(const m in MODES)modes[m]={frame_w:R.fw,frame_h:R.fh,cols:MODES[m],rows:1,count:MODES[m]};await post(`meta-${kind}.json`,JSON.stringify({ax:R.ax,ay:R.ay,modes}))}
+ document.title='EXPORT OK';window.SAVED=true})().catch(e=>{document.title='EXPORT ÉCHEC';console.error(e)});
+</script></body></html>

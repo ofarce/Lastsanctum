@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Export du Tyrien</title>
+<style>
+:root{--bg:#0b0d10;--txt:#dcd8cc;--mut:#939aa4}
+body{margin:0;background:var(--bg);color:var(--txt);font:14px/1.4 system-ui,sans-serif;padding:16px}
+h1{font-size:20px;margin:0 0 6px}p{color:var(--mut);margin:0 0 12px;max-width:900px}
+canvas{image-rendering:pixelated;background:#23282f;display:block;margin:4px 0 14px;max-width:100%}
+#log{color:var(--mut);white-space:pre-wrap}
+</style></head><body>
+<h1>Ingénieur tyrien · planches du jeu</h1>
+<p>Sprites générés depuis <code>assets/engineer-volume.js</code> (tenue 8 « Le Tyrien », planche <code>tyrien-equipement.html</code>), vue ¾ à 45°, ×0,5. Une planche pour le corps (« base ») et une par pièce d’équipement : chaque calque ne contient que les pixels que la pièce change, corps en place (masquage et contour compris). Avec <code>?save=1</code> et <code>tools/tyrien/serve.py</code>, tout est écrit dans <code>assets/imported/engineer/tyrien/</code>.</p>
+<div id="log"></div><div id="out"></div>
+<script src="assets/decor.js?v=6"></script><script src="assets/units.js?v=10"></script><script src="assets/engineer-volume.js?v=4"></script>
+<script>
+'use strict';
+const TYR={id:'tyr',seed:88,hair:'bun',top:{type:'tunic',ramp:PAL.bone,hemY:30},feet:{type:'sandals',ramp:PAL.leath},belt:{ramp:PAL.rope,y:37,h:1.8,braid:1},bracers:1};
+const K=.5,FW=48,FH=48,FAX=24,FAY=45,VTH=Math.PI/4,COLS=19;
+const ORDER=['back','lhand','feet','chest','hands','head','eye','rhand'];
+const AIM={angles:Array.from({length:19},(_,i)=>-90+i*10),rows:[{recoil:0,pulse:.5},{recoil:1.5,pulse:.5},{recoil:3,pulse:.5},{recoil:0,pulse:1}]};
+const ease=x=>.5-.5*Math.cos(Math.PI*cl(x));
+const ANIMS={
+ idle:{count:24,cols:12,pose:i=>pose('idle',i/24),note:'repos : image floor(t·24/2,4) mod 24'},
+ walk:{count:12,cols:12,pose:i=>pose('walk',i/12),note:'marche : phase += distance / stride'},
+ kneel:{count:36,cols:12,fps:10,pose:i=>POSES.kneel(i/10),note:'à genoux, souffle court : tente de se relever toutes les 3,6 s'},
+ pray:{count:24,cols:12,fps:10,pose:i=>POSES.pray(i/10),note:'agenouillé, mains jointes (incantation)'},
+ settle:{count:10,cols:12,fps:10,pose:i=>{const t=i/9,S=pose('idle',0),C=POSES.crouch(),L=POSES.lotus(0);return t<.4?lerpPose(S,C,ease(t/.4)):lerpPose(C,L,ease((t-.4)/.6))},note:'s’assoit en tailleur : debout → accroupi → lotus (jouée à l’envers pour se relever)'},
+ lotus:{count:24,cols:12,fps:10,pose:i=>POSES.lotus(i/10),note:'méditation en tailleur, yeux clos ; lévitation ajoutée en jeu'},
+ aim:{count:76,cols:19,pose:i=>{const r=AIM.rows[Math.floor(i/19)];return POSES.aim(AIM.angles[i%19],r.recoil,r.pulse,VTH)},note:'visée du lance-pitons : 19 angles (−90° à +90°) × 4 lignes (recul 0 / 1,5 / 3, suspension)'}};
+const PIECES=[];for(const s of ORDER)for(const[v,l]of GEAR[s].opts)if(v)PIECES.push({key:v,slot:s,label:l});
+const log=m=>{document.getElementById('log').textContent+=m+'\n'};
+function render(gear,P){const F=new Fig(FW,FH,K,FAX,FAY,VTH);drawFigure(F,{...TYR,gear},P);return F}
+const blocks={};let y=0;for(const[n,a]of Object.entries(ANIMS)){a.rows=Math.ceil(a.count/a.cols);a.y=y;y+=a.rows*FH;blocks[n]=a}
+const SHEET_H=y,SHEET_W=COLS*FW;
+// corps : une image par animation, gardée pour les différences
+const base={},sheets={};
+function sheet(){const c=document.createElement('canvas');c.width=SHEET_W;c.height=SHEET_H;return c}
+function px(c){return new Uint32Array(c.getContext('2d').getImageData(0,0,c.width,c.height).data.buffer)}
+async function build(){const t0=performance.now(),bs=sheet(),bg=bs.getContext('2d');
+ for(const[n,a]of Object.entries(ANIMS)){base[n]=[];for(let i=0;i<a.count;i++){const c=render({},a.pose(i)).finish();base[n].push(c);bg.drawImage(c,(i%a.cols)*FW,a.y+Math.floor(i/a.cols)*FH)}}
+ sheets.base=bs;log('base '+Math.round(performance.now()-t0)+' ms');
+ for(const p of PIECES){await new Promise(r=>setTimeout(r));const s=sheet(),g=s.getContext('2d');
+  for(const[n,a]of Object.entries(ANIMS))for(let i=0;i<a.count;i++){const f=render({[p.slot]:p.key},a.pose(i)).finish(),A=px(f),B=px(base[n][i]),out=new ImageData(FW,FH),O=new Uint32Array(out.data.buffer);
+   for(let j=0;j<A.length;j++)if(A[j]!==B[j])O[j]=A[j];const c=document.createElement('canvas');c.width=FW;c.height=FH;c.getContext('2d').putImageData(out,0,0);g.drawImage(c,(i%a.cols)*FW,a.y+Math.floor(i/a.cols)*FH)}
+  sheets[p.key]=s;log(p.key+' '+Math.round(performance.now()-t0)+' ms')}
+ // visée : bouche du lance-pitons et épaule, dans le repère de l'image
+ const muzzle=AIM.angles.map(a=>{const P=POSES.aim(a,0,.5,VTH),F=new Fig(FW,FH,K,FAX,FAY,VTH),r=P.aimArm,q=F.proj(add(r.W,mul(P.aimDir,4.5)));return[q.x+.5,q.y+.5]});
+ const F0=new Fig(FW,FH,K,FAX,FAY,VTH),sq=F0.proj(POSES.aim(0,0,.5,VTH).aimArm.S),hq=F0.proj(pose('idle',0).head);
+ // portrait du HUD : tête du premier repos agrandie (comme engineer_bare_portrait)
+ const por=document.createElement('canvas');por.width=por.height=128;{const g=por.getContext('2d');g.imageSmoothingEnabled=false;g.drawImage(base.idle[0],hq.x-12,hq.y-10,24,24,0,10,128,128)}
+ sheets.portrait=por;
+ const meta={source:'planches/assets/engineer-volume.js (tenue « Le Tyrien »), vue ¾ 45°, k=0.5 — planches/tyrien-export.html',frame_w:FW,frame_h:FH,ax:FAX,ay:FAY,h:42,stride:2.1,self_bob:true,
+  anims:Object.fromEntries(Object.entries(ANIMS).map(([n,a])=>[n,{y:a.y,cols:a.cols,rows:a.rows,count:a.count,...(a.fps?{fps:a.fps}:{}),note:a.note}])),
+  aim:{angles:AIM.angles,rows_def:AIM.rows,muzzle,shoulder:[sq.x+.5,sq.y+.5]},
+  order:ORDER,slots:Object.fromEntries(ORDER.map(s=>[s,GEAR[s].label])),pieces:Object.fromEntries(PIECES.map(p=>[p.key,{slot:p.slot,name:p.label}]))};
+ window.EXPORT={meta,sheets};
+ for(const[n,c]of Object.entries(sheets)){const d=document.createElement('div');d.textContent=n;const v=document.createElement('canvas');v.width=c.width;v.height=c.height;v.getContext('2d').drawImage(c,0,0);d.append(v);document.getElementById('out').append(d)}
+ log('terminé en '+Math.round(performance.now()-t0)+' ms');
+ if(new URLSearchParams(location.search).has('save')){const post=(n,b)=>fetch('/out/'+n,{method:'POST',body:b});
+  for(const[n,c]of Object.entries(sheets))await post('tyrien_'+n+'.png',c.toDataURL('image/png'));await post('tyrien.json',JSON.stringify(meta));log('écrit dans assets/imported/engineer/tyrien/')}
+ document.title='Export du Tyrien · prêt'}
+build();
+</script></body></html>

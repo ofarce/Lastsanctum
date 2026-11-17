@@ -37,6 +37,7 @@ func _reference(name: String) -> Image:
 func test_background_matches_js() -> void:
 	var f := Fixtures.load_json("dig_scenario")
 	var state := TerrainState.new()
+	state.groves = false
 	state.generate_galleries(int(f["seed"]))
 	var m := _minimap()
 	m.build_background(state)
@@ -49,6 +50,7 @@ func test_background_matches_js() -> void:
 func test_background_after_dig_matches_js() -> void:
 	var f := Fixtures.load_json("dig_scenario")
 	var state := TerrainState.new()
+	state.groves = false
 	state.generate_galleries(int(f["seed"]))
 	var reg := DecorRegistry.new()
 	var ops := TerrainOps.new(state, reg)

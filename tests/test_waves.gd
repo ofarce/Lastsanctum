@@ -30,6 +30,10 @@ func test_enemy_stats_match_js() -> void:
 
 func test_first_wave_and_pause() -> void:
 	var sim := game()
+	# En armure, l'Ingénieur (portée 250) abattrait aussitôt le rampant qui doit retenir la vague suivante.
+	for u: Unit in GameState.units:
+		if u.role == "engineer":
+			u.unarmored = true
 	GameState.orb_active = true
 	GameState.sim_time = 50.0
 	GameState.next_wave = 70.0

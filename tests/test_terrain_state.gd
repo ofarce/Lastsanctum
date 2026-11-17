@@ -10,6 +10,7 @@ func test_galleries_match_js_for_5_seeds() -> void:
 	check_eq(f["results"].size(), 5, "graines")
 	var state := TerrainState.new()
 	for res: Dictionary in f["results"]:
+		state.groves = false
 		state.generate_galleries(int(res["seed"]))
 		var cells := 0
 		for v in state.mask:
@@ -25,6 +26,7 @@ func test_galleries_match_js_for_5_seeds() -> void:
 func test_walkable_matches_js() -> void:
 	var f := Fixtures.load_json("walkable")
 	var state := TerrainState.new()
+	state.groves = false
 	state.generate_galleries(GALLERY_SEED)
 	var wrong := 0
 	var first := ""
@@ -41,6 +43,7 @@ func test_walkable_matches_js() -> void:
 
 func test_push_out_of_rock_lands_on_walkable_ground() -> void:
 	var state := TerrainState.new()
+	state.groves = false
 	state.generate_galleries(GALLERY_SEED)
 	var r := Rng.new(5)
 	for i in 200:

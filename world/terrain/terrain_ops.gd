@@ -31,7 +31,7 @@ func dig_cell(i: int, j: int) -> void:
 	# Décor de la case retiré (falaise, éboulis) ; nouvelle falaise au fond si la case au nord reste de la roche.
 	registry.remove_in_rect(x - 0.01, z - 0.01, x + 4.0, z + 4.01, func(e: Dictionary) -> bool:
 		return not DecorRegistry.is_fixed(e) and e["x"] >= x - 0.01 and e["x"] < x + 4.0 and e["z"] >= z - 0.01 and e["z"] <= z + 4.01)
-	if not state.walkable(x + 2.0, z - 2.0):
+	if not state.ground(x + 2.0, z - 2.0):
 		var v := ((i * 7 + j * 3) & 7) % 6
 		registry.add({"s": "face5_%d" % v, "runtime": true, "x": x, "z": z, "d": z, "bx": x, "bz": z})
 	state.version += 1
@@ -67,7 +67,7 @@ func open_vault() -> void:
 		var bz := Z0
 		while bz < Z1 and not CaveShape.in_vault(cx, bz):
 			bz += 0.5
-		if not state.walkable(cx, Z0 - 2.0):
+		if not state.ground(cx, Z0 - 2.0):
 			registry.add({"s": "face5_%d" % (floori(x / 4.0) % 6), "runtime": true, "x": x, "z": bz, "d": bz, "bx": x, "bz": bz})
 		x += 4.0
 	state.version += 1
@@ -144,7 +144,7 @@ func reveal_gallery(sx: float, sz: float) -> void:
 		while z < Z1:
 			var cx := x + 2.0
 			var cz := z + 2.0
-			if not (state.walkable(cx, cz) or not state.walkable(cx, cz + 4.0) or CaveShape.in_cave(cx, cz + 4.0)):
+			if not (state.ground(cx, cz) or not state.ground(cx, cz + 4.0) or CaveShape.in_cave(cx, cz + 4.0)):
 				var bz := z + 4.0
 				var t := z + 4.0
 				while t < z + 8.0:

@@ -31,7 +31,7 @@ func test_limits_and_zoom_range() -> void:
 	check_eq(cam.px, 6, "zoom maximal")
 	cam.set_view(Vector2(-500, 500), 0)
 	check_eq(cam.cam, Vector2(-202, 44), "limites opposées")
-	check_eq(cam.px, 1, "zoom minimal")
+	check_eq(cam.px, 2, "zoom minimal")
 	cam.free()
 
 
@@ -41,7 +41,7 @@ func test_wheel_changes_px_by_one() -> void:
 	check_eq(cam.px, 3, "molette vers le haut")
 	cam._unhandled_input(_mouse_button(MOUSE_BUTTON_WHEEL_DOWN, true, Vector2.ZERO))
 	cam._unhandled_input(_mouse_button(MOUSE_BUTTON_WHEEL_DOWN, true, Vector2.ZERO))
-	check_eq(cam.px, 1, "molette vers le bas")
+	check_eq(cam.px, 2, "molette vers le bas")
 	cam.free()
 
 

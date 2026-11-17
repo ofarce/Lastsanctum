@@ -39,6 +39,27 @@ func give(amount: float) -> void:
 		GameState.res[k] = amount
 
 
+## Objets de caserne (arcs, flèches, épées, boucliers) pour `squads` escouades de chaque type, au coffre.
+func stock_caserne_items(squads: int) -> void:
+	var Storage := preload("res://sim/item_storage.gd")
+	GameState.base_inventory_unlocked = true
+	for role: String in ["archer", "lame"]:
+		var cost: Dictionary = preload("res://data/recipes.gd").caserne_cost(role, 4 * squads)
+		for k: String in cost:
+			for i in int(cost[k]):
+				Storage.store(GameState.base_inventory, Storage.BASE_CAPACITY, k)
+
+
+## Caserne prête (règle du 2026-11-17) : un adepte d'Indra au poste et les objets de `squads` escouades d'archers et
+## d'Épée et bouclier déjà au coffre bleu.
+func ready_caserne(sim: Simulation, b: Building, squads: int) -> void:
+	staff(sim, b, 1)
+	for role: String in ["archer", "lame"]:
+		var cost: Dictionary = preload("res://data/recipes.gd").caserne_cost(role, 4 * squads)
+		for k: String in cost:
+			Production.put_into(b.input_box, k, int(cost[k]))
+
+
 ## Bâtiment achevé posé directement (sans chantier).
 func built(type: String, x: float, z: float) -> Building:
 	var b := Building.create(GameState.buildings.size(), type, x, z)
@@ -47,3 +68,20 @@ func built(type: String, x: float, z: float) -> Building:
 	b.finished_at = -10.0
 	GameState.buildings.append(b)
 	return b
+
+
+## Bâtiment servi (sim/production.gd) : `n` adeptes de son culte déjà à leur poste.
+func staff(sim: Simulation, b: Building, n := 1) -> Array[Unit]:
+	var out: Array[Unit] = []
+	for i in n:
+		var u := sim.spawn("Adepte", b.x, b.z, Production.staff_role(b))
+		u.job = {"type": "staff", "building": b, "post": "worker", "step": "post"}
+		out.append(u)
+	for u: Unit in out:
+		var p := Production.post_spot(b, Production.members(b, "worker").find(u))
+		u.x = p.x
+		u.z = p.y
+		u.tx = p.x
+		u.tz = p.y
+		u.working = true
+	return out

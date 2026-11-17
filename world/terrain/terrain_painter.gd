@@ -78,11 +78,11 @@ func paint_dug_cell(i: int, j: int) -> void:
 	var p := ground_px(x, z)
 	var out := _sample(_dug_tex, p)
 	terrain.blit(_image(out), p.x, p.y)
-	if not state.walkable(x - 2.0, z + 2.0):
+	if not state.ground(x - 2.0, z + 2.0):
 		terrain.darken(Rect2i(p.x, p.y, 2, TILE))
-	if not state.walkable(x + 6.0, z + 2.0):
+	if not state.ground(x + 6.0, z + 2.0):
 		terrain.darken(Rect2i(p.x + 30, p.y, 2, TILE))
-	if not state.walkable(x + 2.0, z + 6.0):
+	if not state.ground(x + 2.0, z + 6.0):
 		terrain.darken(Rect2i(p.x, p.y + 30, TILE, 2))
 
 

@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Tyrien · équipement visible</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0b0d10;--panel:#12151a;--line:#262c35;--txt:#dcd8cc;--mut:#939aa4;--acc:#c9b6e8;--cy:#5ce8ff}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--txt);font:15px/1.45 'Pixelify Sans',system-ui,sans-serif}
+header,main{max-width:1400px;margin:auto;padding:18px 16px}h1{margin:0;font-weight:600;letter-spacing:.08em;font-size:26px;color:var(--acc)}
+header p{color:var(--mut);margin:6px 0 0;max-width:980px}h2{font-size:17px;font-weight:600;color:var(--acc);margin:0 0 8px}
+button{font:inherit;color:var(--txt);background:#1a1f27;border:1px solid var(--line);padding:4px 10px;cursor:pointer;font-size:14px}button:hover{border-color:var(--acc)}
+button.on{border-color:var(--acc);color:var(--acc);background:#211d2b}
+.bar{display:flex;gap:6px;align-items:center;flex-wrap:wrap}.bar span{color:var(--mut);margin-right:4px}
+.top{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:16px}
+.box{background:var(--panel);border:1px solid var(--line);padding:12px}
+.stage canvas{image-rendering:pixelated;display:block;width:100%;height:auto;aspect-ratio:120/84;background:#060709}
+.slots{display:grid;gap:8px}.slot{display:grid;grid-template-columns:120px minmax(0,1fr);gap:8px;align-items:center}.slot b{color:var(--mut);font-weight:400;font-size:14px}
+.views{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:4px}
+.views div,.layers div{text-align:center;font-size:11px;color:var(--mut)}.views canvas,.layers canvas{image-rendering:pixelated;width:100%;height:auto;display:block;background:#171b21}
+.layers{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:6px}
+.layers .op{display:flex;align-items:center;justify-content:center;font-size:22px;color:var(--mut)}
+.note{color:var(--mut);font-size:14px;margin:8px 0 0}.note b{color:var(--txt)}
+section{margin-top:16px}
+@media(max-width:1000px){.top{grid-template-columns:1fr}.views{grid-template-columns:repeat(4,minmax(0,1fr))}.slot{grid-template-columns:1fr}}
+</style></head><body>
+<header><h1>LE TYRIEN · ÉQUIPEMENT VISIBLE</h1>
+<p>Démonstration avant implémentation : chaque emplacement visible de la fiche d’équipement ajoute une couche qui n’habille que sa partie du corps. Le plastron de fer ne change que la poitrine, les grèves que les jambes, etc. Toutes les combinaisons restent cohérentes, de face comme de dos. L’anneau et l’emplacement de minage n’ont pas de couche (trop petit, et le lance-pitons est déjà dessiné).</p></header>
+<main>
+<div class="top">
+ <div class="box"><div class="bar" style="margin-bottom:8px"><span>Scène :</span><button data-mode="pivot" class="on">Pivot</button><button data-mode="ronde">Ronde autour de l’Ancre</button><button data-mode="jeu">Vue du jeu (¾, retournée)</button><button id="pause">Pause</button></div>
+  <div class="stage"><canvas id="scene" width="120" height="84"></canvas></div></div>
+ <div class="box"><h2>Équipement</h2><div class="bar" style="margin-bottom:10px"><span>Ensembles :</span><span id="presets" class="bar" style="margin:0"></span></div><div class="slots" id="slots"></div></div>
+</div>
+<section class="box"><h2>Sous toutes les coutures</h2><div class="bar" style="margin-bottom:8px"><span>Taille :</span><button data-res="1" class="on">Gabarit ×1</button><button data-res=".5">Jeu ×0,5</button></div><div class="views" id="views"></div></section>
+<section class="box"><h2>Ce que le jeu empilerait (vue du jeu, taille réelle)</h2><div class="layers" id="layers"></div>
+<p class="note"><b>Principe :</b> le corps nu est une planche de sprites ; chaque pièce est une autre planche, dessinée avec le corps en place, donc déjà masquée là où un bras ou la tête passe devant elle. En jeu, Godot superpose la base et les pièces portées, puis trace le contour noir sur l’ensemble. Une pièce = un jeu de planches par animation (repos, marche, à genoux, creusement, méditation, visée), pas une planche par combinaison.</p></section>
+</main>
+<script src="assets/decor.js?v=6"></script><script src="assets/units.js?v=10"></script><script src="assets/engineer-volume.js?v=2"></script>
+<script>
+'use strict';
+const TYR={id:'tyr',seed:88,hair:'bun',top:{type:'tunic',ramp:PAL.bone,hemY:30},feet:{type:'sandals',ramp:PAL.leath},belt:{ramp:PAL.rope,y:37,h:1.8,braid:1},bracers:1};
+const SLOTS=Object.keys(GEAR);
+const PRESETS=[['Sans équipement',{}],['Plastron de fer seul',{chest:'iron'}],['Gardien de fer',{head:'helm',chest:'iron',hands:'gauntlets',feet:'greaves',lhand:'shield',rhand:'blade'}],
+ ['Forgeron',{chest:'leather',hands:'gloves',feet:'boots',rhand:'hammer'}],['Explorateur',{head:'hood',eye:'lens',back:'pack',feet:'boots',lhand:'lantern'}],['Pèlerin tyrien',{head:'circlet',chest:'mail',back:'cape'}]];
+let gear={chest:'iron'},mode='pivot',res=1,paused=false,t=0,last;
+const DIRS=[0,45,90,135,180,225,270,315],DN=['Face','¾ face','Profil','¾ dos','Dos','¾ dos (g.)','Profil (g.)','¾ face (g.)'];
+const sig=()=>SLOTS.map(s=>gear[s]||'').join(',');
+const FC=new Map();
+function render(g,m,deg,fr,k){const F=new Fig(Math.ceil(80*k),Math.ceil(84*k),k,40*k,80*k,deg*Math.PI/180);drawFigure(F,{...TYR,gear:g},pose(m,fr/12));return F}
+function figure(m,deg,fr,k){const key=sig()+'|'+m+'|'+deg+'|'+fr+'|'+k;let c=FC.get(key);if(!c){c=render(gear,m,deg,fr,k).finish();FC.set(key,c)}return c}
+
+// ---------- interface ----------
+const slotsEl=document.getElementById('slots');
+function syncButtons(){document.querySelectorAll('[data-slot]').forEach(b=>b.classList.toggle('on',(gear[b.dataset.slot]||'')===b.dataset.v));
+ document.querySelectorAll('[data-preset]').forEach(b=>{const p=PRESETS[+b.dataset.preset][1];b.classList.toggle('on',SLOTS.every(s=>(p[s]||'')===(gear[s]||'')))})}
+for(const s of SLOTS){const row=document.createElement('div');row.className='slot';row.innerHTML=`<b>${GEAR[s].label}</b><div class="bar">${GEAR[s].opts.map(([v,l])=>`<button data-slot="${s}" data-v="${v}">${l}</button>`).join('')}</div>`;slotsEl.append(row)}
+PRESETS.forEach(([n],i)=>{const b=document.createElement('button');b.textContent=n;b.dataset.preset=i;document.getElementById('presets').append(b)});
+document.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;
+ if(b.dataset.slot){gear={...gear,[b.dataset.slot]:b.dataset.v};if(!b.dataset.v)delete gear[b.dataset.slot];changed()}
+ else if(b.dataset.preset){gear={...PRESETS[+b.dataset.preset][1]};changed()}
+ else if(b.dataset.mode){mode=b.dataset.mode;document.querySelectorAll('[data-mode]').forEach(x=>x.classList.toggle('on',x===b))}
+ else if(b.dataset.res){res=+b.dataset.res;document.querySelectorAll('[data-res]').forEach(x=>x.classList.toggle('on',x===b));lastV=''}
+ else if(b.id==='pause'){paused=!paused;b.textContent=paused?'Lecture':'Pause'}});
+const views=DIRS.map((d,i)=>{const div=document.createElement('div'),c=document.createElement('canvas');div.append(c,DN[i]);document.getElementById('views').append(div);return c});
+let lastV='';
+function changed(){syncButtons();lastV='';buildLayers()}
+
+// ---------- calques de la vue du jeu ----------
+function layerCanvas(F,ids,label){const c=document.createElement('canvas');c.width=F.w;c.height=F.h;const g=c.getContext('2d'),img=g.createImageData(F.w,F.h),d=new Uint32Array(img.data.buffer);
+ for(let i=0;i<F.w*F.h;i++)if(F.z[i]>-1e8&&ids(F.pid[i]))d[i]=F.col[i];g.putImageData(img,0,0);return c}
+function tile(c,label,sc=3){const div=document.createElement('div'),v=document.createElement('canvas');v.width=c.width*sc;v.height=c.height*sc;const g=v.getContext('2d');g.imageSmoothingEnabled=false;g.drawImage(c,0,0,v.width,v.height);div.append(v,label);return div}
+function buildLayers(){const el=document.getElementById('layers');el.innerHTML='';const k=.5,F=render(gear,'idle',45,0,k),op=s=>{const d=document.createElement('div');d.className='op';d.textContent=s;el.append(d)};
+ const B=render({},'idle',45,0,k);el.append(tile(layerCanvas(B,()=>true),'Corps (base)'));
+ for(const s of SLOTS){if(!gear[s])continue;op('+');el.append(tile(layerCanvas(F,p=>p===GEAR[s].id),GEAR[s].label+' · '+GEAR[s].opts.find(o=>o[0]===gear[s])[1]))}
+ op('=');el.append(tile(F.finish(),'Résultat en jeu'));const m=F.finish(),mc=document.createElement('canvas');mc.width=m.width;mc.height=m.height;const g=mc.getContext('2d');g.translate(m.width,0);g.scale(-1,1);g.drawImage(m,0,0);el.append(tile(mc,'Retourné (vers la gauche)'))}
+
+// ---------- scène et vues ----------
+function drawScene(){const g=document.getElementById('scene').getContext('2d'),k=.5;g.imageSmoothingEnabled=false;g.drawImage(FLOOR,0,0);let fx,fy,deg,fm,fr,flip=false;
+ if(mode==='ronde'){const sp=.38,u=t*sp,ex=29,ey=13;fx=AX+Math.cos(u)*ex;fy=PBY+2+Math.sin(u)*ey;deg=((Math.round((Math.atan2(-Math.sin(u)*ex,Math.cos(u)*ey)*180/Math.PI)/22.5)*22.5)+360)%360;fm='walk';fr=Math.floor(t*sp*Math.hypot(ex,ey)*.92/14*12)%12}
+ else if(mode==='jeu'){const p=(t*.16)%2,a=p<1?p:2-p;fx=24+a*30;fy=72;flip=p>=1;deg=45;fm=(p%1)<.08||(p%1)>.92?'idle':'walk';fr=fm==='walk'?Math.floor(t*10)%12:Math.floor(t*5)%12}
+ else{fx=50;fy=70;deg=DIRS[Math.floor(t/1.1)%8];fm='idle';fr=Math.floor(t*5)%12}
+ const f=figure(fm,deg,fr,k),X=Math.round(fx),Y=Math.round(fy),df=()=>{shadowAt(g,X,Y,k);if(flip){g.save();g.translate(X,0);g.scale(-1,1);g.drawImage(f,-20,Y-40);g.restore()}else g.drawImage(f,X-20,Y-40)},da=()=>{g.drawImage(PED,0,0);orb(g,t)};
+ if(Y<PBY){df();da()}else{da();df()}}
+function drawViews(){const k=res,fm=mode==='ronde'?'walk':'idle',fr=mode==='ronde'?Math.floor(t*10)%12:Math.floor(t*5)%12,key=sig()+fm+fr+k;if(key===lastV)return;lastV=key;
+ views.forEach((c,i)=>{const f=figure(fm,DIRS[i],fr,k);if(c.width!==f.width){c.width=f.width;c.height=f.height}const g=c.getContext('2d');g.clearRect(0,0,c.width,c.height);g.drawImage(f,0,0)})}
+function loop(now){const dt=last===undefined?0:Math.min((now-last)/1000,.1);last=now;if(!paused)t+=dt;drawScene();drawViews();requestAnimationFrame(loop)}
+changed();requestAnimationFrame(loop);
+</script></body></html>

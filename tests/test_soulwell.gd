@@ -6,6 +6,7 @@ extends "res://tests/econ_case.gd"
 func test_passive_healing_range_and_limits() -> void:
 	var sim := game()
 	var well := built("soulwell", -30.0, -104.0)
+	staff(sim, well, 1)
 	var near := sim.spawn("Archer", well.x + 8.0, well.z, "archer")
 	var edge := sim.spawn("Archer", well.x, well.z + 12.0, "archer")
 	var far := sim.spawn("Archer", well.x + 9.0, well.z + 9.0, "archer")
@@ -32,6 +33,7 @@ func test_passive_healing_range_and_limits() -> void:
 func test_fallen_and_revive() -> void:
 	var sim := game()
 	var well := built("soulwell", -30.0, -104.0)
+	staff(sim, well, 1)
 	var a := sim.spawn("Adepte archer", 0.0, -120.0, "archer")
 	a.level = 3
 	a.xp = 40.0
@@ -57,6 +59,7 @@ func test_fallen_and_revive() -> void:
 func test_revive_actions_list() -> void:
 	var sim := game()
 	var well := built("soulwell", -30.0, -104.0)
+	staff(sim, well, 1)
 	for i in 11:
 		var a := sim.spawn("Adepte de Sigil", 0.0, -120.0, "sigil")
 		a.hp = 0.0
@@ -72,7 +75,7 @@ func test_revive_cost_by_recruitment_and_level() -> void:
 	game()
 	for role: String in ["sigil", "aether", "medeina", "indra", "archer", "flammes", "lame", "shooter", "paladin", "healer"]:
 		var u := Unit.create(100, role, 0, -120, role)
-		var base := 50 if Catalog.DEITY_RES.has(role) else (100 if Catalog.ADEPT.has(role) else 400)
+		var base := 10 if Catalog.DEITY_RES.has(role) else (100 if Catalog.ADEPT.has(role) else 400)
 		for level in [1, 2, 5]:
 			u.level = level
 			check_eq(Catalog.revive_cost(u), {"vie": base * level}, "%s niveau %d" % [role, level])
@@ -81,6 +84,7 @@ func test_revive_cost_by_recruitment_and_level() -> void:
 func test_affordability_is_individual_and_payment_exact() -> void:
 	var sim := game()
 	var well := built("soulwell", -30, -104)
+	staff(sim, well, 1)
 	var a := sim.spawn("Adepte de Sigil", 0, -120, "sigil")
 	var b := sim.spawn("Archer", 0, -120, "archer")
 	a.level = 2
@@ -88,15 +92,15 @@ func test_affordability_is_individual_and_payment_exact() -> void:
 	for u: Unit in [a, b]:
 		u.hp = 0
 		sim.on_unit_death(u)
-	GameState.res["vie"] = 100
+	GameState.res["vie"] = 20
 	GameState.hud_building = well
 	GameState.selected.clear()
 	var actions := HudModel.panel_actions(sim).filter(func(action: Dictionary) -> bool: return action["id"].begins_with("revive-"))
 	check(actions[0]["disabled"], "archer 300 Vie indisponible")
-	check(not actions[1]["disabled"], "adepte 100 Vie disponible")
-	check(actions[1]["title"].contains("100 Vie"), "coût individuel dans infobulle")
+	check(not actions[1]["disabled"], "adepte 20 Vie disponible")
+	check(actions[1]["title"].contains("20 Vie"), "coût individuel dans infobulle")
 	sim.revive_unit(well, b)
-	check_eq(GameState.res["vie"], 100, "échec sans paiement partiel")
+	check_eq(GameState.res["vie"], 20, "échec sans paiement partiel")
 	sim.revive_unit(well, a)
 	check_eq(GameState.res["vie"], 0, "paiement exact")
 	check(a.alive() and GameState.fallen.has(b), "seule unité abordable ressuscitée")
@@ -108,6 +112,7 @@ func test_affordability_is_individual_and_payment_exact() -> void:
 func test_heal_and_revive_fx_markers() -> void:
 	var sim := game()
 	var well := built("soulwell", -30.0, -104.0)
+	staff(sim, well, 1)
 	var near := sim.spawn("Archer", well.x + 6.0, well.z, "archer")
 	var full := sim.spawn("Archer", well.x - 6.0, well.z, "archer")
 	near.hp = near.max_hp - 20.0

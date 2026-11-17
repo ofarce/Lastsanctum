@@ -1,14 +1,14 @@
 extends "res://tests/econ_case.gd"
-## Étape 7 (v2) : invocation d'adepte au temple (50 de la ressource du dieu, portail divin actif 3,5 s) et prière
+## Étape 7 (v2) : invocation d'adepte au temple (10 de la ressource du dieu, portail divin actif 3,5 s) et prière
 ## (+1 par seconde et par adepte, popup « +5 » toutes les 5 s), comme dans buildings.js et adepts.js (73b410f).
 
 
 func test_summon_adept() -> void:
 	var sim := game()
 	var t := built("sigil", -26.0, -118.0)
-	GameState.res["savoir"] = 60.0
+	GameState.res["savoir"] = 10.0
 	sim.summon_adept(t)
-	check_near(GameState.res["savoir"], 10.0, 1e-9, "50 Savoir payés")
+	check_near(GameState.res["savoir"], 0.0, 1e-9, "10 Savoir payés")
 	var a: Unit = GameState.units[-1]
 	check_eq(a.role, "sigil", "adepte de Sigil")
 	check_eq(a.max_hp, 90.0, "PV d'un adepte de Sigil")
@@ -19,7 +19,7 @@ func test_summon_adept() -> void:
 	run(sim, 3.6)
 	check(not GameState.deity_active["sigil"], "portail refermé après 3,5 s")
 	sim.summon_adept(t)
-	check_eq(GameState.units.size(), 2, "10 Savoir : invocation refusée")
+	check_eq(GameState.units.size(), 2, "Solde insuffisant : invocation refusée")
 
 
 func test_prayer_income_and_popups() -> void:
@@ -39,7 +39,7 @@ func test_prayer_income_and_popups() -> void:
 	check(not GameState.pray_popups.is_empty(), "popup « +5 » (cumul de prière du temple ≥ 5 s)")
 	check_eq(GameState.pray_popups[0]["res"], "savoir", "ressource du popup")
 	# prayerSpot : rangées de 5, à 2 unités d'écart, devant le temple.
-	check_eq(sim.prayer_spot(adepts[1], t), Vector2(-26.0 - 4.0 + 2.0, -118.0 + 6.0 + 1.0), "place du 2e adepte")
+	check_eq(sim.prayer_spot(adepts[1], t), Vector2(-26.0 - 4.0 + 2.0, -118.0 + t.half() + 1.0), "place du 2e adepte")
 
 
 func test_prayer_only_at_own_temple() -> void:
@@ -75,7 +75,7 @@ func test_engineer_meditates_at_temple() -> void:
 	e.z = spot.y
 	sim.tick(DT)
 	check(e.working and e.job.has("since"), "médite dès l'arrivée")
-	check_eq(Simulation.resource_rates()["vie"], 1 * int(GameState.orb_active) + 5, "+5 Vie par seconde")
+	check_eq(Simulation.resource_rates()["vie"], 5, "+5 Vie par seconde")
 	var v0: float = GameState.res["vie"]
 	run(sim, Simulation.MEDITATE_SETTLE - 0.1)
 	check_near(GameState.res["vie"], v0 + (Simulation.MEDITATE_SETTLE - 0.1) * (1.0 if GameState.orb_active else 0.0), 0.2, "rien pendant l'assise")

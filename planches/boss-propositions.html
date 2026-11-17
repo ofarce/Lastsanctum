@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Premier boss</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0c0d10;--panel:#14161b;--line:#2c3038;--txt:#e2dccb;--mut:#9a9ca2;--acc:#d84a3a;--gold:#d0a038}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--txt);font:15px/1.45 'Pixelify Sans',system-ui,sans-serif}
+header,main{max-width:1240px;margin:auto;padding:18px 16px}h1{margin:0;font-weight:600;letter-spacing:.08em;font-size:26px;color:var(--acc)}
+.intro{display:grid;grid-template-columns:160px minmax(0,1fr);gap:18px;align-items:start;margin-top:10px}
+.intro img{width:100%;border:1px solid var(--line);display:block}.intro p{color:var(--mut);margin:0 0 8px;max-width:900px}.intro b{color:var(--txt);font-weight:600}
+button{font:inherit;color:var(--txt);background:#1c1f26;border:1px solid var(--line);padding:6px 12px;cursor:pointer}button:hover,button[aria-pressed=true]{border-color:var(--acc);background:#2a1a1a}
+.bar{display:flex;gap:8px;align-items:center;margin-top:12px;flex-wrap:wrap}
+figure{margin:0 0 22px;background:var(--panel);border:1px solid var(--line);min-width:0}
+canvas{image-rendering:pixelated;display:block;width:100%;height:auto}
+.row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.25fr)}
+.big{background:#07080a;border-right:1px solid var(--line)}
+.side{display:flex;flex-direction:column;min-width:0}
+.game{background:#07080a;padding:6px;border-bottom:1px solid var(--line)}.game small,.big small{display:block;color:var(--mut);font-size:12px;padding:4px 6px}
+figcaption{padding:10px 14px 14px}figcaption b{color:var(--acc);font-weight:600;font-size:19px}figcaption i{display:block;font-style:normal;color:var(--gold);font-size:13px;letter-spacing:.06em;margin-top:2px}
+figcaption p{margin:6px 0 0;color:var(--mut);font-size:14px}figcaption ul{margin:8px 0 0;padding-left:18px;font-size:14px}figcaption li{margin:2px 0}figcaption li span{color:var(--acc)}
+.sw{display:flex;gap:3px;margin-top:8px;flex-wrap:wrap}.sw div{display:flex}.sw span{width:12px;height:14px;display:block}
+.hpbar{margin:10px 0 0;padding:6px 8px;background:#0b0b0e;border:1px solid #3a2224}.hpbar .n{display:flex;justify-content:space-between;font-size:13px}.hpbar .n em{color:var(--mut);font-style:normal;font-size:12px}
+.hpbar .g{height:9px;margin-top:4px;background:#24100f;display:grid;grid-template-columns:repeat(20,1fr);gap:1px;padding:1px}.hpbar .g i{background:#b41c20}.hpbar .g i.p{background:#5a0c10}
+.hpbar .g i:nth-child(10){box-shadow:2px 0 0 #f0cc66}
+@media(max-width:860px){.row{grid-template-columns:1fr}.big{border-right:0;border-bottom:1px solid var(--line)}.intro{grid-template-columns:110px minmax(0,1fr)}}
+</style></head><body>
+<header><h1>PREMIER BOSS · 5 PROPOSITIONS</h1>
+<div class="intro"><img src="assets/boss/inspiration.webp" alt="Image d’inspiration : femme aux cornes, larmes de sang, doigt sur les lèvres">
+<div><p>Humanoïde, <b>deux fois la taille d’un humain</b> : ~76 px de haut contre ~38 pour l’Ingénieur. Repris de l’inspiration : cornes, cheveux pâles, front fendu de rouge, larmes de sang, glyphes d’or sur une cape sombre, main tatouée portée aux lèvres.</p>
+<p>Ça colle à la charte sans rien forcer : <b>le carmin marque la Bête, l’or le Credo</b>. Le boss appartient donc naturellement au <b>Credo souillé</b>, comme le Fanatique et le Thuriféraire. Ni cyan (Exilés), ni pourpre (Ancre).</p>
+<p>À gauche, détail ×4 (repos puis attaque signature, en boucle). À droite, la même image <b>à l’échelle du jeu</b>, à côté de l’Ingénieur, d’un soldat d’Indra, d’un Fanatique et d’un Soldat du Credo. Les mécaniques sont des pistes à valider.</p>
+<div class="bar"><button id="m-cycle" aria-pressed="true">Repos → attaque</button><button id="m-idle">Repos</button><button id="m-atk">Attaque</button><button id="pause">Pause</button></div></div></div></header>
+<main id="list"></main>
+<script src="assets/boss/boss-planches.js?v=3"></script>
+<script>
+'use strict';
+const {PROPS,PAL,render,ground,shadow,W,H,CX,FY}=Boss;
+const refs={};['ingenieur','lame','creep','soldier'].forEach(n=>{const i=new Image();i.src='assets/boss/'+n+'.png';refs[n]=i});
+const GW=240,GH=118,GB=108;
+const list=document.getElementById('list'),cards=[];
+PROPS.forEach((p,i)=>{const f=document.createElement('figure');
+ const sw=p.sw.map(k=>`<div title="${k}">${PAL[k].map(c=>`<span style="background:${c}"></span>`).join('')}</div>`).join('');
+ const seg=Array.from({length:20},(_,k)=>`<i class="${k>=13?'p':''}"></i>`).join('');
+ f.innerHTML=`<div class="row"><div class="big"><small>Détail ×4</small><canvas width="${W}" height="${H}"></canvas></div><div class="side">
+ <div class="game"><small>À l’échelle du jeu : Ingénieur, soldat d’Indra, Fanatique, Soldat du Credo, le boss</small><canvas width="${GW}" height="${GH}"></canvas></div>
+ <figcaption><b>${p.name}</b><i>${p.title}</i><p>${p.desc}</p><ul>${p.pts.map(x=>`<li>${x}</li>`).join('')}</ul>
+ <div class="sw">${sw}</div>
+ <div class="hpbar"><div class="n"><span>${p.name.replace(/^\d · /,'')}</span><em>${p.title}</em></div><div class="g">${seg}</div></div></figcaption></div></div>`;
+ list.appendChild(f);const[c1,c2]=f.querySelectorAll('canvas');cards.push({p,c1,c2,g1:ground(W,H,i*7+1),g2:ground(GW,GH,i*7+3)})});
+let mode='cycle',paused=false,t0=performance.now(),tp=0;
+const btn={cycle:'m-cycle',idle:'m-idle',atk:'m-atk'};
+for(const[m,id]of Object.entries(btn))document.getElementById(id).onclick=()=>{mode=m;for(const[k,j]of Object.entries(btn))document.getElementById(j).setAttribute('aria-pressed',k===m)};
+document.getElementById('pause').onclick=e=>{paused=!paused;e.target.textContent=paused?'Lecture':'Pause'};
+const CYC=4.6,ATK=1.7;
+function frame(now){if(!paused)tp+=(now-t0)/1000;t0=now;const t=Math.floor(tp*12)/12;
+ let a=null;if(mode==='atk')a=(t%ATK)/ATK;else if(mode==='cycle'){const u=t%CYC;if(u>CYC-ATK)a=(u-(CYC-ATK))/ATK}
+ for(const c of cards){const spr=render(c.p,t,a),lf=spr.lift||0;
+  const g=c.c1.getContext('2d');g.drawImage(c.g1,0,0);shadow(g,CX,FY,20-lf*.8,4.5-lf*.15);g.drawImage(spr,0,0);
+  const h=c.c2.getContext('2d');h.drawImage(c.g2,0,0);
+  const put=(img,x)=>{if(!img.complete||!img.width)return;shadow(h,x,GB,img.width*.42,2.2);h.drawImage(img,Math.round(x-img.width/2),GB-img.height+1)};
+  put(refs.ingenieur,26);put(refs.lame,56);put(refs.creep,86);put(refs.soldier,112);
+  const bx=178;shadow(h,bx,GB,20-lf*.8,4.5-lf*.15);h.drawImage(spr,bx-CX,GB-FY)}
+ requestAnimationFrame(frame)}
+requestAnimationFrame(frame);
+</script></body></html>

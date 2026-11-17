@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="fr">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Strazhar à quatre pattes</title>
+<style>
+:root{color-scheme:dark;--bg:#0e1219;--panel:#161d28;--line:#343e4e;--text:#e8dfca;--muted:#a3abb8;--gold:#e0b966;--fore:#f0cc66;--hind:#c85048}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px/1.5 system-ui,sans-serif}
+main{max-width:1320px;margin:auto;padding:26px 28px 40px}
+small{color:var(--gold);text-transform:uppercase;letter-spacing:.16em;font-size:11px}
+h1{font:normal 34px Georgia,serif;margin:4px 0 6px}p{color:var(--muted);margin:4px 0}
+.controls{position:sticky;top:0;z-index:2;display:flex;flex-wrap:wrap;gap:14px;align-items:center;margin:18px 0 6px;padding:12px 14px;background:#141a24f2;border:1px solid var(--line)}
+button,select{font:inherit;background:#222a37;color:var(--text);border:1px solid #6e5f42;padding:6px 11px;cursor:pointer;border-radius:3px}
+label{display:flex;gap:7px;align-items:center}input{accent-color:var(--gold)}
+.legend{display:flex;gap:14px;margin-left:auto;font-size:12px;color:var(--muted)}.legend i{display:inline-block;width:10px;height:10px;margin-right:5px;vertical-align:-1px}
+article{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);gap:18px;margin-top:18px;padding:18px;background:var(--panel);border:1px solid var(--line)}
+header h2{font:normal 25px Georgia,serif;margin:0}header h2 span{color:var(--gold);margin-right:8px}header em{display:block;font-style:normal;color:var(--gold);font-size:12px;letter-spacing:.08em;text-transform:uppercase}
+header p{margin-top:6px}
+canvas{display:block;width:100%;image-rendering:pixelated;background:#1b2230}
+.lab{grid-row:span 2}.tag{font-size:12px;color:var(--muted);margin:6px 0 4px}
+.rhythm{margin-top:10px}.strip{display:grid;grid-template-columns:repeat(6,1fr);gap:4px;margin-top:6px}
+.strip figure{margin:0}.strip figcaption{font-size:11px;color:var(--muted);text-align:center}
+output{font-size:12px;color:#e6c781}
+.foot{font-size:12px;margin-top:22px}
+@media(max-width:880px){article{grid-template-columns:1fr}.lab{grid-row:auto}main{padding:16px}.legend{margin-left:0}}
+</style></head>
+<body><main>
+<small>Exiles Defense · Ennemis · Étude de déplacement</small>
+<h1>Strazhar à quatre pattes</h1>
+<p>Cinq allures pour le champion de Byrsa, qui se déplace comme un gorille enragé. Elles suivent toutes le même rythme : les deux poings se posent ensemble, puis les deux pieds. Le Strazhar garde son équipement : épée au fourreau et bouclier solaire sanglés sur le dos, cape bordeaux, couronne et halo. Pixel art au format des ennemis du jeu, avec la même palette, le même contour noir et la même échelle.</p>
+<div class="controls">
+ <button id="play">Pause</button><button id="step">+ 1 image</button>
+ <label>Vitesse <select id="speed"><option value=".25">× 0,25</option><option value=".5">× 0,5</option><option value="1" selected>× 1</option></select></label>
+ <label><input type="checkbox" id="marks" checked> Repères d’appui</label>
+ <label><input type="checkbox" id="flip"> Vers la gauche</label>
+ <span class="legend"><span><i style="background:var(--fore)"></i>Poings</span><span><i style="background:var(--hind)"></i>Pieds</span></span>
+</div>
+<div id="cards"></div>
+<p class="foot">Les sprites sont dessinés par programme avec le kit des ennemis (<code>ennemis/project-unit-kit.js</code>), dans un cadre de 68 × 48 px. Dans la scène, les deux Strazhar sont à l’échelle 1:1 du jeu, grossis ×2 : à gauche le quadrupède, à droite le Strazhar debout actuel pour comparer la taille. Rien n’est encore intégré dans Godot.</p>
+</main>
+<script src="assets/decor.js"></script>
+<script src="ennemis/project-unit-kit.js"></script>
+<script src="ennemis/strazhar-quadrupede-v3.js"></script>
+<script>
+'use strict';
+(()=>{
+const {VARIANTS,FRAMES,NW,NH,ground,get}=StrazharQuad,$=id=>document.getElementById(id);
+const LAB=5,SCW=200,SCH=84,KEYS=[0,4,8,12,16,20];
+let time=0,playing=!matchMedia('(prefers-reduced-motion: reduce)').matches,last=0,ready=false;const img={};
+$('play').textContent=playing?'Pause':'Lecture';
+for(const v of VARIANTS){
+ const a=document.createElement('article');
+ a.innerHTML=`<div class="lab"><header><em>${v.sub}</em><h2><span>${v.num}</span>${v.name}</h2><p>${v.desc}</p></header>
+  <p class="tag">Inspection ×${LAB}</p><canvas class="big" width="${NW*LAB}" height="${NH*LAB}" aria-label="${v.name}, inspection agrandie"></canvas>
+  <canvas class="rhythm" width="${NW*LAB}" height="46" aria-label="${v.name}, rythme des appuis"></canvas><output></output></div>
+  <div><p class="tag">Sur le terrain, échelle du jeu ×2</p><canvas class="scene" width="${SCW*2}" height="${SCH*2}" aria-label="${v.name}, traversée du terrain"></canvas></div>
+  <div><p class="tag">Poses clés</p><div class="strip">${KEYS.map((f,i)=>`<figure><canvas width="${NW*2}" height="${NH*2}" aria-label="${v.name}, pose ${i+1}"></canvas><figcaption>${['Poings posés','Bascule','Transfert','Pieds posés','Poussée','Relance'][i]}</figcaption></figure>`).join('')}</div></div>`;
+ $('cards').append(a);
+ v.big=a.querySelector('.big');v.rh=a.querySelector('.rhythm');v.sc=a.querySelector('.scene');v.out=a.querySelector('output');v.strip=[...a.querySelectorAll('.strip canvas')];
+ v.buf=document.createElement('canvas');v.buf.width=SCW;v.buf.height=SCH;
+}
+function blit(g,c,x,y,k,flip){g.save();g.imageSmoothingEnabled=false;if(flip){g.translate(x+NW*k,y);g.scale(-1,1);g.drawImage(c,0,0,NW*k,NH*k)}else g.drawImage(c,x,y,NW*k,NH*k);g.restore()}
+function marks(g,contacts,k,ox,oy,flip,all){
+ for(const c of contacts){if(!c.planted&&!all)continue;const x=flip?ox+(NW-c.x)*k:ox+c.x*k,y=oy+c.y*k;
+  g.fillStyle=c.kind==='fore'?'#f0cc66':'#c85048';g.globalAlpha=c.planted?(c.far?.55:1):.25;g.fillRect(Math.round(x-k*1.5),Math.round(y+k*.6),Math.round(k*3),Math.max(2,Math.round(k*.6)))}
+ g.globalAlpha=1;
+}
+function drawBig(v,f){
+ const g=v.big.getContext('2d'),W=v.big.width,H=v.big.height,flip=$('flip').checked,fr=get(v,f);
+ g.fillStyle='#1b2230';g.fillRect(0,0,W,H);
+ g.fillStyle='#262f3f';g.fillRect(0,(ground+1)*LAB,W,H);g.fillStyle='#3a4458';g.fillRect(0,(ground+1)*LAB,W,2);
+ for(let x=0;x<W;x+=LAB*8){g.fillStyle='#2e3849';g.fillRect((x-(time/v.dur*v.stride/2*LAB)%(LAB*8)+LAB*8)%W,(ground+1)*LAB+2,LAB*3,LAB)}
+ blit(g,fr.canvas,0,0,LAB,flip);
+ if($('marks').checked)marks(g,fr.contacts,LAB,0,0,flip,false);
+}
+function drawRhythm(v,q){
+ const g=v.rh.getContext('2d'),W=v.rh.width;g.clearRect(0,0,W,46);g.font='11px system-ui';
+ const lanes=[['Poings',v.fore,'#f0cc66'],['Pieds',v.hind,'#c85048']],x0=56,w=W-x0-6;
+ lanes.forEach(([name,[s,len],col],i)=>{const y=6+i*19;g.fillStyle='#232b39';g.fillRect(x0,y,w,13);g.fillStyle=col;
+  for(const o of[-1,0]){const a=x0+(s+o)*w,b=a+len*w;g.fillRect(Math.max(x0,a),y,Math.max(0,Math.min(x0+w,b)-Math.max(x0,a)),13)}
+  g.fillStyle='#a3abb8';g.fillText(name,4,y+11)});
+ g.fillStyle='#ffffff';g.fillRect(x0+q*w-1,2,2,42);
+}
+function drawScene(v,f){
+ const g=v.buf.getContext('2d'),flip=$('flip').checked;g.imageSmoothingEnabled=false;
+ const pat=g.createPattern(img.floor,'repeat');g.fillStyle=pat;g.fillRect(0,0,SCW,SCH);
+ g.fillStyle='#0a0f1a40';g.fillRect(0,0,SCW,SCH);
+ const speed=v.stride/2/v.dur,span=SCW+NW,travel=(time*speed)%span,x=flip?SCW-travel:travel-NW,y=SCH-NH-10;
+ g.fillStyle='#05081066';g.beginPath();g.ellipse(Math.round(x+NW*.5),y+ground+1,17,3,0,0,TAUc);g.fill();
+ blit(g,get(v,f).canvas,Math.round(x),y,1,flip);
+ // Strazhar debout actuel (image 1 de la marche), échelle identique
+ g.fillStyle='#05081066';g.beginPath();g.ellipse(SCW-24,SCH-12,9,2.5,0,0,TAUc);g.fill();
+ g.drawImage(img.ref,0,0,40,42,SCW-40,SCH-52,40,42);
+ const o=v.sc.getContext('2d');o.imageSmoothingEnabled=false;o.drawImage(v.buf,0,0,SCW*2,SCH*2);
+}
+const TAUc=Math.PI*2;
+function drawStrip(v){if(v.stripDone===$('flip').checked)return;v.stripDone=$('flip').checked;
+ v.strip.forEach((c,i)=>{const g=c.getContext('2d');g.fillStyle='#1b2230';g.fillRect(0,0,c.width,c.height);g.fillStyle='#262f3f';g.fillRect(0,(ground+1)*2,c.width,c.height);const fr=get(v,KEYS[i]);blit(g,fr.canvas,0,0,2,$('flip').checked);marks(g,fr.contacts,2,0,0,$('flip').checked,false)});}
+function render(){if(!ready)return;for(const v of VARIANTS){const q=(time/v.dur)%1,f=Math.floor(q*FRAMES)%FRAMES;drawBig(v,f);drawRhythm(v,q);drawScene(v,f);drawStrip(v);
+ v.out.textContent=`Cycle ${v.dur.toLocaleString('fr')} s · ${FRAMES} images · image ${f+1}/${FRAMES}`}}
+$('play').onclick=()=>{playing=!playing;$('play').textContent=playing?'Pause':'Lecture'};
+$('step').onclick=()=>{playing=false;$('play').textContent='Lecture';time+=1/24;render()};
+for(const id of['marks','flip'])$(id).onchange=()=>{VARIANTS.forEach(v=>v.stripDone=undefined);render()};
+function load(k,src){return new Promise((ok,ko)=>{const i=new Image();i.onload=()=>{img[k]=i;ok()};i.onerror=()=>ko(new Error(src));i.src=src})}
+Promise.all([load('floor','assets/strazhar-quadrupede/sol-ardoise.png'),load('ref','assets/strazhar-quadrupede/strazhar-debout-walk.png')]).then(()=>{ready=true;render()}).catch(e=>{document.querySelector('.foot').textContent='Erreur de chargement : '+e.message});
+function loop(now){const dt=last?Math.min((now-last)/1000,.06):0;last=now;if(playing){time+=dt*Number($('speed').value);render()}requestAnimationFrame(loop)}
+requestAnimationFrame(loop);
+})();
+</script>
+</body></html>

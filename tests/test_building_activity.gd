@@ -34,18 +34,19 @@ func test_income_rates_count_only_current_producers() -> void:
 	var u := Unit.create(100, "Prieur", 15, -130, "sigil")
 	u.job = {"type": "pray", "temple": temple}
 	GameState.units.append(u)
-	check_eq(Simulation.resource_rates()["savoir"], 1, "en déplacement : Ancre seule")
+	check_eq(Simulation.resource_rates()["savoir"], 0, "prieur en déplacement")
 	u.working = true
-	check_eq(Simulation.resource_rates()["savoir"], 2, "Ancre et prieur")
-	check_eq(HudModel.view(sim)["resource_rates"]["forge"], 1, "revenus transmis au HUD")
+	check_eq(Simulation.resource_rates()["savoir"], 1, "prieur au temple")
+	check_eq(HudModel.view(sim)["resource_rates"]["forge"], 0, "revenus transmis au HUD")
 	u.hp = 0
-	check_eq(Simulation.resource_rates()["savoir"], 1, "prieur mort exclu")
+	check_eq(Simulation.resource_rates()["savoir"], 0, "prieur mort exclu")
 
 
 func test_simultaneous_research_and_training_progress() -> void:
 	var sim := game()
 	give(1000)
 	var barracks := built("caserne", 15, -130)
+	ready_caserne(sim, barracks, 1)
 	sim.start_research(barracks, "mining_power")
 	sim.train_unit(barracks, "archer")
 	sim.update_buildings(3.0)
@@ -61,6 +62,32 @@ func test_simultaneous_research_and_training_progress() -> void:
 
 func test_strazhar_stats_applied_to_spawned_enemy() -> void:
 	var e := Enemy.make("strazhar", 0, -130, 0)
-	check_eq(e.hp, 450.0, "PV triplés")
-	check_eq(e.max_hp, 450.0, "PV maximum")
+	# Strazhar renforcé : 600 PV, 8 d'armure (au lieu de 450 et 6).
+	check_eq(e.hp, 600.0, "PV du Strazhar")
+	check_eq(e.max_hp, 600.0, "PV maximum")
 	check_near(e.speed, 8.4, 0.00001, "vitesse doublée")
+
+
+func test_creuset_recipe_indicator() -> void:
+	var sim := game()
+	var creuset := built("creuset", 15, -130)
+	sim.craft(creuset, "iron_shield")
+	creuset.craft = Simulation.Recipes.craft_time(creuset.type) * 0.5
+	var jobs := WorldOverlay.building_jobs(creuset)
+	check_eq(jobs, [{"icon": "shield", "progress": 0.5, "blocked": true, "stock": 0}], "bouclier en fabrication au Creuset")
+	creuset.input_box.append({"item": "iron_ingot", "quantity": 5})
+	check(WorldOverlay.building_jobs(creuset)[0]["blocked"], "poste vacant")
+	staff(sim, creuset)
+	check(not WorldOverlay.building_jobs(creuset)[0]["blocked"], "fabrication possible")
+	creuset.input_box.clear()
+	check(WorldOverlay.building_jobs(creuset)[0]["blocked"], "ingrédients manquants")
+	creuset.input_box.append({"item": "iron_ingot", "quantity": 5})
+	for i in Production.BOX_CAPACITY:
+		creuset.output_box.append({"item": "iron_shield", "quantity": Production.ItemStorage.MAX_STACK})
+	check(WorldOverlay.building_jobs(creuset)[0]["blocked"], "coffre de sortie plein")
+	creuset.output_box[0]["item"] = "iron_sword"
+	check_eq(WorldOverlay.building_jobs(creuset)[0]["stock"], (Production.BOX_CAPACITY - 1) * Production.ItemStorage.MAX_STACK, "seuls les boucliers du coffre rouge sont comptés")
+	creuset.output_box[1]["quantity"] -= 1
+	check(not WorldOverlay.building_jobs(creuset)[0]["blocked"], "place dans une pile")
+	sim.craft(creuset, "iron_shield")
+	check(WorldOverlay.building_jobs(creuset).is_empty(), "indicateur retiré à l’arrêt")

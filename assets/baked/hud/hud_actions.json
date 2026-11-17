@@ -986,9 +986,9 @@
      {
       "id": "b-library",
       "icon": "book",
-      "label": "Bibliothèque · 200",
+      "label": "Bibliothèque · 50",
       "key": "l",
-      "title": "Bibliothèque · 200 Savoir",
+      "title": "Bibliothèque · 50 Savoir",
       "disabled": false,
       "active": true,
       "cooldown": ""
@@ -996,9 +996,9 @@
      {
       "id": "b-forge",
       "icon": "hammer",
-      "label": "Forge · 200",
+      "label": "Forge · 50",
       "key": "f",
-      "title": "Forge · 200 Forge · nécessite un Temple d’Aether",
+      "title": "Forge · 50 Forge · nécessite un Temple d’Aether",
       "disabled": true,
       "active": false,
       "cooldown": ""
@@ -1006,9 +1006,9 @@
      {
       "id": "b-workshop",
       "icon": "repair",
-      "label": "Atelier · 200",
+      "label": "Atelier · 50",
       "key": "t",
-      "title": "Atelier · 200 Forge · nécessite un Temple d’Aether",
+      "title": "Atelier · 50 Forge · nécessite un Temple d’Aether",
       "disabled": true,
       "active": false,
       "cooldown": ""
@@ -1016,9 +1016,9 @@
      {
       "id": "b-bedroom",
       "icon": "people",
-      "label": "Chambre à coucher · 200",
+      "label": "Chambre à coucher · 50",
       "key": "n",
-      "title": "Chambre à coucher · 200 Vie · nécessite un Temple de Medeina · 2 × 2",
+      "title": "Chambre à coucher · 50 Vie · nécessite un Temple de Medeina · 2 × 2",
       "disabled": true,
       "active": false,
       "cooldown": ""
@@ -1026,9 +1026,9 @@
      {
       "id": "b-soulwell",
       "icon": "spirit",
-      "label": "Puits des Âmes · 200",
+      "label": "Puits des Âmes · 50",
       "key": "u",
-      "title": "Puits des Âmes · 200 Vie · nécessite un Temple de Medeina · 2 × 2",
+      "title": "Puits des Âmes · 50 Vie · nécessite un Temple de Medeina · 2 × 2",
       "disabled": true,
       "active": false,
       "cooldown": ""
@@ -1036,9 +1036,9 @@
      {
       "id": "b-caserne",
       "icon": "shield",
-      "label": "Caserne · 200",
+      "label": "Caserne · 50",
       "key": "c",
-      "title": "Caserne · 200 Discipline · nécessite un Temple d’Indra",
+      "title": "Caserne · 50 Discipline · nécessite un Temple d’Indra",
       "disabled": true,
       "active": false,
       "cooldown": ""
@@ -1067,7 +1067,7 @@
     "health_text": "140 / 140",
     "health_pct": 100,
     "health_label": "Points de vie",
-    "status": "Placez : Bibliothèque · 200 Savoir",
+    "status": "Placez : Bibliothèque · 50 Savoir",
     "damage": "80",
     "armor": "0",
     "speed": "15,2",
@@ -1125,9 +1125,9 @@
      {
       "id": "b-library",
       "icon": "book",
-      "label": "Bibliothèque · 200",
+      "label": "Bibliothèque · 50",
       "key": "l",
-      "title": "Bibliothèque · 200 Savoir · nécessite un Temple de Sigil",
+      "title": "Bibliothèque · 50 Savoir · nécessite un Temple de Sigil",
       "disabled": true,
       "active": false,
       "cooldown": ""
@@ -1135,9 +1135,9 @@
      {
       "id": "b-forge",
       "icon": "hammer",
-      "label": "Forge · 200",
+      "label": "Forge · 50",
       "key": "f",
-      "title": "Forge · 200 Forge · nécessite un Temple d’Aether",
+      "title": "Forge · 50 Forge · nécessite un Temple d’Aether",
       "disabled": true,
       "active": false,
       "cooldown": ""
@@ -1145,9 +1145,9 @@
      {
       "id": "b-workshop",
       "icon": "repair",
-      "label": "Atelier · 200",
+      "label": "Atelier · 50",
       "key": "t",
-      "title": "Atelier · 200 Forge · nécessite un Temple d’Aether",
+      "title": "Atelier · 50 Forge · nécessite un Temple d’Aether",
       "disabled": true,
       "active": false,
       "cooldown": ""
@@ -1155,9 +1155,9 @@
      {
       "id": "b-bedroom",
       "icon": "people",
-      "label": "Chambre à coucher · 200",
+      "label": "Chambre à coucher · 50",
       "key": "n",
-      "title": "Chambre à coucher · 200 Vie · nécessite un Temple de Medeina · 2 × 2",
+      "title": "Chambre à coucher · 50 Vie · nécessite un Temple de Medeina · 2 × 2",
       "disabled": true,
       "active": false,
       "cooldown": ""
@@ -1165,9 +1165,9 @@
      {
       "id": "b-soulwell",
       "icon": "spirit",
-      "label": "Puits des Âmes · 200",
+      "label": "Puits des Âmes · 50",
       "key": "u",
-      "title": "Puits des Âmes · 200 Vie · nécessite un Temple de Medeina · 2 × 2",
+      "title": "Puits des Âmes · 50 Vie · nécessite un Temple de Medeina · 2 × 2",
       "disabled": true,
       "active": false,
       "cooldown": ""
@@ -1175,9 +1175,9 @@
      {
       "id": "b-caserne",
       "icon": "shield",
-      "label": "Caserne · 200",
+      "label": "Caserne · 50",
       "key": "c",
-      "title": "Caserne · 200 Discipline · nécessite un Temple d’Indra",
+      "title": "Caserne · 50 Discipline · nécessite un Temple d’Indra",
       "disabled": true,
       "active": false,
       "cooldown": ""
@@ -1481,7 +1481,7 @@
     "health_text": "Intégrité : 73 %",
     "health_pct": 72.3,
     "health_label": "Intégrité de l’Ancre",
-    "status": "Éveillée · +1 Forge, Vie, Discipline et Savoir / s",
+    "status": "Éveillée · clic droit avec l’Ingénieur pour prier (+3 de chaque mana / s)",
     "damage": "—",
     "armor": "—",
     "speed": "—",
@@ -1520,7 +1520,7 @@
     "health_text": "Intégrité : 100 %",
     "health_pct": 100,
     "health_label": "Intégrité de l’Ancre",
-    "status": "Éveillée · +1 Forge, Vie, Discipline et Savoir / s",
+    "status": "Éveillée · clic droit avec l’Ingénieur pour prier (+3 de chaque mana / s)",
     "damage": "—",
     "armor": "—",
     "speed": "—",
@@ -1538,9 +1538,9 @@
      {
       "id": "summon",
       "icon": "rune",
-      "label": "Adepte · 50",
+      "label": "Adepte · 10",
       "key": "i",
-      "title": "Invoquer un adepte de sigil · 50 Savoir · prie au temple : +1 Savoir / s",
+      "title": "Invoquer un adepte de sigil · 10 Savoir · prie au temple : +1 Savoir / s",
       "disabled": false,
       "active": false,
       "cooldown": ""
@@ -1559,7 +1559,7 @@
     "health_text": "Achevé",
     "health_pct": 100,
     "health_label": "Points de vie",
-    "status": "Adepte de Sigil · 50 Savoir · 1 en prière (+1 Savoir / s)",
+    "status": "Adepte de Sigil · 10 Savoir · 1 en prière (+1 Savoir / s)",
     "damage": "—",
     "armor": "—",
     "speed": "—",
@@ -2199,7 +2199,7 @@
     "health_text": "Intégrité : 35 %",
     "health_pct": 35,
     "health_label": "Intégrité de l’Ancre",
-    "status": "Éveillée · +1 Forge, Vie, Discipline et Savoir / s",
+    "status": "Éveillée · clic droit avec l’Ingénieur pour prier (+3 de chaque mana / s)",
     "damage": "—",
     "armor": "—",
     "speed": "—",

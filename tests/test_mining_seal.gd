@@ -5,9 +5,11 @@ func test_research_cost_duration_prerequisites_and_unique_completion() -> void:
 	var sim := game()
 	give(100.0)
 	var forge := built("forge", 0, -130)
+	staff(sim, forge, 1)
 	check(not Simulation.can_research(forge, "mining_artifact"), "artefact verrouillé sans prérequis")
 	for id: String in ["mining_concept", "mining_spark", "mining_power"]:
 		var b := built(Catalog.RESEARCH[id]["building"], 10, -130)
+		staff(sim, b, 1)
 		sim.start_research(b, id)
 		sim.start_research(b, id)
 		check_eq(GameState.research_jobs.size(), 1, "pas de recherche en double")

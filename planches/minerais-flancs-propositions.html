@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="fr">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Minerais · dessus et flanc</title>
+<style>
+*{box-sizing:border-box}
+:root{--bg:#0c1214;--panel:#121b1e;--line:#2b383b;--ink:#e8e5d9;--mute:#9fb0ab;--cu:#e09670;--fe:#a8b6c0;--qz:#d6cbe9;--au:#f0d07a}
+body{background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,sans-serif;margin:0}
+main{max-width:1280px;margin:24px auto;padding:0 16px}
+small,.mute{color:var(--mute)}
+h1{font:400 30px/1.2 Georgia,serif;margin:6px 0 4px}
+h2{font:400 22px/1.2 Georgia,serif;margin:0}
+.lead{max-width:880px;color:#c9d2cd}
+nav{display:flex;flex-wrap:wrap;gap:6px;margin:16px 0}
+button{background:#182326;color:#c1ccc7;border:1px solid #465451;padding:7px 12px;cursor:pointer;font:inherit;border-radius:3px}
+button[aria-pressed=true]{color:#10191a;background:#d6d6bb}
+.desc{min-height:2.9em;max-width:880px;color:#c9d2cd;margin:0 0 10px}
+.shot{margin:0;border:1px solid var(--line);background:#000;position:relative}
+.shot img{width:100%;display:block;image-rendering:pixelated}
+.shot .zoom{position:absolute;right:10px;bottom:10px;width:34%;border:1px solid #6b7a74;background:#000;box-shadow:0 4px 18px #000a}
+.shot .zoom img{image-rendering:pixelated}
+section{margin:32px 0}
+.head{display:flex;align-items:baseline;gap:12px;margin-bottom:10px;flex-wrap:wrap}
+.scroll{overflow-x:auto;padding-bottom:6px}
+table{border-collapse:separate;border-spacing:6px}
+th{font-weight:400;text-align:left;color:var(--mute);font-size:13px;padding:0 2px;white-space:nowrap}
+th.p{color:var(--ink);font-size:14px;vertical-align:middle;min-width:130px}
+.c{display:grid;place-items:end center;border:1px solid #303b42;background:#1c1f26 url(assets/minerais-v3/masse.png) 0 0/288px;image-rendering:pixelated;width:100px;height:150px}
+.c img{image-rendering:pixelated;display:block}
+.c.top{place-items:center}
+.c.top img{width:96px;height:96px}
+.c.face{background:#20262f}
+.c.face img{width:96px;height:147px}
+.c.icon{place-items:center;background:#0e171b;border-color:#2a4950;height:110px;clip-path:polygon(10px 0,100% 0,100% calc(100% - 10px),calc(100% - 10px) 100%,0 100%,0 10px)}
+.c.icon img{width:96px;height:96px}
+.sep{border-left:1px solid var(--line)}
+footer{margin:36px 0 20px;font-size:12px;color:#7f8f8a;display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+</style>
+<body>
+<main>
+<small>EXILES DEFENSE &nbsp;/&nbsp; MINERAIS &nbsp;/&nbsp; DESSUS ET FLANC</small>
+<h1>Le minerai sur le dessus et le flanc du bloc</h1>
+<p class="lead">Plus de bloc ni d’objet posé : le minerai est une marque légère dans la roche. Il se lit sur le <b>dessus</b> de la case (la masse sombre) et sur le <b>flanc</b>, la paroi striée qui apparaît quand on creuse la case juste au sud. Cinq traitements, tous en calques sans contour, posés sur la roche existante.</p>
+
+<section>
+  <div class="head"><h2>En jeu</h2><span class="mute">Capture Godot, zoom 3 : deux tranchées creusées dans la roche, des filons sur leurs flancs et d’autres sur le dessus. L’encart grossit ×2 le flanc en haut à gauche. Les rochers de décor posés sur ces cases de démonstration ont été retirés.</span></div>
+  <nav id="tabs"></nav>
+  <p class="desc" id="desc"></p>
+  <figure class="shot"><img id="shot" alt=""><div class="zoom"><img id="zoom" alt="Détail grossi"></div></figure>
+</section>
+
+<section>
+  <div class="head"><h2>Calques</h2><span class="mute">×3. Dessus sur la masse rocheuse, flanc posé sur une vraie paroi du jeu (face5), icône d’inventaire.</span></div>
+  <div class="scroll"><table id="grid"></table></div>
+</section>
+
+<footer><span>Générateur : tools/minerais/minerais_v4.py → planches/assets/minerais-v4/ (atlas-*.png au format de nodules.png, flancs-*.png : 4 colonnes × 2 lignes de 32 × 49) · capture : tests/visual/ore_face_capture.tscn</span><span>Disposition des filons de démonstration, pas la répartition du jeu</span></footer>
+</main>
+<script>
+const D='assets/minerais-v4/';
+const P=[
+ ['actuel','Actuel','Nodules en jeu aujourd’hui ; le flanc ne montre rien.'],
+ ['paillettes','1 · Paillettes','Éclats d’un ou deux pixels groupés en essaims. Sur le flanc, ils suivent le litage de la paroi.'],
+ ['filets','2 · Filets','Fils de minerai d’un pixel qui serpentent sur le dessus et suivent les strates sur le flanc, avec des interruptions.'],
+ ['strate','3 · Strate teintée','La roche prend la couleur du minerai : une tache diffuse sur le dessus, une ou deux strates teintées sur le flanc, avec quelques éclats.'],
+ ['nodules','4 · Nodules affleurants','Petits disques plats à fleur de roche, éclairés en haut à gauche, cernés d’un fin liseré d’ombre.'],
+ ['fissure','5 · Fissure cristalline','Fissures sombres où sont nichés de minuscules cristaux. Sur le dessus elles rayonnent, sur le flanc elles coupent les strates.'],
+];
+const ORES=[['copper','Cuivre','--cu'],['iron','Fer','--fe'],['quartz','Quartz','--qz'],['gold','Or','--au']];
+const $=s=>document.querySelector(s);
+function show(i){
+  const [k,n,d]=P[i];
+  $('#shot').src=`${D}jeu-${k}.png`;$('#shot').alt=`Mur de roche en jeu, ${n}`;
+  $('#zoom').src=`${D}jeu-${k}-zoom.png`;
+  $('#desc').textContent=d;
+  document.querySelectorAll('#tabs button').forEach((b,j)=>b.setAttribute('aria-pressed',i===j));
+}
+$('#tabs').innerHTML=P.map((p,i)=>`<button>${p[1]}</button>`).join('');
+document.querySelectorAll('#tabs button').forEach((b,i)=>b.onclick=()=>show(i));
+show(1);
+$('#grid').innerHTML=`<tr><th></th>${ORES.map(([o,n,v])=>`<th colspan="5" class="sep" style="color:var(${v})">${n}</th>`).join('')}</tr>
+<tr><th></th>${ORES.map(()=>['Dessus filon','Dessus gisement','Flanc filon','Flanc gisement','Icône'].map((t,i)=>`<th${i?'':' class="sep"'}>${t}</th>`).join('')).join('')}</tr>`+
+P.slice(1).map(([k,n])=>`<tr><th class="p">${n}</th>${ORES.map(([o,on])=>`
+ <td class="sep"><div class="c top"><img src="${D}${k}-${o}-vein-top.png" alt="${n}, ${on}, dessus d’un filon"></div></td>
+ <td><div class="c top"><img src="${D}${k}-${o}-lode-top.png" alt="${n}, ${on}, dessus d’un gisement"></div></td>
+ <td><div class="c face"><img src="${D}${k}-${o}-vein-face-apercu.png" alt="${n}, ${on}, flanc d’un filon"></div></td>
+ <td><div class="c face"><img src="${D}${k}-${o}-lode-face-apercu.png" alt="${n}, ${on}, flanc d’un gisement"></div></td>
+ <td><div class="c icon"><img src="${D}${k}-${o}-icon.png" alt="${n}, ${on}, icône"></div></td>`).join('')}</tr>`).join('');
+</script>
+</body>
+</html>

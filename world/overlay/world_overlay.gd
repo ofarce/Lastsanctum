@@ -23,7 +23,7 @@ const FORMULAS := {
 }
 ## Vers de chaque bâtiment (BUILDINGS[].verse, buildings.js).
 const VERSE_OF := {"sigil": "templeJob", "aether": "foundryJob", "medeina": "sawmillJob", "indra": "barracksJob",
-	"library": "templeJob", "forge": "foundryJob", "workshop": "foundryJob", "bedroom": "sawmillJob", "soulwell": "sawmillJob",
+	"warehouse": "templeJob", "library": "templeJob", "forge": "foundryJob", "workshop": "foundryJob", "creuset": "foundryJob", "bedroom": "sawmillJob", "soulwell": "sawmillJob",
 	"caserne": "barracksJob"}
 
 var world: World
@@ -374,7 +374,7 @@ func _draw_build_cells() -> void:
 	var p: Variant = GameState.build_pointer
 	if p != null:
 		var q := Simulation.snap_for(GameState.hud_build_type, p)
-		var ok := sim.valid_site(GameState.hud_build_type, q)
+		var ok := sim.site_visible(GameState.hud_build_type, q) and sim.valid_site(GameState.hud_build_type, q)
 		_draw_footprint(q.x, q.y, Simulation.half_of(GameState.hud_build_type), Color("#a4f2ca") if ok else Color("#f28d80"),
 			Color("#a4f2ca30") if ok else Color("#f28d8030"))
 
@@ -395,7 +395,7 @@ func _draw_build_preview() -> void:
 		return
 	var type := GameState.hud_build_type
 	var p := Simulation.snap_for(type, GameState.build_pointer)
-	var ok := world.simulation.valid_site(type, p)
+	var ok := world.simulation.site_visible(type, p) and world.simulation.valid_site(type, p)
 	var F: Dictionary = _fp_meta["valid" if ok else "invalid"]
 	var tex := _fp_valid if ok else _fp_invalid
 	var q := _project(p.x, 0.0, p.y)
@@ -432,7 +432,7 @@ func _draw_anchor() -> void:
 	_text_c(_bold, Vector2(q.x, q.y + 15.0 * 0.9), text, 10, Color("#c9afd0"))
 
 
-## Une entrée par recherche active et pour l’unité actuellement en formation.
+## Activités affichées au-dessus du bâtiment avec leur progression.
 static func building_jobs(b: Building) -> Array[Dictionary]:
 	var jobs: Array[Dictionary] = []
 	if not b.complete:
@@ -441,6 +441,11 @@ static func building_jobs(b: Building) -> Array[Dictionary]:
 		var job: Dictionary = GameState.research_jobs[id]
 		if job["building"] == b:
 			jobs.append({"icon": "mining_seal", "progress": clampf(job["progress"] / Catalog.RESEARCH_TIME, 0, 1)})
+	if Simulation.Recipes.has_station(b.type) and b.recipe != "":
+		jobs.append({"icon": HudModel.CRAFT_ICON.get(b.recipe, "hammer"),
+			"stock": Production.count_in(b.output_box, b.recipe),
+			"blocked": Production.craft_workers(b) == 0,
+			"progress": clampf(b.craft / Simulation.Recipes.craft_time(b.type), 0, 1)})
 	if b.type == "caserne" and not b.queue.is_empty():
 		for unit: Dictionary in Catalog.CASERNE_UNITS:
 			if unit["id"] == b.queue[0]:
@@ -449,8 +454,23 @@ static func building_jobs(b: Building) -> Array[Dictionary]:
 
 
 func _draw_job(at: Vector2, job: Dictionary) -> void:
-	draw_style_box(_job_panel(), Rect2(at - Vector2(38, 43), Vector2(76, 55)))
-	draw_texture_rect(HudStyle.icon(job["icon"], 28), Rect2(at - Vector2(14, 38), Vector2(28, 28)), false)
+	var panel := Rect2(at - Vector2(38, 43), Vector2(76, 55))
+	var icon_at := at - Vector2(14, 38)
+	var label := ""
+	if job.has("stock"):
+		label = "En stock : %d" % job["stock"]
+		var width := _bold.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, 11).x
+		var padding := maxf(0, (width + 12 - panel.size.x) / 2)
+		panel = panel.grow_individual(padding, 16, padding, 0)
+		icon_at.y -= 16
+	draw_style_box(_job_panel(), panel)
+	if label != "":
+		draw_string(_bold, Vector2(panel.position.x, at.y - 8), label, HORIZONTAL_ALIGNMENT_CENTER, panel.size.x, 11)
+	draw_texture_rect(HudStyle.icon(job["icon"], 28), Rect2(icon_at, Vector2(28, 28)), false)
+	if job.get("blocked", false):
+		var badge := icon_at + Vector2(27, 4)
+		draw_circle(badge, 8, Color("#13212b"))
+		draw_string(_bold, badge + Vector2(-8, 5), "!", HORIZONTAL_ALIGNMENT_CENTER, 16, 15, Color("#ffdb44"))
 	var bar := Rect2(at + Vector2(-31, -2), Vector2(62, 6))
 	draw_rect(bar, Color("#132c33"))
 	draw_rect(Rect2(bar.position, Vector2(bar.size.x * job["progress"], bar.size.y)), Color("#5ce8ff"))

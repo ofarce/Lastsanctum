@@ -32,6 +32,17 @@ var spot := Vector2.ZERO
 var finished_at := INF
 ## Cumul de prière pour les popups « +5 » (t._acc).
 var acc := 0.0
+## Production (sim/production.gd) : recette fabriquée en boucle (choisie dans le panneau, "" aucune) et sa
+## progression ; coffre bleu (ingrédients livrés) et coffre rouge (objets fabriqués), piles {item, quantity} ;
+## derniers dépôt et retrait (animation d'ouverture des coffres).
+var requested_items: Array[String] = []
+var warehouse_page := 0
+var recipe := ""
+var craft := 0.0
+var input_box: Array[Dictionary] = []
+var output_box: Array[Dictionary] = []
+var chest_in_at := -INF
+var chest_out_at := -INF
 
 
 static func create(bid: int, btype: String, px: float, pz: float) -> Building:

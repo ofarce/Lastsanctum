@@ -17,6 +17,9 @@ const ARROW_FL := Color("#ac3438")
 const ARROW_SPARK: Array[Color] = [Color("#18448e"), Color("#2e6cc8"), Color("#64a2f4"), Color("#bcdcff")]
 const FIRE: Array[Color] = [Color("#5a1408"), Color("#a82a10"), Color("#e85a18"), Color("#ff9a30"), Color("#ffd060"), Color("#fff4c0")]
 const INK := Color("#0a0a0c")
+## Buse du lance-flammes (soldat 4.1, planches/soldats-export.html) : pointe de la buse en position de tir,
+## en pixels du sprite depuis son point au sol, regard à droite ; ×AdeptView.SCALE en pixels natifs.
+const FLAME_NOZZLE := Vector2(15.0, -20.5) * AdeptView.SCALE
 ## Pitons d'ancrage de l'Ingénieur (planche « Pitons d'ancrage — Suspension ») : cyan des Exilés et laiton.
 const CY: Array[Color] = [Color("#0a2a33"), Color("#12596b"), Color("#1f9fb8"), Color("#5ce8ff"), Color("#c8fbff"), Color("#ffffff")]
 const BRASS: Array[Color] = [Color("#3a2808"), Color("#6a4a14"), Color("#a07424"), Color("#d0a03c"), Color("#f0cc6a"), Color("#fff0b0")]
@@ -55,12 +58,18 @@ func draw_all(now: float) -> void:
 		_warmup()
 	for drop: Dictionary in GameState.ground_items:
 		var position: Vector2 = drop["position"]
+		if not world.fog.visible_at(position):
+			continue
 		var screen := nat_p(position.x, position.y) * px
 		ci.draw_circle(screen + Vector2(0, 3 * px), 7 * px, Color("#00000066"))
 		ItemIcon.draw_item(ci, drop["item"], screen, px)
 	_fire_walls(now)
 	for e in GameState.effects:
+		if e.has("x") and e.has("z") and not world.fog.visible_at(Vector2(e["x"], e["z"])):
+			continue
 		match e["type"]:
+			"mining_gain": _mining_gain(e)
+			"new_resource": _new_resource(e)
 			"rivet": _rivet(e)
 			"rivethit": _rivet_hit(e)
 			"arrow": _arrow(e)
@@ -71,7 +80,73 @@ func draw_all(now: float) -> void:
 			"suspend": _suspend(e, now)
 			_: _simple(e)
 	_planted_pitons(now)
+	for e in GameState.damage_numbers:
+		if world.fog.visible_at(Vector2(e["x"], e["z"])):
+			_damage_number(e)
 	_turret_bolts()
+
+
+## Point au-dessus de la tête de `u` (barre de vie), ou null si son nœud n'est pas affiché.
+func _head(u: Unit) -> Variant:
+	var view := world.unit_view(u)
+	if not is_instance_valid(view) or not view.is_visible_in_tree():
+		return null
+	if view is UnitView:
+		return world.camera.project(u.x, 0, u.z) - Vector2(0, view.hp_y() * px)
+	return world.camera.project(u.x, 3.9, u.z)
+
+
+## Texte centré, contour noir, `alpha` appliqué au texte et au contour.
+func _outlined_c(text: String, at: Vector2, size: int, color: Color, alpha: float) -> void:
+	var font := HudStyle.font()
+	var width := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x
+	var baseline := (at - Vector2(width * 0.5, 0)).round()
+	ci.draw_string_outline(font, baseline, text, HORIZONTAL_ALIGNMENT_LEFT, -1, size, 4, Color(INK, alpha))
+	ci.draw_string(font, baseline, text, HORIZONTAL_ALIGNMENT_LEFT, -1, size, Color(color, alpha))
+
+
+## Chiffre de dégâts : blanc, monte au-dessus de la cible et s'efface dans le dernier tiers.
+func _damage_number(effect: Dictionary) -> void:
+	var t: Unit = effect["target"]
+	var view := world.unit_view(t)
+	var at: Variant = _head(t) if is_instance_valid(view) else world.camera.project(effect["x"], 3.9, effect["z"])
+	if at == null:
+		return
+	var head: Vector2 = at
+	var p: float = effect["age"] / effect["duration"]
+	var amount: float = effect["amount"]
+	var text := str(roundi(amount)) if amount >= 1.0 else ("%.1f" % amount)
+	var alpha := clampf((1.0 - p) * 3.0, 0.0, 1.0)
+	_outlined_c(text, head - Vector2(0, 8 + 30 * p), 16, Color.WHITE, alpha)
+
+
+## « Nouvelle ressource : … ! » en jaune au-dessus du récolteur, au-dessus du « +1 ».
+func _new_resource(effect: Dictionary) -> void:
+	var at: Variant = _head(effect["miner"])
+	if at == null:
+		return
+	var head: Vector2 = at
+	var p: float = effect["age"] / effect["duration"]
+	var label := "Nouvelle ressource : %s !" % ItemIcon.Blocks.ITEMS[effect["item"]]["name"]
+	var alpha := clampf((1.0 - p) * 4.0, 0.0, 1.0)
+	_outlined_c(label, head - Vector2(0, 58 + 14 * p), 17, Color("#ffd84a"), alpha)
+
+
+func _mining_gain(effect: Dictionary) -> void:
+	var miner: Unit = effect["miner"]
+	var at: Variant = _head(miner)
+	if at == null:
+		return
+	var head: Vector2 = at
+	var item: String = effect["item"]
+	var label := "+1 %s" % ItemIcon.Blocks.ITEMS[item]["name"]
+	var font := HudStyle.font()
+	var width := font.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, 15).x
+	var origin := (head - Vector2((26 + width) * 0.5, 24 + 26 * float(effect["age"]))).round()
+	ItemIcon.draw_item(ci, item, origin + Vector2(11, -5), 0.75)
+	var baseline := origin + Vector2(26, 0)
+	ci.draw_string_outline(font, baseline, label, HORIZONTAL_ALIGNMENT_LEFT, -1, 15, 4, INK)
+	ci.draw_string(font, baseline, label, HORIZONTAL_ALIGNMENT_LEFT, -1, 15, Color("#fff2ce"))
 
 
 func _z() -> float:
@@ -267,7 +342,10 @@ func _simple(e: Dictionary) -> void:
 	var col: Color = e["color"]
 	match e["type"]:
 		"laser":
-			ci.draw_line(cam.project(e["x"], 1.35, e["z"]), cam.project(e["tx"], 1.2, e["tz"]), Color(col, col.a * a), 3.0, true)
+			var from := cam.project(e["x"], 1.35, e["z"])
+			if e.has("nozzle"):
+				from = cam.project(e["x"], 0.0, e["z"]) + FLAME_NOZZLE * Vector2(float(e["nozzle"]), 1.0) * cam.px
+			ci.draw_line(from, cam.project(e["tx"], 1.2, e["tz"]), Color(col, col.a * a), 3.0, true)
 		"hit":
 			# sphere3 : disque à dégradé radial (#f2f3eb, couleur à 15 %, #090c14), centre décalé vers le haut à gauche.
 			var c := cam.project(e["x"], 1.4, e["z"])
@@ -411,7 +489,8 @@ func nring(cx: float, cy: float, r: float, c: Color, a: float) -> void:
 ## Bouche du lance-pitons de l'Ingénieur u visant `target`, en pixels natifs.
 func _muzzle(x: float, z: float, target: Vector2, u: Unit) -> Vector2:
 	var face := EngineerAim.face_to(x, target, u.face if u and u.face != 0 else 1)
-	return nat_p(x, z) + EngineerAim.muzzle(EngineerAim.angle_to(x, z, target, face), face)
+	var bare := u != null and u.unarmored
+	return nat_p(x, z) + EngineerAim.muzzle(EngineerAim.angle_to(x, z, target, face, bare), face, bare)
 
 
 ## Piton planté : halo cyan pulsé, tête de laiton cernée.

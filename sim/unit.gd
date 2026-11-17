@@ -55,6 +55,10 @@ var face := 0
 ## Paquetage personnel : piles {item, quantity}, 9 999 objets par case ; accessible sans armure.
 var inventory: Array[Dictionary] = []
 var inventory_capacity := 10
+## Équipement porté sans armure : emplacement de la fiche (« Tête », « Torse »…) → objet (data/gear_items.gd).
+var equipment: Dictionary = {}
+## Lot transporté par un adepte d'un bâtiment (sim/production.gd) : {item, quantity}, vide sinon.
+var carrying: Dictionary = {}
 var unarmored := false
 var winded_at := INF
 ## Dernier soin reçu (Puits des Âmes, Soigneur) : petits « + » verts tant qu'il dure (HealFx).

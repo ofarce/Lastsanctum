@@ -18,7 +18,7 @@ const EVIL := Color8(255, 70, 40)
 ## Écart voulu D16 (charte graphique) : une couleur par culte, l'Ancre pourpre.
 const ANCRE := Color8(154, 58, 184)
 const CULT := {"medeina": Color8(122, 224, 112), "indra": Color8(255, 138, 42), "sigil": Color8(228, 234, 246), "aether": Color8(122, 128, 255)}
-const CULT_OF := {"sigil": "sigil", "library": "sigil", "aether": "aether", "forge": "aether", "workshop": "aether",
+const CULT_OF := {"sigil": "sigil", "warehouse": "sigil", "library": "sigil", "aether": "aether", "forge": "aether", "workshop": "aether", "creuset": "aether",
 	"medeina": "medeina", "bedroom": "medeina", "soulwell": "medeina", "indra": "indra", "caserne": "indra"}
 const PORTAL := Vector2(0.0, -167.7)
 const DEITY_X := {"indra": -41.0, "sigil": -24.0, "medeina": 24.0, "aether": 41.0}
@@ -80,6 +80,8 @@ func collect() -> Array[Dictionary]:
 	var L: Array[Dictionary] = []
 	for p in providers:
 		L.append_array(p.call())
+	for torch in world.fog.road_torches:
+		L.append({"x": torch.x, "z": torch.y, "r": 16.0 * flick(t, torch.y, 0.04), "rgb": WARM, "glow": 0.16})
 	var core := CaveShape.CORE
 	if GameState.orb_active:
 		L.append({"x": core.x, "z": core.y, "r": 10.0 * flick(t, 1.0, 0.04), "rgb": ANCRE, "glow": 0.22})
@@ -90,6 +92,8 @@ func collect() -> Array[Dictionary]:
 		if p["active"]:
 			L.append({"x": p["x"], "z": p["z"] + 1.0, "r": 8.0 * flick(t, p["id"] + 3, 0.08), "rgb": EVIL, "glow": 0.22})
 	for id: String in DEITY_X:
+		if not GameState.deity_active.get(id, false):
+			continue
 		var x: float = DEITY_X[id]
 		L.append({"x": x, "z": PORTAL.y + 1.0, "r": 5.5 * flick(t, x), "rgb": CULT[id], "glow": 0.16})
 	# Grappes de quartz du décor (style ardoise) : liste recalculée seulement quand le décor change.
@@ -119,6 +123,8 @@ func _process(_delta: float) -> void:
 	var dark := PackedVector4Array()
 	_glows.clear()
 	for l in collect():
+		if not world.fog.visible_at(Vector2(l["x"], l["z"])):
+			continue
 		var p := Proj.project(l["x"], 0.0, l["z"], world.camera.cam, px, screen)
 		var pr: float = l["r"] * s
 		if not (p.x > -pr and p.x < screen.x + pr and p.y > -pr and p.y < screen.y + pr):

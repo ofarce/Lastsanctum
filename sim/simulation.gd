@@ -2,6 +2,8 @@ class_name Simulation
 extends Node
 
 const ItemStorage := preload("res://sim/item_storage.gd")
+const Recipes := preload("res://data/recipes.gd")
+const Blocks := preload("res://data/mineable_blocks.gd")
 ## Boucle de simulation (frame() et update(), Index.html, 73b410f) et ordres du joueur.
 ## Ordre des systèmes identique au prototype (R14) : portail, bâtiments et Ancre, tâches des adeptes,
 ## portails maléfiques, unités, tourelles, ennemis, fin de partie. Les étapes 7 et 8 complèteront
@@ -31,6 +33,7 @@ const SPEED_GUARD := 3.45
 const ADEPT_ROLES := ["sigil", "medeina", "aether", "indra", "flammes", "archer", "lame"]
 ## Prière de l'Ingénieur (méditation en lévitation, planche ingenieur-priere-propositions.html, proposition 5) :
 ## +5 de la ressource du dieu par seconde, après le temps de s'asseoir en tailleur (planche « settle » : 1 s).
+const ANCHOR_PRAY := 3.0
 const ENGINEER_PRAY := 5.0
 const MEDITATE_SETTLE := 1.0
 const DIG_MSG :="Creusement · l’Ingénieur ancre quatre pitons à distance (une case de portée), la roche est suspendue puis effacée."
@@ -42,6 +45,8 @@ var paused := false
 var rng := RandomNumberGenerator.new()
 ## Combat, ennemis, vagues et balistes (étape 8).
 var combat := Combat.new(self)
+## Bâtiments servis par des adeptes : postes, coffres, transports, mineurs (sim/production.gd).
+var production := Production.new(self)
 ## Décision D9 : Paladin, Soigneur et Tireur présents dès le début de partie, comme avant leur mise de côté
 ## dans 73b410f (soldier(...) commentés dans init). Désactivé par défaut ; réglage de projet
 ## « exiles/debug/heros_historiques » ou affectation directe (tests).
@@ -143,6 +148,9 @@ func tick(dt: float) -> void:
 		t = _prof("portails et file", t)
 	update_squads()
 	combat.update_units(dt, alive)
+	if not GameState.ground_items.is_empty():
+		for u in alive:
+			ItemStorage.collect_nearby(u)
 	if profiling:
 		t = _prof("alliés", t)
 	combat.update_turrets(dt)
@@ -251,17 +259,15 @@ func update_buildings(dt: float) -> void:
 			else:
 				say("%s achevé.%s" % [D["name"], unlock_text(b.type)], 4.0)
 			continue
-		if b.type == "soulwell":
+		# Soins du Puits : il faut au moins un adepte de Medeina (ou l'Ingénieur) au poste.
+		if b.type == "soulwell" and not Production.idle(b):
 			for unit: Unit in GameState.units:
 				if unit.alive() and not unit.hidden and unit.hp < unit.max_hp \
 						and Vector2(unit.x - b.x, unit.z - b.z).length_squared() <= float(D["heal_radius"]) ** 2:
 					unit.hp = minf(unit.max_hp, unit.hp + float(D["heal_per_second"]) * dt)
 					unit.healed_at = GameState.sim_time
-		if b.type == "caserne" and not b.queue.is_empty():
-			b.train += dt
-			if b.train >= Catalog.CASERNE_TIME:
-				b.train = 0.0
-				spawn_trained(b, b.queue.pop_front())
+	# Fabrication, entraînement de la caserne et transports : sim/production.gd.
+	production.update(dt)
 	GameState.pray_popups = GameState.pray_popups.filter(func(p: Dictionary) -> bool: return GameState.sim_time - p["at"] < 1.8)
 
 
@@ -276,8 +282,6 @@ static func unlock_text(type: String) -> String:
 
 func update_orb(dt: float) -> void:
 	if GameState.orb_active:
-		for k: String in GameState.res:
-			GameState.res[k] += dt
 		if GameState.spark_pending and GameState.sim_time - GameState.orb_finished_at >= SPARK_ARRIVAL:
 			GameState.spark_pending = false
 			combat.activate_turrets()
@@ -311,7 +315,7 @@ func order_orb(u: Unit = null) -> void:
 	if GameState.ended:
 		return
 	if GameState.orb_active:
-		say("L’Ancre est éveillée · +1 de chaque ressource par seconde.", 2.0)
+		say("L’Ancre est éveillée. L’Ingénieur peut y prier.", 2.0)
 		return
 	if u == null:
 		u = builder()
@@ -355,6 +359,13 @@ func kneeling(u: Unit) -> bool:
 
 # ---------------------------------------------------------------- Tâches (adepts.js)
 
+func _first_engineer() -> Unit:
+	for u in GameState.units:
+		if u.role == "engineer" and u.alive():
+			return u
+	return null
+
+
 func builder() -> Unit:
 	for u in GameState.selected:
 		if u.role == "engineer" and u.alive() and not u.hidden:
@@ -369,6 +380,8 @@ func set_job(u: Unit, job: Dictionary) -> void:
 	# cancelTurretRepair : étape 8.
 	cancel_build(u)
 	cancel_orb(u)
+	if not u.carrying.is_empty():
+		production._drop(u)
 	job.merge({"phase": "go", "carry": 0, "work": 0.0})
 	u.job = job
 	u.stance = "attack"
@@ -397,6 +410,32 @@ func cancel_build(u: Unit) -> void:
 	u.build_job = null
 
 
+func _collect_mined_item(item: String, miner: Unit, drop_position: Vector2) -> void:
+	if miner.role == "engineer":
+		ItemStorage.deposit(item, miner, drop_position)
+	else:
+		miner.carrying = {"item": item, "quantity": 1}
+	GameState.effects.append({"type": "mining_gain", "miner": miner, "item": item, "age": 0.0, "duration": 1.0})
+	if not GameState.collected_items.has(item):
+		GameState.collected_items[item] = true
+		GameState.effects.append({"type": "new_resource", "miner": miner, "item": item, "age": 0.0, "duration": 2.6})
+
+
+## Un bois récolté sur un arbre pétrifié : seul un adepte de Medeina ne l'entame pas. À WOOD_YIELD bois,
+## l'arbre est abattu et sa case creusée. Renvoie true si l'arbre vient de disparaître.
+func _spend_wood(u: Unit, key: Vector2i) -> bool:
+	var st := state()
+	if not st.grove_cells.has(key) or u.role == Blocks.WOOD_KEEPER:
+		return false
+	var origin: Vector2i = st.grove_cells[key]
+	st.wood_left[origin] = int(st.wood_left[origin]) - 1
+	if st.wood_left[origin] > 0:
+		return false
+	st.fell_grove(origin)
+	say("Le bosquet pétrifié s’effondre : le gisement est épuisé.", 2.0)
+	return true
+
+
 func update_adepts(_dt: float) -> void:
 	var dt := _dt
 	combat.update_fire_walls(dt)
@@ -407,6 +446,11 @@ func update_adepts(_dt: float) -> void:
 		if j == null or not u.alive():
 			continue
 		if j["type"] == "dig":
+			if not u.carrying.is_empty():
+				if production.deliver_harvest(u) and j.get("advance_after_delivery", false):
+					j.erase("advance_after_delivery")
+					_advance_dig(u)
+				continue
 			if not can_mine(u):
 				u.job = null
 				u.tx = u.x
@@ -415,7 +459,8 @@ func update_adepts(_dt: float) -> void:
 			var c: Dictionary = j["cell"]
 			var key := Vector2i(c["i"], c["j"])
 			var block := st.block_definition(key.x, key.y)
-			if block.is_empty():
+			# Case vide (bloc absent, ou bosquet abattu entre-temps) : on passe à la suivante.
+			if block.is_empty() or (st.walkable(key.x * 4.0 + 2.0, key.y * 4.0 + 2.0) and not st.permanent_ores.has(key)):
 				_advance_dig(u)
 				continue
 			var resistance: int = block["resistance"]
@@ -434,29 +479,57 @@ func update_adepts(_dt: float) -> void:
 				if Combat.hyp(u.x - at.x, u.z - at.y) >= 0.7:
 					continue
 			u.working = true
-			j["work"] += dt * (TerrainState.ENGINEER_DIG * TerrainState.DIG_HITS if eng else 0.25)
+			if not eng:
+				var interval := adept_mining_seconds(u)
+				j["work"] += dt
+				if j["work"] >= interval:
+					j["work"] -= interval
+					_collect_mined_item(block["drop_item"], u, u.pos())
+					j["advance_after_delivery"] = _spend_wood(u, key) or int(j.get("index", 0)) + 1 < (j.get("cells", []) as Array).size()
+					if production.deliver_harvest(u) and j["advance_after_delivery"]:
+						_advance_dig(u)
+				continue
+			j["work"] += dt * TerrainState.ENGINEER_DIG * TerrainState.DIG_HITS
 			while j["work"] >= TerrainState.HIT_TIME:
 				j["work"] -= TerrainState.HIT_TIME
 				var h: int = st.dig_hits.get(key, 0) + 1
 				st.dig_hits[key] = h
 				st.dig_hit_at[key] = GameState.sim_time
-				if eng:
-					Combat.piton(u, key, (h - 1) % 4)
-				else:
-					Combat.flash(key.x * 4 + 2, key.y * 4 + 2, Color("#a89c86"))
+				Combat.piton(u, key, (h - 1) % 4)
 				if h >= resistance:
 					if st.permanent_ores.has(key):
 						st.dig_hits.erase(key)
 						st.dig_hit_at.erase(key)
-						ItemStorage.deposit(block["drop_item"], u, u.pos())
-						_advance_dig(u)
-						break
-					if eng:
-						Combat.suspend(u, key, world.cell_image(key.x, key.y))
+						_collect_mined_item(block["drop_item"], u, u.pos())
+						if _spend_wood(u, key):
+							_advance_dig(u)
+							break
+						# Gisement inépuisable : l'Ingénieur continue d'y récolter s'il termine sa file,
+						# sinon il passe à la case suivante de la sélection.
+						if int(j.get("index", 0)) + 1 < (j.get("cells", []) as Array).size():
+							_advance_dig(u)
+							break
+						continue
+					Combat.suspend(u, key, world.cell_image(key.x, key.y))
 					world.dig_cell(key.x, key.y)
-					ItemStorage.deposit(block["drop_item"], u, Vector2(key.x * 4 + 2, key.y * 4 + 2))
+					_collect_mined_item(block["drop_item"], u, Vector2(key.x * 4 + 2, key.y * 4 + 2))
 					_advance_dig(u)
 					break
+			continue
+		if j["type"] == "anchor_pray":
+			if not GameState.orb_active or u.role != "engineer" or u.hidden:
+				u.job = null
+				continue
+			u.tx = ORB_SPOT.x
+			u.tz = ORB_SPOT.y
+			if u.pos().distance_to(ORB_SPOT) < 0.7:
+				u.working = true
+				if not j.has("since"):
+					j["since"] = GameState.sim_time
+				for resource: String in Catalog.RES_ORDER:
+					GameState.res[resource] += ANCHOR_PRAY * dt
+			else:
+				j.erase("since")
 			continue
 		if j["type"] == "chest":
 			var spot := CaveShape.CHEST_SPOT
@@ -466,6 +539,12 @@ func update_adepts(_dt: float) -> void:
 				continue
 			open_chest(u)
 			u.job = null
+			continue
+		if j["type"] == "staff":
+			production.update_unit(u, dt)
+			continue
+		if j["type"] == "collect":
+			production.update_collect(u)
 			continue
 		if j["type"] == "pray":
 			var t: Building = j["temple"]
@@ -491,8 +570,9 @@ func update_adepts(_dt: float) -> void:
 					GameState.res[r] += ENGINEER_PRAY
 					GameState.pray_popups.append({"x": t.x, "z": t.z, "amount": int(ENGINEER_PRAY), "res": r, "at": GameState.sim_time})
 				continue
-			GameState.res[r] += dt
-			t.acc += dt
+			var gain := dt * pray_rate(u, t)
+			GameState.res[r] += gain
+			t.acc += gain
 			if t.acc >= 5.0:
 				t.acc -= 5.0
 				GameState.pray_popups.append({"x": t.x, "z": t.z, "amount": 5, "res": r, "at": GameState.sim_time})
@@ -556,21 +636,11 @@ func open_chest(u: Unit) -> void:
 	say("Coffre antique ouvert · la réserve de la base (100 cases) reçoit désormais les objets minés (touche C).", 4.0)
 
 
-## orderAdepts : clic droit de l'Ingénieur sur la roche (creuser). Prière au temple : étape 7.
 func order_adepts(p: Vector2) -> bool:
-	var engs: Array[Unit] = []
-	for u in GameState.selected:
-		if u.role == "engineer" and u.alive() and not u.hidden:
-			engs.append(u)
-	if not engs.is_empty():
-		var cell: Variant = state().diggable_cell(p)
-		if cell != null:
-			order_mining_cells([cell])
-			return true
-	return false
+	var cell: Variant = state().diggable_cell(p)
+	return cell != null and order_mining_cells([cell])
 
 
-## Ordonne une file de cases au(x) Ingénieur(s) sélectionné(s), dans l'ordre du glisser.
 func order_mining_cells(cells: Array) -> bool:
 	if cells.is_empty():
 		return false
@@ -583,20 +653,30 @@ func order_mining_cells(cells: Array) -> bool:
 			ordered.append(cell.duplicate())
 	if ordered.is_empty():
 		return false
-	var engs := GameState.selected.filter(func(u: Unit) -> bool: return u.role == "engineer" and u.alive() and not u.hidden)
-	if engs.is_empty():
-		return false
-	var issued := false
-	for u: Unit in engs:
+	var handled := false
+	var engineer_digging := false
+	var adept_mining := false
+	for u: Unit in GameState.selected:
+		if not u.alive() or u.hidden or (u.role != "engineer" and not Catalog.is_adept(u)):
+			continue
+		handled = true
+		# Adepte d'Aether affecté à un bâtiment, sur un gisement inépuisable : il devient mineur du bâtiment.
+		if production.try_miner(u, ordered):
+			continue
 		if not can_mine(u):
 			engineer_spoke.emit(u, "Impossible. Je n'ai pas mon sceau de minage.")
 			continue
 		var queue := ordered.duplicate(true)
 		set_job(u, {"type": "dig", "cells": queue, "index": 0, "cell": queue[0], "at": queue[0]["at"]})
-		issued = true
-	if issued:
+		if u.role == "engineer":
+			engineer_digging = true
+		else:
+			adept_mining = true
+	if engineer_digging:
 		say(DIG_MSG, 2.0)
-	return true
+	elif adept_mining:
+		say("Les adeptes récoltent le matériau du bloc.", 2.0)
+	return handled
 
 
 ## Passe à la case suivante de la sélection, ou termine la tâche.
@@ -699,7 +779,9 @@ func ability() -> void:
 		say("INGÉNIEUR EXILÉ — Réparation de l’Ancre.", 2.0)
 	elif source.role == "shooter":
 		source.ability = 10.0
-		var t: Variant = Combat.target_closest(source, GameState.enemies, 18.0)
+		if world:
+			world.fog.refresh(state())
+		var t: Variant = Combat.target_closest(source, GameState.enemies, 18.0, world)
 		if t:
 			combat.damage(t, 95.0 + Catalog.lvl_bonus(source), source)
 			Combat.blast(source, t, Color("#f7e7a2"))
@@ -799,9 +881,15 @@ func pray_selected() -> void:
 func order_pray(b: Building) -> bool:
 	if b == null or not b.complete or not b.is_temple():
 		return false
+	var sigils := GameState.selected.filter(func(u: Unit) -> bool: return u.role == "sigil" and u.alive() and not u.hidden)
+	for u: Unit in sigils:
+		set_job(u, {"type": "pray", "temple": b})
 	var engs := GameState.selected.filter(func(u: Unit) -> bool: return u.role == "engineer" and u.alive() and not u.hidden)
 	if engs.is_empty():
-		return false
+		if not sigils.is_empty():
+			var foreign: bool = b.def()["deity"] != "sigil"
+			say("Les adeptes de Sigil prient au %s%s." % [b.def()["name"], " · deux fois plus lentement" if foreign else ""], 2.0)
+		return not sigils.is_empty()
 	for u: Unit in engs:
 		set_job(u, {"type": "pray", "temple": b})
 	say("L’Ingénieur rejoint le %s pour méditer · +%d %s / s." % [b.def()["name"], int(ENGINEER_PRAY), Catalog.RES_INFO[Catalog.DEITY_RES[b.def()["deity"]]]["name"]], 2.0)
@@ -813,7 +901,10 @@ func send_to_pray(u: Unit, t: Building = null) -> bool:
 		return false
 	if t == null:
 		var best := INF
-		for o in HudModel.own_temples(u):
+		var pool := HudModel.own_temples(u)
+		if pool.is_empty():
+			pool = HudModel.prayable_temples(u)
+		for o in pool:
 			var d := Combat.hyp(o.x - u.x, o.z - u.z)
 			if d < best:
 				best = d
@@ -889,6 +980,17 @@ func work_spot(type: String, p: Vector2) -> Vector2:
 	return Vector2(p.x - h - 2.0, p.y + 3.0)
 
 
+## Toutes les cases de l’emprise doivent avoir été repérées.
+func site_visible(type: String, center: Vector2) -> bool:
+	var size := int(Catalog.BUILDINGS[type]["size"])
+	var first := center - Vector2.ONE * (half_of(type) - CELL / 2)
+	for x in size:
+		for z in size:
+			if not world.fog.visible_at(first + Vector2(x, z) * CELL):
+				return false
+	return true
+
+
 ## placeBuilding : clic en mode construction. Paie, crée le chantier et envoie l'Ingénieur sur son point.
 func place_building(p: Vector2) -> void:
 	var u := builder()
@@ -897,6 +999,10 @@ func place_building(p: Vector2) -> void:
 		return
 	var D: Dictionary = Catalog.BUILDINGS[type]
 	p = snap_for(type, p)
+	world.fog.refresh(state())
+	if not site_visible(type, p):
+		say("Explorez tout l’emplacement avant de construire.", 2.0)
+		return
 	if not valid_site(type, p):
 		say("Emplacement impossible : il faut un sol dégagé (grotte, galerie creusée ou jungle).", 2.0)
 		return
@@ -963,9 +1069,34 @@ func train_unit(b: Building, id: String) -> void:
 	if not Catalog.can_pay(Catalog.CASERNE_COST):
 		say("Entraînement : %s requis." % Catalog.cost_text(Catalog.CASERNE_COST), 3.0)
 		return
+	# Les objets (arcs, flèches, épées, boucliers) sont apportés au coffre bleu par les adeptes d'Indra
+	# (sim/production.gd) ; l'entraînement attend qu'ils y soient.
 	Catalog.pay(Catalog.CASERNE_COST)
 	b.queue.append(id)
 	say("%s à l’entraînement · %s s." % [Catalog.ADEPT[id]["name"], HudModel.num(Catalog.CASERNE_TIME)], 2.0)
+
+
+## Fabrication (Atelier, Forge, Creuset) : la recette choisie est fabriquée en boucle par les adeptes au poste,
+## avec les ingrédients du coffre bleu (sim/production.gd).
+static func can_craft(b: Building, item: String) -> bool:
+	return not GameState.ended and b != null and GameState.buildings.has(b) and b.complete \
+		and Recipes.RECIPES.get(b.type, {}).has(item)
+
+
+## Choisit (ou arrête) la recette fabriquée en boucle.
+func craft(b: Building, item: String) -> void:
+	production.select_recipe(b, item)
+
+
+## Vider le coffre rouge : l'Ingénieur rapporte son contenu au stock.
+func collect_output(b: Building) -> void:
+	if not production.order_collect(b):
+		say("Le coffre rouge est vide." if b and b.output_box.all(func(s: Dictionary) -> bool: return s.is_empty()) else "Aucun Ingénieur disponible.", 2.0)
+
+
+## Bâtiment servi : l'unité sélectionnée y prend un poste (clic droit).
+func order_staff(b: Building) -> bool:
+	return production.assign(b)
 
 
 ## spawnTrained : le combattant sort devant la caserne.
@@ -1010,6 +1141,9 @@ func on_unit_death(u: Unit) -> void:
 func revive_unit(b: Building, u: Unit) -> void:
 	if GameState.ended or b == null or not GameState.buildings.has(b) or b.type != "soulwell" or not b.complete or not revivable(u):
 		return
+	if Production.idle(b):
+		say("Le Puits des Âmes est à l’arrêt : il faut un adepte de Medeina au poste.", 3.0)
+		return
 	var cost := Catalog.revive_cost(u)
 	if not Catalog.can_pay(cost):
 		say("Résurrection : %s requis." % Catalog.cost_text(cost), 3.0)
@@ -1041,6 +1175,10 @@ func revive_unit(b: Building, u: Unit) -> void:
 	u.revived_at = GameState.sim_time
 	u.revived_from = Vector2(b.x, b.z)
 	say("%s revient du Puits des Âmes · niveau %d." % [u.name, Catalog.lvl(u)], 3.0)
+
+
+static func adept_mining_seconds(u: Unit) -> float:
+	return 2.0 if u.role == "aether" else 4.0
 
 
 static func can_mine(u: Unit) -> bool:
@@ -1075,7 +1213,8 @@ func update_research(dt: float) -> void:
 		var job: Dictionary = GameState.research_jobs[id]
 		if not GameState.buildings.has(job["building"]) or not job["building"].complete:
 			continue
-		job["progress"] = minf(Catalog.RESEARCH_TIME, job["progress"] + dt)
+		# Recherche à la vitesse du personnel au poste (à l'arrêt sans personne).
+		job["progress"] = minf(Catalog.RESEARCH_TIME, job["progress"] + dt * Production.speed(job["building"]))
 		if job["progress"] < Catalog.RESEARCH_TIME:
 			continue
 		GameState.research_jobs.erase(id)
@@ -1100,25 +1239,45 @@ func offer_menace() -> void:
 	GameState.menace += Catalog.ANCHOR_MENACE_GAIN
 
 
-## Revenus actuels : Ancre éveillée et adeptes effectivement en prière.
+## Revenus des unités effectivement en prière.
 static func resource_rates() -> Dictionary:
 	var rates := {}
 	for resource: String in Catalog.RES_ORDER:
-		rates[resource] = 1 if GameState.orb_active and not GameState.ended else 0
+		rates[resource] = 0
 	if GameState.ended:
 		return rates
 	for u: Unit in GameState.units:
-		if not u.alive() or u.hidden or not u.working or u.job == null or u.job.get("type") != "pray":
+		if not u.alive() or u.hidden or not u.working or u.job == null:
+			continue
+		if u.job.get("type") == "anchor_pray" and GameState.orb_active:
+			for resource: String in Catalog.RES_ORDER:
+				rates[resource] += ANCHOR_PRAY
+		if u.job.get("type") != "pray":
 			continue
 		var temple: Building = u.job.get("temple")
 		if temple != null and temple.complete and GameState.buildings.has(temple) and temple.is_temple():
-			rates[Catalog.DEITY_RES[temple.def()["deity"]]] += pray_rate(u)
+			rates[Catalog.DEITY_RES[temple.def()["deity"]]] += pray_rate(u, temple)
 	return rates
 
 
-## Ressource par seconde d'une unité en prière : 1 pour un adepte, 5 pour l'Ingénieur.
-static func pray_rate(u: Unit) -> int:
-	return int(ENGINEER_PRAY) if u.role == "engineer" else 1
+## Ressource par seconde d'une unité en prière : 1 pour un adepte, 5 pour l'Ingénieur. Un adepte de Sigil
+## peut prier à un autel étranger : il y produit la ressource de ce dieu deux fois plus lentement.
+static func pray_rate(u: Unit, temple: Building = null) -> float:
+	if u.role == "engineer":
+		return ENGINEER_PRAY
+	if temple != null and u.role == "sigil" and temple.def()["deity"] != "sigil":
+		return SIGIL_FOREIGN_RATE
+	return 1.0
+
+
+const SIGIL_FOREIGN_RATE := 0.5
+
+
+## Un adepte peut prier à ce temple : celui de son dieu, ou n'importe lequel pour un adepte de Sigil.
+static func can_pray_at(u: Unit, b: Building) -> bool:
+	if b == null or not b.complete or not b.is_temple() or not Catalog.prays(u):
+		return false
+	return u.role == "sigil" or b.def()["deity"] == u.role
 
 
 static func squad_survivors(u: Unit) -> Array[Unit]:
