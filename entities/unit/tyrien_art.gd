@@ -7,7 +7,7 @@ extends RefCounted
 
 const DIR := "res://assets/imported/engineer/tyrien/"
 const PORTRAIT := DIR + "tyrien_portrait.png"
-const ANIMS := ["idle", "walk", "kneel", "pray", "settle", "lotus", "aim"]
+const ANIMS := ["idle", "walk", "kneel", "pray", "settle", "lotus", "aim", "slash1", "slash2", "shoot"]
 
 static var meta: Dictionary
 ## frames[calque][animation] : Array[AtlasTexture] ; calque = "base" ou une pièce (helm, iron…).
@@ -103,3 +103,19 @@ static func icon(piece: String) -> AtlasTexture:
 		a.region = Rect2(first.region.position + Vector2(used.position), Vector2(used.size))
 		_icon_rect[piece] = a
 	return _icon_rect[piece]
+
+
+## Icône 32 × 32 d'une arme du Creuset (planches/assets/armes-creuset.js), ou null.
+static var _weapon_icons: Dictionary = {}
+static func weapon_icon(item: String) -> AtlasTexture:
+	load_all()
+	var order: Array = meta.get("weapon_icons", [])
+	var i := order.find(item)
+	if i < 0:
+		return null
+	if not _weapon_icons.has(item):
+		var a := AtlasTexture.new()
+		a.atlas = load(DIR + "tyrien_weaponicons.png")
+		a.region = Rect2(i * 32, 0, 32, 32)
+		_weapon_icons[item] = a
+	return _weapon_icons[item]

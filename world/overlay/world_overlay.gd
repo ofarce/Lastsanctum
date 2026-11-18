@@ -442,7 +442,7 @@ static func building_jobs(b: Building) -> Array[Dictionary]:
 		if job["building"] == b:
 			jobs.append({"icon": "mining_seal", "progress": clampf(job["progress"] / Catalog.RESEARCH_TIME, 0, 1)})
 	if Simulation.Recipes.has_station(b.type) and b.recipe != "":
-		jobs.append({"icon": HudModel.CRAFT_ICON.get(b.recipe, "hammer"),
+		jobs.append({"icon": HudModel.CRAFT_ICON.get(b.recipe, "hammer"), "item": b.recipe,
 			"stock": Production.count_in(b.output_box, b.recipe),
 			"blocked": Production.craft_workers(b) == 0,
 			"progress": clampf(b.craft / Simulation.Recipes.craft_time(b.type), 0, 1)})
@@ -466,7 +466,12 @@ func _draw_job(at: Vector2, job: Dictionary) -> void:
 	draw_style_box(_job_panel(), panel)
 	if label != "":
 		draw_string(_bold, Vector2(panel.position.x, at.y - 8), label, HORIZONTAL_ALIGNMENT_CENTER, panel.size.x, 11)
-	draw_texture_rect(HudStyle.icon(job["icon"], 28), Rect2(icon_at, Vector2(28, 28)), false)
+	# Arme du Creuset : son icône dessinée plutôt que le pictogramme générique.
+	var wi := TyrienArt.weapon_icon(String(job.get("item", "")))
+	if wi:
+		draw_texture_rect(wi, Rect2(icon_at - Vector2(2, 2), Vector2(32, 32)), false)
+	else:
+		draw_texture_rect(HudStyle.icon(job["icon"], 28), Rect2(icon_at, Vector2(28, 28)), false)
 	if job.get("blocked", false):
 		var badge := icon_at + Vector2(27, 4)
 		draw_circle(badge, 8, Color("#13212b"))

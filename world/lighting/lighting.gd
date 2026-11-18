@@ -23,6 +23,8 @@ const CULT_OF := {"sigil": "sigil", "warehouse": "sigil", "library": "sigil", "a
 const PORTAL := Vector2(0.0, -167.7)
 const DEITY_X := {"indra": -41.0, "sigil": -24.0, "medeina": 24.0, "aether": 41.0}
 const ORB_TIME := 8.0
+const FIREFLY := Color8(196, 255, 120)
+const MAX_FIREFLIES := 24
 
 var enabled := true
 var providers: Array[Callable] = []
@@ -104,7 +106,37 @@ func collect() -> Array[Dictionary]:
 			if e.get("light", false):
 				_decor_lights.append({"x": e["x"], "z": e["z"], "r": 4.5, "rgb": ArtStyle.QUARTZ_LIGHT, "glow": 0.14})
 	L.append_array(_decor_lights)
+	L.append_array(fireflies(t))
 	return L
+
+
+## Lucioles de la jungle, la nuit : petites lueurs vertes qui dérivent près de la caméra.
+func fireflies(t: float) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	var n := DayNight.night(t) * (1.0 - Weather.rain())
+	if n < 0.3:
+		return out
+	var cam: Vector2 = world.camera.cam
+	var cell := 12.0
+	var cx := floori(cam.x / cell)
+	var cz := floori(cam.y / cell)
+	for i in range(cx - 4, cx + 5):
+		for j in range(cz - 3, cz + 4):
+			var h := Rng.hash3(i, j, 0xf1ef)
+			if h > 0.45 * n:
+				continue
+			var ph := Rng.hash3(i, j, 0x77) * TAU
+			var x := (i + 0.5) * cell + sin(t * 0.4 + ph) * 4.0 + sin(t * 1.1 + ph * 2.0) * 1.2
+			var z := (j + 0.5) * cell + cos(t * 0.33 + ph) * 3.0
+			if z < CaveShape.mountain_edge(x) + 2.0:
+				continue
+			var blink := 0.5 + 0.5 * sin(t * 2.3 + ph * 3.0)
+			if blink < 0.25:
+				continue
+			out.append({"x": x, "z": z, "r": 1.1 * blink * n, "rgb": FIREFLY, "glow": 0.5})
+			if out.size() >= MAX_FIREFLIES:
+				return out
+	return out
 
 
 func _process(_delta: float) -> void:
@@ -136,6 +168,13 @@ func _process(_delta: float) -> void:
 		var w: float = l["glow"]
 		_glows.append([p, pr * 0.8, Color(c.r * w, c.g * w, c.b * w, 1.0)])
 	_dark_mat.set_shader_parameter("qsize", qsize)
+	var sky := DayNight.sky(GameState.sim_time)
+	var gloom := Weather.gloom()
+	sky = Color(lerpf(sky.r, Weather.GREY.r, gloom * 3.0), lerpf(sky.g, Weather.GREY.g, gloom * 3.0), lerpf(sky.b, Weather.GREY.b, gloom * 3.0), minf(0.9, sky.a + gloom))
+	_dark_mat.set_shader_parameter("sky", sky)
+	_dark_mat.set_shader_parameter("cam", world.camera.cam)
+	_dark_mat.set_shader_parameter("px", float(px))
+	_dark_mat.set_shader_parameter("screen", screen)
 	_dark_mat.set_shader_parameter("lights", dark)
 	_dark_mat.set_shader_parameter("light_count", dark.size())
 	_up_mat.set_shader_parameter("screen_size", screen)

@@ -13,11 +13,22 @@ uniform vec2 qsize = vec2(360.0, 225.0);
 // Sources en pixels du calque au quart : (x, y, rayon, inutilisé).
 uniform vec4 lights[MAX_LIGHTS];
 uniform int light_count = 0;
+// Cycle jour/nuit (core/day_night.gd) : obscurité du dehors (non prémultipliée), appliquée au sud du flanc
+// de la montagne seulement. Repère : caméra (unités de monde), facteur de pixel, taille de l'écran.
+uniform vec4 sky = vec4(0.047, 0.027, 0.016, 0.28);
+uniform vec2 cam = vec2(0.0);
+uniform float px = 2.0;
+uniform vec2 screen = vec2(1440.0, 900.0);
 
 void fragment() {
 	vec2 p = UV * qsize;
-	float a = 0.28;
-	vec3 rgb = vec3(12.0, 7.0, 4.0) / 255.0 * a;
+	vec2 sp = p * 4.0;
+	float wx = (sp.x - screen.x * 0.5) / (8.0 * px) + cam.x;
+	float wz = (sp.y - screen.y * 0.45) / (8.0 * px) + cam.y;
+	float edge = -78.0 + 4.0 * sin(wx * 0.13) + 3.0 * sin(wx * 0.31 + 1.0);
+	float w = smoothstep(edge - 2.0, edge + 5.0, wz);
+	float a = mix(0.28, sky.a, w);
+	vec3 rgb = mix(vec3(12.0, 7.0, 4.0) / 255.0, sky.rgb, w) * a;
 	for (int i = 0; i < MAX_LIGHTS; i++) {
 		if (i >= light_count) break;
 		vec4 l = lights[i];

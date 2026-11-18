@@ -174,7 +174,10 @@ const ENEMY := {
 	"archer": {"hp": 45, "speed": 2.8, "range": 10.0, "damage": 6, "cd": 1.4, "armor": 1},
 	"strazhar": {"hp": 600, "speed": 8.4, "range": 1.7, "damage": 64.0 / 3.0, "cd": 0.85, "armor": 8},
 	## Premier boss (sim/martyre.gd) : jamais dans les vagues ; dégâts fixes à l'Ingénieur, impact différé.
-	"martyre": {"hp": 500, "speed": 2.2, "range": 2.4, "damage": 10, "cd": 3.0},
+	## Faune hostile de la jungle (sim/wildlife.gd en surcharge les valeurs).
+	"croc": {"hp": 160, "speed": 3.4, "range": 1.6, "damage": 14, "cd": 1.6, "armor": 4},
+	"feline": {"hp": 90, "speed": 4.3, "range": 1.4, "damage": 10, "cd": 0.9, "armor": 1},
+	"martyre": {"hp": 500, "speed": 2.2, "range": 2.4, "damage": 10, "cd": 3.0 / 1.3},
 }
 ## Portails maléfiques (EVIL) : un rejeton toutes les 7 s, 8 au plus par portail.
 const EVIL := {"interval": 7.0, "cap": 8}
@@ -198,6 +201,8 @@ const ENEMY_INFO := {
 	"spitter": {"name": "Thuriféraire de Fortuna", "kind": "ENNEMI · CREDO SOUILLÉ", "lore": "Il projette de loin une lumière souillée par la Bête."},
 	"brute": {"name": "Automate doré de Byrsa", "kind": "ENNEMI · CREDO SOUILLÉ", "lore": "Un automate d’or fêlé ; ses coups lourds brisent les lignes."},
 	"martyre": {"name": "Martyre de Byrsa", "kind": "BOSS · CHAMPIONNE DE BYRSA", "lore": "L’armure d’un automate d’or s’est soudée à son corps. Sous son bouclier, elle n’accepte que le combat singulier."},
+	"croc": {"name": "Crocodile des berges", "kind": "FAUNE · NEUTRE", "lore": "Il guette au ras de l’eau, près des ponts, et happe tout ce qui passe trop près : Exilés comme soldats du Credo."},
+	"feline": {"name": "Félin de la jungle", "kind": "FAUNE · NEUTRE", "lore": "Un grand fauve tacheté qui défend son territoire dans la forêt dense. La nuit, il voit de plus loin."},
 	"beast": {"name": "Aberration du Dévoreur", "kind": "ENNEMI · CHAIR DU DÉVOREUR", "lore": "Chair pâle et gueules multiples, vomie par les galeries."},
 }
 ## Dégâts de base des unités hors FIGHT (updateHUD, hud.js).
@@ -293,6 +298,9 @@ static func base_reach(u: Unit) -> float:
 	if u.role == "engineer" and not u.unarmored:
 		return 250.0
 	var w := gear_weapon(u)
+	# Épée du Creuset : taille à 1,5 bloc (data/gear_items.gd, melee).
+	if w.has("melee"):
+		return float(w["melee"])
 	return float(w["reach"]) if w.has("reach") else (Catalog.FIGHT[u.role]["reach"] if Catalog.FIGHT.has(u.role) else Catalog.HERO.get(u.role, {"reach": 8.6})["reach"])
 
 

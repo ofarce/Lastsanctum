@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><title>Export Martyre v3</title>
+<style>body{margin:0;padding:16px;background:#0c0d10;color:#e2dccb;font:14px system-ui}canvas{image-rendering:pixelated;background:#2b323d;margin:4px 0;display:block;max-width:100%}h2{font-size:15px;margin:14px 0 4px;color:#d84a3a}</style></head><body>
+<p>Export de la Martyre de Byrsa v3 (modèle C2 « L’armure cède », planche <code>martyre-v3-propositions.html</code>) au format des ennemis du jeu, à 24 images par seconde et 30 % plus vite que la planche : repos (boucle 3,08 s), marche, frappe (0,77 s, impact à 0,385 s), incantation des sceaux (1,69 s), touchée (0,385 s), mort (2,46 s). Cadre 150 × 120, ancre (60, 114). Avec <code>?save=1</code> (servie par <code>tools/martyre/serve.py</code>), écrit <code>assets/imported/enemies/martyre_*.png</code> et l’entrée du manifeste.</p>
+<div id="out"></div>
+<script src="assets/boss/martyre-v2.js?v=5"></script><script src="assets/boss/martyre-v3.js?v=3"></script>
+<script>
+'use strict';
+const V3=MartyreV3,M=MartyreV2,SPEED=1.3,FW=M.FW,FH=M.FH,COLS=12;V3.setModel(1);
+// durées de la planche, divisées par SPEED ; n images à 24 i/s
+const ACTIONS={
+ idle:{dur:4/SPEED,f:(i,n)=>V3.anim('idle',i/n*4,i/n*4).c,loop:true},
+ walk:{dur:1.1/SPEED,f:(i,n)=>V3.anim('walk',i/n*1.1,i/n*1.1).c},
+ attack:{dur:1/SPEED,f:(i,n)=>V3.anim('fissure',i/n,i/n).c},
+ cast:{dur:2.2/SPEED,f:(i,n)=>V3.anim('seal',i/n*2,i/n*2.2).c},
+ hit:{dur:.5/SPEED,f:(i,n)=>V3.anim('hit',i/n*.5,i/n*.5).c},
+ death:{dur:3.2/SPEED,f:(i,n)=>V3.anim('death',i/(n-1)*3.2,i/n*3.2).c},
+};
+const OUT={strips:{}},meta={ax:M.CX,ay:M.FY,h:77,stride:+(2.2*1.1/SPEED).toFixed(3),self_bob:true,version:3},root=document.getElementById('out');
+for(const[name,A]of Object.entries(ACTIONS)){const n=Math.max(2,Math.round(A.dur*24)),rows=Math.ceil(n/COLS),c=document.createElement('canvas');c.width=FW*COLS;c.height=FH*rows;const g=c.getContext('2d');
+ for(let i=0;i<n;i++)g.drawImage(A.f(i,n),(i%COLS)*FW,Math.floor(i/COLS)*FH);
+ OUT.strips[name]=c.toDataURL('image/png');
+ meta[name]={frame_w:FW,frame_h:FH,cols:COLS,rows,count:n,fps:+(n/A.dur).toFixed(4),duration:+A.dur.toFixed(4)};if(A.loop)meta[name].loop=true;
+ const h=document.createElement('h2');h.textContent=`${name} : ${n} images, ${A.dur.toFixed(3)} s`;root.appendChild(h);c.style.width=c.width+'px';root.appendChild(c)}
+OUT.meta=meta;window.OUT=OUT;
+const SAVE=new URLSearchParams(location.search).get('save');
+if(SAVE!=null)(async()=>{const base=SAVE.startsWith('http')?SAVE:'',post=(n,b)=>fetch(base+'/out/'+n,{method:'POST',body:b}).then(r=>{if(!r.ok)throw new Error(n+' '+r.status)});
+ for(const n in OUT.strips)await post(`martyre_${n}.png`,OUT.strips[n]);await post('meta-martyre.json',JSON.stringify(meta));
+ document.title='EXPORT OK';window.SAVED=true})().catch(e=>{document.title='EXPORT ÉCHEC';console.error(e)});
+</script></body></html>

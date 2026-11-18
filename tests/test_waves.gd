@@ -53,7 +53,13 @@ func test_first_wave_and_pause() -> void:
 	var b := Enemy.make("beast", 100.0, 60.0, 1.0)
 	GameState.enemies.append(b)
 	run(sim, 0.1)
-	check(GameState.next_wave > 0.0, "seuls des rejetons : pause de 4 s")
+	check(GameState.next_wave > 0.0, "seuls des rejetons : pause")
 	var at := GameState.next_wave
-	run(sim, 4.1)
-	check_eq(GameState.wave, 2, "vague 2 après la pause (%.2f)" % at)
+	var days := DayNight.day(at) - DayNight.day(GameState.sim_time)
+	check(days >= 2 and days <= 3, "prochain assaut 2 à 3 jours plus tard (%d)" % days)
+	check(DayNight.is_day(at), "prochain assaut de jour")
+	# Saut jusqu'à la veille de l'assaut (la faune laissée seule des jours durant abattrait l'Ingénieur désarmé).
+	GameState.enemies.clear()
+	GameState.sim_time = at - 0.1
+	run(sim, 0.2)
+	check_eq(GameState.wave, 2, "vague 2 au matin prévu (%.2f, t %.2f, fin %s, suivante %.2f)" % [at, GameState.sim_time, GameState.ended, GameState.next_wave])

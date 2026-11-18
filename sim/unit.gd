@@ -41,6 +41,9 @@ var working := false
 ## Sortie du portail pour une unité qui en émerge (exit), et message d'arrivée.
 var exit_point: Variant = null
 var arrival := ""
+## Esprit en cours d'arrivée à l'autel (Simulation.summon_adept) : fin de l'arrivée (0 sinon) et temple d'origine.
+var arrival_end := 0.0
+var arrival_temple: Variant = null
 ## Chemin en cache pour steer (u._path, u._pg, u._pv du prototype).
 var memo := {}
 ## Combat : charge de l'archer (dash {e, t0}, charged), charges du moulinet (orage), prochain sillon (sillonAt).
@@ -63,6 +66,8 @@ var equipment: Dictionary = {}
 var carrying: Dictionary = {}
 var unarmored := false
 var winded_at := INF
+## Étourdi jusqu'à cet instant (fissure de la Martyre de Byrsa) : ni déplacement ni attaque.
+var stunned_until := -INF
 ## Dernier soin reçu (Puits des Âmes, Soigneur) : petits « + » verts tant qu'il dure (HealFx).
 var healed_at := -INF
 ## Rappel par le Puits des Âmes : instant et position du puits (bulle qui devient l'unité, ReviveFx).

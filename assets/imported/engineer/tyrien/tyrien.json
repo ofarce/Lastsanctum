@@ -54,8 +54,32 @@
    "fps": 10,
    "note": "méditation en tailleur, yeux clos ; lévitation ajoutée en jeu"
   },
-  "aim": {
+  "slash1": {
    "y": 528,
+   "cols": 14,
+   "rows": 1,
+   "count": 14,
+   "fps": 21,
+   "note": "taille à une main (épées), 21 i/s"
+  },
+  "slash2": {
+   "y": 576,
+   "cols": 16,
+   "rows": 1,
+   "count": 16,
+   "fps": 18,
+   "note": "taille à deux mains (épées à deux mains), 18 i/s"
+  },
+  "shoot": {
+   "y": 624,
+   "cols": 6,
+   "rows": 1,
+   "count": 6,
+   "fps": 12,
+   "note": "tir du canon à projection (0,5 s), 12 i/s"
+  },
+  "aim": {
+   "y": 672,
    "cols": 19,
    "rows": 4,
    "count": 76,
@@ -224,11 +248,15 @@
   },
   "coppershield": {
    "slot": "lhand",
-   "name": "Bouclier en cuivre"
+   "name": "Bouclier en cuivre",
+   "item": "copper_shield",
+   "hold": "shield"
   },
   "ironshield": {
    "slot": "lhand",
-   "name": "Bouclier en fer"
+   "name": "Bouclier en fer",
+   "item": "iron_shield",
+   "hold": "shield"
   },
   "greaves": {
    "slot": "feet",
@@ -292,23 +320,42 @@
   },
   "coppersword": {
    "slot": "rhand",
-   "name": "Épée en cuivre"
+   "name": "Épée en cuivre",
+   "item": "copper_sword",
+   "hold": "sword"
   },
   "ironsword": {
    "slot": "rhand",
-   "name": "Épée en fer"
+   "name": "Épée en fer",
+   "item": "iron_sword",
+   "hold": "sword"
   },
   "coppergreat": {
    "slot": "rhand",
-   "name": "Épée à deux mains en cuivre"
+   "name": "Épée à deux mains en cuivre",
+   "item": "copper_greatsword",
+   "hold": "great"
   },
   "irongreat": {
    "slot": "rhand",
-   "name": "Épée à deux mains en fer"
+   "name": "Épée à deux mains en fer",
+   "item": "iron_greatsword",
+   "hold": "great"
   },
   "cannon": {
    "slot": "rhand",
-   "name": "Canon à projection"
+   "name": "Canon à projection",
+   "item": "cannon",
+   "hold": "cannon"
   }
- }
+ },
+ "weapon_icons": [
+  "copper_sword",
+  "iron_sword",
+  "copper_greatsword",
+  "iron_greatsword",
+  "cannon",
+  "copper_shield",
+  "iron_shield"
+ ]
 }

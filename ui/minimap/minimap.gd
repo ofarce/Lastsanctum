@@ -1,4 +1,7 @@
 class_name Minimap
+## Monde procédural : la minicarte montre une fenêtre de la taille de la zone d'origine (464 × 408), qui
+## suit la caméra par pas de WIN_STEP unités, bornée à la carte. Au départ, elle coïncide avec la zone
+## d'origine (dessin identique au prototype) ; ailleurs, le moucheté de la jungle est ancré au monde.
 extends Control
 ## Minicarte du HUD (buildMiniMap, drawMiniMap, hud.js, 73b410f).
 ## Le fond est un canvas de 240×160 dessiné comme dans le prototype : rectangles à coordonnées
@@ -25,6 +28,12 @@ var _bg_version := -1
 var _bg_seed := -1
 var _meta: Dictionary
 var _view := PackedVector2Array()
+const WIN_STEP := 32.0
+## Fenêtre affichée (unités du monde).
+static var win := Rect2(CaveShape.START_X0, CaveShape.START_Z0, CaveShape.START_X1 - CaveShape.START_X0, CaveShape.START_Z1 - CaveShape.START_Z0)
+var _bg_win := Rect2()
+var _fog_win := Rect2()
+var _dragging := false
 
 
 func _ready() -> void:
@@ -36,11 +45,40 @@ func _ready() -> void:
 
 
 static func map_pt(x: float, z: float) -> Vector2:
-	return Vector2((x - CaveShape.WORLD_X0) / (CaveShape.WORLD_X1 - CaveShape.WORLD_X0) * W,
-		(z - CaveShape.WORLD_Z0) / (CaveShape.WORLD_Z1 - CaveShape.WORLD_Z0) * H)
+	return Vector2((x - win.position.x) / win.size.x * W, (z - win.position.y) / win.size.y * H)
+
+
+static func start_window() -> Rect2:
+	return Rect2(CaveShape.START_X0, CaveShape.START_Z0, CaveShape.START_X1 - CaveShape.START_X0, CaveShape.START_Z1 - CaveShape.START_Z0)
+
+
+## Fenêtre centrée sur `c`, alignée sur WIN_STEP et bornée à la carte ; la zone d'origine tant que la
+## caméra y reste.
+static func window_for(c: Vector2) -> Rect2:
+	var s := start_window()
+	var half := s.size / 2.0
+	var center := s.get_center()
+	if c.x < s.position.x + half.x * 0.5 or c.x > s.end.x - half.x * 0.5 or c.y < s.position.y + half.y * 0.5:
+		center = (c / WIN_STEP).round() * WIN_STEP
+	var o := center - half
+	o.x = clampf(o.x, CaveShape.WORLD_X0, CaveShape.WORLD_X1 - s.size.x)
+	o.y = clampf(o.y, CaveShape.WORLD_Z0, CaveShape.WORLD_Z1 - s.size.y)
+	return Rect2(o, s.size)
 
 
 # ---------------------------------------------------------------- Dessin lissé (canvas 2D)
+
+static func _blend_px(img: Image, px: int, py: int, x: float, y: float, w: float, h: float, c: Color) -> void:
+	var cy := minf(py + 1.0, y + h) - maxf(float(py), y)
+	var cx := minf(px + 1.0, x + w) - maxf(float(px), x)
+	if cx <= 0.0 or cy <= 0.0:
+		return
+	var a := roundf(c.a * cx * cy * 255.0) / 255.0
+	if a <= 0.0:
+		return
+	var d := img.get_pixel(px, py)
+	img.set_pixel(px, py, Color(d.r + (c.r - d.r) * a, d.g + (c.g - d.g) * a, d.b + (c.b - d.b) * a))
+
 
 ## fillRect lissé : chaque pixel reçoit la couleur au prorata de sa surface couverte.
 static func fill_rect(img: Image, x: float, y: float, w: float, h: float, c: Color) -> void:
@@ -50,6 +88,19 @@ static func fill_rect(img: Image, x: float, y: float, w: float, h: float, c: Col
 	var x1 := mini(W, ceili(x + w))
 	var y0 := maxi(0, floori(y))
 	var y1 := mini(H, ceili(y + h))
+	# Intérieur couvert à 100 % d'une couleur opaque : remplissage natif (même résultat, a = 1).
+	var ix0 := maxi(x0, ceili(x))
+	var ix1 := mini(x1, floori(x + w))
+	var iy0 := maxi(y0, ceili(y))
+	var iy1 := mini(y1, floori(y + h))
+	if c.a >= 1.0 and ix1 - ix0 >= 2 and iy1 - iy0 >= 2:
+		img.fill_rect(Rect2i(ix0, iy0, ix1 - ix0, iy1 - iy0), Color(c.r, c.g, c.b))
+		for py in range(y0, y1):
+			var edge_row := py < iy0 or py >= iy1
+			for px in range(x0, x1):
+				if edge_row or px < ix0 or px >= ix1:
+					_blend_px(img, px, py, x, y, w, h, c)
+		return
 	for py in range(y0, y1):
 		var cy := minf(py + 1.0, y + h) - maxf(float(py), y)
 		if cy <= 0.0:
@@ -69,20 +120,59 @@ static func fill_rect(img: Image, x: float, y: float, w: float, h: float, c: Col
 ## arbres, portails).
 func build_background(st: TerrainState) -> void:
 	var g := _bg
+	_bg_win = win
 	g.fill(Color("#233522"))
-	var R := Rng.new(775)
-	for i in 2400:
-		var col := Color("#34472b") if R.next() > 0.5 else Color("#1b2b1e")
-		var rx := R.next() * W
-		var ry := R.next() * H
-		fill_rect(g, rx, ry, 2.0, 2.0, col)
+	if win == start_window():
+		var R := Rng.new(775)
+		for i in 2400:
+			var col := Color("#34472b") if R.next() > 0.5 else Color("#1b2b1e")
+			var rx := R.next() * W
+			var ry := R.next() * H
+			fill_rect(g, rx, ry, 2.0, 2.0, col)
+	else:
+		# Moucheté ancré au monde : un point par cellule de 8 unités, position et teinte hachées.
+		var cz := floorf(win.position.y / 8.0) * 8.0
+		while cz < win.end.y:
+			var cx := floorf(win.position.x / 8.0) * 8.0
+			while cx < win.end.x:
+				var hsh := hash([cx, cz, 775])
+				var q := map_pt(cx + float(hsh & 7), cz + float((hsh >> 3) & 7)).floor()
+				g.fill_rect(Rect2i(int(q.x), int(q.y), 2, 2), Color("#34472b") if (hsh >> 6) & 1 else Color("#1b2b1e"))
+				cx += 8.0
+			cz += 8.0
+		# Arbres de la jungle hors zone d'origine (mêmes couleurs que les arbres du prototype).
+		cz = floorf(win.position.y / 4.0) * 4.0
+		while cz < win.end.y:
+			var cx := floorf(win.position.x / 4.0) * 4.0
+			while cx < win.end.x:
+				var hsh := hash([cx, cz, 0x7ee])
+				var tx := cx + float(hsh & 3)
+				var tz := cz + float((hsh >> 2) & 3)
+				if not CaveShape.in_start(tx, tz) and tz > CaveShape.mountain_edge(tx) + 3.0 and (hsh >> 4) % 3 != 0:
+					var q := (map_pt(tx, tz) - Vector2.ONE).floor()
+					g.fill_rect(Rect2i(int(q.x), int(q.y), 2, 2), Color("#162d1c") if (hsh >> 6) & 1 else Color("#2f4c29"))
+				cx += 4.0
+			cz += 4.0
 	var rock := Color("#3a342d")
-	var x := CaveShape.WORLD_X0
-	while x < CaveShape.WORLD_X1:
-		var a := map_pt(x, CaveShape.WORLD_Z0)
-		var c := map_pt(x + 2.0, CaveShape.mountain_edge(x + 1.0))
-		fill_rect(g, a.x, a.y, c.x - a.x + 0.5, c.y - a.y, rock)
-		x += 2.0
+	var x := win.position.x
+	if win == start_window():
+		while x < win.end.x:
+			var a := map_pt(x, win.position.y)
+			var c := map_pt(x + 2.0, CaveShape.mountain_edge(x + 1.0))
+			fill_rect(g, a.x, a.y, c.x - a.x + 0.5, c.y - a.y, rock)
+			x += 2.0
+	else:
+		# Montagne colonne par colonne : remplissage natif, dernier pixel mélangé au prorata.
+		for px in W:
+			var wx := win.position.x + (px + 0.5) / W * win.size.x
+			var ey := map_pt(wx, CaveShape.mountain_edge(wx)).y
+			if ey <= 0.0:
+				continue
+			var full := mini(H, floori(ey))
+			if full > 0:
+				g.fill_rect(Rect2i(px, 0, 1, full), rock)
+			if full < H:
+				_blend_px(g, px, full, px, 0.0, 1.0, ey, rock)
 	var hollow := Color("#24262b")
 	for k: Vector2i in st.dug:
 		_cell(g, k.x * 4.0, k.y * 4.0, 4.0, hollow)
@@ -95,10 +185,10 @@ func build_background(st: TerrainState) -> void:
 			z += 1.5
 		x += 1.5
 	if st.found > 0:
-		var z := CaveShape.WORLD_Z0
-		while z < CaveShape.WORLD_Z1:
-			x = CaveShape.WORLD_X0
-			while x < CaveShape.WORLD_X1:
+		var z := win.position.y
+		while z < win.end.y:
+			x = win.position.x
+			while x < win.end.x:
 				if st.is_gallery_open(x + 1.0, z + 1.0):
 					_cell(g, x, z, 2.0, hollow)
 				x += 2.0
@@ -140,7 +230,10 @@ func refresh() -> void:
 	if world == null or world.terrain_state == null:
 		return
 	var st := world.terrain_state
-	if st.version != _bg_version or st.seed != _bg_seed:
+	# Fenêtre figée pendant un clic-glisser sur la minicarte (elle ne bouge pas sous le curseur).
+	if not _dragging:
+		win = window_for(world.camera.cam)
+	if st.version != _bg_version or st.seed != _bg_seed or win != _bg_win:
 		build_background(st)
 	_frame.blit_rect(_bg, Rect2i(0, 0, W, H), Vector2i.ZERO)
 	for b in GameState.buildings:
@@ -158,10 +251,13 @@ func refresh() -> void:
 	for e: Variant in GameState.enemies:
 		if not e.hidden:
 			_dot(e.x, e.z, Color("#ee7055"), 3.0)
-	if _fog_revision != world.fog.revision:
-		_fog_mask = world.fog.image.duplicate()
+	if _fog_revision != world.fog.revision or _fog_win != win:
+		# Brouillard (toute la carte) recadré sur la fenêtre affichée.
+		var o := Vector2i(int(win.position.x - CaveShape.WORLD_X0), int(win.position.y - CaveShape.WORLD_Z0))
+		_fog_mask = world.fog.image.get_region(Rect2i(o, Vector2i(win.size)))
 		_fog_mask.resize(W, H, Image.INTERPOLATE_BILINEAR)
 		_fog_revision = world.fog.revision
+		_fog_win = win
 	_frame.blend_rect(_fog_mask, Rect2i(0, 0, W, H), Vector2i.ZERO)
 	_tex.update(_frame)
 	# Trapèze : coins de l'écran au-dessus du bandeau, projetés au sol.
@@ -215,8 +311,7 @@ func _draw() -> void:
 func _pan(local: Vector2) -> void:
 	var inner := Rect2(Vector2.ZERO, size)
 	var cam := world.camera
-	var c := Vector2(CaveShape.WORLD_X0 + local.x / inner.size.x * (CaveShape.WORLD_X1 - CaveShape.WORLD_X0),
-		CaveShape.WORLD_Z0 + local.y / inner.size.y * (CaveShape.WORLD_Z1 - CaveShape.WORLD_Z0))
+	var c := win.position + local / inner.size * win.size
 	cam.set_view(c, cam.px)
 	refresh()
 
@@ -224,8 +319,12 @@ func _pan(local: Vector2) -> void:
 func _gui_input(event: InputEvent) -> void:
 	if world == null:
 		return
-	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
+	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and not event.pressed:
+		_dragging = false
+		refresh()
+	elif event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
 		grab_focus()
+		_dragging = true
 		_pan(event.position)
 		accept_event()
 	elif event is InputEventMouseMotion and event.button_mask & MOUSE_BUTTON_MASK_LEFT:

@@ -59,6 +59,12 @@ func hit_orb(p: Vector2) -> bool:
 
 func _process(_delta: float) -> void:
 	_engineer_keys()
+	if GameState.incarnated != null:
+		_incarnated_attack()
+		_mining_hover.cell = null
+		_mining_hover.selected_cells = []
+		_mining_hover.queue_redraw()
+		return
 	var pointer := get_viewport().get_mouse_position()
 	var blocked := not _pointer_inside or get_viewport().gui_get_hovered_control() != null or _box_on 		or Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT)
 	_mining_hover.cell = mining_hover_cell(pointer, blocked)
@@ -86,11 +92,17 @@ func _engineer_keys() -> void:
 	var s := Vector2(
 		float(_label_down(KEY_D)) - float(_label_down(KEY_Q)),
 		float(_label_down(KEY_S)) - float(_label_down(KEY_Z)))
-	var eng: Unit = null
-	for u: Unit in GameState.units:
-		if u.role == "engineer" and u.alive() and not u.hidden:
-			eng = u
-			break
+	var eng: Unit = GameState.incarnated
+	if eng != null:
+		# Incarnation : les flèches pilotent aussi l'Exilé (elles ne déplacent plus la caméra).
+		s += Vector2(float(Input.is_key_pressed(KEY_RIGHT)) - float(Input.is_key_pressed(KEY_LEFT)),
+			float(Input.is_key_pressed(KEY_DOWN)) - float(Input.is_key_pressed(KEY_UP)))
+		s = s.clamp(Vector2(-1, -1), Vector2(1, 1))
+	else:
+		for u: Unit in GameState.units:
+			if u.role == "engineer" and u.alive() and not u.hidden:
+				eng = u
+				break
 	if eng == null:
 		return
 	if s == Vector2.ZERO:
@@ -111,6 +123,14 @@ func _engineer_keys() -> void:
 	eng.tz = t.y
 	eng.stance = "attack"
 	eng.force_move = true
+
+
+## Incarnation : clic droit maintenu = attaque vers le curseur si une arme est équipée (cadence de l'arme).
+func _incarnated_attack() -> void:
+	if GameState.ended or not Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT) \
+			or get_viewport().gui_get_hovered_control() != null:
+		return
+	sim.combat.aimed_attack(GameState.incarnated, ground(get_viewport().get_mouse_position()))
 
 
 static func _label_down(k: Key) -> bool:
@@ -197,6 +217,16 @@ func _mining_cell(point: Vector2) -> Variant:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	# Incarnation (mode action pur) : ni sélection, ni ordres, ni raccourcis ; Échap désincarne.
+	if GameState.incarnated != null:
+		_box_on = false
+		if event is InputEventKey and event.pressed and not event.echo:
+			var k: Key = event.key_label if event.key_label != KEY_NONE else event.keycode
+			if k == KEY_ESCAPE:
+				ExileGallery.disincarnate()
+			elif k == KEY_R and event.shift_pressed:
+				sim.new_game()
+		return
 	if event is InputEventMouseMotion:
 		# templePointer : point du sol sous le pointeur, pour l'aperçu de construction.
 		GameState.build_pointer = ground(event.position)

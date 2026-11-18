@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Attaques du Creuset</title>
+<style>
+:root{--bg:#14171c;--panel:#1d2128;--ink:#d5c7a9;--dim:#8b8676;--line:#2c323b}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 system-ui,sans-serif;padding:20px}
+h1{margin:0 0 4px;font-size:22px}p.intro{color:var(--dim);max-width:980px;margin:0 0 16px}
+section{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:14px;margin:0 0 14px}
+h2{margin:0 0 2px;font-size:17px}h2 small{color:var(--dim);font-weight:400;font-size:13px}.note{color:var(--dim);margin:0 0 10px;max-width:980px}
+.cells{display:flex;gap:10px;align-items:end;flex-wrap:wrap}.cap{color:var(--dim);font-size:11px;text-align:center;margin-top:3px}
+canvas{image-rendering:pixelated;display:block}.none{color:#c9a46a;font-weight:600}
+</style></head><body>
+<h1>Attaques des armes du Creuset</h1>
+<p class="intro">Suite de <code>armes-creuset.html</code> : mêmes dessins d’armes, posés sur l’Ingénieur tyrien à l’échelle du jeu (vue ¾ 45°, image 48 px).
+Les bras sont replacés à chaque image (cinématique inverse du générateur) ; l’arme suit la main en 3D (raccourci et passage derrière le corps compris).
+Pour chaque arme : une scène à portée et une hors de portée (boucles ×3), puis chaque image de la première ×2. Vitesse d’attaque des épées +50 % (21 i/s à une main, 18 i/s à deux mains). Sol en dalles de 1 bloc (32 px en jeu), mannequin d’entraînement en guise d’ennemi.</p>
+<div id="out"></div>
+<script src="assets/decor.js?v=6"></script><script src="assets/units.js?v=10"></script><script src="assets/engineer-volume.js?v=11"></script>
+<script>
+'use strict';
+const OUTL='#0b090b';
+const CU=['#3a1c0d','#7a3f1f','#b0623a','#d98c4f','#f6bb85'],FE=['#1c1f25','#40454e','#6b737d','#a2abb5','#e2e8ee'];
+const LE=['#26190f','#4e3720','#6e4d2d','#8d6640'],VG=['#2f5446','#5e9c80','#8fd0b0'];
+const hsh=(a,b)=>{let h=(a*374761393+b*668265263)|0;h=(h^(h>>>13))*1274126177;return((h^(h>>>16))>>>0)/4294967296};
+const metal=(R,v,hw)=>v<-hw+.75?R[4]:v>hw-.75?R[1]:Math.abs(v)<.45?R[2]:R[3];
+// ---- dessins des armes (identiques à armes-creuset.html) ----
+function sword(o){const R=o.cu?CU:FE;return(u,v)=>{
+ if(u<-o.grip-1.6)return null;
+ if(u<-o.grip)return Math.hypot(u+o.grip+.8,v)<1.25?(v<0?R[4]:R[2]):null;
+ if(u<0)return Math.abs(v)<.95?(((Math.floor(u*1.3))&1)?LE[2]:LE[1]):null;
+ if(u<1.3){const g=o.guard/2;if(Math.abs(v)>g)return null;if(o.quill&&Math.abs(v)>g-1.2&&u<.5)return null;return v<0?R[4]:R[1]}
+ const L=o.blade,t=(u-1.3)/L;if(t>1)return null;
+ let hw=o.leaf?mix(o.w,o.w*1.35,Math.sin(Math.min(t/.75,1)*Math.PI*.6)):mix(o.w,o.w*.85,t);if(t>o.tip)hw*=(1-t)/(1-o.tip);
+ if(Math.abs(v)>hw)return null;if(o.cu&&hsh(Math.floor(u*1.2),Math.floor(v+5))>.9)return VG[1];
+ if(!o.cu&&Math.abs(v)<.4&&t<.75)return R[1];return metal(R,v,hw)}}
+function cannon(){return(u,v)=>{
+ if(u>-1.5&&u<4.5&&v<-2.2&&v>-5.2){const hw=1.6-(-2.2-v)*.15;if(Math.abs(u-1.5)<hw+1)return v<-4.4?FE[1]:u<1?CU[4]:CU[2]}
+ if(u<-4.5||u>12)return null;const r=u<-3?2.4:2.6;if(Math.abs(v)>r)return null;
+ if(u>11)return Math.abs(v)<1.2?OUTL:FE[2];
+ if(Math.abs(u)<.9||Math.abs(u-7.5)<.9)return v<0?CU[4]:v>r-.8?CU[1]:CU[3];
+ if(u<-3.4)return LE[2];return v<-r+.8?FE[4]:v>r-.8?FE[1]:Math.abs(v)<.5?FE[3]:FE[2]}}
+// tramage à l'angle `deg`, échelle `s`, raccourci `su` le long de l'arme ; main (u = 0) au pixel (ax, ay) ; contour #0b090b
+function raster(g,f,deg,s,ax,ay,w,h,su=1){const a=deg*Math.PI/180,du=[Math.cos(a),Math.sin(a)],dv=[-Math.sin(a),Math.cos(a)];
+ const img=g.getImageData(0,0,w,h),d=img.data,m=new Uint8Array(w*h),hx=c=>[parseInt(c.slice(1,3),16),parseInt(c.slice(3,5),16),parseInt(c.slice(5,7),16)];
+ for(let y=0;y<h;y++)for(let x=0;x<w;x++){const px=(x+.5-ax)/s,py=(y+.5-ay)/s,u=(px*du[0]+py*du[1])/su,v=px*dv[0]+py*dv[1],c=f(u,v);if(!c)continue;const k=(y*w+x)*4,[r,gg,b]=hx(c);d[k]=r;d[k+1]=gg;d[k+2]=b;d[k+3]=255;m[y*w+x]=1}
+ for(let y=0;y<h;y++)for(let x=0;x<w;x++){if(m[y*w+x])continue;const n=(x>0&&m[y*w+x-1])||(x<w-1&&m[y*w+x+1])||(y>0&&m[(y-1)*w+x])||(y<h-1&&m[(y+1)*w+x]);if(n){const k=(y*w+x)*4;d[k]=11;d[k+1]=9;d[k+2]=11;d[k+3]=255}}
+ g.putImageData(img,0,0)}
+function canvas(w,h){const c=document.createElement('canvas');c.width=w;c.height=h;return c}
+function zoom(src,k){const c=canvas(src.width*k,src.height*k),g=c.getContext('2d');g.imageSmoothingEnabled=false;g.drawImage(src,0,0,c.width,c.height);return c}
+function cell(el,cap){const d=document.createElement('div');d.append(el);if(cap){const t=document.createElement('div');t.className='cap';t.textContent=cap;d.append(t)}return d}
+const TYR={id:'tyr',seed:88,hair:'bun',top:{type:'tunic',ramp:PAL.bone,hemY:30},feet:{type:'sandals',ramp:PAL.leath},belt:{ramp:PAL.rope,y:37,h:1.8,braid:1},bracers:1};
+const SWORDS={
+ copper_sword:sword({cu:1,grip:2.4,guard:4.6,blade:6.8,w:1.4,leaf:1,tip:.72}),iron_sword:sword({grip:2.6,guard:5.6,blade:9.4,w:1.15,tip:.8}),
+ copper_greatsword:sword({cu:1,grip:4.2,guard:6,blade:11.5,w:1.9,leaf:1,tip:.78}),iron_greatsword:sword({grip:4.6,guard:8.4,quill:1,blade:14.5,w:1.6,tip:.84})};
+const LEN={copper_sword:9,iron_sword:11.5,copper_greatsword:14,iron_greatsword:17};
+// ---- poses : repère du personnage (X sa droite, Y haut, Z avant) ; la main droite est sd = +1 ----
+const lerpV=(a,b,t)=>lerp3(a,b,t),keyAt=(K,t)=>{for(let i=1;i<K.length;i++)if(t<=K[i].t){const a=K[i-1],b=K[i],u=(t-a.t)/(b.t-a.t||1),e=b.ease?.5-.5*Math.cos(Math.PI*u):u;
+  const o={};for(const k in b)if(k!=='t'&&k!=='ease')o[k]=Array.isArray(b[k])?lerpV(a[k],b[k],e):b[k];return o}return K[K.length-1]};
+function armPose(right,left){const P0=pose('idle',.25),Y=53.4+P0.up,arms=P0.arms.map(r=>{const T=r.sd>0?right:left;if(!T)return r;return ARM(r.sd,Y,T,[r.sd*.9,-1,-.5])});return{...P0,arms}}
+// ---- scène : sol en dalles (1 bloc = 32 px en jeu = 16 px dans l'image 48 px, affichée ×2 en jeu), Ingénieur, mannequin ----
+const BLOCK=32,REACH=BLOCK*3,SCH=84,SOY=52,CB=[0,45,0];
+function floor(g,W,ox){for(let y=-16;y<SCH+16;y+=16)for(let x=-16;x<W+16;x+=16){const bx=x+((ox-8)%16+16)%16-16,by=y+((SOY-8)%16+16)%16-16;g.fillStyle=((Math.floor((bx-ox+8)/16)+Math.floor((by-SOY+8)/16))&1)?'#272c33':'#2b3038';g.fillRect(bx,by,16,16)}}
+// mannequin d'entraînement : pieu, corps de paille, tête ; flash blanc puis rouge quand il est touché
+function dummy(g,x,y,hit){x=Math.round(x);y=Math.round(y);const body=hit===1?'#ffffff':hit===2?'#e0484a':'#b59a5a',dark=hit?body:'#7d6534';
+ g.fillStyle=OUTL;g.fillRect(x-4,y-21,9,18);g.fillRect(x-3,y-25,7,5);g.fillRect(x-1,y-4,3,5);g.fillStyle='#5a3d22';g.fillRect(x,y-4,1,4);
+ g.fillStyle=body;g.fillRect(x-3,y-20,7,16);g.fillRect(x-2,y-24,5,4);g.fillStyle=dark;g.fillRect(x+2,y-20,1,16);g.fillRect(x-3,y-13,7,1);
+ g.fillStyle='rgba(0,0,0,.35)';g.fillRect(x-4,y,9,1)}
+function dmgText(g,x,y,n,age){if(age<0||age>5)return;const t=`-${n}`;g.font='bold 8px monospace';g.textAlign='center';const yy=Math.round(y-age*2);
+ g.fillStyle=OUTL;for(const[dx,dy]of[[-1,0],[1,0],[0,-1],[0,1]])g.fillText(t,x+dx,yy+dy);g.fillStyle=age<2?'#fff3a0':'#ffd84a';g.fillText(t,x,yy)}
+// une image : sol, ce qui est derrière le corps, corps + arme (devant ou derrière selon la profondeur de la main), puis effets
+function frame(P,hand,dir,f,len,W,ox,trail,pre,post){const F=new Fig(W,SCH,.5,ox,SOY,Math.PI/4);drawFigure(F,{...TYR,gear:{}},P);const body=F.finish();
+ const q0=F.proj(hand),q1=F.proj(add(hand,mul(dir,10))),vx=q1.x-q0.x,vy=q1.y-q0.y,pl=Math.hypot(vx,vy),su=Math.max(.3,Math.min(1,pl/5));
+ const deg=Math.atan2(vy,vx)*180/Math.PI,behind=q0.d<F.proj(CB).d-1.5,c=canvas(W,SCH),g=c.getContext('2d'),l=canvas(W,SCH);
+ floor(g,W,ox);if(pre)pre(g,F);
+ raster(l.getContext('2d'),f,deg,1,q0.x+.5,q0.y+.5,W,SCH,su);
+ const tip=[q0.x+.5+Math.cos(deg*Math.PI/180)*len*su,q0.y+.5+Math.sin(deg*Math.PI/180)*len*su];
+ if(behind){g.drawImage(l,0,0);g.drawImage(body,0,0)}else{g.drawImage(body,0,0);g.drawImage(l,0,0)}
+ if(post)post(g,F);return{c,tip,F}}
+// slash : arc blanc courbé à 1 bloc du buste, sur la trajectoire de la pointe ; épais à la tête, fin et transparent à la queue
+function slashArc(g,F,pts,head,span){const n0=Math.max(0,head-span);for(let i=n0;i<=head&&i<pts.length;i++){const u=(i-n0)/Math.max(1,head-n0),q=F.proj(pts[i]),w=u>.75?2:u>.35?1:0;
+  g.fillStyle=`rgba(255,255,255,${.25+.75*u})`;for(let dy=-w;dy<=w;dy++)g.fillRect(q.x,q.y+dy,1,1);if(u>.6){g.fillStyle='rgba(205,240,255,.7)';g.fillRect(q.x,q.y-w-1,1,1)}}}
+// zone de portée au sol : demi-ellipse pointillée de 1 bloc, côté avant
+function reachRing(g,F,from,to){for(let a=from;a<=to;a+=.02){const q=F.proj([Math.cos(a)*REACH,0,Math.sin(a)*REACH]);if(((a*40)|0)%3===0){g.fillStyle='rgba(255,255,255,.35)';g.fillRect(q.x,q.y,1,1)}}}
+// attaque d'épée : pose image par image + arc (échantillonné finement sur la fenêtre de frappe) + mannequin touché ou non
+function swordAttack(id,o){const N=o.N,out=[],pts=[],W=200,ox=96,dmg={copper_sword:7,iron_sword:10,copper_greatsword:14,iron_greatsword:18}[id];
+ const S=180;for(let j=0;j<=S;j++){const t=o.t0+(o.t1-o.t0)*j/S,{hand,dir}=o.at(t),tip3=add(hand,mul(dir,LEN[id]*2));pts.push(add(CB,mul(nrm(sub(tip3,CB)),REACH)))}
+ const headOf=t=>t<o.t0?-1:Math.min(S,Math.round((t-o.t0)/(o.t1-o.t0)*S));
+ const E=o.enemy,eAng=Math.atan2(E[2],E[0]),inReach=Math.hypot(E[0],E[2])<=REACH+6;
+ let hitFrame=-1;if(inReach){let best=1e9;for(let i=0;i<N;i++){const t=i/N,h=headOf(t);if(h<0||t>o.t1+.04)continue;const p=pts[h],dd=Math.abs(Math.atan2(p[2],p[0])-eAng);if(dd<best){best=dd;hitFrame=i}}if(best>.7)hitFrame=-1}
+ for(let i=0;i<N;i++){const t=i/N,{hand,dir,left}=o.at(t),h=headOf(t),hitAge=hitFrame<0?-1:i-hitFrame,eFront=E[2]>4;
+  const drawE=(g,F)=>{const q=F.proj(E);dummy(g,q.x+.5,q.y+.5,hitAge===0?1:hitAge===1?2:0)};
+  const r=frame(armPose(hand,left),hand,dir,SWORDS[id],LEN[id],W,ox,null,
+   (g,F)=>{reachRing(g,F,-.4,Math.PI+.4);if(!eFront)drawE(g,F)},
+   (g,F)=>{if(eFront)drawE(g,F);if(h>=0&&t<=o.t1+.12)slashArc(g,F,pts,h,t>o.t1?Math.round(S*.35*Math.max(0,1-(t-o.t1)/.12)):Math.round(S*.55));
+    if(hitAge>=0){const q=F.proj(add(E,[0,48,0]));dmgText(g,q.x,q.y,dmg,hitAge)}});
+  out.push(r.c)}
+ return out}
+// ---- épée à une main : taille horizontale devant le corps, de sa droite vers sa gauche ----
+// θ = angle autour du buste (0 = sa droite, π/2 = devant, π = sa gauche) ; la lame pointe vers l'extérieur du cercle.
+const ONE=[{t:0,a:[-.1,42,0]},{t:.18,a:[-.55,50,0],ease:1},{t:.3,a:[-.6,51,0]},{t:.36,a:[.5,46,0]},{t:.43,a:[1.55,42,0]},{t:.5,a:[2.55,39,0]},{t:.57,a:[3.15,37,0]},{t:.7,a:[3.2,37,0]},{t:1,a:[-.1,42,0],ease:1}];
+const oneAt=t=>{const k=keyAt(ONE,t),th=k.a[0],y=k.a[1];return{hand:[Math.cos(th)*12,y,Math.sin(th)*11+2.5],dir:nrm([Math.cos(th),.1-(y-42)*.04,Math.sin(th)*.9+.25])}};
+const oneHand=(id,enemy)=>swordAttack(id,{N:14,t0:.3,t1:.57,at:oneAt,enemy});
+// ---- épée à deux mains : taille en diagonale, de l'épaule gauche à la taille côté droit, tenue à deux mains ----
+const TWO=[{t:0,g:[2,38,7],d:[.15,-.35,1]},{t:.2,g:[-6,60,3],d:[-.45,.85,-.3],ease:1},{t:.32,g:[-7,62,2],d:[-.5,.85,-.35]},
+ {t:.4,g:[-3,52,10],d:[-.1,.2,1]},{t:.48,g:[3,42,11],d:[.45,-.45,.75]},{t:.56,g:[8,33,8],d:[.6,-.8,.25]},{t:.7,g:[8,32,7],d:[.55,-.85,.2]},{t:1,g:[2,38,7],d:[.15,-.35,1],ease:1}];
+const twoAt=t=>{const k=keyAt(TWO,t),dir=nrm(k.d);return{hand:k.g,dir,left:add(k.g,mul(dir,-2.6))}};
+const twoHand=(id,enemy)=>swordAttack(id,{N:16,t0:.32,t1:.56,at:twoAt,enemy});
+// ---- canon : 2 tirs par seconde ; la balle file jusqu'au premier obstacle solide (ennemi ou mur) ----
+const CW=220,COX=30;
+function cannonFrames(withEnemy){const N=12,speed=11,out=[],shots=[0,6],dmg=12,ED=96,WD=200;
+ for(let i=0;i<N;i++){const since=Math.min(...shots.map(s=>(i-s+N)%N)),rc=since===0?2.2:since===1?1.2:since===2?.4:0;
+  const hand=[3.5,41,8.5-rc],dir=nrm([.05,-.05,1]),P=armPose(hand,[-4,40,9-rc*.6]),h0=[3.5,41,8.5];
+  const E=[h0[0]+dir[0]*ED,0,h0[2]+dir[2]*ED],Wl=[h0[0]+dir[0]*WD,0,h0[2]+dir[2]*WD];
+  const r=frame(P,hand,dir,cannon(),12,CW,COX,null,(g,F)=>{
+    const q=F.proj(Wl);g.fillStyle=OUTL;g.fillRect(q.x-1,q.y-31,18,33);g.fillStyle='#4a4f58';g.fillRect(q.x,q.y-30,16,31);g.fillStyle='#5d636d';g.fillRect(q.x,q.y-30,16,5);g.fillStyle='#3a3e46';for(const yy of[-20,-10])g.fillRect(q.x,q.y+yy,16,1);g.fillRect(q.x+8,q.y-25,1,5);g.fillRect(q.x+4,q.y-20,1,10);g.fillRect(q.x+11,q.y-10,1,11)},null);
+  const g=r.c.getContext('2d'),F=r.F;
+  const m0=F.proj(add(h0,mul(dir,12))),mx=m0.x+.5,my=m0.y+.5,q1=F.proj(add(h0,mul(dir,22))),dx=q1.x-m0.x,dy=q1.y-m0.y,nd=Math.hypot(dx,dy),ux=dx/nd,uy=dy/nd;
+  const qe=F.proj(E),qw=F.proj(Wl),stop=((withEnemy?qe.x-4:qw.x-1)-mx)/ux;
+  const tHit=Math.ceil((stop-4)/speed),hitAges=shots.map(s=>((i-s+N)%N)-tHit);
+  const eHit=Math.min(...hitAges.filter(a=>a>=0).concat([99]));
+  if(withEnemy)dummy(g,qe.x+.5,qe.y+.5,eHit===0?1:eHit===1?2:0);
+  if(since===0){g.fillStyle='#fff3c4';g.fillRect(Math.round(mx),Math.round(my)-1,3,3);g.fillStyle='#ffb347';g.fillRect(Math.round(mx+3*ux),Math.round(my+3*uy)-1,2,2);g.fillRect(Math.round(mx+ux),Math.round(my)-3,1,1);g.fillRect(Math.round(mx+ux),Math.round(my)+3,1,1);g.fillStyle='#ff7a1a';g.fillRect(Math.round(mx+5*ux),Math.round(my+5*uy),1,1)}
+  if(since===1||since===2){g.fillStyle=since===1?'rgba(170,170,165,.75)':'rgba(150,150,145,.45)';const sx=Math.round(mx+ux*(since+1)),sy=Math.round(my-since);g.fillRect(sx,sy-1,3,2);g.fillRect(sx+1,sy-2,1,1)}
+  shots.forEach((s,k)=>{const age=(i-s+N)%N,ha=hitAges[k];if(age<1)return;
+   if(ha<0){const d=4+age*speed;ball(g,mx+ux*d,my+uy*d,i*7+s);return}
+   const ix=Math.round(mx+ux*stop),iy=Math.round(my+uy*stop);
+   if(ha===0){g.fillStyle='#e9fbff';g.fillRect(ix-1,iy-1,3,3);g.fillStyle='#5ce8ff';for(const[a,b]of[[-3,-2],[2,-3],[3,2],[-2,3],[0,-4]])g.fillRect(ix+a,iy+b,1,1)}
+   if(ha===1){g.fillStyle='rgba(200,200,190,.6)';g.fillRect(ix-2,iy-2,2,2);g.fillRect(ix+1,iy-1,2,2)}
+   if(withEnemy&&ha<=3)dmgText(g,qe.x+.5,qe.y-26,dmg,ha)});
+  out.push(r.c)}
+ return out}
+function ball(g,x,y,seed){x=Math.round(x);y=Math.round(y);
+ g.fillStyle=OUTL;g.fillRect(x-1,y-2,3,5);g.fillRect(x-2,y-1,5,3);g.fillStyle='#24262b';g.fillRect(x-1,y-1,2,2);g.fillStyle='#5b6068';g.fillRect(x-1,y-1,1,1);
+ // micro-éclairs : 2 ou 3 zigzags de 2–3 px autour de la balle, renouvelés à chaque image
+ for(let k=0;k<3;k++){if(hsh(seed,k)<.25)continue;const a=hsh(seed+11,k)*Math.PI*2;let px=x+Math.round(Math.cos(a)*3),py=y+Math.round(Math.sin(a)*3);
+  for(let s=0;s<3;s++){g.fillStyle=s===0?'#e9fbff':'#5ce8ff';g.fillRect(px,py,1,1);px+=Math.round(Math.cos(a+(s&1?.9:-.9)));py+=Math.round(Math.sin(a+(s&1?.9:-.9)))}}}
+// ---- planche ----
+const IN1=[-20,0,70],OUT1=[-30,0,120],IN2=[40,0,62],OUT2=[60,0,105];
+const SECT=[
+ {name:'Épée à une main en cuivre',note:'Taille horizontale devant le personnage, de sa droite vers sa gauche. Arc blanc à 3 blocs du buste : tout ennemi dans l’arc subit les dégâts (7).',fps:21,scenes:[['À portée (3 blocs)',()=>oneHand('copper_sword',IN1)],['Hors de portée',()=>oneHand('copper_sword',OUT1)]]},
+ {name:'Épée à une main en fer',note:'Même taille, dégâts 10.',fps:21,scenes:[['À portée (3 blocs)',()=>oneHand('iron_sword',IN1)],['Hors de portée',()=>oneHand('iron_sword',OUT1)]]},
+ {name:'Épée à deux mains en cuivre',note:'Tenue à deux mains, taille en diagonale de l’épaule gauche à la taille côté droit. Arc blanc à 3 blocs : dégâts 14 à l’ennemi touché.',fps:18,scenes:[['À portée (3 blocs)',()=>twoHand('copper_greatsword',IN2)],['Hors de portée',()=>twoHand('copper_greatsword',OUT2)]]},
+ {name:'Épée à deux mains en fer',note:'Même taille, dégâts 18.',fps:18,scenes:[['À portée (3 blocs)',()=>twoHand('iron_greatsword',IN2)],['Hors de portée',()=>twoHand('iron_greatsword',OUT2)]]},
+ {name:'Canon à projection',note:'2 balles par seconde. Une balle ne s’arrête qu’au premier obstacle solide : sur un ennemi elle fait ses dégâts (12), sinon elle s’écrase sur le mur.',fps:12,scenes:[['Ennemi sur la trajectoire',()=>cannonFrames(true)],['Pas d’ennemi : jusqu’au mur',()=>cannonFrames(false)]]},
+ {name:'Boucliers (cuivre, fer)',none:true}];
+const out=document.getElementById('out');
+for(const S of SECT){const sec=document.createElement('section');sec.innerHTML=`<h2>${S.name}</h2>`;
+ if(S.none){sec.innerHTML+=`<p class="note"><span class="none">Pas d’attaque.</span> Le bouclier ne sert qu’à se défendre (défense +1 en cuivre, +2 en fer) ; l’Ingénieur garde l’attaque de l’arme de sa main droite.</p>`;out.append(sec);continue}
+ sec.innerHTML+=`<p class="note">${S.note}</p>`;
+ S.scenes.forEach(([label,make],si)=>{const fr=make(),row=document.createElement('div');row.className='cells';row.style.marginBottom='10px';
+  const w=fr[0].width,live=canvas(w*3,SCH*3),lg=live.getContext('2d');lg.imageSmoothingEnabled=false;let i=0;
+  const tick=()=>{lg.clearRect(0,0,live.width,live.height);lg.drawImage(fr[i%fr.length],0,0,live.width,live.height);i++};tick();setInterval(tick,1000/S.fps);
+  row.append(cell(live,`${label} · boucle ×3 · ${S.fps} i/s`));if(si===0)fr.forEach((f,k)=>row.append(cell(zoom(f,2),String(k+1))));sec.append(row)});
+ out.append(sec)}
+document.title='Attaques du Creuset · prêt';
+</script></body></html>

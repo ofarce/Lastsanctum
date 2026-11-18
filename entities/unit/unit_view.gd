@@ -29,6 +29,9 @@ var _idle: Array[AtlasTexture] = []
 var _walk: Array[AtlasTexture] = []
 var _enemy_attack: Array[AtlasTexture] = []
 var _enemy_death: Array[AtlasTexture] = []
+## Animations propres à la Martyre de Byrsa : incantation et réaction aux coups (vides pour les autres).
+var _enemy_cast: Array[AtlasTexture] = []
+var _enemy_hit: Array[AtlasTexture] = []
 var _corpse_shadow_ready := false
 static var _enemy_sheets: Dictionary = {}
 var _kneel: Array[AtlasTexture] = []
@@ -87,13 +90,16 @@ func setup(u: Unit, meta: Dictionary, sim: Simulation, w: World = null) -> void:
 	if enemy:
 		if not _enemy_sheets.has(u.role):
 			var sheets := {}
-			for action: String in ["idle", "walk", "attack", "death"]:
-				sheets[action] = _frames(base + action + ".png", meta[action])
+			for action: String in ["idle", "walk", "attack", "death", "cast", "hit"]:
+				if meta.has(action):
+					sheets[action] = _frames(base + action + ".png", meta[action])
 			_enemy_sheets[u.role] = sheets
 		_idle = _enemy_sheets[u.role]["idle"]
 		_walk = _enemy_sheets[u.role]["walk"]
 		_enemy_attack = _enemy_sheets[u.role]["attack"]
 		_enemy_death = _enemy_sheets[u.role]["death"]
+		_enemy_cast = _enemy_sheets[u.role].get("cast", [] as Array[AtlasTexture])
+		_enemy_hit = _enemy_sheets[u.role].get("hit", [] as Array[AtlasTexture])
 	else:
 		_idle = _frames(base + "idle.png", meta["idle"])
 		_walk = _frames(base + "walk.png", meta["walk"])
@@ -202,6 +208,9 @@ func _update() -> void:
 	var key: int = (u as Enemy).anim_key() if enemy else u.id
 	if walking:
 		frame = walk_frames[wi]
+	elif enemy and _meta["idle"].get("loop", false):
+		# Boucle de repos à sa propre cadence (Martyre de Byrsa : 74 images à 24 i/s).
+		frame = _idle[floori(t * float(_meta["idle"]["fps"])) % _idle.size()]
 	else:
 		frame = (_bare["idle"] if bare else _idle)[(floori(t * SPR_FRAMES / SPR_LOOP) + (key & 7) * 3) % SPR_FRAMES]
 	var ax := float(_meta["ax"])
@@ -230,11 +239,22 @@ func _update() -> void:
 	if enemy:
 		var age := t - (u as Enemy).attack_started
 		# Durée propre de l'animation si elle est plus courte que la recharge (Martyre de Byrsa).
-		if age >= 0.0 and age < float(_meta["attack"].get("duration", Catalog.ENEMY[u.role]["cd"])):
+		var playing := age >= 0.0 and age < float(_meta["attack"].get("duration", Catalog.ENEMY[u.role]["cd"]))
+		if playing:
 			frame = _enemy_attack[mini(_enemy_attack.size() - 1, floori(age * float(_meta["attack"]["fps"])))]
 			ax = float(_meta["ax"])
 			ay = float(_meta["ay"])
 			bob = 0
+		# Incantation (la plus récente des deux l'emporte), puis réaction aux coups si rien d'autre ne joue.
+		if not _enemy_cast.is_empty():
+			var ca := t - (u as Enemy).cast_started
+			if ca >= 0.0 and ca < float(_meta["cast"]["duration"]) and (u as Enemy).cast_started >= (u as Enemy).attack_started:
+				frame = _enemy_cast[mini(_enemy_cast.size() - 1, floori(ca * float(_meta["cast"]["fps"])))]
+				playing = true
+		if not _enemy_hit.is_empty() and not playing:
+			var ha := t - (u as Enemy).hurt_at
+			if ha >= 0.0 and ha < float(_meta["hit"]["duration"]):
+				frame = _enemy_hit[mini(_enemy_hit.size() - 1, floori(ha * float(_meta["hit"]["fps"])))]
 	if not _kneel.is_empty() and simulation and simulation.kneeling(u):
 		if bare:
 			var pr: Array = _bare["pray"]
@@ -285,6 +305,19 @@ func _update() -> void:
 		_med_on = not med.is_empty()
 		_med_back.queue_redraw()
 		_med_front.queue_redraw()
+	# Ingénieur armé au Creuset : taille à une main (slash1), à deux mains (slash2) ou tir du canon (shoot),
+	# planches/armes-attaques.html ; démarre à sw_t0 (épées) ou sh_t0 (canon).
+	if bare and not winded and med.is_empty():
+		var anim := String(Gear.weapon(u).get("anim", ""))
+		if anim != "" and TyrienArt.meta["anims"].has(anim):
+			var fps := TyrienArt.fps(anim)
+			var frames := TyrienArt.anim(anim)
+			var age := t - (u.sh_t0 if anim == "shoot" else u.sw_t0)
+			if age >= 0.0 and age < frames.size() / fps:
+				frame = frames[mini(frames.size() - 1, floori(age * fps))]
+				kick = 0
+				bob = 0
+				_face = u.face
 	# Tyrien : planches au gabarit propre (cadre plus large pour l'équipement).
 	var tyrien := bare and TyrienArt.is_tyrien(frame)
 	if tyrien:

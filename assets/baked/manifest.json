@@ -766,110 +766,238 @@
   "note": "Échelle en jeu : Z()/16 × 1,9, soit 1,1047 × PX ; filtre « le plus proche ». Image : floor(t·6) & 3 (marche : & 1).",
   "roles": {
    "sigil": {
-    "ax": 7,
-    "ay": 26,
+    "ax": 12,
+    "ay": 35,
+    "spirit": true,
+    "crate": [
+     7,
+     19
+    ],
     "modes": {
      "idle": {
-      "frame_w": 18,
-      "frame_h": 27,
-      "cols": 1,
+      "frame_w": 34,
+      "frame_h": 37,
+      "cols": 24,
       "rows": 1,
-      "count": 1
+      "count": 24,
+      "fps": 12
      },
      "walk": {
-      "frame_w": 18,
-      "frame_h": 27,
-      "cols": 2,
+      "frame_w": 34,
+      "frame_h": 37,
+      "cols": 24,
       "rows": 1,
-      "count": 2
+      "count": 24,
+      "fps": 12
+     },
+     "carry": {
+      "frame_w": 34,
+      "frame_h": 37,
+      "cols": 24,
+      "rows": 1,
+      "count": 24,
+      "fps": 12
+     },
+     "pray": {
+      "frame_w": 34,
+      "frame_h": 37,
+      "cols": 24,
+      "rows": 1,
+      "count": 24,
+      "fps": 12
      },
      "work": {
-      "frame_w": 18,
-      "frame_h": 27,
-      "cols": 4,
+      "frame_w": 34,
+      "frame_h": 37,
+      "cols": 24,
       "rows": 1,
-      "count": 4
+      "count": 24,
+      "fps": 12
+     },
+     "fight": {
+      "frame_w": 34,
+      "frame_h": 37,
+      "cols": 24,
+      "rows": 1,
+      "count": 24,
+      "fps": 12
      }
     }
    },
    "medeina": {
-    "ax": 7,
-    "ay": 25,
+    "ax": 15,
+    "ay": 31,
+    "spirit": true,
+    "crate": [
+     6,
+     10
+    ],
     "modes": {
      "idle": {
-      "frame_w": 20,
-      "frame_h": 26,
-      "cols": 1,
+      "frame_w": 41,
+      "frame_h": 33,
+      "cols": 24,
       "rows": 1,
-      "count": 1
+      "count": 24,
+      "fps": 12
      },
      "walk": {
-      "frame_w": 20,
-      "frame_h": 26,
-      "cols": 2,
+      "frame_w": 41,
+      "frame_h": 33,
+      "cols": 24,
       "rows": 1,
-      "count": 2
+      "count": 24,
+      "fps": 12
+     },
+     "carry": {
+      "frame_w": 41,
+      "frame_h": 33,
+      "cols": 24,
+      "rows": 1,
+      "count": 24,
+      "fps": 12
+     },
+     "pray": {
+      "frame_w": 41,
+      "frame_h": 33,
+      "cols": 24,
+      "rows": 1,
+      "count": 24,
+      "fps": 12
      },
      "work": {
-      "frame_w": 20,
-      "frame_h": 26,
-      "cols": 4,
+      "frame_w": 41,
+      "frame_h": 33,
+      "cols": 24,
       "rows": 1,
-      "count": 4
+      "count": 24,
+      "fps": 12
+     },
+     "fight": {
+      "frame_w": 41,
+      "frame_h": 33,
+      "cols": 24,
+      "rows": 1,
+      "count": 24,
+      "fps": 12
      }
     }
    },
    "aether": {
-    "ax": 7,
-    "ay": 26,
+    "ax": 14,
+    "ay": 35,
+    "spirit": true,
+    "crate": [
+     9,
+     11
+    ],
     "modes": {
      "idle": {
-      "frame_w": 20,
-      "frame_h": 27,
-      "cols": 1,
+      "frame_w": 43,
+      "frame_h": 37,
+      "cols": 24,
       "rows": 1,
-      "count": 1
+      "count": 24,
+      "fps": 12
      },
      "walk": {
-      "frame_w": 20,
-      "frame_h": 27,
-      "cols": 2,
+      "frame_w": 43,
+      "frame_h": 37,
+      "cols": 24,
       "rows": 1,
-      "count": 2
+      "count": 24,
+      "fps": 12
+     },
+     "carry": {
+      "frame_w": 43,
+      "frame_h": 37,
+      "cols": 24,
+      "rows": 1,
+      "count": 24,
+      "fps": 12
+     },
+     "pray": {
+      "frame_w": 43,
+      "frame_h": 37,
+      "cols": 24,
+      "rows": 1,
+      "count": 24,
+      "fps": 12
      },
      "work": {
-      "frame_w": 20,
-      "frame_h": 27,
-      "cols": 4,
+      "frame_w": 43,
+      "frame_h": 37,
+      "cols": 24,
       "rows": 1,
-      "count": 4
+      "count": 24,
+      "fps": 12
+     },
+     "fight": {
+      "frame_w": 43,
+      "frame_h": 37,
+      "cols": 24,
+      "rows": 1,
+      "count": 24,
+      "fps": 12
      }
     }
    },
    "indra": {
     "ax": 11,
-    "ay": 27,
+    "ay": 36,
+    "spirit": true,
+    "crate": [
+     6,
+     2
+    ],
     "modes": {
      "idle": {
-      "frame_w": 21,
-      "frame_h": 28,
-      "cols": 1,
+      "frame_w": 34,
+      "frame_h": 38,
+      "cols": 24,
       "rows": 1,
-      "count": 1
+      "count": 24,
+      "fps": 12
      },
      "walk": {
-      "frame_w": 21,
-      "frame_h": 28,
-      "cols": 2,
+      "frame_w": 34,
+      "frame_h": 38,
+      "cols": 24,
       "rows": 1,
-      "count": 2
+      "count": 24,
+      "fps": 12
+     },
+     "carry": {
+      "frame_w": 34,
+      "frame_h": 38,
+      "cols": 24,
+      "rows": 1,
+      "count": 24,
+      "fps": 12
+     },
+     "pray": {
+      "frame_w": 34,
+      "frame_h": 38,
+      "cols": 24,
+      "rows": 1,
+      "count": 24,
+      "fps": 12
      },
      "work": {
-      "frame_w": 21,
-      "frame_h": 28,
-      "cols": 4,
+      "frame_w": 34,
+      "frame_h": 38,
+      "cols": 24,
       "rows": 1,
-      "count": 4
+      "count": 24,
+      "fps": 12
+     },
+     "fight": {
+      "frame_w": 34,
+      "frame_h": 38,
+      "cols": 24,
+      "rows": 1,
+      "count": 24,
+      "fps": 12
      }
     }
    },

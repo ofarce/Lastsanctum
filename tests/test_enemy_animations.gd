@@ -78,7 +78,7 @@ func test_progressive_roster() -> void:
 			if w < 8:
 				check(spawn["kind"] != "strazhar", "champion à partir du huitième assaut")
 	for kind: String in Catalog.ENEMY:
-		if kind != "beast" and kind != Martyre.KIND:
+		if kind != "beast" and kind != Martyre.KIND and not Wildlife.KINDS.has(kind):
 			check(seen.has(kind), "renfort présent : " + kind)
 	check(not seen.has(Martyre.KIND), "le boss ne vient jamais en vague")
 

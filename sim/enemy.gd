@@ -25,7 +25,14 @@ var slow_until := 0.0
 var beast := false
 var armor := 0.0
 var attack_started := -INF
+## Incantation (sceaux) et réaction aux coups de la Martyre de Byrsa : début des animations martyre_cast, martyre_hit.
+var cast_started := -INF
+var hurt_at := -INF
 var died_at := INF
+## Faune hostile de la jungle (sim/wildlife.gd) : neutre, repaire, proie courante.
+var neutral := false
+var home := Vector2.ZERO
+var wild_target: Unit = null
 ## Portail maléfique d'origine (rejetons), ou null.
 var portal: Variant = null
 

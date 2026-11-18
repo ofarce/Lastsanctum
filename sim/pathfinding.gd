@@ -8,8 +8,8 @@ extends RefCounted
 ## de la roche ; début de ligne testé finement (clear_near) ; steer contourne un coin où l'unité est arrêtée.
 
 const CELL := 2.0
-const W := 232  # (WORLD.x1 − WORLD.x0) / 2
-const H := 204  # (WORLD.z1 − WORLD.z0) / 2
+const W := int(CaveShape.WORLD_X1 - CaveShape.WORLD_X0) / 2
+const H := int(CaveShape.WORLD_Z1 - CaveShape.WORLD_Z0) / 2
 const BUDGET := 60000
 ## Longueur du début de ligne vérifiée au pas fin (0,2) dans clear_line / clear_near.
 const NEAR := 0.6

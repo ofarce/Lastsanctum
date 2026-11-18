@@ -36,6 +36,12 @@ var _anchors: Array[ScreenAnchor] = []
 var _portal_meta := {}
 ## Éclairage (étape 4) : créé après le décor, donc dessiné par-dessus.
 var lighting: Lighting
+## Vie décorative de la jungle (oiseaux, papillons, poissons, pollen, brume).
+var jungle_life: JungleLife
+## Objets posés le long des chemins (RoadProps.place).
+var road_props: Array[Dictionary] = []
+## Pluie et éclairs à l'écran (core/weather.gd).
+var rain_view: RainView
 ## Simulation (étape 5) : fournit les unités à dessiner.
 var simulation: Simulation
 var _unit_views := {}
@@ -58,6 +64,7 @@ var anchor_overload: AnchorOverload
 ## Emprises au sol des bâtiments (drawBuildGrid), sous le décor.
 var build_grid: BuildGrid
 var soulwell_halo: SoulwellHalo
+var spirit_arrival: SpiritArrivalFx
 ## Coffre antique de la réserve scellée (visible une fois la réserve découverte).
 var chest_view: ChestView
 ## Glyphe tyrien qui trahit la réserve scellée sur la paroi est de la salle.
@@ -69,6 +76,13 @@ var _special := {}
 ## Dessus de roche posés au-dessus des parois : [Sprite2D, x, z de la paroi], et version du terrain vue.
 var _caps: Array = []
 var _caps_version := -1
+## Ambiances de la montagne (bassins sous les objets triés ; champignons, lianes, faune dans le tri).
+var ambience_ground := Node2D.new()
+## Rendu de la rivière de la jungle (null sans rivière).
+var river_view: RiverView
+## Nœuds de la petite végétation (null sans végétation).
+var flora_view: FloraView
+var ambience := {}
 
 @onready var camera: WorldCamera = $Camera
 @onready var terrain: Terrain = $Terrain
@@ -89,6 +103,9 @@ func _ready() -> void:
 	_sprites_mat.set_shader_parameter("meta", load("res://assets/baked/world/decor_atlas_meta.png"))
 	ysort.material = _sprites_mat
 	camera.view_changed.connect(apply_view)
+	ambience_ground.name = "AmbienceGround"
+	add_child(ambience_ground)
+	move_child(ambience_ground, ysort.get_index())
 	build_grid = BuildGrid.new()
 	build_grid.name = "BuildGrid"
 	build_grid.world = self
@@ -107,6 +124,23 @@ func _ready() -> void:
 		dome.front = is_front
 		add_child(dome)
 		move_child(dome, ysort.get_index() + (1 if is_front else 0))
+	# Arrivée des esprits à l'autel (Germe) : repère du monde, par-dessus les sprites.
+	spirit_arrival = SpiritArrivalFx.new()
+	spirit_arrival.name = "SpiritArrival"
+	spirit_arrival.world = self
+	add_child(spirit_arrival)
+	move_child(spirit_arrival, ysort.get_index() + 1)
+	var rain_layer := CanvasLayer.new()
+	rain_layer.name = "RainLayer"
+	rain_layer.layer = 2
+	add_child(rain_layer)
+	rain_view = RainView.new()
+	rain_view.world = self
+	rain_layer.add_child(rain_view)
+	jungle_life = JungleLife.new()
+	jungle_life.name = "JungleLife"
+	jungle_life.world = self
+	add_child(jungle_life)
 	overlay = WorldOverlay.new()
 	overlay.name = "Overlay"
 	overlay.world = self
@@ -130,6 +164,7 @@ func _ready() -> void:
 	lighting.providers.append(anchor_overload.lights)
 	lighting.providers.append(_vault_lights)
 	lighting.providers.append(_grove_lights)
+	lighting.providers.append(_ambience_lights)
 	add_child(lighting)
 	var fog_layer := CanvasLayer.new()
 	fog_layer.layer = 3
@@ -163,12 +198,16 @@ func reset_world(seed: int) -> void:
 	_loader.parent = ysort
 	_anchors.clear()
 	_loader.build_decor(decor)
+	_build_generated_decor(seed)
 	decor.builder = _build_runtime_node
 	_special = _loader.special
 	for e: Dictionary in decor.entries():
 		_attach_visuals(e)
 	terrain_state.reset_digging()
 	terrain_state.generate_galleries(seed)
+	_clear_river_decor()
+	_thin_trees()
+	_lay_roads()
 	fog.reset_exploration()
 	fog.refresh(terrain_state)
 	_update_caps()
@@ -187,6 +226,11 @@ func reset_world(seed: int) -> void:
 		var ore := preload("res://world/terrain/ore_view.gd").new()
 		ore.setup(terrain_state, key)
 		ysort.add_child(ore)
+	_build_ambience()
+	flora_view = null
+	if terrain_state.flora:
+		flora_view = FloraView.new()
+		flora_view.setup(terrain_state.flora, ysort, ambience_ground)
 	chest_view = ChestView.new()
 	chest_view.name = "Chest"
 	chest_view.setup(terrain_state)
@@ -198,6 +242,140 @@ func reset_world(seed: int) -> void:
 	terrain_ops = TerrainOps.new(terrain_state, decor, TerrainPainter.new(terrain, terrain_state))
 	print("Graine des galeries : %d (%d réseaux)" % [seed, terrain_state.count])
 	apply_view()
+
+
+## Ni arbre ni caillou dans le lit, sur les berges ou sur les ponts (décor baké compris).
+func _clear_river_decor() -> void:
+	var r := terrain_state.river
+	if r == null:
+		return
+	var zr := r.z_range()
+	decor.remove_in_rect(CaveShape.WORLD_X0, zr.x, CaveShape.WORLD_X1, zr.y,
+		func(e: Dictionary) -> bool: return not DecorRegistry.is_fixed(e) and r.clear_of_decor(float(e["x"]), float(e["z"])))
+
+
+## Chemins de la jungle : sol repeint, décor dégagé, torches le long de la route principale.
+func _lay_roads() -> void:
+	var road := terrain_state.road
+	if road == null:
+		return
+	terrain.paint_road(road)
+	for r: Rect2 in road.bounds():
+		decor.remove_in_rect(r.position.x, r.position.y, r.end.x, r.end.y,
+			func(e: Dictionary) -> bool: return not DecorRegistry.is_fixed(e) and road.on_road(float(e["x"]), float(e["z"]), 1.5))
+	# Objets du chemin et poste abandonné : sol dégagé autour, puis un sprite chacun.
+	road_props = RoadProps.place(road, gallery_seed)
+	for p: Dictionary in road_props:
+		var x: float = p["x"]
+		var z: float = p["z"]
+		var r := RoadProps.OUTPOST_R + 1.5 if p["k"] == "outpost" else 1.6
+		decor.remove_in_rect(x - r, z - r, x + r, z + r, func(e: Dictionary) -> bool: return not DecorRegistry.is_fixed(e))
+		if terrain_state.flora:
+			terrain_state.flora.clear_rect(x - r, z - r, x + r, z + r)
+		if p["k"] == "outpost":
+			continue
+		var s := Sprite2D.new()
+		s.name = "Prop_" + String(p["k"])
+		var tex := PropArt.texture(p["k"])
+		s.texture = tex
+		s.centered = false
+		s.offset = Vector2(-floorf(tex.get_width() / 2.0), -tex.get_height() + 1.0)
+		s.flip_h = p["flip"]
+		s.position = Vector2(roundf(x * Proj.K), roundf(z * Proj.K))
+		ysort.add_child(s)
+	for k in fog.road_torches.size():
+		var t: Vector2 = fog.road_torches[k]
+		if t.y > Road.GATE_Z:
+			fog.road_torches[k] = Vector2(roundf(road.main_x(t.y)), t.y)
+
+
+## Clairières, marais et coins rocheux : moins d'arbres (Flora.thin_tree).
+func _thin_trees() -> void:
+	var f := terrain_state.flora
+	if f == null:
+		return
+	decor.remove_in_rect(CaveShape.WORLD_X0, -100.0, CaveShape.WORLD_X1, CaveShape.WORLD_Z1,
+		func(e: Dictionary) -> bool: return String(e.get("s", "")).begins_with("tree_") and f.thin_tree(float(e["x"]), float(e["z"])))
+
+
+# ---------------------------------------------------------------- Décor généré (hors zone d'origine)
+## Les entrées de tous les chunks sont dans le registre dès le départ (le creusement et la révélation des
+## galeries les retirent comme les autres) ; seuls leurs nœuds sont créés à l'approche de la caméra et
+## libérés quand elle s'éloigne (DECOR_KEEP chunks de marge en plus, pour ne pas osciller).
+
+const DECOR_MARGIN := 1
+const DECOR_KEEP := 2
+## Vector2i(chunk) → Array[Dictionary] (entrées du registre).
+var _gen_decor := {}
+var _gen_live := {}
+var _gen_view := Rect2i()
+
+
+func _build_generated_decor(map_seed: int) -> void:
+	_gen_decor.clear()
+	_gen_live.clear()
+	_gen_view = Rect2i()
+	var cr := DecorGen.chunk_range()
+	for cz in range(cr.position.y, cr.end.y):
+		for cx in range(cr.position.x, cr.end.x):
+			var c := Vector2i(cx, cz)
+			var list := DecorGen.chunk(map_seed, c)
+			if list.is_empty():
+				continue
+			for e in list:
+				decor.add_raw(e)
+			_gen_decor[c] = list
+
+
+## Chunks de décor visibles (unités du monde) : écran à l'échelle ×PX, plus une marge.
+func _decor_view() -> Rect2i:
+	var half := get_viewport_rect().size / (16.0 * camera.px)
+	var c0 := Vector2i(floori((camera.cam.x - half.x) / DecorGen.CHUNK), floori((camera.cam.y - half.y) / DecorGen.CHUNK))
+	var c1 := Vector2i(floori((camera.cam.x + half.x) / DecorGen.CHUNK), floori((camera.cam.y + half.y) / DecorGen.CHUNK))
+	return Rect2i(c0, c1 - c0 + Vector2i.ONE).grow(DECOR_MARGIN)
+
+
+func _stream_decor() -> void:
+	var view := _decor_view()
+	if view == _gen_view:
+		return
+	_gen_view = view
+	var keep := view.grow(DECOR_KEEP - DECOR_MARGIN)
+	if flora_view:
+		flora_view.stream(view, keep)
+	if _gen_decor.is_empty():
+		return
+	for c: Vector2i in _gen_live.keys():
+		if keep.has_point(c):
+			continue
+		for e: Dictionary in _gen_decor[c]:
+			var node: Node = e.get("node")
+			if node and is_instance_valid(node):
+				node.queue_free()
+			e.erase("node")
+		_gen_live.erase(c)
+	for cz in range(view.position.y, view.end.y):
+		for cx in range(view.position.x, view.end.x):
+			var c := Vector2i(cx, cz)
+			if _gen_live.has(c) or not _gen_decor.has(c):
+				continue
+			_gen_live[c] = true
+			for e: Dictionary in _gen_decor[c]:
+				# Retirée du registre (creusement, galerie révélée) : plus jamais dessinée.
+				if not decor.has(e):
+					continue
+				e["node"] = _loader.make_node(e)
+				_attach_visuals(e)
+
+
+## Nœuds de décor généré actuellement créés (tests, mesures).
+func generated_decor_nodes() -> int:
+	var n := 0
+	for c: Vector2i in _gen_live:
+		for e: Dictionary in _gen_decor[c]:
+			if e.has("node"):
+				n += 1
+	return n
 
 
 ## Nœud d'un objet ajouté en cours de partie (face, stalagmite, portail maléfique), avec ses effets.
@@ -369,6 +547,14 @@ func _process(_delta: float) -> void:
 	_sync_enemies()
 	_sync_turrets()
 	_update_dynamic()
+	if flora_view:
+		flora_view.refresh()
+	if terrain_state.river:
+		var fl := Weather.flood()
+		if fl != terrain_state.river.flood:
+			terrain_state.river.flood = fl
+			if river_view:
+				river_view.set_flood(fl)
 
 
 ## Crée ou retire les nœuds des unités pour suivre GameState.units (les unités mortes ne sont pas dessinées).
@@ -540,6 +726,47 @@ func _grove_lights() -> Array[Dictionary]:
 	return out
 
 
+## Ambiances de la montagne (planche ambiances-montagne-detail.html), avec parcimonie : AmbienceLayout.
+func _build_ambience() -> void:
+	for child in ambience_ground.get_children():
+		child.free()
+	river_view = null
+	if terrain_state.river:
+		river_view = RiverView.new()
+		river_view.setup(terrain_state.river)
+		ambience_ground.add_child(river_view)
+	for p: Dictionary in terrain_state.pools:
+		var pool := PoolView.new()
+		pool.setup(terrain_state, p)
+		ambience_ground.add_child(pool)
+	ambience = AmbienceLayout.build(terrain_state)
+	for d: Dictionary in ambience["mushrooms"]:
+		var m := MushroomView.new()
+		m.setup(terrain_state, d)
+		ysort.add_child(m)
+	for key: String in ["vines", "roots"]:
+		for d: Dictionary in ambience[key]:
+			var v := VineView.new()
+			v.setup(terrain_state, d, key == "roots")
+			ysort.add_child(v)
+	for pair: Array in [["bats", FaunaView.Kind.BATS], ["beetles", FaunaView.Kind.BEETLES], ["salamanders", FaunaView.Kind.SALAMANDER]]:
+		for d: Dictionary in ambience[pair[0]]:
+			var f := FaunaView.new()
+			f.setup(terrain_state, d, pair[1])
+			ysort.add_child(f)
+
+
+## Lueur des champignons : pulsée, plus vive autour des lanternes ; seulement dans les galeries ouvertes.
+func _ambience_lights() -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	for d: Dictionary in ambience.get("mushrooms", []):
+		if not terrain_state.is_gallery_open(d["x"], d["z"]):
+			continue
+		var k := 0.5 + 0.5 * sin(GameState.sim_time * 2.0 - float(d["x"]) * 0.32)
+		out.append({"x": d["x"], "z": d["z"], "r": (6.0 if d["lantern"] else 4.5) * (0.85 + 0.15 * k), "rgb": Color8(220, 240, 205), "glow": 0.08 + 0.05 * k})
+	return out
+
+
 func _building_lights() -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	var t := GameState.sim_time
@@ -609,6 +836,7 @@ func apply_view() -> void:
 	_snap.set_shader_parameter("px", float(px))
 	_sprites_mat.set_shader_parameter("px", float(px))
 	_sprites_mat.set_shader_parameter("world_origin", position)
+	_stream_decor()
 	_update_dynamic()
 
 

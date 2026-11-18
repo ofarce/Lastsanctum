@@ -113,9 +113,7 @@ func test_deferred_effects() -> void:
 	GameState.buildings.append(b)
 	GameState.effects.clear()
 	sim.summon_adept(b)
-	var fx: Dictionary = GameState.effects[-1]
-	check_eq([fx["type"], fx["x"], fx["z"], fx["color"]], ["hit", -24.0, Simulation.PORTAL.y + 1.0, Color("#dde2ee")],
-		"invocation : éclair au portail de Sigil")
+	check(GameState.effects.is_empty(), "invocation : plus d'éclair au portail (arrivée à l'autel)")
 	GameState.effects.clear()
 	var u := engineer()
 	GameState.orb_owner = u

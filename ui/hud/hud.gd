@@ -27,6 +27,11 @@ var _root := Control.new()
 var _wave_card := _Panel.new()
 var _wave_icon := TextureRect.new()
 var _wave_label := HudStyle.label(20, HudStyle.IVORY)
+## Jour et heure (core/day_night.gd), sous le bandeau des ressources.
+var _sky_card := _Panel.new()
+var _sky_icon := TextureRect.new()
+var _sky_label := HudStyle.label(18, HudStyle.IVORY)
+var _sky_key := ""
 var _res_panel := _Panel.new()
 ## Panneau d'objectif sous la carte de vague (Rapport de l'Ingénieur).
 var objective := ObjectivePanel.new()
@@ -87,6 +92,8 @@ var _last_map := -INF
 var _last_update := -INF
 var _ctx := ""
 var _view := {}
+## Galerie des Exilés (au-dessus de la minicarte) et boutons Incarner / Désincarner.
+var exile_gallery := ExileGallery.new()
 
 
 func _ready() -> void:
@@ -97,6 +104,7 @@ func _ready() -> void:
 	_build_top()
 	_build_bar()
 	_build_overlays()
+	_root.add_child(exile_gallery)
 	var inventory := preload("res://ui/inventory/engineer_inventory.gd").new()
 	_root.add_child(inventory)
 	get_viewport().size_changed.connect(_layout)
@@ -110,6 +118,7 @@ func setup(s: Simulation, w: World) -> void:
 	sim = s
 	world = w
 	minimap.world = w
+	exile_gallery.world = w
 	dialogue.camera = w.camera
 	s.engineer_greeted.connect(dialogue.greet_engineer)
 	s.engineer_spoke.connect(func(u: Unit, text: String) -> void:
@@ -152,6 +161,13 @@ func _build_top() -> void:
 	_wave_icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_wave_card.add_child(_wave_icon)
 	_wave_card.add_child(_wave_label)
+	_sky_card.kind = "metal"
+	_sky_card.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_root.add_child(_sky_card)
+	for c: Control in [_sky_icon, _sky_label]:
+		c.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_sky_card.add_child(c)
+	_sky_icon.modulate = Color("#f1c86a")
 	_root.add_child(objective)
 	objective.resized.connect(_layout_debug)
 	_res_panel.kind = "metal"
@@ -384,6 +400,7 @@ func _layout() -> void:
 	_diamonds.modules = _modules
 	_diamonds.size = _bar.size
 	_diamonds.queue_redraw()
+	exile_gallery.hud_bottom = _bar.position.y
 	_layout_map(_modules[0].size)
 	_layout_selection(_modules[1].size)
 	_layout_details(_modules[2].size)
@@ -423,6 +440,12 @@ func _layout_top(s: Vector2) -> void:
 		var w := 26.0 + 10.0 + HudStyle.text_width(it["name"].text + " ", 16) + 8.0 + HudStyle.text_width(it["value"].text, 20)
 		widths.append(w)
 		total += w + (25.0 + 24.0 if i < keys.size() - 1 else 0.0)
+	var sw := HudStyle.text_width(_sky_label.text, 18)
+	_sky_card.size = Vector2(18.0 + 20.0 + 8.0 + sw + 18.0, 40.0)
+	_sky_icon.position = Vector2(18.0, 10.0)
+	_sky_icon.size = Vector2(20, 20)
+	_sky_label.position = Vector2(46.0, 7.0)
+	_sky_label.size = Vector2(sw + 4.0, 26.0)
 	var left := TOP_INSET.x + _wave_card.size.x + 26.0
 	var right := s.x - TOP_INSET.x
 	# Réduit les espaces entre ressources si le bandeau dépasse la place disponible.
@@ -430,6 +453,8 @@ func _layout_top(s: Vector2) -> void:
 	total += (gap - 49.0) * (keys.size() - 1)
 	_res_panel.size = Vector2(total, 52.0)
 	_res_panel.position = Vector2(left + maxf(0.0, (right - left - total) / 2.0), TOP_INSET.y)
+	# Heure et météo : sous le bandeau des ressources, centrées.
+	_sky_card.position = Vector2(roundf(_res_panel.position.x + (_res_panel.size.x - _sky_card.size.x) / 2.0), TOP_INSET.y + _res_panel.size.y + 8.0)
 	var x := 23.0
 	var seps: Array[float] = []
 	for i in keys.size():
@@ -642,6 +667,10 @@ func _process(delta: float) -> void:
 	if sim == null:
 		return
 	dialogue.tick(minf(delta, Simulation.MAX_DT))
+	# Incarnation : mode action pur, sans bandeau de commandement.
+	var free := GameState.incarnated == null
+	_bar.visible = free
+	_build_row.visible = free
 	if _notice_end < GameState.sim_time:
 		_notice.modulate.a = maxf(0.0, _notice.modulate.a - delta / 0.2)
 	else:
@@ -706,6 +735,16 @@ func refresh(force_map := false) -> void:
 
 func _apply_view(v: Dictionary) -> void:
 	_wave_label.text = "Vague " + v["wave"]
+	var sky: Dictionary = v["sky"]
+	var text: String = sky["day"] + " · " + sky["time"]
+	if _sky_label.text != text or _sky_key != sky["time_icon"]:
+		var relayout_sky := _sky_label.text.length() != text.length()
+		_sky_label.text = text
+		if _sky_key != sky["time_icon"]:
+			_sky_key = sky["time_icon"]
+			_sky_icon.texture = HudStyle.icon(sky["time_icon"], 22)
+		if relayout_sky:
+			_layout_top(_screen())
 	for k in Catalog.RES_ORDER:
 		_res_items[k]["value"].text = v["res"][k] + " (+ %s/s)" % HudModel.num_fr(v["resource_rates"][k])
 	_res_items["population"]["value"].text = v["population"]

@@ -10,8 +10,8 @@ extends Node
 signal view_changed
 
 ## clampCam : x ∈ [WORLD.x0 + 30, WORLD.x1 − 30], z ∈ [WORLD.z0 + 20, WORLD.z1 − 28] (galleries.js).
-const CAM_MIN := Vector2(-202.0, -316.0)
-const CAM_MAX := Vector2(202.0, 44.0)
+const CAM_MIN := Vector2(CaveShape.WORLD_X0 + 30.0, CaveShape.WORLD_Z0 + 20.0)
+const CAM_MAX := Vector2(CaveShape.WORLD_X1 - 30.0, CaveShape.WORLD_Z1 - 28.0)
 ## Position de départ (init(), Index.html).
 const START := Vector2(0.0, -148.0)
 const KEY_SPEED := 10.0
@@ -83,6 +83,9 @@ func _process(delta: float) -> void:
 	if not input_enabled:
 		return
 	# Ctrl maintenu ou raccourci avec Ctrl en cours (Ctrl+A : tout sélectionner, D2) : pas de défilement.
+	# Exilé incarné : la caméra le suit (ExileGallery), les touches le pilotent.
+	if GameState.incarnated != null:
+		return
 	if not _chords.is_empty() or Input.is_key_pressed(KEY_CTRL) or Input.is_key_pressed(KEY_META):
 		return
 	var dx := Input.get_action_strength("cam_right") - Input.get_action_strength("cam_left")
@@ -108,7 +111,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		set_view(cam, px + 1)
 	elif event.is_action_pressed("zoom_out"):
 		set_view(cam, px - 1)
-	elif event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_RIGHT:
+	elif event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_RIGHT and GameState.incarnated == null:
 		if event.pressed:
 			_pan_on = true
 			_pan_moved = false

@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ambiances de la montagne</title>
+<style>
+:root{--bg:#14161b;--panel:#1d2028;--line:#2c313c;--ink:#e6e8ee;--mute:#9aa1b0;--acc:#c8d4ec}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,sans-serif}
+main{max-width:1500px;margin:0 auto;padding:24px 16px 60px}
+h1{font-size:26px;margin:0 0 4px}
+h2{font-size:18px;margin:32px 0 10px}
+.sub{color:var(--mute);margin:0 0 18px}
+.analyse{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px}
+.analyse div{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px 14px}
+.analyse b{color:var(--acc)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,460px),1fr));gap:16px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:8px;overflow:hidden}
+canvas{display:block;width:100%;image-rendering:pixelated;background:#000}
+.txt{padding:10px 14px 14px}
+.txt h3{margin:0 0 4px;font-size:16px}
+.txt h3 span{color:var(--mute);font-weight:400;margin-right:6px}
+.txt p{margin:4px 0;color:#c9cdd6;font-size:14px}
+.tag{display:inline-block;font-size:12px;padding:1px 7px;border-radius:9px;background:#2a2f3a;color:var(--mute);margin:6px 4px 0 0}
+.bar{position:sticky;top:0;background:var(--bg);padding:8px 0;z-index:2;display:flex;gap:8px}
+button{background:#2a2f3a;color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:6px 12px;cursor:pointer}
+button.on{background:#3b4456}
+</style>
+</head>
+<body>
+<main>
+<h1>Ambiances de la montagne · 12 propositions</h1>
+<p class="sub">Analyse du biome actuel (Ardoise tyrienne) et pistes pour rendre l'exploration plus vivante. Chaque vignette est un rendu animé à l'échelle du jeu (1 pixel logique = 1 pixel du jeu, affiché ×3), sur le sol de dalles et la paroi actuels.</p>
+
+<h2>Constat sur le biome actuel</h2>
+<div class="analyse">
+<div><b>Palette très resserrée.</b> Tout tient dans les gris-bleus de l'ardoise (#272d37 → #404955) et les taches de terre ocre. Rien de chaud ni de saturé dans la roche : l'œil n'a aucun repère pour se dire « ici, c'est un autre endroit ».</div>
+<div><b>Décor presque immobile.</b> Ce qui bouge aujourd'hui : la lueur du quartz, le rai et les poussières du bosquet, l'Ancre. Une galerie vide est une image fixe. Rien ne réagit au passage de l'Ingénieur.</div>
+<div><b>Répétition des motifs.</b> Mêmes rochers moussus, mêmes stalactites en dents, même dallage d'une galerie à l'autre. Avec le monde infini, chaque chunk ressemble au précédent.</div>
+<div><b>Peu de repères à découvrir.</b> Les filons et les bosquets sont les seules récompenses visuelles. Il manque des « lieux » : une salle d'eau, une faille de lave, une ruine. Ce sont eux qui donnent envie de creuser plus loin.</div>
+<div><b>Lumière uniforme.</b> Un seul type de source (quartz blanc froid). Des sources colorées locales (lave orange, champignons pâles, jour qui filtre) structureraient l'espace la nuit.</div>
+<div><b>Contraintes de charte respectées ici.</b> Cyan réservé aux Exilés (eau en bleu-gris, pas cyan), rouge à la Bête (yeux des bêtes pas rouges), or à Laetan, pourpre à l'Ancre. Contour noir franc gardé sur tout.</div>
+</div>
+
+<h2>Propositions</h2>
+<div class="bar"><button id="day" class="on">Jour</button><button id="night">Nuit</button><button id="pause">Pause</button></div>
+<div class="grid" id="grid"></div>
+</main>
+<script>
+const W=160,H=100,S=3;
+const OUT='#0b090b';
+const P={w0:'#272d37',w1:'#333a46',w2:'#404955',w3:'#4e5868',fl:'#4a515e',fl2:'#555d6b',gr:'#2e333c',dirt:'#6b5438',moss:'#4f6b3a',moss2:'#6c8a4a',q:'#c8d4ec',qw:'#eef2fb'};
+let night=false,paused=false;
+
+function hash(x,y,s=0){let h=(x*374761393+y*668265263+s*1442695041)|0;h=(h^(h>>>13))*1274126177|0;return((h^(h>>>16))>>>0)/4294967296}
+function vnoise(x,y,s=0){const xi=Math.floor(x),yi=Math.floor(y),xf=x-xi,yf=y-yi;const u=xf*xf*(3-2*xf),v=yf*yf*(3-2*yf);
+ const a=hash(xi,yi,s),b=hash(xi+1,yi,s),c=hash(xi,yi+1,s),d=hash(xi+1,yi+1,s);return a+(b-a)*u+(c-a)*v+(a-b-c+d)*u*v}
+function hex(c){const n=parseInt(c.slice(1),16);return[n>>16,(n>>8)&255,n&255]}
+
+class G{ // tampon de pixels logiques
+ constructor(ctx){this.ctx=ctx;this.img=ctx.createImageData(W,H);this.d=this.img.data}
+ px(x,y,c,a=1){x|=0;y|=0;if(x<0||y<0||x>=W||y>=H)return;const i=(y*W+x)*4,[r,g,b]=typeof c==='string'?hex(c):c;
+  this.d[i]=this.d[i]*(1-a)+r*a;this.d[i+1]=this.d[i+1]*(1-a)+g*a;this.d[i+2]=this.d[i+2]*(1-a)+b*a;this.d[i+3]=255}
+ add(x,y,c,a){x|=0;y|=0;if(x<0||y<0||x>=W||y>=H)return;const i=(y*W+x)*4,[r,g,b]=typeof c==='string'?hex(c):c;
+  this.d[i]=Math.min(255,this.d[i]+r*a);this.d[i+1]=Math.min(255,this.d[i+1]+g*a);this.d[i+2]=Math.min(255,this.d[i+2]+b*a)}
+ rect(x,y,w,h,c,a=1){for(let j=0;j<h;j++)for(let i=0;i<w;i++)this.px(x+i,y+j,c,a)}
+ get(x,y){const i=(y*W+x)*4;return[this.d[i],this.d[i+1],this.d[i+2]]}
+ glow(cx,cy,r,c,k=1){ // halo en paliers (pas de dégradé lisse)
+  for(let y=Math.max(0,cy-r|0);y<Math.min(H,cy+r+1);y++)for(let x=Math.max(0,cx-r|0);x<Math.min(W,cx+r+1);x++){
+   const d=Math.hypot(x-cx,(y-cy)*1.3)/r;if(d>=1)continue;const step=Math.ceil((1-d)*4)/4;this.add(x,y,c,step*0.22*k)}}
+ flush(){this.ctx.putImageData(this.img,0,0)}
+}
+
+// ---------- décor de base : paroi nord + sol de dalles ----------
+function base(g,o={}){
+ const wallH=o.wallH??22;
+ for(let y=0;y<H;y++)for(let x=0;x<W;x++){
+  if(y<wallH){ // paroi
+   const top=wallH-12;
+   if(y<top){const n=vnoise(x/6,y/6,3);g.px(x,y,n>.6?P.w1:P.w0)}
+   else if(y===top)g.px(x,y,OUT);
+   else{const n=hash(x>>2,0,7);let c=n>.66?P.w2:n>.33?P.w1:P.w1;if(x%8===0)c=P.w0;if(y===top+1)c=P.w3;g.px(x,y,c)}
+  }else{
+   const row=(y-wallH)>>3,off=row%2?8:0,sx=(x+off)>>4;
+   const gx=(x+off)%16===0,gy=(y-wallH)%8===0;
+   let c=hash(sx,row,1)>.5?P.fl:P.fl2;
+   if(vnoise(x/9,y/9,5)>.72)c=P.dirt;
+   if(gx||gy)c=P.gr;
+   if(hash(x,y,9)>.985)c=P.w2;
+   g.px(x,y,c)}
+ }
+ for(let x=0;x<W;x++)g.px(x,wallH,OUT);
+ // stalactites
+ if(o.stal!==false)for(const sx of o.stalX||[22,58,118,140]){for(let j=0;j<6;j++){const w=Math.max(0,2-(j>>1));for(let i=-w;i<=w;i++)g.px(sx+i,wallH+j,j===5?OUT:(i===-w?OUT:P.w2))}}
+}
+function boulder(g,cx,cy,r){for(let y=-r;y<=r;y++)for(let x=-r-2;x<=r+2;x++){const d=Math.hypot(x/(r+2),y/r);if(d>1)continue;
+ g.px(cx+x,cy+y,d>.85?OUT:(y<-r/3?P.w3:y<r/3?P.w2:P.w1));if(y<-r/2&&hash(x,y,cx)>.6&&d<.85)g.px(cx+x,cy+y,P.moss)}}
+function quartz(g,cx,cy,t,k=1){const sh=[[0,-9],[-3,-6],[3,-7],[-5,-4],[5,-4]];
+ for(const[dx,h]of sh){for(let j=0;j>h;j--){g.px(cx+dx,cy+j,P.qw);g.px(cx+dx-1,cy+j,OUT);g.px(cx+dx+1,cy+j,P.q)}g.px(cx+dx,cy+h,OUT)}
+ g.glow(cx,cy-4,22,[200,212,236],k*(0.8+0.2*Math.sin(t*2)))}
+function nightPass(g){if(!night)return;for(let i=0;i<g.d.length;i+=4){const r=g.d[i],gg=g.d[i+1],b=g.d[i+2];
+ g.d[i]=r*.55;g.d[i+1]=gg*.62;g.d[i+2]=Math.min(255,b*.8+18)}}
+
+// ---------- propositions ----------
+const pools={};
+const cards=[
+{n:1,t:'Bassins d\'eau souterraine',d:'Petites salles où l\'eau stagne. Gouttes qui tombent des stalactites, ronds dans l\'eau, reflet tremblé du quartz. L\'eau reste bleu-gris profond (le cyan est aux Exilés).',tags:['shader eau (ondulation + reflet)','GPUParticles2D gouttes','case infranchissable'],
+ f(g,t){base(g);const cx=80,cy=66;
+  for(let y=40;y<H;y++)for(let x=20;x<140;x++){const e=((x-cx)/52)**2+((y-cy)/20)**2;
+   if(e<1){let c=e>.86?'#2b3a4b':'#1a2735';const w=Math.sin(x*.35+t*2+y*.8)*.5+Math.sin(x*.12-t*1.3);if(w>1.1&&e<.86)c='#3c5268';g.px(x,y,c)}
+   else if(e<1.08)g.px(x,y,OUT)}
+  // reflet du quartz, inversé et ondulé
+  for(let j=0;j<12;j++){const wob=Math.round(Math.sin(t*3+j*.9)*1.2);for(const dx of[-5,-3,0,3,5])if(j<[4,6,9,7,4][[-5,-3,0,3,5].indexOf(dx)])g.px(100+dx+wob,52+j,'#7f93ad',.7)}
+  quartz(g,100,50,t);
+  // goutte + ronds
+  const per=1.6,ph=(t%per)/per,dy=24+ph*ph*40;if(ph<.75)g.px(58,dy,'#a9bdd6');
+  const r=((t+per*.25)%per)/per*14;for(let a=0;a<6.28;a+=.08){const x=58+Math.cos(a)*r,y=64+Math.sin(a)*r*.4;if(((x-cx)/52)**2+((y-cy)/20)**2<.86)g.px(x,y,'#6f87a3',1-r/14)}
+  boulder(g,30,86,5)}},
+{n:2,t:'Failles de lave',d:'Rares fissures profondes dans les galeries lointaines : lave qui coule lentement, croûte sombre qui dérive, braises qui montent, sol réchauffé en orange autour. Repère fort de nuit, et danger possible.',tags:['shader flux (bruit défilant)','PointLight2D orange','braises particules'],
+ f(g,t){base(g,{stalX:[30,130]});
+  for(let y=23;y<H;y++){const c=70+Math.sin(y*.12)*14+(y-23)*.35;for(let x=c-16;x<c+16;x++){const d=Math.abs(x-c)/ (9+Math.sin(y*.3)*2);
+   if(d>1.5)continue;if(d>1.2){g.px(x,y,'#3a1a10');continue}if(d>1){g.px(x,y,OUT);continue}
+   const n=vnoise(x/5,(y-t*6)/5,2)+d*.4;g.px(x,y,n<.45?'#fde68a':n<.7?'#f97316':n<.95?'#c2410c':'#4a1d10')}}
+  g.glow(78,62,40,[249,115,22],1.1);
+  for(let i=0;i<14;i++){const life=(t*.5+hash(i,0,4))%1,x=60+hash(i,1,4)*36+Math.sin(t*2+i)*2,y=90-life*70;g.px(x,y,life<.6?'#fdba74':'#9a3412',1-life)}
+  boulder(g,132,70,6)}},
+{n:3,t:'Champignons luminescents',d:'Touffes de champignons pâles qui pulsent doucement et lâchent des spores. Lumière ivoire tirant sur le vert d\'eau, assez douce pour ne pas concurrencer le quartz. Marquent les recoins humides.',tags:['sprite 4 images','lumière pulsée','spores particules'],
+ f(g,t){base(g);
+  const tufts=[[34,60,0],[44,66,1],[118,82,2],[126,74,3],[106,48,4]];
+  for(const[x,y,i]of tufts){const k=.6+.4*Math.sin(t*1.5+i*1.7);g.glow(x,y-3,16,[220,236,200],k);
+   for(const[dx,h,w]of[[0,6,3],[-4,4,2],[4,3,2]]){for(let j=0;j<h;j++)g.px(x+dx,y-j,'#cfc8b0');g.px(x+dx-1,y-1,OUT);
+    for(let i2=-w;i2<=w;i2++){g.px(x+dx+i2,y-h,'#e9f2d2');g.px(x+dx+i2,y-h-1,i2*i2<w*w?'#f6fbe9':OUT);g.px(x+dx+i2,y-h+1,'#9fb38c')}g.px(x+dx-w-1,y-h,OUT);g.px(x+dx+w+1,y-h,OUT)}}
+  for(let i=0;i<22;i++){const tf=tufts[i%5],life=(t*.25+hash(i,2,6))%1;g.px(tf[0]+Math.sin(t+i)*6*life,tf[1]-6-life*30,'#eaf5d8',(1-life)*.9)}
+  boulder(g,76,40,5)}},
+{n:4,t:'Puits de jour et poussières',d:'Une faille dans la voûte laisse passer le jour (la jungle est au-dessus). Rai oblique où dansent les poussières, petits graviers qui tombent de temps en temps. Suit le cycle jour/nuit : clair de lune bleuté la nuit.',tags:['Polygon2D additif','particules lentes','lié au cycle jour/nuit'],
+ f(g,t){base(g,{stalX:[20,140]});
+  const col=night?[150,175,230]:[255,240,200];
+  for(let y=0;y<H;y++){const x0=60+y*.35,x1=92+y*.45;for(let x=x0|0;x<x1;x++){const e=Math.min(x-x0,x1-x)/6;g.add(x,y,col,Math.min(1,e)*.18)}}
+  for(let y=72;y<92;y++)for(let x=80;x<124;x++)if(((x-102)/22)**2+((y-82)/8)**2<1)g.add(x,y,col,.18);
+  for(let i=0;i<30;i++){const life=(t*.05+hash(i,3,8))%1,y=life*H,x=60+y*.38+hash(i,4,8)*30+Math.sin(t*.8+i)*3;g.px(x,y,'#fff7e0',.7*Math.sin(life*3.14))}
+  const ph=(t%3.2)/3.2;if(ph<.4){const y=22+ph/.4*60;g.px(84+ph*10,y,P.w2);g.px(85+ph*10,y,OUT)}
+  for(let x=62;x<96;x+=3)g.px(x,10+hash(x,0,2)*3,'#5f7d3e'); // herbes au bord du trou
+  boulder(g,30,70,6)}},
+{n:5,t:'Petite faune inoffensive',d:'Chauves-souris qui s\'envolent quand l\'Ingénieur approche, scarabées d\'ardoise qui trottent le long des murs, salamandre qui fuit dans une fente. Yeux noirs ou ambrés, jamais rouges (rouge = la Bête).',tags:['entités cosmétiques hors sim','fuite au passage','2–3 images d\'anim'],
+ f(g,t){base(g);
+  // chauves-souris
+  for(let b=0;b<3;b++){const ph=t*.6+b*2.1,x=(30+ph*28)%(W+20)-10,y=34+Math.sin(ph*2.3+b)*8+b*6,flap=Math.floor(t*10+b)%2;
+   g.px(x,y,OUT);g.px(x,y+1,'#2a2430');for(let i=1;i<4;i++){const dy=flap?-(i>>1):(i>>1);g.px(x-i,y+dy,OUT);g.px(x+i,y+dy,OUT)}}
+  // scarabées
+  for(let k=0;k<2;k++){const x=(t*8+k*70)%W,y=26+k*58,leg=Math.floor(t*12)%2;
+   g.rect(x,y,4,3,'#3d4a5c');g.px(x+1,y,'#7a8ba3');g.px(x+4,y+1,OUT);g.px(x-1,y+1,OUT);g.rect(x,y+3,4,1,OUT);g.px(x+leg,y+3,'#222');g.px(x+2+leg,y-1,OUT)}
+  // salamandre
+  const sx=110+Math.sin(t*.7)*14,sy=76;for(let i=0;i<10;i++){const yy=sy+Math.round(Math.sin(t*6-i*.7)*1.2);g.px(sx-i,yy,i<3?'#c08a3e':'#a8702c');g.px(sx-i,yy+1,OUT)}
+  g.px(sx+1,sy,'#c08a3e');g.px(sx+1,sy-1,OUT);g.px(sx,sy-1,'#1a1a1a');
+  // papillons de nuit autour du quartz
+  quartz(g,46,70,t,.8);for(let m=0;m<3;m++){const a=t*2.2+m*2.1;g.px(46+Math.cos(a)*10,62+Math.sin(a*1.3)*6,(Math.floor(t*12+m)%2)?'#e8e0cc':'#a39a86')}}},
+{n:6,t:'Racines et lianes de la jungle',d:'Près de la lisière sud, des racines percent la voûte et des lianes pendent en se balançant. Quelques feuilles vertes qui tombent. Transition douce entre la montagne et la jungle.',tags:['shader de balancement (vertex)','densité selon distance à la jungle'],
+ f(g,t){base(g,{stal:false});
+  const vines=[[18,40],[30,26],[52,48],[96,34],[110,52],[136,30]];
+  for(const[x,len]of vines){for(let j=0;j<len;j++){const sw=Math.sin(t*1.2+x)*(j/len)*3,xx=x+sw;g.px(xx,22+j,j%5===0?'#5f7d3e':'#3f5a2c');g.px(xx+1,22+j,OUT);
+   if(j%6===3){g.px(xx-1,22+j,'#6c8a4a');g.px(xx-2,22+j+1,'#4f6b3a')}}}
+  for(let x=0;x<W;x+=1)if(hash(x,1,3)>.6){const l=2+hash(x,2,3)*6;for(let j=0;j<l;j++)g.px(x+(j>>2),11+j,'#4b3a26')} // racines sur la paroi
+  for(let i=0;i<4;i++){const life=(t*.15+i*.25)%1,x=40+i*30+Math.sin(life*12)*5,y=24+life*70;g.px(x,y,'#6c8a4a');g.px(x+1,y,'#4f6b3a')}
+  for(let x=0;x<W;x++)if(hash(x,9,9)>.7)g.px(x,23,'#4f6b3a');
+  boulder(g,76,74,7)}},
+{n:7,t:'Ruines tyriennes enfouies',d:'Fragments de l\'ancienne civilisation pris dans la roche : colonne brisée, dalle à glyphes qui s\'éveille faiblement quand l\'Ingénieur passe, tête de statue renversée. Donne une histoire aux galeries.',tags:['props de décor procédural','glyphe réactif (proximité)','rares, 1 par région'],
+ f(g,t){base(g);
+  // colonne brisée
+  for(let y=30;y<70;y++){const top=y<34;for(let x=26;x<38;x++){let c=x<28?'#8d8a82':x>35?'#5c5a55':'#77746c';if((x-26)%4===0)c='#5c5a55';if(top&&hash(x,y,1)>.4)continue;g.px(x,y,c)}g.px(25,y,OUT);g.px(38,y,OUT)}
+  g.rect(22,70,20,4,'#6d6a63');g.rect(22,74,20,1,OUT);
+  // tambour tombé
+  for(let x=46;x<66;x++){for(let y=78;y<86;y++)g.px(x,y,y<80?'#8d8a82':'#6d6a63');g.px(x,86,OUT);g.px(x,77,OUT)}for(let y=77;y<87;y++){g.px(66,y,'#55524c');g.px(67,y,OUT)}
+  // dalle à glyphes
+  g.rect(96,52,30,18,'#3a404c');g.rect(96,51,30,1,OUT);g.rect(96,70,30,1,OUT);
+  const k=.4+.6*Math.max(0,Math.sin(t*1.2));const gl=[[100,56],[104,56],[108,58],[112,55],[116,57],[120,56],[102,63],[110,64],[118,63]];
+  for(const[x,y]of gl){g.px(x,y,[94,234,234],k);g.px(x+1,y,[94,234,234],k*.7);g.px(x,y+1,[94,234,234],k*.7)}
+  g.glow(111,60,18,[94,234,234],k*.5);
+  // tête de statue
+  for(let y=-5;y<=5;y++)for(let x=-6;x<=6;x++){const d=Math.hypot(x/6,y/5);if(d<1)g.px(138+x,82+y,d>.82?OUT:x<0?'#8d8a82':'#6d6a63')}
+  g.rect(135,81,2,1,OUT);g.rect(140,81,2,1,OUT);g.px(139,84,OUT);for(let x=130;x<147;x++)if(hash(x,0,5)>.5)g.px(x,77,P.moss)}},
+{n:8,t:'Sol vivant et varié',d:'Le dallage cède par endroits : gravier, éboulis, flaques qui reflètent les lumières, coussins de mousse, ossements de bêtes anciennes. Variations par chunk (bruit basse fréquence) pour casser la répétition.',tags:['TerrainPainter : couches par bruit','reflets via shader de flaque','coût faible'],
+ f(g,t){base(g);
+  for(let y=24;y<H;y++)for(let x=0;x<W;x++){const n=vnoise(x/14,y/14,11);
+   if(n>.68&&x<70){g.px(x,y,hash(x,y,2)>.5?'#5f6672':'#3c424d');if(hash(x,y,3)>.9)g.px(x,y,OUT)}
+   if(n<.25&&x>90){g.px(x,y,hash(x,y,4)>.4?P.moss:P.moss2)}}
+  // flaque avec reflet
+  for(let y=62;y<74;y++)for(let x=70;x<100;x++){const e=((x-85)/14)**2+((y-68)/5)**2;if(e<1)g.px(x,y,e>.75?'#2b3a4b':(Math.sin(x*.5+t*2)>.85?'#7f93ad':'#1f2d3c'));else if(e<1.15)g.px(x,y,OUT)}
+  // os
+  g.rect(118,40,12,2,'#d9d2bf');g.px(117,39,'#d9d2bf');g.px(117,42,'#d9d2bf');g.px(130,39,'#d9d2bf');g.px(130,42,'#d9d2bf');g.rect(118,42,12,1,OUT);
+  for(let i=0;i<4;i++){g.rect(122+i*3,30,1,5,'#cfc7b2');g.px(122+i*3,35,OUT)}
+  // éboulis
+  for(let i=0;i<9;i++){const x=24+hash(i,0,1)*30,y=34+hash(i,1,1)*14;g.rect(x,y,3,2,P.w3);g.rect(x,y+2,3,1,OUT)}
+  boulder(g,40,82,6)}},
+{n:9,t:'Quartz qui scintille et réfracte',d:'Les grappes de quartz lancent des étincelles en étoile et projettent au sol de petites taches de lumière qui glissent lentement. Rend la lumière actuelle plus vivante sans changer sa couleur.',tags:['shader étincelle sur l\'atlas','taches au sol (sprites additifs)'],
+ f(g,t){base(g);quartz(g,52,56,t,1.1);quartz(g,120,40,t+1,.8);
+  for(let i=0;i<6;i++){const a=t*.3+i,x=60+Math.cos(a)*30+i*8,y=72+Math.sin(a*.7)*10;for(let j=-2;j<=2;j++)for(let k=-1;k<=1;k++)g.add(x+j,y+k,[220,230,255],.25*(1-Math.abs(j)/3))}
+  const sp=[[49,47],[55,49],[52,46],[118,32],[123,34]];
+  for(let i=0;i<sp.length;i++){const ph=(t*1.3+i*.37)%1;if(ph<.35){const r=ph<.17?2:3;const[x,y]=sp[i];g.px(x,y,'#ffffff');for(let k=1;k<=r;k++){const a=1-k/(r+1);g.px(x+k,y,'#ffffff',a);g.px(x-k,y,'#ffffff',a);g.px(x,y+k,'#ffffff',a);g.px(x,y-k,'#ffffff',a)}}}
+  boulder(g,96,82,5)}},
+{n:10,t:'Brume rampante',d:'Dans les poches basses, une nappe de brume coule sur le sol, s\'écarte autour des unités et laisse dépasser rochers et stalagmites. Donne de la profondeur et du mystère aux zones encore inexplorées.',tags:['shader bruit 2 couches','masque par zones creuses','écartement au passage'],
+ f(g,t){base(g);boulder(g,40,60,7);boulder(g,112,74,6);quartz(g,130,50,t,.6);
+  for(let y=24;y<H;y++)for(let x=0;x<W;x++){const n=vnoise((x+t*6)/16,y/7,4)*.6+vnoise((x-t*3)/7,(y+t)/5,5)*.4;const fall=Math.min(1,(y-30)/30);
+   const ux=80+Math.sin(t*.5)*30,d=Math.hypot(x-ux,(y-80)*1.5);const clear=d<14?d/14:1;
+   const a=Math.max(0,(n-.38))*1.6*fall*clear;if(a>0)g.px(x,y,'#b9c3d6',Math.ceil(a*3)/3*.55)}
+  const ux=80+Math.sin(t*.5)*30;g.rect(ux-2,72,4,8,'#3b3f4a');g.rect(ux-2,70,4,2,'#c9b28a');g.rect(ux-3,72,1,8,OUT);g.rect(ux+2,72,1,8,OUT)}},
+{n:11,t:'Évents de vapeur',d:'Petites bouches dans le sol qui crachent par intermittence une colonne de vapeur. Le sol autour est humide et plus sombre. Rythme lisible qui peut aussi servir de piège ou de raccourci plus tard.',tags:['GPUParticles2D en salves','son « pschitt »','option gameplay'],
+ f(g,t){base(g);
+  const vents=[[54,70,0],[112,58,1.7]];
+  for(const[x,y,o]of vents){for(let yy=-4;yy<=4;yy++)for(let xx=-10;xx<=10;xx++)if((xx/10)**2+(yy/4)**2<1)g.px(x+xx,y+yy,'#3a404b',.6);
+   g.rect(x-3,y-1,7,3,OUT);g.rect(x-2,y,5,1,'#1a1d23');
+   const cyc=(t+o)%3.5,on=cyc<1.6;
+   for(let i=0;i<40;i++){const life=((t*.9+hash(i,o*10,1))%1);if(!on&&life<.5)continue;const yy=y-life*48,xx=x+Math.sin(life*6+i)*life*8+(hash(i,1,o*3)-.5)*life*10;
+    const a=(1-life)*(on?.8:.3);g.px(xx,yy,'#dfe5ee',a);g.px(xx+1,yy,'#c4ccd8',a*.7)}}
+  boulder(g,28,40,5)}},
+{n:12,t:'Cascade souterraine',d:'Une source jaillit de la paroi et tombe en filet dans un bassin. Écume en bas, bruine, petits arcs de reflets. Pièce rare, à garder pour des salles remarquables (repère de navigation sur la minimap).',tags:['texture défilante','écume particules','repère minimap'],
+ f(g,t){base(g,{stalX:[24,136],wallH:30});
+  for(let y=18;y<64;y++)for(let x=74;x<86;x++){const n=Math.sin((y-t*40)*.5+x*1.7);g.px(x,y,x===74||x===85?OUT:n>.6?'#c7d4e4':n>0?'#7f93ad':'#56708e')}
+  for(let y=58;y<H;y++)for(let x=34;x<128;x++){const e=((x-80)/46)**2+((y-80)/18)**2;if(e<1){let c=e>.88?'#2b3a4b':'#1a2735';if(Math.sin(x*.3+t*3+y)>.9)c='#3c5268';g.px(x,y,c)}else if(e<1.07)g.px(x,y,OUT)}
+  for(let i=0;i<30;i++){const life=(t*1.5+hash(i,0,2))%1,a=hash(i,1,2)*6.28,r=life*12;g.px(80+Math.cos(a)*r,66-Math.sin(a)*life*6+life*life*6,'#eaf0f8',1-life)}
+  for(let x=68;x<92;x++)if(hash(x,Math.floor(t*8),3)>.5)g.px(x,65+hash(x,1,Math.floor(t*8))*3,'#eaf0f8');
+  quartz(g,126,52,t,.7)}}
+];
+
+const grid=document.getElementById('grid'),items=[];
+for(const c of cards){const el=document.createElement('div');el.className='card';
+ el.innerHTML=`<canvas width="${W}" height="${H}"></canvas><div class="txt"><h3><span>${String(c.n).padStart(2,'0')}</span>${c.t}</h3><p>${c.d}</p>${c.tags.map(x=>`<span class="tag">${x}</span>`).join('')}</div>`;
+ grid.appendChild(el);const ctx=el.querySelector('canvas').getContext('2d');items.push({c,g:new G(ctx)})}
+let t0=performance.now(),tp=0;
+function frame(now){if(!paused)tp+=(now-t0)/1000;t0=now;const t=Math.floor(tp*12)/12; // 12 i/s comme les autres planches
+ for(const{c,g}of items){g.d.fill(0);c.f(g,t);nightPass(g);g.flush()}requestAnimationFrame(frame)}
+requestAnimationFrame(frame);
+const bd=document.getElementById('day'),bn=document.getElementById('night'),bp=document.getElementById('pause');
+bd.onclick=()=>{night=false;bd.classList.add('on');bn.classList.remove('on')};
+bn.onclick=()=>{night=true;bn.classList.add('on');bd.classList.remove('on')};
+bp.onclick=()=>{paused=!paused;bp.classList.toggle('on',paused)};
+</script>
+</body>
+</html>

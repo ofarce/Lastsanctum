@@ -90,11 +90,14 @@ static func ghost(role: String) -> Dictionary:
 	if not ResourceLoader.exists(path):
 		_ghosts[role] = {}
 		return {}
-	var src := (load(path) as Texture2D).get_image()
-	src.decompress()
+	var R: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://assets/baked/manifest.json"))["adepts"]["roles"][role]
+	# L'image de repos est une planche d'images : on ne garde que la première.
+	var M: Dictionary = R["modes"]["idle"]
+	var sheet := (load(path) as Texture2D).get_image()
+	sheet.decompress()
+	var src := sheet.get_region(Rect2i(0, 0, int(M["frame_w"]), int(M["frame_h"])))
 	var w := src.get_width()
 	var h := src.get_height()
-	var R: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://assets/baked/manifest.json"))["adepts"]["roles"][role]
 	var solid := func(x: int, y: int) -> bool: return x >= 0 and y >= 0 and x < w and y < h and src.get_pixel(x, y).a > 0.5
 	var list: Array[ImageTexture] = []
 	for phase in 3:

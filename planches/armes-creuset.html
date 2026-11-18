@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Armes du Creuset</title>
+<style>
+:root{--bg:#14171c;--panel:#1d2128;--ink:#d5c7a9;--dim:#8b8676;--line:#2c323b}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 system-ui,sans-serif;padding:20px}
+h1{margin:0 0 4px;font-size:22px}p.intro{color:var(--dim);max-width:980px;margin:0 0 16px}
+table{border-collapse:separate;border-spacing:0 10px;width:100%}
+th{color:var(--dim);font-weight:500;text-align:left;font-size:13px;padding:0 10px}
+td{background:var(--panel);padding:12px 10px;vertical-align:middle;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+td:first-child{border-left:1px solid var(--line);border-radius:6px 0 0 6px;width:190px}
+td:last-child{border-right:1px solid var(--line);border-radius:0 6px 6px 0}
+.name{font-weight:600}.stat{color:var(--dim);font-size:12px}
+.cells{display:flex;gap:10px;align-items:end}.cap{color:var(--dim);font-size:11px;text-align:center;margin-top:3px}
+canvas{image-rendering:pixelated;display:block}
+</style></head><body>
+<h1>Armes du Creuset · coffre, porté, fabriqué</h1>
+<p class="intro">Proposition : chaque arme est un <b>seul dessin en pixels</b> (style A « Objet franc », contour #0b090b, lumière en haut à gauche),
+réutilisé partout. <b>Coffre</b> : case d’inventaire 32 × 32, à ×1 et ×3. <b>Porté</b> : collé à la main de l’Ingénieur tyrien, à l’échelle
+du jeu (repos, puis 4 images de marche), ×1 et ×4 ; l’arme passe toujours devant le corps, au lieu du volume 3D actuel caché par le torse.
+<b>Fabriqué</b> : l’indicateur au-dessus du Creuset (icône 28 px, « En stock », barre de fabrication), ×1. <b>Attaque</b> : sous chaque arme, la boucle animée ×4 et chaque image ×2 ; le bras d’attaque est le bras de visée du lance-pitons (bras proche de la caméra), l’arme suit son angle.</p>
+<table><thead><tr><th>Arme</th><th>Coffre</th><th>Porté</th><th>Fabriqué</th></tr></thead><tbody id="rows"></tbody></table>
+<script src="assets/decor.js?v=6"></script><script src="assets/units.js?v=10"></script><script src="assets/engineer-volume.js?v=11"></script>
+<script>
+'use strict';
+const OUTL='#0b090b';
+const CU=['#3a1c0d','#7a3f1f','#b0623a','#d98c4f','#f6bb85'],FE=['#1c1f25','#40454e','#6b737d','#a2abb5','#e2e8ee'];
+const LE=['#26190f','#4e3720','#6e4d2d','#8d6640'],WD=['#2a1a0e','#56371d','#7a5130','#a06c42'],VG=['#2f5446','#5e9c80','#8fd0b0'];
+const hsh=(a,b)=>{let h=(a*374761393+b*668265263)|0;h=(h^(h>>>13))*1274126177;return((h^(h>>>16))>>>0)/4294967296};
+// côté éclairé : v < 0 (le haut-gauche une fois l'arme posée en diagonale)
+const metal=(R,v,hw,u)=>v<-hw+.75?R[4]:v>hw-.75?R[1]:Math.abs(v)<.45?R[2]:R[3];
+// ---- formes : (u le long de l'arme depuis la main, vers la pointe ; v en travers) → couleur ou null ----
+function sword(o){const R=o.cu?CU:FE;return(u,v)=>{
+ if(u<-o.grip-1.6)return null;
+ if(u<-o.grip)return Math.hypot(u+o.grip+.8,v)<1.25?(v<0?R[4]:R[2]):null;
+ if(u<0)return Math.abs(v)<.95?(((Math.floor(u*1.3))&1)?LE[2]:LE[1]):null;
+ if(u<1.3){const g=o.guard/2;if(Math.abs(v)>g)return null;if(o.quill&&Math.abs(v)>g-1.2&&u<.5)return null;return v<0?R[4]:R[1]}
+ const L=o.blade,t=(u-1.3)/L;if(t>1)return null;
+ let hw=o.leaf?mix(o.w,o.w*1.35,Math.sin(Math.min(t/.75,1)*Math.PI*.6)):mix(o.w,o.w*.85,t);if(t>o.tip)hw*=(1-t)/(1-o.tip);
+ if(Math.abs(v)>hw)return null;if(o.cu&&hsh(Math.floor(u*1.2),Math.floor(v+5))>.9)return VG[1];
+ if(!o.cu&&Math.abs(v)<.4&&t<.75)return R[1];return metal(R,v,hw,u)}}
+function roundShield(R){return(u,v)=>{const d=Math.hypot(u,v);if(d>5.6)return null;if(d<1.5)return v+u<0?R[4]:R[2];
+ if(d>4.5)return(u+v)<-1?R[4]:(u+v)>2?R[1]:R[3];const a=Math.atan2(v,u);if(Math.abs(d-3)<.5&&((Math.floor((a+4)*2.2))&1))return R[3];
+ return((Math.floor(v+20))&1)?WD[2]:WD[1]}}
+function kiteShield(R){return(u,v)=>{const y=u,w=y<-2?4.8:4.8*Math.max(0,(8.5-y)/10.5);if(y<-6||y>8.5||Math.abs(v)>w)return null;
+ if(Math.abs(v)>w-1.1||y<-5)return v<0||y<-5?R[4]:R[1];if(Math.abs(v)<.7||Math.abs(y+2)<.7)return R[3];return v<0?R[3]:R[2]}}
+function cannon(){return(u,v)=>{
+ if(u>-1.5&&u<4.5&&v<-2.2&&v>-5.2){const hw=1.6-(-2.2-v)*.15;if(Math.abs(u-1.5)<hw+1)return v<-4.4?FE[1]:u<1?CU[4]:CU[2]}
+ if(u<-4.5||u>12)return null;const r=u<-3?2.4:2.6;if(Math.abs(v)>r)return null;
+ if(u>11)return Math.abs(v)<1.2?OUTL:FE[2];
+ if(Math.abs(u-0)<.9||Math.abs(u-7.5)<.9)return v<0?CU[4]:v>r-.8?CU[1]:CU[3];
+ if(u<-3.4)return LE[2];return v<-r+.8?FE[4]:v>r-.8?FE[1]:Math.abs(v)<.5?FE[3]:FE[2]}}
+// ---- les armes du Creuset (data/recipes.gd) ----
+const W=[
+ {id:'copper_sword',name:'Épée à une main en cuivre',stat:'Dégâts 7 · une main',f:sword({cu:1,grip:2.4,guard:4.6,blade:6.8,w:1.4,leaf:1,tip:.72}),hold:'sword',len:11},
+ {id:'iron_sword',name:'Épée à une main en fer',stat:'Dégâts 10 · une main',f:sword({grip:2.6,guard:5.6,blade:9.4,w:1.15,tip:.8}),hold:'sword',len:14},
+ {id:'copper_greatsword',name:'Épée à deux mains en cuivre',stat:'Dégâts 14 · deux mains',f:sword({cu:1,grip:4.2,guard:6,blade:11.5,w:1.9,leaf:1,tip:.78}),hold:'great',len:18},
+ {id:'iron_greatsword',name:'Épée à deux mains en fer',stat:'Dégâts 18 · deux mains',f:sword({grip:4.6,guard:8.4,quill:1,blade:14.5,w:1.6,tip:.84}),hold:'great',len:22},
+ {id:'copper_shield',name:'Bouclier en cuivre',stat:'Défense 1 · main gauche',f:roundShield(CU),hold:'shield',len:12},
+ {id:'iron_shield',name:'Bouclier en fer',stat:'Défense 2 · main gauche',f:kiteShield(FE),hold:'shield',len:15},
+ {id:'cannon',name:'Canon à projection',stat:'Dégâts 12 · portée 12 · munitions de fer',f:cannon(),hold:'cannon',len:17}];
+// ---- tramage : échantillonne la forme à l'angle `deg` et l'échelle `s`, main (u=0) au pixel (ax, ay), puis contour ----
+function raster(g,f,deg,s,ax,ay,w,h){const a=deg*Math.PI/180,du=[Math.cos(a),Math.sin(a)],dv=[-Math.sin(a),Math.cos(a)];
+ const img=g.getImageData(0,0,w,h),d=img.data,m=new Uint8Array(w*h),hx=c=>[parseInt(c.slice(1,3),16),parseInt(c.slice(3,5),16),parseInt(c.slice(5,7),16)];
+ for(let y=0;y<h;y++)for(let x=0;x<w;x++){const px=(x+.5-ax)/s,py=(y+.5-ay)/s,u=px*du[0]+py*du[1],v=px*dv[0]+py*dv[1],c=f(u,v);if(!c)continue;const k=(y*w+x)*4,[r,gg,b]=hx(c);d[k]=r;d[k+1]=gg;d[k+2]=b;d[k+3]=255;m[y*w+x]=1}
+ for(let y=0;y<h;y++)for(let x=0;x<w;x++){if(m[y*w+x])continue;const n=(x>0&&m[y*w+x-1])||(x<w-1&&m[y*w+x+1])||(y>0&&m[(y-1)*w+x])||(y<h-1&&m[(y+1)*w+x]);if(n){const k=(y*w+x)*4;d[k]=11;d[k+1]=9;d[k+2]=11;d[k+3]=255}}
+ g.putImageData(img,0,0)}
+function canvas(w,h){const c=document.createElement('canvas');c.width=w;c.height=h;return c}
+function zoom(src,k){const c=canvas(src.width*k,src.height*k),g=c.getContext('2d');g.imageSmoothingEnabled=false;g.drawImage(src,0,0,c.width,c.height);return c}
+function cell(el,cap){const d=document.createElement('div');d.append(el);if(cap){const t=document.createElement('div');t.className='cap';t.textContent=cap;d.append(t)}return d}
+// icône : arme en diagonale (pointe en haut à droite), centrée et agrandie au plus grand qui tient dans size − 2
+const ICON_DEG={sword:-45,great:-45,shield:90,cannon:-20};
+function icon(wp,size){const c=canvas(size,size),g=c.getContext('2d');let s=4;
+ for(s=2.3;s>.5;s-=.05){const t=canvas(size*3,size*3),tg=t.getContext('2d');raster(tg,wp.f,ICON_DEG[wp.hold],s,size*1.5,size*1.5,size*3,size*3);
+  const D=tg.getImageData(0,0,size*3,size*3).data;let x0=1e9,y0=1e9,x1=-1,y1=-1;for(let i=0;i<D.length/4;i++)if(D[i*4+3]){const x=i%(size*3),y=i/(size*3)|0;x0=Math.min(x0,x);x1=Math.max(x1,x);y0=Math.min(y0,y);y1=Math.max(y1,y)}
+  if(x1-x0+1<=size-2&&y1-y0+1<=size-2){g.drawImage(t,x0,y0,x1-x0+1,y1-y0+1,Math.floor((size-(x1-x0+1))/2),Math.floor((size-(y1-y0+1))/2),x1-x0+1,y1-y0+1);break}}
+ return c}
+function slot(wp){const c=canvas(36,36),g=c.getContext('2d');g.fillStyle='#0f1216';g.fillRect(0,0,36,36);g.strokeStyle='#3a4250';g.strokeRect(.5,.5,35,35);g.drawImage(icon(wp,32),2,2);
+ g.fillStyle='#d5c7a9';g.font='bold 9px system-ui';g.fillText('1',28,33);return c}
+// porté : corps du Tyrien (vue ¾ 45°, k = 0,5, image 48 × 48) + arme collée à la main, toujours devant
+const TYR={id:'tyr',seed:88,hair:'bun',top:{type:'tunic',ramp:PAL.bone,hemY:30},feet:{type:'sandals',ramp:PAL.leath},belt:{ramp:PAL.rope,y:37,h:1.8,braid:1},bracers:1};
+const HOLD={sword:{arm:1,deg:112},great:{arm:1,deg:98},cannon:{arm:1,deg:8},shield:{arm:-1,deg:90}};
+function worn(wp,P){const F=new Fig(48,48,.5,24,45,Math.PI/4);drawFigure(F,{...TYR,gear:{}},P);const body=F.finish(),c=canvas(48,48),g=c.getContext('2d');g.drawImage(body,0,0);
+ const h=HOLD[wp.hold],r=P.arms.find(a=>Math.sign(a.sd)===h.arm),at=h.arm<0?lerp3(r.E,r.W,.55):add(r.W,[r.sd*.2,-1.9,.4]),q=F.proj(at);
+ const sw=Math.sin(P.swing||0);const l=canvas(48,48),lg=l.getContext('2d');raster(lg,wp.f,h.deg,1,q.x+.5,q.y+.5,48,48);g.drawImage(l,0,0);return c}
+// fabriqué : Creuset + indicateur de world_overlay.gd (_draw_job) avec l'icône de l'arme
+const CRE=new Image();CRE.src='assets/creuset-ref-base.png';
+function crafted(wp){const c=canvas(240,320),g=c.getContext('2d');g.fillStyle='#1a1d22';g.fillRect(0,0,240,320);
+ g.drawImage(CRE,120-160,236-168);const at={x:120,y:78};
+ const rr=(x,y,w,h,r)=>{g.beginPath();g.roundRect(x,y,w,h,r)};rr(at.x-38+.5,at.y-59+.5,76,71,4);g.fillStyle='#06121ae8';g.fill();g.strokeStyle='#1f9fb8';g.stroke();
+ g.font='bold 11px system-ui';g.fillStyle='#fff';g.textAlign='center';g.fillText('En stock : 2',at.x,at.y-8);
+ g.drawImage(icon(wp,28),at.x-14,at.y-54);g.fillStyle='#132c33';g.fillRect(at.x-31,at.y-2,62,6);g.fillStyle='#5ce8ff';g.fillRect(at.x-31,at.y-2,62*.6,6);g.strokeStyle='#1f9fb8';g.strokeRect(at.x-31+.5,at.y-2+.5,61,5);return c}
+function build(){const tb=document.getElementById('rows');
+ for(const wp of W){const tr=document.createElement('tr'),td=()=>{const t=document.createElement('td');tr.append(t);return t};
+  td().innerHTML=`<div class="name">${wp.name}</div><div class="stat">${wp.stat}</div>`;
+  const c1=document.createElement('div');c1.className='cells';const s=slot(wp);c1.append(cell(s,'×1'),cell(zoom(s,3),'×3'));td().append(c1);
+  const c2=document.createElement('div');c2.className='cells';const idle=worn(wp,pose('idle',0));c2.append(cell(idle,'×1'),cell(zoom(idle,4),'repos ×4'));
+  for(const ph of[0,.25,.5,.75])c2.append(cell(zoom(worn(wp,pose('walk',ph)),2),'marche ×2'));td().append(c2);
+  td().append(cell(crafted(wp),'×1'));tb.append(tr);
+  // attaque : une ligne pleine largeur sous l'arme (images ×2 + boucle animée ×4)
+  const ta=document.createElement('tr'),c=document.createElement('td');c.colSpan=4;c.style.cssText='border-radius:6px;width:auto;border:1px solid var(--line)';
+  const fr=attack(wp),A=ATK[wp.hold],row=document.createElement('div');row.className='cells';row.style.flexWrap='wrap';
+  const lab=document.createElement('div');lab.style.cssText='width:190px;align-self:center';lab.innerHTML=`<div class="name">Attaque</div><div class="stat">${A.note}</div>`;row.append(lab);
+  const live=canvas(48*4,48*4),lg=live.getContext('2d');lg.imageSmoothingEnabled=false;let i=0;setInterval(()=>{lg.clearRect(0,0,192,192);lg.drawImage(fr[i%fr.length],0,0,192,192);i++},1000/A.fps);
+  row.append(cell(live,`boucle ×4 · ${A.fps} i/s`));fr.forEach((f,k)=>row.append(cell(zoom(f,2),String(k+1))));c.append(row);ta.append(c);tb.append(ta)}
+ document.title='Armes du Creuset · prêt'}
+// ---- attaques : bras de visée (POSES.aim, bras proche de la caméra) orienté à l'angle écran `deg` (0 = droite, + = bas) ----
+// Épées : armé haut puis taille vers le bas-avant, traînée claire sur les images de frappe. Bouclier : coup de bouclier
+// (bras replié puis détendu). Canon : visée à l'horizontale, recul, éclair et projectile de fer.
+const ATK={
+ sword:{fps:14,note:'taille : armé, frappe, retour',deg:[-20,-60,-85,-70,-10,40,65,60,35,10],smear:[4,5,6]},
+ great:{fps:11,note:'frappe lourde au-dessus de la tête, à deux mains',deg:[-10,-50,-80,-95,-95,-40,25,70,85,85,65,30],smear:[5,6,7]},
+ shield:{fps:12,note:'coup de bouclier : bras replié puis poussée',deg:[15,10,8,5,5,8,12,15],rc:[4,7,8,1,-1,0,3,5]},
+ cannon:{fps:12,note:'tir : visée, recul, éclair, projectile de fer',deg:[0,0,0,0,0,0,0,0],rc:[0,0,4,3,1.5,.6,0,0],flash:[2,3]}};
+function attack(wp){const A=ATK[wp.hold],out=[],tips=[];
+ for(let k=0;k<A.deg.length;k++){const P={...POSES.aim(A.deg[k],A.rc?A.rc[k]:0,.5,Math.PI/4)};delete P.launcher;
+  const F=new Fig(48,48,.5,24,45,Math.PI/4);drawFigure(F,{...TYR,gear:{}},P);const c=canvas(48,48),g=c.getContext('2d');g.drawImage(F.finish(),0,0);
+  const q=F.proj(P.aimArm.W),hx=q.x+.5,hy=q.y+.5,deg=wp.hold==='shield'?90:A.deg[k];
+  const a=deg*Math.PI/180,tip=[hx+Math.cos(a)*wp.len*.9,hy+Math.sin(a)*wp.len*.9];
+  if(A.smear&&A.smear.includes(k)){g.fillStyle='rgba(235,240,245,.55)';for(let j=Math.max(0,k-2);j<k;j++){const t0=tips[j];for(let s=0;s<=8;s++){const x=mix(t0[0],tip[0],s/8),y=mix(t0[1],tip[1],s/8);g.fillRect(Math.round(mix(hx,x,.55)),Math.round(mix(hy,y,.55)),1,1);g.fillRect(Math.round(x),Math.round(y),1,1)}}}
+  tips.push(tip);const l=canvas(48,48);raster(l.getContext('2d'),wp.f,deg,1,hx,hy,48,48);g.drawImage(l,0,0);
+  if(A.flash&&A.flash.includes(k)){const mx=Math.round(hx+12),my=Math.round(hy);g.fillStyle='#ffd27a';g.fillRect(mx,my-1,3,3);g.fillStyle='#ff8a2a';g.fillRect(mx+3,my,2,1);g.fillRect(mx+1,my-2,1,1);g.fillRect(mx+1,my+2,1,1)}
+  if(A.flash&&k>A.flash[0]){const px=Math.round(hx+14+(k-A.flash[0])*5);if(px<47){g.fillStyle=OUTL;g.fillRect(px-1,Math.round(hy)-1,4,3);g.fillStyle=FE[3];g.fillRect(px,Math.round(hy),2,1)}}
+  out.push(c)}
+ return out}
+CRE.onload=build;CRE.onerror=build;
+</script></body></html>

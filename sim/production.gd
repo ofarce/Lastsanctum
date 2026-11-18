@@ -23,6 +23,7 @@ const BOX_CAPACITY := 16
 ## Ingrédients demandés d'avance, en nombre de fabrications.
 const STOCK_TARGET := 2
 const WAREHOUSE_TARGET := 5
+const CARRY_CAPACITY := 5
 
 var sim: Simulation
 
@@ -282,7 +283,7 @@ static func craft_workers(b: Building) -> int:
 	if n == 0:
 		return 0
 	var probe := b.output_box.duplicate(true)
-	return n if ItemStorage.store(probe, BOX_CAPACITY, b.recipe) else 0
+	return n if put_into(probe, b.recipe, Recipes.output_quantity(b.recipe)) == 0 else 0
 
 
 func _craft(b: Building, dt: float) -> void:
@@ -299,7 +300,7 @@ func _craft(b: Building, dt: float) -> void:
 	b.craft = 0.0
 	for k: String in cost:
 		take_from(b.input_box, k, int(cost[k]))
-	ItemStorage.store(b.output_box, BOX_CAPACITY, b.recipe)
+	put_into(b.output_box, b.recipe, Recipes.output_quantity(b.recipe))
 	b.chest_out_at = GameState.sim_time
 
 
@@ -334,7 +335,7 @@ func _dispatch(b: Building) -> void:
 		var src := find_source(b, item, carrier)
 		if src.is_empty():
 			continue
-		var qty := mini(missing, int(src["available"]))
+		var qty := mini(CARRY_CAPACITY, mini(missing, int(src["available"])))
 		src.erase("available")
 		carrier.job["step"] = "fetch"
 		carrier.job["fetch"] = {"item": item, "qty": qty, "src": src}
@@ -374,7 +375,7 @@ func update_unit(u: Unit, dt: float) -> void:
 				return
 			if not _go(u, src_pos(f["src"]), 1.2):
 				return
-			var got := take_from(src_items(f["src"]), f["item"], int(f["qty"]))
+			var got := take_from(src_items(f["src"]), f["item"], mini(CARRY_CAPACITY, int(f["qty"])))
 			j.erase("fetch")
 			if got == 0:
 				j["step"] = "post"

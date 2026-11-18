@@ -10,6 +10,9 @@ func test_generation_bands_and_safe_start() -> void:
 			# Bosquets et filons illimités au sol : couverts par test_wood et test_lodes.
 			if st.block_types[key] == st.Blocks.WOOD or st.lode_cells.has(key):
 				continue
+			# Paliers autour de l'Ancre : zone d'origine seulement (l'extension suit les biomes, test_biomes).
+			if not CaveShape.in_start(key.x * 4.0, key.y * 4.0):
+				continue
 			var tier := st.Blocks.ORES.find(st.block_types[key])
 			counts[tier] += 1
 			var center := Vector2(key * 4) + Vector2(2, 2)
@@ -76,9 +79,12 @@ func test_adepts_harvest_solid_copper_at_their_own_rate() -> void:
 	check(GameState.base_inventory.is_empty(), "le cuivre est en route")
 	sim.update_adepts(2.0)
 	check_eq(GameState.selected[0].carrying.get("item"), "copper", "Indra récolte à quatre secondes")
+	for i in 16:
+		sim.update_adepts(1.0)
 	for u: Unit in GameState.selected:
+		check_eq(u.carrying.get("quantity"), 5, "lot de cinq minerais")
 		u.x = CaveShape.CHEST_SPOT.x
 		u.z = CaveShape.CHEST_SPOT.y
 	sim.update_adepts(0.0)
-	check_eq(Production.count_in(GameState.base_inventory, "copper"), 2, "les deux récoltes arrivent au coffre")
+	check_eq(Production.count_in(GameState.base_inventory, "copper"), 10, "les deux lots arrivent au coffre")
 	check(not sim.state().dug.has(key) and not sim.state().dig_hits.has(key), "bloc intact")

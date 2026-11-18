@@ -53,8 +53,10 @@ func test_other_adept_fells_tree() -> void:
 	var r := _miner(sim, "indra")
 	for i in 19:
 		sim.update_adepts(Simulation.adept_mining_seconds(r[0]))
+		sim.update_adepts(0.0)
 	check_eq(sim.state().wood_left[r[1]], 1, "19 bois récoltés")
 	sim.update_adepts(Simulation.adept_mining_seconds(r[0]))
+	sim.update_adepts(0.0)
 	var c := Vector2(r[1] * 4) + Vector2(4, 4)
 	check(not sim.state().wood_left.has(r[1]) and sim.state().walkable(c.x, c.y), "bosquet abattu après 20 bois, sol libre")
 	check(r[0].job == null, "le mineur s'arrête")
@@ -94,9 +96,14 @@ func test_wood_reaches_vault_only_on_arrival() -> void:
 	sim.update_adepts(Simulation.adept_mining_seconds(u))
 	check_eq(u.carrying.get("item"), "wood", "le bois voyage avec la récoltante")
 	check_eq(Production.count_in(GameState.base_inventory, "wood"), 0, "bois encore en route")
+	check_eq(u.carrying.get("quantity"), 1, "première ressource conservée pendant la récolte")
+	for i in 4:
+		sim.update_adepts(Simulation.adept_mining_seconds(u))
+	check_eq(u.carrying.get("quantity"), 5, "départ avec cinq bois")
+	sim.update_adepts(0.0)
 	check_eq(Vector2(u.tx, u.tz), CaveShape.CHEST_SPOT, "destination du transport")
 	u.x = u.tx
 	u.z = u.tz
 	sim.update_adepts(DT)
-	check_eq(Production.count_in(GameState.base_inventory, "wood"), 1, "bois déposé au coffre")
+	check_eq(Production.count_in(GameState.base_inventory, "wood"), 5, "cinq bois déposés au coffre")
 	check(u.carrying.is_empty() and u.job != null, "prête à retourner au bosquet")

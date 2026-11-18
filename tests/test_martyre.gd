@@ -165,3 +165,121 @@ func test_new_game_resets_the_boss() -> void:
 	_boss(sim)
 	sim.new_game(SEED)
 	check(GameState.martyre == null and GameState.martyre_state == "", "remise à zéro")
+
+
+## Boss au centre, Ingénieur immobile à `dist` unités à l'est, attaques à distance prêtes ou non.
+func _range_duel(sim: Simulation, dist: float, fissure: bool, seals: bool) -> Array:
+	var e := _boss(sim)
+	var eng := _bare()
+	eng.stance = "hold"
+	e.x = Martyre.center().x
+	e.z = Martyre.center().y
+	_into_dome(eng, Vector2(dist, 0.0))
+	var now := GameState.sim_time
+	GameState.martyre_ready = {"fissure": now if fissure else INF, "seals": now if seals else INF}
+	return [e, eng]
+
+
+func test_cadence_is_thirty_percent_faster() -> void:
+	check_near(Catalog.ENEMY[Martyre.KIND]["cd"], 3.0 / 1.3, 1e-6, "recharge de la frappe")
+	check_near(Martyre.IMPACT, 0.5 / 1.3, 1e-6, "impact")
+	check_near(Martyre.FISSURE["cd"], 7.0 / 1.3, 1e-6)
+	check_near(Martyre.SEALS["charge"], 1.3 / 1.3, 1e-6)
+	var meta: Dictionary = EnemyArt.all()[Martyre.KIND]
+	check_near(float(meta["attack"]["duration"]), 1.0 / 1.3, 1e-3, "animation de frappe")
+	check_near(float(meta["idle"]["duration"]), 4.0 / 1.3, 1e-3, "boucle de repos")
+
+
+func test_fissure_runs_to_the_aimed_spot_then_erupts() -> void:
+	var sim := game()
+	var pair := _range_duel(sim, 12.0, true, false)
+	var eng: Unit = pair[1]
+	sim.tick(DT)
+	check_eq(GameState.martyre_hit_kind, "fissure", "geste de la fissure")
+	run(sim, Martyre.IMPACT + 0.05)
+	var f: Array = GameState.martyre_fx.filter(func(o: Dictionary) -> bool: return o["type"] == "fissure")
+	check_eq(f.size(), 1, "la faille part")
+	var end := Vector2(f[0]["x1"], f[0]["z1"])
+	check(end.distance_to(eng.pos()) < 0.5, "vers la position visée")
+	var before := eng.hp
+	run(sim, float(f[0]["erupt"]) - GameState.sim_time + 0.05)
+	check_near(before - eng.hp, Martyre.FISSURE["damage"], 1e-6, "12 dégâts à l'éruption")
+	check(eng.stunned_until > GameState.sim_time, "étourdi")
+	run(sim, Martyre.FISSURE["erupt"] + Martyre.FISSURE["cool"] + 0.1)
+	check(GameState.martyre_fx.is_empty(), "la faille s'éteint")
+
+
+func test_leaving_the_aimed_spot_dodges_the_fissure() -> void:
+	var sim := game()
+	var pair := _range_duel(sim, 12.0, true, false)
+	var eng: Unit = pair[1]
+	sim.tick(DT)
+	_into_dome(eng, Vector2(12.0, 6.0))
+	var before := eng.hp
+	run(sim, 1.6)
+	check_eq(eng.hp, before, "esquivée")
+
+
+func test_seals_fall_under_the_engineer() -> void:
+	var sim := game()
+	var pair := _range_duel(sim, 18.0, false, true)
+	var e: Enemy = pair[0]
+	var eng: Unit = pair[1]
+	sim.tick(DT)
+	check_near(e.cast_started, GameState.sim_time, 1e-6, "incantation")
+	run(sim, Martyre.SEALS["place"] + 0.05)
+	var seals: Array = GameState.martyre_fx.filter(func(o: Dictionary) -> bool: return o["type"] == "seal")
+	check_eq(seals.size(), 3, "trois sceaux")
+	check(seals.any(func(o: Dictionary) -> bool: return Vector2(o["x"], o["z"]).distance_to(eng.pos()) < 0.1), "un sous l'Ingénieur")
+	var before := eng.hp
+	run(sim, Martyre.SEALS["charge"] * 0.5)
+	check_eq(eng.hp, before, "pas pendant la charge")
+	run(sim, Martyre.SEALS["charge"] * 0.6)
+	check_near(before - eng.hp, Martyre.SEALS["damage"], 1e-6, "14 dégâts")
+
+
+func test_stunned_engineer_neither_moves_nor_attacks() -> void:
+	var sim := game()
+	var e := _boss(sim)
+	var eng := _bare()
+	_into_dome(eng, Vector2(1.0, 0.0))
+	eng.tx = eng.x + 10.0
+	eng.force_move = true
+	eng.stunned_until = GameState.sim_time + 1.0
+	var at := eng.pos()
+	var hp := e.hp
+	sim.combat.update_units(DT, [eng])
+	check(eng.pos() == at, "immobile")
+	check_eq(e.hp, hp, "aucun coup")
+
+
+func test_hurt_reaction_at_most_once_per_second() -> void:
+	var sim := game()
+	var e := _boss(sim)
+	var eng := _bare()
+	_into_dome(eng)
+	sim.combat.damage(e, 5.0, eng)
+	var first := e.hurt_at
+	check_near(first, GameState.sim_time, 1e-6, "réaction")
+	GameState.sim_time += 0.5
+	sim.combat.damage(e, 5.0, eng)
+	check_eq(e.hurt_at, first, "pas deux fois dans la seconde")
+
+
+func test_view_plays_cast_and_hurt() -> void:
+	var sim := game()
+	var world: World = sim.get_node("../World")
+	var e := _boss(sim)
+	world.fog.refresh(sim.state())
+	var v := UnitView.new()
+	world.ysort.add_child(v)
+	v.setup(e, EnemyArt.all()[Martyre.KIND], sim, world)
+	var body: Sprite2D = v.get("_body")
+	e.cast_started = GameState.sim_time - 0.1
+	v._update()
+	check((body.texture as AtlasTexture).atlas.resource_path.ends_with("martyre_cast.png"), "incantation")
+	e.cast_started = -INF
+	e.hurt_at = GameState.sim_time - 0.05
+	v._update()
+	check((body.texture as AtlasTexture).atlas.resource_path.ends_with("martyre_hit.png"), "touchée")
+	v.queue_free()

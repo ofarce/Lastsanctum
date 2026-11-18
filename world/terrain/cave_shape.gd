@@ -2,10 +2,16 @@ class_name CaveShape
 ## Géométrie fixe de la carte (73b410f, Index.html : CAVE, mountainEdge, caveW/E/N/S, inCave, inTunnel,
 ## inPath ; galleries.js : WORLD). Fonctions pures, calculées en double précision comme le JS.
 
-const WORLD_X0 := -232.0
-const WORLD_X1 := 232.0
-const WORLD_Z0 := -336.0
+const WORLD_X0 := -464.0
+const WORLD_X1 := 464.0
+const WORLD_Z0 := -744.0
 const WORLD_Z1 := 72.0
+## Zone d'origine (carte du prototype, 464 × 408) : cœur du Temple, générée exactement comme le JS.
+## Le reste de la carte (extension) est tiré avec une graine dérivée, hors de cette zone.
+const START_X0 := -232.0
+const START_X1 := 232.0
+const START_Z0 := -336.0
+const START_Z1 := 72.0
 const CAVE_X0 := -56.0
 const CAVE_X1 := 56.0
 const CAVE_Z0 := -168.0
@@ -84,3 +90,8 @@ static func in_path(x: float, z: float) -> bool:
 ## Dehors (jungle) : au sud du flanc de la montagne.
 static func outdoors(x: float, z: float) -> bool:
 	return z >= mountain_edge(x)
+
+
+## Point dans la zone d'origine.
+static func in_start(x: float, z: float) -> bool:
+	return x >= START_X0 and x < START_X1 and z >= START_Z0 and z < START_Z1

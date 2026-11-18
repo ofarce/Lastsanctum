@@ -73,6 +73,14 @@ func paint_dug_cell(i: int, j: int) -> void:
 	# Ordre du prototype : une révélation antérieure est entièrement peinte avant cette case.
 	if not _queue.is_empty():
 		finish()
+	_blit_dug_cell(i, j)
+	# Les voisines déjà creusées gardaient leur bande sombre côté nouvelle case : on les repeint.
+	for d: Vector2i in [Vector2i(-1, 0), Vector2i(1, 0), Vector2i(0, -1), Vector2i(0, 1)]:
+		if state.dug.has(Vector2i(i, j) + d):
+			_blit_dug_cell(i + d.x, j + d.y)
+
+
+func _blit_dug_cell(i: int, j: int) -> void:
 	var x := i * 4.0
 	var z := j * 4.0
 	var p := ground_px(x, z)

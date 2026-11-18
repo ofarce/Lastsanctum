@@ -28,6 +28,11 @@ static func cell_of(x: float, z: float) -> Vector2i:
 	return Vector2i(floori(x / 4.0), floori(z / 4.0))
 
 
+## L'entrée est encore dans le registre (pas retirée par un creusement ou une révélation).
+func has(entry: Dictionary) -> bool:
+	return entry.has("_id") and _entries.has(entry["_id"])
+
+
 ## Ajoute une entrée telle quelle (le nœud éventuel est déjà dans entry["node"]).
 func add_raw(entry: Dictionary) -> void:
 	version += 1

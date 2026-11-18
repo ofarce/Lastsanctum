@@ -1,0 +1,722 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><title>Export des esprits</title>
+<style>body{margin:0;padding:12px;background:#14161b;color:#e6e8ee;font:14px system-ui}</style></head>
+<body><p>Export des esprits retenus (planches/esprits-v6-propositions.html) : Faon de cairn, Roue-mandala, Orrery, Livre ailé. 6 modes × 24 images à 12 i/s. <code>?save=http://127.0.0.1:8172</code> envoie vers tools/esprits/serve.py.</p>
+<script>
+/* moteur commun, copie de assets/esprits-planches.js */
+const CW=56,CH=56,GY=47,PI2=Math.PI*2,OUT='#0b090b';
+const POSES=['sortie','marche','porter','prier','travail','combat','mort'];
+const LABELS=['Sortie du portail','Marche','Porter une caisse','Prière','Travail / minage','Combat','Mort'];
+const R=Math.round,sn=(t,k=1,ph=0)=>Math.sin((t*k+ph)*PI2),cs=(t,k=1,ph=0)=>Math.cos((t*k+ph)*PI2);
+const sm=x=>x<=0?0:x>=1?1:x*x*(3-2*x),cl=x=>Math.max(0,Math.min(1,x)),lerp=(a,b,k)=>a+(b-a)*k;
+function hash(x,y,s=0){let h=(x*374761393+y*668265263+s*1442695041)|0;h=(h^(h>>>13))*1274126177|0;return((h^(h>>>16))>>>0)/4294967296}
+const RGB={};function rgb(c){return RGB[c]||(RGB[c]=[parseInt(c.slice(1,3),16),parseInt(c.slice(3,5),16),parseInt(c.slice(5,7),16)])}
+function mix(a,b,k){const A=rgb(a),B=rgb(b);return'#'+A.map((v,i)=>R(lerp(v,B[i],k)).toString(16).padStart(2,'0')).join('')}
+
+class L{
+ constructor(){this.a=new Array(CW*CH).fill(null)}
+ p(x,y,c){x=R(x);y=R(y);if(!c||x<0||y<0||x>=CW||y>=CH)return;this.a[y*CW+x]=c}
+ g(x,y){return x<0||y<0||x>=CW||y>=CH?null:this.a[y*CW+x]}
+ rect(x,y,w,h,c){x=R(x);y=R(y);for(let j=0;j<h;j++)for(let i=0;i<w;i++)this.p(x+i,y+j,c)}
+ ell(cx,cy,rx,ry,c){for(let y=Math.floor(cy-ry-1);y<=Math.ceil(cy+ry+1);y++)for(let x=Math.floor(cx-rx-1);x<=Math.ceil(cx+rx+1);x++){const dx=(x-cx)/(rx+.4),dy=(y-cy)/(ry+.4);if(dx*dx+dy*dy<=1)this.p(x,y,c)}}
+ disc(x,y,r,c){this.ell(x,y,r,r,c)}
+ line(x0,y0,x1,y1,c,w=1){const n=Math.max(1,Math.ceil(Math.max(Math.abs(x1-x0),Math.abs(y1-y0))*1.5));for(let i=0;i<=n;i++){const x=lerp(x0,x1,i/n),y=lerp(y0,y1,i/n);if(w>1)this.rect(x-(w>>1),y-(w>>1),w,w,c);else this.p(x,y,c)}}
+ poly(pts,c){const xs=pts.map(p=>p[0]),ys=pts.map(p=>p[1]);for(let y=Math.floor(Math.min(...ys));y<=Math.ceil(Math.max(...ys));y++)for(let x=Math.floor(Math.min(...xs));x<=Math.ceil(Math.max(...xs));x++){let ins=false;for(let i=0,j=pts.length-1;i<pts.length;j=i++){const[xi,yi]=pts[i],[xj,yj]=pts[j];if((yi>y+.5)!==(yj>y+.5)&&x+.5<(xj-xi)*(y+.5-yi)/(yj-yi)+xi)ins=!ins}if(ins)this.p(x,y,c)}}
+ mask(fn){for(let y=0;y<CH;y++)for(let x=0;x<CW;x++)if(fn(x,y))this.a[y*CW+x]=null}
+}
+function crate(S,x,y){S.rect(x,y,10,8,'#5c4632');S.rect(x,y,10,2,'#7d6346');S.rect(x+1,y+4,8,1,'#3e2f22');S.rect(x+4,y+2,2,6,'#4a3828');S.p(x+5,y+5,'#7a3e3e')}
+function rock(S,x,y){S.ell(x+4,y+5,5,5,'#333a46');S.ell(x+3,y+3,3,2.5,'#404955');S.p(x+5,y+6,'#b07a4a');S.p(x+2,y+7,'#b07a4a')}
+function star(F,x,y,c,r=2){F.p(x,y,c);for(let i=1;i<=r;i++){F.p(x+i,y,c);F.p(x-i,y,c);F.p(x,y+i,c);F.p(x,y-i,c)}}
+
+const GODS={
+ medeina:{name:'Medeina',sub:'Vie, mort, renaissance. Puits des Âmes, Chambre.',col:'#6cc24a',c:['#1f3d1e','#2f5a2c','#4f8a3e','#86c25a','#c6eb8e'],bone:['#8f8774','#b9b19b','#e2dcc8'],flower:'#f1efd2'},
+ indra:{name:'Indra',sub:'Discipline martiale. Caserne (les soldats formés restent humains). Frappe deux fois plus fort.',col:'#ee8f2e',c:['#4a220c','#7a3a12','#c0621c','#ee8f2e','#ffc070'],steel:['#2c2c32','#46464e','#64646e']},
+ aether:{name:'Aether',sub:'Astronomie. Atelier, Forge, Creuset, et les mineurs.',col:'#7b7fe0',c:['#1d1b4a','#2c2a6a','#4b4cb0','#7b7fe0','#b9bcff'],metal:['#2a2840','#3f3c5e','#5c5880']},
+ sigil:{name:'Sigil',sub:'Savoir et recherche, érudition sans magie. Bibliothèque, transport.',col:'#b5b7bb',c:['#3c3e44','#55575d','#7d7f85','#a4a6ab','#cbccce']}
+};
+
+/* ============ MEDEINA ============ */
+function deer(S,F,G,o){
+ const c=G.c,b=G.bone,{bx,by}=o;
+ if(o.lie){S.rect(bx-9,by+3,6,2,b[1]);S.rect(bx+1,by+3,7,2,c[1])}
+ else{const ox=[-8,-5,3,6];for(let k=0;k<4;k++){const x0=bx+ox[k],sw=o.leg?o.leg[k]:0;S.line(x0,by+2,x0+sw,GY,k<2?b[1]:c[1]);S.p(x0+sw,GY,'#2a2218')}}
+ S.line(bx-10,by-3,bx,by-3,b[1]);for(const i of[-8,-6,-4,-2])S.line(bx+i,by-3,bx+i,by+3,b[2]);S.ell(bx-10,by-1,2,2,b[1]);
+ S.ell(bx+3,by,6,4,c[2]);S.ell(bx+3,by-2,4,1.5,c[3]);S.p(bx+2,by-3,G.flower);S.p(bx+6,by-1,G.flower);S.p(bx+4,by+1,'#e9e4b0');
+ const[hx,hy]=o.head;S.line(bx+7,by-2,hx-1,hy+1,c[2],2);
+ const a=o.antler||1;S.line(hx-1,hy-2,hx-1-a,hy-5-a*2,c[0]);S.line(hx-1-a*.5,hy-4-a,hx+1+a,hy-6-a*2,c[0]);S.p(hx-2-a,hy-5-a*2,c[3]);S.p(hx+1+a,hy-6-a*2,c[3]);
+ S.ell(hx,hy,3,2,c[2]);S.p(hx+3,hy+1,c[1]);S.p(hx+1,hy-1,'#10140e');S.line(hx-2,hy-2,hx-3,hy-4,c[1]);
+ if(o.blooms)for(let i=0;i<o.blooms;i++)S.disc(bx-8+i*2,by-4-(i%2),1,i%2?G.flower:'#e9e4b0');
+}
+function biche(S,F,pose,t,G){
+ const c=G.c,b=G.bone;let bx=24,by=35;
+ if(pose==='mort'){
+  if(t<.45){deer(S,F,G,{bx,by:41,lie:true,head:[bx+12,44]});return{x:bx,rx:12}}
+  const k=sm((t-.5)/.4);S.line(bx-6,45,bx+6,45,b[2],2);S.disc(bx-7,45,1.5,b[1]);S.disc(bx+7,45,1.5,b[1]);
+  if(t>.5){S.line(bx,44,bx,44-k*6,G.c[2]);if(k>.4){S.p(bx-1,42-k*3,c[3]);S.p(bx+1,41-k*3,c[3])}F.p(bx,43-k*6,c[4])}
+  return{x:bx,rx:8}}
+ const w=sn(t),bob=R(Math.abs(w));
+ if(pose==='marche'||pose==='porter'){by=35-bob;deer(S,F,G,{bx,by,leg:[w*2,-w*2,-w*2,w*2],head:[bx+11,by-9]});
+  if(pose==='porter'){crate(S,bx-8,by-12);S.line(bx-8,by-6,bx-7,by-3,c[1]);S.line(bx+1,by-6,bx,by-3,c[1]);S.p(bx-3,by-13,c[3])}}
+ if(pose==='prier'){deer(S,F,G,{bx,by:41,lie:true,head:[bx+11,32],blooms:Math.floor(sm(t*1.3)*5)});
+  for(let i=0;i<3;i++){const u=(t+i/3)%1;F.p(bx-6+i*3,37-u*14,u<.8?c[4]:c[3])}}
+ if(pose==='travail'){deer(S,F,G,{bx,by,head:[bx+13,by+7+R(sn(t,2)*.6)]});
+  for(let i=0;i<4;i++){const u=(t+i/4)%1;F.p(bx+10+i*2+sn(u,1)*1.5,by-6+u*14,G.flower)}}
+ if(pose==='combat'){const d=Math.max(0,sn(t))*6;deer(S,F,G,{bx:bx+d,by:by+1,leg:[-2,-2,2,2],head:[bx+d+13,by+1],antler:2});
+  if(t>.18&&t<.34)star(F,R(bx+d+19),by-3,c[4],3)}
+ return{x:bx,rx:11}}
+
+function cairn(S,F,pose,t,G){
+ const c=G.c,st=['#4b5548','#6a7564','#8f9a86'];
+ const stone=(x,y,rx,ry)=>{S.ell(x,y,rx,ry,st[1]);S.ell(x-1,y-1,rx-1.5,ry-1.2,st[2]);S.p(x+R(rx/2),y+1,st[0]);S.p(x-R(rx/2),y,c[2]);S.p(x-R(rx/2)+1,y,c[3])};
+ const bud=(x,y,h=3)=>{S.line(x,y,x,y-h,c[2]);S.p(x-1,y-h,c[3]);S.p(x+1,y-h+1,c[3]);S.p(x-2,y-h+1,c[2]);F.p(x,y-h-1,c[4])};
+ let f=sn(t)*1.5,x=27;
+ if(pose==='marche'){const sw=sn(t,1);stone(x+sw,40+f,6,3);stone(x-sw,33+f,5,2.5);stone(x+sw*1.5,27+f,4,2);bud(x+R(sw*1.5),25+f);return{x,rx:7}}
+ if(pose==='porter'){stone(x,41+f,6,3);crate(S,x-5,33+f);stone(x,28+f,5,2.5);stone(x,22+f,4,2);bud(x,20+f);return{x,rx:7}}
+ if(pose==='prier'){stone(x,44,6,3);stone(x,39,5,2.5);stone(x,35,4,2);bud(x,33,3+R(sm(t)*2));
+  for(let i=0;i<4;i++){const h=R(sm(cl(t*1.6-i*.15))*4);if(h>0)S.line(x-10+i*6+(i>1?2:0),GY,x-10+i*6+(i>1?2:0),GY-h,c[2]);if(h>3)S.p(x-10+i*6+(i>1?2:0),GY-h,c[4])}
+  return{x,rx:7}}
+ if(pose==='travail'){for(let k=0;k<3;k++){const a=t+k/3,ox=sn(a)*5,oy=cs(a)*1.5;stone(x+ox,[40,33,27][k]+oy+f*.5,[6,5,4][k],[3,2.5,2][k])}bud(x,24);
+  for(let i=0;i<3;i++){const u=(t+i/3)%1;F.p(x+8+i*2,30+u*14,c[3])}return{x,rx:9}}
+ if(pose==='combat'){stone(x,40+f,6,3);stone(x,33+f,5,2.5);
+  if(t<.15)stone(x,26-t*20,4,2);else if(t<.65){const u=(t-.15)/.5;stone(lerp(x,51,u),lerp(24,44,u)-Math.sin(u*Math.PI)*12,4,2);if(u>.85)star(F,50,44,c[4],2)}
+  else{const k=(t-.65)/.35;if(k>.5)stone(x,27+f,4,2);else bud(x,31+f,R(k*6))}
+  return{x,rx:7}}
+ if(pose==='mort'){const k=sm(t*2.2);stone(x-k*6,40+k*5,6,3);stone(x+k*7,33+k*12,5,2.5);stone(x+k*2,27+k*18,4,2);
+  if(t>.6)bud(x-1,46,R(sm((t-.6)/.35)*5));return{x,rx:9}}
+ return{x,rx:7}}
+
+function mue(S,F,pose,t,G){
+ const sc=['#5f8a4a','#9cc47e','#c9e6ae'],path=[];let N=22;
+ for(let i=0;i<=N;i++){const u=i/N;let x,y;
+  if(pose==='prier'){const a=u*PI2*1.6,r=lerp(9,1.5,u);x=27+Math.cos(a)*r;y=43+Math.sin(a)*r*.45;if(u>.86){x=27;y=lerp(43,30,(u-.86)/.14)}}
+  else if(pose==='mort'){const k=sm(t*1.6);x=8+u*24;y=lerp(u<.6?45:45-(u-.6)/.4*18,46,k)+sn(u*1.5)*1*(1-k)}
+  else{const amp=pose==='travail'?3:1.6,ph=pose==='combat'?0:t;x=6+u*24;y=u<.6?45-sn(u*1.6-ph)*amp:45-((u-.6)/.4)*18;
+   if(pose==='combat'&&u>.55)x+=Math.max(0,sn(t))*8*((u-.55)/.45);if(pose==='porter'&&u<.6){const a=u/.6*PI2*1.25;x=24+Math.cos(a)*7;y=38+Math.sin(a)*4}}
+  path.push([x,y])}
+ if(pose==='porter')crate(S,19,33);
+ path.forEach(([x,y],i)=>{const r=i<4?1+i*.3:2.2;S.disc(x,y,r,i%3===0?sc[0]:i%3===1?sc[1]:sc[2]);if(i%3===2)S.p(x,y,sc[0])});
+ if(pose==='porter')path.slice(0,8).forEach(([x,y],i)=>{if(y>37)S.disc(x,y,2,i%2?sc[1]:sc[2])});
+ const[hx,hy]=path[N];if(pose!=='mort'||t<.5){S.ell(hx,hy-1,4.5,4,sc[1]);S.ell(hx,hy-1,3,2.6,sc[2]);S.ell(hx+1,hy-3,2.5,1.6,sc[1]);S.p(hx,hy-3,'#1a2a1a');S.p(hx+2,hy-3,'#1a2a1a');}
+ else S.ell(hx,46,4,1.5,sc[1]);
+ if(pose==='combat'&&t>.2&&t<.35)star(F,R(hx+6),R(hy-2),G.c[4],2);
+ if(pose==='prier')for(let i=0;i<3;i++){const u=(t+i/3)%1;F.p(23+i*4,40-u*14,G.c[4])}
+ if(pose==='travail')for(let i=0;i<3;i++){const u=(t+i/3)%1;F.p(6+i*3,46-u*4,G.c[3])}
+ return{x:20,rx:12}}
+
+/* ============ INDRA ============ */
+function plate(S,G,x,y,w,h){const c=G.c;S.rect(x,y,w,h,c[2]);S.rect(x,y,w,1,c[3]);if(h>2)S.rect(x,y+h-1,w,1,c[1]);S.p(x+R(w/2),y+R(h/2),G.c[0])}
+function lamelles(S,F,pose,t,G){
+ const c=G.c,P=[];let dy=0,j=1;
+ // [x,y,w,h]
+ const base=[[23,22,9,3],[24,25,7,3],[24,28,7,3],[23,31,9,3],[22,35,5,3],[28,35,5,3],[22,39,5,3],[28,39,5,3],[22,43,5,3],[28,43,5,3],[18,23,4,4],[17,28,4,4],[33,23,4,4],[34,28,4,4]];
+ base.forEach(b=>P.push(b.slice()));
+ const legs=[4,6,8],legR=[5,7,9],armL=[10,11],armR=[12,13];
+ if(pose==='marche'||pose==='porter'||pose==='sortie'){const w=pose==='sortie'?0:sn(t);legs.forEach((k,i)=>{P[k][0]+=R(w*(i+1)*.6);if(w>0)P[k][1]-=R(w*(i)*.5)});legR.forEach((k,i)=>{P[k][0]-=R(w*(i+1)*.6);if(w<0)P[k][1]+=R(w*(i)*.5)});dy=-R(Math.abs(w))}
+ if(pose==='porter'){P[10]=[22,27,4,4];P[11]=[23,31,4,3];P[12]=[31,27,4,4];P[13]=[30,31,4,3]}
+ if(pose==='prier'){j=0;dy=5;P[6]=[18,39,5,3];P[8]=[17,43,5,3];P[7]=[28,39,5,3];P[9]=[33,42,5,3];P[4]=[22,36,5,3];P[5]=[28,36,5,3];P[10]=[22,27,4,4];P[11]=[23,31,4,3];P[12]=[30,27,4,4];P[13]=[29,31,4,3]}
+ if(pose==='travail'){for(let k=0;k<4;k++){const a=t+k/4;P[k]=[R(27+Math.cos(a*PI2)*10-P[k][2]/2),R(27+Math.sin(a*PI2)*3),P[k][2],P[k][3]]}}
+ if(pose==='combat'){const sp=t<.4?sm(t/.4):t<.5?1-sm((t-.4)/.1):0;P.forEach((p,k)=>{p[0]+=R((p[0]+p[2]/2-27)*sp*.5);p[1]+=R((p[1]-30)*sp*.4)});
+  const pu=t>.4&&t<.65?1:0;P[12]=[33+pu*7,24,4,4];P[13]=[35+pu*5,24,4,4];if(t>.45&&t<.62){star(F,46,25,c[4],3);F.p(44,22,c[3]);F.p(48,28,c[3])}}
+ if(pose==='mort'){const k=sm(t*1.5);P.forEach((p,i)=>{const gx=16+(i*7)%22,gy=GY-2-(i%3)*2;p[0]=R(lerp(p[0],gx,k));p[1]=R(lerp(p[1],gy,k))})}
+ const hd=pose==='mort'?[R(lerp(24,32,sm(t*1.5))),R(lerp(14,42,sm(t*1.5)))]:pose==='prier'?[25,14+dy]:[24,14];
+ P.forEach((p,k)=>{const jj=j?R(sn(t,1,k*.13)*.7):0;plate(S,G,p[0],p[1]+dy+jj,p[2],p[3])});
+ const hy=hd[1]+(pose==='prier'||pose==='mort'?0:dy);S.rect(hd[0],hy,7,6,c[2]);S.rect(hd[0],hy,7,1,c[3]);S.rect(hd[0]+1,hy+3,5,1,'#120804');
+ if(pose!=='mort'||t<.3)for(let i=-1;i<=1;i++)S.line(hd[0]+3,hy-1,hd[0]+3+i*3,hy-5,c[3]);
+ if(pose==='porter')crate(S,23,26+dy);
+ if(pose==='porter'){plate(S,G,21,27+dy,3,4);plate(S,G,32,27+dy,3,4)}
+ if(pose==='prier'){for(let k=0;k<4;k++)F.rect(25,24+k*3+dy+ (k>1?1:0),5,0,c[4]);F.p(27,21+dy,c[4]);const u=t;F.p(27+R(sn(u)*3),18-R(u*6),c[3])}
+ if(pose==='travail')for(let k=0;k<4;k++)F.p(27,24+k*3,t*4%1<.5?c[4]:c[3]);
+ return{x:27,rx:9}}
+
+function braise(S,F,pose,t,G){
+ const c=G.c,s=G.steel;let x=27,y=32,rx=9,ember=1,legs=true,dash=0;
+ const w=sn(t);
+ if(pose==='marche'||pose==='porter'){y=32-R(Math.abs(w))}
+ if(pose==='prier'){y=37;legs=false;ember=.4+.6*Math.abs(sn(t,.5))}
+ if(pose==='travail'){rx=Math.max(1.5,9*Math.abs(cs(t)))}
+ if(pose==='combat'){dash=Math.max(0,sn(t))*8;x+=dash}
+ if(pose==='mort'){const k=sm(t*2);if(k<1||true){
+   S.line(21,44,22,47,s[1]);S.line(33,44,32,47,s[1]);
+   const ry=lerp(9,2.5,k),cy=lerp(32,44,k);S.ell(27,cy,9,ry,c[1]);S.ell(27,cy,7,ry*.75,c[2]);S.ell(27,cy,4,ry*.45,c[3]);S.disc(27,cy,ry>3?2:1,mix(c[4],'#4a4a4a',k));
+   if(t<.5)F.p(27,R(cy),c[4]);else if(hash(R(t*12),1)>.7)F.p(27,R(cy)-2-R(t*4),'#5a5a5a');return{x:27,rx:10}}}
+ if(legs){const l=pose==='marche'||pose==='porter'?w*2:0;S.line(x-4,y+7,x-4+l,GY,s[1],2);S.line(x+3,y+7,x+3-l,GY,s[1],2);S.rect(x-6+l,GY,4,1,s[0]);S.rect(x+2-l,GY,4,1,s[0])}
+ S.ell(x,y,rx,9,c[1]);S.ell(x,y,Math.max(1,rx-2),7,c[2]);if(rx>4){S.ell(x,y,rx-4,4.5,c[3]);S.ell(x-2,y-3,Math.max(1,rx-7),1.5,c[4])}
+ for(const a of[0,.25,.5,.75]){const px=x+Math.cos(a*PI2)*(rx-1),py=y+Math.sin(a*PI2)*8;S.p(px,py,s[2])}
+ if(rx>3){S.disc(x,y,2,c[0]);F.disc(x,y,ember>.7?1.5:1,mix('#3a1a08',c[4],ember));F.p(x,y,ember>.6?'#fff0d0':c[3])}
+ if(pose==='porter')crate(S,x-5,y-16);
+ if(pose==='prier')for(let i=0;i<3;i++){const u=(t+i/3)%1;F.p(x-3+i*3,y-10-u*10,u<.6?c[4]:c[2])}
+ if(pose==='travail'&&rx<3)F.p(x,y-9,'#fff0d0');
+ if(pose==='combat'&&t>.15&&t<.35){star(F,R(x+11),y,c[4],3);F.p(R(x+13),y-4,c[3]);F.p(R(x+13),y+4,c[3])}
+ return{x,rx:9}}
+
+function ombre(S,F,pose,t,G){
+ const c=G.c,wood='#6b4a2a',body=c[1],rim=c[2];
+ const fig=(x,y,lean,arm,F2)=>{const L2=F2||S;const hx=x+lean,hy=y;
+  L2.poly([[x-5,y+5],[x+5,y+5],[x+3,y+19],[x-3,y+19]],F2?c[2]:body);if(!F2){L2.line(x-5,y+5,x-3,y+19,rim)}
+  for(let i=0;i<4;i++){const wx=x-3+i*2+sn(t,2,i*.25)*1.5;L2.line(x-3+i*2,y+19,wx,y+24+(i%2)*2,F2?c[2]:i%2?body:c[0])}
+  L2.disc(hx,hy,3,F2?c[2]:body);if(!F2){L2.p(hx-1,hy-2,rim);F.p(hx+1,hy,c[4]);F.p(hx+2,hy,c[4])}
+  const ax=x+Math.cos(arm)*9,ay=y+8+Math.sin(arm)*9;if(!F2){S.line(x+3,y+7,ax,ay,body,2);S.line(ax-Math.cos(arm)*12,ay-Math.sin(arm)*12,ax+Math.cos(arm)*6,ay+Math.sin(arm)*6,wood)}};
+ const f=R(sn(t)*1);let x=27,y=16+f;
+ if(pose==='marche'){fig(x,y,1,-1.2)}
+ if(pose==='porter'){fig(x,y,0,-2.4);crate(S,x-3,y+8);S.p(x-3,y+10,body);S.p(x+6,y+10,body)}
+ if(pose==='prier'){fig(x,23,2,1.4)}
+ if(pose==='travail'){fig(x,y,0,t*PI2)}
+ if(pose==='combat'){const k=t<.4?t/.4:1;const arm=lerp(-2.6,.4,sm(k));const ka=cl(k-.25);if(t>.25)fig(x-4,y,0,lerp(-2.6,.4,sm(ka)),F);fig(x,y,2,arm);if(t>.38&&t<.55)star(F,44,29,c[4],3)}
+ if(pose==='mort'){fig(x,y+R(t*6),2,1.4);S.mask((px,py)=>S.g(px,py)&&hash(px,py,7)<t*1.3);for(let i=0;i<6;i++){const u=(t+i/6)%1;if(t>.2)F.p(20+i*3,40-u*24,u<.5?c[2]:c[1])}}
+ if(pose==='marche'||pose==='prier'||pose==='travail')for(let i=0;i<2;i++){const u=(t+i/2)%1;F.p(25+i*4,42-u*8,c[2])}
+ return{x:27,rx:7}}
+
+/* ============ AETHER ============ */
+function ring(S,F,cx,cy,r,tilt,spin,col,hi,back,front){for(let i=0;i<64;i++){const a=i/64*PI2;let x=r*Math.cos(a),y=0,z=r*Math.sin(a);const y2=y*Math.cos(tilt)-z*Math.sin(tilt),z2=y*Math.sin(tilt)+z*Math.cos(tilt);const x3=x*Math.cos(spin)+z2*Math.sin(spin),z3=-x*Math.sin(spin)+z2*Math.cos(spin);(z3<0?back:front).push([cx+x3,cy+y2,i%8===0?hi:col])}}
+function orrery(S,F,pose,t,G){
+ const c=G.c,m=G.metal;let x=27,y=27,hop=0,core=true,back=[],front=[];
+ if(pose==='marche'||pose==='porter'){hop=-R(Math.abs(sn(t))*3)}
+ const stand=(tilt=0)=>{S.ell(x+tilt*2,46,4.5,1.5,m[1]);S.line(x,45,x+tilt,y+hop+4,m[2]);S.p(x-1,45,m[2])};
+ let rs=[[10,.9,t],[8,1.6,-t*1.3+.2],[12,.3,t*.7+.5]];
+ if(pose==='prier'){rs=rs.map(([r,ti,sp],k)=>[r,lerp(ti,1.5,sm(t*2)),sp*.3])}
+ if(pose==='porter')rs=[[11,.9,t],[13,.4,-t*.8]];
+ if(pose==='mort'){const k=sm(t*2);stand(k*3);rs.forEach(([r,ti],i)=>{S.ell(x-6+i*6,lerp(y,45,k),r*lerp(1,.6,k),lerp(r*Math.cos(ti),1.2,k),c[2]);S.ell(x-6+i*6,lerp(y,45,k),r*lerp(1,.6,k)-1,lerp(r*Math.cos(ti),.3,k),null)});
+  for(const L2 of[S]){}S.mask(()=>false);S.disc(x+k*3,y+hop+R(k*14),3,mix(c[3],m[0],k));if(t<.4)F.disc(x,y,1,c[4]);return{x,rx:9}}
+ let det=null;
+ if(pose==='travail'){det=rs.pop();rock(S,43,36)}
+ if(pose==='combat'){det=rs.pop()}
+ rs.forEach(([r,ti,sp])=>ring(S,F,x,y+hop,r,ti*PI2/4,sp*PI2,c[2],c[4],back,front));
+ stand();
+ back.forEach(([a,b,cc])=>S.p(a,b,cc));
+ if(pose==='porter'){crate(S,x-5,y-4+hop)}else{S.disc(x,y+hop,3.5,m[1]);S.disc(x,y+hop,2.5,c[3]);F.disc(x,y+hop,1.5,c[4]);F.p(x,y+hop,'#eef0ff')}
+ front.forEach(([a,b,cc])=>S.p(a,b,cc));
+ if(det){if(pose==='travail'){const sw=t<.5?sm(t/.5):1-sm((t-.5)/.5);const hx=lerp(36,46,sw),hy=lerp(22,33,sw);const fb=[],ff=[];ring(S,F,hx,hy,6,PI2/4,.25*PI2+sw,c[2],c[4],fb,ff);fb.concat(ff).forEach(([a,b,cc])=>S.p(a,b,cc));if(t>.42&&t<.6){star(F,49,37,c[4],2);F.p(52,34,'#d8a070');F.p(45,34,'#d8a070')}}
+  else{const u=t<.5?sm(t/.5):1-sm((t-.5)/.5);const dx=lerp(x,50,u);S.ell(dx,y,6*Math.abs(cs(t,4))+1,2,c[2]);S.ell(dx,y,Math.max(0,6*Math.abs(cs(t,4))-1),.5,null);for(let i=1;i<4;i++)F.p(dx-i*3*(t<.5?1:-1),y,c[3]);if(t>.4&&t<.6)star(F,52,y,c[4],3)}}
+ if(pose==='prier')for(let i=0;i<3;i++){const u=(t+i/3)%1;F.p(x-8+i*8,y-6-u*10,c[4])}
+ return{x,rx:7}}
+
+function constel(S,F,pose,t,G){
+ const c=G.c;const base=[[-9,4],[-6,-2],[0,-3],[5,-5],[8,-9],[6,-15],[9,-16],[11,-7],[4,3],[-6,6],[-10,0]];
+ const edges=[[0,1],[1,2],[2,3],[3,4],[4,5],[4,6],[3,7],[2,8],[1,9],[0,10],[1,10]];
+ let pts=base.map(p=>p.slice()),cx=27,cy=36;
+ if(pose==='marche'||pose==='porter'){const h=Math.abs(sn(t))*5;cy-=h;pts[8][1]+=R(sn(t)*2);pts[9][1]-=R(sn(t)*2)}
+ if(pose==='prier'){const k=sm(t*1.6);pts=pts.map((p,i)=>{const a=i/pts.length*PI2+t;return[lerp(p[0],Math.cos(a)*9,k),lerp(p[1],-6+Math.sin(a)*9,k)]})}
+ if(pose==='combat'){const k=Math.max(0,sn(t));pts[4][0]+=k*12;pts[5][0]+=k*12;pts[6][0]+=k*12;pts[3][0]+=k*6}
+ if(pose==='mort'){pts=pts.map((p,i)=>[p[0]*(1+t*1.5)+sn(i*.37)*t*6,p[1]*(1+t)+t*8])}
+ if(pose==='porter')crate(S,cx-5,cy-7);
+ const dim=pose==='mort'?1-t:1;
+ edges.forEach(([a,b],k)=>{if(pose==='mort'&&hash(k,3)<t*1.4)return;const[x0,y0]=pts[a],[x1,y1]=pts[b];const n=Math.ceil(Math.hypot(x1-x0,y1-y0));for(let i=1;i<n;i++)if((i+R(t*8))%2===0)F.p(cx+lerp(x0,x1,i/n),cy+lerp(y0,y1,i/n),c[2])});
+ pts.forEach(([x,y],i)=>{if(pose==='mort'&&hash(i,9)<t*1.2)return;const tw=hash(i,R(t*12))>.75;F.p(cx+x,cy+y,tw?'#ffffff':c[4]);if(tw||i===4){F.p(cx+x+1,cy+y,c[3]);F.p(cx+x-1,cy+y,c[3]);F.p(cx+x,cy+y-1,c[3]);F.p(cx+x,cy+y+1,c[3])}});
+ if(pose==='travail'){rock(S,42,36);for(let i=0;i<4;i++){const u=(t+i/4)%1;F.p(lerp(cx+5,46,u),lerp(cy-5,38,u)-Math.sin(u*Math.PI)*6,c[4])}if(t%.25<.08)star(F,47,38,c[4],1)}
+ if(pose==='combat'&&t>.15&&t<.35)star(F,cx+21,cy-12,'#ffffff',3);
+ return{x:cx,rx:8,faint:true}}
+
+function lyrique(S,F,pose,t,G){
+ const c=G.c,m=G.metal;let x=27,y=0,lean=0,bow=0;const w=sn(t);
+ if(pose==='marche'||pose==='porter')y=-R(Math.abs(w));
+ if(pose==='prier'){bow=R(sm(t*2)*3);}
+ if(pose==='travail'){lean=R(Math.max(0,sn(t))*3);rock(S,42,36)}
+ if(pose==='mort'){bow=R(sm(t*2)*6)}
+ const l=pose==='marche'||pose==='porter'?w*2:0;
+ if(pose!=='mort'){S.line(x-4,40+y,x-4+l,GY,m[1],2);S.line(x+3,40+y,x+3-l,GY,m[1],2)}else{S.line(x-5,44,x-7,GY,m[1],2);S.line(x+4,44,x+6,GY,m[1],2)}
+ const by=(pose==='mort'?4:0)+y;
+ S.rect(x-7,36+by,14,5,c[1]);S.rect(x-7,36+by,14,1,c[2]);S.p(x-3,38+by,'#0c0b1c');S.p(x+2,38+by,'#0c0b1c');
+ const top=17+bow+y,tx=lean+bow;
+ const arm=(s)=>{S.line(x+s*6,36+by,x+s*9+tx*.3,28+by+bow*.5,c[2],2);S.line(x+s*9+tx*.3,28+by+bow*.5,x+s*6+tx,top,c[2],2);S.p(x+s*7+tx,top-1,c[4])};
+ arm(-1);arm(1);S.line(x-6+tx,top,x+6+tx,top,c[3],2);
+ for(let i=-1;i<=1;i++){const vib=(pose==='combat'||pose==='travail'||pose==='prier')&&i===0?R(sn(t,6)*1):0;
+  if(pose==='mort'&&t>.3){F.line(x+i*2.5+tx,top+2,x+i*3+tx+R(sn(i*.3)*3),top+8,c[3])}else F.line(x+i*2.5+tx,top+2,x+i*2.5+vib*(i===0?1:0)+tx*.2,36+by,pose==='prier'?c[4]:c[3])}
+ if(pose==='porter'){crate(S,x-5,24+y);S.p(x-6,27+y,c[2]);S.p(x+5,27+y,c[2])}
+ const note=(nx,ny,cc)=>{F.rect(nx,ny,2,2,cc);F.line(nx+1,ny,nx+1,ny-4,cc);F.p(nx+2,ny-4,cc)};
+ if(pose==='travail'){if(t>.2&&t<.35)star(F,41,37,c[4],2);const u=(t+.6)%1;note(36+R(u*4),30-R(u*12),c[4])}
+ if(pose==='prier'){const u=t;note(x+8,24-R(u*12),c[4])}
+ if(pose==='combat')for(let k=0;k<2;k++){const u=(t+k/2)%1,ax=x+8+u*20,r=3+u*5;for(let a=-.8;a<=.8;a+=.2)F.p(ax+Math.cos(a)*r-r,30+Math.sin(a)*r,u<.7?c[4]:c[3])}
+ return{x,rx:8}}
+
+/* ============ SIGIL ============ */
+function capuche(S,F,pose,t,G){
+ const c=G.c,v='#0e0f12';let x=27,y=R(sn(t)*1),bow=0,h=1;
+ if(pose==='prier')bow=R(sm(t*2)*2)+1;
+ if(pose==='mort'){h=lerp(1,.25,sm(t*1.6));}
+ const top=17+y+R((1-h)*26),hem=42+y;
+ if(pose==='mort'&&t>.3){S.ell(x,45,9,2.5,c[2]);S.ell(x-1,44,7,1.5,c[3]);S.line(x-6,45,x+6,44,c[1]);S.ell(x+R(t*6),lerp(30,42,sm(t*2)),4,3,c[2]);S.ell(x+R(t*6)+1,lerp(30,42,sm(t*2)),2,1.5,v);return{x,rx:10}}
+ const fl=k=>R(sn(t,2,k*.2)*(pose==='marche'||pose==='porter'?1.5:.7));
+ const rp=[[x-6,top+6],[x+6,top+6],[x+8,hem+fl(1)],[x+4,hem-1+fl(2)],[x,hem+fl(3)],[x-4,hem-1+fl(4)],[x-8,hem+fl(5)]];S.poly(rp,c[2]);
+ S.line(x-6,top+6,x-8,hem,c[1]);S.line(x+3,top+9,x+6,hem-1,c[3]);S.line(x-2,top+12,x+1,top+18,c[1]);S.line(x+1,top+18,x-1,top+24,c[1]);
+ for(let i=0;i<3;i++){const u=(t+i/3)%1;if(pose!=='prier')F.p(x-5+i*5,hem+2+u*3,c[3])}
+ const hx=x+bow,hy=top+bow;S.ell(hx,hy,5.5,5.5,c[2]);S.ell(hx-1,hy-2,3,2,c[3]);S.ell(hx+1,hy+1,3,3.2,v);F.p(hx,hy,c[1]);F.p(hx+2,hy,c[1]);
+ let sl=[[x-6,top+7,x-8,top+16],[x+6,top+7,x+8,top+16]];
+ if(pose==='porter'){crate(S,x-3,top+11);sl=[[x-6,top+7,x-3,top+13],[x+6,top+7,x+7,top+13]]}
+ if(pose==='prier')sl=[[x-5,top+8+bow,x+1,top+14],[x+6,top+8+bow,x+3,top+14]];
+ if(pose==='combat'){const a=t<.4?-2.2:lerp(-2.2,.3,sm((t-.4)/.2));sl[1]=[x+6,top+7,x+6+Math.cos(a)*10,top+9+Math.sin(a)*10];const[,,ex,ey]=sl[1];S.line(ex-3,ey-1,ex+3,ey+1,'#d9d3bd',2);S.p(ex+3,ey+1,'#8a8270');if(t>.55&&t<.7)star(F,R(ex+5),R(ey),c[4],2);
+  for(let i=0;i<2;i++){const u=(t*1.5+i/2)%1;if(t>.5)F.rect(lerp(x+10,52,u),lerp(top+10,top+6,u),3,2,'#e6e2d4')}}
+ sl.forEach(([a,b,cc,d])=>{S.line(a,b,cc,d,c[2],3);S.p(cc,d+1,v)});
+ if(pose==='travail'){S.rect(44,20,9,27,'#3a3128');S.rect(45,26,7,1,'#5a4a38');S.rect(45,33,7,1,'#5a4a38');S.rect(45,40,7,1,'#5a4a38');for(let k=0;k<3;k++){S.rect(46+k*2,22,1,4,['#6e5a44','#7d7f85','#5c4632'][k]);S.rect(45+k*2,29,1,4,['#7d7f85','#5c4632','#6e5a44'][k])}
+  for(let i=0;i<2;i++){const u=(t+i/2)%1;const px=lerp(hx+3,48,u),py=lerp(hy,35,u)-Math.sin(u*Math.PI)*10;S.rect(px,py,4,3,'#e6e2d4');S.p(px+1,py+1,c[1])}}
+ if(pose==='prier')for(let i=0;i<2;i++){const u=(t+i/2)%1;F.p(hx+1,hy-6-u*10,c[4])}
+ return{x,rx:8}}
+
+function buste(S,F,pose,t,G){
+ const c=G.c;let x=27,lean=0,hdx=0,hdy=0,glow=0;const f=pose==='marche'||pose==='porter'?R(Math.abs(sn(t))*1):0;
+ if(pose==='prier'){hdx=1;hdy=R(sm(t*2)*1)+1;glow=.4}
+ if(pose==='travail'){glow=Math.abs(sn(t))}
+ if(pose==='combat'){lean=R(Math.max(0,sn(t))*4)}
+ if(pose==='mort'){const k=sm(t*1.6);S.rect(19,44,16,3,c[2]);S.rect(19,44,16,1,c[3]);S.line(22,44,26,46,c[0]);
+  const hx=lerp(27,40,k),hy=lerp(18,43,k);if(t<.35){S.rect(23,32,9,12,c[2]);S.line(25,33,25,43,c[1]);S.line(28,33,28,43,c[1])}
+  S.ell(hx,hy,4,5,c[2]);S.ell(hx-1,hy-2,2.5,2,c[3]);S.line(hx-2,hy-3,hx+1,hy+3,c[0]);return{x,rx:9}}
+ S.rect(22,45-f,11,2,c[3]);S.rect(23,32-f,9,13,c[2]);S.line(25,33-f,25,44-f,c[1]);S.line(28,33-f,28,44-f,c[1]);S.line(30,33-f,30,44-f,c[3]);S.rect(21,30-f,13,3,c[3]);S.rect(21,32-f,13,1,c[1]);
+ S.line(24,36-f,29,41-f,c[0]);
+ const sx=x+lean*.5,sy=27-f;S.ell(sx,sy,7,3,c[2]);S.ell(sx-1,sy-1,5,1.5,c[3]);S.rect(sx-1,sy-5,3,3,c[2]);
+ const hx=x+lean+hdx,hy=18-f+hdy;S.ell(hx,hy,4,5,c[2]);S.ell(hx-1,hy-3,3.5,2,c[4]);S.p(hx-2,hy,c[1]);S.p(hx+1,hy,c[1]);S.p(hx+3,hy+1,c[1]);S.rect(hx-1,hy+3,2,1,c[1]);
+ S.line(hx-3,hy-2,hx-1,hy+2,c[0]);S.line(sx+2,sy-1,sx+5,sy+1,c[0]);
+ if(glow>.3){const g=mix(c[2],'#f0f1f3',glow);F.line(hx-3,hy-2,hx-1,hy+2,g);F.line(sx+2,sy-1,sx+5,sy+1,g);F.line(24,36-f,29,41-f,g)}
+ if(pose==='porter')crate(S,hx-5,hy-13);
+ if(pose==='marche'||pose==='porter')for(let i=0;i<2;i++){const u=(t+i/2)%1;F.p(20-u*5,46-u*2,c[1])}
+ if(pose==='travail'){S.rect(40,30,9,6,'#e6e2d4');S.line(44,30,44,35,'#8a8270');S.line(41,32,43,32,c[1]);S.line(45,33,47,33,c[1]);S.line(41,34,43,34,c[1]);F.p(44,28-R(t*6),c[4])}
+ if(pose==='combat'&&t>.18&&t<.34)star(F,hx+6,hy,c[4],3);
+ return{x,rx:8}}
+
+function marginalia(S,F,pose,t,G){
+ const c=G.c,pa='#d6d3c8',pb='#a8a59a',ink='#55575d';let x=27,y=24,flap=sn(t,2),sc=1,fold=0;
+ if(pose==='porter'){y=31+R(sn(t,4)*1);flap=sn(t,4)}
+ if(pose==='prier'){y=42;flap=-.6;fold=1}
+ if(pose==='combat'){const u=t<.6?sm(t/.6):1-sm((t-.6)/.4);x=lerp(18,42,u);y=lerp(16,38,u);flap=-.8}
+ if(pose==='mort'){const k=sm(t*1.5);y=lerp(24,44,k);sc=lerp(1,.45,k);flap=0}
+ if(pose==='travail'){const k=t<.5?sm(t/.5):1-sm((t-.5)/.5);if(k>.5){const px=21,py=30;S.rect(px,py,13,10,pa);S.rect(px,py,13,1,pb);for(let r=0;r<4;r++)S.line(px+2,py+2+r*2,px+10-(r%2)*3,py+2+r*2,ink);S.p(px+12,py+9,pb);return{x:27,rx:7}}y=lerp(24,32,k);sc=lerp(1,1.3,k);flap=lerp(flap,0,k)}
+ const P=(dx,dy)=>[x+dx*sc,y+dy*sc];
+ if(pose==='porter'){crate(S,x-5,y+9);S.line(x-2,y+2,x-4,y+9,pb);S.line(x+3,y+2,x+4,y+9,pb)}
+ S.poly([P(-8,2),P(8,-1),P(3,3)],pb);
+ const wy=fold?-3:-10*flap;S.poly([P(-2,0),P(4,-1),P(-3,wy-1)],pa);S.line(...P(-1,-1),...P(-2,wy*.6),ink);
+ S.poly([P(-8,2),P(8,-1),P(2,1)],pa);S.line(...P(-4,1),...P(4,0),ink);S.p(...P(7,-1),pb);
+ S.poly([P(0,0),P(5,-1),P(2,wy*(fold?.8:.75)+(fold?0:2))],mix(pa,'#ffffff',.25));S.line(...P(2,-1),...P(2.5,wy*.45),ink);
+ if(pose==='mort'&&t>.5){S.mask((px,py)=>S.g(px,py)&&hash(px,py,3)<.25)}
+ if(pose==='combat')for(let i=1;i<5;i++)F.p(x-i*3,y-i*1.6,c[3]);
+ if(pose==='combat'&&t>.5&&t<.66)star(F,44,40,c[4],2);
+ if(pose==='prier')for(let i=0;i<2;i++){const u=(t+i/2)%1;F.p(x-2+i*4,y-4-u*10,c[4])}
+ return{x,rx:pose==='prier'?7:5}}
+
+
+/* ============ MEDEINA · mélanges ============ */
+const STONE=['#4b5548','#6a7564','#8f9a86'];
+function pebble(S,G,x,y,rx,ry){S.ell(x,y,rx,ry,STONE[1]);S.ell(x-.7,y-.8,Math.max(.6,rx-1.4),Math.max(.5,ry-1.2),STONE[2]);S.p(x+R(rx/2),y+R(ry/2),STONE[0]);S.p(x-R(rx/2),y-R(ry/2)+1,G.c[2])}
+function faonCairn(S,F,pose,t,G){
+ const c=G.c,b=G.bone;let bx=24,by=35,lie=false,head,leg=[0,0,0,0],ant=1,d=0;const w=sn(t);
+ if(pose==='mort'){const k=sm(t*2);pebble(S,G,lerp(bx-6,bx-9,k),lerp(by-1,45,k),4.5,3.5);pebble(S,G,lerp(bx+3,bx+6,k),lerp(by-1,45,k),5,4);pebble(S,G,lerp(bx+12,bx+14,k),lerp(by-9,45,k),3,2);
+  S.line(bx-3,46,bx+2,45,b[2],2);if(t>.55){const h=R(sm((t-.55)/.35)*6);S.line(bx,44,bx,44-h,c[2]);if(h>3){S.p(bx-1,44-h,c[3]);S.p(bx+1,45-h,c[3])}F.p(bx,43-h,c[4])}return{x:bx+2,rx:12}}
+ if(pose==='marche'||pose==='porter'){by-=R(Math.abs(w));leg=[w*2,-w*2,-w*2,w*2]}
+ if(pose==='prier'){lie=true;by=40}
+ if(pose==='combat'){d=Math.max(0,sn(t))*6;bx+=d;leg=[-2,-2,2,2];ant=2}
+ head=pose==='travail'?[bx+13,by+7+R(sn(t,2)*.6)]:pose==='combat'?[bx+13,by+1]:lie?[bx+11,by-8]:[bx+11,by-9];
+ const j=k=>pose==='prier'?0:R(sn(t,1,k*.3)*.7);
+ if(lie){S.rect(bx-9,by+3,5,2,b[1]);S.rect(bx+2,by+3,6,2,c[1])}
+ else{const ox=[-8,-5,3,6];for(let k=0;k<4;k++){const x0=bx+ox[k];S.line(x0,by+2,x0+leg[k],GY,k<2?b[1]:c[1]);S.p(x0+leg[k],GY,'#2a2218')}}
+ S.ell(bx-9,by,2,2,b[1]);S.line(bx-8,by+2,bx-4,by+2,b[2]);
+ if(pose==='porter'){pebble(S,G,bx-5,by+j(0),4,2.5);crate(S,bx-6,by-9);pebble(S,G,bx-1,by-11+j(2),2.5,1.5)}
+ else pebble(S,G,bx-5,by-1+j(0),4.5,3.5);
+ // pousse entre les pierres
+ S.line(bx-1,by-1,bx-1,by-5,c[2]);S.p(bx-2,by-5,c[3]);S.p(bx,by-6,c[3]);F.p(bx-1,by-6,c[4]);
+ pebble(S,G,bx+4,by-1+j(1),5,4);S.ell(bx+4,by-4+j(1),3.5,1,c[2]);S.p(bx+3,by-5+j(1),G.flower);S.p(bx+6,by-4+j(1),'#e9e4b0');
+ const[hx,hy]=head;pebble(S,G,lerp(bx+8,hx,.4),lerp(by-3,hy,.4)+j(3),2,1.6);pebble(S,G,lerp(bx+8,hx,.75),lerp(by-3,hy,.75)+j(4),1.8,1.4);
+ S.line(hx-1,hy-2,hx-1-ant,hy-5-ant*2,c[0]);S.line(hx-1-ant*.5,hy-4-ant,hx+1+ant,hy-6-ant*2,c[0]);S.p(hx-2-ant,hy-5-ant*2,c[3]);S.p(hx+1+ant,hy-6-ant*2,c[3]);
+ S.ell(hx,hy,3,2,STONE[1]);S.ell(hx,hy-1,2.4,1,c[2]);S.rect(hx+2,hy,2,2,b[2]);S.p(hx+1,hy,'#10140e');
+ if(pose==='prier'){const n=Math.floor(sm(t*1.3)*5);for(let i=0;i<n;i++)S.disc(bx-8+i*3,GY-1-(i%2),1,i%2?G.flower:'#e9e4b0');for(let i=0;i<3;i++){const u=(t+i/3)%1;F.p(bx-5+i*4,34-u*14,c[4])}}
+ if(pose==='travail')for(let i=0;i<4;i++){const u=(t+i/4)%1;F.p(bx+10+i*2+sn(u)*1.5,by-6+u*14,G.flower)}
+ if(pose==='combat'&&t>.18&&t<.34)star(F,R(bx+19),by-3,c[4],3);
+ return{x:bx+2,rx:12}}
+
+
+
+/* ============ INDRA · nouvelles pistes ============ */
+function elephant(S,F,pose,t,G){
+ const c=G.c,s=G.steel,iv='#e2dcc8';let bx=24,by=33,d=0;const w=sn(t);const walk=pose==='marche'||pose==='porter';
+ if(pose==='mort'){const k=sm(t*1.6);S.ell(25,41,11,lerp(7,5,k),s[1]);S.ell(25,43,10,2.5,s[0]);S.rect(17,36,14,4,c[2]);S.rect(17,36,14,1,c[3]);for(let i=0;i<7;i++)S.p(18+i*2,40,c[4]);
+  for(const lx of[18,23,28,32])S.rect(lx,45,4,2,s[2]);S.ell(37,42,5.5,4.5,s[1]);S.ell(35,41,3,3.5,s[0]);S.line(37,40,39,40,'#120804');S.line(41,44,46,46,s[1],2);S.line(40,45,43,46,iv);
+  if(t>.5)for(let i=0;i<3;i++){const u=(t*2+i/3)%1;F.p(22+i*4,36-u*10,c[3])}return{x:27,rx:13}}
+ if(walk)by-=R(Math.abs(w)*.8);
+ if(pose==='combat'){d=Math.max(0,sn(t))*6}
+ const kneel=pose==='prier';bx+=d;
+ let tr=[[bx+16,by-1],[bx+19,by+4],[bx+18,by+10]];
+ if(pose==='combat')tr=[[bx+16,by-3],[bx+20,by-8],[bx+21,by-13]];
+ if(pose==='travail'){const k=Math.abs(sn(t));tr=[[bx+16,by-1],[bx+20,by+2-k*8],[bx+21,by+9-k*20]];if(k<.2){F.p(bx+22,46,'#8a8270');F.p(bx+19,46,'#8a8270');F.p(bx+24,45,'#8a8270')}}
+ if(kneel)tr=[[bx+16,by+3],[bx+19,by+7],[bx+16,by+9]];
+ const leg=(x,k,far)=>{let lift=walk?(k%2?Math.max(0,w):Math.max(0,-w))*2:0,top=by+3,h=GY-top-R(lift)+1;if(kneel&&k>=2){S.rect(x-1,GY-2,6,3,far?s[0]:s[1]);return}S.rect(x+(walk?R((k%2?w:-w)):0),top,3,h,far?s[0]:s[1]);S.rect(x+(walk?R((k%2?w:-w)):0),top+h-1,3,1,s[2])};
+ leg(bx-5,1,true);leg(bx+5,3,true);
+ const hb=kneel?3:0;
+ S.ell(bx,by+hb*.5,10,7,s[1]);S.ell(bx,by+4+hb*.5,9,3,s[0]);
+ S.rect(bx-8,by-7+hb*.5,14,7,c[2]);S.rect(bx-8,by-7+hb*.5,14,1,c[3]);for(let i=0;i<3;i++)S.rect(bx-8,by-5+i*2+hb*.5,14,1,i%2?c[1]:c[2]);for(let i=0;i<7;i++)S.p(bx-8+i*2,by+hb*.5,c[4]);
+ leg(bx-8,0,false);leg(bx+2,2,false);
+ S.line(bx-10,by-2,bx-12,by+3,s[0]);
+ const hx=bx+11,hy=by-4+hb;S.ell(hx,hy,6,5.5,s[1]);S.ell(hx,hy-3,4,1.5,s[2]);S.ell(hx-3,hy,3.5,4.5,s[0]);S.line(hx-6,hy-3,hx-6,hy+3,c[2]);
+ S.rect(hx-1,hy-7,6,3,c[2]);S.rect(hx-1,hy-7,6,1,c[3]);S.p(hx+1,hy-9,c[4]);S.p(hx+2,hy-10,c[4]);S.p(hx+3,hy-9,c[4]);
+ S.p(hx+2,hy-1,kneel?s[0]:'#120804');S.line(hx+4,hy+3,hx+7,hy+4,iv);
+ S.line(tr[0][0],tr[0][1],tr[1][0],tr[1][1],s[1],2);S.line(tr[1][0],tr[1][1],tr[2][0],tr[2][1],s[1],2);S.p(tr[2][0],tr[2][1],s[2]);
+ if(pose==='porter')crate(S,bx-6,by-15);
+ if(pose==='combat'&&t>.18&&t<.34)star(F,R(tr[2][0]+3),R(tr[2][1]),c[4],3);
+ if(kneel)for(let i=0;i<3;i++){const u=(t+i/3)%1;F.p(bx-4+i*4,by-10-u*12,c[4])}
+ return{x:bx+2,rx:13}}
+
+function singe(S,F,pose,t,G){
+ const c=G.c,wood='#6b4a2a',face='#e3c49a',dk='#120804';let x=27,y=0;const w=sn(t);
+ const head=(hx,hy,closed)=>{S.disc(hx,hy,4,c[2]);S.p(hx-1,hy-4,c[3]);S.p(hx,hy-5,c[3]);S.disc(hx-4,hy,1.2,c[2]);S.disc(hx+5,hy,1.2,c[2]);S.ell(hx+1,hy+1,2.6,2.2,face);
+  if(closed){S.line(hx-1,hy,hx,hy,dk);S.line(hx+2,hy,hx+3,hy,dk)}else{S.p(hx,hy,dk);S.p(hx+2,hy,dk)}S.p(hx+1,hy+2,'#8a5a3a');S.line(hx-3,hy-3,hx+5,hy-3,c[0]);S.line(hx-3,hy-3,hx-7,hy-1+R(sn(t,2)),c[0]);S.line(hx-3,hy-2,hx-6,hy+1+R(sn(t,2)),c[0])};
+ const staff=(x0,y0,x1,y1)=>{S.line(x0,y0,x1,y1,wood);S.p(x0,y0,c[3]);S.p(x1,y1,c[3])};
+ if(pose==='mort'){const k=sm(t*1.6);S.ell(26,44,6,3,c[2]);S.ell(27,45,3,1.5,c[4]);head(35,lerp(36,43,k),true);S.line(20,45,15,43,c[1]);staff(12,46,30,46);return{x:27,rx:10}}
+ if(pose==='prier'){y=3;S.rect(x-6,42,12,3,c[1]);S.p(x-6,44,face);S.p(x+5,44,face);S.ell(x,34+y,4.5,6,c[2]);S.ell(x+1,35+y,2.5,4,c[4]);S.line(x-4,30+y,x,33+y,c[1],2);S.line(x+4,30+y,x+1,33+y,c[1],2);S.p(x,33+y,face);S.p(x+1,32+y,face);
+  head(x+1,23+y+R(sm(t*2)),true);staff(x-11,45,x+12,45);S.line(x-4,39,x-9,37,c[1]);S.line(x-9,37,x-10,33,c[1]);for(let i=0;i<2;i++){const u=(t+i/2)%1;F.p(x-2+i*5,18-u*10,c[4])}return{x,rx:8}}
+ if(pose==='combat')y=-R(Math.abs(sn(t))*5);
+ if(pose==='marche'||pose==='porter')y=-R(Math.abs(w));
+ const kn=pose==='marche'||pose==='porter'?w*2:0;
+ S.line(x-2,38+y,x-4+kn,42+y,c[1],2);S.line(x-4+kn,42+y,x-3+kn,GY+(y<-2?y+2:0),c[1],2);S.line(x+2,38+y,x+4-kn,42+y,c[1],2);S.line(x+4-kn,42+y,x+3-kn,GY+(y<-2?y+2:0),c[1],2);
+ S.rect(x-4+kn,GY+(y<-2?y+2:0),2,1,face);S.rect(x+3-kn,GY+(y<-2?y+2:0),2,1,face);
+ const tf=sn(t)*1;S.line(x-4,38+y,x-8,36+y,c[1]);S.line(x-8,36+y,x-9,31+y+tf,c[1]);S.line(x-9,31+y+tf,x-7,29+y+tf,c[1]);
+ S.ell(x,33+y,4.5,6,c[2]);S.ell(x+1,34+y,2.5,4,c[4]);
+ let hl=[x-5,35+y],hr=[x+6,33+y];
+ if(pose==='porter'){hl=[x-3,17+y];hr=[x+5,17+y]}
+ S.line(x-3,28+y,hl[0],hl[1],c[1],2);
+ head(x+1,22+y,false);
+ if(pose==='porter'){crate(S,x-4,9+y);S.line(x+4,28+y,hr[0],hr[1],c[1],2);S.p(hl[0],hl[1],face);S.p(hr[0],hr[1],face);return{x,rx:7}}
+ let a=-1.25,len=11;
+ if(pose==='travail')a=t*PI2*2;
+ if(pose==='combat')a=lerp(-2.6,.25,sm(cl((t-.15)/.3)));
+ const hx=pose==='combat'?x+7:x+6,hy=pose==='combat'?29+y:31+y;hr=[hx,hy];
+ S.line(x+4,28+y,hr[0],hr[1],c[1],2);staff(hx-Math.cos(a)*len,hy-Math.sin(a)*len,hx+Math.cos(a)*len,hy+Math.sin(a)*len);S.p(hx,hy,face);
+ if(pose==='combat'&&t>.42&&t<.58)star(F,R(hx+Math.cos(a)*(len+3)),R(hy+Math.sin(a)*(len+2)),c[4],3);
+ if(pose==='travail')for(let i=0;i<2;i++)F.p(hx+Math.cos(a+i*Math.PI)*(len+1),hy+Math.sin(a+i*Math.PI)*(len+1),c[3]);
+ return{x,rx:7}}
+
+function mante(S,F,pose,t,G){
+ const c=G.c;let x=28,hy=0;const w=sn(t);const walk=pose==='marche'||pose==='porter';
+ if(pose==='mort'){const k=sm(t*1.6);S.ell(26,44,9,2.5,c[2]);S.ell(24,43,6,1.5,c[3]);for(let i=0;i<4;i++){const lx=20+i*4;S.line(lx,43,lx+R(sn(t,3,i*.2)*(1-k)),37+i%2,c[1])}S.poly([[34,42],[39,41],[37,45]],c[2]);S.p(38,42,c[1]);return{x:27,rx:11}}
+ if(pose==='prier')hy=1;
+ const lw=walk?w*2:0;
+ S.line(x-1,33,x+4+lw,GY,c[1]);S.line(x-1,33,x-1-lw,GY,c[1]);S.line(x-4,35,x-11-lw,GY,c[1]);S.line(x-4,35,x-6+lw,GY,c[1]);
+ S.ell(x-7,36,7,3,c[2]);S.line(x-12,37,x-2,36,c[1]);S.ell(x-6,34,6,1.6,c[3]);S.line(x-11,34,x-2,33,c[4]);
+ S.line(x-1,35,x+1,21,c[2],2);
+ const hx=x+1,hh=17+hy;S.poly([[hx-3,hh],[hx+4,hh-1],[hx+1,hh+5]],c[2]);S.p(hx-3,hh,c[4]);S.p(hx+4,hh-1,c[4]);F.p(hx-3,hh,'#ffe0b0');F.p(hx+4,hh-1,'#ffe0b0');
+ S.line(hx-2,hh-1,hx-5,hh-7,c[1]);S.line(hx+3,hh-2,hx+7,hh-8,c[1]);
+ let A=[x+4,27],B=[x+2,21];
+ if(pose==='porter'){crate(S,x+2,24);A=[x+13,26];B=[x+12,32]}
+ if(pose==='travail'){const k=Math.abs(sn(t,2));A=[x+5,27-k];B=[x+3+k*2,21+k*3]}
+ if(pose==='combat'){const k=t>.33&&t<.55?1:t>.25&&t<.33?(t-.25)/.08:0;A=[lerp(x+4,x+10,k),lerp(27,23,k)];B=[lerp(x+2,x+20,k),lerp(21,25,k)]}
+ S.line(x+1,24,A[0],A[1],c[3]);S.line(A[0],A[1],B[0],B[1],c[3]);S.p((A[0]+B[0])/2,(A[1]+B[1])/2,c[4]);
+ S.line(x+1,25,A[0]+1,A[1]+1,c[2]);
+ if(pose==='combat'&&t>.36&&t<.52)star(F,R(B[0]+3),R(B[1]),c[4],3);
+ if(pose==='prier'){F.p(B[0],B[1]-1,c[4]);for(let i=0;i<2;i++){const u=(t+i/2)%1;F.p(x+2+i*3,14-u*10,c[4])}}
+ return{x:x-3,rx:11}}
+
+function coq(S,F,pose,t,G){
+ const c=G.c,s=G.steel;let x=25,y=0,hdx=0,hdy=0;const w=sn(t);const walk=pose==='marche'||pose==='porter';
+ const tail=(ox,oy)=>{for(let k=0;k<3;k++){const col=[c[1],c[0],c[3]][k];let px=ox-4,py=oy-2;for(let i=1;i<=10;i++){const u=i/10;const qx=ox-4-u*9-k,qy=oy-2-Math.sin(u*Math.PI)*(9-k*2)+u*(6+k*2);S.line(px,py,qx,qy,col,2);px=qx;py=qy}}};
+ const body=(bx,by)=>{tail(bx,by);S.ell(bx,by,7,5.5,c[2]);S.ell(bx-1,by,4.5,3,c[1]);S.line(bx-4,by-1,bx+2,by-2,c[3])};
+ const head=(hx,hy,closed)=>{S.poly([[hx-4,hy+2],[hx,hy-1],[hx+1,hy+9],[hx-4,hy+9]],c[3]);S.disc(hx,hy,2.5,c[2]);S.p(hx-1,hy-3,c[4]);S.p(hx,hy-4,c[4]);S.p(hx+1,hy-3,c[4]);S.p(hx+2,hy-3,c[4]);S.line(hx+3,hy,hx+4,hy+1,s[2]);S.p(hx+2,hy+3,c[3]);S.p(hx+1,hy-1,closed?c[1]:'#120804')};
+ if(pose==='mort'){S.ell(26,43,7,3.5,c[2]);S.ell(25,43,4,2,c[1]);tail(26,44);head(34,43,true);S.line(24,40,22,37,s[1]);S.line(27,40,28,37,s[1]);if(t>.3)for(let i=0;i<3;i++){const u=(t+i/3)%1;F.p(20+i*5,38+u*8,c[3])}return{x:27,rx:10}}
+ if(pose==='prier'){body(x,38);head(x+8,29,true);return{x,rx:9}}
+ if(walk){y=-R(Math.abs(w));hdx=R(w*1.5)}
+ if(pose==='combat')y=-R(Math.max(0,sn(t))*7);
+ const fy=GY+(pose==='combat'?y:0);
+ let l1=[x-1+(walk?w*2:0),fy],l2=[x+2-(walk?w*2:0),fy];
+ if(pose==='travail'){const k=Math.max(0,sn(t,2));l2=[x+2-k*6,fy-k*2];if(k>.6)for(let i=0;i<3;i++)F.p(x-6-i*2,45-i,'#8a8270')}
+ if(pose==='combat'&&y<-3){l1=[x+6,38+y+6];l2=[x+8,38+y+4]}
+ S.line(x-1,38+y,l1[0],l1[1],s[1]);S.line(x+2,38+y,l2[0],l2[1],s[1]);S.p(x-2,42+y,s[2]);S.p(x+1,42+y,s[2]);S.line(l1[0]-1,l1[1],l1[0]+2,l1[1],s[1]);S.line(l2[0]-1,l2[1],l2[0]+2,l2[1],s[1]);
+ body(x,33+y);head(x+8+hdx,23+y+hdy,false);
+ if(pose==='porter')crate(S,x-7,22+y);
+ if(pose==='combat'&&t>.2&&t<.36)star(F,x+12,40+y,c[4],3);
+ return{x,rx:8}}
+
+/* ============ SIGIL · nouvelles pistes ============ */
+const SAND='#3a3128',INK=['#1f2126','#2e3138','#454950'],PAPER='#d6d3c8';
+function shelf(S){S.rect(44,18,9,29,'#3a3128');for(const yy of[25,32,39])S.rect(45,yy,7,1,'#5a4a38');for(let k=0;k<3;k++){S.rect(46+k*2,21,1,4,['#6e5a44','#7d7f85','#5c4632'][k]);S.rect(45+k*2,28,1,4,['#7d7f85','#5c4632','#6e5a44'][k]);S.rect(46+k*2,35,1,4,['#5c4632','#6e5a44','#7d7f85'][k])}}
+function hibou(S,F,pose,t,G){
+ const c=G.c;let x=27,y=0;const w=sn(t);
+ const face=(fx,fy,closed,look=0)=>{S.disc(fx,fy,6,c[2]);S.ell(fx,fy+1,5,4,c[3]);S.line(fx-4,fy-4,fx-6,fy-8,c[2]);S.line(fx+4,fy-4,fx+6,fy-8,c[2]);S.p(fx-6,fy-8,c[1]);S.p(fx+6,fy-8,c[1]);
+  if(closed){S.line(fx-3,fy,fx-1,fy,c[0]);S.line(fx+1,fy,fx+3,fy,c[0])}else{S.disc(fx-2,fy,1.6,c[4]);S.disc(fx+2,fy,1.6,c[4]);S.p(fx-2+look,fy,'#141518');S.p(fx+2+look,fy,'#141518')}S.p(fx,fy+2,'#6e5a44');S.p(fx,fy+3,'#5c4632')};
+ const body=(bx,by)=>{S.ell(bx,by,6.5,8,c[2]);S.ell(bx+.5,by+2,4,5.5,c[3]);for(let r=0;r<3;r++)for(let k=-1;k<=1;k++)S.p(bx+k*2+(r%2),by+r*2,c[1]);S.line(bx-3,by-4,bx+2,by+5,c[0])};
+ if(pose==='mort'){const k=sm(t*1.6);S.ell(25,43,8,3.5,c[2]);S.ell(25,44,6,2,c[3]);face(35,R(lerp(36,41,k)),true);S.rect(16,44,2,2,SAND);if(t>.3)for(let i=0;i<3;i++){const u=(t+i/3)%1;F.p(18+i*6,34+u*10,c[3])}return{x:27,rx:10}}
+ if(pose==='porter'){y=-6+R(sn(t,2)*1);const wy=sn(t,2)*5;body(x,32+y);S.poly([[x-5,27+y],[x-16,20+y+wy],[x-14,30+y+wy*.5],[x-5,34+y]],c[1]);S.poly([[x+5,27+y],[x+16,20+y+wy],[x+14,30+y+wy*.5],[x+5,34+y]],c[1]);S.line(x-6,28+y,x-14,22+y+wy,c[3]);S.line(x+6,28+y,x+14,22+y+wy,c[3]);
+  face(x,23+y,false);crate(S,x-5,40+y);S.line(x-2,39+y,x-2,41+y,SAND);S.line(x+2,39+y,x+2,41+y,SAND);return{x,rx:7}}
+ const walk=pose==='marche';if(walk)x+=R(w);
+ let d=0;if(pose==='combat')d=R(Math.max(0,sn(t))*6);
+ S.rect(x-3+d,GY-1,2,2,SAND);S.rect(x+2+d,GY-1,2,2,SAND);
+ body(x+d,35+y);
+ if(pose==='combat'&&d>2){S.poly([[x-5+d,29],[x-16+d,18],[x-12+d,33]],c[1]);S.poly([[x+5+d,29],[x+17+d,18],[x+13+d,33]],c[1]);S.line(x+5+d,44,x+12+d,41,SAND);if(t>.2&&t<.34)star(F,x+15+d,40,c[4],3)}
+ else{S.ell(x-6,35+y,2.5,6,c[1]);if(pose!=='travail')S.ell(x+6,35+y,2,6,c[1])}
+ if(pose==='travail'){shelf(S);const k=t<.5?sm(t/.5):1-sm((t-.5)/.5);S.poly([[x+5,30],[x+lerp(9,16,k),lerp(32,27,k)],[x+6,38]],c[1]);S.rect(x+lerp(9,15,k),lerp(30,25,k),3,4,PAPER);S.p(x+lerp(9,15,k)+1,lerp(31,26,k),c[1])}
+ face(x+d,25+y+(pose==='prier'?R(sm(t*2))+1:0),pose==='prier',pose==='travail'?1:0);
+ if(pose==='prier')for(let i=0;i<2;i++){const u=(t+i/2)%1;F.p(x-2+i*4,15-u*10,c[4])}
+ return{x:x+d,rx:7}}
+
+function tortue(S,F,pose,t,G){
+ const c=G.c,books=['#5c4632','#6e5a44','#4a4c52','#7d6346'];let x=24,hd=0,closed=false,tilt=0;const w=sn(t);const walk=pose==='marche'||pose==='porter';
+ if(pose==='prier'){hd=-4;closed=true}
+ if(pose==='combat')hd=R(Math.max(0,sn(t))*5);
+ if(pose==='travail')hd=R(sn(t,2)*.6);
+ if(pose==='mort'){hd=-5;closed=true;tilt=R(sm(t*1.5)*2)}
+ for(const[k,lx]of[[0,x-9],[1,x-4],[2,x+3],[3,x+7]]){const lift=walk?(k%2?Math.max(0,w):Math.max(0,-w)):0;if(pose==='mort'&&k>0)continue;S.rect(lx,42-R(lift),3,5,c[2]);S.rect(lx,46-R(lift),3,1,c[1])}
+ if(hd>-4){S.line(x+9,40,x+12+hd,38,c[2],3);S.ell(x+15+hd,37,3,2.5,c[2]);S.ell(x+15+hd,36,2,1,c[3]);S.p(x+17+hd,38,c[1]);S.p(x+16+hd,36,closed?c[1]:'#141518')}else S.ell(x+10,40,1.5,1.5,c[1]);
+ S.ell(x,42+tilt*.5,11,2.5,c[1]);
+ S.ell(x,31+tilt,8,5,c[2]);S.ell(x-2,29+tilt,4,2,c[3]);S.p(x,25+tilt,c[4]);S.p(x,24+tilt,c[3]);
+ S.rect(x-9,34+tilt,18,1,c[4]);
+ for(let i=-4;i<=4;i++){const cx=x+i*2;S.line(cx,35+tilt,cx,41,i%2===0?c[3]:c[1]);if(i%2!==0)S.rect(cx,37+(i+5)%3,1,4-(i+5)%3,books[(i+4)%4])}
+ if(pose==='mort'){S.line(x-3,30,x,36,c[0]);S.line(x+3,33,x+5,39,c[0]);if(t>.4){const k=sm((t-.4)/.4);S.p(x+8+k*6,lerp(26,45,k),c[4])}}
+ if(pose==='travail'){const k=Math.abs(sn(t));S.rect(x-1-R(k*10),37,2,4,'#7d6346');S.p(x-1-R(k*10),37,'#a08a68')}
+ if(pose==='porter')crate(S,x-5,17);
+ if(pose==='prier')for(let i=0;i<3;i++){const u=(t+i/3)%1;F.p(x-4+i*4,22-u*10,c[4])}
+ if(pose==='combat'&&t>.2&&t<.34)star(F,x+21,37,c[4],2);
+ return{x:x+2,rx:13}}
+
+function encre(S,F,pose,t,G){
+ const c=G.c;let x=27,sq=1,qa=-1.2,y=0;const w=sn(t);
+ if(pose==='marche'){sq=1+w*.15;y=-R(Math.max(0,w)*2)}
+ if(pose==='porter'){sq=.8+Math.abs(w)*.06;qa=-2.4}
+ if(pose==='prier'){sq=lerp(1,.7,sm(t*2));qa=lerp(-1.2,-.35,sm(t*2))}
+ if(pose==='combat'){qa=t>.3&&t<.6?-.05:-1.2}
+ if(pose==='mort'){const k=sm(t*1.4);S.ell(27,46,lerp(6,12,k),lerp(4,1.5,k),INK[1]);S.ell(25,45,lerp(3,7,k),.8,INK[2]);S.line(30,45,42,43,PAPER,2);S.p(42,43,INK[0]);if(k<.5){S.p(25,44,c[4]);S.p(29,44,c[4])}return{x:27,rx:12}}
+ const ry=7*sq,rx=7/Math.sqrt(sq),cy=GY-ry+y;
+ S.poly([[x-rx*.6,cy-ry*.4],[x+rx*.6,cy-ry*.4],[x+1,cy-ry-6*sq]],INK[1]);S.ell(x,cy,rx,ry,INK[1]);S.ell(x-2,cy-1,2,ry*.5,INK[2]);S.p(x-3,cy-ry*.6,c[3]);
+ S.rect(x-2,cy,1,2,c[4]);S.rect(x+2,cy,1,2,c[4]);
+ const qx=x+1+(pose==='combat'?2:0),qy=cy-ry-3*sq,ex=qx+Math.cos(qa)*14,ey=qy+Math.sin(qa)*14;
+ S.line(qx,qy,ex,ey,PAPER,2);S.line(qx+Math.cos(qa)*5,qy+Math.sin(qa)*5,ex,ey,'#b8b4a6');S.p(qx-Math.cos(qa)*2,qy-Math.sin(qa)*2,INK[0]);
+ if(pose==='porter')crate(S,x-5,cy-ry-7);
+ if(pose==='marche')for(let i=0;i<3;i++)S.p(x-10-i*4,46,INK[1]);
+ if(pose==='travail'){S.rect(36,42,13,5,PAPER);S.rect(36,42,13,1,'#a8a59a');const n=Math.floor(t*12);for(let i=0;i<n;i++)S.p(38+(i%10),44+Math.floor(i/10)*2,INK[1]);const nx=38+(n%10);S.line(x+5,cy-ry,nx,43,PAPER,2);S.p(nx,44,INK[0])}
+ if(pose==='combat'&&t>.33&&t<.55){star(F,R(ex+3),R(ey),c[4],3);F.p(R(ex+5),R(ey)-3,INK[2]);F.p(R(ex+6),R(ey)+3,INK[2])}
+ if(pose==='prier')for(let i=0;i<2;i++){const u=(t+i/2)%1;F.p(x-2+i*4,cy-ry-6-u*10,c[4])}
+ return{x,rx:7}}
+
+function chat(S,F,pose,t,G){
+ const c=G.c;let bx=24,by=36,y=0;const w=sn(t);const walk=pose==='marche'||pose==='porter';
+ const head=(hx,hy,closed)=>{S.disc(hx,hy,4,c[2]);S.poly([[hx-4,hy-2],[hx-3,hy-8],[hx,hy-3]],c[2]);S.poly([[hx+1,hy-3],[hx+4,hy-8],[hx+4,hy-1]],c[2]);S.p(hx-3,hy-5,c[1]);S.p(hx+3,hy-5,c[1]);
+  if(closed){S.line(hx-2,hy,hx-1,hy,c[0]);S.line(hx+1,hy,hx+2,hy,c[0])}else{S.p(hx-2,hy,c[4]);S.p(hx+2,hy,c[4]);S.p(hx-2,hy+1,'#141518');S.p(hx+2,hy+1,'#141518')}S.p(hx,hy+2,INK[1])};
+ const tail=(tx,ty,ph)=>{let px=tx,py=ty;for(let i=1;i<=8;i++){const u=i/8,qx=tx-u*5+Math.sin(u*3+ph)*1.5,qy=ty-u*10;S.line(px,py,qx,qy,i>6?INK[1]:c[2],2);px=qx;py=qy}};
+ if(pose==='mort'){S.ell(26,43,8,4,c[2]);S.ell(26,42,6,2,c[3]);head(33,42,true);S.line(18,45,30,46,c[2],2);S.p(30,46,INK[1]);return{x:27,rx:10}}
+ if(pose==='prier'){S.ell(25,42,8,4.5,c[2]);S.ell(25,40,6,2,c[3]);head(33,36+R(sm(t*2)),true);S.line(17,45,31,46,c[2],2);S.p(31,46,INK[1]);S.line(22,40,26,44,c[0]);for(let i=0;i<2;i++){const u=(t+i/2)%1;F.p(31+i*4,28-u*10,c[4])}return{x:26,rx:10}}
+ let dx=0;if(pose==='combat'){const k=Math.max(0,sn(t));dx=k*8;y=-R(k*5)}
+ bx+=dx;
+ tail(bx-8,by-1+y,t*PI2);
+ const sw=walk?w*2:0,fl=pose==='combat'&&y<-2;
+ for(const[k,lx]of[[0,bx-6],[1,bx-3],[2,bx+4],[3,bx+6]]){let ex=lx+(k%2?sw:-sw),ey=GY+(fl?y:0);if(fl&&k>=2){ex=lx+6;ey=by+2+y}if(pose==='travail'&&k===3){ex=bx+15;ey=by-12}S.line(lx,by+2+y,ex,ey,k%2?c[1]:c[2],2);S.p(ex,ey,INK[1])}
+ S.ell(bx,by+y,8,4.5,c[2]);S.ell(bx,by-2+y,6,1.5,c[3]);S.ell(bx,by+3+y,6,1.2,c[1]);S.line(bx-4,by-2+y,bx+1,by+3+y,c[0]);
+ S.line(bx+6,by-2+y,bx+8,by+2+y,'#5c4632',2);S.line(bx+8,by+2+y,bx+7,by+5+y,'#5c4632');
+ head(bx+10,by-5+y,false);
+ if(pose==='porter')crate(S,bx-5,by-12);
+ if(pose==='travail'){shelf(S);const k=Math.abs(sn(t));S.rect(41+R(k*3),24,3,4,'#7d6346')}
+ if(pose==='combat'&&t>.2&&t<.36)star(F,R(bx+16),by+y-2,c[4],3);
+ return{x:bx,rx:10}}
+
+const PALE='#eef0f4';
+/* ============ enveloppe commune des poses ============ */
+// draw(S,F,G,x,gy,st) dessine l'esprit debout, pieds (ou base) à gy, centré en x.
+// L'enveloppe gère les poses : marche, caisse tenue par des liens de lumière, prière, poste, combat, mort.
+const WOOD='#6b4a2a',WOOD2='#8a6038',EYE2='#fff0d0';
+function mk(draw,o={}){return function(S,F,pose,t,G){
+ const c=G.c,S0=new L(),F0=new L(),walk=pose==='marche'||pose==='porter',fl=!!o.float;
+ const st={pose,t,w:walk?sn(t):0,closed:pose==='prier',k:pose==='mort'?sm(t*1.5):0,act:0};
+ let x=27,gy=GY+(fl?-(o.hover||4)+R(sn(t,.5)*1.2):0);
+ if(walk&&!fl)gy-=R(Math.abs(sn(t))*(o.hop||1));
+ if(pose==='prier')gy+=fl?2:0;
+ if(pose==='travail'){st.act=Math.max(0,sn(t));x+=R(st.act*3)}
+ if(pose==='combat'){st.act=t>.3&&t<.55?1:t>.22&&t<.3?(t-.22)/.08:0;x+=R(st.act*6)}
+ const wx=o.workX||0;
+ if(pose==='travail'){if(G===GODS.sigil){shelf(S);const v=st.act;}else{rock(S,42,36);if(st.act>.92)star(F,43,38,c[4],2)}}
+ draw(S0,F0,G,x,gy,st);
+ if(pose==='porter'){const[cx,cy]=o.carry?[x+o.carry[0],gy+o.carry[1]]:[x-5,gy-(o.h||30)-9];crate(S0,cx,cy);
+  const an=o.anchor?o.anchor.map(([a,b])=>[x+a,gy+b]):[[x-4,gy-(o.h||30)],[x+4,gy-(o.h||30)]];
+  for(const[ax,ay]of an){F0.line(cx+(ax<x?1:8),cy+7,ax,ay,mix(G.col,'#ffffff',.2));}}
+ const k=st.k,fall=fl?(o.hover||4):0;
+ for(let y=0;y<CH;y++)for(let xx=0;xx<CW;xx++){const v=S0.g(xx,y);if(!v)continue;if(k>0&&hash(xx,y,13)<k*1.15-.35)continue;S.p(xx,y+R(k*fall),v)}
+ for(let y=0;y<CH;y++)for(let xx=0;xx<CW;xx++){const f=F0.g(xx,y);if(!f)continue;if(k>.5&&hash(xx,y,17)<k)continue;F.p(xx,y+R(k*fall),f)}
+ if(fl&&k===0)for(let i=0;i<3;i++){const u=(t+i/3)%1;F.p(x-3+i*3+sn(u)*1,gy+1+u*(GY-gy),mix(G.col,'#000000',.35+u*.4))}
+ if(pose==='prier')for(let i=0;i<3;i++){const u=(t+i/3)%1;F.p(x-5+i*5,gy-(o.h||30)-2-u*9,u<.6?c[4]:c[3])}
+ if(pose==='combat'&&t>.36&&t<.52){const[fx,fy]=o.front||[11,-16];star(F,R(x+fx),R(gy+fy),c[4],3)}
+ if(pose==='mort'&&t>.2)for(let i=0;i<5;i++){const u=(t*1.3+i/5)%1;F.p(x-8+i*4,GY-4-u*24,u<.6?c[3]:mix(c[3],'#000000',.5))}
+ return{x,rx:o.rx||7,faint:fl}}}
+
+/* ============ INDRA · 10 pistes ============ */
+const iVajra=mk((S,F,G,x,gy,st)=>{const c=G.c,cy=gy-17;const pr=(sgn)=>{const b=cy+sgn*6,tip=cy+sgn*15;for(const dx of[-4,0,4]){S.line(x,b,x+dx,cy+sgn*11,c[2],dx?1:2);S.line(x+dx,cy+sgn*11,x,tip,c[2])}S.p(x,tip,c[4]);F.p(x,tip+sgn,c[4])};
+ S.rect(x-1,cy-6,3,12,c[1]);pr(-1);pr(1);S.disc(x,cy,3,c[2]);S.disc(x-1,cy-1,1,c[4]);F.p(x,cy,st.closed?c[3]:EYE2);F.p(x+1,cy,c[4]);
+ if(st.k<.5)for(let i=0;i<3;i++){if(hash(i,R(st.t*24),3)<.5)continue;const sx=x+(i-1)*4,y1=cy-12+hash(i,5)*4;F.line(sx,y1,x-sx+x,y1+3,'#ffe0b0')}},{float:true,hover:3,h:32,front:[6,-17],rx:5});
+const iBanniere=mk((S,F,G,x,gy,st)=>{const c=G.c,wv=sn(st.t,1.5)*2,w=st.w*2;S.line(x-2+w,gy,x,gy-6,WOOD);S.line(x+2-w,gy,x,gy-6,WOOD);S.line(x,gy-6,x,gy-35,WOOD,2);S.rect(x-3,gy-35,7,1,WOOD2);S.p(x,gy-37,c[4]);S.p(x,gy-36,c[3]);
+ const top=gy-33;S.poly([[x+1,top],[x+11,top+1+wv*.5],[x+10,top+17+wv],[x+6,top+14+wv*.8],[x+1,top+16]],c[2]);S.line(x+1,top+1,x+11,top+2+wv*.5,c[3]);S.line(x+1,top+16,x+6,top+14+wv*.8,c[1]);
+ const gx=x+6,gyl=top+7+R(wv*.5);for(const[a,b]of[[0,-2],[-2,0],[2,0],[0,2],[0,0]])F.p(gx+a,gyl+b,c[4]);
+ if(!st.closed){F.p(x+4,top+4,EYE2);F.p(x+8,top+4,EYE2)}},{h:36,carry:[-12,-26],anchor:[[0,-28]],front:[13,-24],rx:5});
+const iBrasero=mk((S,F,G,x,gy,st)=>{const c=G.c,s=G.steel,w=st.w*2;S.line(x-5,gy-12,x-7+w,gy,s[1]);S.line(x+5,gy-12,x+7-w,gy,s[1]);S.line(x,gy-12,x,gy,s[0]);
+ S.ell(x,gy-14,7,2.5,s[1]);S.rect(x-7,gy-14,15,1,s[2]);const fk=st.t*3;const h=st.closed?11:15;
+ for(let y=0;y<h;y++){const u=y/h,wd=(1-u*u)*5.5+sn(fk,1,u)*1;for(let xx=-6;xx<=6;xx++){if(Math.abs(xx-sn(fk,1,u*1.2)*u*2)>wd)continue;const e=Math.abs(xx)/Math.max(1,wd);F.p(x+xx+R(sn(fk,1,u)*u*2),gy-15-y,e>.7||u>.75?c[3]:e>.35?c[4]:EYE2)}}
+ F.p(x-2,gy-20,c[1]);F.p(x+2,gy-20,c[1]);if(st.closed){F.p(x-1,gy-20,c[1]);F.p(x+3,gy-20,c[1])}},{h:30,anchor:[[-5,-14],[5,-14]],front:[10,-18],rx:8});
+const iTambour=mk((S,F,G,x,gy,st)=>{const c=G.c,w=st.w*2;S.rect(x-4+w,gy-6,2,6,c[1]);S.rect(x+2-w,gy-6,2,6,c[1]);
+ S.rect(x-7,gy-22,14,16,c[1]);S.rect(x-7,gy-22,14,2,c[2]);S.rect(x-7,gy-8,14,2,c[2]);for(let i=0;i<7;i++){S.line(x-7+i*2,gy-20,x-6+i*2,gy-9,c[3])}S.ell(x,gy-23,7,2,'#e8d6b0');S.ell(x,gy-23,5,1,'#f2e6c8');
+ const beat=Math.abs(sn(st.t,2)),sy=gy-25-R(beat*6);S.line(x-9,sy-5,x-3,sy,WOOD);S.line(x+9,sy-5,x+3,sy,WOOD);S.p(x-3,sy,c[4]);S.p(x+3,sy,c[4]);
+ if(beat<.15){for(let a=-1;a<=1;a+=.25){F.p(x+Math.cos(a-1.57)*9,gy-24+Math.sin(a-1.57)*4,c[4])}}
+ F.p(x-3,gy-15,st.closed?c[2]:EYE2);F.p(x+2,gy-15,st.closed?c[2]:EYE2)},{h:28,anchor:[[-7,-22],[7,-22]],front:[10,-20],rx:8});
+const iCloche=mk((S,F,G,x,gy,st)=>{const c=G.c,cy=gy-30,sw=sn(st.t,1)*2;S.rect(x-1,cy-4,3,3,c[1]);S.ell(x,cy,3,2,c[2]);
+ S.poly([[x-3,cy],[x+3,cy],[x+6,cy+12],[x+9,cy+18],[x-9,cy+18],[x-6,cy+12]],c[2]);S.line(x-3,cy+1,x-7,cy+16,c[3]);S.rect(x-9,cy+16,19,2,c[3]);S.rect(x-6,cy+9,13,1,c[1]);S.line(x+3,cy+2,x+6,cy+14,c[1]);
+ S.disc(x+R(sw),cy+20,2,c[1]);F.p(x+R(sw),cy+20,st.closed?c[3]:EYE2);F.p(x-3,cy+6,c[4]);F.p(x+3,cy+6,c[4]);
+ if(Math.abs(sw)>1.8)for(let i=0;i<3;i++)F.p(x-11-i,cy+10+i*3,c[3]),F.p(x+11+i,cy+10+i*3,c[3])},{float:true,hover:4,h:32,anchor:[[-1,-35]],carry:[-5,-46],front:[11,-14],rx:7});
+const iLanterne=mk((S,F,G,x,gy,st)=>{const c=G.c,w=st.w*2;S.rect(x-4+w,gy-2,3,2,STONE[0]);S.rect(x+1-w,gy-2,3,2,STONE[0]);
+ S.rect(x-5,gy-5,11,3,STONE[1]);S.rect(x-2,gy-14,5,9,STONE[1]);S.rect(x-2,gy-14,1,9,STONE[2]);S.rect(x-6,gy-16,13,2,STONE[2]);
+ S.rect(x-5,gy-25,11,9,STONE[1]);S.rect(x-3,gy-23,7,6,c[1]);F.rect(x-2,gy-22,5,4,c[3]);F.rect(x-1,gy-21,3,2,c[4]);
+ if(!st.closed){F.p(x-1,gy-21,c[1]);F.p(x+1,gy-21,c[1])}
+ S.poly([[x-9,gy-25],[x+9,gy-25],[x+5,gy-29],[x-5,gy-29]],STONE[2]);S.line(x-9,gy-25,x-10,gy-27,STONE[2]);S.line(x+9,gy-25,x+10,gy-27,STONE[2]);S.disc(x,gy-31,1.5,STONE[1]);S.p(x,gy-33,c[3])},{h:33,anchor:[[-6,-16],[6,-16]],front:[10,-20],rx:7});
+const iEpee=mk((S,F,G,x,gy,st)=>{const c=G.c,s=G.steel,cy=gy-30,wv=sn(st.t,1.5)*2;S.rect(x,cy+3,3,21,s[2]);S.rect(x+2,cy+3,1,21,s[1]);S.poly([[x,cy+24],[x+3,cy+24],[x+1,cy+28]],s[2]);
+ S.ell(x+1,cy+1,5,1.6,c[2]);S.p(x-3,cy+1,c[3]);S.rect(x,cy-8,3,8,c[1]);for(let i=0;i<4;i++)S.p(x+1,cy-7+i*2,c[3]);S.disc(x+1,cy-9,1.5,c[4]);
+ F.p(x+1,cy+1,st.closed?c[3]:EYE2);
+ S.line(x-4,cy+2,x-9,cy+8+wv,c[3]);S.line(x-9,cy+8+wv,x-8,cy+14-wv,c[3]);S.line(x+6,cy+2,x+10,cy+8-wv,c[3]);S.line(x+10,cy+8-wv,x+9,cy+14+wv,c[3]);
+ F.line(x+1,cy+4,x+1,cy+22,mix(s[2],'#ffffff',.4))},{float:true,hover:5,h:32,anchor:[[-8,-17],[9,-17]],carry:[-4,-15],front:[6,-6],rx:4});
+const iMoine=mk((S,F,G,x,gy,st)=>{const c=G.c,b=st.closed?3:0;const body=[[x-4,gy-22+b],[x+4,gy-22+b],[x+7,gy-2],[x-7,gy-2]];S.poly(body,c[0]);
+ for(let y=gy-22+b;y<gy;y++)for(let xx=x-8;xx<=x+8;xx++){if(!S.g(xx,y))continue;const h=hash(xx,y,R(st.t*6));if(h>.8)F.p(xx,y,h>.95?EYE2:c[3]);else if(h>.55)S.p(xx,y,c[1])}
+ S.disc(x+1,gy-26+b,4,c[0]);for(let i=0;i<5;i++){const h=hash(i,R(st.t*6),9);F.p(x-2+h*6,gy-29+b+i,c[3])}
+ F.p(x,gy-26+b,st.closed?c[2]:EYE2);F.p(x+3,gy-26+b,st.closed?c[2]:EYE2);
+ if(st.closed){S.line(x-3,gy-16,x,gy-14,c[1]);S.line(x+4,gy-16,x+1,gy-14,c[1]);F.p(x,gy-14,c[4])}else{S.line(x-4,gy-20,x-6,gy-11+R(st.w),c[0],2);S.line(x+4,gy-20,x+6,gy-11-R(st.w),c[0],2)}
+ for(let i=0;i<3;i++){const u=(st.t+i/3)%1;F.p(x-3+i*3,gy-30-u*8,c[3])}},{h:30,anchor:[[-6,-12],[6,-12]],carry:[-5,-18],front:[11,-18],rx:7});
+const iRoue=mk((S,F,G,x,gy,st)=>{const c=G.c,cy=gy-10,r=9,a0=(st.pose==='marche'||st.pose==='porter')?st.t*PI2:st.t*PI2*.2;
+ for(let i=0;i<8;i++){const a=a0+i/8*PI2;S.line(x,cy,x+Math.cos(a)*r,cy+Math.sin(a)*r,c[3]);F.p(x+Math.cos(a)*(r+2),cy+Math.sin(a)*(r+2),i%2?c[3]:c[4])}
+ for(let i=0;i<40;i++){const a=i/40*PI2;S.p(x+Math.cos(a)*r,cy+Math.sin(a)*r,c[2]);S.p(x+Math.cos(a)*(r-1),cy+Math.sin(a)*(r-1),c[1])}
+ S.disc(x,cy,2.5,c[2]);F.p(x,cy,st.closed?c[3]:EYE2);F.p(x+1,cy,c[4])},{h:20,carry:[-5,-30],anchor:[[0,-19]],front:[12,-10],rx:9});
+const iTotem=mk((S,F,G,x,gy,st)=>{const c=G.c,h=st.pose==='marche'||st.pose==='porter'?Math.abs(st.w):0;const blk=(y,i,lag)=>{const yy=y-R(h*(2+lag));S.rect(x-5,yy,11,8,i%2?WOOD:WOOD2);S.rect(x-5,yy,11,1,c[2]);S.rect(x-5,yy+7,11,1,c[1]);
+  if(i===0){S.rect(x-3,yy+5,7,1,c[0]);F.p(x-2,yy+3,c[4]);F.p(x+2,yy+3,c[4])}if(i===1){S.rect(x-4,yy+2,3,2,c[2]);S.rect(x+2,yy+2,3,2,c[2]);F.p(x-3,yy+3,st.closed?c[1]:EYE2);F.p(x+3,yy+3,st.closed?c[1]:EYE2);S.rect(x-1,yy+5,3,2,c[1])}
+  if(i===2){S.poly([[x-5,yy+1],[x-11,yy-3],[x-5,yy+5]],c[2]);S.poly([[x+6,yy+1],[x+12,yy-3],[x+6,yy+5]],c[2]);S.poly([[x-1,yy+4],[x+5,yy+4],[x+2,yy+8]],c[3]);F.p(x-2,yy+2,c[4]);F.p(x+3,yy+2,c[4])}};
+ blk(gy-8,0,0);blk(gy-16,1,1);blk(gy-24,2,2);S.rect(x-6,gy-1,13,1,WOOD)},{h:26,hop:3,anchor:[[-11,-26],[12,-26]],front:[10,-14],rx:7});
+
+/* ============ SIGIL · 10 pistes ============ */
+const sLivre=mk((S,F,G,x,gy,st)=>{const c=G.c,cy=gy-18,fl=st.closed?0:sn(st.t,2)*5;
+ S.poly([[x,cy],[x-11,cy-3-fl],[x-10,cy+3-fl*.4],[x,cy+5]],PAPER);S.poly([[x,cy],[x+11,cy-3-fl],[x+10,cy+3-fl*.4],[x,cy+5]],'#e6e2d4');
+ for(let r=0;r<3;r++){S.line(x-2,cy+1+r,x-8,cy-1-fl*.7+r*1.5,INK[2]);S.line(x+2,cy+1+r,x+8,cy-1-fl*.7+r*1.5,INK[2])}
+ S.rect(x-1,cy-1,3,7,'#5c4632');S.p(x,cy,c[4]);F.p(x,cy+2,st.closed?'#9a9ca2':PALE);F.p(x-5,cy-1-fl*.6,'#d8dade')},{float:true,hover:4,h:22,carry:[-5,-12],anchor:[[0,-13]],front:[12,-18],rx:6});
+const sPlume=mk((S,F,G,x,gy,st)=>{const c=G.c,a=-1.15+(st.closed?.35:0)+sn(st.t,.5)*.06,bx=x+3,by=gy-6,ex=bx+Math.cos(a)*30,ey=by+Math.sin(a)*30;
+ for(let i=6;i<=28;i++){const px=bx+Math.cos(a)*i,py=by+Math.sin(a)*i,w=i<26?Math.min(4,(i-6)*.4):2;S.line(px,py,px-Math.cos(a+1.57)*w-2,py-Math.sin(a+1.57)*w+1,i%3?'#e6e2d4':'#c8c4b6')}
+ S.line(bx,by,ex,ey,PAPER);S.line(bx,by,bx-Math.cos(a)*4,by-Math.sin(a)*4,INK[0],2);F.p(bx-Math.cos(a)*5,by-Math.sin(a)*5+1,PALE);
+ for(let i=0;i<3;i++){const u=(st.t+i/3)%1;F.p(bx-3+Math.cos(u*PI2)*4,by+3-u*6,'#d8dade')}F.p(bx+Math.cos(a)*14,by+Math.sin(a)*14-1,st.closed?'#9a9ca2':PALE)},{float:true,hover:3,h:30,carry:[-10,-24],anchor:[[-3,-20]],front:[3,-2],rx:5});
+const sColonne=mk((S,F,G,x,gy,st)=>{const c=G.c,w=st.w*2;S.rect(x-4+w,gy-2,3,2,c[1]);S.rect(x+2-w,gy-2,3,2,c[1]);S.rect(x-6,gy-4,13,2,c[3]);
+ S.rect(x-5,gy-22,11,18,c[2]);for(const fx of[-3,0,3])S.line(x+fx,gy-21,x+fx,gy-5,c[1]);S.line(x+4,gy-21,x+4,gy-5,c[3]);
+ S.poly([[x-5,gy-22],[x-3,gy-25],[x-1,gy-23],[x+2,gy-27],[x+4,gy-24],[x+5,gy-22]],c[2]);S.line(x-4,gy-12,x+1,gy-8,c[0]);
+ S.ell(x,gy-15,2.5,1.6,c[4]);F.p(x,gy-15,st.closed?'#9a9ca2':PALE);F.p(x+1,gy-15,'#ffffff');
+ for(let i=0;i<2;i++){const u=(st.t+i/2)%1;S.p(x-8-i*3,gy-1,c[1])}},{h:27,hop:2,anchor:[[-5,-26],[5,-26]],front:[9,-14],rx:7});
+const sSablier=mk((S,F,G,x,gy,st)=>{const c=G.c,w=st.w*2,u=(st.t*.5)%1;S.rect(x-5+w,gy-2,3,2,WOOD);S.rect(x+3-w,gy-2,3,2,WOOD);
+ S.rect(x-7,gy-4,15,2,c[3]);S.rect(x-7,gy-32,15,2,c[3]);S.line(x-6,gy-30,x-6,gy-5,c[1]);S.line(x+6,gy-30,x+6,gy-5,c[1]);
+ const glass='#9fa6b2';S.poly([[x-4,gy-29],[x+4,gy-29],[x,gy-18]],glass);S.poly([[x-4,gy-5],[x+4,gy-5],[x,gy-17]],glass);
+ const top=R(lerp(8,2,u)),bot=R(lerp(2,8,u));S.poly([[x-top*.45,gy-18-top],[x+top*.45,gy-18-top],[x,gy-18]],'#b8b0a0');S.poly([[x-bot*.5,gy-5],[x+bot*.5,gy-5],[x,gy-5-bot]],'#b8b0a0');
+ F.line(x,gy-18,x,gy-6,'#e6e2d4');F.p(x-2,gy-25,st.closed?'#9a9ca2':PALE);F.p(x+2,gy-25,st.closed?'#9a9ca2':PALE)},{h:32,anchor:[[-6,-32],[6,-32]],front:[10,-16],rx:7});
+const sRouleau=mk((S,F,G,x,gy,st)=>{const c=G.c,l=(st.pose==='marche'||st.pose==='porter')?6+Math.abs(st.w)*6:st.closed?4:9;const x0=x-R(l/2),x1=x+R(l/2);
+ S.rect(x0,gy-16,x1-x0,14,PAPER);for(let r=0;r<4;r++)S.line(x0+1,gy-13+r*3,x1-2,gy-13+r*3,INK[2]);
+ for(const rx of[x0-2,x1])S.rect(rx,gy-18,3,18,WOOD2),S.rect(rx,gy-18,3,1,'#a07a4a'),S.p(rx+1,gy-20,c[4]),S.p(rx+1,gy-19,c[3]);
+ F.p(x-1,gy-10,st.closed?'#9a9ca2':PALE);F.p(x+2,gy-10,st.closed?'#9a9ca2':PALE)},{h:20,anchor:[[-5,-20],[5,-20]],front:[10,-10],rx:8});
+const sBalance=mk((S,F,G,x,gy,st)=>{const c=G.c,cy=gy-26,tl=sn(st.t,1)*2*(st.closed?0:1);S.line(x,cy,x,cy+20,c[3]);S.rect(x-3,cy+20,7,2,c[2]);
+ S.line(x-10,cy+2+tl,x+10,cy+2-tl,c[3]);S.disc(x,cy,2,c[2]);F.p(x,cy,st.closed?'#9a9ca2':PALE);
+ const pan=(px,py,obj)=>{S.line(px,py,px-3,py+8,c[1]);S.line(px,py,px+3,py+8,c[1]);S.ell(px,py+9,4,1.4,c[2]);if(obj)S.rect(px-2,py+6,4,3,'#5c4632');else S.line(px-2,py+7,px+3,py+5,PAPER)};
+ pan(x-10,cy+2+tl,true);pan(x+10,cy+2-tl,false)},{float:true,hover:3,h:28,carry:[-5,-37],anchor:[[0,-28]],front:[12,-18],rx:8});
+const sCle=mk((S,F,G,x,gy,st)=>{const c=G.c,cy=gy-26;for(let i=0;i<36;i++){const a=i/36*PI2;S.p(x+Math.cos(a)*6,cy+Math.sin(a)*6,c[3]);S.p(x+Math.cos(a)*5,cy+Math.sin(a)*5,c[2])}
+ S.ell(x,cy,3,3.5,c[1]);S.ell(x,cy,1.5,2,'#2a2b30');F.p(x,cy,st.closed?'#9a9ca2':PALE);for(const a of[0,1.57,3.14,4.71])S.p(x+Math.cos(a)*7,cy+Math.sin(a)*7,c[4]);
+ S.rect(x-1,cy+6,3,18,c[2]);S.rect(x+1,cy+6,1,18,c[3]);S.rect(x+2,cy+17,4,2,c[2]);S.rect(x+2,cy+21,5,2,c[2]);S.rect(x+4,cy+19,2,2,c[2]);
+ F.line(x+1,cy+8,x+1,cy+22,'#d8dade')},{float:true,hover:4,h:32,carry:[-12,-26],anchor:[[-6,-26]],front:[8,-3],rx:5});
+const sMasque=mk((S,F,G,x,gy,st)=>{const c=G.c,cy=gy-24,wv=sn(st.t,1)*1.5;for(let i=0;i<16;i++){const y=cy+6+i,xx=x+R(sn(st.t,1,i*.06)*i/8);if(i>11&&bay(xx,y)<(i-11)/5)continue;S.p(xx-1,y,c[3]);S.p(xx,y,c[4]);if(i%3===0)S.p(xx,y,INK[2])}
+ S.ell(x,cy,6,7,c[3]);S.ell(x-1,cy-2,4,3,c[4]);S.line(x-4,cy-1,x-1,cy-1,c[1]);S.line(x+1,cy-1,x+4,cy-1,c[1]);S.p(x,cy+2,c[2]);S.line(x-1,cy+4,x+1,cy+4,c[1]);S.line(x-3,cy-5,x-1,cy+1,c[0]);F.line(x-3,cy-5,x-1,cy+1,'#d8dade');
+ const hand=(hx,hy)=>{S.poly([[hx-2,hy],[hx+2,hy-1],[hx+3,hy+3],[hx-1,hy+4]],PAPER);S.line(hx-1,hy+1,hx+2,hy+1,'#a8a59a')};
+ hand(x-10,cy+8+wv);hand(x+9,cy+8-wv)},{float:true,hover:4,h:31,anchor:[[-10,-16],[9,-16]],carry:[-5,-14],front:[11,-16],rx:6});
+const sLampe=mk((S,F,G,x,gy,st)=>{const c=G.c,w=st.w*2;S.rect(x-5+w,gy-2,3,2,c[1]);S.rect(x+2-w,gy-2,3,2,c[1]);
+ S.ell(x,gy-6,8,4,c[2]);S.ell(x-1,gy-8,5,1.5,c[3]);S.poly([[x+6,gy-8],[x+12,gy-10],[x+12,gy-8],[x+7,gy-5]],c[2]);S.line(x-8,gy-8,x-11,gy-12,c[2]);S.line(x-11,gy-12,x-8,gy-14,c[2]);S.ell(x,gy-10,2,1,'#2a2b30');
+ const h=st.closed?3:5;F.ell(x+12,gy-12-h/2,1.5,h/2+1,'#f2f0e6');F.p(x+12,gy-13-h,'#ffffff');F.p(x+12,gy-12,'#ffffff');
+ for(let yy=-6;yy<=6;yy++)for(let xx=-6;xx<=6;xx++){const d=Math.hypot(xx,yy);if(d>4&&d<6.5&&bay(x+12+xx,gy-13+yy)<.18)F.p(x+12+xx,gy-13+yy,'#9a9ca2')}
+ F.p(x-3,gy-6,st.closed?'#9a9ca2':PALE);F.p(x+1,gy-6,st.closed?'#9a9ca2':PALE)},{h:16,carry:[-6,-26],anchor:[[-8,-14],[0,-10]],front:[16,-12],rx:9});
+const sStele=mk((S,F,G,x,gy,st)=>{const c=G.c,w=st.w*2,tl=R(st.w);S.rect(x-5+w,gy-3,4,3,c[1]);S.rect(x+2-w,gy-3,4,3,c[1]);
+ S.rect(x-6+tl,gy-26,13,23,c[2]);S.ell(x+tl,gy-26,6.5,4,c[2]);S.ell(x-2+tl,gy-27,3,1.5,c[3]);S.line(x+6+tl,gy-25,x+6+tl,gy-4,c[1]);
+ for(let r=0;r<4;r++)S.line(x-4+tl,gy-12+r*2,x+3+tl,gy-12+r*2,INK[2]);
+ const gx=x+tl,gyy=gy-21;for(const[a,b]of[[0,-3],[0,3],[-2,-1],[2,-1],[-2,1],[2,1],[0,0]])F.p(gx+a,gyy+b,st.closed?'#b8bac0':PALE);S.line(x-5+tl,gy-24,x-2+tl,gy-16,c[0])},{h:30,anchor:[[-6,-20],[6,-20]],front:[10,-16],rx:7});
+
+/* ============ ROUE · 5 variantes ============ */
+const EYE='#120804';
+const rolling=st=>st.pose==='marche'||st.pose==='porter';
+function wheel(S,F,G,x,cy,r,a0,o={}){const c=G.c;const n=o.spokes||8;
+ for(let i=0;i<n;i++){const a=a0+i/n*PI2;if(o.spoke)o.spoke(a);else S.line(x,cy,x+Math.cos(a)*r,cy+Math.sin(a)*r,o.sc||c[3])}
+ if(!o.norim)for(let i=0;i<48;i++){const a=i/48*PI2;S.p(x+Math.cos(a)*r,cy+Math.sin(a)*r,o.rc||c[2]);S.p(x+Math.cos(a)*(r-1),cy+Math.sin(a)*(r-1),o.rc2||c[1])}}
+const r1Feu=mk((S,F,G,x,gy,st)=>{const c=G.c,cy=gy-10,r=9,a0=rolling(st)?st.t*PI2:st.t*PI2*.2;wheel(S,F,G,x,cy,r,a0,{rc:c[1],rc2:c[0]});
+ for(let i=0;i<24;i++){const a=i/24*PI2+a0,h=1.5+hash(i,R(st.t*12))*2.5*(st.closed?.4:1);for(let j=0;j<h;j++)F.p(x+Math.cos(a)*(r+1+j),cy+Math.sin(a)*(r+1+j),j<1?c[4]:j<2?c[3]:mix(c[3],'#000000',.3))}
+ if(rolling(st))for(let i=0;i<6;i++){const u=(st.t*2+i/6)%1;F.p(x-r-2-u*8,cy-4+i*1.5,u<.5?c[4]:c[3])}
+ S.disc(x,cy,2.5,c[2]);F.p(x,cy,st.closed?c[3]:EYE2);F.p(x+1,cy,c[4])},{h:22,carry:[-5,-33],anchor:[[0,-21]],front:[13,-10],rx:9});
+const r2Lamelles=mk((S,F,G,x,gy,st)=>{const c=G.c,s=G.steel,cy=gy-11,r=10,a0=rolling(st)?st.t*PI2:st.t*PI2*.15;
+ wheel(S,F,G,x,cy,r,a0,{norim:true,spokes:6,spoke:a=>{S.line(x+Math.cos(a)*3,cy+Math.sin(a)*3,x+Math.cos(a)*(r-1),cy+Math.sin(a)*(r-1),WOOD);S.p(x+Math.cos(a)*(r-2),cy+Math.sin(a)*(r-2),s[2])}});
+ for(let i=0;i<12;i++){const a=a0+i/12*PI2;const px=x+Math.cos(a)*r,py=cy+Math.sin(a)*r;S.rect(px-1,py-1,3,3,i%2?c[2]:c[3]);S.p(px,py,c[0])}
+ S.disc(x,cy,3.5,c[2]);S.rect(x-2,cy-1,5,1,EYE);F.p(x-1,cy-1,st.closed?c[2]:EYE2);F.p(x+1,cy-1,st.closed?c[2]:EYE2);for(let i=-1;i<=1;i++)S.line(x,cy-4,x+i*2,cy-7,c[3])},{h:24,carry:[-5,-35],anchor:[[0,-22]],front:[14,-11],rx:10});
+const r3Gyro=mk((S,F,G,x,gy,st)=>{const c=G.c,cy=gy-13,r=9,sp=st.t*PI2*(rolling(st)?1:.4);
+ for(let i=0;i<48;i++){const a=i/48*PI2;S.p(x+Math.cos(a)*r,cy+Math.sin(a)*r,c[2]);const ex=Math.cos(a)*r*Math.cos(sp),ey=Math.sin(a)*r;if(Math.abs(ex)>.5||i%2)S.p(x+ex,cy+ey,c[3])}
+ for(let i=0;i<6;i++){const a=i/6*PI2+sp;S.line(x,cy,x+Math.cos(a)*r,cy+Math.sin(a)*r,c[1])}
+ S.disc(x,cy,2.5,c[2]);F.p(x,cy,st.closed?c[3]:EYE2);for(let i=0;i<3;i++){const a=st.t*PI2*2+i*2.1;F.p(x+Math.cos(a)*(r+3),cy+Math.sin(a)*(r+3)*.4,c[4])}},{float:true,hover:3,h:24,carry:[-5,-34],anchor:[[0,-23]],front:[13,-13],rx:8});
+const r4Char=mk((S,F,G,x,gy,st)=>{const c=G.c,s=G.steel,cy=gy-11,r=10,a0=rolling(st)?st.t*PI2:st.t*PI2*.1;
+ wheel(S,F,G,x,cy,r,a0,{spokes:10,sc:WOOD2,rc:s[1],rc2:WOOD});for(let i=0;i<8;i++){const a=i/8*PI2+a0;S.p(x+Math.cos(a)*r,cy+Math.sin(a)*r,s[2])}
+ S.disc(x,cy,3,WOOD);S.disc(x,cy,1.5,s[1]);F.p(x,cy,st.closed?c[3]:EYE2);
+ const wv=sn(st.t,2)*2;for(let k=0;k<2;k++){S.line(x-2,cy-1+k*2,x-10-(rolling(st)?4:0),cy-2+k*3+wv,c[2+k]);S.line(x-10-(rolling(st)?4:0),cy-2+k*3+wv,x-15-(rolling(st)?5:0),cy+k*3-wv,c[2+k])}},{h:24,carry:[-5,-35],anchor:[[0,-22]],front:[14,-11],rx:10});
+const r5Mandala=mk((S,F,G,x,gy,st)=>{const c=G.c,cy=gy-14,r=10,a0=st.t*PI2*(st.closed?.2:.6);
+ for(let i=0;i<8;i++){const a=a0+i/8*PI2,px=x+Math.cos(a)*r,py=cy+Math.sin(a)*r*.35;S.line(x,cy,px,py,c[3]);const z=Math.sin(a);if(z>-.3){F.p(px,py-1,c[4]);F.p(px,py-2,c[3]);if(hash(i,R(st.t*12))>.5)F.p(px,py-3,c[3])}}
+ for(let i=0;i<48;i++){const a=i/48*PI2;S.p(x+Math.cos(a)*r,cy+Math.sin(a)*r*.35,c[2])}
+ S.ell(x,cy,2.5,1.5,c[2]);S.line(x,cy+2,x,cy+8,c[1]);S.disc(x,cy-3,2,c[2]);F.p(x,cy-3,st.closed?c[3]:EYE2);F.p(x+1,cy-3,c[4])},{float:true,hover:4,h:20,carry:[-5,-30],anchor:[[0,-19]],front:[13,-14],rx:10});
+
+/* ============ LIVRE · 5 variantes ============ */
+function book(S,F,G,x,cy,o){const fl=o.fl,cov=o.cov||'#5c4632',pg=o.pg||PAPER,pg2=o.pg2||'#e6e2d4',w=o.w||11;
+ S.poly([[x,cy],[x-w,cy-3-fl],[x-w+1,cy+3-fl*.4],[x,cy+5]],pg);S.poly([[x,cy],[x+w,cy-3-fl],[x+w-1,cy+3-fl*.4],[x,cy+5]],pg2);
+ S.line(x,cy,x-w,cy-3-fl,cov);S.line(x,cy,x+w,cy-3-fl,cov);
+ for(let r=0;r<3;r++){S.line(x-2,cy+1+r,x-w+3,cy-1-fl*.7+r*1.5,INK[2]);S.line(x+2,cy+1+r,x+w-3,cy-1-fl*.7+r*1.5,INK[2])}
+ S.rect(x-1,cy-1,3,7,cov);S.p(x,cy,G.c[4])}
+const l1Codex=mk((S,F,G,x,gy,st)=>{const c=G.c,cy=gy-18,fl=st.closed?0:sn(st.t,2)*4;book(S,F,G,x,cy,{fl,cov:c[2],w:12});
+ S.line(x-12,cy-3-fl,x-12,cy+3-fl*.4,c[3]);S.line(x+12,cy-3-fl,x+12,cy+3-fl*.4,c[3]);S.rect(x-2,cy+5,5,2,c[3]);S.ell(x,cy+6,1.5,1,c[1]);F.p(x,cy+6,st.closed?'#9a9ca2':PALE);S.line(x-6,cy-1-fl*.6,x-4,cy+2,c[0])},{float:true,hover:4,h:24,carry:[-5,-12],anchor:[[0,-11]],front:[13,-18],rx:6});
+const l2Papillon=mk((S,F,G,x,gy,st)=>{const c=G.c,cy=gy-18;for(let k=2;k>=0;k--){const fl=st.closed?k:sn(st.t,2,k*.12)*(4+k)+k*1.5;const sh=k?(k===1?'#d6d3c8':'#c8c4b6'):PAPER;
+  S.poly([[x,cy],[x-10-k,cy-4-fl],[x-8-k,cy+2-fl*.3],[x,cy+4]],sh);S.poly([[x,cy],[x+10+k,cy-4-fl],[x+8+k,cy+2-fl*.3],[x,cy+4]],k?sh:'#e6e2d4')}
+ S.rect(x-1,cy-1,3,7,'#5c4632');F.p(x,cy+2,st.closed?'#9a9ca2':PALE);
+ if(!st.closed)for(let i=0;i<3;i++){const u=(st.t+i/3)%1;S.p(x-12-u*6+i*12,cy-8-u*8+i,INK[2]);S.p(x-11-u*6+i*12,cy-8-u*8+i,INK[1])}},{float:true,hover:4,h:24,carry:[-5,-12],anchor:[[0,-13]],front:[13,-18],rx:6});
+const l3Signet=mk((S,F,G,x,gy,st)=>{const c=G.c,cy=gy-19,fl=st.closed?0:sn(st.t,2)*5;
+ let px=x,py=cy+5;for(let i=1;i<=12;i++){const qx=x-i*1.2+sn(st.t,1,i*.07)*2,qy=cy+5+i*1.1;S.line(px,py,qx,qy,i%4===0?c[4]:'#7a6a8a',2);px=qx;py=qy}
+ S.poly([[px-2,py],[px+2,py],[px,py+3]],'#7a6a8a');
+ book(S,F,G,x,cy,{fl});F.p(x,cy+2,st.closed?'#9a9ca2':PALE)},{float:true,hover:5,h:24,carry:[-5,-13],anchor:[[0,-14]],front:[13,-19],rx:6});
+const l4Lumiere=mk((S,F,G,x,gy,st)=>{const c=G.c,cy=gy-16,fl=st.closed?0:sn(st.t,2)*4;book(S,F,G,x,cy,{fl});F.p(x,cy+2,st.closed?'#9a9ca2':PALE);
+ S.rect(x-1,cy-5,3,4,c[3]);S.rect(x-2,cy-2,5,1,c[2]);const h=st.closed?2:3+R(sn(st.t,3)*.6);F.ell(x,cy-6-h/2,1.2,h/2+.5,'#f2f0e6');F.p(x,cy-7-h,'#ffffff');
+ for(let yy=-6;yy<=6;yy++)for(let xx=-6;xx<=6;xx++){const d=Math.hypot(xx,yy);if(d>3.5&&d<6&&bay(x+xx,cy-7+yy)<.18)F.p(x+xx,cy-7+yy,'#9a9ca2')}},{float:true,hover:4,h:28,carry:[-5,-12],anchor:[[0,-11]],front:[13,-16],rx:6});
+const l5Pile=mk((S,F,G,x,gy,st)=>{const c=G.c;const books=[['#5c4632',0,0,11],['#6e5a44',-9,8,7],['#4a4c52',8,10,6]];
+ books.slice().reverse().forEach(([cov,dx,dy,w],j)=>{const k=2-j;const fl=st.closed?0:sn(st.t,2,k*.2)*(w/3);const cy=gy-20+dy+R(sn(st.t,1,k*.3)*1);book(S,F,G,x+dx,cy,{fl,cov,w});if(k===0)F.p(x,cy+2,st.closed?'#9a9ca2':PALE)})},{float:true,hover:3,h:26,carry:[-5,-14],anchor:[[0,-15]],front:[13,-20],rx:8});
+
+/* ============ listes ============ */
+const STRIP=['marche','porter','prier','travail','combat','mort'],STRIP_L=['Marche','Porter une caisse','Prière','Travail / minage','Combat','Mort'];
+const SPIRITS=[
+ ['medeina','M1','Faon de cairn',faonCairn,true,'Retenu.'],
+ ['aether','','Orrery',orrery,true,'Retenu.'],
+ ['indra','·','Roue de discipline (base)',iRoue,true,'La base retenue, pour comparer.'],
+ ['indra','R1','Roue de feu',r1Feu,false,'La jante est une couronne de flammes, plus haute quand elle roule et retombée quand elle prie. Elle laisse une traînée de braises derrière elle.'],
+ ['indra','R2','Roue de lamelles',r2Lamelles,false,'Douze plaques lamellaires forment la jante et six hampes de lance tiennent lieu de rais. Au moyeu, un petit masque à visière et cimier avec deux yeux de braise. La plus martiale.'],
+ ['indra','R3','Roue-gyroscope',r3Gyro,false,'Deux roues croisées qui pivotent l\'une dans l\'autre. Elle flotte sans rouler, et trois braises tournent autour d\'elle.'],
+ ['indra','R4','Roue de char',r4Char,false,'Une roue de char en bois à dix rais, cerclée de fer, avec deux rubans orange qui flottent en arrière. La plus terre à terre et la plus druidique.'],
+ ['indra','R5','Roue-mandala',r5Mandala,false,'Une roue posée à plat qui lévite et tourne sur elle-même, comme une roue de la loi. Des flammes se dressent au bout des rais, et un œil la surmonte.'],
+ ['sigil','·','Livre ailé (base)',sLivre,true,'La base retenue, pour comparer.'],
+ ['sigil','L1','Codex de marbre',l1Codex,false,'Des plats de marbre veiné aux tranches pâles, plus large. Un fermoir rond porte l\'œil sous le livre. Plus lourd et plus solennel.'],
+ ['sigil','L2','Livre-papillon',l2Papillon,false,'Trois épaisseurs de pages qui battent chacune à son rythme, comme les ailes d\'un papillon de nuit, et des lettres qui s\'en échappent.'],
+ ['sigil','L3','Livre au signet',l3Signet,false,'Un long signet de tissu flotte sous le livre comme la queue d\'un cerf-volant. Il donne une ligne de mouvement très lisible.'],
+ ['sigil','L4','Livre à la veilleuse',l4Lumiere,false,'Une petite veilleuse pâle brûle au-dessus du dos du livre : la lumière de l\'étude. Elle se baisse quand il prie.'],
+ ['sigil','L5','Nuée de livres',l5Pile,false,'Un grand livre, qui porte l\'œil, et deux petits qui volent en formation avec lui. Un essaim d\'étude.']
+];
+const ARR_ROWS=[
+ ['Medeina · Aether (retenus)',[['medeina',faonCairn],['aether',orrery]]],
+ ['Indra · base, R1 à R5',[['indra',iRoue],['indra',r1Feu],['indra',r2Lamelles],['indra',r3Gyro],['indra',r4Char],['indra',r5Mandala]]],
+ ['Sigil · base, L1 à L5',[['sigil',sLivre],['sigil',l1Codex],['sigil',l2Papillon],['sigil',l3Signet],['sigil',l4Lumiere],['sigil',l5Pile]]]
+];
+
+
+/* ============ export ============ */
+// Pas d'établi dans les atlas : le poste est dessiné par le jeu.
+rock=function(){};shelf=function(){};
+const BAYER=[0,8,2,10,12,4,14,6,3,11,1,9,15,7,13,5],bay=(x,y)=>BAYER[(y&3)*4+(x&3)]/16;
+const ROLES={medeina:faonCairn,indra:r5Mandala,aether:orrery,sigil:sLivre};
+// mode du jeu → pose de la planche ; 24 images à 12 i/s (t de 0 à 2, deux boucles de pose)
+const MODES={idle:'idle',walk:'marche',carry:'porter',pray:'prier',work:'travail',fight:'combat'};
+const N=24,FPS=12;
+function frame(fn,G,pose,t){const S=new L(),F=new L();fn(S,F,pose,t%1===0&&pose==='idle'?t:t,G);const px=new Array(CW*CH).fill(null);
+ for(let y=0;y<CH;y++)for(let x=0;x<CW;x++){const v=S.g(x,y);if(v)px[y*CW+x]=v;else if(S.g(x-1,y)||S.g(x+1,y)||S.g(x,y-1)||S.g(x,y+1))px[y*CW+x]=OUT;const f=F.g(x,y);if(f)px[y*CW+x]=f}
+ return px}
+const OUTS={},root=document.body;
+for(const role in ROLES){const G=GODS[role],fn=ROLES[role],frames={};let x0=CW,y0=CH,x1=0,y1=0;
+ for(const m in MODES){frames[m]=[];for(let i=0;i<N;i++){const px=frame(fn,G,MODES[m],i/FPS);frames[m].push(px);px.forEach((c,k)=>{if(!c)return;const x=k%CW,y=(k/CW)|0;x0=Math.min(x0,x);y0=Math.min(y0,y);x1=Math.max(x1,x);y1=Math.max(y1,y)})}}
+ const fw=x1-x0+1,fh=y1-y0+1,R={fw,fh,ax:27-x0,ay:47-y0,strips:{},crate:null};
+ for(const m in MODES){const cv=document.createElement('canvas');cv.width=fw*N;cv.height=fh;const cx=cv.getContext('2d'),im=cx.createImageData(fw*N,fh);
+  frames[m].forEach((px,i)=>{for(let y=0;y<fh;y++)for(let x=0;x<fw;x++){const c=px[(y+y0)*CW+x+x0];if(!c)continue;const v=rgb(c),j=(y*fw*N+i*fw+x)*4;im.data[j]=v[0];im.data[j+1]=v[1];im.data[j+2]=v[2];im.data[j+3]=255}});
+  cx.putImageData(im,0,0);R.strips[m]=cv.toDataURL('image/png');cv.style.cssText='display:block;height:'+fh*3+'px;image-rendering:pixelated;margin:4px 0;background:#4a515e';root.appendChild(cv);
+  if(m==='carry'){const px=frames[m][0];for(let k=0;k<px.length&&!R.crate;k++)if(px[k]==='#7d6346')R.crate=[(k%CW)-x0,((k/CW)|0)-y0]}}
+ const p=document.createElement('canvas');p.width=p.height=128;const pc=p.getContext('2d'),pi=pc.createImageData(128,128),px=frames.idle[0],k=3;
+ for(let y=0;y<CH;y++)for(let x=0;x<CW;x++){const c=px[y*CW+x];if(!c)continue;const v=rgb(c);for(let a=0;a<k;a++)for(let b=0;b<k;b++){const X=64+(x-27)*k+a,Y=112+(y-47)*k+b+(fh>34?0:-10);if(X<0||Y<0||X>127||Y>127)continue;const j=(Y*128+X)*4;pi.data[j]=v[0];pi.data[j+1]=v[1];pi.data[j+2]=v[2];pi.data[j+3]=255}}
+ pc.putImageData(pi,0,0);R.portrait=p.toDataURL('image/png');OUTS[role]=R}
+window.OUT=OUTS;
+const SAVE=new URLSearchParams(location.search).get('save');
+if(SAVE!=null)(async()=>{const base=SAVE.startsWith('http')?SAVE:'',post=(n,b)=>fetch(base+'/out/'+n,{method:'POST',body:b}).then(r=>{if(!r.ok)throw new Error(n+' '+r.status)});
+ for(const role in OUTS){const R=OUTS[role];for(const m in R.strips)await post(`${role}_${m}.png`,R.strips[m]);await post(`portrait-${role}.png`,R.portrait);
+  const modes={};for(const m in MODES)modes[m]={frame_w:R.fw,frame_h:R.fh,cols:N,rows:1,count:N,fps:FPS};await post(`meta-${role}.json`,JSON.stringify({ax:R.ax,ay:R.ay,spirit:true,crate:R.crate,modes}))}
+ document.title='EXPORT OK';window.SAVED=true})().catch(e=>{document.title='EXPORT ÉCHEC';console.error(e)});
+</script></body></html>

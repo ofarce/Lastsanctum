@@ -8,7 +8,8 @@ func test_bands_sources_road_and_reset() -> void:
 	u.x = 100
 	u.z = 20
 	fog.refresh(sim.state())
-	var expected := {0: 0, 12: 0, 14: 13, 16: 26, 18: 51, 20: 77, 24: 128, 28: 204, 30: 255, 32: 255}
+	# Au-delà du halo, la jungle reste explorée dès le départ (voile EXPLORED_ALPHA, pas le noir).
+	var expected := {0: 0, 12: 0, 14: 13, 16: 26, 18: 51, 20: 77, 24: 128, 28: 204, 30: 204, 32: 204}
 	for d: int in expected:
 		var alpha: int = fog.image.get_pixelv(Vector2i(u.pos()) + Vector2i(d, 0) - fog.ORIGIN).a8
 		check(absi(alpha - int(expected[d])) <= 1, "distance %d, opacité obtenue %d" % [d, alpha])
@@ -21,8 +22,10 @@ func test_bands_sources_road_and_reset() -> void:
 	fog.refresh(sim.state())
 	check(fog.visible_at(Vector2(120, 20)), "structure achevée")
 	check(fog.visible_at(Vector2(0, 40)) and fog.visible_at(Vector2(0, -85)), "chemin et tunnel")
+	var road: Road = sim.state().road
 	for z in range(-72, 72):
-		check_eq(fog.image.get_pixelv(Vector2i(4, z) - fog.ORIGIN).a8, 0, "chaussée éclairée en continu")
+		var rx := roundi(road.main_x(z)) if road and z > Road.GATE_Z else 4
+		check_eq(fog.image.get_pixelv(Vector2i(rx, z) - fog.ORIGIN).a8, 0, "chaussée éclairée en continu (z %d)" % z)
 	check_eq(fog.image.get_pixelv(Vector2i(24, 32) - fog.ORIGIN).a8, 128, "pénombre au bord du halo")
 	check(not fog.visible_at(Vector2(33, 32)), "noir au-delà du halo")
 	sim.new_game(SEED)
@@ -147,4 +150,6 @@ func test_explored_ground_outside_current_vision() -> void:
 	fog.refresh(sim.state())
 	check_eq(fog.image.get_pixelv(pixel).a8, 0, "terrain revisité")
 	sim.new_game(SEED)
-	check_eq(fog.image.get_pixelv(pixel).a8, 255, "exploration effacée en nouvelle partie")
+	# Nouvelle partie : la jungle repart « déjà explorée », la montagne repart noire.
+	check_eq(fog.image.get_pixelv(pixel).a8, 204, "jungle connue en nouvelle partie")
+	check_eq(fog.image.get_pixelv(Vector2i(135, -200) - fog.ORIGIN).a8, 255, "montagne inexplorée en nouvelle partie")

@@ -28,6 +28,7 @@ func test_rally_on_training_and_summoning() -> void:
 	temple.rally_point = Vector2(10, -110)
 	sim.summon_adept(temple)
 	var adept: Unit = GameState.units.back()
+	run(sim, Simulation.ARRIVAL + 0.1)
 	check_eq(Vector2(adept.tx, adept.tz), temple.rally_point, "destination adepte")
 	check(adept.job == null and adept.force_move, "ralliement au lieu de prière")
 

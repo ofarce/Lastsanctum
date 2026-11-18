@@ -1,0 +1,384 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ambiances, détail</title>
+<style>
+:root{--bg:#14161b;--panel:#1d2028;--line:#2c313c;--ink:#e6e8ee;--mute:#9aa1b0;--acc:#c8d4ec}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,sans-serif}
+main{max-width:1300px;margin:0 auto;padding:24px 16px 60px}
+h1{font-size:26px;margin:0 0 4px}
+.sub{color:var(--mute);margin:0 0 14px}
+.bar{position:sticky;top:0;background:var(--bg);padding:8px 0;z-index:2;display:flex;gap:8px;flex-wrap:wrap}
+button{background:#2a2f3a;color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:6px 12px;cursor:pointer}
+button.on{background:#3b4456}
+section{background:var(--panel);border:1px solid var(--line);border-radius:10px;margin:22px 0;overflow:hidden}
+section h2{margin:0;padding:14px 18px 4px;font-size:19px}
+section h2 span{color:var(--mute);font-weight:400;margin-right:8px}
+.lead{padding:0 18px 10px;color:#c9cdd6;margin:0}
+canvas{display:block;width:100%;image-rendering:pixelated;background:#000}
+.row{display:grid;grid-template-columns:2fr 1fr;gap:0;border-top:1px solid var(--line)}
+@media (max-width:820px){.row{grid-template-columns:1fr}}
+.fiche{border-left:1px solid var(--line)}
+.fiche h4{margin:0;padding:8px 12px 0;font-size:13px;color:var(--mute);font-weight:500;text-transform:uppercase;letter-spacing:.05em}
+ul{margin:0;padding:10px 18px 16px 36px;color:#c9cdd6;font-size:14px}
+li{margin:3px 0}
+li b{color:var(--acc);font-weight:600}
+</style>
+</head>
+<body>
+<main>
+<h1>Ambiances de la montagne · détail</h1>
+<p class="sub">Approfondissement de quatre pistes : 05 Petite faune, 03 Champignons, 06 Racines et lianes, 01 Bassins d'eau. Grande scène à l'échelle du jeu (×3) à gauche ; fiche des sprites isolés (×6) à droite. Un Ingénieur traverse chaque scène pour montrer les réactions.</p>
+<div class="bar"><button id="day" class="on">Jour</button><button id="night">Nuit</button><button id="pause">Pause</button><button id="slow">Ralenti</button></div>
+<div id="root"></div>
+</main>
+<script>
+const OUT='#0b090b';
+const P={w0:'#272d37',w1:'#333a46',w2:'#404955',w3:'#4e5868',fl:'#4a515e',fl2:'#555d6b',gr:'#2e333c',dirt:'#6b5438',moss:'#4f6b3a',moss2:'#6c8a4a',moss3:'#88a85c',q:'#c8d4ec',qw:'#eef2fb'};
+let night=false,paused=false,slow=false;
+function hash(x,y,s=0){let h=(x*374761393+y*668265263+s*1442695041)|0;h=(h^(h>>>13))*1274126177|0;return((h^(h>>>16))>>>0)/4294967296}
+function vnoise(x,y,s=0){const xi=Math.floor(x),yi=Math.floor(y),xf=x-xi,yf=y-yi;const u=xf*xf*(3-2*xf),v=yf*yf*(3-2*yf);
+ const a=hash(xi,yi,s),b=hash(xi+1,yi,s),c=hash(xi,yi+1,s),d=hash(xi+1,yi+1,s);return a+(b-a)*u+(c-a)*v+(a-b-c+d)*u*v}
+const HX={};function hex(c){if(typeof c!=='string')return c;if(HX[c])return HX[c];const n=parseInt(c.slice(1),16);return HX[c]=[n>>16,(n>>8)&255,n&255]}
+function mix(a,b,k){a=hex(a);b=hex(b);return[a[0]+(b[0]-a[0])*k,a[1]+(b[1]-a[1])*k,a[2]+(b[2]-a[2])*k]}
+
+class G{
+ constructor(ctx,W,H){this.ctx=ctx;this.W=W;this.H=H;this.img=ctx.createImageData(W,H);this.d=this.img.data}
+ px(x,y,c,a=1){if(!c)return;x=Math.round(x);y=Math.round(y);if(x<0||y<0||x>=this.W||y>=this.H||a<=0)return;const i=(y*this.W+x)*4,[r,g,b]=hex(c);
+  this.d[i]+=(r-this.d[i])*a;this.d[i+1]+=(g-this.d[i+1])*a;this.d[i+2]+=(b-this.d[i+2])*a;this.d[i+3]=255}
+ add(x,y,c,a){x=Math.round(x);y=Math.round(y);if(x<0||y<0||x>=this.W||y>=this.H)return;const i=(y*this.W+x)*4,[r,g,b]=hex(c);
+  this.d[i]=Math.min(255,this.d[i]+r*a);this.d[i+1]=Math.min(255,this.d[i+1]+g*a);this.d[i+2]=Math.min(255,this.d[i+2]+b*a)}
+ mul(x,y,k){x=Math.round(x);y=Math.round(y);if(x<0||y<0||x>=this.W||y>=this.H)return;const i=(y*this.W+x)*4;this.d[i]*=k;this.d[i+1]*=k;this.d[i+2]*=k}
+ rect(x,y,w,h,c,a=1){for(let j=0;j<h;j++)for(let i=0;i<w;i++)this.px(x+i,y+j,c,a)}
+ glow(cx,cy,r,c,k=1){for(let y=Math.max(0,cy-r|0);y<Math.min(this.H,cy+r+1);y++)for(let x=Math.max(0,cx-r|0);x<Math.min(this.W,cx+r+1);x++){
+   const d=Math.hypot(x-cx,(y-cy)*1.3)/r;if(d>=1)continue;this.add(x,y,c,Math.ceil((1-d)*4)/4*0.2*k)}}
+ // sprite en caractères ; pal : car → couleur ; flip horizontal possible
+ spr(rows,x,y,pal,flip=false,a=1){for(let j=0;j<rows.length;j++){const r=rows[j];for(let i=0;i<r.length;i++){const ch=r[flip?r.length-1-i:i];if(ch==='.'||ch===' ')continue;const c=pal[ch];if(c)this.px(x+i,y+j,c,a)}}}
+ clear(){this.d.fill(0)}
+ flush(){if(night)for(let i=0;i<this.d.length;i+=4){this.d[i]*=.55;this.d[i+1]*=.62;this.d[i+2]=Math.min(255,this.d[i+2]*.8+18)}this.ctx.putImageData(this.img,0,0)}
+}
+
+// ---------- fond commun ----------
+function base(g,o={}){const W=g.W,H=g.H,wallH=o.wallH??24,top=wallH-12;
+ for(let y=0;y<H;y++)for(let x=0;x<W;x++){
+  if(y<wallH){if(y<top){const n=vnoise(x/6,y/6,3);g.px(x,y,n>.6?P.w1:P.w0)}else if(y===top)g.px(x,y,OUT);
+   else{const n=hash(x>>2,0,7);let c=n>.6?P.w2:P.w1;if(x%8===0)c=P.w0;if(y===top+1)c=P.w3;if(hash(x,y,12)>.93)c=P.w0;g.px(x,y,c)}}
+  else{const row=(y-wallH)>>3,off=row%2?8:0,sx=(x+off)>>4,gx=(x+off)%16===0,gy=(y-wallH)%8===0;
+   let c=hash(sx,row,1)>.5?P.fl:P.fl2;if(vnoise(x/9,y/9,5)>.72)c=P.dirt;if(gx||gy)c=P.gr;if(hash(x,y,9)>.985)c=P.w2;g.px(x,y,c)}}
+ for(let x=0;x<W;x++)g.px(x,wallH,OUT);
+ if(o.stal!==false)for(const sx of o.stalX||[]){for(let j=0;j<6;j++){const w=Math.max(0,2-(j>>1));for(let i=-w;i<=w;i++)g.px(sx+i,wallH+j,j===5?OUT:(i===-w?OUT:P.w2))}}
+}
+function boulder(g,cx,cy,r){for(let y=-r;y<=r;y++)for(let x=-r-2;x<=r+2;x++){const d=Math.hypot(x/(r+2),y/r);if(d>1)continue;
+ g.px(cx+x,cy+y,d>.85?OUT:(y<-r/3?P.w3:y<r/3?P.w2:P.w1));if(y<-r/2&&hash(x,y,cx)>.6&&d<.85)g.px(cx+x,cy+y,P.moss)}
+ for(let x=-r;x<=r;x++)g.mul(cx+x,cy+r+1,.7)}
+function quartz(g,cx,cy,t,k=1){for(const[dx,h]of[[0,-9],[-3,-6],[3,-7],[-5,-4],[5,-4]]){for(let j=0;j>h;j--){g.px(cx+dx,cy+j,P.qw);g.px(cx+dx-1,cy+j,OUT);g.px(cx+dx+1,cy+j,P.q)}g.px(cx+dx,cy+h,OUT)}
+ g.glow(cx,cy-4,24,[200,212,236],k*(0.85+0.15*Math.sin(t*2)))}
+// Ingénieur (silhouette simplifiée du Tyrien)
+const ENG=[
+"...XXXX...",
+"..XhhhhX..",
+"..XsssshX.",
+"..XsXsXX..",
+"...XssX...",
+"..XttttX..",
+".XttcttsX.",
+".XstttttX.",
+"..XttttX..",
+"..XbbbbX..",
+"..Xb.XbX..",
+"..XX..XX.."];
+const ENG2=[
+"...XXXX...",
+"..XhhhhX..",
+"..XsssshX.",
+"..XsXsXX..",
+"...XssX...",
+"..XttttX..",
+".XttcttsX.",
+".XstttttX.",
+"..XttttX..",
+"..XbbbbX..",
+"..XbXXb...",
+"...XX.XX.."];
+const ENGP={X:OUT,h:'#3b2f2a',s:'#c79a74',t:'#5b6577',c:'#5eeaea',b:'#3a3f4a'};
+function engineer(g,x,y,t,flip){g.spr(Math.floor(t*6)%2?ENG:ENG2,x-5,y-12,ENGP,flip);for(let i=-3;i<=3;i++)g.mul(x+i,y+1,.6)}
+
+// ====================== 05 FAUNE ======================
+const BAT_UP=[
+"X.X.......X.X",
+"XmXX.....XXmX",
+".XmmX.X.XmmX.",
+"..XmmXbXmmX..",
+"...XXbebXX...",
+".....XbX.....",
+"......X......"];
+const BAT_MID=[
+".............",
+"XX.X.....X.XX",
+"XmmmXX.XXmmmX",
+".XXmmXbXmmXX.",
+"....XbebX....",
+".....XbX.....",
+"......X......"];
+const BAT_DN=[
+".............",
+".............",
+"....XX.XX....",
+"..XXmXbXmXX..",
+".XmmmbebmmmX.",
+"XmXXXXbXXXXmX",
+"X.....X.....X"];
+const BAT_HANG=[
+"..X.X..",
+".XbXbX.",
+"XmbbbmX",
+"XmmbmmX",
+"XmmemmX",
+".XmmmX.",
+"..XXX.."];
+const BATP={X:OUT,m:'#4d4656',b:'#2f2a36',e:'#d9a441'};
+const BEETLE=[[
+"X....X",
+".X..X.",
+"XXshXX",
+"XsshsX",
+"XsslsX",
+"XsslsX",
+".XXXX."],[
+".X..X.",
+".X..X.",
+"XXshX.",
+"XsshsX",
+"XsslsX",
+"XsslsX",
+".XXXX."]];
+const BEETLEP={X:OUT,s:'#3d4a5c',h:'#8fa2bd',l:'#24303f'};
+// scarabée vu de dessus, avance vers la droite : on le tourne en dessinant ses lignes en colonnes
+function beetle(g,x,y,t,dir){const f=BEETLE[Math.floor(t*10)%2];
+ for(let j=0;j<f.length;j++)for(let i=0;i<f[j].length;i++){const ch=f[j][i];if(ch==='.')continue;const xx=dir>0?x+(f.length-1-j):x+j;g.px(xx,y+i,BEETLEP[ch])}
+ // pattes alternées
+ const k=Math.floor(t*12)%2;for(let l=0;l<3;l++){const lx=x+1+l*2;g.px(lx+(k^(l&1)),y-1,OUT);g.px(lx+((k+1)%2^(l&1)),y+6,OUT)}}
+function salamander(g,x,y,t,dir){ // corps en segments ondulants, 4 pattes, taches
+ const seg=16,pts=[];for(let i=0;i<seg;i++){pts.push([x-dir*i,y+Math.sin(t*7-i*.55)*(i/seg)*2.4])}
+ for(let i=seg-1;i>=0;i--){const[px,py]=pts[i],w=i<3?2:i<9?1.6:i<13?1:0.5;
+  for(let k=-Math.ceil(w);k<=Math.ceil(w);k++){const edge=Math.abs(k)>=w;g.px(px,py+k,edge?OUT:(k<0?'#d9a24f':'#a8702c'))}
+  if(i>3&&i<11&&i%3===0)g.px(px,py,'#5a3a1a')}
+ const step=Math.sin(t*14)>0?1:-1;for(const[i,s]of[[3,1],[3,-1],[9,1],[9,-1]]){const[px,py]=pts[i];const off=(s*step>0?1:-1)*dir;g.px(px+off,py+s*3,OUT);g.px(px,py+s*3,'#a8702c')}
+ const[hx,hy]=pts[0];g.px(hx+dir,hy,'#d9a24f');g.px(hx+dir*2,hy,OUT);g.px(hx+dir,hy-1,'#1a1410');g.px(hx+dir,hy+1,'#1a1410')}
+function moth(g,x,y,t,i){const f=Math.floor(t*14+i)%2;
+ if(f){g.px(x-1,y,'#e8e0cc');g.px(x+1,y,'#e8e0cc');g.px(x-2,y-1,'#cfc5ad');g.px(x+2,y-1,'#cfc5ad')}else{g.px(x-1,y-1,'#a39a86');g.px(x+1,y-1,'#a39a86')}
+ g.px(x,y,'#6b6150')}
+function snail(g,x,y,t){ // escargot de paroi + traînée qui brille
+ for(let i=0;i<22;i++)g.px(x-6-i,y+2,'#9fb0c8',.25*(1-i/22)*(0.6+0.4*Math.sin(t*3+i)));
+ g.spr([".XXX..","XsrsX.","XrsrsX","XsrsXX","XXXXbbX",".bbbbbe"],x-5,y-3,{X:OUT,s:'#b48a5a',r:'#7a5532',b:'#8a8f7a',e:'#c6c9b4'})}
+const FAUNA={n:'05',t:'Petite faune inoffensive',lead:'Un petit écosystème cosmétique, hors simulation : il ne bloque rien, ne se cible pas, mais réagit à l\'Ingénieur. Couleurs sourdes, yeux ambrés ou noirs (le rouge reste à la Bête).',
+ W:220,H:124,
+ scene(g,t){base(g,{stalX:[30,160]});
+  boulder(g,190,96,8);quartz(g,58,92,t,.9);
+  const ex=((t*14)%300)-40,ey=104;
+  // colonie suspendue : chaque chauve-souris se décroche quand l'Ingénieur passe dessous
+  const hangX=[96,104,112,121,129];
+  hangX.forEach((hx,i)=>{const d=ex-hx+8*i-10;if(d<0){g.spr(BAT_HANG,hx-3,13,BATP);return}
+   const life=d/26;const fr=[BAT_UP,BAT_MID,BAT_DN,BAT_MID][Math.floor(t*12+i)%4];
+   const bx=hx+life*70*(i%2?1:-.6)+Math.sin(life*5+i)*6,by=13+Math.sin(life*3)*10+life*18-life*life*8;if(by<130)g.spr(fr,bx-6,by,BATP,i%2===0)});
+  // scarabées le long du pied de paroi, s'arrêtent et repartent
+  for(let k=0;k<3;k++){const ph=t*.6+k*2,stop=Math.sin(ph*1.3)>.6;const x=(Math.floor((t*9+k*80)%260)-20);beetle(g,stop?x:x,26+k*3+(k===2?62:0),stop?0:t,1)}
+  // salamandre : file dans la fente quand l'Ingénieur approche
+  const crack=[150,74];for(let i=0;i<9;i++){g.px(crack[0]+i,crack[1]+(i>>2),OUT);g.px(crack[0]+i,crack[1]+1+(i>>2),'#1a1d23')}
+  const dist=Math.abs(ex-140),flee=dist<40;const sx=flee?Math.min(crack[0],130+(40-dist)*1.5):128+Math.sin(t*.8)*8;
+  if(sx<crack[0]-2)salamander(g,sx,80,flee?t*2:t*.5,1);
+  // escargot sur le flanc de paroi
+  snail(g,30+((t*1.5)%40),18,t);
+  // papillons de nuit autour du quartz
+  for(let m=0;m<4;m++){const a=t*(1.8+m*.3)+m*1.7;moth(g,58+Math.cos(a)*12,82+Math.sin(a*1.4)*7,t,m)}
+  engineer(g,ex,ey,t,false)},
+ fiche(g,t){g.rect(0,0,g.W,g.H,'#2a2f3a');
+  g.spr([BAT_UP,BAT_MID,BAT_DN,BAT_MID][Math.floor(t*10)%4],2,3,BATP);g.spr(BAT_HANG,18,3,BATP);
+  beetle(g,28,4,t,1);
+  salamander(g,62,22,t,1);
+  snail(g,82,8,t);
+  for(let m=0;m<2;m++)moth(g,8+m*8,22,t,m)},
+ notes:[['Chauves-souris','colonie suspendue (1 image + battement d\'oreille), 4 images de vol à 12 i/s ; se décroche à 3 cases de l\'Ingénieur, en cascade, puis sort du champ.'],
+  ['Scarabées d\'ardoise','carapace à reflet bleu-gris, pattes alternées sur 2 images ; longent le pied des parois, marquent des arrêts.'],
+  ['Salamandre','corps en 16 segments qui ondulent (pas de sprite fixe), 4 pattes, dos tacheté ; file vers la fente la plus proche quand on approche.'],
+  ['Escargot','très lent sur la paroi, traînée qui accroche la lumière.'],
+  ['Papillons de nuit','tournent autour des quartz et des champignons, 2 images.'],
+  ['Godot','une couche FaunaLayer par chunk, entités pures visuelles (Node2D + _process), quotas par chunk, rien dans Simulation.']]};
+
+// ====================== 03 CHAMPIGNONS ======================
+function capMush(g,x,y,h,w,k,cols){ // champignon à chapeau, lamelles dessous, points
+ for(let j=0;j<h;j++){g.px(x,y-j,cols.st);g.px(x-1,y-j,OUT);g.px(x+1,y-j,cols.st2)}g.px(x,y-h+1,cols.st2);
+ const cy=y-h;for(let i=-w;i<=w;i++){const e=1-(i/w)**2;const hh=Math.max(1,Math.round(e*(w*.7)));
+  for(let j=0;j<hh;j++){const c=j===hh-1?OUT:(j===hh-2?cols.cap2:(i<0?cols.cap:cols.cap));g.px(x+i,cy-j,j===hh-1?OUT:mix(cols.cap,cols.glow,k*.5*(j/hh)))}
+  g.px(x+i,cy+1,Math.abs(i)<w?cols.gill:OUT)}
+ g.px(x-w-1,cy,OUT);g.px(x+w+1,cy,OUT);g.px(x-w,cy+1,OUT);g.px(x+w,cy+1,OUT);
+ for(let i=-w+1;i<w;i+=2)g.px(x+i,cy+1,cols.gillD);
+ if(w>=3){g.px(x-1,cy-1,cols.dot);g.px(x+2,cy-2,cols.dot)}}
+const IVORY={st:'#cfc8b0',st2:'#a89f86',cap:'#d8e6c4',cap2:'#eef6dc',glow:'#ffffff',gill:'#9fb38c',gillD:'#6f805f',dot:'#ffffff'};
+function lantern(g,x,y,h,k,sw){ // tige fine et bulbe lumineux
+ for(let j=0;j<h;j++){const xx=x+Math.round(Math.sin(sw)*j/h*2);g.px(xx,y-j,'#9aa58a');g.px(xx-1,y-j,OUT)}
+ const bx=x+Math.round(Math.sin(sw)*2),by=y-h;g.spr([".XXX.","XbwbX","XwwwX","XbwbX",".XXX."],bx-2,by-4,{X:OUT,b:mix('#bfe0c8','#ffffff',k*.4),w:mix('#e8fff0','#ffffff',k)});
+ g.glow(bx,by-2,10,[210,245,220],k)}
+function shelf(g,x,y,n,k){ // polypores en étagère sur la paroi
+ for(let s=0;s<n;s++){const sy=y+s*4,w=6-s;for(let i=-w;i<=w;i++){g.px(x+i,sy,i===-w||i===w?OUT:mix('#c9c2a0','#f3f0d8',k*.6));g.px(x+i,sy+1,Math.abs(i)<w?'#8d8466':OUT);g.px(x+i,sy+2,Math.abs(i)<w-1?'#e5efce':null,k*.6)}g.px(x,sy-1,OUT);for(let i=-w+1;i<w;i++)g.px(x+i,sy-1,OUT)}}
+function puffball(g,x,y,burst){ // vesse-de-loup qui crache un nuage de spores
+ const sq=burst>0&&burst<.15?1:0;g.spr(sq?[".XXXXX.","XpppppX","XpqpppX","XXXXXXX"]:["..XXX..",".XpqpX.","XppqppX","XpppppX",".XXXXX."],x-3,y-(sq?3:4),{X:OUT,p:'#b7b09a',q:'#e4dec8'});
+ if(burst>0&&burst<1)for(let i=0;i<24;i++){const a=hash(i,1,3)*6.28,r=burst*(8+hash(i,2,3)*10);g.px(x+Math.cos(a)*r,y-4-Math.abs(Math.sin(a))*r*.8-burst*6,'#eaf5d8',(1-burst)*.9)}}
+function cluster(g,x,y,t,seed,k){const n=3+Math.floor(hash(seed,0,1)*3);
+ for(let i=0;i<n;i++){const dx=Math.round((hash(seed,i,2)-.5)*12),dy=Math.round(hash(seed,i,3)*4),h=3+Math.floor(hash(seed,i,4)*5),w=1+Math.floor(hash(seed,i,5)*3);capMush(g,x+dx,y+dy,h,w,k,IVORY)}
+ g.glow(x,y-4,18,[220,240,205],k)}
+const MUSH={n:'03',t:'Champignons luminescents',lead:'Quatre espèces qui partagent une même lumière ivoire-vert d\'eau. La pulsation se propage d\'une touffe à l\'autre comme une vague, ce qui guide l\'œil vers le fond de la galerie.',
+ W:220,H:124,
+ scene(g,t){base(g,{stalX:[20,184]});
+  // humidité au sol : taches sombres sous les touffes
+  for(let y=60;y<124;y++)for(let x=0;x<220;x++)if(vnoise(x/12,y/10,8)>.6)g.mul(x,y,.85);
+  shelf(g,46,14,3,.6+.4*Math.sin(t*1.4));shelf(g,150,15,2,.6+.4*Math.sin(t*1.4+2));
+  const tufts=[[24,70,1],[40,84,2],[66,100,3],[104,62,4],[150,92,5],[184,72,6],[200,108,7]];
+  for(const[x,y,s]of tufts){const k=.5+.5*Math.sin(t*2-x*.04);cluster(g,x,y,t,s,k)}
+  for(const[x,y,i]of[[88,96,0],[94,92,1],[170,66,2],[176,70,3]]){const k=.5+.5*Math.sin(t*2-x*.04);lantern(g,x,y,8+i*2,k,Math.sin(t*1.3+i)*.5)}
+  const ex=((t*14)%300)-40;
+  const pf=[[126,100],[134,104]];pf.forEach(([x,y],i)=>{const d=(ex-x)/40;puffball(g,x,y,d>0&&d<1?d:0)});
+  // spores flottantes
+  for(let i=0;i<40;i++){const tf=tufts[i%tufts.length],life=(t*.2+hash(i,2,6))%1;g.px(tf[0]+Math.sin(t*.9+i)*8*life,tf[1]-8-life*40,'#eaf5d8',Math.sin(life*3.14)*.8)}
+  boulder(g,120,40,6);engineer(g,ex,110,t,false)},
+ fiche(g,t){g.rect(0,0,g.W,g.H,'#2a2f3a');const k=.5+.5*Math.sin(t*2);
+  capMush(g,10,34,6,3,k,IVORY);capMush(g,18,34,4,2,k,IVORY);capMush(g,24,34,3,1,k,IVORY);
+  lantern(g,40,34,12,k,Math.sin(t*1.3)*.5);shelf(g,62,10,3,k);puffball(g,88,30,(t*.5)%1.6>1?0:(t*.5)%1.6)},
+ notes:[['Grappe ivoire','3 à 5 chapeaux de tailles tirées au hasard ; lamelles sombres sous le bord, chapeau qui s\'éclaire vers le haut au pic de la pulsation.'],
+  ['Lanternes','tige fine qui se balance, bulbe lumineux : la source la plus vive, par paires.'],
+  ['Polypores en étagère','sur la paroi (face nord), 2–3 étages, prolongent la lumière en hauteur.'],
+  ['Vesse-de-loup','s\'écrase et lâche un nuage de spores quand l\'Ingénieur passe à côté.'],
+  ['Vague de lumière','phase = position x : la pulsation court le long de la galerie (shader : sin(t − x·k)).'],
+  ['Godot','atlas 4 espèces × 2 états, PointLight2D partagée par touffe (pas une par chapeau), placement près des parois et des zones humides.']]};
+
+// ====================== 06 RACINES ET LIANES ======================
+function vine(g,x0,len,t,seed,wallH){ // liane à ressort : chaque segment suit le précédent avec retard
+ let x=x0,y=wallH-4;const pts=[];
+ for(let j=0;j<len;j++){const sw=Math.sin(t*1.1+seed-j*.12)*Math.pow(j/len,1.5)*5;pts.push([x0+sw,y+j])}
+ for(let j=0;j<len;j++){const[px,py]=pts[j];g.px(px-1,py,OUT);g.px(px,py,j%7<4?'#4a6a32':'#3f5a2c');g.px(px+1,py,OUT);
+  if(j%5===2){const side=(Math.floor(j/5)+seed)%2?1:-1,big=hash(seed,j,1)>.5;
+   const L=big?[[1,0,'#6c8a4a'],[2,0,'#88a85c'],[2,-1,'#6c8a4a'],[3,-1,'#88a85c'],[1,1,'#4f6b3a'],[2,1,'#4f6b3a'],[3,0,OUT],[4,-1,OUT],[3,-2,OUT],[2,-2,OUT]]:[[1,0,'#6c8a4a'],[2,-1,'#88a85c'],[2,0,OUT],[3,-1,OUT],[1,1,OUT]];
+   for(const[dx,dy,c]of L)g.px(px+dx*side,py+dy,c)}
+  if(j%11===8&&hash(seed,j,2)>.5){g.px(px-2,py,'#e8dcc2');g.px(px-2,py-1,'#f3ead6');g.px(px-3,py,'#d6c8a8')}}
+ const[ex,ey]=pts[len-1];g.px(ex,ey+1,'#88a85c');g.px(ex,ey+2,OUT);
+ return pts[len-1]}
+function root(g,x0,y0,t,seed,len,thick){ // racine épaisse qui perce la paroi et descend vers le sol
+ let x=x0,y=y0,w=thick;for(let j=0;j<len;j++){x+=Math.sin(j*.25+seed)*.6;y+=1;w=thick*(1-j/len*.75);
+  for(let i=-Math.ceil(w);i<=Math.ceil(w);i++){const edge=Math.abs(i)>=w-.3;g.px(x+i,y,edge?OUT:(i<0?'#6e5236':(i<w*.4?'#57402a':'#3f2e1e')))}
+  if(j%4===0)g.px(x,y,'#7d6043');
+  if(j>len*.5&&j%9===0){for(let k=0;k<5;k++)g.px(x+w+k,y+k*.6,'#4b3a26')}}
+ for(let k=0;k<6;k++){g.px(x-3+k,y+1,'#3f2e1e');g.px(x-4+k*1.6,y+2,OUT)} // pied qui s'étale au sol
+ return[x,y]}
+const VINES={n:'06',t:'Racines et lianes de la jungle',lead:'Aux abords de la lisière sud, la jungle perce la voûte. Racines épaisses qui fendent la paroi et rampent sur le dallage, rideaux de lianes à ressort (le balancement part du haut et se propage vers le bas), mousse en rideau, fleurs pâles, gouttes.',
+ W:220,H:124,
+ scene(g,t){const wallH=30;base(g,{stal:false,wallH});
+  // fissure de paroi d'où sort la grosse racine, éclats de dalles soulevées
+  for(let j=0;j<12;j++){g.px(60+Math.sin(j)*1.5,18+j,OUT);g.px(61+Math.sin(j)*1.5,18+j,'#1a1d23')}
+  const[rx,ry]=root(g,61,26,t,1,58,4.5);
+  for(let i=0;i<6;i++){const x=rx-14+i*5,y=ry-2+hash(i,0,1)*4;g.rect(x,y,4,2,P.fl2);g.rect(x,y+2,4,1,OUT);g.px(x,y-1,OUT)}
+  root(g,170,20,t,4,30,2.5);
+  // radicelles sur toute la paroi
+  for(let x=0;x<220;x++)if(hash(x,1,3)>.62){const l=3+hash(x,2,3)*9;for(let j=0;j<l;j++)g.px(x+Math.sin(j*.5+x)*.7,8+j,j===Math.floor(l)-1?OUT:'#4b3a26')}
+  // rideau de mousse au rebord
+  for(let x=0;x<220;x++){const l=Math.floor(vnoise(x/5,0,6)*5);for(let j=0;j<l;j++)g.px(x,wallH-2+j,j===l-1?'#3f5a2c':(hash(x,j,4)>.5?P.moss:P.moss2))}
+  // lianes
+  const vs=[[14,52],[22,34],[36,70],[86,46],[98,62],[112,30],[132,74],[146,40],[196,56],[208,38]];
+  vs.forEach(([x,l],i)=>{const tip=vine(g,x,l,t,i*1.7,wallH);
+   const per=2.4+i*.3,ph=((t+i)%per)/per;if(i%3===0){const y=tip[1]+ph*ph*50;if(y<124)g.px(tip[0],y,'#a9bdd6');if(ph>.95)g.px(tip[0],124-2,'#6f87a3')}});
+  // feuilles qui tombent en virevoltant
+  for(let i=0;i<6;i++){const life=(t*.12+i/6)%1,x=30+i*32+Math.sin(life*14+i)*6,y=30+life*94,f=Math.floor(life*20)%2;g.px(x,y,f?'#88a85c':'#4f6b3a');g.px(x+(f?1:-1),y,'#6c8a4a')}
+  // touffes d'herbe pâle sur le dallage près de la paroi
+  for(let x=4;x<220;x+=7)if(hash(x,3,3)>.4)for(let k=0;k<3;k++){g.px(x+k,wallH+3-(k%2),'#6c8a4a');g.px(x+k,wallH+4,'#4f6b3a')}
+  const ex=((t*14)%300)-40;engineer(g,ex,112,t,false)},
+ fiche(g,t){g.rect(0,0,g.W,g.H,'#2a2f3a');vine(g,10,32,t,1,4);vine(g,22,24,t,2,4);root(g,46,2,t,2,32,3.5);
+  for(let x=70;x<100;x++){const l=Math.floor(vnoise(x/5,0,6)*6);for(let j=0;j<l;j++)g.px(x,4+j,j===l-1?'#3f5a2c':(hash(x,j,4)>.5?P.moss:P.moss2))}
+  for(let x=70;x<100;x+=2){const l=4+hash(x,2,3)*14;for(let j=0;j<l;j++)g.px(x,14+j,'#4b3a26')}},
+ notes:[['Lianes à ressort','balancement en sin(t − j·k)·(j/L)^1,5 : le haut bouge peu, le bas fouette ; feuilles en alternance gauche/droite, deux tailles ; fleurs pâles rares.'],
+  ['Grosse racine','sort d\'une fissure de la paroi, s\'amincit, rampe et soulève les dalles à son pied (éclats).'],
+  ['Radicelles + rideau de mousse','donnent du relief au rebord de la paroi, sans animation.'],
+  ['Gouttes et feuilles','une goutte au bout d\'une liane sur trois ; feuilles qui virevoltent en 2 images.'],
+  ['Densité','proportionnelle à la proximité de la jungle (z > …) : nulle au cœur de la montagne, forte en lisière.'],
+  ['Godot','Line2D ou sprite + shader de vertex (décalage horizontal selon UV.y), racines en sprites fixes posés sur les faces nord.']]};
+
+// ====================== 01 BASSINS ======================
+// forme organique : somme de « métaballes » déformées par du bruit
+function poolField(x,y,seed){const balls=[[96,82,30,14],[134,90,22,11],[66,92,18,10],[118,72,14,8],[150,100,12,7]];
+ let f=0;for(const[bx,by,rx,ry]of balls){const d=((x-bx)/rx)**2+((y-by)/ry)**2;f+=1/(d+.05)}
+ return f*(0.82+0.36*vnoise(x/7,y/5,seed))}
+const POOL={n:'01',t:'Bassins d\'eau souterraine',lead:'Le bassin n\'est plus un ovale : contour en métaballes déformées par du bruit (lobes, criques, avancées de roche), berge mouillée plus sombre, haut-fond où l\'on devine les dalles, fosse plus profonde, galets, mousse, stalagmite qui émerge. Reflets ondulés du quartz et des stalactites.',
+ W:220,H:124,cache:null,
+ scene(g,t){const wallH=24;base(g,{stalX:[64,98,140],wallH});
+  if(!this.cache){this.cache=new Float32Array(220*124);for(let y=0;y<124;y++)for(let x=0;x<220;x++)this.cache[y*220+x]=poolField(x,y,7)}
+  const F=(x,y)=>x<0||y<0||x>=220||y>=124?0:this.cache[y*220+x];
+  // berge mouillée
+  for(let y=wallH+1;y<124;y++)for(let x=0;x<220;x++){const f=F(x,y);if(f>.55&&f<1)g.mul(x,y,.62+(1-f)*.6)}
+  // eau
+  for(let y=wallH+1;y<124;y++)for(let x=0;x<220;x++){const f=F(x,y);if(f<1)continue;
+   const edge=F(x,y-1)<1||F(x-1,y)<1||F(x+1,y)<1||F(x,y+1)<1;if(edge){g.px(x,y,OUT);continue}
+   const depth=Math.min(1,(f-1)/2.2);
+   let c;if(depth<.18){// haut-fond : dalles visibles teintées
+    const i=(y*220+x)*4;const fl=[g.d[i],g.d[i+1],g.d[i+2]];c=mix(fl,'#2e4a5e',.55)}
+   else c=mix('#28405a','#132030',Math.min(1,(depth-.18)*1.6));
+   g.px(x,y,c);
+   // ondulations : stries claires, quantifiées
+   const w=Math.sin(x*.32+t*1.8+Math.sin(y*.7+t)*1.5)+Math.sin(x*.11-t*1.1+y*.4);
+   if(w>1.25&&depth>.1)g.px(x,y,'#4a6782');
+   // liseré de haut-fond juste sous la berge
+   if(F(x,y-2)<1&&depth<.3)g.px(x,y,'#5b7a92',.6)}
+  // caustiques sur la berge et la paroi proche
+  for(let i=0;i<14;i++){const x=40+hash(i,0,9)*140,y=wallH+2+hash(i,1,9)*6;const k=.5+.5*Math.sin(t*2.3+i*1.9);if(F(x,y+8)>.6)g.add(x,y,[170,200,230],.25*k)}
+  // reflets inversés des stalactites et du quartz, coupés par les ondulations
+  const refl=(sx,sy,h,c)=>{for(let j=0;j<h;j++){const wob=Math.round(Math.sin(t*3+j*.8+sx)*1.3);const y=sy+j;if(F(sx,y)>1.4&&Math.sin(y*1.3+t*4)>-.6)g.px(sx+wob,y,c,.55*(1-j/h))}};
+  for(const sx of[98,140])for(let i=-1;i<=1;i++)refl(sx+i,74,8-Math.abs(i)*3,'#55657a');
+  quartz(g,118,62,t,1);for(const[dx,h]of[[0,12],[-3,8],[3,9],[-5,5],[5,5]])refl(118+dx,64,h,'#8da2bd');
+  // stalagmite qui émerge, avec son anneau d'eau
+  g.spr(["..X..",".XwX.","XwwsX","XwssX","XssssX"],86,82,{X:OUT,w:P.w3,s:P.w2});
+  const ring=(Math.sin(t*2)+1)*.5;for(let a=0;a<6.28;a+=.15)g.px(88.5+Math.cos(a)*(4+ring),87+Math.sin(a)*(1.5+ring*.4),'#6f87a3',.6);
+  // galets et mousse sur la berge
+  for(let i=0;i<120;i++){const x=Math.floor(hash(i,3,2)*220),y=wallH+3+Math.floor(hash(i,4,2)*96),f=F(x,y);if(f>.7&&f<.97){
+   if(i%3===0){g.rect(x,y,2,1,P.w3);g.rect(x,y+1,2,1,OUT)}else if(i%3===1){g.px(x,y,P.moss);g.px(x+1,y,P.moss2)}else g.px(x,y,'#6b7480')}}
+  // gouttes qui tombent des stalactites et ronds organiques (déformés)
+  for(const[sx,o]of[[64,0],[98,.7],[140,1.3]]){const per=1.9,ph=((t+o)%per)/per,target=sx===64?92:sx===98?80:88;
+   if(ph<.6){const y=wallH+6+ph/.6*(target-wallH-6);g.px(sx,y,'#a9bdd6');g.px(sx,y-1,'#6f87a3',.5)}
+   else{const r=(ph-.6)/.4;for(let ring=0;ring<2;ring++){const rr=r*12-ring*4;if(rr<=0)continue;for(let a=0;a<6.28;a+=.07){const wob=1+.15*Math.sin(a*3+sx);const x=sx+Math.cos(a)*rr*wob,y=target+Math.sin(a)*rr*.38*wob;if(F(x|0,y|0)>1.2)g.px(x,y,'#7f9bb8',(1-r)*.9)}}
+    if(r<.25)for(let k=0;k<4;k++)g.px(sx+(k-1.5)*2,target-2-r*8+Math.abs(k-1.5),'#c7d4e4')}}
+  boulder(g,30,104,7);boulder(g,190,64,6);
+  // l'Ingénieur longe la berge ; ses pas font des ronds quand il marche dans le haut-fond
+  const ex=((t*12)%280)-30,ey=116;engineer(g,ex,ey,t,false);if(F(ex|0,ey)>1)for(let a=0;a<6.28;a+=.2)g.px(ex+Math.cos(a)*5,ey+Math.sin(a)*1.6,'#7f9bb8',.7)},
+ fiche(g,t){g.rect(0,0,g.W,g.H,'#2a2f3a');
+  // coupe de profondeur : berge mouillée → haut-fond → fosse
+  const stops=[[P.fl,'sol'],[mix(P.fl,'#000',.35),'berge'],[mix(P.fl,'#2e4a5e',.55),'haut-fond'],['#28405a','eau'],['#132030','fosse']];
+  stops.forEach(([c,_],i)=>g.rect(6+i*14,6,12,12,c));for(let i=0;i<5;i++){g.rect(6+i*14,18,12,1,OUT)}
+  // ronds déformés
+  const r=(t*.7)%1;for(let a=0;a<6.28;a+=.06){const wob=1+.15*Math.sin(a*3);g.px(30+Math.cos(a)*r*14*wob,32+Math.sin(a)*r*5*wob,'#7f9bb8',1-r)}
+  g.spr(["..X..",".XwX.","XwwsX","XwssX","XssssX"],70,24,{X:OUT,w:P.w3,s:P.w2});
+  for(let j=0;j<8;j++)g.px(100+Math.round(Math.sin(t*3+j*.8)*1.3),24+j,'#8da2bd',.8*(1-j/8))},
+ notes:[['Contour organique','5 métaballes (tailles et positions tirées par le générateur) × bruit basse fréquence → lobes, criques, avancées ; seuil à 1, contour noir franc sur la frontière.'],
+  ['Profondeur en 3 paliers','haut-fond translucide (on devine les dalles), eau, fosse ; plus un liseré clair sous la berge.'],
+  ['Berge vivante','sol mouillé assombri autour, galets, mousse, caustiques qui dansent sur la base de la paroi.'],
+  ['Reflets','stalactites et quartz inversés, ondulés ligne par ligne et hachés par les vagues.'],
+  ['Gouttes','ronds doubles légèrement déformés, éclaboussure de 4 pixels à l\'impact ; l\'Ingénieur fait des ronds quand il passe dans le haut-fond (praticable), la fosse reste infranchissable.'],
+  ['Godot','masque du bassin rendu dans la texture du chunk (TerrainPainter), shader d\'eau sur un Sprite2D au même masque (profondeur dans un canal), reflets via BackBufferCopy ou sprites miroirs.']]};
+
+// ---------- montage ----------
+const host=document.getElementById('root'),items=[];
+for(const S of[FAUNA,MUSH,VINES,POOL]){
+ const sec=document.createElement('section');
+ sec.innerHTML=`<h2><span>${S.n}</span>${S.t}</h2><p class="lead">${S.lead}</p><div class="row"><div><canvas class="sc" width="${S.W}" height="${S.H}"></canvas></div><div class="fiche"><h4>Fiche (×6)</h4><canvas class="fi" width="110" height="42"></canvas><ul>${S.notes.map(([a,b])=>`<li><b>${a}</b> : ${b}</li>`).join('')}</ul></div></div>`;
+ host.appendChild(sec);
+ const sc=sec.querySelector('.sc').getContext('2d'),fi=sec.querySelector('.fi').getContext('2d');
+ items.push({S,g:new G(sc,S.W,S.H),f:new G(fi,110,42)})}
+let t0=performance.now(),tp=0;
+function frame(now){if(!paused)tp+=(now-t0)/1000*(slow?.35:1);t0=now;const t=Math.floor(tp*12)/12;
+ for(const{S,g,f}of items){g.clear();S.scene(g,t);g.flush();f.clear();S.fiche(f,t);f.flush()}requestAnimationFrame(frame)}
+requestAnimationFrame(frame);
+const $=id=>document.getElementById(id);
+$('day').onclick=()=>{night=false;$('day').classList.add('on');$('night').classList.remove('on')};
+$('night').onclick=()=>{night=true;$('night').classList.add('on');$('day').classList.remove('on')};
+$('pause').onclick=()=>{paused=!paused;$('pause').classList.toggle('on',paused)};
+$('slow').onclick=()=>{slow=!slow;$('slow').classList.toggle('on',slow)};
+</script>
+</body>
+</html>

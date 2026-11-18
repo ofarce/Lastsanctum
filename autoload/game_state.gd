@@ -75,6 +75,10 @@ var hud_enemy: Enemy = null
 
 ## Numéro de la vague en cours (wave), 0 avant le premier assaut.
 var wave: int = 0
+## Repaires de la faune hostile (sim/wildlife.gd) : {kind, x, z, beast, empty_since}.
+var wildlife_lairs: Array[Dictionary] = []
+## Météo de la jungle (core/weather.gd) : {kind, from, since} ; vide = temps clair.
+var weather: Dictionary = {}
 ## Assauts programmés (spawnQueue : {"at": instant}) et ennemis vivants (étape 8).
 var spawn_queue: Array = []
 var enemies: Array = []
@@ -88,6 +92,14 @@ var martyre_center := Vector2.ZERO
 var martyre_at: float = INF
 var martyre_down_at: float = INF
 var martyre_hit_at: float = INF
+## Coup de bâton attendu ("melee" ou "fissure") et point visé ; incantation des sceaux en cours ; geste en
+## cours (elle ne bouge pas) ; prochaines attaques à distance prêtes ; effets au sol (sim/martyre.gd).
+var martyre_hit_kind := "melee"
+var martyre_aim := Vector2.ZERO
+var martyre_cast_at: float = INF
+var martyre_busy_until: float = -INF
+var martyre_ready: Dictionary = {}
+var martyre_fx: Array[Dictionary] = []
 ## Bâtiments du sanctuaire (buildings) et unités tombées que le Puits des Âmes peut rappeler (FALLEN).
 var buildings: Array[Building] = []
 var fallen: Array[Unit] = []
@@ -107,9 +119,12 @@ var pray_popups: Array[Dictionary] = []
 var deity_until: Dictionary = {}
 ## Point du sol sous le pointeur (templePointer), pour l'aperçu de construction ; null hors du monde.
 var build_pointer: Variant = null
+## Exilé incarné (galerie des Exilés) : la caméra le suit, ZQSD/flèches le pilotent, clic droit attaque.
+var incarnated: Unit = null
 
 
 func reset() -> void:
+	incarnated = null
 	sim_time = 0.0
 	fast_construction = false
 	ended = false
@@ -147,6 +162,8 @@ func reset() -> void:
 	hud_building = null
 	hud_enemy = null
 	wave = 0
+	wildlife_lairs.clear()
+	weather = {}
 	spawn_queue = []
 	enemies = []
 	martyre = null
@@ -155,6 +172,12 @@ func reset() -> void:
 	martyre_at = INF
 	martyre_down_at = INF
 	martyre_hit_at = INF
+	martyre_hit_kind = "melee"
+	martyre_aim = Vector2.ZERO
+	martyre_cast_at = INF
+	martyre_busy_until = -INF
+	martyre_ready = {}
+	martyre_fx.clear()
 	enemy_corpses.clear()
 	buildings.clear()
 	fallen.clear()

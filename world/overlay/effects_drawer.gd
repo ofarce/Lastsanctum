@@ -78,6 +78,9 @@ func draw_all(now: float) -> void:
 			"xboom": _xboom(e)
 			"piton": _piton_flight(e)
 			"suspend": _suspend(e, now)
+			"slash": _slash(e)
+			"cball": _cball(e)
+			"cballhit": _cball_hit(e)
 			_: _simple(e)
 	_planted_pitons(now)
 	for e in GameState.damage_numbers:
@@ -219,6 +222,84 @@ func _arrow_path(e: Dictionary, p: float) -> Vector2:
 	var y1 := t.y - 14.0
 	var h := 1.0 + Vector2(x1 - x0, y1 - y0).length() * 0.025
 	return Vector2(x0 + (x1 - x0) * p, y0 + (y1 - y0) * p - h * 4.0 * p * (1.0 - p))
+
+
+## Taille d'épée du Creuset (planches/armes-attaques.html) : arc blanc courbé à la portée du coup (3 blocs),
+## balayé de la droite vers la gauche du personnage (à deux mains : de l'épaule gauche, en haut, à la taille côté
+## droit, en bas) ; épais et opaque à la tête, fin et transparent à la queue, puis s'efface.
+func _slash(e: Dictionary) -> void:
+	var age: float = e["age"]
+	if age < 0.0:
+		return
+	var p := age / float(e["duration"])
+	var base := atan2(float(e["dz"]), float(e["dx"]))
+	var two: bool = e["two"]
+	var a0 := base - PI * 0.5 if two else base + PI * 0.5
+	var a1 := base + PI * 0.5 if two else base - PI * 0.5
+	var head := clampf(p / 0.55, 0.0, 1.0)
+	var fade := 1.0 - clampf((p - 0.55) / 0.45, 0.0, 1.0)
+	var span := 0.6
+	var r: float = e["r"]
+	var steps := 48
+	for i in steps + 1:
+		var u := float(i) / steps
+		var t := head - span + span * u
+		if t < 0.0:
+			continue
+		var ang := lerpf(a0, a1, t)
+		var y := lerpf(2.6, 0.5, t) if two else 1.2
+		var n := Proj.nat(float(e["x"]) + cos(ang) * r, y, float(e["z"]) + sin(ang) * r) + world.native_offset
+		var w := 2 if u > 0.75 else (1 if u > 0.35 else 0)
+		var c := Color(1, 1, 1, (0.25 + 0.75 * u) * fade)
+		for dy in range(-w, w + 1):
+			npx(n.x, n.y + dy, c)
+		if u > 0.6:
+			npx(n.x, n.y - w - 1, Color(0.8, 0.94, 1.0, 0.7 * fade))
+
+
+## Balle du canon à projection : petite balle noire cernée de micro-éclairs cyan, renouvelés à chaque image.
+func _cball(e: Dictionary) -> void:
+	var p := clampf(float(e["age"]) / float(e["duration"]), 0.0, 1.0)
+	var n := Proj.nat(lerpf(e["x"], e["tx"], p), 1.3, lerpf(e["z"], e["tz"], p)) + world.native_offset
+	var x := jr(n.x)
+	var y := jr(n.y)
+	for q: Vector2 in [Vector2(-1, -2), Vector2(0, -2), Vector2(1, -2), Vector2(-2, -1), Vector2(2, -1), Vector2(-2, 0), Vector2(2, 0), Vector2(-2, 1), Vector2(2, 1), Vector2(-1, 2), Vector2(0, 2), Vector2(1, 2)]:
+		npx(x + q.x, y + q.y, INK)
+	for q: Vector2 in [Vector2(-1, -1), Vector2(0, -1), Vector2(1, -1), Vector2(-1, 0), Vector2(0, 0), Vector2(1, 0), Vector2(-1, 1), Vector2(0, 1), Vector2(1, 1)]:
+		npx(x + q.x, y + q.y, Color("#24262b"))
+	npx(x - 1, y - 1, Color("#5b6068"))
+	var R := Rng.new(int(e["seed"]) + int(float(e["age"]) * 30.0) * 7)
+	for k in 3:
+		if R.next() < 0.25:
+			continue
+		var a := R.next() * TAU
+		var sx := x + roundf(cos(a) * 3.0)
+		var sy := y + roundf(sin(a) * 3.0)
+		for s in 3:
+			npx(sx, sy, Color("#e9fbff") if s == 0 else CY[3])
+			var b := a + (0.9 if s & 1 else -0.9)
+			sx += roundf(cos(b))
+			sy += roundf(sin(b))
+
+
+## Impact de la balle (ennemi ou roche) : éclat blanc, étincelles cyan, puis poussière.
+func _cball_hit(e: Dictionary) -> void:
+	var age: float = e["age"]
+	if age < 0.0:
+		return
+	var p := age / float(e["duration"])
+	var n := Proj.nat(e["x"], 1.3, e["z"]) + world.native_offset
+	var x := jr(n.x)
+	var y := jr(n.y)
+	if p < 0.4:
+		for q: Vector2 in [Vector2(0, 0), Vector2(-1, 0), Vector2(1, 0), Vector2(0, -1), Vector2(0, 1)]:
+			npx(x + q.x, y + q.y, CY[5])
+		for q: Vector2 in [Vector2(-3, -2), Vector2(2, -3), Vector2(3, 2), Vector2(-2, 3), Vector2(0, -4)]:
+			npx(x + q.x, y + q.y, CY[3])
+	else:
+		var c := Color(0.78, 0.78, 0.74, 0.6 * (1.0 - p))
+		for q: Vector2 in [Vector2(-2, -2), Vector2(-1, -2), Vector2(1, -1), Vector2(2, -1), Vector2(0, -3)]:
+			npx(x + q.x, y + q.y - roundf(p * 3.0), c)
 
 
 func _arrow(e: Dictionary) -> void:

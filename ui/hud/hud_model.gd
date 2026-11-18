@@ -337,7 +337,18 @@ static func format_assault() -> String:
 	if due == 0.0:
 		return "Assaut en cours"
 	var t := maxi(0, ceili(due - GameState.sim_time))
+	# Assaut lointain (un autre jour) : on annonce le jour plutôt qu'un compte à rebours.
+	if DayNight.day(due) != DayNight.day(GameState.sim_time) and t > 120:
+		return "Jour %d au matin" % DayNight.day(due)
 	return "%02d:%02d" % [t / 60, t % 60]
+
+
+## Jour et heure du bandeau : {"day", "time", "time_icon"}.
+static func sky_status() -> Dictionary:
+	var t := GameState.sim_time
+	var lbl := DayNight.label(t)
+	var icon := "moon" if lbl == "nuit" else "dawn" if lbl == "aube" or lbl == "crépuscule" else "sun"
+	return {"day": "Jour %d" % DayNight.day(t), "time": DayNight.clock(t), "time_icon": icon}
 
 
 static func dig_hits(sim: Simulation, cell: Dictionary) -> int:
@@ -482,6 +493,7 @@ static func view(sim: Simulation) -> Dictionary:
 	var B: Building = selected_building() if not anchor and u == null else null
 	var v := {}
 	v["wave"] = str(GameState.wave) if GameState.wave > 0 else "—"
+	v["sky"] = sky_status()
 	var res := {}
 	for k in Catalog.RES_ORDER:
 		res[k] = str(floori(GameState.res[k]))

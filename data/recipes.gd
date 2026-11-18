@@ -16,7 +16,7 @@ const ITEMS := {
 	"pickaxe": {"name": "Pioche", "color": Color("#8a8f96"), "pending": true,
 		"desc": "Consommée par un adepte pour pouvoir miner."},
 	"arrows": {"name": "Flèches", "color": Color("#b89a6a"),
-		"desc": "Nécessaires pour recruter un archer (une par archer)."},
+		"desc": "Munitions des archers. Fabriquées par lots de 15."},
 	"chest": {"name": "Coffre", "color": Color("#8a6038"), "pending": true,
 		"desc": "Se pose par terre ; 10 emplacements de stockage."},
 	"wood_fiber": {"name": "Fibre de bois", "color": Color("#c8b080"),
@@ -78,11 +78,15 @@ const RECIPES := {
 	},
 }
 
-## Objets consommés par unité recrutée à la caserne (une escouade de 4 en consomme 4 fois plus).
+## Objets consommés par unité recrutée, sauf l'archer qui demande un arc par groupe de 4.
 const CASERNE_ITEMS := {
-	"archer": {"bow": 1, "arrows": 1},
+	"archer": {"bow": 1},
 	"lame": {"sword": 1, "shield": 1},
 }
+
+
+static func output_quantity(item: String) -> int:
+	return 15 if item == "arrows" else 1
 
 
 static func craft_time(building_type: String) -> float:
@@ -127,6 +131,7 @@ static func cost_text(cost: Dictionary) -> String:
 ## Objets de caserne pour `count` unités du rôle `role` (vide si le rôle n'en demande pas).
 static func caserne_cost(role: String, count: int) -> Dictionary:
 	var out := {}
+	var item_count := ceili(count / 4.0) if role == "archer" else count
 	for k: String in CASERNE_ITEMS.get(role, {}):
-		out[k] = CASERNE_ITEMS[role][k] * count
+		out[k] = CASERNE_ITEMS[role][k] * item_count
 	return out

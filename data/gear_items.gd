@@ -3,7 +3,8 @@ extends RefCounted
 ## d'inventaire et calque dessiné (TyrienArt). Les pièces « gear_* » n'ont que leur apparence ; celles du
 ## Creuset des Exilés (data/recipes.gd) portent des statistiques : armor (défense), damage (dégâts de base),
 ## reach (portée, arme à distance), two_hands (occupe aussi la main gauche), ammo (munition prise dans le stock
-## à chaque tir).
+## à chaque tir), melee (portée de la taille, en unités de monde : 4 par bloc), cd (recharge en secondes), anim (animation
+## d'attaque du Tyrien : slash1, slash2, shoot).
 
 const RIGHT := "Main droite"
 const LEFT := "Main gauche"
@@ -29,20 +30,20 @@ const ITEMS := {
 	# Creuset des Exilés.
 	"copper_armor": {"name": "Armure en cuivre", "slot": "Torse", "piece": "copperarmor", "armor": 3, "desc": "Défense faible."},
 	"iron_armor": {"name": "Armure en fer", "slot": "Torse", "piece": "ironarmor", "armor": 6, "desc": "Défense moyenne."},
-	"iron_greatsword": {"name": "Épée à deux mains en fer", "slot": "Main droite", "piece": "irongreat", "damage": 18, "two_hands": true,
-		"desc": "Occupe les deux mains, dégâts élevés."},
-	"iron_sword": {"name": "Épée à une main en fer", "slot": "Main droite", "piece": "ironsword", "damage": 10,
-		"desc": "Occupe une seule main, dégâts moyens."},
+	"iron_greatsword": {"name": "Épée à deux mains en fer", "slot": "Main droite", "piece": "irongreat", "melee": 6.0, "cd": 0.89, "anim": "slash2", "damage": 18, "two_hands": true,
+		"desc": "Occupe les deux mains, dégâts élevés. Taille à 1,5 bloc."},
+	"iron_sword": {"name": "Épée à une main en fer", "slot": "Main droite", "piece": "ironsword", "melee": 6.0, "cd": 0.67, "anim": "slash1", "damage": 10,
+		"desc": "Occupe une seule main, dégâts moyens. Taille à 1,5 bloc."},
 	"iron_shield": {"name": "Bouclier en fer", "slot": "Main gauche", "piece": "ironshield", "armor": 2,
 		"desc": "Occupe une seule main, défense faible."},
-	"copper_greatsword": {"name": "Épée à deux mains en cuivre", "slot": "Main droite", "piece": "coppergreat", "damage": 14, "two_hands": true,
-		"desc": "Occupe les deux mains, dégâts élevés."},
-	"copper_sword": {"name": "Épée à une main en cuivre", "slot": "Main droite", "piece": "coppersword", "damage": 7,
-		"desc": "Occupe une seule main, dégâts faibles."},
+	"copper_greatsword": {"name": "Épée à deux mains en cuivre", "slot": "Main droite", "piece": "coppergreat", "melee": 6.0, "cd": 0.89, "anim": "slash2", "damage": 14, "two_hands": true,
+		"desc": "Occupe les deux mains, dégâts élevés. Taille à 1,5 bloc."},
+	"copper_sword": {"name": "Épée à une main en cuivre", "slot": "Main droite", "piece": "coppersword", "melee": 6.0, "cd": 0.67, "anim": "slash1", "damage": 7,
+		"desc": "Occupe une seule main, dégâts faibles. Taille à 1,5 bloc."},
 	"copper_shield": {"name": "Bouclier en cuivre", "slot": "Main gauche", "piece": "coppershield", "armor": 1,
 		"desc": "Occupe une seule main, défense très faible."},
-	"cannon": {"name": "Canon à projection", "slot": "Main droite", "piece": "cannon", "damage": 12, "reach": 12.0, "ammo": "iron",
-		"desc": "Tire des munitions de fer à distance. Portée 12, dégâts 12."},
+	"cannon": {"name": "Canon à projection", "slot": "Main droite", "piece": "cannon", "damage": 12, "reach": 12.0, "cd": 0.5, "anim": "shoot", "ammo": "iron",
+		"desc": "Tire 2 balles de fer par seconde, qui filent jusqu’au premier obstacle. Dégâts 12."},
 }
 
 

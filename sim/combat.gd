@@ -63,8 +63,11 @@ static func target_closest(source: Variant, list: Array, range_ := 1e9, observer
 ## damage : `src` gagne l'expérience du monstre qu'il achève.
 func damage(t: Unit, amount: float, src: Unit = null) -> void:
 	# Bouclier de la Martyre : seul l'Ingénieur, sous le bouclier, l'atteint.
-	if t is Enemy and (t as Enemy).kind == Martyre.KIND and not Martyre.can_hurt(src):
-		return
+	if t is Enemy and (t as Enemy).kind == Martyre.KIND:
+		if not Martyre.can_hurt(src):
+			return
+		if amount > 0.0:
+			Martyre.hurt(t as Enemy)
 	var was := t.hp
 	if src and not src.is_enemy():
 		amount *= src.power
@@ -217,6 +220,10 @@ func barracks_strike(u: Unit, e: Enemy) -> void:
 		return
 	if u.role == "lame" and moulinet(u, dmg):
 		return
+	# Ingénieur armé au Creuset : même attaque que le clic droit, vers sa cible (taille en arc ou balle de canon).
+	if not Catalog.gear_weapon(u).is_empty():
+		gear_attack(u, Vector2(e.x, e.z))
+		return
 	# Arme à munitions du Creuset (canon) : une munition prise au stock par tir.
 	var w := Catalog.gear_weapon(u)
 	if w.has("ammo"):
@@ -235,55 +242,93 @@ func barracks_strike(u: Unit, e: Enemy) -> void:
 		sword_strike(u, e)
 
 
-## Attaque visée de l'Ingénieur armé (clic droit) : une arme de tir part vers `point` et touche le premier
-## ennemi sur sa trajectoire ; une arme de mêlée frappe les ennemis à portée dans un arc vers `point`.
-## Vrai si l'Ingénieur porte une arme utilisable (le clic est alors consommé, même en recharge).
+## Attaque visée de l'Ingénieur armé (clic droit) : voir gear_attack. Vrai si l'Ingénieur porte une arme utilisable
+## (le clic est alors consommé, même en recharge).
 func aimed_attack(u: Unit, point: Vector2) -> bool:
-	var w := Catalog.gear_weapon(u)
-	if w.is_empty():
+	if Catalog.gear_weapon(u).is_empty():
 		return false
-	if u.attack > 0.0:
-		return true
+	if u.attack <= 0.0:
+		gear_attack(u, point)
+	return true
+
+
+## Vitesse des balles du canon (unités de monde par seconde) et distance maximale d'une balle sans obstacle.
+const BALL_SPEED := 40.0
+const BALL_RANGE := 80.0
+## Rayon de contact d'une balle avec un ennemi.
+const BALL_HIT := 1.0
+## Images d'attaque du Tyrien (planches/armes-attaques.html) : début de la frappe dans l'animation, en secondes.
+const SLASH_DELAY := {"slash1": 0.2, "slash2": 0.28}
+
+
+## Attaque de l'Ingénieur armé au Creuset vers `point` (planche planches/armes-attaques.html).
+## Épée : taille en arc devant lui (de sa droite vers sa gauche, ou de l'épaule gauche à la taille côté droit à
+## deux mains) ; tout ennemi visible à moins de `melee` (1,5 bloc) dans le demi-cercle avant subit les dégâts.
+## Canon : une balle (une munition) file en ligne droite jusqu'au premier obstacle solide ; si c'est un ennemi,
+## il subit les dégâts.
+func gear_attack(u: Unit, point: Vector2) -> void:
+	var w := Catalog.gear_weapon(u)
 	var d := point - Vector2(u.x, u.z)
 	if d.length() < 0.01:
 		d = Vector2(float(u.face), 0.0)
 	d = d.normalized()
 	u.face = -1 if d.x < 0.0 else 1
-	u.attack = Catalog.FIGHT["engineer"]["cd"]
+	u.attack = float(w.get("cd", Catalog.FIGHT["engineer"]["cd"]))
 	var dmg: float = (Catalog.attack_damage(u) + Catalog.lvl_bonus(u)) * (1.5 if u.buff > 0.0 else 1.0)
-	var visible := func(e: Enemy) -> bool:
-		return e.hp > 0.0 and not e.hidden and (sim.world == null or sim.world.fog.visible_at(e.pos()))
-	if w.has("reach"):
-		var reach := float(w["reach"])
-		if w.has("ammo"):
-			Catalog.ItemStorage.take_ammo(w["ammo"])
-		var hit: Enemy = null
-		var best := reach
-		for e: Enemy in GameState.enemies:
-			if not visible.call(e):
+	if w.has("melee"):
+		var reach := float(w["melee"])
+		for e: Enemy in GameState.enemies.duplicate():
+			if not _can_hit(e):
 				continue
 			var rel := Vector2(e.x - u.x, e.z - u.z)
-			var t := rel.dot(d)
-			if t < 0.0 or t > best or absf(rel.cross(d)) > 0.9:
-				continue
-			best = t
-			hit = e
-		var end := Vector2(u.x, u.z) + d * best
-		blast(u, {"x": end.x, "z": end.y}, Color("#bed7df"))
-		flash(end.x, end.y, Color("#bed7df"))
-		if hit:
-			damage(hit, dmg, u)
-		return true
-	var reach := maxf(2.2, Catalog.unit_reach(u))
-	for e: Enemy in GameState.enemies.duplicate():
-		if not visible.call(e):
+			if rel.length() <= reach + 0.6 and (rel.length() < 0.3 or rel.normalized().dot(d) >= 0.0):
+				damage(e, dmg, u)
+				flash(e.x, e.z, Color("#f0dba4"))
+		sword_strike(u, {"x": u.x + d.x, "z": u.z + d.y})
+		var anim := String(w.get("anim", "slash1"))
+		_fx({"type": "slash", "x": u.x, "z": u.z, "dx": d.x, "dz": d.y, "r": reach, "two": anim == "slash2",
+			"age": -float(SLASH_DELAY.get(anim, 0.2)), "duration": 0.26})
+		return
+	if w.has("ammo"):
+		Catalog.ItemStorage.take_ammo(w["ammo"])
+	u.sh_t0 = GameState.sim_time
+	var hit := ball_target(u, d)
+	var end: Vector2 = hit["end"]
+	var dur := maxf(0.04, end.distance_to(Vector2(u.x, u.z)) / BALL_SPEED)
+	_fx({"type": "cball", "x": u.x, "z": u.z, "tx": end.x, "tz": end.y, "age": 0.0, "duration": dur, "seed": _seed()})
+	_fx({"type": "cballhit", "x": end.x, "z": end.y, "age": -dur, "duration": 0.25, "seed": _seed()})
+	if hit["enemy"] != null:
+		damage(hit["enemy"], dmg, u)
+
+
+func _can_hit(e: Enemy) -> bool:
+	return e.hp > 0.0 and not e.hidden and (sim == null or sim.world == null or sim.world.fog.visible_at(e.pos()))
+
+
+## Trajectoire d'une balle de canon tirée par `u` dans la direction `d` : premier ennemi touché (ou null) et point
+## d'arrêt (ennemi, roche ou bord du terrain praticable ; BALL_RANGE au plus).
+func ball_target(u: Unit, d: Vector2) -> Dictionary:
+	var from := Vector2(u.x, u.z)
+	var best := BALL_RANGE
+	var target: Enemy = null
+	for e: Enemy in GameState.enemies:
+		if not _can_hit(e):
 			continue
 		var rel := Vector2(e.x - u.x, e.z - u.z)
-		if rel.length() <= reach and (rel.length() < 0.3 or rel.normalized().dot(d) > 0.5):
-			damage(e, dmg, u)
-			flash(e.x, e.z, Color("#f0dba4"))
-	sword_strike(u, {"x": u.x + d.x, "z": u.z + d.y})
-	return true
+		var t := rel.dot(d)
+		if t < 0.0 or t > best or absf(rel.cross(d)) > BALL_HIT:
+			continue
+		best = t
+		target = e
+	var ts: Variant = sim.world.terrain_state if sim != null and sim.world != null else null
+	if ts != null:
+		var s := 1.0
+		while s < best:
+			var p := from + d * s
+			if not ts.walkable(p.x, p.y) and not ts.water_at(p.x, p.y):
+				return {"enemy": null, "end": from + d * maxf(0.0, s - 0.5)}
+			s += 0.5
+	return {"enemy": target, "end": from + d * best}
 
 
 ## archerTick : Charge du Lac. Renvoie vrai si l'archer a agi (charge, mêlée, approche).
@@ -405,6 +450,9 @@ func flame_tick(u: Unit, e: Enemy, dt: float) -> void:
 	for o: Enemy in GameState.enemies.duplicate():
 		if o.hp > 0.0 and dist(o, e) < F["splash"]:
 			damage(o, dmg, u)
+	# Les flammes brûlent la végétation basse autour de la cible.
+	if sim.state().flora:
+		sim.state().flora.burn(e.x, e.z, F["splash"])
 	var now := GameState.sim_time
 	if now >= u.flame_fx:
 		u.flame_fx = now + 0.06
@@ -440,6 +488,9 @@ func update_units(dt: float, alive: Array[Unit]) -> void:
 	if sim.world and not GameState.enemies.is_empty():
 		sim.world.fog.refresh(sim.state())
 	for u in alive:
+		# Étourdi (fissure de la Martyre) : ni déplacement ni attaque.
+		if u.stunned_until > GameState.sim_time:
+			continue
 		if u.force_move and Combat.hyp(u.x - u.tx, u.z - u.tz) < 0.6:
 			u.force_move = false
 		var enemy: Variant = null
@@ -501,7 +552,7 @@ func update_enemies(dt: float, alive: Array[Unit]) -> void:
 	tactics.update(dt, alive)
 	var core := {"x": CaveShape.CORE.x, "z": CaveShape.CORE.y}
 	for e: Enemy in GameState.enemies:
-		if e.hp <= 0.0:
+		if e.hp <= 0.0 or e.neutral:
 			continue
 		if e.kind == Martyre.KIND:
 			Martyre.act(sim, e, dt)
@@ -509,10 +560,14 @@ func update_enemies(dt: float, alive: Array[Unit]) -> void:
 		if e.stun > 0.0:
 			e.stun -= dt
 			continue
-		var espd := e.speed * (Catalog.SILLON["slow"] if e.slow_until > GameState.sim_time else 1.0)
+		var espd := e.speed * (Catalog.SILLON["slow"] if e.slow_until > GameState.sim_time else 1.0) * Weather.speed_at(e.x, e.z)
 		e.cooldown -= dt
 		var coordinated := not e.tactical_group.is_empty()
 		var target: Variant = tactics.target(e, alive) if coordinated else target_closest(e, alive, e.reach if e.kind == "archer" else 4.5)
+		# Attaqué par une bête de la jungle : il riposte.
+		var wild := Wildlife.attacker_of(e)
+		if wild and (target == null or dist(wild, e) < dist(target, e)):
+			target = wild
 		# Rien ne frappe à travers le bouclier de la Martyre.
 		if target != null and Martyre.blocks(e, target):
 			target = null
@@ -595,6 +650,18 @@ func _move_enemy(e: Enemy, goal: Vector2, speed: float, dt: float) -> void:
 ## Menace figée au lancement : effectif, composition et statistiques de toute la vague.
 func start_wave() -> void:
 	GameState.wave += 1
+	# Chaque vague, la végétation abîmée regagne un stade (trois vagues pour repousser).
+	if sim.state().flora:
+		sim.state().flora.regrow()
+	if sim.world:
+		var msg := Weather.on_wave(sim.state().seed, GameState.wave)
+		if msg != "":
+			sim.say(msg, 4.0)
+	# La faune hostile s'installe au premier assaut, puis se repeuple vague après vague.
+	if GameState.wildlife_lairs.is_empty() and sim.world:
+		Wildlife.populate(sim, sim.state().seed)
+	else:
+		Wildlife.on_wave(GameState.wave)
 	var w := GameState.wave
 	var menace := GameState.menace
 	var tier := Catalog.menace_tier(menace)
@@ -647,7 +714,8 @@ func update_evil_portals() -> void:
 	for p: Dictionary in sim.state().portals:
 		if not p["active"] or GameState.sim_time < p["next"]:
 			continue
-		var tier := Catalog.menace_tier(GameState.menace)
+		# Menace du biome du portail (data/biomes.gd) : paliers en plus de la menace courante.
+		var tier := Catalog.menace_tier(GameState.menace) + Biomes.threat_tiers(int(p.get("threat", 1)))
 		p["next"] = GameState.sim_time + Catalog.menace_portal_interval(tier)
 		var n := 0
 		for e: Enemy in GameState.enemies:
@@ -781,9 +849,11 @@ func finish_tick(dt: float, alive: Array[Unit]) -> void:
 		end_game(false)
 	elif GameState.orb_active and not GameState.enemies.any(func(e: Enemy) -> bool: return not e.beast) and GameState.spawn_queue.is_empty():
 		if GameState.next_wave == 0.0:
-			GameState.next_wave = GameState.sim_time + 4.0
-			sim.say("Zone sécurisée. Prochain assaut imminent.", 3.0)
-		elif GameState.sim_time >= GameState.next_wave:
+			# La nuit reste calme : l'assaut suivant vient au matin, deux ou trois jours plus tard.
+			var at := DayNight.next_assault(GameState.sim_time, GameState.wave, sim.state().seed)
+			GameState.next_wave = at
+			sim.say("Zone sécurisée. Prochain assaut au matin du jour %d." % DayNight.day(at), 4.0)
+		elif GameState.sim_time >= GameState.next_wave and DayNight.is_day(GameState.sim_time):
 			GameState.next_wave = 0.0
 			start_wave()
 

@@ -89,7 +89,7 @@ func _input(event: InputEvent) -> void:
 		if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
 			var p: Vector2 = (event.position - _origin) / _scale
 			if event.pressed:
-				if Rect2(1010, 12, 150, 40).has_point(p):
+				if not Rect2(20, 12, 1140, 796).has_point(p) or Rect2(1010, 12, 150, 40).has_point(p):
 					close()
 				else:
 					_drag_slot = slot_at(p)
@@ -112,6 +112,9 @@ func _drop(from: Dictionary, to: Dictionary) -> void:
 			Storage.move_stack(_box(), from["box"], _owner.inventory, to["index"], _owner.inventory_capacity)
 		return
 	if to.has("box"):
+		if _kind == "in" and from.has("items") and is_same(from["items"], _owner.inventory):
+			Storage.move_stack(from["items"], from["index"], _box(), to["box"], Production.BOX_CAPACITY)
+			_chest.chest_in_at = GameState.sim_time
 		return
 	var u := _owner if _owner else engineer()
 	if to.has("equip") and not from.has("equip"):
@@ -282,7 +285,7 @@ func _draw_chest() -> void:
 	var tint := Color("#62adff") if _kind == "in" else Color("#ff817a")
 	_panel(Rect2(20, 64, 600, 604), tint)
 	_text(Vector2(38, 92), "Coffre bleu" if _kind == "in" else "Coffre rouge", tint, 20)
-	_text(Vector2(38, 117), "Cliquez sur une pile pour la transférer au paquetage.", MUTED)
+	_text(Vector2(38, 117), "Glissez les piles entre le paquetage et le coffre." if _kind == "in" else "Cliquez sur une pile pour la transférer au paquetage.", MUTED)
 	var box := _box()
 	for i in Production.BOX_CAPACITY:
 		var rect := _box_rect(i)

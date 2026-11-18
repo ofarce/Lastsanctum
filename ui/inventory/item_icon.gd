@@ -10,6 +10,12 @@ const ITEM_ORDER := ["wood", "rock", "torch", "pickaxe", "arrows", "bow", "sword
 static func draw_item(canvas: CanvasItem, item: String, center: Vector2, scale_factor: float) -> void:
 	var gear: Dictionary = Gear.ITEMS.get(item, {})
 	if not gear.is_empty():
+		# Arme du Creuset : son icône 32 × 32 dessinée (planches/armes-creuset.html).
+		var wi := TyrienArt.weapon_icon(item)
+		if wi:
+			var ws := Vector2.ONE * 32 * scale_factor
+			canvas.draw_texture_rect(wi, Rect2((center - ws * 0.5).round(), ws), false)
+			return
 		# Pièce d'équipement : son calque de repos, recadré et agrandi (pixels entiers).
 		var tex := TyrienArt.icon(gear["piece"])
 		if tex:

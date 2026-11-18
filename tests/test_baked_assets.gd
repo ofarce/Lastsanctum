@@ -104,7 +104,13 @@ func test_units_enemies_adepts() -> void:
 	check_eq(m["adepts"]["roles"].size(), 7, "rôles d'adeptes")
 	for role: String in m["adepts"]["roles"]:
 		var modes: Dictionary = m["adepts"]["roles"][role]["modes"]
-		check_eq(int(modes["idle"]["count"]) + int(modes["walk"]["count"]) + int(modes["work"]["count"]), 7, role + " : 1 + 2 + 4 images")
+		if m["adepts"]["roles"][role].get("spirit", false):
+			# Esprits mineurs (tools/esprits/serve.py) : six modes de 24 images à 12 i/s.
+			check_eq(modes.keys().size(), 6, role + " : six modes d'esprit")
+			for mode: String in modes:
+				check_eq(int(modes[mode]["count"]), 24, "%s %s : 24 images" % [role, mode])
+		else:
+			check_eq(int(modes["idle"]["count"]) + int(modes["walk"]["count"]) + int(modes["work"]["count"]), 7, role + " : 1 + 2 + 4 images")
 		for mode: String in modes:
 			_check_sheet(BAKED + "adepts/%s_%s.png" % [role, mode], modes[mode], "%s %s" % [role, mode])
 

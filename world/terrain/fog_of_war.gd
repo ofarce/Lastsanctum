@@ -43,6 +43,14 @@ func _init() -> void:
 func reset_exploration() -> void:
 	image.fill(Color.BLACK)
 	_explored_pixels = image.get_data()
+	# La jungle (au sud du flanc) est connue dès le départ : explorée, mais les créatures n'y sont vues
+	# que dans le champ de vision.
+	for x in SIZE.x:
+		var wx := float(ORIGIN.x + x) + 0.5
+		var y0 := maxi(0, ceili(CaveShape.mountain_edge(wx) + 1.0) - ORIGIN.y)
+		for y in range(y0, SIZE.y):
+			_explored_pixels[(y * SIZE.x + x) * 4 + 3] = EXPLORED_ALPHA
+	image.set_data(SIZE.x, SIZE.y, false, Image.FORMAT_RGBA8, _explored_pixels)
 	_current_visibility.resize(SIZE.x * SIZE.y)
 	_current_visibility.fill(0)
 	_sources.clear()

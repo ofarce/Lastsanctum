@@ -26,11 +26,11 @@ func _motion(pos: Vector2) -> InputEventMouseMotion:
 
 func test_limits_and_zoom_range() -> void:
 	var cam := _camera()
-	cam.set_view(Vector2(500, -500), 9)
-	check_eq(cam.cam, Vector2(202, -316), "limites de la caméra")
+	cam.set_view(Vector2(1000, -1000), 9)
+	check_eq(cam.cam, Vector2(434, -724), "limites de la caméra")
 	check_eq(cam.px, 6, "zoom maximal")
-	cam.set_view(Vector2(-500, 500), 0)
-	check_eq(cam.cam, Vector2(-202, 44), "limites opposées")
+	cam.set_view(Vector2(-1000, 500), 0)
+	check_eq(cam.cam, Vector2(-434, 44), "limites opposées")
 	check_eq(cam.px, 2, "zoom minimal")
 	cam.free()
 

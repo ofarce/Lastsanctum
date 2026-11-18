@@ -124,6 +124,7 @@ func state() -> TerrainState:
 func tick(dt: float) -> void:
 	GameState.sim_time += dt
 	portal_tick()
+	arrival_tick()
 	if GameState.ended:
 		return
 	var t := Time.get_ticks_usec() if profiling else 0
@@ -160,14 +161,29 @@ func tick(dt: float) -> void:
 	if profiling:
 		t = _prof("balistes", t)
 	combat.update_enemies(dt, alive)
+	Wildlife.tick(self, dt, alive)
 	if not GameState.placed.is_empty():
 		Placeables.tick(self, dt)
 	Martyre.enforce(self)
 	if profiling:
 		t = _prof("ennemis", t)
 	combat.finish_tick(dt, alive)
+	_trample(dt, alive)
 	if profiling:
 		_prof("fin de tick", t)
+
+
+## Piétinement de la petite végétation (Flora) par les unités et les ennemis qui se déplacent.
+func _trample(dt: float, alive: Array[Unit]) -> void:
+	var f := state().flora
+	if f == null:
+		return
+	for u in alive:
+		if not u.hidden:
+			f.trample(u.x, u.z, dt)
+	for e: Enemy in GameState.enemies:
+		if e.hp > 0.0:
+			f.trample(e.x, e.z, dt)
 
 
 ## steer : prochain point du chemin A* vers `to` (chemin en cache dans u.memo).
@@ -183,7 +199,7 @@ func portal_tick() -> void:
 	if GameState.sim_time < te:
 		return
 	for u in GameState.units:
-		if not u.hidden:
+		if not u.hidden or u.arrival_end > 0.0:
 			continue
 		u.hidden = false
 		if u.role == "engineer":
@@ -206,7 +222,7 @@ func move(u: Unit, t: Vector2, dt: float, mult := 1.0) -> void:
 	var d := sqrt(dx * dx + dz * dz)
 	if d < 0.24:
 		return
-	var speed := (SPEED_GUARD if u.role == "guard" else SPEED_ADEPT if is_adept(u) else SPEED_ENGINEER) * mult
+	var speed := (SPEED_GUARD if u.role == "guard" else SPEED_ADEPT if is_adept(u) else SPEED_ENGINEER) * mult * Weather.speed_at(u.x, u.z)
 	var step := minf(d, speed * dt)
 	var nx := u.x + dx / d * step
 	var nz := u.z + dz / d * step
@@ -312,8 +328,12 @@ func update_orb(dt: float) -> void:
 	Combat.zone(CaveShape.CORE.x, CaveShape.CORE.y, 12.0, Color("#8777ac"))
 	# Les balistes s'arment à l'arrivée de l'étincelle (SPARK_ARRIVAL), plus haut.
 	GameState.spark_pending = true
-	GameState.next_wave = GameState.sim_time + 20.0
-	say("L’Ancre s’éveille ! Les gardes tyriennes de l’entrée se rallument · premier assaut dans 20 s.", 5.0)
+	# Premier assaut 20 s plus tard, mais jamais de nuit : il attend alors le matin.
+	GameState.next_wave = DayNight.next_daylight(GameState.sim_time + 20.0)
+	if GameState.next_wave > GameState.sim_time + 20.0:
+		say("L’Ancre s’éveille ! Les gardes tyriennes de l’entrée se rallument · premier assaut au matin.", 5.0)
+	else:
+		say("L’Ancre s’éveille ! Les gardes tyriennes de l’entrée se rallument · premier assaut dans 20 s.", 5.0)
 
 
 ## orderOrb : envoie l'Ingénieur (sélectionné, sinon le premier disponible) réactiver l'Ancre.
@@ -420,7 +440,7 @@ func _collect_mined_item(item: String, miner: Unit, drop_position: Vector2) -> v
 	if miner.role == "engineer":
 		ItemStorage.deposit(item, miner, drop_position)
 	else:
-		miner.carrying = {"item": item, "quantity": 1}
+		miner.carrying = {"item": item, "quantity": int(miner.carrying.get("quantity", 0)) + 1}
 	GameState.effects.append({"type": "mining_gain", "miner": miner, "item": item, "age": 0.0, "duration": 1.0})
 	if not GameState.collected_items.has(item):
 		GameState.collected_items[item] = true
@@ -452,10 +472,12 @@ func update_adepts(_dt: float) -> void:
 		if j == null or not u.alive():
 			continue
 		if j["type"] == "dig":
-			if not u.carrying.is_empty():
+			if not u.carrying.is_empty() and (j.get("delivering", false) or int(u.carrying["quantity"]) >= Production.CARRY_CAPACITY):
 				if production.deliver_harvest(u) and j.get("advance_after_delivery", false):
 					j.erase("advance_after_delivery")
 					_advance_dig(u)
+				if u.carrying.is_empty():
+					j.erase("delivering")
 				continue
 			if not can_mine(u):
 				u.job = null
@@ -467,11 +489,19 @@ func update_adepts(_dt: float) -> void:
 			var block := st.block_definition(key.x, key.y)
 			# Case vide (bloc absent, ou bosquet abattu entre-temps) : on passe à la suivante.
 			if block.is_empty() or (st.walkable(key.x * 4.0 + 2.0, key.y * 4.0 + 2.0) and not st.permanent_ores.has(key)):
+				if not u.carrying.is_empty():
+					j["delivering"] = true
+					j["advance_after_delivery"] = true
+					continue
 				_advance_dig(u)
 				continue
 			var resistance: int = block["resistance"]
 			var eng := u.role == "engineer"
 			if st.dug.has(key):
+				if not u.carrying.is_empty():
+					j["delivering"] = true
+					j["advance_after_delivery"] = true
+					continue
 				_advance_dig(u)
 				continue
 			var at: Vector2 = j["at"]
@@ -491,9 +521,10 @@ func update_adepts(_dt: float) -> void:
 				if j["work"] >= interval:
 					j["work"] -= interval
 					_collect_mined_item(block["drop_item"], u, u.pos())
-					j["advance_after_delivery"] = _spend_wood(u, key) or int(j.get("index", 0)) + 1 < (j.get("cells", []) as Array).size()
-					if production.deliver_harvest(u) and j["advance_after_delivery"]:
-						_advance_dig(u)
+					var exhausted := _spend_wood(u, key)
+					if exhausted or int(u.carrying["quantity"]) >= Production.CARRY_CAPACITY:
+						j["delivering"] = true
+						j["advance_after_delivery"] = exhausted or int(j.get("index", 0)) + 1 < (j.get("cells", []) as Array).size()
 				continue
 			j["work"] += dt * TerrainState.ENGINEER_DIG * TerrainState.DIG_HITS
 			while j["work"] >= TerrainState.HIT_TIME:
@@ -946,8 +977,12 @@ static func snap_for(type: String, p: Vector2) -> Vector2:
 	return Vector2(js_round(p.x / CELL) * CELL, js_round(p.y / CELL) * CELL)
 
 
-## Tout sol praticable est constructible, y compris les allées et les galeries.
+## Tout sol praticable est constructible, y compris les allées et les galeries ; pas sur la rive des
+## ennemis ni sur les ponts (ils doivent rester ouverts).
 func buildable_ground(x: float, z: float) -> bool:
+	var r := state().river
+	if r and (r.far_bank(x, z) or r.on_deck(x, z)):
+		return false
 	return state().walkable(x, z)
 
 
@@ -1042,6 +1077,8 @@ func place_building(p: Vector2) -> void:
 	b.owner = u
 	b.spot = work_spot(type, p)
 	GameState.buildings.append(b)
+	if state().flora:
+		state().flora.clear_rect(b.x - b.half(), b.z - b.half(), b.x + b.half(), b.z + b.half())
 	u.build_job = b
 	u.tx = b.spot.x
 	u.tz = b.spot.y
@@ -1053,7 +1090,11 @@ func place_building(p: Vector2) -> void:
 
 # ---------------------------------------------------------------- Temples, caserne, Puits des Âmes
 
-## summonAdept : un adepte du dieu franchit son portail divin (actif 3,5 s) et part prier au temple.
+## summonAdept : l'esprit mineur du dieu naît à son autel (arrivée « Germe de l'autel », ARRIVAL s, choix de
+## planches/esprits-v6-propositions.html) puis part prier au temple, ou rejoint le point de ralliement.
+## Pendant l'arrivée l'esprit reste caché (ni ciblé, ni sélectionnable) ; arrival_tick le libère.
+const ARRIVAL := 10.0
+
 func summon_adept(b: Building) -> void:
 	if GameState.ended or b == null:
 		return
@@ -1065,21 +1106,43 @@ func summon_adept(b: Building) -> void:
 		say("Invocation : %s requis." % Catalog.cost_text(cost), 3.0)
 		return
 	Catalog.pay(cost)
-	GameState.deity_until[id] = GameState.sim_time + 3.5
 	var A: Dictionary = Catalog.ADEPT[id]
-	var u := spawn(A["name"], DEITY_X[id], PORTAL.y + 1.8, id)
+	var spot := arrival_spot(b)
+	var u := spawn(A["name"], spot.x, spot.y, id)
 	GameState.menace += 1
 	u.hp = A["hp"]
 	u.max_hp = u.hp
 	u.radius = 0.55
-	Combat.flash(DEITY_X[id], PORTAL.y + 1.0, Catalog.DEITY_GLOW[id])
-	if b.rally_point != null:
-		u.tx = b.rally_point.x
-		u.tz = b.rally_point.y
-		u.force_move = true
-	else:
-		set_job(u, {"type": "pray", "temple": b})
-	say("%s franchit le portail et rejoint son temple pour prier." % A["name"], 2.0)
+	u.hidden = true
+	u.tx = u.x
+	u.tz = u.z
+	u.arrival_end = GameState.sim_time + ARRIVAL
+	u.arrival_temple = b
+	say("Un esprit de %s s’éveille à son autel." % Catalog.DEITY_NAMES[id], 2.0)
+
+
+## Pied de l'autel, devant à droite de la statue (là où la graine se pose).
+static func arrival_spot(b: Building) -> Vector2:
+	return Vector2(b.x + 2.5, b.z + b.half() + 0.6)
+
+
+## arrivalTick : l'esprit dont l'arrivée est finie apparaît et part prier (ou rejoint le ralliement).
+func arrival_tick() -> void:
+	for u in GameState.units:
+		if u.arrival_end <= 0.0 or GameState.sim_time < u.arrival_end:
+			continue
+		u.arrival_end = 0.0
+		u.hidden = false
+		var b: Building = u.arrival_temple
+		u.arrival_temple = null
+		if not u.alive():
+			continue
+		if b != null and b.rally_point != null:
+			u.tx = b.rally_point.x
+			u.tz = b.rally_point.y
+			u.force_move = true
+		elif b != null and GameState.buildings.has(b):
+			set_job(u, {"type": "pray", "temple": b})
 
 
 ## trainUnit : file de la caserne (5 au plus), 100 Discipline par combattant.

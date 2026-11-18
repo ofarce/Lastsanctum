@@ -101,6 +101,8 @@ func _draw() -> void:
 			var ang := TAU * k / 64.0
 			pts.append(c + Vector2(cos(ang), sin(ang)) * r)
 		draw_colored_polygon(pts, Color(VEIL, VEIL.a * s))
+		# Attaques à distance, partie au sol (faille, cercles des sceaux).
+		MartyreFx.ground(self)
 		return
 	# Par-dessus les sprites : le mur est de la lumière, les arbres ne doivent pas le cacher.
 	var f := floori(t * FPS) % FRAMES
@@ -114,6 +116,8 @@ func _draw() -> void:
 		var at := (c + Vector2(cos(ang), sin(ang)) * r + Vector2(0.0, -p * hp * 1.2)).round()
 		var col: Color = CARMINE if j % 7 == 0 else GOLD[3]
 		draw_rect(Rect2(at, Vector2.ONE), Color(col, sin(PI * p) * s))
+	# Attaques à distance, partie lumineuse (éruptions, rai et colonnes des sceaux, étourdissement).
+	MartyreFx.air(self)
 
 
 static func _h(a: int, b: int) -> float:

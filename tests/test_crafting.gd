@@ -96,12 +96,11 @@ func test_caserne_waits_for_items_in_blue_chest() -> void:
 	check_near(GameState.res["discipline"], 900.0, 1e-9, "Discipline payée")
 	staff(sim, b, 1)
 	run(sim, Catalog.CASERNE_TIME + 1.0)
-	check_eq(b.queue.size(), 1, "sans arcs ni flèches : l'entraînement attend")
-	_stock({"bow": 4, "arrows": 4})
+	check_eq(b.queue.size(), 1, "sans arc : l'entraînement attend")
+	_stock({"bow": 1})
 	run(sim, 60.0)
 	check(b.queue.is_empty(), "objets apportés : escouade formée")
-	check_eq(Storage.count("bow"), 0, "4 arcs consommés")
-	check_eq(Storage.count("arrows"), 0, "4 flèches consommées")
+	check_eq(Storage.count("bow"), 0, "1 arc consommé")
 	check_eq(GameState.units.filter(func(u: Unit) -> bool: return u.role == "archer").size(), 1, "un archer")
 
 

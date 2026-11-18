@@ -10,7 +10,7 @@ canvas{image-rendering:pixelated;background:#23282f;display:block;margin:4px 0 1
 <h1>Ingénieur tyrien · planches du jeu</h1>
 <p>Sprites générés depuis <code>assets/engineer-volume.js</code> (tenue 8 « Le Tyrien », planche <code>tyrien-equipement.html</code>), vue ¾ à 45°, ×0,5. Une planche pour le corps (« base ») et une par pièce d’équipement : chaque calque ne contient que les pixels que la pièce change, corps en place (masquage et contour compris). Avec <code>?save=1</code> et <code>tools/tyrien/serve.py</code>, tout est écrit dans <code>assets/imported/engineer/tyrien/</code>.</p>
 <div id="log"></div><div id="out"></div>
-<script src="assets/decor.js?v=6"></script><script src="assets/units.js?v=10"></script><script src="assets/engineer-volume.js?v=11"></script>
+<script src="assets/decor.js?v=6"></script><script src="assets/units.js?v=10"></script><script src="assets/engineer-volume.js?v=11"></script><script src="assets/armes-creuset.js?v=1"></script>
 <script>
 'use strict';
 const TYR={id:'tyr',seed:88,hair:'bun',top:{type:'tunic',ramp:PAL.bone,hemY:30},feet:{type:'sandals',ramp:PAL.leath},belt:{ramp:PAL.rope,y:37,h:1.8,braid:1},bracers:1};
@@ -25,6 +25,7 @@ const ANIMS={
  pray:{count:24,cols:12,fps:10,pose:i=>POSES.pray(i/10),note:'agenouillé, mains jointes (incantation)'},
  settle:{count:10,cols:12,fps:10,pose:i=>{const t=i/9,S=pose('idle',0),C=POSES.crouch(),L=POSES.lotus(0);return t<.4?lerpPose(S,C,ease(t/.4)):lerpPose(C,L,ease((t-.4)/.6))},note:'s’assoit en tailleur : debout → accroupi → lotus (jouée à l’envers pour se relever)'},
  lotus:{count:24,cols:12,fps:10,pose:i=>POSES.lotus(i/10),note:'méditation en tailleur, yeux clos ; lévitation ajoutée en jeu'},
+ slash1:{...A_ANIMS.slash1},slash2:{...A_ANIMS.slash2},shoot:{...A_ANIMS.shoot},
  aim:{count:76,cols:19,pose:i=>{const r=AIM.rows[Math.floor(i/19)];return POSES.aim(AIM.angles[i%19],r.recoil,r.pulse,VTH)},note:'visée du lance-pitons : 19 angles (−90° à +90°) × 4 lignes (recul 0 / 1,5 / 3, suspension)'}};
 const PIECES=[];for(const s of ORDER)for(const[v,l]of GEAR[s].opts)if(v)PIECES.push({key:v,slot:s,label:l});
 const log=m=>{document.getElementById('log').textContent+=m+'\n'};
@@ -42,6 +43,16 @@ async function build(){const t0=performance.now(),bs=sheet(),bg=bs.getContext('2
   for(const[n,a]of Object.entries(ANIMS))for(let i=0;i<a.count;i++){const f=render({[p.slot]:p.key},a.pose(i)).finish(),A=px(f),B=px(base[n][i]),out=new ImageData(FW,FH),O=new Uint32Array(out.data.buffer);
    for(let j=0;j<A.length;j++)if(A[j]!==B[j])O[j]=A[j];const c=document.createElement('canvas');c.width=FW;c.height=FH;c.getContext('2d').putImageData(out,0,0);g.drawImage(c,(i%a.cols)*FW,a.y+Math.floor(i/a.cols)*FH)}
   sheets[p.key]=s;log(p.key+' '+Math.round(performance.now()-t0)+' ms')}
+ // armes du Creuset (planches/assets/armes-creuset.js) : dessin en pixels collé à la main, suivi en 3D pendant les attaques ;
+ // rien pendant l'agenouillement, la prière, la méditation et la visée des pitons.
+ const NO_WEAPON=['kneel','pray','settle','lotus','aim'];
+ for(const wp of WEAPONS){await new Promise(r=>setTimeout(r));const s=sheet(),g=s.getContext('2d');
+  for(const[n,a]of Object.entries(ANIMS)){if(NO_WEAPON.includes(n))continue;for(let i=0;i<a.count;i++){const P=a.pose(i),F=new Fig(FW,FH,K,FAX,FAY,VTH),att=A_ANIMS[n]?A_ANIMS[n].at(i):null;
+   const f=aWeaponOn(F,base[n][i],wp,P,att,FW,FH),A=px(f),B=px(base[n][i]),out=new ImageData(FW,FH),O=new Uint32Array(out.data.buffer);
+   for(let j=0;j<A.length;j++)if(A[j]!==B[j])O[j]=A[j];const c=document.createElement('canvas');c.width=FW;c.height=FH;c.getContext('2d').putImageData(out,0,0);g.drawImage(c,(i%a.cols)*FW,a.y+Math.floor(i/a.cols)*FH)}}
+  sheets[wp.key]=s;log(wp.key+' '+Math.round(performance.now()-t0)+' ms')}
+ // icônes 32 × 32 des armes (coffre, indicateur du Creuset), dans l'ordre de WEAPONS
+ {const c=document.createElement('canvas');c.width=32*WEAPONS.length;c.height=32;const g=c.getContext('2d');WEAPONS.forEach((wp,i)=>g.drawImage(aIcon(wp,32),i*32,0));sheets.weaponicons=c}
  // visée : bouche du lance-pitons et épaule, dans le repère de l'image
  const muzzle=AIM.angles.map(a=>{const P=POSES.aim(a,0,.5,VTH),F=new Fig(FW,FH,K,FAX,FAY,VTH),r=P.aimArm,q=F.proj(add(r.W,mul(P.aimDir,4.5)));return[q.x+.5,q.y+.5]});
  const F0=new Fig(FW,FH,K,FAX,FAY,VTH),sq=F0.proj(POSES.aim(0,0,.5,VTH).aimArm.S),hq=F0.proj(pose('idle',0).head);
@@ -51,7 +62,8 @@ async function build(){const t0=performance.now(),bs=sheet(),bg=bs.getContext('2
  const meta={source:'planches/assets/engineer-volume.js (tenue « Le Tyrien »), vue ¾ 45°, k=0.5 — planches/tyrien-export.html',frame_w:FW,frame_h:FH,ax:FAX,ay:FAY,h:42,stride:2.1,self_bob:true,
   anims:Object.fromEntries(Object.entries(ANIMS).map(([n,a])=>[n,{y:a.y,cols:a.cols,rows:a.rows,count:a.count,...(a.fps?{fps:a.fps}:{}),note:a.note}])),
   aim:{angles:AIM.angles,rows_def:AIM.rows,muzzle,shoulder:[sq.x+.5,sq.y+.5]},
-  order:ORDER,slots:Object.fromEntries(ORDER.map(s=>[s,GEAR[s].label])),pieces:Object.fromEntries(PIECES.map(p=>[p.key,{slot:p.slot,name:p.label}]))};
+  order:ORDER,slots:Object.fromEntries(ORDER.map(s=>[s,GEAR[s].label])),pieces:Object.fromEntries(PIECES.map(p=>[p.key,{slot:p.slot,name:p.label}]).concat(WEAPONS.map(w=>[w.key,{slot:w.slot,name:w.label,item:w.item,hold:w.hold}]))),
+  weapon_icons:WEAPONS.map(w=>w.item)};
  window.EXPORT={meta,sheets};
  for(const[n,c]of Object.entries(sheets)){const d=document.createElement('div');d.textContent=n;const v=document.createElement('canvas');v.width=c.width;v.height=c.height;v.getContext('2d').drawImage(c,0,0);d.append(v);document.getElementById('out').append(d)}
  log('terminé en '+Math.round(performance.now()-t0)+' ms');

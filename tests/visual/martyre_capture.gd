@@ -60,6 +60,34 @@ func _ready() -> void:
 	sim.paused = true
 	await _shot("4_duel_suite")
 	print("PV Martyre ", GameState.martyre.hp if GameState.martyre else -1.0, " · Ingénieur ", eng.hp, " · état ", GameState.martyre_state)
+	# Attaques à distance : Ingénieur immobile à l'est de la Martyre.
+	var boss: Enemy = GameState.martyre
+	eng.stance = "hold"
+	eng.hp = eng.max_hp
+	boss.x = c.x - 6.0
+	boss.z = c.y - 10.0
+	eng.x = boss.x + 12.0
+	eng.z = boss.z
+	eng.tx = eng.x
+	eng.tz = eng.z
+	GameState.martyre_busy_until = -INF
+	GameState.martyre_ready = {"fissure": GameState.sim_time, "seals": INF}
+	world.camera.set_view(Vector2(boss.x + 6.0, boss.z - 3.0), 3)
+	_run(sim, 0.4 + 6.0 / Martyre.FISSURE["speed"])
+	await _shot("6_fissure")
+	_run(sim, 6.0 / Martyre.FISSURE["speed"] + 0.12)
+	await _shot("7_eruption")
+	_run(sim, 1.4)
+	eng.x = boss.x + 16.0
+	eng.tx = eng.x
+	GameState.martyre_busy_until = -INF
+	GameState.martyre_ready = {"fissure": INF, "seals": GameState.sim_time}
+	world.camera.set_view(Vector2(boss.x + 9.0, boss.z - 3.0), 3)
+	_run(sim, Martyre.SEALS["place"] + Martyre.SEALS["charge"] * 0.6)
+	await _shot("8_sceaux_charge")
+	_run(sim, Martyre.SEALS["charge"] * 0.4 + 0.12)
+	await _shot("9_sceaux_colonne")
+	print("Après les attaques · Ingénieur ", eng.hp)
 	GameState.martyre.hp = 0.0
 	sim.paused = false
 	for i in 30:
@@ -67,3 +95,8 @@ func _ready() -> void:
 	sim.paused = true
 	await _shot("5_chute")
 	get_tree().quit()
+
+
+func _run(sim: Simulation, seconds: float) -> void:
+	for i in roundi(seconds * 60.0):
+		sim.tick(1.0 / 60.0)
