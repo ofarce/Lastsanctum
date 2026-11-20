@@ -11,7 +11,7 @@ var view: UnitView
 
 
 static func equipped(u: Unit) -> bool:
-	return u.role == "engineer" and not u.is_enemy() and u.alive() and GameState.research_done.has("mining_artifact")
+	return u.role == "engineer" and not u.is_enemy() and u.alive() and GameState.mining_seal
 
 
 static func sphere(index: int, time: float) -> Vector2:

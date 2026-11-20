@@ -48,10 +48,12 @@ d'assaut, selon son type (`Catalog.KILL_MENACE` : fanatique 1, archer 2, bouclie
 ## Nuit
 
 `night.gd` (après le premier assaut). Flot de squelettes levés un peu partout dehors (jamais dans la grotte), du crépuscule à la fin de nuit, rare
-puis serré puis nul avant l'aube (`Catalog.NIGHT_FLOW`). Chaque nuit, chaque pylône éveillé et non
-canalisé, ainsi que le pylône non canalisé le plus proche de l'Ancre même endormi, lâche une meute de chiens qui
+puis serré puis nul avant l'aube (`Catalog.NIGHT_FLOW`). Chaque nuit, chaque pylône non canalisé lâche,
+si et seulement si un chemin praticable le relie à l'Ancre, une meute de chiens née à son pied qui
 marche sur l'Ancre (`Catalog.NIGHT_RAID` : 3 + 1 par palier, 12 au plus).
 Squelettes et meutes sont hors menace et hors fin de vague (`Enemy.beast`).
+
+`skeletons.gd`. Les trois squelettes de la nuit : à collier (par trois, jamais à plus de 4 blocs les uns des autres, éclats quand il est touché), à bubons (touché, blesse tout à moins de 1 bloc sauf les squelettes), explosif (à sa mort, souffle de 2 blocs puis dix boules de feu). Un bloc = 4 unités. Scène d’essai : `tests/visual/skeleton_capture.tscn`.
 
 ## Pylônes de Merenor
 
@@ -73,8 +75,8 @@ le nord, fermé par une porte de chair (`eye_gate`, infranchissable tant que `ey
 deux cases d'une galerie du biome 2 (la salle et le biome 2 restent deux réseaux). Le boss s'éveille quand la salle
 est découverte ; la salle sert d'arène (seul l'Ingénieur y entre et l'y blesse ; l'œil ouvert prend double dégâts).
 Huit attaques (`planches/oeil-maj.html`) enchaînées par phase selon `ROTATION` : Regard, Larmes, Cils (I) ;
-plus Strabisme et Pupilles errantes (II) ; Regard sur deux axes, Fixation, Clignement (III), et Les mille yeux une
-fois à l'entrée en phase III (`INTRO`). Chaque attaque pose des événements datés et des contrôleurs dans
+plus Strabisme et Pupilles errantes (II) ; Regard sur deux axes, Fixation, Clignement (III), et Les mille yeux à
+l'entrée en phase II puis en phase III (`INTRO`). Chaque attaque pose des événements datés et des contrôleurs dans
 `GameState.oeil_fx` ; les pupilles errantes sont des ennemis `PUPIL_KIND` menés par l'Œil (cibles fragiles,
 seul l'Ingénieur les touche). Racines au contact. Sa mort ouvre la porte. Rendu : `world/oeil/` (piste « L'Orbite »,
 calques par phase dans `assets/imported/oeil/`, exportés par `tools/oeil/export.sh`). Capture :

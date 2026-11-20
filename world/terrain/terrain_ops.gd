@@ -102,7 +102,6 @@ func open_vault() -> void:
 		x += 4.0
 	state.version += 1
 	Combat.zone(CaveShape.CHEST.x, CaveShape.CHEST.y, 6.0, Color("#5ce8ff"))
-	Events.notice.emit("Une réserve tyrienne scellée ! Un coffre antique y repose.", 4.0)
 
 
 ## Mur sud soufflé par l'explosion du bouclier : la brèche devient creuse, sol repeint, roche retirée.
@@ -225,6 +224,4 @@ func reveal_gallery(sx: float, sz: float) -> void:
 	state.version += 1
 	Combat.zone((X0 + X1) / 2.0, (Z0 + Z1) / 2.0, 6.0, Color("#8fd6f0"))
 	var msg := "Galerie découverte ! (%d / %d)" % [state.found, state.count]
-	if not woke.is_empty():
-		msg += " · un Pylône de Merenor s’y dresse : sa corruption ronge l’Ingénieur et ses gardiens renaissent tant qu’il n’est pas canalisé."
-	Events.notice.emit(msg, 5.0 if not woke.is_empty() else 3.0)
+	Events.notice.emit(msg, 3.0)

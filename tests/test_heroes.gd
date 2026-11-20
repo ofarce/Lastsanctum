@@ -7,7 +7,8 @@ func _usnap() -> Dictionary:
 	return {
 		"units": GameState.units.map(func(o: Unit) -> Array:
 			return [r4(o.x), r4(o.z), r4(o.hp), r4(o.attack), r4(o.ability), r4(o.shield), r4(o.buff)]),
-		"enemies": GameState.enemies.map(func(e: Enemy) -> Array: return [r4(e.x), r4(e.z), r4(e.hp)]),
+		# Gorge-Cuivre attend dans sa salle du biome 2 dès le premier tick : hors du combat relevé.
+		"enemies": GameState.enemies.filter(func(e: Enemy) -> bool: return e.kind != "gorge").map(func(e: Enemy) -> Array: return [r4(e.x), r4(e.z), r4(e.hp)]),
 		"core": r4(GameState.core_hp), "effects": GameState.effects.size()}
 
 
@@ -17,43 +18,39 @@ func _ally(sim: Simulation, role: String, x: float, z: float, hp: float) -> Unit
 	return a
 
 
-## 40 pas de 0,05 s de la boucle complète : déplacements, frappes (épée, salves, soins), ripostes, effets.
-func test_hero_fights_match_js() -> void:
+## 40 pas de 0,05 s de la boucle complète, sur les scènes de combat relevées dans le prototype (héros, alliés,
+## ennemis). La parité pas à pas n'est plus possible : les ennemis arment leurs coups (Catalog.ENEMY_WINDUP), leurs
+## dégâts ont été rééquilibrés et une unité frappe dès le bord de la silhouette de sa cible. On vérifie que le
+## combat a bien lieu : un ennemi est entamé, le héros tient, et ses animations d'attaque partent.
+func test_hero_fights_play_out() -> void:
 	for H: Dictionary in js()["heroes"]:
 		var u := setup(H["role"], int(H["level"]))
 		var sim := game_sim()
-		var engineer_ally: Unit = null
 		for a: Array in H["allies"]:
 			var ally := _ally(sim, a[0], a[1], a[2], a[3])
 			if ally.role == "engineer":
-				engineer_ally = ally
+				# L'Ingénieur du prototype (80 dégâts à distance) n'existe plus : en armure il frappe à 1 000.
+				ally.unarmored = true
 		for f: Array in H["foes"]:
 			foe(f[0], f[1], f[2], f[3])
 		GameState.next_wave = 1e9
 		GameState.orb_active = false
-		if engineer_ally:
-			# L'Ingénieur du prototype (80 dégâts à distance) n'existe plus : en armure il frappe à 1 000, sans
-			# armure au corps à corps à 5. Pas de parité pas à pas : on vérifie que le combat a lieu.
-			engineer_ally.unarmored = true
-			var target: Enemy = GameState.enemies[0]
-			var hp0 := target.hp
-			for _k in H["steps"].size():
-				sim.tick(0.05)
-			check(target.hp < hp0, "%s niv. %d : l'ennemi est touché (%.0f → %.0f)" % [H["role"], H["level"], hp0, target.hp])
-			check(u.alive(), "%s niv. %d : le héros tient" % [H["role"], H["level"]])
-			continue
-		var i := 0
-		for want: Dictionary in H["steps"]:
+		var foes := GameState.enemies.duplicate()
+		var total := 0.0
+		for e: Enemy in foes:
+			total += e.hp
+		for _k in H["steps"].size():
 			sim.tick(0.05)
-			if not _same_quiet(_usnap(), want):
-				check(false, "%s niv. %d, pas %d : %s ≠ %s" % [H["role"], H["level"], i, _usnap(), want])
-				break
-			i += 1
-		check_eq(i, H["steps"].size(), "%s niv. %d : pas identiques au prototype" % [H["role"], H["level"]])
+		var left := 0.0
+		for e: Enemy in foes:
+			left += maxf(0.0, e.hp)
+		var what := "%s niv. %d" % [H["role"], H["level"]]
+		check(left < total, "%s : les ennemis sont entamés (%.0f → %.0f)" % [what, total, left])
+		check(u.alive(), "%s : le héros tient" % what)
 		if u.role == "paladin":
-			check(u.sw >= 0, "le Paladin a donné des coups d'épée (animation)")
+			check(u.sw >= 0, "%s : le Paladin a donné des coups d'épée (animation)" % what)
 		if u.role == "shooter":
-			check(u.sh_t0 > 0.0, "le Tireur a tiré des salves (animation)")
+			check(u.sh_t0 > 0.0, "%s : le Tireur a tiré des salves (animation)" % what)
 
 
 ## Égide, Restauration, Discipline martiale, tir de précision, puis recharge.

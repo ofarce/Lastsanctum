@@ -105,6 +105,37 @@ static func bearer_name(kind: String, r: RandomNumberGenerator) -> String:
 	return "%s %s" % [lists[0][r.randi() % (lists[0] as Array).size()], lists[1][r.randi() % (lists[1] as Array).size()]]
 
 
+## Prime sans touche (bilan « Visibilité des balles », 2026-11-20) : un boss que l'Exilé a frappé et abattu sans
+## jamais être touché pendant le combat laisse en plus ces lignes. Chiffres de moi, à valider.
+const FLAWLESS := {
+	"martyre": [{"item": "copper_armor", "chance": 1.0}],
+	"oeil": [{"item": "copper_armor", "chance": 1.0}],
+	"gorge": [{"item": "copper_armor", "chance": 1.0}, {"item": "copper", "chance": 1.0, "n": [8, 12]}],
+}
+
+
+## Coup porté (Combat.damage) : retient qu'un boss a été frappé par l'Exilé, ou que l'Exilé a été touché pendant
+## qu'il combattait un boss.
+static func note_hit(t: Unit, src: Unit) -> void:
+	if t is Enemy:
+		if FLAWLESS.has((t as Enemy).kind) and src != null and src.role == "engineer":
+			(t as Enemy).engineer_hit = true
+		return
+	if t.role != "engineer":
+		return
+	if Martyre.duelist() == t:
+		GameState.martyre.touched_engineer = true
+	if OeilMatrice.duelist() == t:
+		GameState.oeil.touched_engineer = true
+	if Gorge.active() and t.pos().distance_to(Gorge.center()) <= Gorge.ROOM:
+		Gorge.boss().touched_engineer = true
+
+
+## Le boss e a été abattu sans que l'Exilé, qui l'a frappé, soit touché.
+static func flawless(e: Enemy) -> bool:
+	return FLAWLESS.has(e.kind) and e.engineer_hit and not e.touched_engineer
+
+
 ## Porteur à inscrire sur `item` pris sur le corps `e` : seulement les armes et armures.
 static func owner_of(e: Enemy, item: String) -> String:
 	return e.bearer if Gear.is_gear(item) and Gear.slot_of(item) != Gear.MODULE else ""
@@ -132,6 +163,8 @@ static func roll(e: Enemy) -> void:
 		return
 	var r := RandomNumberGenerator.new()
 	r.seed = hash([e.kind, snappedf(e.x, 0.01), snappedf(e.z, 0.01), snappedf(GameState.sim_time, 0.001), GameState.menace])
+	if flawless(e):
+		rows = rows + FLAWLESS[e.kind]
 	for item in roll_rows(rows, r):
 		e.loot.append(item)
 		if Gear.is_gear(item) and Gear.slot_of(item) != Gear.MODULE and e.bearer == "":

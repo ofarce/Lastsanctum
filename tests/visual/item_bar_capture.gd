@@ -41,7 +41,7 @@ func _ready() -> void:
 	world.camera.set_view(Vector2(-1.0, -150.0), 3)
 	ExileGallery.incarnate(eng)
 	await _shot("3_incarne_cases_vides")
-	GameState.research_done["mining_artifact"] = true
+	GameState.mining_seal = true
 	GameState.research_done["minimap"] = true
 	GameState.research_done[Ammo.RESEARCH] = true
 	eng.unarmored = true

@@ -10,7 +10,7 @@ func test_seal_visual_follows_equipment_and_body_visibility() -> void:
 	var fx = view._mining_seal
 	fx.tick(1, Vector2.ZERO, true)
 	check(not fx.visible, "pas de sphères avec la seule armure de minage")
-	GameState.research_done["mining_artifact"] = true
+	GameState.mining_seal = true
 	fx.tick(-1, Vector2(0, -8), true)
 	check(fx.visible, "sceau équipé rend les sphères visibles")
 	check_eq(fx.scale, Vector2(-1, 1), "sillage suit l'orientation")

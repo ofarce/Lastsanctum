@@ -1,23 +1,24 @@
 class_name ItemBanner
 extends Control
 ## Bannières « Reçu : OBJET » (bannière 16 bits, SnesBanner) : titre centré, gros visuel à gauche, texte à droite.
-## Plusieurs objets s'enchaînent : la première action (clic, touche) pose la bannière suivante par-dessus,
-## la dernière action referme le tout. Chaque bannière joue le son « victoire ».
+## Plusieurs objets s'enchaînent, un seul à la fois : chaque action (clic, touche) remplace la bannière
+## par la suivante, la dernière action referme le tout. Chaque bannière joue le son « victoire ».
 
 const ICON_BOX := 96.0
 const TITLE_SIZE := 19
 const TITLE_H := 30.0
 const GAP := 18.0
-## Décalage de la bannière posée par-dessus, pour laisser voir la précédente.
-const STACK := Vector2(0, 16)
 ## Délai avant qu'une action puisse faire avancer (évite que l'action qui a ouvert ne referme aussitôt).
 const ARM_DELAY := 0.25
 const SOUND := "victoire"
 const SOUND_DB := -8.0
 
 ## Texte de chaque objet remis (titre en capitales, visuel tiré des sprites de l'Ingénieur).
+## Nom des objets absents de data/gear_items.gd.
+const NAMES := {"mining_seal": "Sceau de minage"}
 const TEXTS := {
 	"cannon": "L'arme de base de tous les Exilés, la vôtre n'ayant pas survécu au voyage temporel. Consomme de l'énergie spirituelle à chaque tir. Faites-en bon usage.",
+	"mining_seal": "Un sceau commun qui vous permet de miner la roche et certains minéraux basiques.",
 	"combinaison": "Une combinaison sommaire commune à tous les Exilés, votre armure n'ayant pas supporté le voyage temporel. Il existe peut-être des moyens de la renforcer ?",
 }
 
@@ -45,7 +46,7 @@ func show_items(items: Array) -> void:
 		_next()
 
 
-## Action du joueur : bannière suivante par-dessus, ou fermeture après la dernière.
+## Action du joueur : bannière suivante à la place de l'actuelle, ou fermeture après la dernière.
 func advance() -> void:
 	if not active() or Time.get_ticks_msec() / 1000.0 < _armed_at:
 		return
@@ -65,6 +66,9 @@ func close() -> void:
 
 func _next() -> void:
 	var item: String = _queue.pop_front()
+	for old in _cards:
+		old.queue_free()
+	_cards.clear()
 	var c := _Card.new()
 	c.setup(item, TEXTS.get(item, ""))
 	add_child(c)
@@ -78,13 +82,14 @@ func _next() -> void:
 func _layout() -> void:
 	var view := get_viewport_rect().size
 	var w := SnesBanner.width(view)
-	for i in _cards.size():
-		var c := _cards[i]
+	for c in _cards:
 		c.layout(w)
-		c.position = Vector2(roundf((view.x - w) / 2.0), BossBar.top()) + STACK * i
+		c.position = Vector2(roundf((view.x - w) / 2.0), BossBar.top())
 
 
 static func visual(item: String) -> Texture2D:
+	if item == "mining_seal":
+		return HudStyle.MINING_SEAL
 	var wi := TyrienArt.weapon_icon(item)
 	if wi:
 		return wi
@@ -102,7 +107,7 @@ class _Card extends Control:
 
 	func setup(item: String, text: String) -> void:
 		mouse_filter = Control.MOUSE_FILTER_IGNORE
-		var name_ := String(preload("res://data/gear_items.gd").ITEMS.get(item, {}).get("name", item))
+		var name_ := String(preload("res://data/gear_items.gd").ITEMS.get(item, {}).get("name", ItemBanner.NAMES.get(item, item)))
 		_title.text = "Reçu : " + name_.to_upper()
 		_title.add_theme_font_size_override("font_size", TITLE_SIZE)
 		_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER

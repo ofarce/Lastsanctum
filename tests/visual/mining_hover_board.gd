@@ -22,7 +22,7 @@ func _ready() -> void:
 	eng.tx = eng.x
 	eng.tz = eng.z
 	GameState.portal_start = -100
-	GameState.research_done["mining_artifact"] = true
+	GameState.mining_seal = true
 	GameState.selected = [eng]
 	GameState.orb_active = true
 	GameState.orb_finished_at = -20

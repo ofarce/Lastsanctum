@@ -32,7 +32,7 @@ func _ready() -> void:
 	_key(KEY_B)
 	await _wait(0.2)
 	_check(GameState.hud_menu == "build", "B ouvre le menu de construction")
-	_check(hud._buttons.size() == 1 and hud._build_buttons.size() == 12, "rangée de 12 bâtiments + Retour (%d, %d)" % [hud._build_buttons.size(), hud._buttons.size()])
+	_check(hud._build_buttons.size() == 4, "onglet Temples : 4 temples (%d)" % hud._build_buttons.size())
 	await _shot("menu_construire")
 	var mv := InputEventMouseMotion.new()
 	mv.position = hud._build_buttons[1].get_global_rect().get_center()

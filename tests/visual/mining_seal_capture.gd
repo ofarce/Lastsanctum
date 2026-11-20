@@ -21,7 +21,7 @@ func _ready() -> void:
 	u.tx = u.x
 	u.tz = u.z
 	GameState.portal_start = -100
-	GameState.research_done["mining_artifact"] = true
+	GameState.mining_seal = true
 	world.camera.input_enabled = false
 	world.camera.set_view(Vector2(u.x, u.z), 4)
 	world.finish_painting()

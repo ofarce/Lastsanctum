@@ -99,7 +99,7 @@ func test_channel_needs_one_spirit_of_each_god() -> void:
 	check_eq(p["cover"], 0.0, "la nappe s'est retirée")
 	# Canalisé : une bête tuée ne revient pas, même longtemps après.
 	(_guards(p)[0] as Enemy).hp = 0.0
-	var n := _guards(p).size() - 1
+	var n := _guards(p).size()  # vivants seulement : la bête tuée n'y est déjà plus
 	_advance(sim, Pylons.RESPAWN * 2.0)
 	check_eq(_guards(p).size(), n, "aucune renaissance quand il est canalisé")
 	check(Pylons.timer(p).is_empty(), "pas de minuteur")

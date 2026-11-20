@@ -1,0 +1,286 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Aura de la Martyre</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;600&display=swap" rel="stylesheet">
+<style>
+/* Planche : couleur du sol dans l'aura (dôme) de la Martyre de Byrsa, qui part d'elle et tranche sur l'or.
+   Servie depuis la racine du dépôt (config launch « planches-balles », port 8197 → /planches/martyre-aura-propositions.html)
+   pour lire les atlas du jeu. ?t= avance la simulation, ?pause fige, ?all dessine toutes les cartes. */
+:root{--bg:#0c0d10;--panel:#14161b;--line:#2c3038;--txt:#e2dccb;--mut:#9a9ca2;--acc:#5ce8ff;--gold:#d0a038;--ok:#5fbf7a;--redo:#e0b04a;--no:#e0583a;color-scheme:dark}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--txt);font:15px/1.45 'Pixelify Sans',system-ui,sans-serif}
+header,main{max-width:1320px;margin:auto;padding:18px 16px}main{padding-bottom:80px}
+h1{margin:0;font-weight:600;letter-spacing:.08em;font-size:26px;color:var(--acc)}
+h2{font-weight:600;font-size:20px;color:var(--gold);margin:36px 0 6px;letter-spacing:.05em}
+p.lead{color:var(--mut);margin:6px 0 0;max-width:1040px}p.lead b{color:var(--txt);font-weight:600}
+code{font:13px ui-monospace,Menlo,monospace;color:#c8bfa6}
+.rules{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr));gap:10px;margin-top:14px}
+.rules div{background:var(--panel);border:1px solid var(--line);padding:10px 12px;font-size:14px;color:var(--mut)}.rules b{color:var(--gold);display:block;font-weight:600}
+button{font:inherit;color:var(--txt);background:#1c1f26;border:1px solid var(--line);padding:5px 11px;cursor:pointer}
+button:hover{border-color:#3a6470}button[aria-pressed=true]{border-color:var(--acc);background:#12303a}
+button:focus-visible,textarea:focus-visible{outline:2px solid var(--gold);outline-offset:1px}
+.bar{position:sticky;top:0;z-index:5;background:var(--bg);border-bottom:1px solid var(--line);display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding:8px 16px;max-width:1320px;margin:auto}
+.bar .lab{color:var(--mut);font-size:13px;margin-left:10px}#tally{margin-left:auto;color:var(--mut);font-size:13px}
+.bar .hue i{display:inline-block;width:10px;height:10px;margin-right:5px;border:1px solid #000;vertical-align:-1px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,600px),1fr));gap:14px;margin-top:12px}
+.card{background:var(--panel);border:1px solid var(--line);display:flex;flex-direction:column;min-width:0}
+.card[data-v=garder]{border-color:#2f6a40}.card[data-v=revoir]{border-color:#7a6226}.card[data-v=rejeter]{border-color:#7a3a2a;opacity:.72}
+canvas.px{image-rendering:pixelated;display:block;width:100%;height:auto;background:#07080a}
+body.bw canvas{filter:grayscale(1)}
+.cap{padding:10px 14px 12px;display:flex;flex-direction:column;gap:6px}
+.cap b.t{color:var(--acc);font-weight:600;font-size:18px}.cap b.t.cur{color:var(--mut)}.cap p{margin:0;color:var(--mut);font-size:14px}
+.spec{font:12px/1.5 ui-monospace,Menlo,monospace;color:#b8ad92}
+.sw{display:flex;gap:3px}.sw i{flex:1;height:10px;border:1px solid #000}
+.zoom{display:flex;gap:6px;flex-wrap:wrap;padding:8px 14px 0}.zoom canvas{width:96px;height:96px;image-rendering:pixelated;background:#222}
+.verdict{display:flex;gap:6px}.verdict button{flex:1 1 0;min-width:0;font-size:13px}
+.verdict button.sel[data-v=garder]{background:#1f3a28;border-color:var(--ok)}.verdict button.sel[data-v=revoir]{background:#3a321b;border-color:var(--redo)}.verdict button.sel[data-v=rejeter]{background:#3a2019;border-color:var(--no)}
+textarea{background:#101217;color:var(--txt);border:1px solid var(--line);font:13px system-ui,sans-serif;padding:6px 8px;resize:vertical;min-height:32px;width:100%}
+table{border-collapse:collapse;width:100%;font-size:14px}td,th{border-bottom:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}th{color:var(--gold);font-weight:600}td{color:var(--mut)}td b{color:var(--txt);font-weight:600}
+td .verdict{min-width:240px}td textarea{margin-top:6px}
+.tablewrap{overflow-x:auto;background:var(--panel);border:1px solid var(--line);margin-top:12px}
+#out{display:none;margin-top:10px;min-height:180px;font-family:ui-monospace,monospace}
+</style></head><body>
+<header><h1>AURA DE LA MARTYRE</h1>
+<p class="lead">Aujourd’hui le sol du dôme n’a qu’un <b>voile d’or à 7 %</b> (<code>MartyreDome.VEIL</code>) : la Martyre, son mur, ses failles et ses éclats sont dorés, et le sol aussi. La demande : dans son aura, <b>en partant d’elle</b>, le sol prend une couleur qui <b>tranche sur l’or</b>. Chaque vignette est à 1 px natif (8 px par unité), avec la vraie Martyre (atlas v4), l’Exilé, les éclats du jeu (double bord sombre) et la Rosace des sceaux en boucle. Le mur passe à droite : la Martyre est à 18 u de lui, l’Exilé à 4 u. Le bouton <b>Noir et blanc</b> vérifie que les éclats se lisent encore sans la teinte.</p>
+<div class="rules">
+ <div><b>Pourquoi pas rouge, orange, jaune</b>Le carmin est réservé aux annonces (pointillés, cercles), l’orange et le jaune au feu, à la faille et aux éclats. Un sol dans ces teintes ferait disparaître les trois.</div>
+ <div><b>Teinte par carte de valeurs</b>La couleur ne recouvre pas l’herbe : chaque pixel garde sa valeur et prend la teinte (rampe de 4 tons). Brins, pierres et chemin restent lisibles.</div>
+ <div><b>Tramé comme le mur</b>Le passage du sol normal au sol teinté se fait en trame 4 × 4, comme le mur du dôme et les failles, pas en transparence.</div>
+ <div><b>Elle en est la source</b>Le cœur de la teinte est sous ses pieds, pas au centre du dôme : la couleur la suit, s’étend quand le dôme se lève et rentre en elle à sa chute.</div>
+</div></header>
+<div class="bar"><button id="bw" aria-pressed="false">Noir et blanc</button><button id="slow" aria-pressed="false">Ralenti ×0,4</button><button id="pause" aria-pressed="false">Pause</button>
+ <span class="lab">Teinte des sections 2 à 4 :</span><span id="hues" style="display:flex;gap:4px;flex-wrap:wrap"></span><span id="tally"></span></div>
+<main>
+<h2>1 · La couleur</h2>
+<p class="lead">Même forme partout (dégradé tramé, plein à ses pieds, 40 % au mur, voir 2·C). Seule la rampe change. Loupes ×4 : un petit puis un gros éclat sur le sol teinté près d’elle, puis l’Exilé et sa zone touchée.</p>
+<div class="grid" id="s1"></div>
+
+<h2>2 · La forme : comment la couleur part d’elle</h2>
+<p class="lead">Avec la teinte choisie dans la barre (Outremer par défaut). Les ondes et les veines bougent ; la nappe et les dégradés sont fixes.</p>
+<div class="grid" id="s2"></div>
+
+<h2>3 · Quand elle marche</h2>
+<p class="lead">La Martyre se déplace dans son dôme (pas de 1,9 u, comme en jeu). Le centre de la teinte suit ses pieds, le mur reste où il est.</p>
+<div class="grid" id="s3"></div>
+
+<h2>4 · Lever et chute</h2>
+<p class="lead">Boucle de 6 s : le dôme se lève (1 s, <code>MartyreDome.RISE</code>), duel, puis elle tombe (1,2 s, <code>Martyre.COLLAPSE</code>). La couleur naît d’elle et y retourne.</p>
+<div class="grid" id="s4"></div>
+
+<h2>5 · Réglages</h2>
+<p class="lead">Points sans vignette. Un verdict par ligne ; les chiffres sont de moi.</p>
+<div class="tablewrap"><table id="others"><tr><th>Point</th><th>Proposition</th><th>Verdict</th></tr></table></div>
+
+<h2>Bilan</h2><p class="lead">Les choix sont gardés dans ce navigateur. « Copier le bilan » produit le texte à me renvoyer.</p>
+<div style="margin-top:10px;display:flex;gap:8px"><button id="copy">Copier le bilan</button><button id="clear">Tout effacer</button></div>
+<textarea id="out" readonly></textarea>
+</main>
+<script>
+'use strict';
+// ------------------------------------------------------------------ Constantes du jeu (martyre_dome.gd, martyre_fx.gd)
+const GOLD=['#a07424','#d0a038','#f0cc66','#fff2b0'], CARMINE='#e2382e';
+const LIGHT=['#3a280c','#6a4a16','#a07424','#d0a038','#f0cc66','#fff2b0','#fffbe8'];
+const BAYER=[[0,8,2,10],[12,4,14,6],[3,11,1,9],[15,7,13,5]];
+const W=400,H=240,K=8,MLIFT=17;
+// Dôme : centre hors champ à gauche, rayon Martyre.RADIUS = 48 u = 384 px.
+const DC=[-120,150],DR=384;
+const MART=[118,142], EXIL=[230,182];
+const HUES={
+ A:{name:'Outremer',r:['#0c1030','#16205e','#24368e','#3a56bc'],hi:'#7a9cf0',note:'Complément exact de l’or (≈ 225°). Le plus fort contraste de teinte ; rien d’autre n’est bleu outremer en jeu (l’eau est plus verte et plus sombre).'},
+ B:{name:'Sarcelle',r:['#04232a','#0a3f48','#12646c','#2a9a9a'],hi:'#6ae0d8',note:'Proche du complément, plus froid. Mais c’est la couleur des panneaux du HUD, des rivets et de la traînée de l’Ingénieur en duel : ses propres tirs s’y fondraient.'},
+ C:{name:'Améthyste',r:['#170826','#2e1250','#4c2280','#7444b0'],hi:'#b688ea',note:'Violet du Credo, très « sacré ». Contraste fort avec l’or ; proche de l’ichor violet proposé pour le Fanatique et des bubons.'},
+ D:{name:'Cendre',r:['#16181c','#2a2e34','#42484e','#60666c'],hi:'#9aa2aa',note:'Le sol perd sa couleur : tout ce qui est doré devient la seule chose saturée. Le plus discret, le moins « magique ».'},
+ E:{name:'Éclipse',r:['#05060c','#0a0d18','#121828','#1c2438'],hi:'#4a5a88',note:'Sol presque noir, bleu nuit. Contraste de valeur maximal pour l’or ; mais le double bord sombre des éclats et les ombres se perdent, et la scène paraît être la nuit.'},
+};
+let HUE='A';
+
+// ------------------------------------------------------------------ Outils
+function hash(a,b){const v=Math.sin(a*12.9898+b*78.233)*43758.5453;return v-Math.floor(v)}
+function lerp(a,b,k){return a+(b-a)*k}
+function clamp(v,a,b){return Math.max(a,Math.min(b,v))}
+function smooth(e0,e1,x){const k=clamp((x-e0)/(e1-e0),0,1);return k*k*(3-2*k)}
+function hex(c){return[parseInt(c.slice(1,3),16),parseInt(c.slice(3,5),16),parseInt(c.slice(5,7),16)]}
+function P(c,x,y,col,a){if(a!==undefined)c.globalAlpha=a;c.fillStyle=col;c.fillRect(Math.round(x),Math.round(y),1,1);if(a!==undefined)c.globalAlpha=1}
+function emit(t,period,phase,life,f){const k1=Math.floor((t-phase)/period),k0=Math.floor((t-phase-life)/period);for(let k=k0;k<=k1;k++){const age=t-(phase+k*period);if(age>=0&&age<life)f(age,k)}}
+function bay(x,y){return(BAYER[y&3][x&3]+.5)/16}
+function vnoise(x,y,s,seed){const X=x/s,Y=y/s,x0=Math.floor(X),y0=Math.floor(Y),fx=X-x0,fy=Y-y0,u=fx*fx*(3-2*fx),v=fy*fy*(3-2*fy);
+ const a=hash(x0+seed,y0),b=hash(x0+1+seed,y0),c=hash(x0+seed,y0+1),d=hash(x0+1+seed,y0+1);return lerp(lerp(a,b,u),lerp(c,d,u),v)}
+
+// ------------------------------------------------------------------ Sol : herbe 16 bits, chemin de terre, pierres
+const GROUND=(()=>{const cv=document.createElement('canvas');cv.width=W;cv.height=H;const c=cv.getContext('2d');
+ const G=['#1a2a15','#22361a','#2c4420','#365228','#436230','#557a3a'],D=['#2e2216','#3e2e1c','#4e3a24','#604a2e','#76603e'],S=['#2a2c30','#44474c','#62666a','#868a8c'];
+ for(let y=0;y<H;y++)for(let x=0;x<W;x++){
+  const n=vnoise(x,y,22,3)*.55+vnoise(x,y,7,11)*.3+hash(x,y)*.15;
+  // Chemin : bande sinueuse du nord-est au sud-ouest.
+  const px=310-y*.95+Math.sin(y*.035)*18,dp=Math.abs(x-px);
+  if(dp<17+vnoise(x,y,9,5)*7){const m=n*.8+.1-(dp>14?.15:0);P(c,x,y,D[clamp(Math.floor(m*5+bay(x,y)*.9),0,4)])}
+  else{P(c,x,y,G[clamp(Math.floor(n*5.2+bay(x,y)-.3),0,5)])}}
+ // Brins d'herbe, fleurs, cailloux.
+ for(let k=0;k<900;k++){const x=Math.floor(hash(k,1)*W),y=Math.floor(hash(k,2)*H);const px=310-y*.95+Math.sin(y*.035)*18;if(Math.abs(x-px)<22)continue;
+  const h=1+Math.floor(hash(k,3)*3);for(let i=0;i<h;i++)P(c,x+(i==h-1&&k%3==0?1:0),y-i,i==h-1?G[5]:G[4]);P(c,x,y+1,G[0])}
+ for(let k=0;k<26;k++){const x=Math.floor(hash(k,7)*W),y=Math.floor(hash(k,8)*H);P(c,x,y,k%3?'#d8d2c0':'#c86a8a');P(c,x+1,y,'#2a2a18')}
+ for(let k=0;k<70;k++){const y=Math.floor(hash(k,9)*H),x=Math.round(310-y*.95+Math.sin(y*.035)*18+(hash(k,10)-.5)*28),r=hash(k,11)<.2?2:1;
+  for(let j=-r;j<=r;j++)for(let i=-r-1;i<=r+1;i++)P(c,x+i,y+j,j<0?S[3]:(j>0?S[1]:S[2]));P(c,x-r-1,y+r+1,S[0])}
+ // Grosses pierres.
+ for(const[x,y]of[[40,60],[330,200],[180,40],[60,215]]){for(let j=-4;j<=3;j++)for(let i=-6;i<=6;i++){const q=(i*i)/40+(j*j)/14;if(q>1)continue;P(c,x+i,y+j,j<-1?S[3]:(q>.6?S[1]:S[2]))}for(let i=-6;i<=6;i++)P(c,x+i,y+4,'#141210')}
+ return c.getImageData(0,0,W,H)})();
+const LUM=new Float32Array(W*H);for(let i=0;i<W*H;i++){const d=GROUND.data;LUM[i]=(d[i*4]*.3+d[i*4+1]*.59+d[i*4+2]*.11)/255}
+const INSIDE=new Uint8Array(W*H);for(let y=0;y<H;y++)for(let x=0;x<W;x++)INSIDE[y*W+x]=Math.hypot(x-DC[0],y-DC[1])<DR?1:0;
+
+// ------------------------------------------------------------------ Teinte du sol
+// s(x, y) ∈ [0, 1] : force de la teinte ; mode 'dither' (trame 4 × 4) ou 'alpha' (mélange continu) ; hi(x, y) : pixels clairs (ondes, veines, front).
+function tint(ctx,hue,sFn,mode,hiFn){const img=ctx.createImageData(W,H),o=img.data,g=GROUND.data,R=hue.r.map(hex),HI=hex(hue.hi);
+ for(let y=0;y<H;y++)for(let x=0;x<W;x++){const i=y*W+x,j=i*4;let r=g[j],gg=g[j+1],b=g[j+2];
+  if(INSIDE[i]){const s=sFn(x,y);if(s>0){
+   const t=clamp((LUM[i]-.07)/.3,0,1)*3,ti=Math.floor(t),tc=Math.min(3,ti+((t-ti)>bay(x+2,y+1)?1:0));let c=R[tc];
+   const h=hiFn?hiFn(x,y):0;if(h>0&&h>bay(x+1,y+3))c=HI;
+   if(mode==='alpha'){r=lerp(r,c[0],s);gg=lerp(gg,c[1],s);b=lerp(b,c[2],s)}
+   else if(s>bay(x,y)){r=c[0];gg=c[1];b=c[2]}}}
+  o[j]=r;o[j+1]=gg;o[j+2]=b;o[j+3]=255}
+ ctx.putImageData(img,0,0)}
+function veil(ctx){ctx.save();ctx.beginPath();ctx.arc(DC[0],DC[1],DR,0,Math.PI*2);ctx.fillStyle='rgba(209,161,56,0.07)';ctx.fill();ctx.restore()}
+// Profil du dégradé : plein jusqu'à 3 u de ses pieds, 40 % à partir de 18 u.
+const NEAR=3*K,FAR=18*K;
+function grad(m,lo,hi_){return(x,y)=>lerp(hi_??1,lo??.4,smooth(NEAR,FAR,Math.hypot(x-m[0],(y-m[1])*1.15)))}
+// Veines : branches qui partent des pieds de la Martyre (calculées une fois par position).
+const VEINS=(()=>{const m=new Float32Array(W*H);for(let b=0;b<16;b++){let a=b/16*Math.PI*2+hash(b,1)*.3,x=MART[0],y=MART[1],len=0;
+ const walk=(x,y,a,len,depth)=>{for(let s=0;s<220;s++){a+=(hash(b*97+s,depth)-.5)*.5;x+=Math.cos(a);y+=Math.sin(a)*.85;len++;const X=Math.round(x),Y=Math.round(y);if(X<0||Y<0||X>=W||Y>=H)return;
+  const i=Y*W+X;if(!INSIDE[i])return;m[i]=Math.max(m[i],len);if(depth<2&&s>20&&hash(b*31+s,depth+5)<.035)walk(x,y,a+(hash(s,b)<.5?-.8:.8),len,depth+1);if(depth>0&&s>60)return}};walk(x,y,a,0,0)}return m})();
+
+// ------------------------------------------------------------------ Sprites
+const IMG={};function img(k,src){const i=new Image();i.src=src;IMG[k]=i}
+const MA={idle:{n:74,fps:24.05},walk:{n:20,fps:23.64},cast:{n:41,fps:24.23},death:{n:59,fps:23.97}};
+for(const a in MA)img('m_'+a,`../assets/imported/enemies/martyre_${a}.png`);
+img('exil','../assets/imported/engineer/exil/exil_base.png');
+function martyre(c,a,x,y,t,face,alpha){const im=IMG['m_'+a],A=MA[a];if(!im.complete||!im.naturalWidth)return;const f=a==='death'?Math.min(A.n-1,Math.floor(t*A.fps)):Math.floor(t*A.fps)%A.n;
+ c.save();c.globalAlpha=alpha??1;c.translate(Math.round(x),Math.round(y));if(face<0)c.scale(-1,1);c.drawImage(im,(f%12)*150,Math.floor(f/12)*120,150,120,-60,-114,150,120);c.restore()}
+function exil(c,x,y,t){const im=IMG.exil;if(!im.complete||!im.naturalWidth)return;const f=Math.floor(t*12)%72;c.save();c.translate(Math.round(x),Math.round(y));c.scale(-1,1);c.drawImage(im,(f%12)*48,Math.floor(f/12)*48,48,48,-24,-45,48,48);c.restore()}
+function hitbox(c,p){for(let y=-2;y<3;y++)for(let x=-2;x<3;x++)P(c,p[0]+x,p[1]+y,Math.abs(x)<2&&Math.abs(y)<2?'#fff':'#10123a')}
+function feetShadow(c,x,y,w){c.fillStyle='rgba(0,0,0,0.35)';c.beginPath();c.ellipse(Math.round(x),Math.round(y),w,w*.35,0,0,Math.PI*2);c.fill()}
+
+// ------------------------------------------------------------------ Éclats d'or (MartyreFx.shard, double bord sombre)
+const SHARD_ROT=16,_shards={};
+function shardTex(big,rot){const key=(big?'B':'s')+rot;if(_shards[key])return _shards[key];
+ const n=big?31:19,sc=big?3:1.5,a=rot*Math.PI*2/SHARD_ROT,ca=Math.cos(a),sa=Math.sin(a),h=(n-1)/2;
+ const cv=document.createElement('canvas');cv.width=cv.height=n;const c=cv.getContext('2d');const lvl=new Uint8Array(n*n);
+ for(let y=0;y<n;y++)for(let x=0;x<n;x++){const u=((x-h)*ca+(y-h)*sa)/sc,v=(-(x-h)*sa+(y-h)*ca)/sc,q=Math.abs(u)/3.7+Math.abs(v)/1.8;if(q>1)continue;lvl[y*n+x]=1;
+  P(c,x,y,q<.42?'#fff':(q<.72?(u>0?LIGHT[6]:LIGHT[5]):(u>0?LIGHT[4]:LIGHT[3])))}
+ for(let k=2;k<4;k++){const mark=[];for(let y=0;y<n;y++)for(let x=0;x<n;x++){if(lvl[y*n+x])continue;for(const d of[[1,0],[-1,0],[0,1],[0,-1]]){const X=x+d[0],Y=y+d[1];if(X>=0&&Y>=0&&X<n&&Y<n&&lvl[Y*n+X]==k-1){mark.push([x,y]);break}}}
+  for(const[x,y]of mark){lvl[y*n+x]=k;P(c,x,y,'#1e0e04')}}
+ return _shards[key]=cv}
+function shard(c,g,vx,vy,big){const rot=((Math.round(Math.atan2(vy,vx)/(Math.PI*2)*SHARD_ROT))%SHARD_ROT+SHARD_ROT)%SHARD_ROT;const tex=shardTex(big,rot),h=(tex.width-1)/2;c.drawImage(tex,Math.round(g[0]-h),Math.round(g[1]-h-MLIFT))}
+function shardShadow(c,g,big){c.fillStyle='rgba(4,4,8,0.5)';const p=[Math.round(g[0]),Math.round(g[1])];if(big){c.fillRect(p[0]-6,p[1]-2,13,5);c.fillRect(p[0]-4,p[1]-3,9,7)}else{c.fillRect(p[0]-3,p[1],7,1);c.fillRect(p[0]-2,p[1]-1,5,3)}}
+// Rosace des sceaux : anneaux de 14 éclats, 1 gros sur 4, depuis la Martyre.
+function rosace(c,t,src,shadowOnly){const near=[];emit(t,.85,0,4.2,(age,k)=>{const n=14,big=k%4==3,sp=big?40:50;for(let i=0;i<n;i++){const a=(i+(k%2)*.5)/n*Math.PI*2+k*.09;const vx=Math.cos(a)*sp,vy=Math.sin(a)*sp;
+  const g=[src[0]+vx*age+Math.cos(a)*14,src[1]+vy*age+Math.sin(a)*10];if(g[0]<-20||g[1]<-10||g[0]>W+20||g[1]>H+30)continue;if(Math.hypot(g[0]-DC[0],g[1]-DC[1])>DR)continue;
+  if(shadowOnly)shardShadow(c,g,big);else{shard(c,g,vx,vy,big);near.push(g)}}});return near}
+
+// ------------------------------------------------------------------ Mur du dôme (arc à droite : liseré d'or tramé, rideau qui s'éteint vers le haut)
+const WALL_H=Math.round(6*K*.96/.86);
+function wall(c,t,s){if(s<=0)return;const f=Math.floor(t*5)%4;
+ for(let gy=-10;gy<H+WALL_H;gy++){const dy=gy-DC[1];if(Math.abs(dy)>DR)continue;const gx=Math.round(DC[0]+Math.sqrt(DR*DR-dy*dy));if(gx<-2||gx>W+2)continue;
+  for(let k=0;k<WALL_H;k++){const y=gy-k;if(y<0||y>=H)continue;const hh=k/WALL_H,band=.5+.5*Math.sin(gy*.06-Math.PI*2*f/4+hh*5);const a=Math.pow(1-hh,1.5)*(.6+.4*band)*.65*s;const th=bay(gx,y);
+   for(let w=-1;w<=1;w++){const x=gx+w;if(a*2-1>th)P(c,x,y,band>.75?GOLD[3]:GOLD[2],.62);else if(a*2>th)P(c,x,y,GOLD[1],.34)}}
+  const acc=((gy+f*4)%32+32)%32<2;P(c,gx,gy,acc?CARMINE:GOLD[3],.9*s);P(c,gx-1,gy,GOLD[2],.6*s)}}
+
+// ------------------------------------------------------------------ Scènes
+// o.tint(ctx, t, m) : peint le sol ; o.walk : la Martyre marche ; o.cycle : lever / chute.
+function marchPos(t){const a=t*.22;return[118+Math.cos(a)*46,150+Math.sin(a*2)*22]}
+function scene(o){return(ctx,t)=>{
+ let m=MART,anim='idle',face=1,alpha=1,s=1,cyc=null;
+ if(o.walk){m=marchPos(t);const n=marchPos(t+.05);face=n[0]>=m[0]?1:-1;anim='walk'}
+ if(o.cycle){const ct=t%6;cyc=ct;if(ct<.4){s=0;alpha=clamp(ct/.4,0,1)}else if(ct<1.4)s=(ct-.4);else if(ct<4.6)s=1;else{anim='death';s=0;alpha=clamp((6-ct)/.5,0,1)}}
+ o.tint(ctx,t,m,cyc);
+ const near=(cyc===null||(cyc>1.4&&cyc<4.6))?rosace(ctx,t,[m[0],m[1]-MLIFT],true):[];
+ feetShadow(ctx,EXIL[0],EXIL[1],7);feetShadow(ctx,m[0],m[1],16);
+ const ex=()=>exil(ctx,EXIL[0],EXIL[1],t), mt=()=>martyre(ctx,anim,m[0],m[1],anim==='death'?cyc-4.6:t,face,alpha);
+ if(m[1]<EXIL[1]){mt();ex()}else{ex();mt()}
+ const ws=o.cycle?(cyc<.4?0:cyc<1.4?cyc-.4:cyc<4.6?1:Math.max(0,1-(cyc-4.6)/1.2)*((cyc*14)%1<.6?1:.35)):1;wall(ctx,t,ws);
+ if(near.length||cyc===null)rosace(ctx,t,[m[0],m[1]-MLIFT]);hitbox(ctx,[EXIL[0],EXIL[1]-17]);}}
+const CARDS=[];
+function C(sec,id,title,desc,spec,render,opts){CARDS.push({sec,id,title,desc,spec,render,...(opts||{})})}
+
+// 1 · couleur
+const cur=(ctx)=>{ctx.putImageData(GROUND,0,0);veil(ctx)};
+const ZOOM=[[MART[0]+30,MART[1]-12,false],[MART[0]-36,MART[1]+12,true],[EXIL[0],EXIL[1]-14,null]];
+C('s1','couleur-actuel','Actuel · voile d’or à 7 %','Le sol du dôme est à peine doré. Rien ne dit où commence l’aura ni d’où elle vient ; près de la Martyre, les éclats d’or passent sur son corps doré et sur la lumière de sa faille.','MartyreDome.VEIL = (0,82 ; 0,63 ; 0,22 ; 0,07), polygone sous les sprites',scene({tint:cur}),{zoom:'cur'});
+for(const k of'ABCDE'){const h=HUES[k];
+ C('s1','couleur-'+k,`${k} · ${h.name}`,h.note,`rampe ${h.r.join(' ')} · clair ${h.hi}`,scene({tint:(ctx,t,m)=>tint(ctx,h,grad(m),'dither')}),{zoom:k,swatch:[...h.r,h.hi]})}
+
+// 2 · forme
+const H_=()=>HUES[HUE];
+C('s2','forme-A','A · Nappe pleine','Tout le dôme prend la teinte à 85 %, d’un coup, jusqu’au mur. Très lisible comme « arène », mais rien ne part d’elle : la source n’est que le centre de la zone.','s = 0,85 partout dans le dôme',scene({tint:(ctx)=>tint(ctx,H_(),()=>.85,'dither')}));
+C('s2','forme-B','B · Dégradé lissé','Plein sous ses pieds, 40 % à 18 u, en mélange continu. Doux, mais c’est un dégradé de transparence que le reste du jeu n’emploie pas.','s : 1 → 0,4 entre 3 et 18 u · mélange alpha',scene({tint:(ctx,t,m)=>tint(ctx,H_(),grad(m),'alpha')}));
+C('s2','forme-C','C · Dégradé tramé','Même profil que B, en trame 4 × 4 comme le mur du dôme : la couleur s’effiloche en pixels en s’éloignant d’elle. C’est la forme de la section 1.','s : 1 → 0,4 entre 3 et 18 u · trame Bayer 4 × 4',scene({tint:(ctx,t,m)=>tint(ctx,H_(),grad(m),'dither')}));
+C('s2','forme-D','D · Ondes','Fond à 40 %, et toutes les 1,2 s un anneau plein part de ses pieds à 7 u/s jusqu’au mur, avec un liseré clair. On voit à chaque instant que la couleur sort d’elle.','fond 0,4 · anneau 9 px, 56 px/s, période 1,2 s · liseré clair au front',scene({tint:(ctx,t,m)=>{const ring=(x,y)=>{const d=Math.hypot(x-m[0],(y-m[1])*1.15);let v=0,hv=0;emit(t,1.2,0,7,(age)=>{const r=age*56,e=1-Math.abs(d-r)/9;if(e>0){v=Math.max(v,e);if(d>r-2&&d<r+1)hv=Math.max(hv,.8*(1-r/420))}});return[v,hv]};
+ tint(ctx,H_(),(x,y)=>Math.max(grad(m,.4,.9)(x,y),ring(x,y)[0]),'dither',(x,y)=>ring(x,y)[1])}}));
+C('s2','forme-E','E · Veines','Fond léger (25 à 55 %) et seize veines claires qui partent de ses pieds, se ramifient et courent jusqu’au mur ; une pulsation claire les parcourt vers l’extérieur. La couleur « s’infiltre » dans le sol.','fond 0,55 → 0,25 · veines au ton clair · pulsation 70 px/s, période 1,5 s',scene({tint:(ctx,t)=>{const pulse=(x,y)=>{const L=VEINS[y*W+x];if(!L)return 0;const ph=((L-t*70)%105+105)%105;return Math.max(.45,ph<10?1-ph/10:0)};
+ tint(ctx,H_(),(x,y)=>VEINS[y*W+x]?1:grad(MART,.25,.55)(x,y),'dither',pulse)}}));
+
+// 3 · marche
+C('s3','suivi-A','A · La teinte suit ses pieds','Le dégradé tramé (2·C) est recalculé à chaque image autour de sa position. Le cœur coloré marche avec elle.','centre = Martyre.pos() · rayon du mur inchangé',scene({walk:true,tint:(ctx,t,m)=>tint(ctx,H_(),grad(m),'dither')}));
+let TRAIL=[];
+C('s3','suivi-B','B · La teinte la suit avec retard','Le cœur coloré glisse derrière elle avec 0,6 s de retard et laisse une traînée tramée sur son passage, qui s’efface en 2 s.','centre = position de la Martyre il y a 0,6 s · traînée 2 s',scene({walk:true,tint:(ctx,t,m)=>{const lag=marchPos(t-.6),pts=[];for(let k=1;k<=8;k++)pts.push([marchPos(t-k*.25),1-k/9]);
+ tint(ctx,H_(),(x,y)=>{let s=grad(lag)(x,y);for(const[p,w]of pts){const d=Math.hypot(x-p[0],(y-p[1])*1.15);if(d<22)s=Math.max(s,w*(1-d/22))}return s},'dither')}}));
+
+// 4 · lever et chute
+function rise(front){return(ctx,t,m,ct)=>{const g=grad(m);let R,dir;if(ct<.4){R=0}else if(ct<1.4){R=smooth(0,1,ct-.4)*420}else if(ct<4.6){R=999}else{R=(1-smooth(0,1,(ct-4.6)/1.2))*420}
+ if(R<=0){ctx.putImageData(GROUND,0,0);return}
+ tint(ctx,H_(),(x,y)=>{const d=Math.hypot(x-m[0],(y-m[1])*1.15);if(front==='net')return d<R?g(x,y):0;const e=clamp((R-d)/26,0,1);return g(x,y)*e},'dither',
+  (x,y)=>{if(R>=420)return 0;const d=Math.hypot(x-m[0],(y-m[1])*1.15);return front==='net'&&d<R&&d>R-3?1:0})}}
+C('s4','lever-A','A · Front net','La couleur jaillit de ses pieds et file jusqu’au mur en 1 s, avec un liseré clair au front ; à la chute, elle se rétracte et rentre en elle pendant qu’elle s’effondre.','front 0 → 52 u en 1 s · liseré 3 px · retour en 1,2 s',scene({cycle:true,tint:rise('net')}));
+C('s4','lever-B','B · Front tramé','Même course, mais le front est une bande de trame de 26 px qui se densifie : la couleur monte comme une marée plutôt qu’un anneau.','front 0 → 52 u en 1 s · bord tramé 26 px · retour en 1,2 s',scene({cycle:true,tint:rise('trame')}));
+
+// 5 · réglages
+const OTHERS=[
+ ['r-voile','Retirer le voile d’or','Le voile à 7 % disparaît : la teinte le remplace entièrement.'],
+ ['r-liseré','Liseré du mur gardé en or','Le mur, son liseré au sol et ses accents carmin restent tels quels : sur un sol froid, ils deviennent la frontière la plus nette de l’écran.'],
+ ['r-tout','Tout le sol, chemins et eau compris','La teinte passe aussi sur la terre, les pierres et l’eau (carte de valeurs) ; pas sur les arbres, les bâtiments ni les sprites.'],
+ ['r-nuit','Lueur propre la nuit','La nuit, la teinte garde un tiers de sa valeur sous l’obscurité (comme le mur), pour que l’aura reste visible.'],
+ ['r-phase3','Phase III : la teinte se resserre avec le mur','Quand le dôme se resserre à 36 u, la teinte se coupe au nouveau mur ; le plein sous ses pieds ne change pas.'],
+ ['r-intensite','Plus forte en phase II et III','Le minimum au mur passe de 40 % à 55 % puis 70 % d’une phase à l’autre : la zone « s’assombrit » à mesure qu’elle s’énerve.'],
+ ['r-faille','La faille reste dorée','Les failles ardentes, les colonnes des sceaux et les éclats gardent leurs couleurs : c’est tout l’intérêt d’un sol froid.'],
+];
+
+// ------------------------------------------------------------------ Construction, verdicts, boucle
+const KEY='planche-martyre-aura';let state={};try{state=JSON.parse(localStorage.getItem(KEY)||'{}')}catch(e){}
+if(state._hue&&HUES[state._hue])HUE=state._hue;
+function save(){try{localStorage.setItem(KEY,JSON.stringify(state))}catch(e){}tally()}
+function verdict(id,host,cardEl){const box=document.createElement('div');box.className='verdict';
+ for(const[v,l]of[['garder','Garder'],['revoir','Revoir'],['rejeter','Rejeter']]){const b=document.createElement('button');b.dataset.v=v;b.textContent=l;b.onclick=()=>{const s=state[id]||(state[id]={});s.v=s.v===v?null:v;save();paint()};box.appendChild(b)}
+ const ta=document.createElement('textarea');ta.placeholder='Remarque…';ta.value=(state[id]&&state[id].n)||'';ta.oninput=()=>{(state[id]||(state[id]={})).n=ta.value;save()};
+ function paint(){const v=state[id]&&state[id].v;for(const b of box.children)b.classList.toggle('sel',b.dataset.v===v);if(cardEl)cardEl.dataset.v=v||''}
+ paint();host.appendChild(box);host.appendChild(ta)}
+const hb=document.getElementById('hues');
+function paintHues(){for(const b of hb.children)b.setAttribute('aria-pressed',b.dataset.h===HUE)}
+for(const k of'ABCDE'){const b=document.createElement('button');b.className='hue';b.dataset.h=k;b.innerHTML=`<i style="background:${HUES[k].r[2]}"></i>${k} ${HUES[k].name}`;b.onclick=()=>{HUE=k;state._hue=k;save();paintHues();for(const cd of CARDS)cd.dirty=true};hb.appendChild(b)}
+paintHues();
+for(const cd of CARDS){const el=document.createElement('div');el.className='card';
+ const cv=document.createElement('canvas');cv.className='px';cv.width=W;cv.height=H;cv.setAttribute('aria-label',cd.title);el.appendChild(cv);
+ if(cd.zoom){const z=document.createElement('div');z.className='zoom';cd.zc=[];for(const q of ZOOM){const zc=document.createElement('canvas');zc.width=zc.height=24;z.appendChild(zc);cd.zc.push([zc,q])}el.appendChild(z)}
+ const cap=document.createElement('div');cap.className='cap';cap.innerHTML=`<b class="t${cd.id.endsWith('actuel')?' cur':''}">${cd.title}</b>${cd.swatch?'<div class="sw">'+cd.swatch.map(c=>`<i style="background:${c}"></i>`).join('')+'</div>':''}<p>${cd.desc}</p><div class="spec">${cd.spec}</div>`;el.appendChild(cap);
+ verdict(cd.id,cap,el);document.getElementById(cd.sec).appendChild(el);cd.cv=cv;cd.ctx=cv.getContext('2d',{willReadFrequently:true});cd.vis=false}
+const tb=document.getElementById('others');
+for(const[id,t,p]of OTHERS){const tr=document.createElement('tr');tr.innerHTML=`<td><b>${t}</b></td><td>${p}</td><td></td>`;verdict(id,tr.lastChild,null);tb.appendChild(tr)}
+const io=new IntersectionObserver(es=>{for(const e of es){const cd=CARDS.find(c=>c.cv===e.target);if(cd)cd.vis=e.isIntersecting}},{rootMargin:'100px'});
+for(const cd of CARDS)io.observe(cd.cv);
+function tally(){const ids=CARDS.map(c=>c.id).concat(OTHERS.map(o=>o[0]));const n=ids.filter(i=>state[i]&&state[i].v).length;document.getElementById('tally').textContent=`${n} / ${ids.length} verdicts`}
+tally();
+let speed=1,paused=false,simT=1.7,last=performance.now();
+const qs=new URLSearchParams(location.search);if(qs.has('t'))simT=+qs.get('t');if(qs.has('pause'))paused=true;
+function frame(now){const dt=Math.min(.1,(now-last)/1000);last=now;if(!paused)simT+=dt*speed;
+ const ready=Object.values(IMG).every(i=>i.complete&&i.naturalWidth);
+ if(ready)for(const cd of CARDS){if(!cd.vis&&!qs.has('all'))continue;const c=cd.ctx;c.imageSmoothingEnabled=false;
+  try{cd.render(c,simT)}catch(e){if(!cd.err){cd.err=1;console.error(cd.id,e)}}
+  if(cd.zc&&!cd.zdone){for(const[zc,q]of cd.zc){const z=zc.getContext('2d');z.imageSmoothingEnabled=false;z.drawImage(cd.cv,q[0]-12,q[1]-12,24,24,0,0,24,24);if(q[2]!==null){/* éclat posé au centre de la loupe */const tex=shardTex(q[2],2);z.drawImage(tex,12-(tex.width-1)/2,12-(tex.width-1)/2)}}cd.zdone=true}}
+ requestAnimationFrame(frame)}
+requestAnimationFrame(frame);
+const tog=(id,f)=>{const b=document.getElementById(id);b.onclick=()=>{const on=b.getAttribute('aria-pressed')!=='true';b.setAttribute('aria-pressed',on);f(on)}};
+tog('bw',on=>document.body.classList.toggle('bw',on));tog('slow',on=>speed=on?.4:1);tog('pause',on=>paused=on);
+if(paused)document.getElementById('pause').setAttribute('aria-pressed','true');
+document.getElementById('copy').onclick=()=>{const L=['Planche « Aura de la Martyre » — bilan',`Teinte retenue dans la barre : ${HUE} ${HUES[HUE].name}`];let sec='';
+ for(const cd of CARDS){const h=document.getElementById(cd.sec).previousElementSibling.previousElementSibling.textContent;if(h!==sec){sec=h;L.push('',h)}const s=state[cd.id]||{};L.push(`- ${cd.title} : ${s.v||'—'}${s.n?' — '+s.n:''}`)}
+ L.push('','5 · Réglages');for(const[id,t]of OTHERS){const s=state[id]||{};L.push(`- ${t} : ${s.v||'—'}${s.n?' — '+s.n:''}`)}
+ const out=document.getElementById('out');out.style.display='block';out.value=L.join('\n');out.select();try{navigator.clipboard.writeText(out.value)}catch(e){}};
+document.getElementById('clear').onclick=()=>{if(!confirm('Effacer tous les verdicts et remarques ?'))return;state={};save();location.reload()};
+</script>
+</body></html>

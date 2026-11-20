@@ -1,5 +1,6 @@
 extends "res://tests/fight_case.gd"
-## Étape 8 (v2) : fin de partie (Ancre détruite, plus aucun allié, Ingénieur tombé) et bannières.
+## Étape 8 (v2) : fin de partie et bannière. Seule l'Ancre détruite termine la partie ; l'Ingénieur tombé
+## revient à la capsule (Simulation.engineer_fell).
 
 
 func _ended_after(sim: Simulation) -> bool:
@@ -22,17 +23,21 @@ func test_core_destroyed() -> void:
 func test_engineer_dies() -> void:
 	var sim := game()
 	sim.spawn("Adepte archer", 0.0, -120.0, "archer")
-	engineer().hp = 0.0
-	check(_ended_after(sim), "Ingénieur tombé : défaite")
-	var hud: Hud = _main.get_node("Hud")
-	check_eq(hud._banner_title.text, "L’INGÉNIEUR EST TOMBÉ", "bannière")
+	# Seule la destruction de l'Ancre termine la partie : l'Ingénieur tombé revient à la capsule.
+	var u := engineer()
+	u.hp = 0.0
+	check(not _ended_after(sim), "Ingénieur tombé : la partie continue")
+	check(GameState.engineer_respawn_at < INF, "retour à la capsule programmé")
+	GameState.sim_time = GameState.engineer_respawn_at
+	sim.tick(DT)
+	check(u.alive() and u.hp == u.max_hp, "il revient avec tous ses PV")
 
 
 func test_no_ally_left() -> void:
 	var sim := game()
 	for u in GameState.units:
 		u.hp = 0.0
-	check(_ended_after(sim), "plus aucun allié : défaite")
+	check(not _ended_after(sim), "plus aucun allié : la partie continue tant que l'Ancre tient")
 
 
 func test_simulation_frozen_after_end() -> void:
@@ -54,5 +59,10 @@ func test_enemy_damage_with_guard_shield_and_armor() -> void:
 	u.shield = 1.0
 	var hp := u.hp
 	var alive: Array[Unit] = [u]
-	game_sim().combat.update_enemies(0.01, alive)
+	# L'ennemi arme son coup (Catalog.ENEMY_WINDUP) avant de frapper : on avance jusqu'au premier coup porté.
+	for i in 200:
+		GameState.sim_time += 0.02
+		game_sim().combat.update_enemies(0.02, alive)
+		if u.hp < hp:
+			break
 	check_near(hp - u.hp, maxf(12.0 * 0.35 * 0.55 * 0.15, 12.0 * 0.35 * 0.55 - 2.0), 1e-9, "bouclier ×0,35, garde ×0,55, défense −2")

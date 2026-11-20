@@ -14,6 +14,8 @@ const HIT_TIME := 1.0
 const ENGINEER_DIG := 3.0
 ## Portée du lance-pitons de l'Ingénieur : au plus une case (4 unités) entre lui et la case visée.
 const DIG_REACH := 4.0
+## Sceau de minage de l'Exilé incarné : portée d'activation, un bloc et demi (6 unités) du bord de la case.
+const INCARNATED_DIG_REACH := 6.0
 
 # ----- Galeries (masque à 1 unité : 0 = roche, 1 = galerie ; open = déjà découverte) -----
 var mask := PackedByteArray()
@@ -414,6 +416,10 @@ func generate_galleries(new_seed: int) -> void:
 	frontier = false
 	eye_gate.clear()
 	eye_gate_closed = false
+	# Vidés dès le début : les clairières et les filons les consultent (_grove_fits) avant que les pylônes de
+	# cette carte soient posés ; ceux de la carte précédente déplaçaient filons et bassins d'une instance réutilisée.
+	pylon_cells.clear()
+	theme_rooms.clear()
 	mask.fill(0)
 	open.fill(0)
 	found = 0
@@ -1246,17 +1252,10 @@ func seal_needed(i: int, j: int) -> String:
 
 
 func dig_cell_at(i: int, j: int, p: Vector2) -> Variant:
-	if block_definition(i, j).is_empty() or frontier_cell(i, j):
+	if not minable_block(i, j):
 		return null
 	var x := i * 4.0
 	var z := j * 4.0
-	var key := Vector2i(i, j)
-	if key == VAULT_COPPER and permanent_ores.has(key) and not vault_open:
-		return null
-	if dug.has(key) or (not permanent_ores.has(key) and cell_clear(i, j)):
-		return null
-	if x < CaveShape.WORLD_X0 + 8.0 or x + 4.0 > CaveShape.WORLD_X1 - 8.0 or z < CaveShape.WORLD_Z0 + 8.0:
-		return null
 	var at: Variant = null
 	var best := 1e9
 	for t: float in [0.3, 1.0, 2.0, 3.0, 3.7]:
@@ -1268,6 +1267,74 @@ func dig_cell_at(i: int, j: int, p: Vector2) -> Variant:
 				best = d
 				at = q
 	return {"i": i, "j": j, "at": at} if at != null else null
+
+
+## Relief dessiné d'une roche (vue 3/4) : la paroi face5 (32 × 49 px, ancrée à 45 px) d'une case dont le sud est
+## du sol monte de FACE_RISE au-dessus de son bord sud et déborde de FACE_DROP dessous ; une roche isolée (sol au
+## nord) porte en plus son chapeau (World._attach_rock_cap, 32 px) au-dessus de la paroi. Le reste de la roche
+## est peint à son emprise au sol. Unités de monde, axe z.
+const FACE_RISE := 45.0 / 8.0
+const FACE_DROP := 4.0 / 8.0
+
+
+## Roche (pas de creux) au centre de la case (i, j).
+func rock_cell(i: int, j: int) -> bool:
+	return not ground(i * 4.0 + 2.0, j * 4.0 + 2.0)
+
+
+## La case de roche (i, j) montre une paroi : sol juste au sud.
+func faced_cell(i: int, j: int) -> bool:
+	return rock_cell(i, j) and ground(i * 4.0 + 2.0, j * 4.0 + 6.0)
+
+
+## Étendue verticale dessinée (z haut, z bas, ramenés au sol) de la case de roche (i, j) : paroi (et chapeau
+## d'une roche isolée), ou emprise au sol moins le pied de la paroi voisine au sud qui la recouvre.
+func drawn_span(i: int, j: int) -> Vector2:
+	var south := (j + 1) * 4.0
+	if faced_cell(i, j):
+		var top := south - FACE_RISE - (4.0 if ground(i * 4.0 + 2.0, j * 4.0 - 2.0) else 0.0)
+		return Vector2(top, south + FACE_DROP)
+	return Vector2(south - 4.0, south - (FACE_RISE - 4.0 if faced_cell(i, j + 1) else 0.0))
+
+
+## Case de roche dessinée sous le point `p` (sol sous le pointeur) : la paroi (ou le chapeau) la plus au sud qui
+## le couvre, dessinée devant, sinon la roche peinte sous lui ; null sur du sol nu.
+func visual_block(p: Vector2) -> Variant:
+	var i := floori(p.x / 4.0)
+	var j0 := floori(p.y / 4.0)
+	for j: int in [j0 + 2, j0 + 1, j0, j0 - 1]:
+		if not faced_cell(i, j):
+			continue
+		var span := drawn_span(i, j)
+		if p.y >= span.x and p.y <= span.y:
+			return Vector2i(i, j)
+	if rock_cell(i, j0):
+		return Vector2i(i, j0)
+	return null
+
+
+## Case minable désignée par le dessin sous `p` (visual_block), avec son point de travail ; null si elle est
+## enfouie (aucun côté dégagé) ou ne se mine pas.
+func pointed_cell(p: Vector2) -> Variant:
+	var key: Variant = visual_block(p)
+	if key == null:
+		return null
+	return dig_cell_at(key.x, key.y, p)
+
+
+## Bloc (i, j) qu'on pourrait miner, même encore enfoui (aucun côté dégagé) : il le deviendra une fois un voisin
+## creusé. dig_cell_at y ajoute un point de travail praticable.
+func minable_block(i: int, j: int) -> bool:
+	if block_definition(i, j).is_empty() or frontier_cell(i, j):
+		return false
+	var key := Vector2i(i, j)
+	if key == VAULT_COPPER and permanent_ores.has(key) and not vault_open:
+		return false
+	if dug.has(key) or (not permanent_ores.has(key) and cell_clear(i, j)):
+		return false
+	var x := i * 4.0
+	var z := j * 4.0
+	return not (x < CaveShape.WORLD_X0 + 8.0 or x + 4.0 > CaveShape.WORLD_X1 - 8.0 or z < CaveShape.WORLD_Z0 + 8.0)
 
 
 ## Case (i, j) entièrement dégagée : centre, coins et les 16 sous-cases praticables (plus rien à miner).
@@ -1343,7 +1410,7 @@ static func cell_nearest(i: int, j: int, p: Vector2) -> Vector2:
 ## case, jamais en diagonale par un coin), au plus DIG_REACH unités du bord, et un passage dégagé (sol
 ## praticable) entre l'Ingénieur et la case : on ne tire pas à travers la roche, et la case creusée reste
 ## reliée au sol où il se tient.
-func in_dig_reach(i: int, j: int, p: Vector2) -> bool:
+func in_dig_reach(i: int, j: int, p: Vector2, reach := DIG_REACH) -> bool:
 	var x := i * 4.0
 	var z := j * 4.0
 	var facing_x := p.x >= x + 0.3 and p.x <= x + 3.7
@@ -1352,7 +1419,7 @@ func in_dig_reach(i: int, j: int, p: Vector2) -> bool:
 		return false
 	var q := cell_nearest(i, j, p)
 	var d := p.distance_to(q)
-	if d > DIG_REACH:
+	if d > reach:
 		return false
 	var n := ceili(d / 0.4)
 	for k in range(1, n):

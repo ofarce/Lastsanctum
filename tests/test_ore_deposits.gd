@@ -19,29 +19,36 @@ func test_generation_bands_and_safe_start() -> void:
 			var distance := center.distance_to(CaveShape.CORE)
 			var band: Vector2 = st.ORE_BANDS[tier]
 			check(distance >= band.x and distance <= band.y, "distance du minerai")
-			for dx in 5:
-				for dz in 5:
-					check(not CaveShape.in_cave(key.x * 4 + dx, key.y * 4 + dz), "salle initiale vide")
-		check(counts[0] > counts[1] and counts[1] > counts[2] and counts[2] > counts[3] and counts[3] > 0, "abondance par graine %d : %s" % [map_seed, counts])
-		check_eq(st.block_types.get(st.VAULT_COPPER), "copper", "cuivre garanti")
+			# Intérieur de la case (ses bords touchent les cases voisines, qui peuvent être du sol de la salle).
+			for dx in 4:
+				for dz in 4:
+					check(not CaveShape.in_cave(key.x * 4 + dx + 0.5, key.y * 4 + dz + 0.5), "salle initiale vide")
+		# Le Temple (biome 1) ne porte que du cuivre : fer, quartz et or viennent des biomes suivants.
+		check(counts[0] > 0 and counts[1] + counts[2] + counts[3] == 0, "cuivre seul dans le Temple, graine %d : %s" % [map_seed, counts])
 
 
 func test_repeated_vault_mining_and_solid_ore_drop() -> void:
 	var sim := game()
 	var st := sim.state()
-	var key := st.VAULT_COPPER
+	# Gisement inépuisable : une case d'un filon au sol (le cuivre garanti de la réserve n'existe plus).
+	var key: Vector2i = st.lodes.keys()[0]
+	# Sa clairière est dans une galerie pas encore découverte : on les ouvre toutes.
+	st.open = st.mask.duplicate()
+	st.found = st.count
+	st.version += 1
 	var center := Vector2(key * 4) + Vector2(2, 2)
-	check(st.diggable_cell(center) == null, "gisement scellé")
-	sim.world.dig_cell(14, -37)
-	sim.world.dig_cell(15, -37)
+	var cell: Variant = st.diggable_cell(center)
+	check(cell != null, "filon accessible")
 	var u := engineer()
 	GameState.selected = [u] as Array[Unit]
 	GameState.base_inventory_unlocked = true
-	u.x = center.x + 2.6
-	u.z = center.y
+	u.x = cell["at"].x
+	u.z = cell["at"].y
 	check(sim.order_adepts(center), "clic sur le gisement découvert")
 	sim.update_adepts(2.0)
-	check_eq(GameState.base_inventory, [{"item": "copper", "quantity": 2}], "deux récoltes")
+	# L'Ingénieur donne ENGINEER_DIG × DIG_HITS coups par seconde ; une récolte par `resistance` coups.
+	var harvests := int(2.0 * TerrainState.ENGINEER_DIG * TerrainState.DIG_HITS / float(st.block_definition(key.x, key.y)["resistance"]))
+	check_eq(GameState.base_inventory, [{"item": "copper", "quantity": harvests}], "récoltes en deux secondes")
 	sim.world.dig_cell(key.x, key.y)
 	check(not st.dug.has(key) and u.job != null, "gisement intact et travail continu")
 	var west := Vector2i(-17, -39)
@@ -51,7 +58,7 @@ func test_repeated_vault_mining_and_solid_ore_drop() -> void:
 	check(sim.order_adepts(Vector2(-66, -154)), "clic sur le bloc de cuivre")
 	sim.update_adepts(1.0)
 	check(st.dug.has(west), "bloc de cuivre détruit")
-	check_eq(GameState.base_inventory[0]["quantity"], 3, "un cuivre pour le bloc")
+	check_eq(GameState.base_inventory[0]["quantity"], harvests + 1, "un cuivre pour le bloc")
 
 
 

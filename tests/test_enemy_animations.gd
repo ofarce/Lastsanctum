@@ -1,12 +1,20 @@
 extends "res://tests/fight_case.gd"
 
 
+## Ennemis sans atlas dans le manifeste : l'Œil de la Matrice, ses pupilles et Gorge-Cuivre ont leurs propres
+## calques et leur propre vue ; un type à clé « art » (squelette) emprunte l'atlas d'un autre.
+static func _own_atlas(kind: String) -> bool:
+	return kind not in [OeilMatrice.KIND, OeilMatrice.PUPIL_KIND, "gorge"] and not Catalog.ENEMY[kind].has("art")
+
+
 func test_all_enemies_have_complete_atlases() -> void:
-	# L'Œil de la Matrice et ses pupilles ont leurs propres calques (assets/imported/oeil/, OeilView, OeilFx), hors du
-	# manifeste des ennemis.
-	check_eq(EnemyArt.all().size(), Catalog.ENEMY.size() - 2)
 	for kind: String in Catalog.ENEMY:
-		if kind == OeilMatrice.KIND or kind == OeilMatrice.PUPIL_KIND:
+		if not _own_atlas(kind):
+			var borrowed: String = Catalog.ENEMY[kind].get("art", "")
+			check(borrowed.is_empty() or EnemyArt.all().has(borrowed), "%s emprunte un atlas existant" % kind)
+			continue
+		check(EnemyArt.all().has(kind), "atlas de " + kind)
+		if not EnemyArt.all().has(kind):
 			continue
 		var meta: Dictionary = EnemyArt.all()[kind]
 		for action: String in ["idle", "walk", "attack", "death"]:
@@ -16,7 +24,9 @@ func test_all_enemies_have_complete_atlases() -> void:
 			check_eq(tex.get_width(), int(a["frame_w"]) * int(a["cols"]))
 			check_eq(tex.get_height(), int(a["frame_h"]) * int(a["rows"]))
 			check(int(a["count"]) <= int(a["cols"]) * int(a["rows"]))
-		check(int(meta["death"]["count"]) >= 44, "chute complète : " + kind)
+		# 45 images pour les ennemis de la refonte, 36 pour la faune, les monstres du biome 2 et les squelettes,
+		# 24 pour le squelette explosif (il tombe à genoux puis explose).
+		check(int(meta["death"]["count"]) >= 24, "chute complète : " + kind)
 
 
 func test_corpses_are_visual_and_count_menace_once() -> void:
@@ -27,9 +37,10 @@ func test_corpses_are_visual_and_count_menace_once() -> void:
 	check(GameState.enemies.is_empty(), "aucun ennemi mort dans les cibles")
 	check_eq(GameState.enemy_corpses.size(), 1)
 	check(e.dead and e.died_at == GameState.sim_time)
-	check_eq(GameState.menace, 1)
+	var reward: int = Catalog.KILL_MENACE["soldier"]
+	check_eq(GameState.menace, reward, "menace du soldat abattu")
 	sim.combat.finish_tick(DT, [engineer()])
-	check_eq(GameState.menace, 1, "pas de double comptage")
+	check_eq(GameState.menace, reward, "pas de double comptage")
 	check_eq(GameState.enemy_corpses.size(), 1, "pas de corps dupliqué")
 	GameState.sim_time += EnemyArt.CORPSE_LIFETIME
 	sim.combat.finish_tick(DT, [engineer()])
@@ -43,7 +54,8 @@ func test_corpses_do_not_delay_next_assault_and_reset() -> void:
 	var e := foe("creep", 10.0, -110.0, 1.0)
 	sim.combat.damage(e, 100.0)
 	sim.combat.finish_tick(DT, [engineer()])
-	check_near(GameState.next_wave, GameState.sim_time + 4.0)
+	# Un assaut par jour : le suivant est fixé au matin (DayNight.next_assault), cadavres ou non.
+	check_near(GameState.next_wave, DayNight.next_assault(GameState.sim_time, GameState.wave, sim.state().seed))
 	sim.new_game(SEED)
 	check(GameState.enemy_corpses.is_empty())
 
@@ -81,9 +93,13 @@ func test_progressive_roster() -> void:
 			check(spawn["kind"] != "beast", "faune hors assauts")
 			if w < 8:
 				check(spawn["kind"] != "strazhar", "champion à partir du huitième assaut")
-	for kind: String in Catalog.ENEMY:
-		if kind != "beast" and kind != Martyre.KIND and kind != OeilMatrice.KIND and kind != OeilMatrice.PUPIL_KIND and not Wildlife.KINDS.has(kind):
+	# Les troupes d'assaut sont celles qui rapportent de la menace (Catalog.KILL_MENACE) ; faune, errants,
+	# squelettes de la nuit et boss ne viennent pas en vague.
+	for kind: String in Catalog.KILL_MENACE:
+		if int(Catalog.KILL_MENACE[kind]) > 0:
 			check(seen.has(kind), "renfort présent : " + kind)
+	for kind: String in seen:
+		check(int(Catalog.KILL_MENACE.get(kind, 0)) > 0, "type d'assaut : " + kind)
 	check(not seen.has(Martyre.KIND), "le boss ne vient jamais en vague")
 	check(not seen.has(OeilMatrice.KIND), "l'Œil ne vient jamais en vague")
 	check(not seen.has(OeilMatrice.PUPIL_KIND), "ses pupilles non plus")
@@ -100,7 +116,7 @@ func test_menace_unlocks_strazhar_before_wave_eight() -> void:
 		var tier := Catalog.menace_tier(menace)
 		var extra := maxi(0, floori(float(tier - Catalog.MENACE_WAVE["champion_start"]) / Catalog.MENACE_WAVE["champion_step"]))
 		check_eq(champions.size(), 1 + extra if menace >= Catalog.STRAZHAR_MENACE else 0, "Menace %d" % menace)
-		check_eq(GameState.spawn_queue.size(), 7 + Catalog.MENACE_WAVE["count"] * tier, "effectif de la vague 1 au palier %d" % tier)
+		check_eq(GameState.spawn_queue.size(), Catalog.MENACE_WAVE["base"] + Catalog.MENACE_WAVE["per_wave"] + Catalog.MENACE_WAVE["count"] * tier, "effectif de la vague 1 au palier %d" % tier)
 		if menace >= Catalog.STRAZHAR_MENACE:
 			var last := int(GameState.spawn_queue[0]["group"]["expected"]) - 1
 			check_eq(GameState.spawn_queue[last]["kind"], "strazhar", "champion en serre-file de la première escouade")
@@ -121,7 +137,7 @@ func test_views_play_attacks_then_hold_final_corpse_frame() -> void:
 	var world: World = sim.get_node("../World")
 	world.fog.refresh(sim.state())
 	for kind: String in Catalog.ENEMY:
-		if kind == OeilMatrice.KIND or kind == OeilMatrice.PUPIL_KIND:
+		if not _own_atlas(kind):
 			continue
 		var e := Enemy.make(kind, -3, -130, 0)
 		e.attack_started = GameState.sim_time - 0.2

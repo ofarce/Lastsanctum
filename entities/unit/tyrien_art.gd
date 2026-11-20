@@ -17,7 +17,7 @@ const BODY_DIR := "res://assets/imported/engineer/templier/"
 const PORTRAIT := BODY_DIR + "templier_portrait.png"
 const EXIL_DIR := "res://assets/imported/engineer/exil/"
 const EXIL_PORTRAIT := EXIL_DIR + "exil_portrait.png"
-const ANIMS := ["idle", "walk", "kneel", "pray", "settle", "lotus", "aim", "slash1", "slash2", "shoot", "idle_d", "walk_d", "idle_u", "walk_u", "shoot_d", "shoot_u", "hit", "c_idle", "c_walk", "c_shoot", "helm"]
+const ANIMS := ["idle", "walk", "kneel", "pray", "settle", "lotus", "aim", "slash1", "slash2", "shoot", "idle_d", "walk_d", "idle_u", "walk_u", "shoot_d", "shoot_u", "hit", "c_idle", "c_walk", "c_shoot", "c_idle_d", "c_walk_d", "c_idle_u", "c_walk_u", "c_shoot_d", "c_shoot_u", "helm", "helm_d", "helm_u"]
 
 static var meta: Dictionary
 ## frames[calque][animation] : Array[AtlasTexture] ; calque = "base" ou une pièce (helm, iron…).
@@ -79,7 +79,7 @@ static func ragged() -> bool:
 
 ## Calque du corps pour l'animation `name` : « exil » avant la combinaison, sauf Arbalestrie et casque.
 static func _body_layer(name: String) -> String:
-	if ragged() and frames.has("exil") and not name.begins_with("c_") and name != "helm":
+	if ragged() and frames.has("exil") and not name.begins_with("c_") and not name.begins_with("helm"):
 		return "exil"
 	return "base"
 
@@ -96,7 +96,7 @@ static func anim(name: String) -> Array[AtlasTexture]:
 ## Animation d'un corps donné (exil = avant la combinaison), sans regarder l'état de la partie.
 static func anim_of(name: String, exil: bool) -> Array[AtlasTexture]:
 	load_all()
-	return frames["exil" if exil and frames.has("exil") and not name.begins_with("c_") and name != "helm" else "base"][name]
+	return frames["exil" if exil and frames.has("exil") and not name.begins_with("c_") and not name.begins_with("helm") else "base"][name]
 
 
 static func fps(name: String) -> float:

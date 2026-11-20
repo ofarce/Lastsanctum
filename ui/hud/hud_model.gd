@@ -40,7 +40,8 @@ static func selected_building() -> Building:
 ## Incarné : un bâtiment ou une autre unité est ouvert dans le bandeau (clic gauche ou droit).
 static func incarnated_panel() -> bool:
 	var inc := GameState.incarnated
-	return inc != null and (selected_building() != null or GameState.selected.any(func(u: Unit) -> bool: return u != inc))
+	return inc != null and (selected_building() != null or GameState.hud_grove != null \
+		or GameState.selected.any(func(u: Unit) -> bool: return u != inc))
 
 
 ## unlocked (buildings.js) : sans prérequis, ou un bâtiment requis achevé.
@@ -153,7 +154,7 @@ static func _command_glyph(a: Dictionary, u: Unit) -> void:
 	var label: String = a["label"]
 	var name := label.get_slice(" · ", 0).trim_suffix(" ›")
 	var why := ""
-	if a["id"] in ["repair", "ability"] and u and u.ability > 0.0:
+	if a["id"] == "ability" and u and u.ability > 0.0:
 		a["cd_frac"] = clampf(u.ability / float(ABILITY_TIME.get(u.role, 18.0)), 0.0, 1.0)
 		a["cd_text"] = str(ceili(u.ability))
 		why = "Recharge · %s s" % a["cd_text"]
@@ -201,6 +202,9 @@ static func _panel_actions(sim: Simulation) -> Array[Dictionary]:
 			if research["building"] != B.type:
 				continue
 			var done := GameState.research_done.has(id)
+			# Achevée : plus de bouton au bâtiment, la recherche passe dans la rangée du haut à gauche (ResearchShelf).
+			if done:
+				continue
 			var pending := GameState.research_jobs.has(id)
 			var title: String = research["name"] + " · 10 s · " + Catalog.research_cost_text(id) + " · +20 menace à l’achèvement"
 			if research.has("desc"):
@@ -239,8 +243,6 @@ static func _panel_actions(sim: Simulation) -> Array[Dictionary]:
 			_warehouse_actions(A, B)
 		if Simulation.Recipes.has_station(B.type):
 			_craft_actions(A, sim, B)
-		if Production.has_chests(B):
-			_collect_action(A, sim, B)
 		if B.type == "soulwell":
 			var eligible := GameState.fallen.filter(func(f: Unit) -> bool: return Simulation.revivable(f))
 			var last := eligible.slice(maxi(0, eligible.size() - 9))
@@ -259,11 +261,13 @@ static func _panel_actions(sim: Simulation) -> Array[Dictionary]:
 		return A
 	# Désincarné, Ingénieur dans la capsule : les constructions restent accessibles, sans sélection.
 	if GameState.in_capsule and (u == null or u.hidden):
+		_build_family_tabs(A, false)
 		_build_actions(A, sim)
 		return A
 	if u == null or u.hidden:
 		return A
 	if u.role == "engineer" and GameState.hud_menu == "build":
+		_build_family_tabs(A, true)
 		_build_actions(A, sim)
 		A.append(_act("back", "restart", "Retour", "b", "Revenir aux ordres de l’Ingénieur (B ou Échap)", func() -> void:
 			GameState.hud_menu = ""
@@ -292,8 +296,8 @@ static func _panel_actions(sim: Simulation) -> Array[Dictionary]:
 		A.append(_act("menu-place", "flag", "Poser · %d" % stock, "p", "Poser une défense de l’Atelier : poste de tir, barricade, chausse-trappe",
 			func() -> void: GameState.hud_menu = "place"))
 		if GameState.orb_active:
-			A.append(_act("repair", "repair", "Réparer", "r", "Réparer l’Ancre · +15 % d’intégrité", sim.run_ability, u.ability > 0.0, false,
-				"%d s" % ceili(u.ability) if u.ability > 0.0 else ""))
+			A.append(_act("repair", "repair", "Réparer", "r", "Prier à l’Ancre · la répare de %s PV / s · +%s de chaque mana / s · coûte %s PV / s à l’Ingénieur" \
+				% [num(Simulation.ANCHOR_REPAIR), num(Simulation.ANCHOR_PRAY), num(Simulation.ANCHOR_PRAY_HP)], sim.run_ability, false, Capsule.praying(u)))
 		else:
 			A.append(_act("orb", "rune", "Réactiver", "r", "Réactiver l’Ancre · %s s" % num(ORB_TIME), func() -> void: sim.order_orb(u),
 				false, u.orb_job))
@@ -333,9 +337,9 @@ const CRAFT_ICON := {"torch": "flame", "arrows": "bow", "bow": "bow", "wood_fibe
 
 
 static func _warehouse_actions(actions: Array[Dictionary], b: Building) -> void:
-	var groups := ["Matériaux", "Atelier", "Forge", "Creuset"]
-	var catalogs := [Simulation.Blocks.ITEMS, Simulation.Recipes.RECIPES["workshop"],
-		Simulation.Recipes.RECIPES["forge"], Simulation.Recipes.RECIPES["creuset"]]
+	var groups := ["Matériaux", "Atelier", "Scierie", "Archerie", "Fonderie", "Armurerie"]
+	var catalogs := [Simulation.Blocks.ITEMS, Simulation.Recipes.RECIPES["workshop"], Simulation.Recipes.RECIPES["scierie"],
+		Simulation.Recipes.RECIPES["archerie"], Simulation.Recipes.RECIPES["forge"], Simulation.Recipes.RECIPES["creuset"]]
 	var next := (b.warehouse_page + 1) % groups.size()
 	actions.append(_act("warehouse-page", "book", groups[b.warehouse_page] + " ›", "p",
 		"Afficher la catégorie suivante · " + groups[next], func() -> void: b.warehouse_page = next))
@@ -429,7 +433,7 @@ static func _train_glyph(action: Dictionary, B: Building, id: String, label: Str
 	if B.queue.size() >= Catalog.CASERNE_QUEUE:
 		why = "File pleine"
 	elif action["locked"]:
-		why = "Objets manquants au coffre bleu"
+		why = "Objets manquants dans les coffres"
 	elif action["craft_count"] > 0:
 		why = "%d en file" % action["craft_count"]
 	var cost := _mana_text(Catalog.train_cost(id)) + (" · " + _stock_text(items) if not items.is_empty() else "")
@@ -464,22 +468,7 @@ static func _mana_text(cost: Dictionary) -> String:
 	return " + ".join(parts)
 
 
-## Vider le coffre rouge d'un bâtiment producteur (l'Ingénieur rapporte les objets au stock).
-static func _collect_action(A: Array[Dictionary], sim: Simulation, B: Building) -> void:
-	var n := 0
-	for stack: Dictionary in B.output_box:
-		if not stack.is_empty():
-			n += int(stack["quantity"])
-	A.append(_act("collect", "move", "Vider le coffre · %d" % n, "x",
-		"L’Ingénieur rapporte le contenu du coffre rouge au stock (coffre antique, sinon son sac)",
-		func() -> void: sim.collect_output(B), n == 0 or sim.builder() == null))
-	A[-1]["craft_item"] = "collect"
-	A[-1]["craft_count"] = n
-	A[-1]["bubble"] = ["Vider le coffre rouge", "%d objet(s) rapportés au stock par l’Ingénieur" % n, true,
-		"Ingénieur absent" if sim.builder() == null else ""]
-
-
-## « 3/5 Cuivre + 5/5 Fer » : ingrédients d'une recette présents dans le coffre bleu.
+## « 3/5 Cuivre + 5/5 Fer » : ingrédients d'une recette présents dans le réseau des coffres.
 static func _box_text(items: Array, cost: Dictionary) -> String:
 	var parts: PackedStringArray = []
 	for k: String in cost:
@@ -617,7 +606,8 @@ static func unit_status(sim: Simulation, u: Unit) -> String:
 			var bl := float(u.job["pylon"].get("blessing", 0.0))
 			return "Bénit le Pylône de Merenor · répit %d s" % floori(bl) if u.working else "Se rend au Pylône de Merenor"
 		if u.job != null and u.job["type"] == "anchor_pray":
-			return "Prie à l’Ancre · +3 de chaque mana / s" if u.working else "Se rend à l’Ancre pour prier"
+			return "Prie à l’Ancre · répare %s PV / s · +%s de chaque mana / s" % [num(Simulation.ANCHOR_REPAIR), num(Simulation.ANCHOR_PRAY)] \
+				if u.working else "Se rend à l’Ancre pour prier"
 		if u.orb_job:
 			return "Réactivation de l’Ancre · %d %%" % floori(GameState.orb_progress / ORB_TIME * 100.0)
 		if u.job != null and u.job["type"] == "dig":
@@ -681,6 +671,10 @@ static func building_status(b: Building) -> String:
 			return "%s · %s" % [Oublieux.status(b), posts]
 		if b.type != "soulwell":
 			return "En activité %s · %s" % [speed, posts]
+	if b.type == "eglise":
+		return Oublieux.status(b)
+	if b.type == "bedroom":
+		return "Loge %d Exilés de plus" % Catalog.POP_PER_BEDROOM
 	if b.type == "soulwell":
 		var n := GameState.fallen.size()
 		if n == 0:
@@ -714,7 +708,7 @@ static func view(sim: Simulation) -> Dictionary:
 	var tier := Catalog.menace_tier(GameState.menace)
 	var wave_stats := Catalog.menace_stats(tier)
 	var portal_stats := Catalog.menace_stats(tier, true)
-	v["menace_tooltip"] = ("Menace %d · palier %d\nVagues : +%d ennemis · composition +%d vagues\nPV ×%.2f · dégâts ×%.2f · armure +%d\nStrazhar : dès la vague effective 8 ou %d menace ; +1 tous les %d paliers après %d\nPylônes de Merenor : meute de %d à %d bêtes dont un alpha ×%d, renaissance en %d s\nPV ×%.2f · dégâts ×%.2f\nLa nuit : squelettes levés dehors, et %d chiens lâchés par chaque pylône éveillé non canalisé (et par le plus proche)\nLa menace monte à chaque ennemi d'assaut abattu, selon son type (fanatique 1, bouclier 5, Strazhar 12).\nVagues : menace figée au lancement. Pylônes : menace relue à chaque renaissance." % [
+	v["menace_tooltip"] = ("Menace %d · palier %d\nVagues : +%d ennemis · composition +%d vagues\nPV ×%.2f · dégâts ×%.2f · armure +%d\nStrazhar : dès la vague effective 8 ou %d menace ; +1 tous les %d paliers après %d\nPylônes de Merenor : meute de %d à %d bêtes dont un alpha ×%d, renaissance en %d s\nPV ×%.2f · dégâts ×%.2f\nLa nuit : squelettes levés dehors, et %d chiens lâchés par chaque pylône non canalisé relié à l’Ancre\nLa menace monte à chaque ennemi d'assaut abattu, selon son type (fanatique 1, bouclier 5, Strazhar 12).\nVagues : menace figée au lancement. Pylônes : menace relue à chaque renaissance." % [
 		GameState.menace, tier, Catalog.MENACE_WAVE["count"] * tier,
 		floori(float(tier) / Catalog.MENACE_WAVE["composition_step"]), wave_stats["hp"], wave_stats["damage"], wave_stats["armor"],
 		Catalog.STRAZHAR_MENACE, Catalog.MENACE_WAVE["champion_step"], Catalog.MENACE_WAVE["champion_start"],
@@ -803,7 +797,24 @@ static func view(sim: Simulation) -> Dictionary:
 	var foe := selected_enemy() if not anchor and u == null and B == null else null
 	if foe:
 		_enemy_view(v, foe)
+	elif not anchor and u == null and B == null and GameState.hud_grove != null:
+		_grove_view(v)
 	return v
+
+
+## Fiche du bosquet pétrifié sélectionné (GameState.hud_grove).
+static func _grove_view(v: Dictionary) -> void:
+	v["chosen"] = "Bosquet pétrifié"
+	v["kind"] = "GISEMENT · BOIS"
+	v["status"] = "Clic droit avec un adepte : récolte"
+	v["health_label"] = "Bois"
+	v["health_pct"] = 100.0
+	v["health_text"] = "Inépuisable"
+	for k: String in ["damage", "range", "armor", "speed"]:
+		v[k] = "—"
+	v["lore"] = "Arbres changés en pierre, au bois inépuisable."
+	v["portrait_enabled"] = true
+	v["portrait_key"] = "grove"
 
 
 ## Ennemi sélectionné encore en vie (écart voulu D14), sinon null (et la sélection est oubliée).
@@ -845,19 +856,86 @@ static func _enemy_view(v: Dictionary, e: Enemy) -> void:
 	v["portrait_key"] = "enemy-" + e.kind
 
 
-## Boutons de construction (une entrée par bâtiment du catalogue).
-static func _build_actions(A: Array[Dictionary], sim: Simulation) -> void:
+## Familles du menu Construire : [id, nom, icône, bâtiments]. Un bâtiment absent de la liste tombe dans « Utilitaires ».
+const BUILD_FAMILIES := [
+	["temples", "Temples", "rune", ["sigil", "aether", "medeina", "indra"]],
+	["raw", "Matières premières", "wood", ["scierie", "forge"]],
+	["production", "Production", "hammer", ["workshop", "archerie", "creuset"]],
+	["utility", "Utilitaires", "people", ["bedroom", "eglise", "library", "warehouse"]],
+	["military", "Militaire", "sword", ["caserne", "soulwell", "ecole"]],
+]
+
+
+static func build_family_of(type: String) -> String:
+	for f: Array in BUILD_FAMILIES:
+		if type in f[3]:
+			return f[0]
+	return "utility"
+
+
+## Bâtiments débloqués d'une famille, dans l'ordre du catalogue ; les verrouillés sont masqués.
+static func family_buildings(family: String) -> Array[String]:
+	var out: Array[String] = []
 	for type: String in Catalog.BUILDINGS:
-		var D: Dictionary = Catalog.BUILDINGS[type]
-		var ok := unlocked(type)
-		var cost := Catalog.building_cost(type)
-		var title: String = D["name"] + " · " + Catalog.cost_text(cost)
-		if not ok:
-			title += " · " + lock_reason(type)
-		if D["size"] == 2:
-			title += " · 2 × 2"
-		A.append(_act("b-" + type, D["icon"], _temple_prefix.sub(D["name"], "T. ") + " · " + Catalog.short_cost(cost), D["key"], title,
-			func() -> void: sim.arm_build(type), not ok or not Catalog.can_pay(cost),
-			GameState.hud_mode == "build" and GameState.hud_build_type == type))
-		A[-1]["build_type"] = type
-		A[-1]["locked"] = not ok
+		if build_family_of(type) == family and unlocked(type):
+			out.append(type)
+	return out
+
+
+## Onglets du menu Construire : une famille n'apparaît qu'avec au moins un bâtiment débloqué.
+## Touches 1 à 5 dans le menu de l'Ingénieur ; aucune depuis la capsule (les chiffres y choisissent les groupes).
+static func _build_family_tabs(A: Array[Dictionary], keys: bool) -> void:
+	var shown: Array[String] = []
+	for f: Array in BUILD_FAMILIES:
+		if not family_buildings(f[0]).is_empty():
+			shown.append(f[0])
+	if not GameState.hud_build_family in shown:
+		GameState.hud_build_family = shown[0] if not shown.is_empty() else "temples"
+	for f: Array in BUILD_FAMILIES:
+		var fam: String = f[0]
+		if not fam in shown:
+			continue
+		var n := family_buildings(fam).size()
+		var open_tab := func() -> void:
+			GameState.hud_build_family = fam
+			if GameState.hud_mode == "build" and build_family_of(GameState.hud_build_type) != fam:
+				GameState.hud_mode = ""
+				GameState.hud_build_type = ""
+		A.append(_act("bfam-" + fam, f[2], f[1], str(shown.find(fam) + 1) if keys else "",
+			"%s · %d bâtiment(s) disponible(s)" % [f[1], n], open_tab, false, GameState.hud_build_family == fam))
+		A[-1]["bubble"] = [f[1], "", true, ""]
+
+
+## Boutons de construction de l'onglet ouvert (bâtiments débloqués seulement).
+static func _build_actions(A: Array[Dictionary], sim: Simulation) -> void:
+	for type: String in family_buildings(GameState.hud_build_family):
+		A.append(_build_action(type, sim))
+
+
+## Touche d'un bâtiment d'un autre onglet : ouvre son onglet et l'arme (raccourcis inchangés).
+static func build_key(sim: Simulation, k: String) -> bool:
+	for type: String in Catalog.BUILDINGS:
+		if Catalog.BUILDINGS[type]["key"] == k and unlocked(type):
+			GameState.hud_build_family = build_family_of(type)
+			var a := _build_action(type, sim)
+			if not a["disabled"]:
+				(a["run"] as Callable).call()
+			return true
+	return false
+
+
+static func _build_action(type: String, sim: Simulation) -> Dictionary:
+	var D: Dictionary = Catalog.BUILDINGS[type]
+	var ok := unlocked(type)
+	var cost := Catalog.building_cost(type)
+	var title: String = D["name"] + " · " + Catalog.cost_text(cost)
+	if not ok:
+		title += " · " + lock_reason(type)
+	if D["size"] == 2:
+		title += " · 2 × 2"
+	var a := _act("b-" + type, D["icon"], _temple_prefix.sub(D["name"], "T. ") + " · " + Catalog.short_cost(cost), D["key"], title,
+		func() -> void: sim.arm_build(type), not ok or not Catalog.can_pay(cost),
+		GameState.hud_mode == "build" and GameState.hud_build_type == type)
+	a["build_type"] = type
+	a["locked"] = not ok
+	return a

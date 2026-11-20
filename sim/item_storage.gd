@@ -1,8 +1,20 @@
 extends RefCounted
-## Piles de 9 999 objets identiques par case. Le coffre débloqué est la destination exclusive.
+## Piles de 9 999 objets identiques par case. Réseau des coffres (GameState.base_inventory) : l'espace du
+## coffre antique, partagé par tous les coffres des bâtiments, sans limite de cases (pages de 10 × 10 à l'écran).
 const PICKUP_RADIUS := 2.0
-const BASE_CAPACITY := 100
+const BASE_CAPACITY := 1 << 30
+const PAGE := 100
 const MAX_STACK := 9999
+
+
+## Réseau des coffres accessible : coffre antique ouvert, ou au moins un bâtiment à coffres achevé.
+static func network_open() -> bool:
+	if GameState.base_inventory_unlocked:
+		return true
+	for b: Building in GameState.buildings:
+		if b.complete and Production.has_chests(b):
+			return true
+	return false
 
 
 static func character_available(u: Unit) -> bool:
@@ -64,7 +76,7 @@ static func drop_of(item: String, position: Vector2, owner := "") -> Dictionary:
 
 
 static func deposit(item: String, u: Unit, position: Vector2, owner := "") -> void:
-	if GameState.base_inventory_unlocked:
+	if network_open():
 		if store(GameState.base_inventory, BASE_CAPACITY, item, owner):
 			return
 	elif character_available(u):
@@ -92,11 +104,11 @@ static func move_stack(source: Array[Dictionary], from: int, target: Array[Dicti
 		target[to] = stack
 
 
-## Réserves où la fabrication et la caserne puisent : le coffre de base (s'il est débloqué), puis le sac de
-## chaque Ingénieur vivant.
+## Réserves où la fabrication et la caserne puisent : le réseau des coffres (s'il est accessible), puis le sac
+## de chaque Ingénieur vivant.
 static func sources() -> Array:
 	var out: Array = []
-	if GameState.base_inventory_unlocked:
+	if network_open():
 		out.append(GameState.base_inventory)
 	for u: Unit in GameState.units:
 		if u.role == "engineer" and u.alive():
@@ -153,14 +165,10 @@ static func give(cost: Dictionary, position: Vector2) -> void:
 			deposit(k, engineer, position)
 
 
-## Munitions (flèches, obus) : le stock habituel, puis les coffres rouges des bâtiments (un archer tire
-## directement dans la production de l'Atelier sans attendre qu'on la rapporte). Sert aussi aux défenses à poser
-## (poste de tir, barricade, chausse-trappe) : l'Ingénieur les pose depuis le coffre rouge de l'Atelier.
+## Munitions (flèches, obus) et défenses à poser : le stock habituel. Les coffres rouges des bâtiments font
+## partie du réseau des coffres, déjà compté dans sources().
 static func ammo_sources() -> Array:
-	var out := sources()
-	for b: Building in GameState.buildings:
-		out.append(b.output_box)
-	return out
+	return sources()
 
 
 static func count_ammo(item: String) -> int:

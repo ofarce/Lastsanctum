@@ -51,6 +51,11 @@ var _fast_construction := Button.new()
 var _martyre_spawn := Button.new()
 var _oeil_go := Button.new()
 var _minimap_unlock := Button.new()
+var _wave_trigger := Button.new()
+var _archer_spawn := Button.new()
+## Seul bouton de debug visible au départ : il déplie les autres, qu'un clic ailleurs replie.
+var _debug_toggle := Button.new()
+var _debug_open := false
 # Notice, Rejouer, bannière, dialogue.
 var _notice := _Panel.new()
 var _notice_label := SnesBanner.label()
@@ -123,6 +128,8 @@ var minimap_overlay := MinimapOverlay.new()
 ## Codex d'aide (F1 ou bouton « ? » à droite de la carte de vague) : met le jeu en pause.
 var help_panel := HelpPanel.new()
 var _help_button := HelpButton.new()
+## Recherches achevées : icônes en haut à gauche, sous la carte de vague ; effet au survol.
+var research_shelf := ResearchShelf.new()
 var sfx_player: Node = preload("res://ui/audio/sfx_player.gd").new()
 var music_player: Node = preload("res://ui/audio/music_player.gd").new()
 
@@ -133,6 +140,7 @@ func _ready() -> void:
 	_root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_root)
 	_build_top()
+	_root.add_child(research_shelf)
 	_build_bar()
 	minimap_overlay.minimap = minimap
 	_root.add_child(minimap_overlay)
@@ -271,7 +279,7 @@ func _build_top() -> void:
 	_root.add_child(_fast_construction)
 	_crafted_item_boost.name = "CraftedItemBoost"
 	_crafted_item_boost.text = "+100 objets craftables"
-	_crafted_item_boost.tooltip_text = "Ajouter 100 de chaque objet de l’Atelier, de la Forge et du Creuset au stock de base, et rendre ce stock accessible"
+	_crafted_item_boost.tooltip_text = "Ajouter 100 de chaque objet de l’Atelier, de la Scierie, de l’Archerie, de la Fonderie et de l’Armurerie au stock de base, et rendre ce stock accessible"
 	_crafted_item_boost.focus_mode = Control.FOCUS_NONE
 	_crafted_item_boost.mouse_filter = Control.MOUSE_FILTER_STOP
 	_crafted_item_boost.add_theme_font_override("font", HudStyle.font())
@@ -320,6 +328,13 @@ func _build_top() -> void:
 		say("Minicarte : TAB ou M pour l’afficher en plein écran.")
 		refresh(true))
 	_root.add_child(_minimap_unlock)
+	_debug_button(_wave_trigger, "WaveTrigger", "Déclencher une vague",
+		"Lance tout de suite l’assaut suivant par le sud, sans attendre le matin", _trigger_wave)
+	_debug_button(_archer_spawn, "ArcherSpawn", "Faire venir un archer",
+		"Fait apparaître gratuitement un archer allié à côté de l’Ancre, sans Caserne", _spawn_archer)
+	_debug_button(_debug_toggle, "DebugToggle", "DEBUG", "Affiche les boutons de debug", func() -> void:
+		_set_debug_open(not _debug_open))
+	_set_debug_open(false)
 	_ammo_panel.name = "AmmoPanel"
 	_ammo_panel.kind = "metal"
 	_ammo_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -351,6 +366,59 @@ func _spawn_martyre() -> void:
 	refresh()
 
 
+## Bouton de debug au style des autres (bordure de « +100 ressources »).
+func _debug_button(b: Button, node_name: String, label: String, tip: String, action: Callable) -> void:
+	b.name = node_name
+	b.text = label
+	b.tooltip_text = tip
+	b.focus_mode = Control.FOCUS_NONE
+	b.mouse_filter = Control.MOUSE_FILTER_STOP
+	b.add_theme_font_override("font", HudStyle.font())
+	b.add_theme_font_size_override("font_size", 14)
+	b.add_theme_color_override("font_color", HudStyle.IVORY)
+	for state: String in ["normal", "hover", "pressed"]:
+		b.add_theme_stylebox_override(state, _resource_boost.get_theme_stylebox(state))
+	b.pressed.connect(action)
+	_root.add_child(b)
+
+
+func _debug_buttons() -> Array[Button]:
+	return [_resource_boost, _fast_construction, _crafted_item_boost, _martyre_spawn, _oeil_go,
+		_minimap_unlock, _wave_trigger, _archer_spawn]
+
+
+func _set_debug_open(open: bool) -> void:
+	_debug_open = open
+	for b: Button in _debug_buttons():
+		b.visible = open
+
+
+## Debug : l'assaut suivant part aussitôt ; le calendrier normal des vagues reste inchangé.
+func _trigger_wave() -> void:
+	if not GameState.spawn_queue.is_empty():
+		sim.say("Une vague est encore en train d’arriver.", 2.0)
+		return
+	sim.combat.start_wave()
+	refresh()
+
+
+## Debug : un archer allié sort à côté de l'Ancre, gratuit et sans Caserne ni recherche requise
+## (même force qu'un archer de Caserne, sans hausse de menace) ; il tire sans flèches.
+func _spawn_archer() -> void:
+	var p := sim.state().push_out_of_rock(CaveShape.CORE + Vector2(2.5, 2.5))
+	var u := sim.spawn(Catalog.ADEPT["archer"]["name"], p.x, p.y, "archer")
+	var size := float(Catalog.TRAIN_SIZE.get("caserne", 1))
+	u.power = size
+	u.free_ammo = true
+	u.hp = Catalog.ADEPT["archer"]["hp"] * size
+	u.max_hp = u.hp
+	u.tx = u.x
+	u.tz = u.z
+	sim.clamp_world(u)
+	Sfx.at("adepte_arrive", u.x, u.z)
+	refresh(true)
+
+
 ## Debug : la salle de l'Œil est découverte et l'Ingénieur posé à son bord sud, caméra sur la salle.
 func _go_oeil() -> void:
 	var st := world.terrain_state
@@ -376,7 +444,7 @@ func _go_oeil() -> void:
 func _add_crafted_items() -> void:
 	var stock := GameState.base_inventory.duplicate(true)
 	var items := {}
-	for station: String in ["workshop", "forge", "creuset"]:
+	for station: String in ["workshop", "scierie", "archerie", "forge", "creuset"]:
 		for item: String in Simulation.Recipes.RECIPES[station]:
 			items[item] = true
 	for item: String in items:
@@ -590,7 +658,8 @@ func _layout() -> void:
 	_layout_details(_modules[2].size)
 	_layout_actions(_modules[3].size)
 	_layout_build_row()
-	objective.position = Vector2(TOP_INSET.x, TOP_INSET.y + 56.0 + 10.0)
+	research_shelf.position = Vector2(TOP_INSET.x, TOP_INSET.y + 56.0 + 10.0)
+	objective.position = Vector2(TOP_INSET.x, research_shelf.position.y + (ResearchShelf.CELL + 10.0 if research_shelf.visible else 0.0))
 	_layout_debug()
 	_fast_construction.size = Vector2(230, 38)
 	_layout_ammo(s)
@@ -603,6 +672,9 @@ func _layout() -> void:
 ## Boutons de debug : sous le panneau d'objectif, dont la hauteur suit le nombre d'objectifs affichés.
 func _layout_debug() -> void:
 	var dbg_y := objective.position.y + maxf(ObjectivePanel.HEIGHT, objective.size.y) + 10.0
+	_debug_toggle.position = Vector2(16, dbg_y)
+	_debug_toggle.size = Vector2(100, 38)
+	dbg_y += 44.0
 	_resource_boost.position = Vector2(16, dbg_y)
 	_resource_boost.size = Vector2(100, 38)
 	_fast_construction.position = Vector2(16, dbg_y + 44.0)
@@ -614,6 +686,10 @@ func _layout_debug() -> void:
 	_oeil_go.size = Vector2(230, 38)
 	_minimap_unlock.position = Vector2(16, dbg_y + 220.0)
 	_minimap_unlock.size = Vector2(230, 38)
+	_wave_trigger.position = Vector2(16, dbg_y + 264.0)
+	_wave_trigger.size = Vector2(230, 38)
+	_archer_spawn.position = Vector2(16, dbg_y + 308.0)
+	_archer_spawn.size = Vector2(230, 38)
 
 
 func _layout_top(s: Vector2) -> void:
@@ -848,7 +924,7 @@ func _refresh_incarnated_menu(actions: Array[Dictionary]) -> void:
 	if _incarnated_menu():
 		inc_actions = actions.filter(func(a: Dictionary) -> bool:
 			var id: String = a["id"]
-			return id in ["menu-build", "menu-place", "back"] or id.begins_with("place-"))
+			return id in ["menu-build", "menu-place", "back"] or id.begins_with("place-") or id.begins_with("bfam-"))
 	var sig := "|".join(inc_actions.map(func(a: Dictionary) -> String: return a["id"]))
 	if sig != _inc_sig:
 		_inc_sig = sig
@@ -857,6 +933,8 @@ func _refresh_incarnated_menu(actions: Array[Dictionary]) -> void:
 		_inc_buttons.clear()
 		for a in inc_actions:
 			var b := ActionButton.new()
+			b.mouse_entered.connect(_update_bubble)
+			b.mouse_exited.connect(_update_bubble)
 			_inc_actions.add_child(b)
 			_inc_buttons.append(b)
 	for i in inc_actions.size():
@@ -881,7 +959,13 @@ func _layout_incarnated_menu() -> void:
 		_inc_buttons[i].size = INC_BTN
 	var m := _build_buttons.size()
 	_build_row.size = Vector2(maxf(0.0, m * (BuildButton.SIZE + gap) - gap), BuildButton.SIZE)
-	_build_row.position = Vector2(right - _build_row.size.x, _inc_actions.position.y - gap - BuildButton.SIZE)
+	# Centrée sur l'onglet de famille ouvert, gardée dans l'écran ; à droite à défaut d'onglet.
+	var x := right - _build_row.size.x
+	for i in n:
+		if String(_inc_buttons[i].action.get("id", "")).begins_with("bfam-") and _inc_buttons[i].action.get("active", false):
+			var cx := _inc_actions.position.x + i * (INC_BTN.x + gap) + INC_BTN.x / 2.0
+			x = clampf(cx - _build_row.size.x / 2.0, Hud.BAR_MARGIN, right - _build_row.size.x)
+	_build_row.position = Vector2(x, _inc_actions.position.y - gap - BuildButton.SIZE)
 	for i in m:
 		_build_buttons[i].position = Vector2(i * (BuildButton.SIZE + gap), 0.0)
 	_place_sky_card()
@@ -909,6 +993,15 @@ func _layout_build_row() -> void:
 
 ## Bulle au-dessus du carré survolé (ou, à défaut, du bâtiment armé) : « Nom · 20 Savoir ».
 func _update_bubble() -> void:
+	# Onglet du menu Construire survolé (Ingénieur incarné) : nom de la famille, au-dessus de la rangée des bâtiments.
+	for ib in _inc_buttons:
+		if ib.visible and ib.is_hovered() and String(ib.action.get("id", "")).begins_with("bfam-"):
+			var info: Array = ib.action["bubble"]
+			_build_bubble.set_text(info[0], info[1], info[2], info[3], info[4] if info.size() > 4 else "")
+			_show_bubble(ib.global_position + Vector2(ib.size.x / 2.0, 0.0))
+			for b in _build_buttons:
+				b.queue_redraw()
+			return
 	var target: BuildButton = null
 	for b in _build_buttons:
 		if b.is_hovered():
@@ -934,7 +1027,7 @@ func _update_bubble() -> void:
 	if target.action.get("locked", false):
 		why = HudModel.lock_reason(target.action["build_type"])
 	var build_cost := Catalog.building_cost(target.action["build_type"])
-	_build_bubble.set_text(D["name"], Catalog.cost_text(build_cost), Catalog.can_pay(build_cost), why)
+	_build_bubble.set_text(D["name"], Catalog.cost_text(build_cost), Catalog.can_pay(build_cost), why, String(D.get("lore", "")))
 	_show_bubble(target.global_position + Vector2(BuildButton.SIZE / 2.0, 0.0))
 
 
@@ -1024,7 +1117,7 @@ func _process(delta: float) -> void:
 		_wave_alert.modulate.a = minf(1.0, _wave_alert.modulate.a + delta / 0.2)
 	var ctx := "%s|%s|%s|%s|%s|%s|%s|%s" % [GameState.selected.map(func(u: Unit) -> int: return u.id), GameState.hud_menu,
 		GameState.hud_mode, GameState.hud_build_type, GameState.hud_building.id if GameState.hud_building else -1,
-		GameState.anchor_selected, GameState.ended, GameState.hud_enemy.get_instance_id() if GameState.hud_enemy else 0]
+		GameState.anchor_selected, GameState.ended, GameState.hud_enemy.get_instance_id() if GameState.hud_enemy else 0] + str(GameState.hud_grove)
 	var t := GameState.sim_time
 	if ctx != _ctx or t < _last_update or t - _last_update >= 0.1:
 		_ctx = ctx
@@ -1044,6 +1137,8 @@ func refresh(force_map := false) -> void:
 		relayout = true
 		_apply_view(v)
 		_view = v
+	if research_shelf.update_ids():
+		relayout = true
 	var all_actions := HudModel.panel_actions(sim)
 	var actions: Array[Dictionary] = all_actions.filter(func(a: Dictionary) -> bool: return not a.has("build_type"))
 	var builds: Array[Dictionary] = all_actions.filter(func(a: Dictionary) -> bool: return a.has("build_type"))
@@ -1154,6 +1249,12 @@ func _apply_view(v: Dictionary) -> void:
 		_portrait_key = v["portrait_key"]
 		if _portrait_key.begins_with("enemy-"):
 			_portrait.texture = _enemy_portrait(_portrait_key.substr(6))
+		elif _portrait_key == "grove":
+			# Bosquet pétrifié : premier état (intact) de bosquet.png, cadré en carré sur le feuillage.
+			var at := AtlasTexture.new()
+			at.atlas = GroveView.SPRITES
+			at.region = Rect2(0, 8, 96, 96)
+			_portrait.texture = at
 		elif PORTRAITS_EXTRA.has(_portrait_key):
 			_portrait.texture = load(PORTRAITS_EXTRA[_portrait_key])
 		else:
@@ -1208,12 +1309,11 @@ func hide_notice() -> void:
 
 ## end(won) : bannière de fin de partie (les conditions de fin arrivent avec le combat, étape 8).
 func show_banner(won: bool) -> void:
+	# Bannière de victoire masquée (tri des répliques du 2026-11-20).
 	if won:
-		_banner_title.text = "SANCTUM PRÉSERVÉ"
-		_banner_small.text = "Les Exilés et les disciples d’Indra ont repoussé l’assaut."
-	else:
-		_banner_title.text = "L’ANCRE EST PERDUE"
-		_banner_small.text = "Maj + R pour recommencer."
+		return
+	_banner_title.text = "L’ANCRE EST PERDUE"
+	_banner_small.text = "Maj + R pour recommencer."
 	_banner.visible = true
 	_layout_banner()
 
@@ -1247,12 +1347,22 @@ func _center_on_selection() -> void:
 			p = alive[0].pos()
 		elif foe:
 			p = foe.pos()
+		elif GameState.hud_grove != null:
+			p = Vector2(GameState.hud_grove * 4) + Vector2(4, 4)
 	if p != null:
 		world.camera.set_view(p, world.camera.px)
 		refresh(true)
 
 
 func _input(event: InputEvent) -> void:
+	# Menu de debug déplié : un clic hors de ses boutons (et hors de DEBUG, qui bascule seul) le replie ; le clic poursuit sa route.
+	if _debug_open and event is InputEventMouseButton and event.pressed:
+		var at: Vector2 = event.position
+		var on_button := _debug_toggle.get_global_rect().has_point(at)
+		for b: Button in _debug_buttons():
+			on_button = on_button or b.get_global_rect().has_point(at)
+		if not on_button:
+			_set_debug_open(false)
 	# Bannières « Reçu : … » : n'importe quelle action passe à la suivante (posée par-dessus), puis referme.
 	if item_banner.active() and event.is_pressed():
 		if event is InputEventKey or event is InputEventMouseButton or event is InputEventJoypadButton:
@@ -1476,6 +1586,8 @@ class _Bubble extends Control:
 	var _parts: Array = []
 	## Seconde ligne facultative (effet d'une recherche, d'une unité), plus petite.
 	var _desc := ""
+	var _desc_h := 0.0
+	const DESC_W := 340.0
 
 	func set_text(name: String, cost: String, ok: bool, why: String, desc := "") -> void:
 		_parts = [[name, HudStyle.IVORY]]
@@ -1487,9 +1599,12 @@ class _Bubble extends Control:
 		var w := 0.0
 		for p in _parts:
 			w += HudStyle.text_width(p[0], 15)
+		_desc_h = 0.0
 		if desc:
-			w = maxf(w, HudStyle.text_width(desc, 13))
-		size = Vector2(w + 28.0, 50.0 if desc else 32.0)
+			# Descriptif sur plusieurs lignes au-delà de DESC_W (lore des bâtiments).
+			w = clampf(HudStyle.text_width(desc, 13), w, maxf(w, DESC_W))
+			_desc_h = HudStyle.font().get_multiline_string_size(desc, HORIZONTAL_ALIGNMENT_LEFT, w, 13).y
+		size = Vector2(w + 28.0, 32.0 + (_desc_h + 6.0 if desc else 0.0))
 
 	func _draw() -> void:
 		var r := Rect2(Vector2.ZERO, size)
@@ -1504,7 +1619,7 @@ class _Bubble extends Control:
 			draw_string(f, Vector2(x, 21.0), p[0], HORIZONTAL_ALIGNMENT_LEFT, -1, 15, p[1])
 			x += HudStyle.text_width(p[0], 15)
 		if _desc:
-			draw_string(f, Vector2(14.0, 39.0), _desc, HORIZONTAL_ALIGNMENT_LEFT, -1, 13, HudStyle.MUTED)
+			draw_multiline_string(f, Vector2(14.0, 26.0 + f.get_ascent(13)), _desc, HORIZONTAL_ALIGNMENT_LEFT, size.x - 28.0, 13, -1, HudStyle.MUTED)
 
 
 ## Icône d'objet de l'inventaire (bande items.png), dessinée au centre du contrôle.

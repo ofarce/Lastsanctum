@@ -52,7 +52,15 @@ ANIMS = [
     ("c_idle", 12, 4, 48, 12, "repos, Arbalestrie baissée (tête : +1 px sur les images 9 à 20 de chaque souffle de 24)"),
     ("c_walk", 12, 1, 12, None, "marche, Arbalestrie baissée (tête : +1 px sur les images 0, 1, 5, 6, 7, 11)"),
     ("c_shoot", 6, 1, 6, 12, "tir de l’Arbalestrie (0,5 s), 12 i/s (tête : +1 px sur les images 1 et 2)"),
+    ("c_idle_d", 12, 2, 24, 12, "repos de face, Arbalestrie sur l’épaule droite (gauche de l’image)"),
+    ("c_walk_d", 12, 1, 12, None, "marche vers le bas, Arbalestrie sur l’épaule"),
+    ("c_idle_u", 12, 2, 24, 12, "repos de dos, Arbalestrie sur l’épaule droite"),
+    ("c_walk_u", 12, 1, 12, None, "marche vers le haut, Arbalestrie sur l’épaule"),
+    ("c_shoot_d", 6, 1, 6, 12, "tir de l’Arbalestrie vers le sud (de face), canon à la hanche pointé vers le bas, 12 i/s"),
+    ("c_shoot_u", 6, 1, 6, 12, "tir de l’Arbalestrie vers le nord (de dos), canon levé, 12 i/s"),
     ("helm", 4, 1, 4, None, "calque du casque de combat : fermeture 25 / 50 / 75 / 100 % (tête au repos, décaler de dy)"),
+    ("helm_d", 4, 1, 4, None, "casque de face : fermeture 25 / 50 / 75 / 100 % (tête au repos, décaler de head_dy)"),
+    ("helm_u", 4, 1, 4, None, "casque de dos : fermeture 25 / 50 / 75 / 100 % (tête au repos, décaler de head_dy)"),
 ]
 W = 19 * FW
 H = sum(r for _, _, r, *_ in ANIMS) * FH
@@ -79,6 +87,42 @@ def meta(body: str) -> dict:
             "shoulder": [sx, sy],
         },
     }
+
+
+# Rangées de face et de dos à l'Arbalestrie : zone de la bouche (x0, x1, y0, y1), hors des gantelets et des bottes.
+TIP_ZONES = {"c_idle_d": (0, 19, 0, 30), "c_walk_d": (0, 19, 0, 30), "c_idle_u": (29, 48, 0, 30), "c_walk_u": (29, 48, 0, 30),
+             "c_shoot_d": (27, 36, 34, 41), "c_shoot_u": (26, 36, 8, 25)}
+TIP_LIGHT = (200, 251, 255)
+
+
+def tips(sheet: Image.Image, anims: dict) -> dict:
+    """Coin haut gauche de la lumière de la bouche (pixels cyan clair) dans chaque image : lumière de munition du jeu."""
+    out = {}
+    for name, (x0, x1, y0, y1) in TIP_ZONES.items():
+        a, pts = anims[name], []
+        for i in range(a["count"]):
+            fx, fy = (i % a["cols"]) * FW, a["y"] + (i // a["cols"]) * FH
+            lit = [(x, y) for y in range(y0, y1) for x in range(x0, x1) if sheet.getpixel((fx + x, fy + y))[:3] == TIP_LIGHT]
+            pts.append([min(x for x, _ in lit), min(y for _, y in lit)] if lit else [0, 0])
+        out[name] = pts
+    return out
+
+
+# Hauteur de la tête (px, + = plus bas) dans les rangées de face et de dos à l'Arbalestrie, par rapport au repos :
+# haut du crâne mesuré entre x = 21 et 26 (hors du canon), pour poser le casque helm_d / helm_u.
+HEAD_ROWS = {"c_idle_d": "c_idle_d", "c_walk_d": "c_idle_d", "c_shoot_d": "c_idle_d",
+             "c_idle_u": "c_idle_u", "c_walk_u": "c_idle_u", "c_shoot_u": "c_idle_u"}
+
+
+def head_dy(sheet: Image.Image, anims: dict) -> dict:
+    def top(name: str, i: int) -> int:
+        a = anims[name]
+        fx, fy = (i % a["cols"]) * FW, a["y"] + (i // a["cols"]) * FH
+        for y in range(FH):
+            if any(sheet.getpixel((fx + x, fy + y))[3] > 0 for x in range(21, 27)):
+                return y
+        return 0
+    return {name: [top(name, i) - top(ref, 0) for i in range(anims[name]["count"])] for name, ref in HEAD_ROWS.items()}
 
 
 def unkey(img: Image.Image) -> Image.Image:
@@ -111,9 +155,13 @@ def main() -> int:
         print("capture trop petite :", img.size, file=sys.stderr)
         return 1
     out.mkdir(parents=True, exist_ok=True)
-    unkey(img.crop((0, 0, W, H))).save(out / f"{body}_base.png")
+    sheet = unkey(img.crop((0, 0, W, H)))
+    sheet.save(out / f"{body}_base.png")
     unkey(img.crop((0, H, 128, H + 128))).save(out / f"{body}_portrait.png")
-    (out / f"{body}.json").write_text(json.dumps(meta(body), ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
+    m = meta(body)
+    m["tips"] = tips(sheet, m["anims"])
+    m["head_dy"] = head_dy(sheet, m["anims"])
+    (out / f"{body}.json").write_text(json.dumps(m, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
     print("écrit", out.relative_to(ROOT), W, "×", H)
     return 0
 

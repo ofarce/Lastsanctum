@@ -78,12 +78,16 @@ var hud_mode: String = ""
 ## HUD.menu ("" ou "build"), HUD.buildType (bâtiment à placer) et HUD.building (bâtiment sélectionné).
 var hud_menu: String = ""
 var hud_build_type: String = ""
+## Onglet ouvert du menu Construire (HudModel.BUILD_FAMILIES).
+var hud_build_family: String = "temples"
 var hud_building: Building = null
 ## Coffre désigné au clic droit (halo de sélection) : {"kind": "vault"} pour le coffre antique,
 ## {"building": Building, "kind": "in" | "out"} pour un coffre de production ; vide sinon.
 var hud_chest: Dictionary = {}
 ## Ennemi sélectionné (écart voulu D14), ou null.
 var hud_enemy: Enemy = null
+## Bosquet pétrifié sélectionné (origine Vector2i de ses 2 × 2 cases), ou null.
+var hud_grove: Variant = null
 
 ## Numéro de la vague en cours (wave), 0 avant le premier assaut.
 var wave: int = 0
@@ -128,6 +132,8 @@ var martyre_fx: Array[Dictionary] = []
 ## du bouclier et début de son resserrement, fin de l'invulnérabilité de l'Ingénieur après un coup.
 ## Balles des ennemis à distance tirées sur l'Exilé incarné (sim/enemy_shots.gd).
 var enemy_shots: Array[Dictionary] = []
+## Souffles armés des squelettes explosifs tombés (sim/skeletons.gd) : {x, z, at, dmg}.
+var skeleton_blasts: Array[Dictionary] = []
 var martyre_bullets: Array[Dictionary] = []
 var martyre_events: Array[Dictionary] = []
 var martyre_phase := 0
@@ -172,6 +178,10 @@ var in_capsule := false
 var capsule_on := false
 ## Première entrée dans la capsule faite (soin complet et canon remis).
 var capsule_gift := false
+## Sceau de minage remis par la capsule à la première entrée : l'Ingénieur peut creuser la roche.
+var mining_seal := false
+## Dernier coup reçu par l'Exilé incarné (Combat.damage) : il compte comme « en combat » COMBAT_CALM secondes.
+var incarnated_hurt_at := -INF
 ## Retour de l'Ingénieur tombé : instant où il réapparaît dans la capsule (INF s'il est en vie).
 var engineer_respawn_at: float = INF
 ## Munition choisie pour l'Arbalestrie (data/ammo.gd), gardée d'une incarnation à l'autre.
@@ -183,6 +193,8 @@ func reset() -> void:
 	in_capsule = false
 	capsule_on = false
 	capsule_gift = false
+	mining_seal = false
+	incarnated_hurt_at = -INF
 	engineer_respawn_at = INF
 	ammo = "spirit"
 	sim_time = 0.0
@@ -225,10 +237,12 @@ func reset() -> void:
 	hud_mode = ""
 	hud_menu = ""
 	hud_build_type = ""
+	hud_build_family = "temples"
 	hud_place_item = ""
 	hud_building = null
 	hud_chest = {}
 	hud_enemy = null
+	hud_grove = null
 	wave = 0
 	wildlife_lairs.clear()
 	roamers = {}
@@ -256,6 +270,7 @@ func reset() -> void:
 	martyre_fx.clear()
 	martyre_bullets.clear()
 	enemy_shots.clear()
+	skeleton_blasts.clear()
 	martyre_events.clear()
 	martyre_phase = 0
 	martyre_next_at = INF

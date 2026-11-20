@@ -32,19 +32,10 @@ func test_shortcut_unlock_close_and_reset() -> void:
 	inventory.free()
 
 
-func test_mining_slot_follows_actual_research() -> void:
+func test_mining_slot_follows_capsule_gift() -> void:
 	var sim := game()
-	check_eq(Inventory.mining_item(), "", "emplacement vide avant recherche")
-	for id: String in ["mining_concept", "mining_spark", "mining_power"]:
-		GameState.research_done[id] = true
-	check_eq(Inventory.mining_item(), "", "prérequis seuls insuffisants")
-	give(100.0)
-	var forge := built("forge", 0, -130)
-	staff(sim, forge, 1)
-	sim.start_research(forge, "mining_artifact")
-	sim.update_research(9.0)
-	check_eq(Inventory.mining_item(), "", "recherche en cours")
-	sim.update_research(1.0)
+	check_eq(Inventory.mining_item(), "", "emplacement vide avant la capsule")
+	GameState.mining_seal = true
 	check_eq(Inventory.mining_item(), "Sceau de minage", "sceau automatiquement équipé")
 	sim.new_game(SEED)
 	check_eq(Inventory.mining_item(), "", "sceau réinitialisé")

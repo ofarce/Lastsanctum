@@ -48,13 +48,13 @@ func test_mining_seal_highlight_and_dig() -> void:
 	check(spot != Vector2.INF, "un mur minable trouvé")
 	u.x = spot.x
 	u.z = spot.y
-	GameState.research_done.erase("mining_artifact")
+	GameState.mining_seal = false
 	check(sim.incarnated_mining_cell(u, spot) == null, "sans sceau : aucune surbrillance")
-	GameState.research_done["mining_artifact"] = true
+	GameState.mining_seal = true
 	var cell: Variant = sim.incarnated_mining_cell(u, spot + Vector2(0, -3))
 	check(cell != null, "avec le sceau : le mur à un bloc est désigné")
 	if cell != null:
-		sim.incarnated_dig(u, cell)
+		sim.incarnated_dig(u, [cell])
 		run(sim, 15.0)
 		check(st.dug.has(Vector2i(cell["i"], cell["j"])) or st.walkable(cell["i"] * 4.0 + 2.0, cell["j"] * 4.0 + 2.0), "mur miné")
 	u.x = 0.0

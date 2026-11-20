@@ -11,11 +11,20 @@ func _arm(type: String) -> void:
 	GameState.hud_build_type = type
 
 
+## L'emplacement d'un chantier doit être entièrement exploré : l'Ingénieur se tient à côté du site d'essai.
+func _near_site(u: Unit) -> void:
+	u.x = -22.0
+	u.z = -124.0
+	u.tx = u.x
+	u.tz = u.z
+
+
 func test_place_pays_without_engineer() -> void:
 	var sim := game()
 	give(25.0)
 	_arm("sigil")
 	var u := engineer()
+	_near_site(u)
 	var at := Vector2(u.x, u.z)
 	sim.place_building(Vector2(-27.0, -119.0))
 	check_eq(GameState.buildings.size(), 1, "chantier créé")
@@ -57,6 +66,7 @@ func test_progress_is_automatic() -> void:
 	var sim := game()
 	give(25.0)
 	_arm("sigil")
+	_near_site(engineer())
 	sim.place_building(Vector2(-27.0, -119.0))
 	var b: Building = GameState.buildings[0]
 	var u := engineer()
@@ -75,6 +85,7 @@ func test_fast_construction_toggle_during_work() -> void:
 	var sim := game()
 	give(25.0)
 	_arm("sigil")
+	_near_site(engineer())
 	sim.place_building(Vector2(-27.0, -119.0))
 	var b: Building = GameState.buildings[0]
 	GameState.fast_construction = true
@@ -118,6 +129,7 @@ func test_walk_and_build_in_real_time() -> void:
 	var sim := game()
 	give(25.0)
 	_arm("sigil")
+	_near_site(engineer())
 	sim.place_building(Vector2(-27.0, -119.0))
 	var b: Building = GameState.buildings[0]
 	run(sim, 7.0)
@@ -128,6 +140,7 @@ func test_move_keeps_site() -> void:
 	var sim := game()
 	give(25.0)
 	_arm("sigil")
+	_near_site(engineer())
 	sim.place_building(Vector2(-27.0, -119.0))
 	GameState.selected = [engineer()]
 	sim.issue_move(Vector2(-10.0, -125.0))

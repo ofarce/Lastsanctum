@@ -26,14 +26,22 @@ func test_wave_plan_preserves_schedule_and_uses_small_groups() -> void:
 	var sim := game()
 	GameState.wave = 7
 	sim.combat.start_wave()
-	check_eq(GameState.spawn_queue.size(), 28, "effectif inchangé")
+	var n: int = Catalog.MENACE_WAVE["base"] + 8 * Catalog.MENACE_WAVE["per_wave"]
+	check_eq(GameState.spawn_queue.size(), n, "effectif inchangé")
+	# Premier rang de chaque escouade (tailles équilibrées, Combat.wave_squads) : identifiant de son groupe.
+	var first_of := []
+	var start := 0
+	for squad: Array in Combat.wave_squads(8, n):
+		for _k in squad.size():
+			first_of.append(start)
+		start += squad.size()
 	for i in GameState.spawn_queue.size():
 		var entry: Dictionary = GameState.spawn_queue[i]
-		check_eq(entry["kind"], Combat.wave_kind(8, i, 28), "type inchangé")
+		check_eq(entry["kind"], Combat.wave_kind(8, i, n), "type inchangé")
 		check_near(entry["at"], GameState.sim_time + 2.0, 1e-6, "escouades prêtes dès le lancement")
 		check(entry.has("offset"), "place de départ dans la formation")
 		check(int(entry["group"]["expected"]) <= 7, "petit groupe")
-		check_eq(entry["group"]["id"], (i / 7) * 7, "groupe séquentiel")
+		check_eq(entry["group"]["id"], first_of[i], "groupe séquentiel")
 	check_eq(sim.combat.tactics.role_for("strazhar"), "reserve", "champion en réserve")
 
 

@@ -11,11 +11,12 @@ func _js() -> Dictionary:
 
 func test_buildings_match_js() -> void:
 	var js: Dictionary = _js()["buildings"]
-	# Creuset des Exilés : bâtiment ajouté après le prototype (fabrication), placé en dernier.
+	# Les bâtiments du prototype d'abord, dans son ordre ; ceux ajoutés depuis (Creuset, Entrepôt, Église,
+	# École…) à la suite.
 	var keys := Catalog.BUILDINGS.keys()
-	check_eq(keys.pop_back(), "warehouse", "Entrepôt logistique")
-	check_eq(keys.pop_back(), "creuset", "Creuset des Exilés en dernier")
-	check_eq(keys, js.keys(), "ordre des bâtiments")
+	check_eq(keys.slice(0, js.size()), js.keys(), "ordre des bâtiments du prototype")
+	for added: String in ["creuset", "warehouse", "scierie", "archerie"]:
+		check(keys.slice(js.size()).has(added), "bâtiment ajouté après le prototype : " + added)
 	for k: String in js:
 		var a: Dictionary = Catalog.BUILDINGS[k]
 		var b: Dictionary = js[k]
@@ -23,6 +24,10 @@ func test_buildings_match_js() -> void:
 			# Puits des Âmes : texte réécrit avec son soin de zone (écart voulu avec le prototype).
 			if k == "soulwell" and f == "lore":
 				check(String(a[f]).begins_with("Soigne les unités proches"), "soulwell.lore : soin de zone décrit")
+				continue
+			# Chambre à coucher : la règle de population est ajoutée à la suite du texte du prototype.
+			if k == "bedroom" and f == "lore":
+				check(String(a[f]).begins_with(b[f]), "bedroom.lore : texte du prototype conservé en tête")
 				continue
 			check_eq(a[f], b[f], "%s.%s" % [k, f])
 		check_eq(a["cost"], _ints(b["cost"]), "%s.cost" % k)
@@ -58,7 +63,8 @@ func test_adepts_and_fight_match_js() -> void:
 	for k: String in js["adept"]:
 		var a: Dictionary = js["adept"][k]
 		check_eq(Catalog.ADEPT[k], {"name": a["name"], "task": a["task"], "hp": int(a["hp"]), "lore": a["lore"]}, "ADEPT." + k)
-	check_eq(Catalog.ADEPT.keys(), js["adept"].keys(), "ordre des adeptes")
+	# Les rôles du prototype d'abord ; mages et Oublieux ajoutés depuis à la suite.
+	check_eq(Catalog.ADEPT.keys().slice(0, js["adept"].size()), js["adept"].keys(), "ordre des adeptes du prototype")
 	for k: String in js["fight"]:
 		# Ingénieur sans armure : 5 dégâts (au lieu de 80), au corps à corps uniquement (écarts voulus).
 		var dmg := 5 if k == "engineer" else int(js["fight"][k]["dmg"])

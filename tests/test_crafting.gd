@@ -1,5 +1,5 @@
 extends "res://tests/econ_case.gd"
-## Fabrication : recettes de l'Atelier, de la Forge et du Creuset des Exilés (data/recipes.gd), objets demandés
+## Fabrication : recettes de l'Atelier, de la Scierie, de l'Archerie, de la Fonderie et de l'Armurerie (data/recipes.gd), objets demandés
 ## par la caserne, équipement du Creuset porté par l'Ingénieur sans armure.
 
 const Recipes := preload("res://data/recipes.gd")
@@ -20,14 +20,24 @@ func _stock(items: Dictionary) -> void:
 
 
 func test_recipes_match_spec() -> void:
-	check_eq(Recipes.RECIPES["workshop"].size(), 10, "10 recettes à l'Atelier")
-	check_eq(Recipes.RECIPES["forge"].size(), 5, "5 recettes à la Forge")
-	check_eq(Recipes.RECIPES["creuset"].size(), 9, "9 recettes au Creuset")
+	check_eq(Recipes.RECIPES["workshop"].size(), 8, "8 recettes à l'Atelier (fibre, arc et flèches partis)")
+	check_eq(Recipes.RECIPES["scierie"].keys(), ["wood_fiber"], "la Scierie fait la fibre de bois")
+	check_eq(Recipes.RECIPES["archerie"].keys(), ["bow", "arrows"], "l'Archerie fait arcs et flèches")
+	check_eq(Catalog.BUILDINGS["archerie"]["requires"], "scierie", "Archerie débloquée par la Scierie")
+	check_eq(Catalog.STAFF_ROLE["scierie"], "aether", "Scierie servie par Aether")
+	check_eq(Recipes.RECIPES["forge"].size(), 3, "3 recettes à la Fonderie : les lingots seuls")
+	check_eq(Recipes.RECIPES["creuset"].size(), 11, "11 recettes à l'Armurerie")
 	check_eq(Recipes.RECIPES["workshop"]["barricade"], {"wood": 10, "rock": 10}, "barricade")
 	check_eq(Recipes.RECIPES["workshop"]["fishing_rod"], {"wood": 2, "iron": 1, "wood_fiber": 1}, "canne à pêche")
-	check_eq(Recipes.RECIPES["creuset"]["iron_armor"], {"iron": 200}, "armure en fer")
-	check(Catalog.BUILDINGS.has("creuset"), "Creuset des Exilés constructible")
-	check_eq(Catalog.BUILDINGS["creuset"]["requires"], "forge", "débloqué par la Forge")
+	check_eq(Recipes.RECIPES["creuset"]["iron_armor"], {"iron_ingot": 40}, "armure en fer")
+	for item: String in Recipes.RECIPES["forge"]:
+		check(item.ends_with("_ingot"), "la Fonderie ne fait que des lingots : " + item)
+	for item: String in Recipes.RECIPES["creuset"]:
+		for ing: String in Recipes.RECIPES["creuset"][item]:
+			check(ing.ends_with("_ingot"), "l'Armurerie ne prend que des lingots : " + item)
+	check(Recipes.RECIPES["creuset"].has("sword") and Recipes.RECIPES["creuset"].has("shield"), "épée et bouclier de soldat à l'Armurerie")
+	check(Catalog.BUILDINGS.has("creuset"), "Armurerie constructible")
+	check_eq(Catalog.BUILDINGS["creuset"]["requires"], "forge", "débloquée par la Fonderie")
 	# Chaque objet produit ou demandé a un nom lisible.
 	for station: String in Recipes.RECIPES:
 		for item: String in Recipes.RECIPES[station]:
@@ -42,14 +52,14 @@ func test_recipes_match_spec() -> void:
 ## bleu par les adeptes au poste, produit déposé au coffre rouge.
 func test_recipe_loop_fetches_from_vault() -> void:
 	var sim := game()
-	var b := built("workshop", -14.0, -118.0)
+	var b := built("archerie", -14.0, -118.0)
 	_stock({"wood": 3})
 	staff(sim, b, 1)
 	sim.craft(b, "arrows")
 	check_eq(b.recipe, "arrows", "recette choisie")
 	check_eq(Storage.count("wood"), 3, "rien n'est pris au choix de la recette")
 	run(sim, 120.0)
-	check_eq(Production.count_in(b.output_box, "arrows"), 3, "trois flèches au coffre rouge")
+	check_eq(Production.count_in(b.output_box, "arrows"), 3 * Recipes.output_quantity("arrows"), "trois lots de flèches au coffre rouge")
 	check_eq(Storage.count("wood"), 0, "bois apporté depuis le coffre antique")
 	check_eq(Storage.count("arrows"), 0, "le produit reste au coffre rouge")
 	sim.craft(b, "arrows")
@@ -70,7 +80,7 @@ func test_idle_without_staff_and_speed() -> void:
 	staff(sim, b, 2)
 	run(sim, Recipes.craft_time(b.type) + 0.1)
 	check_eq(Production.count_in(b.output_box, "copper_ingot"), 4, "trois adeptes : trois fois plus vite")
-	check(not Simulation.can_craft(b, "torch"), "la Forge ne fait pas de torche")
+	check(not Simulation.can_craft(b, "torch"), "la Fonderie ne fait pas de torche")
 
 
 func test_engineer_pack_is_a_source() -> void:
@@ -122,24 +132,24 @@ func test_creuset_gear_stats() -> void:
 	check(base_dmg < 18, "plus fort qu'à mains nues")
 	var shield_at := pack.find_custom(func(s: Dictionary) -> bool: return not s.is_empty() and s["item"] == "copper_shield")
 	check(not Gear.equip(u, pack, shield_at, "Main gauche"), "pas de bouclier avec une arme à deux mains")
-	# Canon : portée 12, dégâts 12, une munition de fer par tir ; sans fer, retour aux poings.
+	# Arbalestrie (ancien canon) : portée 12, dégâts 12, de la mana de chaque type par tir (data/ammo.gd) ;
+	# sans mana, pas de tir.
 	var cannon_at := pack.find_custom(func(s: Dictionary) -> bool: return not s.is_empty() and s["item"] == "cannon")
-	check(Gear.equip(u, pack, cannon_at, "Main droite"), "canon porté")
-	GameState.base_inventory_unlocked = true
-	check_near(Catalog.unit_reach(u), Catalog.FIGHT["engineer"]["reach"], 1e-9, "sans fer, portée de mêlée")
-	_stock({"iron": 2})
+	check(Gear.equip(u, pack, cannon_at, "Main droite"), "Arbalestrie portée")
 	check_near(Catalog.unit_reach(u), 12.0, 1e-9, "portée 12")
 	check_eq(Catalog.attack_damage(u), 12, "dégâts 12")
 	var e := Enemy.make("brute", u.x + 8.0, u.z, 1.0)
 	e.hp = 500.0
 	e.max_hp = 500.0
 	GameState.enemies.append(e)
+	give(0.0)
 	sim.combat.barracks_strike(u, e)
-	check_eq(Storage.count("iron"), 1, "une munition de fer tirée")
+	check_eq(e.hp, 500.0, "sans mana, pas de tir")
+	var mana: float = Gear.ITEMS["cannon"]["mana"]
+	give(2.0 * mana)
+	sim.combat.barracks_strike(u, e)
+	check_near(GameState.res["forge"], mana, 1e-9, "mana d'un tir payée")
 	check(e.hp < 500.0, "le tir touche")
-	sim.combat.barracks_strike(u, e)
-	check_eq(Storage.count("iron"), 0, "dernière munition")
-	check_eq(Catalog.attack_damage(u), base_dmg, "plus de fer : dégâts à mains nues")
 
 
 func test_creuset_art_two_by_two() -> void:

@@ -289,6 +289,61 @@ def arbalestrie():
     return lowpass(b, 0.5)
 
 
+def arbalestrie_indra():
+    """Balles d'Indra : le tir de base une quarte plus bas, coup d'enclume et queue de souffle."""
+    rng = np.random.default_rng(46)
+    d = 0.2
+    b = mix(d)
+    place(b, 0.9 * band(rng.uniform(-1, 1, n_(0.014)), 0.06, 0.5) * dec(n_(0.014), 0.004), 0.0)
+    place(b, 0.5 * metal(1250, 0.07, 0.016, amps=(1, 0.5, 0.25, 0.1)), 0.0)
+    thwack = glide(520, 230, 0.11, "tri") * dec(n_(0.11), 0.03)
+    thwack += 0.35 * glide(520, 230, 0.11, "pulse", 0.125) * dec(n_(0.11), 0.014)
+    place(b, 0.9 * lowpass(thwack, 0.35), 0.008)
+    tail = band(rng.uniform(-1, 1, n_(0.15)), 0.02, 0.22) * env(n_(0.15), attack=0.01, decay=0.06, sustain=0.0, release=0.06)
+    place(b, 0.45 * tail, 0.03)
+    return lowpass(b, 0.45)
+
+
+def arbalestrie_medeina():
+    """Balles de Medeina : tir feutré, presque un souffle, deux notes douces qui montent."""
+    rng = np.random.default_rng(47)
+    d = 0.2
+    b = mix(d)
+    puff = band(rng.uniform(-1, 1, n_(0.1)), 0.05, 0.3) * env(n_(0.1), attack=0.012, decay=0.05, sustain=0.0, release=0.03)
+    place(b, 0.8 * puff, 0.0)
+    place(b, 0.35 * lowpass(glide(500, 380, 0.07, "tri") * dec(n_(0.07), 0.02), 0.3), 0.005)
+    t = t_(0.13)
+    leaf = (np.sin(2 * np.pi * note("E6") * t) + 0.6 * np.sin(2 * np.pi * note("A6") * t)) * dec(n_(0.13), 0.04, attack=0.015)
+    place(b, 0.2 * leaf, 0.04)
+    return lowpass(b, 0.35)
+
+
+def arbalestrie_sigil():
+    """Balles de Sigil : double clic sec (deux balles), timbre de pierre, sans scintillement."""
+    rng = np.random.default_rng(48)
+    d = 0.2
+    b = mix(d)
+    for at, gain in ((0.0, 1.0), (0.055, 0.8)):
+        place(b, gain * 0.9 * band(rng.uniform(-1, 1, n_(0.01)), 0.15, 0.8) * dec(n_(0.01), 0.0025), at)
+        place(b, gain * 0.4 * metal(3400, 0.03, 0.006, amps=(1, 0.3, 0.15, 0.05)), at)
+        place(b, gain * 0.6 * lowpass(glide(820, 520, 0.05, "tri") * dec(n_(0.05), 0.012), 0.45), at + 0.006)
+    return lowpass(b, 0.55)
+
+
+def arbalestrie_aether():
+    """Balles d'Aether : aspiration brève puis déclic, note tenue qui monte."""
+    rng = np.random.default_rng(49)
+    d = 0.2
+    b = mix(d)
+    suck = band(rng.uniform(-1, 1, n_(0.04)), 0.05, 0.4) * np.linspace(0.0, 1.0, n_(0.04)) ** 2
+    place(b, 0.5 * suck, 0.0)
+    place(b, 0.9 * band(rng.uniform(-1, 1, n_(0.012)), 0.1, 0.7) * dec(n_(0.012), 0.003), 0.04)
+    place(b, 0.6 * lowpass(glide(700, 420, 0.07, "tri") * dec(n_(0.07), 0.02), 0.4), 0.045)
+    rise = glide(note("E6"), note("B6"), 0.14, "tri") * env(n_(0.14), attack=0.02, decay=0.05, sustain=0.5, release=0.06)
+    place(b, 0.3 * rise, 0.05)
+    return lowpass(b, 0.5)
+
+
 def flammes():
     d = 1.0
     t = t_(d)
@@ -719,6 +774,14 @@ CATALOGUE = [
      "Mi–ré–do vers un la mineur tenu. Grave modéré, pas de glas.", -6),
     ("arbalestrie", arbalestrie, "Exilés", "Tir de l'Arbalestrie (Ingénieur)", "combat.gd · gear_attack, arme à mana",
      "Déclic, corde sèche, petit scintillement d'énergie. 0,2 s : fini avant le tir suivant (cadence 0,25 s).", -15),
+    ("arbalestrie_indra", arbalestrie_indra, "Exilés", "Tir de l'Arbalestrie, balles d'Indra", "combat.gd · gear_attack, data/ammo.gd « sfx »",
+     "Le tir de base plus grave, coup d'enclume et queue de souffle.", -13),
+    ("arbalestrie_medeina", arbalestrie_medeina, "Exilés", "Tir de l'Arbalestrie, balles de Medeina", "combat.gd · gear_attack, data/ammo.gd « sfx »",
+     "Tir feutré, presque un souffle, deux notes douces.", -17),
+    ("arbalestrie_sigil", arbalestrie_sigil, "Exilés", "Tir de l'Arbalestrie, balles de Sigil", "combat.gd · gear_attack, data/ammo.gd « sfx »",
+     "Double clic sec, timbre de pierre.", -15),
+    ("arbalestrie_aether", arbalestrie_aether, "Exilés", "Tir de l'Arbalestrie, balles d'Aether", "combat.gd · gear_attack, data/ammo.gd « sfx »",
+     "Aspiration brève, déclic, note tenue qui monte.", -15),
 ]
 
 

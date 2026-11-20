@@ -30,4 +30,5 @@ func _ready() -> void:
 	cinema.hud = hud
 	add_child(cinema)
 	simulation.opening = Simulation.play_opening and not OS.get_cmdline_user_args().has("--sans-ouverture")
-	simulation.new_game()
+	if Simulation.autostart:
+		simulation.new_game()

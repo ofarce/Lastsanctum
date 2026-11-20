@@ -59,8 +59,11 @@ func test_beast_hunts_ally_then_goes_home() -> void:
 	var o := Enemy.make("creep", croc.x + 1.0, croc.z, 0.0)
 	GameState.enemies.append(o)
 	var hp := o.hp
+	# Jusqu'à la première morsure seulement : au coup suivant le fanatique meurt et le crocodile lâche sa proie.
 	for i in 40:
 		Wildlife.tick(sim, 0.05, [] as Array[Unit])
+		if o.hp < hp:
+			break
 	check(o.hp < hp, "le crocodile attaque aussi les ennemis")
 	check_eq(Wildlife.attacker_of(o), croc, "l'ennemi sait qui l'attaque (riposte)")
 	w.free()

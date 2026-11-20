@@ -9,15 +9,16 @@ const ACTION_FIELDS := ["id", "icon", "label", "key", "title", "disabled", "acti
 const TEXT_FIELDS := ["wave", "res", "population", "kind", "chosen", "health_text", "health_label", "status", "damage", "armor",
 	"speed", "lore", "assault", "anchor_details", "portrait_enabled", "portrait_key"]
 
+## Bâtiments du prototype ; ceux ajoutés depuis (Creuset, Entrepôt, Église, École…) sont écartés de la comparaison.
+const PROTOTYPE_BUILDINGS := ["sigil", "aether", "medeina", "indra", "library", "forge", "workshop", "bedroom", "soulwell", "caserne"]
+
 static var _main: Node
 
 
 func _sim() -> Simulation:
 	if _main == null:
-		_main = load("res://main/main.tscn").instantiate()
-		(Engine.get_main_loop() as SceneTree).root.add_child(_main)
+		_main = shared_main()
 		var s: Simulation = _main.get_node("Simulation")
-		s.paused = true
 		s.new_game(Ctx.GALLERY_SEED)
 	return _main.get_node("Simulation")
 
@@ -33,16 +34,32 @@ func test_panel_actions_match_js() -> void:
 		# Creuset des Exilés : bâtiment ajouté après le prototype (fabrication). « Vider le coffre » : coffre rouge des
 		# bâtiments servis par des adeptes (2026-11-17).
 		# Poser (défenses de l’Atelier, sim/placeables.gd) : ordre ajouté après le prototype.
-		var got := HudModel.panel_actions(sim).filter(func(a: Dictionary) -> bool: return not a["id"].begins_with("research-") and a["id"] != "offering" and a["id"] not in ["b-creuset", "b-warehouse"] and a["id"] != "collect" and a["id"] != "menu-place")
-		var want: Array = results[k]["hud"]["actions"]
+		var got := HudModel.panel_actions(sim).filter(func(a: Dictionary) -> bool: return not a["id"].begins_with("research-") and a["id"] != "offering" and not (a["id"].begins_with("b-") and a["id"].substr(2) not in PROTOTYPE_BUILDINGS) and a["id"] != "collect" and a["id"] != "menu-place" and not a["id"].begins_with("bfam-"))
+		# Menu Construire par familles (2026-11-20) : seuls les bâtiments débloqués de l'onglet ouvert restent.
+		var shown := HudModel.family_buildings(GameState.hud_build_family)
+		var want: Array = (results[k]["hud"]["actions"] as Array).filter(func(a: Dictionary) -> bool:
+			return not a["id"].begins_with("b-") or a["id"].substr(2) in shown)
 		if got.size() != want.size():
 			check(false, "%s : %d actions au lieu de %d (%s)" % [c["name"], got.size(), want.size(), _ids(got)])
 			continue
 		for i in want.size():
 			for f: String in ACTION_FIELDS:
 				var expected: Variant = want[i][f]
+				# Prérequis reformulé : « construisez d’abord un Temple… ».
+				if f == "title" and got[i]["id"].begins_with("b-"):
+					expected = str(expected).replace(" · nécessite un ", " · construisez d’abord un ")
 				if f == "title" and got[i]["id"].begins_with("b-") and not str(expected).ends_with(" · 2 × 2"):
 					expected = str(expected) + " · 2 × 2"
+				# Réparer : plus de réparation instantanée à recharge ; le bouton envoie l'Ingénieur prier à l'Ancre,
+				# et la prière la répare (2026-11-20).
+				if got[i]["id"] == "repair":
+					if f == "title":
+						check(str(got[i][f]).begins_with("Prier à l’Ancre · la répare"), "%s : Réparer décrit la prière" % c["name"])
+						continue
+					elif f == "disabled":
+						expected = false
+					elif f == "cooldown":
+						expected = ""
 				# Règle demandée : coût initial × niveau, en remplacement des 200 Vie fixes.
 				if got[i]["id"].begins_with("revive-"):
 					var unit: Unit = GameState.fallen.filter(func(u: Unit) -> bool: return "revive-%d" % u.id == got[i]["id"])[0]
@@ -55,9 +72,13 @@ func test_panel_actions_match_js() -> void:
 					if f == "label":
 						expected = str(expected).replace(" · ", " ×4 · ")
 					elif f == "title":
-						expected = str(expected).replace("Entraîner un ", "Former un ")
+						expected = str(expected).replace("Entraîner un ", "Former : ")
 					# Fabrication : archers et Épée et bouclier demandent leurs objets, affichés avec le stock.
 					var role: String = got[i]["id"].substr(6)
+					# Le bouton de l'unité en tête de file est actif (jauge de formation dessus).
+					if f == "active":
+						var caserne := HudModel.selected_building()
+						expected = not caserne.queue.is_empty() and caserne.queue[0] == role
 					var items: Dictionary = Simulation.Recipes.caserne_cost(role, 4)
 					if not items.is_empty():
 						if f == "title":
@@ -92,6 +113,9 @@ func test_hud_texts_match_js() -> void:
 			if f == "status" and shown == null and shown_b != null and Production.idle(shown_b):
 				expected = HudModel.building_status(shown_b)
 				check(str(expected).begins_with("À l’arrêt"), "%s : signalé à l'arrêt" % c["name"])
+			# Population : « occupées/plafond » (Catalog.POP_BASE et Chambres), au lieu du seul nombre d'unités.
+			if f == "population":
+				expected = "%d/%d" % [Simulation.pop_used(), Simulation.pop_cap()]
 			if f == "lore" and c["name"] in ["puits_des_ames", "puits_des_ames_vide"]:
 				expected = Catalog.BUILDINGS["soulwell"]["lore"]
 			check_eq(got[f], expected, "%s, %s" % [c["name"], f])
@@ -114,14 +138,20 @@ func test_hud_key_runs_visible_action() -> void:
 	check(GameState.units[0].orb_job, "l'Ingénieur part réactiver l'Ancre")
 
 
-func test_disabled_action_consumes_key() -> void:
+func test_repair_key_sends_engineer_to_pray_at_anchor() -> void:
 	var sim := _sim()
 	var input: InputController = _main.get_node("Input")
 	var data := Ctx.load_actions()
-	Ctx.apply(sim, data["contexts"][7], false)  # Réparer en recharge
+	Ctx.apply(sim, data["contexts"][7], false)  # Ingénieur, Ancre active (ancien contexte « Réparer en recharge »)
+	var eng: Unit = GameState.units[0]
 	var hp := GameState.core_hp
-	check(input.hud_key("r"), "la touche reste prise par le bouton désactivé")
-	check_eq(GameState.core_hp, hp, "aucune réparation pendant la recharge")
+	check(input.hud_key("r"), "R : Réparer")
+	check(Capsule.praying(eng), "l'Ingénieur part prier à l'Ancre")
+	check_eq(GameState.core_hp, hp, "aucune réparation instantanée")
+	var repair: Dictionary = HudModel.panel_actions(sim).filter(func(a: Dictionary) -> bool: return a["id"] == "repair")[0]
+	check(repair["active"] and not repair["disabled"], "bouton actif pendant la prière, jamais en recharge")
+	check(input.hud_key("r"), "R de nouveau")
+	check(not Capsule.praying(eng), "second ordre : il se relève")
 
 
 func test_hero_summon_from_anchor() -> void:

@@ -7,9 +7,7 @@ static var _main: Node
 
 
 func _game() -> Simulation:
-	if _main == null:
-		_main = load("res://main/main.tscn").instantiate()
-		(Engine.get_main_loop() as SceneTree).root.add_child(_main)
+	_main = shared_main()
 	var sim: Simulation = _main.get_node("Simulation")
 	sim.paused = true
 	sim.opening = true
@@ -32,6 +30,7 @@ func test_enter_and_exit() -> void:
 	check(GameState.in_capsule and eng.hidden and GameState.incarnated == null)
 	check_eq(eng.hp, eng.max_hp, "soigné à la première entrée")
 	check_eq(eng.equipment.get("Main droite", ""), "cannon", "canon remis à la première entrée")
+	check(GameState.mining_seal, "sceau de minage remis à la première entrée")
 	for i in 90:
 		sim.tick(DT)
 	check(eng.hidden, "reste caché dans la capsule")

@@ -1,0 +1,71 @@
+extends Node
+## Capture de la Scierie, de l’Archerie et de l’Armurerie (planches/batiments-v4-propositions.html), Fonderie et Atelier
+## en repère, dans la salle :
+## rangée du haut au repos (personnel absent), rangée du bas au travail (un adepte au poste).
+## godot --path . res://tests/visual/batiments_v4_capture.tscn
+const OUT := "res://tests/visual/out/batiments_v4/"
+const MAIN = preload("res://main/main.tscn")
+const TYPES := ["scierie", "archerie", "creuset", "forge", "workshop"]
+
+var _vp: SubViewport
+var _world: World
+
+
+func _process(_d: float) -> void:
+	if _world:
+		_world.camera.set_view(Vector2(-3, -109), 3)
+
+
+func _shot(name: String) -> void:
+	await get_tree().create_timer(0.4).timeout
+	await RenderingServer.frame_post_draw
+	_vp.get_texture().get_image().save_png(ProjectSettings.globalize_path(OUT + name + ".png"))
+
+
+func _ready() -> void:
+	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(OUT))
+	_vp = SubViewport.new()
+	_vp.size = Vector2i(1500, 900)
+	_vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+	add_child(_vp)
+	var main = MAIN.instantiate()
+	_vp.add_child(main)
+	var sim: Simulation = main.get_node("Simulation")
+	var world: World = main.get_node("World")
+	sim.new_game(20261114)
+	sim.paused = true
+	var eng: Unit = GameState.units[0]
+	eng.hidden = false
+	eng.x = -30.0
+	eng.z = -112.0
+	eng.tx = eng.x
+	eng.tz = eng.z
+	GameState.portal_start = -100
+	GameState.orb_active = true
+	GameState.orb_finished_at = -20
+	GameState.sim_time = 31.7
+	for row in 2:
+		for k in TYPES.size():
+			var b := Building.create(row * 10 + k, TYPES[k], -25.0 + k * 12.0, -118.0 + row * 14.0)
+			b.complete = true
+			b.finished_at = -10.0
+			GameState.buildings.append(b)
+			if row == 1:
+				var role: String = Production.staff_role(b)
+				var u := sim.spawn("Adepte", b.x, b.z, role)
+				u.job = {"type": "staff", "building": b, "post": "worker", "step": "post"}
+				var p := Production.post_spot(b, 0)
+				u.x = p.x
+				u.z = p.y
+				u.tx = p.x
+				u.tz = p.y
+				u.working = true
+	world.camera.input_enabled = false
+	_world = world
+	world.camera.set_view(Vector2(-3, -105), 3)
+	world.wind_scale = 0
+	world.finish_painting()
+	(main.get_node("Hud") as Hud).hide_notice()
+	await get_tree().create_timer(1.0).timeout
+	await _shot("salle")
+	get_tree().quit()

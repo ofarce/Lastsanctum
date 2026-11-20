@@ -6,8 +6,10 @@ extends Node2D
 ## lumière en jaillit en s'évasant au pied, et l'Ingénieur, quand il est dedans, lévite au-dessus du vide
 ## (vrai atlas TyrienArt, mêlé à la teinte de la colonne par shaders/capsule_glow.gdshader).
 ##
-## Deux nœuds (World) : `ground` = true sous les sprites (puits, halo, onde, trait d'énergie depuis l'Ancre) ;
-## l'autre par-dessus (bornes, colonne, Ingénieur, voyant, invites). Coordonnées de dessin = celles de la
+## Quatre nœuds (World) : `ground` = true sous les sprites (puits, halo, onde, trait d'énergie depuis l'Ancre) ;
+## `layer` « back » (bornes arrière, colonne, Ingénieur) et « front » (bornes avant, voyant) triés avec les
+## sprites (YSort, au pied de leurs bornes) pour qu'un passant devant la capsule la couvre ; le dernier
+## par-dessus tout (poussière, vapeur, lucioles, invites, PV). Coordonnées de dessin = celles de la
 ## planche : pied de la capsule en (60, 62).
 ##
 ## États : éteinte (avant l'Ancre, voyant rouge qui bat), allumage (étape « link » puis les 2,2 premières
@@ -30,6 +32,8 @@ const HOVER := 4
 const BOOT_END := 3.0
 
 var ground := false
+## « back » / « front » : parties triées dans le YSort ; vide = calque du dessus (effets et invites).
+var layer := ""
 
 var _ci: CanvasItem = self
 var _base := Vector2.ZERO
@@ -53,7 +57,11 @@ func _ready() -> void:
 			var d := absf(x + 0.5 - 60.0) / half
 			_beam_core.append(d < 0.25)
 			_beam_base.append(0.22 if d > 0.8 else (0.4 if d > 0.5 else 0.66))
-	if ground:
+	if ground or layer == "":
+		return
+	# Pied des bornes (y = 55 arrière, 63 avant ; pied de la capsule en 62) : clé du tri avec les sprites.
+	position = Vector2(0.0, Proj.nat(Capsule.POS.x, 0.0, Capsule.POS.y).round().y + (-7.0 if layer == "back" else 1.0))
+	if layer != "back":
 		return
 	_occupant = Node2D.new()
 	_occupant.name = "Occupant"
@@ -62,10 +70,6 @@ func _ready() -> void:
 	_occupant.material = mat
 	_occupant.draw.connect(_draw_occupant)
 	add_child(_occupant)
-	_front = Node2D.new()
-	_front.name = "Front"
-	_front.draw.connect(_draw_front)
-	add_child(_front)
 
 
 func _process(_delta: float) -> void:
@@ -74,7 +78,6 @@ func _process(_delta: float) -> void:
 	queue_redraw()
 	if _occupant:
 		_occupant.queue_redraw()
-		_front.queue_redraw()
 
 
 ## Vrai si la capsule, l'Ancre ou le trait qui les relie peuvent toucher l'écran (marge large : invites, lucioles,
@@ -84,7 +87,8 @@ func _on_screen() -> bool:
 		var c := Proj.nat(Capsule.POS.x, 0.0, Capsule.POS.y)
 		_bounds = Rect2(c, Vector2.ZERO).expand(Proj.nat(Capsule.POS.x, 0.0, Capsule.POS.y + 1.0)) \
 			.expand(Proj.nat(CaveShape.CORE.x, 0.0, CaveShape.CORE.y - 1.5)).expand(Proj.nat(CaveShape.CORE.x, 6.0, CaveShape.CORE.y)).grow(160.0)
-	return (get_global_transform_with_canvas() * _bounds).intersects(get_viewport_rect())
+	# Emprise en coordonnées du monde : on retire le décalage des parties triées (posées au pied de leurs bornes).
+	return (get_global_transform_with_canvas().translated_local(-position) * _bounds).intersects(get_viewport_rect())
 
 
 # ---------- état ----------
@@ -120,16 +124,22 @@ func _state() -> Dictionary:
 
 func _draw() -> void:
 	_ci = self
+	# Les parties triées sont posées au pied de leurs bornes : on dessine quand même en coordonnées du monde.
+	draw_set_transform(-position)
 	_base = Proj.nat(Capsule.POS.x, 0.0, Capsule.POS.y).round()
 	var S := _state()
 	if ground:
 		_draw_pit(S)
 		_draw_link()
 		return
-	var shake := 0.0
+	if layer == "":
+		_draw_top(S)
+		return
 	if S.mode == 1 and S.bt > 0.8 and S.bt < 1.15:
-		shake = 1.0 if int(floorf(S.bt * 40.0)) % 2 else -1.0
-	_base.x += shake
+		_base.x += 1.0 if int(floorf(S.bt * 40.0)) % 2 else -1.0
+	if layer == "front":
+		_draw_front(S)
+		return
 	_pylon(45, 55, 0, S)
 	_pylon(75, 55, 1, S)
 	_beam(S, 1.0)
@@ -230,6 +240,7 @@ func _draw_occupant() -> void:
 	if frames.is_empty():
 		return
 	var tex: AtlasTexture = frames[int(floorf(S.t * 12.0)) % frames.size()]
+	_occupant.draw_set_transform(-position)
 	var fy := 57 - HOVER + roundi(sin(S.t * 1.6))
 	var p := _base + Vector2(60 - 60 - 24, fy - 62 - 45)
 	for o: Vector2 in [Vector2(1, 0), Vector2(-1, 0), Vector2(0, -1)]:
@@ -237,10 +248,8 @@ func _draw_occupant() -> void:
 	_occupant.draw_texture(tex, p, Color(0.45, 0.0, 0.0, 1.0))
 
 
-## Devant l'Ingénieur : voile de la colonne, bornes avant, voyant, poussière, vapeur, lucioles, invites.
-func _draw_front() -> void:
-	_ci = _front
-	var S := _state()
+## Devant l'Ingénieur : voile de la colonne, bornes avant, voyant.
+func _draw_front(S: Dictionary) -> void:
 	if S.occ and S.lit >= 1.0:
 		_beam(S, 0.16)
 	_pylon(47, 63, 2, S)
@@ -248,6 +257,11 @@ func _draw_front() -> void:
 	_R(56, 63, 8, 3, K)
 	_R(57, 64, 6, 1, STONE[2])
 	_lamp(59, 64, S)
+
+
+## Par-dessus les sprites : poussière, vapeur, lucioles, invites, PV de l'Exilé.
+func _draw_top(S: Dictionary) -> void:
+	_front = self
 	_overlays(S)
 	var top := _base + Vector2(0, -36)
 	var label := ""

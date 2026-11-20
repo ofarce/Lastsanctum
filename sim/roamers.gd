@@ -33,8 +33,8 @@ const PYLON_GAP := 36.0
 const SAFE := 70.0
 ## Rayon de la ronde autour de la tanière, distance de repérage, laisse (distance de la proie à la tanière).
 const ROAM := 26.0
-const AGGRO := 8.0
-const LEASH := 40.0
+const AGGRO := 16.0
+const LEASH := 44.0
 ## Allure de la ronde (part de la vitesse du type) et durée maximale d'une étape avant d'en changer.
 const STROLL := 0.45
 const LEG_TIME := 16.0
@@ -185,6 +185,8 @@ static func target(e: Enemy, alive: Array[Unit]) -> Unit:
 	var d: Dictionary = e.roam
 	var home := Vector2(d["x"], d["z"])
 	var sight := maxf(AGGRO, e.reach + 2.0)
+	if e.kind == "beast":
+		sight = Catalog.BEAST_SIGHT
 	var best: Unit = null
 	var bd := sight
 	var ex := e.x

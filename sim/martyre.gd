@@ -209,14 +209,12 @@ static func tick(sim: Simulation) -> void:
 				_extinguish(GameState.sim_time, true)
 				GameState.martyre_fx.assign(GameState.martyre_fx.filter(func(f: Dictionary) -> bool: return f["type"] == "mote"))
 				GameState.martyre = null
-				sim.say(QUOTE_DONE, 4.0)
 				return
 			var u := duelist()
 			if GameState.martyre_state == "waiting" and u != null:
 				GameState.martyre_state = "duel"
 				if GameState.martyre_next_at == INF:
 					GameState.martyre_next_at = GameState.sim_time + FIRST_PATTERN
-				sim.say("Combat singulier : la Martyre de Byrsa lève son bâton.", 3.0)
 			elif GameState.martyre_state == "duel" and u == null:
 				GameState.martyre_state = "waiting"
 				GameState.martyre_hit_at = INF
@@ -705,5 +703,5 @@ static func objective() -> Dictionary:
 	var e: Enemy = GameState.martyre
 	return {"id": "martyre", "quest": "La Martyre de Byrsa", "interrupt": true,
 		"label": "Éliminer la Martyre de Byrsa en combat singulier",
-		"quote": QUOTE_DUEL if GameState.martyre_state == "duel" else QUOTE_WAIT, "done_quote": QUOTE_DONE,
+		"quote": "", "done_quote": "",
 		"value": "%d PV" % ceili(e.hp), "progress": 1.0 - e.hp / e.max_hp}

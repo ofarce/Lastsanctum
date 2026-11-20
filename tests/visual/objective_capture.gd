@@ -55,7 +55,7 @@ func _ready() -> void:
 	await _shot("06_salamandre_accomplie")
 	await _wait(3.0)
 	await _shot("07_coffre_sceau")
-	GameState.research_done["mining_artifact"] = true
+	GameState.mining_seal = true
 	await _wait(1.8)
 	await _shot("08_coffre_sceau_fabrique")
 	await _wait(4.0)

@@ -47,7 +47,7 @@ func test_simultaneous_research_and_training_progress() -> void:
 	give(1000)
 	var barracks := built("caserne", 15, -130)
 	ready_caserne(sim, barracks, 1)
-	sim.start_research(barracks, "mining_power")
+	GameState.research_jobs["fletching"] = {"building": barracks, "progress": 0.0}
 	sim.train_unit(barracks, "archer")
 	sim.update_buildings(3.0)
 	var jobs := WorldOverlay.building_jobs(barracks)
@@ -74,7 +74,7 @@ func test_creuset_recipe_indicator() -> void:
 	sim.craft(creuset, "iron_shield")
 	creuset.craft = Simulation.Recipes.craft_time(creuset.type) * 0.5
 	var jobs := WorldOverlay.building_jobs(creuset)
-	check_eq(jobs, [{"icon": "shield", "progress": 0.5, "blocked": true, "stock": 0}], "bouclier en fabrication au Creuset")
+	check_eq(jobs, [{"icon": "shield", "item": "iron_shield", "progress": 0.5, "blocked": true, "stock": 0}], "bouclier en fabrication au Creuset")
 	creuset.input_box.append({"item": "iron_ingot", "quantity": 5})
 	check(WorldOverlay.building_jobs(creuset)[0]["blocked"], "poste vacant")
 	staff(sim, creuset)

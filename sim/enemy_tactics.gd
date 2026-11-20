@@ -3,7 +3,7 @@ extends RefCounted
 ## Les dictionnaires partagés ne référencent aucune unité : pas de cycle de RefCounted.
 const GROUP_SIZE := 7
 const SPACING := 1.8
-const DETECTION := 14.0
+const DETECTION := 28.0
 ## Au combat : largeur du premier rang, durée maximale de tenue du second rang et de la réserve.
 const FIRST_RANK := 3
 const HOLD_RANKS := 6.0

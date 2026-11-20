@@ -3,7 +3,8 @@ extends BaseButton
 ## Grand carré du menu « Construire » (proposition B de planches/construire_5_propositions.html) :
 ## image du bâtiment, touche en bas à droite, liseré jaune au survol ou quand il est armé.
 
-const SIZE := 44.0
+## 44 px à l'origine, + 50 % le 2026-11-21.
+const SIZE := 66.0
 static var _arts := {}
 
 var action: Dictionary = {}

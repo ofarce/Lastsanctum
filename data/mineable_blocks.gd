@@ -23,8 +23,8 @@ const ITEMS := {
 
 const ORES := ["copper", "iron", "quartz", "gold"]
 
-## Arbres pétrifiés : bosquets de 3 cases. Un adepte de Medeina y récolte sans les épuiser ; tout autre
-## mineur (adepte ou Ingénieur) détruit l'arbre après WOOD_YIELD bois.
+## Arbres pétrifiés : bosquets de 2 × 2 cases, inépuisables pour tous les mineurs depuis le 2026-11-20
+## (WOOD_YIELD reste le bois de départ, que plus rien n'entame).
 const WOOD := "wood"
 const WOOD_YIELD := 20
 const WOOD_KEEPER := "medeina"

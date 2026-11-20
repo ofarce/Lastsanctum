@@ -42,13 +42,10 @@ func test_quest_chain() -> void:
 	site.complete = true
 	q.update()
 	check_eq(q.quest, "chest", "quatre autels : Le Coffre Antique")
-	check_eq(q.objective()["label"], "Fabriquer un Sceau de Minage", "étape 1")
-	GameState.research_done["mining_artifact"] = true
-	q.update()
-	check_eq(q.objective()["label"], "Ouvrir un chemin vers le Coffre Antique", "sceau fabriqué : étape 2")
+	check_eq(q.objective()["label"], "Ouvrir un chemin vers le Coffre Antique", "étape 1")
 	GameState.base_inventory_unlocked = true
 	q.update()
-	check_eq(q.chest_step, 1, "coffre ouvert sans être entré dans la salle : l'étape 2 reste due")
+	check_eq(q.chest_step, 0, "coffre ouvert sans être entré dans la salle : l'étape 1 reste due")
 	engineer().hidden = false
 	engineer().x = (CaveShape.VAULT_X0 + CaveShape.VAULT_X1) / 2.0
 	engineer().z = (CaveShape.VAULT_Z0 + CaveShape.VAULT_Z1) / 2.0
@@ -63,9 +60,9 @@ func test_chest_steps_in_real_game() -> void:
 	var sim := game()
 	var q := Quests.new()
 	q.quest = "chest"
-	GameState.research_done["mining_artifact"] = true
+	GameState.mining_seal = true
 	q.update()
-	check_eq(q.chest_step, 1, "sceau fabriqué")
+	check_eq(q.chest_step, 0, "chemin à ouvrir")
 	sim.world.dig_cell(14, -37)
 	sim.world.dig_cell(15, -37)
 	check(sim.order_chest(engineer()), "ordre d'ouvrir le coffre")
@@ -75,7 +72,7 @@ func test_chest_steps_in_real_game() -> void:
 		run(sim, 0.5)
 		t += 0.5
 		q.update()
-		if q.chest_step == 2 and not GameState.base_inventory_unlocked:
+		if q.chest_step == 1 and not GameState.base_inventory_unlocked:
 			entered_before_open = true
 	check(entered_before_open, "l'Ingénieur entre dans la salle avant d'ouvrir le coffre")
 	check_eq(q.quest, "companion", "coffre ouvert : Le Coffre Antique terminée")

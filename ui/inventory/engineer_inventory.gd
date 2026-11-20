@@ -1,5 +1,8 @@
 extends Control
 ## Inventaire de l’Ingénieur : proposition C, sans objets de démonstration.
+## À gauche, le réseau des coffres (coffre antique, coffres bleus et rouges : un seul stockage infini), par pages
+## de 10 × 10 ; flèches, molette, ←/→ ou Page préc./suiv. pour changer de page, et survol d'une flèche pendant un
+## glisser-déposer pour emporter la pile sur la page voisine.
 
 const Storage := preload("res://sim/item_storage.gd")
 const ItemIcon := preload("res://ui/inventory/item_icon.gd")
@@ -15,9 +18,15 @@ const SIL := [".........aaaaaa.........","........abbbbbba........",".......abcc
 "....aaaaabbbbbbaaaaa....","...abbbbaccccccabbbba...","..abccbbacffffcabbccba..","..abcba.acccccca.abcba..","..abcba.abcffcba.abcba..","..abcba.abccccba.abcba..","..abcba.aabbbbaa.abcba..","..abcba.abbbbbba.abcba..",
 ".abccba..abbbba..abccba.",".abffba..aaaaaa..abffba.",".abccba.aabbbbaa.abccba.","..aaaa..abbbbbba..aaaa..","........abbaabba........",".......abba..abba.......",".......abca..acba.......",".......abca..acba.......",".......abfa..afba.......",
 ".......abca..acba.......",".......abba..abba.......",".......abca..acba.......",".......abca..acba.......","......abbba..abbba......",".....abbbba..abbbba.....",".....aaaaaa..aaaaaa....."]
-var _chest: Building
-var _kind: String
 var _owner: Unit
+## Page affichée du réseau des coffres (0 = cases 1 à 100) ; survol d'une flèche pendant un glisser (début, sens).
+var _page := 0
+var _flip_since := 0.0
+var _flip_dir := 0
+const PREV_RECT := Rect2(446, 72, 30, 28)
+const NEXT_RECT := Rect2(584, 72, 30, 28)
+const BASE_RECT := Rect2(20, 64, 600, 604)
+const FLIP_DELAY := 0.45
 var opened := false
 var _drag_slot := {}
 var _consume_right_release := false
@@ -40,7 +49,7 @@ static func available() -> bool:
 
 
 static func mining_item() -> String:
-	return "Sceau de minage" if GameState.research_done.has("mining_artifact") else ""
+	return "Sceau de minage" if GameState.mining_seal else ""
 
 
 func _ready() -> void:
@@ -51,14 +60,14 @@ func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	visible = false
 	texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	Events.production_chest_requested.connect(func(b: Building, kind: String, u: Unit) -> void:
-		if Storage.character_available(u):
-			_chest = b
-			_kind = kind
+	# Un coffre de bâtiment ouvre le même réseau que le coffre antique.
+	Events.production_chest_requested.connect(func(_b: Building, _kind: String, u: Unit) -> void:
+		if Storage.character_available(u) and not GameState.ended:
 			_owner = u
 			_drag_slot = {}
+			if not opened:
+				Sfx.play("ui_inventaire")
 			opened = true
-			Sfx.play("ui_inventaire")
 			show())
 	Events.game_reset.connect(close)
 	Events.inventory_requested.connect(func() -> void:
@@ -71,7 +80,6 @@ func _ready() -> void:
 
 func close() -> void:
 	GameState.hud_chest = {}
-	_chest = null
 	_owner = null
 	opened = false
 	_drag_slot = {}
@@ -102,6 +110,10 @@ func _input(event: InputEvent) -> void:
 				close()
 			get_viewport().set_input_as_handled()
 			return
+		if opened and event.pressed and key in [KEY_LEFT, KEY_PAGEUP, KEY_RIGHT, KEY_PAGEDOWN]:
+			_turn(-1 if key in [KEY_LEFT, KEY_PAGEUP] else 1)
+			get_viewport().set_input_as_handled()
+			return
 	if opened:
 		if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_RIGHT and event.pressed:
 			_consume_right_release = true
@@ -111,11 +123,18 @@ func _input(event: InputEvent) -> void:
 				close()
 			else:
 				_equip_slot(slot_at(p))
+		if event is InputEventMouseButton and event.pressed and event.button_index in [MOUSE_BUTTON_WHEEL_UP, MOUSE_BUTTON_WHEEL_DOWN]:
+			if BASE_RECT.has_point((event.position - _origin) / _scale):
+				_turn(-1 if event.button_index == MOUSE_BUTTON_WHEEL_UP else 1)
 		if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
 			var p: Vector2 = (event.position - _origin) / _scale
 			if event.pressed:
 				if not Rect2(20, 12, 1140, 796).has_point(p) or Rect2(1010, 12, 150, 40).has_point(p):
 					close()
+				elif Storage.network_open() and PREV_RECT.grow(4).has_point(p):
+					_turn(-1)
+				elif Storage.network_open() and NEXT_RECT.grow(4).has_point(p):
+					_turn(1)
 				else:
 					_drag_slot = slot_at(p)
 					if _slot_content(_drag_slot).is_empty():
@@ -145,9 +164,7 @@ func _equip_slot(slot: Dictionary) -> void:
 			if wearer and not wearer.equipment.has(ms):
 				destination = ms
 				break
-	var source: Array[Dictionary] = _box() if slot.has("box") else slot["items"]
-	var index: int = slot["box"] if slot.has("box") else slot["index"]
-	Gear.equip(_owner if _owner else engineer(), source, index, destination)
+	Gear.equip(_owner if _owner else engineer(), slot["items"], slot["index"], destination)
 
 
 func _get_tooltip(at_position: Vector2) -> String:
@@ -180,20 +197,9 @@ func _get_tooltip(at_position: Vector2) -> String:
 	return "\n".join(lines)
 
 
-## Glisser-déposer entre stock, paquetage et emplacements d'équipement (objets de data/gear_items.gd).
+## Glisser-déposer entre réseau des coffres, paquetage et emplacements d'équipement (data/gear_items.gd).
 func _drop(from: Dictionary, to: Dictionary) -> void:
 	Sfx.play("coffre")
-	if from.has("box"):
-		if to == from:
-			_withdraw(from["box"])
-		elif to.has("items") and is_same(to["items"], _owner.inventory):
-			Storage.move_stack(_box(), from["box"], _owner.inventory, to["index"], _owner.inventory_capacity)
-		return
-	if to.has("box"):
-		if _kind == "in" and from.has("items") and is_same(from["items"], _owner.inventory):
-			Storage.move_stack(from["items"], from["index"], _box(), to["box"], Production.BOX_CAPACITY)
-			_chest.chest_in_at = GameState.sim_time
-		return
 	var u := _owner if _owner else engineer()
 	if to.has("equip") and not from.has("equip"):
 		Gear.equip(u, from["items"], from["index"], to["equip"])
@@ -212,10 +218,12 @@ static func equip_rect(i: int) -> Rect2:
 
 func _process(_delta: float) -> void:
 	if opened:
-		if not available() or (_chest and (not GameState.buildings.has(_chest) or not Storage.character_available(_owner))):
+		if not available() or (_owner and not Storage.character_available(_owner)):
 			close()
-		else:
-			queue_redraw()
+			return
+		_page = clampi(_page, 0, page_count() - 1)
+		_hover_flip()
+		queue_redraw()
 
 
 func _text(p: Vector2, text: String, color: Color = CYAN, font_size: int = 14) -> void:
@@ -244,10 +252,7 @@ func _draw() -> void:
 	draw_set_transform(_origin, 0, Vector2.ONE * _scale)
 	_text(Vector2(20, 35), "// INVENTAIRE · INGÉNIEUR EXILÉ", CYAN, 20)
 	_text(Vector2(1015, 35), "C / ÉCHAP · FERMER", MUTED, 12)
-	if _chest:
-		_draw_chest()
-	else:
-		_draw_base()
+	_draw_base()
 	_panel(Rect2(640, 64, 520, 604))
 	_text(Vector2(658, 92), "// DIAGNOSTIC EXO")
 	_text(Vector2(788, 119), "INGÉNIEUR · ARMURE BRISÉE", MUTED, 12)
@@ -303,9 +308,6 @@ func _draw() -> void:
 
 ## Contenu d'une case : {"item", "quantity"} ou {} si vide.
 func _slot_content(slot: Dictionary) -> Dictionary:
-	if slot.has("box"):
-		var box := _box()
-		return box[slot["box"]] if slot["box"] < box.size() else {}
 	if slot.has("equip"):
 		var u := _owner if _owner else engineer()
 		var worn: String = u.equipment.get(slot["equip"], "") if u else ""
@@ -317,14 +319,13 @@ func _slot_content(slot: Dictionary) -> Dictionary:
 
 
 func _slot_rect(slot: Dictionary) -> Rect2:
-	if slot.has("box"):
-		return _box_rect(slot["box"])
 	if slot.has("equip"):
 		return equip_rect(SLOTS.find(slot["equip"]))
 	if slot.has("items"):
 		var i: int = slot["index"]
-		if slot["capacity"] == 100:
-			return Rect2(40 + (i % 10) * 56, 108 + (i / 10) * 54, 51, 49)
+		if is_same(slot["items"], GameState.base_inventory):
+			# Case d'une autre page : rien à dessiner.
+			return base_rect(i - _page * Storage.PAGE) if i / Storage.PAGE == _page else Rect2()
 		return Rect2(268 + i * 65, 727, 58, 58)
 	return Rect2()
 
@@ -337,7 +338,9 @@ func _draw_drag() -> void:
 	if stack.is_empty():
 		_drag_slot = {}
 		return
-	draw_rect(_slot_rect(_drag_slot), Color("#02080dc0"))
+	var origin := _slot_rect(_drag_slot)
+	if origin.has_area():
+		draw_rect(origin, Color("#02080dc0"))
 	var p := (get_local_mouse_position() - _origin) / _scale
 	var target := slot_at(p)
 	if not target.is_empty() and target != _drag_slot:
@@ -347,58 +350,76 @@ func _draw_drag() -> void:
 		_quantity(p + Vector2(34, 28), stack["quantity"])
 
 
+static func base_rect(i: int) -> Rect2:
+	return Rect2(40 + (i % 10) * 56, 108 + (i / 10) * 54, 51, 49)
+
+
+## Pages du réseau : jusqu'à la dernière case occupée, plus une page vide quand la dernière est pleine.
+static func page_count() -> int:
+	var last := -1
+	var inv := GameState.base_inventory
+	for i in range(inv.size() - 1, -1, -1):
+		if not inv[i].is_empty():
+			last = i
+			break
+	return (last + 1) / Storage.PAGE + 1
+
+
+func _turn(dir: int) -> void:
+	var to := clampi(_page + dir, 0, page_count() - 1)
+	if to != _page:
+		_page = to
+		Sfx.play("ui_inventaire")
+
+
+## Pendant un glisser-déposer, rester sur une flèche tourne la page (la pile suit le curseur).
+func _hover_flip() -> void:
+	var dir := 0
+	if not _drag_slot.is_empty() and Storage.network_open():
+		var p := (get_local_mouse_position() - _origin) / _scale
+		dir = -1 if PREV_RECT.grow(4).has_point(p) else (1 if NEXT_RECT.grow(4).has_point(p) else 0)
+	var now := Time.get_ticks_msec() / 1000.0
+	if dir != _flip_dir:
+		_flip_dir = dir
+		_flip_since = now
+	elif dir != 0 and now - _flip_since >= FLIP_DELAY:
+		_turn(dir)
+		_flip_since = now
+
+
 func _draw_base() -> void:
-	_panel(Rect2(20, 64, 600, 604), Color("#586063"))
-	_text(Vector2(38, 92), "// STOCK BASE · 10×10", Color("#788589"))
-	for row in range(10):
-		for col in range(10):
-			var index := row * 10 + col
-			var rect := Rect2(40 + col * 56, 108 + row * 54, 51, 49)
-			var filled := index < GameState.base_inventory.size() and not GameState.base_inventory[index].is_empty()
-			_slot(rect, filled, not GameState.base_inventory_unlocked)
-			if GameState.base_inventory_unlocked and filled:
-				_draw_item(rect, GameState.base_inventory[index])
-	if not GameState.base_inventory_unlocked:
+	var open := Storage.network_open()
+	_panel(BASE_RECT, Color("#1f9fb8") if open else Color("#586063"))
+	_text(Vector2(38, 92), "// RÉSEAU DES COFFRES · 10×10", CYAN if open else Color("#788589"))
+	if open:
+		var pages := page_count()
+		var p := (get_local_mouse_position() - _origin) / _scale
+		_arrow(PREV_RECT, -1, _page > 0, PREV_RECT.grow(4).has_point(p))
+		_arrow(NEXT_RECT, 1, _page < pages - 1, NEXT_RECT.grow(4).has_point(p))
+		var label := "%d / %d" % [_page + 1, pages]
+		var w := _bold.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, 15).x
+		draw_string(_bold, Vector2((PREV_RECT.end.x + NEXT_RECT.position.x - w) / 2.0, 92), label, HORIZONTAL_ALIGNMENT_LEFT, -1, 15, CYAN)
+	var inv := GameState.base_inventory
+	for i in range(Storage.PAGE):
+		var index := _page * Storage.PAGE + i
+		var rect := base_rect(i)
+		var filled := index < inv.size() and not inv[index].is_empty()
+		_slot(rect, filled, not open)
+		if open and filled:
+			_draw_item(rect, inv[index])
+	if not open:
 		draw_rect(Rect2(30, 312, 580, 72), Color("#10181af5"))
-		_text(Vector2(184, 355), "Coffre antique nécessaire", Color("#b6bfc0"), 20)
+		_text(Vector2(84, 345), "Coffre antique ou bâtiment à coffres nécessaire", Color("#b6bfc0"), 17)
+		_text(Vector2(140, 370), "Tous les coffres forment un seul réseau infini.", MUTED, 13)
 
 
-func _box() -> Array[Dictionary]:
-	return _chest.input_box if _kind == "in" else _chest.output_box
-
-
-func _box_rect(i: int) -> Rect2:
-	return Rect2(40 + (i % 4) * 140, 135 + (i / 4) * 125, 132, 116)
-
-
-func _draw_chest() -> void:
-	var tint := Color("#62adff") if _kind == "in" else Color("#ff817a")
-	_panel(Rect2(20, 64, 600, 604), tint)
-	_text(Vector2(38, 92), "Coffre bleu" if _kind == "in" else "Coffre rouge", tint, 20)
-	_text(Vector2(38, 117), "Glissez les piles entre le paquetage et le coffre." if _kind == "in" else "Cliquez sur une pile pour la transférer au paquetage.", MUTED)
-	var box := _box()
-	for i in Production.BOX_CAPACITY:
-		var rect := _box_rect(i)
-		var filled := i < box.size() and not box[i].is_empty()
-		_slot(rect, filled)
-		if filled:
-			_draw_item(rect, box[i])
-
-
-func _withdraw(index: int) -> void:
-	var box := _box()
-	if index >= box.size() or box[index].is_empty():
-		return
-	var bag := _owner.inventory
-	for i in bag.size():
-		if Storage.same_kind(bag[i], box[index]["item"], String(box[index].get("owner", ""))):
-			Storage.move_stack(box, index, bag, i, _owner.inventory_capacity)
-			if box[index].is_empty():
-				return
-	for i in _owner.inventory_capacity:
-		if i >= bag.size() or bag[i].is_empty():
-			Storage.move_stack(box, index, bag, i, _owner.inventory_capacity)
-			return
+## Flèche de page : triangle plein, éteinte en bout de réseau, surlignée au survol.
+func _arrow(r: Rect2, dir: int, enabled: bool, hover: bool) -> void:
+	_slot(r, enabled and hover, not enabled)
+	var c := r.get_center()
+	var tip := Vector2(7.0 * dir, 0)
+	var col := (Color.WHITE if hover else CYAN) if enabled else Color("#3a4447")
+	draw_colored_polygon(PackedVector2Array([c + tip, c - tip + Vector2(0, -8), c - tip + Vector2(0, 8)]), col)
 
 
 ## Liseré de rareté (sim/loot.gd) : rien pour un objet normal, la couleur de la rareté au-delà.
@@ -428,14 +449,10 @@ func _quantity(right: Vector2, amount: int) -> void:
 
 
 func slot_at(p: Vector2) -> Dictionary:
-	if _chest:
-		for i in Production.BOX_CAPACITY:
-			if _box_rect(i).has_point(p):
-				return {"box": i}
-	elif GameState.base_inventory_unlocked:
-		for i in range(100):
-			if Rect2(40 + (i % 10) * 56, 108 + (i / 10) * 54, 51, 49).has_point(p):
-				return {"items": GameState.base_inventory, "index": i, "capacity": 100}
+	if Storage.network_open():
+		for i in range(Storage.PAGE):
+			if base_rect(i).has_point(p):
+				return {"items": GameState.base_inventory, "index": _page * Storage.PAGE + i, "capacity": Storage.BASE_CAPACITY}
 	var u := _owner if _owner else engineer()
 	if u:
 		for i in [0, 1, 2, 3, 4, 5, 6, 7, 8, 10, 11]:

@@ -72,7 +72,11 @@ func test_extension_content_per_biome() -> void:
 				continue
 			var k := Biomes.index_at(z)
 			lodes[k] += 1
-			check(Biomes.ores_at(k, Biomes.depth(k, z + 4.0)).has(st.lodes[o]) or Biomes.ores_at(k, Biomes.depth(k, z)).has(st.lodes[o]), "filon %s permis à sa profondeur" % st.lodes[o])
+			# Le filon (2 × 2 cases) est posé à quelques cases du centre de sa clairière, où le minerai a été tiré.
+			var allowed := false
+			for dz: float in [-12.0, -8.0, -4.0, 0.0, 4.0, 8.0, 12.0, 16.0]:
+				allowed = allowed or Biomes.ores_at(k, Biomes.depth(k, z + dz)).has(st.lodes[o])
+			check(allowed, "filon %s permis à sa profondeur (%s, biome %d, profondeur %.2f)" % [st.lodes[o], o, k, Biomes.depth(k, z)])
 		for key: Vector2i in st.block_types:
 			var item: String = st.block_types[key]
 			if not Blocks.ORES.has(item) or st.lode_cells.has(key) or CaveShape.in_start(key.x * 4.0, key.y * 4.0):
@@ -87,10 +91,11 @@ func test_extension_content_per_biome() -> void:
 		print("     graine %d (%d ms) : bosquets %s, filons %s, parois %s, bassins %s" % [map_seed, ms, groves, lodes, veins, pools])
 		for k in 2:
 			check(groves[k] > 0 and lodes[k] > 0 and veins[k] > 20, "biome %d garni" % k)
-		# Pas de cuivre dans le biome 2.
+		# Chaque minerai reste dans les biomes qui le portent : pas d'or sur la carte, fer et quartz hors du Temple.
 		for key: Vector2i in st.block_types:
-			if st.block_types[key] == "copper" and Biomes.index_at(key.y * 4.0) == 1:
-				check(false, "cuivre dans le biome 2 en %s" % key)
+			var item: String = st.block_types[key]
+			if Blocks.ORES.has(item) and not (Biomes.LIST[Biomes.index_at(key.y * 4.0)]["ores"] as Dictionary).has(item):
+				check(false, "%s hors de son biome en %s" % [item, key])
 				break
 
 
@@ -107,8 +112,15 @@ func test_portal_threat_follows_biome() -> void:
 ## mais à une ou deux cases près.
 func test_passages_stop_short_of_start_galleries() -> void:
 	for map_seed in [3, 42, 20261114]:
-		var st := _gen(map_seed)
+		var st := AfterPassages.new()
+		st.generate_galleries(map_seed)
+		# Réseaux tels que les passages les laissent : les salles posées ensuite (pylônes, salles à thème)
+		# peuvent, elles, déborder sur un passage. Galerie d'origine = déjà là avant les passages (un passage
+		# entre lui-même loin dans la zone quand la galerie visée est loin du bord).
+		var final_mask := st.mask
+		st.mask = st.after_passages
 		var comp := _components(st)
+		st.mask = final_mask
 		var start_ids := {}
 		var ext_ids := {}
 		for k in st.mask.size():
@@ -116,7 +128,7 @@ func test_passages_stop_short_of_start_galleries() -> void:
 				continue
 			var x := k % TerrainState.GAL_W + CaveShape.WORLD_X0 + 0.5
 			var z := k / TerrainState.GAL_W + CaveShape.WORLD_Z0 + 0.5
-			if TerrainState.gallery_allowed(x, z) and not TerrainState.ext_allowed(x, z) and CaveShape.in_start(x, z) and absf(x) < 200.0 and z > -300.0:
+			if st.before_passages[k] != 0 and TerrainState.gallery_allowed(x, z) and not TerrainState.ext_allowed(x, z) and CaveShape.in_start(x, z):
 				start_ids[comp[k]] = true
 			if TerrainState.ext_allowed(x, z):
 				ext_ids[comp[k]] = true
@@ -138,6 +150,17 @@ func test_passages_stop_short_of_start_galleries() -> void:
 			if near <= 12.0:
 				close += 1
 		check(close >= 2, "graine %d : passages tout près de la zone d'origine (%d)" % [map_seed, close])
+
+
+## Garde le masque des galeries juste après le percement des passages.
+class AfterPassages extends TerrainState:
+	var before_passages: PackedByteArray
+	var after_passages: PackedByteArray
+
+	func _carve_passages() -> void:
+		before_passages = mask.duplicate()
+		super()
+		after_passages = mask.duplicate()
 
 
 static func _components(st: TerrainState) -> PackedInt32Array:

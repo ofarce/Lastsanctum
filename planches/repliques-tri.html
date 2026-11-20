@@ -1,0 +1,344 @@
+<title>Tri des répliques</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Pixelify+Sans:wght@400;600&display=swap">
+<style>
+/* Layout : une colonne de bannières 16 bits, chacune suivie de ses trois choix ; barre de filtre collante en haut. */
+:root{
+  --bg:#eef0f6; --panel:#ffffff; --fg:#1b1f33; --muted:#5d6480; --line:#d5d9e8;
+  --keep:#2f8a5b; --hide:#b2453c; --edit:#c08a1e; --accent:#3c4bb8;
+  --sky:#5a6ad0; --deep:#141c6a; --rim:#e6e8f4; --rimlo:#8a90b8; --edge:#0a0c26; --shadow:#10123a;
+  --pix:"Pixelify Sans","Courier New",monospace; --ui:"Inter",system-ui,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0f1220; --panel:#181c30; --fg:#e6e8f4; --muted:#9aa1c0; --line:#2a3050;
+  --keep:#4fc184; --hide:#e2766c; --edit:#e8b44a; --accent:#8d98ff; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f1220; --panel:#181c30; --fg:#e6e8f4; --muted:#9aa1c0; --line:#2a3050;
+  --keep:#4fc184; --hide:#e2766c; --edit:#e8b44a; --accent:#8d98ff; color-scheme:dark}
+body{background:var(--bg);color:var(--fg);font-family:var(--ui);font-size:14px;line-height:1.5}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--panel)}
+.wrap{max-width:860px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:24px 80px}
+h1{font-family:var(--pix);font-weight:600;font-size:30px;margin:0 0 4px;text-wrap:balance}
+.lede{color:var(--muted);margin:0 0 18px;max-width:65ch}
+.bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px 12px;display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;margin-bottom:22px}
+.counts{display:flex;gap:12px;flex-wrap:wrap;font-variant-numeric:tabular-nums;font-size:13px}
+.counts b{font-weight:600}
+.c-keep{color:var(--keep)}.c-hide{color:var(--hide)}.c-edit{color:var(--edit)}.c-todo{color:var(--muted)}
+.filters{display:flex;gap:4px;flex-wrap:wrap;margin-left:auto}
+.filters button,.seg button{font:inherit;font-size:13px;border:1px solid var(--line);background:transparent;color:var(--fg);padding:4px 10px;border-radius:6px;cursor:pointer}
+.filters button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
+button:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.status{font-size:12px;color:var(--muted);width:100%}
+section{margin-bottom:30px}
+h2{font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:0 0 4px;font-weight:600}
+.where{font-size:12px;color:var(--muted);margin:0 0 12px}
+.item{display:grid;grid-template-columns:minmax(0,1fr);gap:6px;margin-bottom:16px}
+/* Bannière façon SnesBanner : dégradé bleu, double liseré, coins cassés. */
+.snes{position:relative;padding:11px 16px;color:#fff;font-family:var(--pix);font-size:16px;line-height:1.4;text-shadow:2px 2px 0 var(--shadow);
+  background:linear-gradient(var(--sky),var(--deep));
+  clip-path:polygon(4px 0,calc(100% - 4px) 0,100% 4px,100% calc(100% - 4px),calc(100% - 4px) 100%,4px 100%,0 calc(100% - 4px),0 4px);
+  box-shadow:inset 0 0 0 1px var(--edge),inset 0 0 0 3px var(--rim),inset 0 0 0 4px var(--rimlo);white-space:pre-line;overflow-wrap:anywhere}
+.snes .who{color:#ffe9a8}
+.snes.teal{background:linear-gradient(#1f4f5c,#0a1d24);box-shadow:inset 0 0 0 1px #04141a,inset 0 0 0 3px #d6f6fb,inset 0 0 0 4px #5fa9b8;font-style:italic}
+.snes.red{background:linear-gradient(#8c2a22,#3a0d0a);box-shadow:inset 0 0 0 1px #1a0504,inset 0 0 0 3px #f2d6d2,inset 0 0 0 4px #b8706a}
+.snes .ph{color:#ffd37a}
+.item.hide .snes{opacity:.35;text-decoration:line-through}
+.item.edit .snes.orig{opacity:.45}
+.meta{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;justify-content:space-between}
+.src{font-size:12px;color:var(--muted);font-family:ui-monospace,monospace;overflow-wrap:anywhere;min-width:0}
+.seg{display:flex;gap:4px}
+.seg button[aria-pressed="true"][data-v="keep"]{background:var(--keep);border-color:var(--keep);color:#fff}
+.seg button[aria-pressed="true"][data-v="hide"]{background:var(--hide);border-color:var(--hide);color:#fff}
+.seg button[aria-pressed="true"][data-v="edit"]{background:var(--edit);border-color:var(--edit);color:#1b1f33}
+.seg button:disabled{opacity:.5;cursor:default}
+textarea{font:inherit;font-family:var(--pix);font-size:16px;width:100%;box-sizing:border-box;min-height:64px;padding:8px 10px;border:1px solid var(--edit);border-radius:6px;background:var(--panel);color:var(--fg);resize:vertical}
+.hint{font-size:12px;color:var(--muted)}
+@media (prefers-reduced-motion:no-preference){.seg button{transition:background .12s}}
+</style>
+
+<div class="wrap">
+  <h1>Tri des répliques</h1>
+  <p class="lede">Toutes les lignes affichées dans la bannière bleue, et tout ce que dit l'Ingénieur. Pour chacune : <b>Garder</b>, <b>Masquer</b> ou <b>Modifier</b>. Si vous choisissez Modifier, écrivez le nouveau texte ; il est enregistré dès que vous quittez le champ. Les parties <span style="color:var(--edit)">[entre crochets]</span> sont remplies par le jeu.</p>
+
+  <div class="bar">
+    <div class="counts" id="counts"></div>
+    <div class="filters" id="filters" role="group" aria-label="Filtrer">
+      <button data-f="all" aria-pressed="true">Toutes</button>
+      <button data-f="todo" aria-pressed="false">À trier</button>
+      <button data-f="keep" aria-pressed="false">Gardées</button>
+      <button data-f="hide" aria-pressed="false">Masquées</button>
+      <button data-f="edit" aria-pressed="false">Modifiées</button>
+    </div>
+    <div class="status" id="status">Connexion à l'enregistrement…</div>
+  </div>
+
+  <div id="list"></div>
+</div>
+
+<script>
+// [id, texte, source, style] — style : "eng" (Ingénieur, bannière bleue), "obj" (panneau d'objectif), "rec" (Reçu), "note" (notification), "red" (alerte rouge), "end" (fin de partie)
+const GROUPS = [
+ {t:"Ce que dit l'Ingénieur", w:"Bannière bleue « Ingénieur Exilé : … »", s:"eng", rows:[
+  ["eng_equip1","Je suis en vie... Mais mon équipement n'a pas résisté. Et sans lui, impossible de combattre le Credo.","ui/hud/hud.gd:201"],
+  ["eng_equip2","Peut-être que la Salamandre peut m'aider. Je devrais pouvoir ériger des temples grâce à mon Enonciation.","ui/hud/hud.gd:202"],
+  ["eng_shield","Le bouclier nous enferme autant qu'il nous protège.","sim/opening.gd:65"],
+  ["eng_noseal","Impossible. Je n'ai pas mon sceau de minage.","sim/simulation.gd:498, 1021"],
+  ["eng_glyph","Un glyphe tyrien dans la roche, encore alimenté. Il y a quelque chose de scellé derrière cette paroi.","sim/simulation.gd:894"],
+  ["eng_reliq","Un reliquaire tyrien. Il tient bien plus que sa taille : cent emplacements.","sim/simulation.gd:957"],
+  ["eng_seal","Ce sceau devrait ne faire qu'une bouchée de ces murs en pierre.","sim/simulation.gd:1831"],
+  ["eng_greet","Ah. elle est là. Au travail.","ui/dialogue/dialogue_bubble.gd:49 (plus appelée)"],
+ ]},
+ {t:"Les boss, vus par l'Ingénieur", w:"Bannière bleue, à la première personne", s:"note", rows:[
+  ["mar_enter","La Martyre de Byrsa est entrée par le sud. Son bouclier ne laisse passer que moi.","sim/martyre.gd:272"],
+  ["mar_duel","Combat singulier : la Martyre de Byrsa lève son bâton.","sim/martyre.gd:219"],
+  ["mar_done","La Martyre est tombée et son dôme avec elle. Les assauts vont reprendre.","sim/martyre.gd:116"],
+  ["mar_phase","Phase [I · Le serment / II · L'armure cède]. — Phase III · Fendue : le dôme se resserre.","sim/martyre.gd:88, 329"],
+  ["oeil_wake","Une salle immense, tout en haut du Temple… et un œil qui s'ouvre. C'est lui qui garde la frontière.","sim/oeil.gd:106"],
+  ["oeil_duel","Combat singulier : l'Œil de la Matrice se tourne vers moi.","sim/oeil.gd:213"],
+  ["oeil_done","L'Œil s'est fermé pour de bon. La porte de chair cède : la route du nord est ouverte.","sim/oeil.gd:108"],
+  ["oeil_phase","Phase [I · Le regard / II · L'iris / III · Les deux axes].","sim/oeil.gd:95, 347"],
+  ["gorge_wake","Le sol tremble sous la grande salle… quelque chose a mangé tous les filons d'ici.","sim/gorge.gd:38"],
+  ["gorge_line","La Gorge-Cuivre laboure la salle : sortez de sa ligne !","sim/gorge.gd:290"],
+  ["gorge_done","La Gorge-Cuivre ne bouge plus. Ce qu'elle a avalé de cuivre est à nous.","sim/gorge.gd:39"],
+ ]},
+ {t:"Répliques de quête", w:"Panneau d'objectif (cadre Sarcelle), dites par l'Ingénieur", s:"obj", rows:[
+  ["q_anchor","L'Ancre s'est éteinte. Je dois la réactiver : elle réveillera les gardes de l'entrée.","sim/quests.gd:98"],
+  ["q_anchor_done","L'Ancre respire de nouveau. Les gardes se lèvent.","sim/quests.gd:99"],
+  ["q_sala","Mon exosquelette est mort. Par l'Énonciation, je dois rappeler les quatre cultes.","sim/quests.gd:108"],
+  ["q_sala_done","Les quatre cultes sont rappelés. La Salamandre va m'écouter.","sim/quests.gd:109"],
+  ["q_sigil","Sigil veille. Ses érudits sauront ce que nous avons oublié.","sim/quests.gd:20"],
+  ["q_indra","Indra répond. Ses guerriers tiendront la ligne.","sim/quests.gd:21"],
+  ["q_medeina","Le cycle de Medeina reprend : la mort ne sera plus une fin.","sim/quests.gd:22"],
+  ["q_aether","Aether lit le ciel pour nous. Les étoiles guideront la forge.","sim/quests.gd:23"],
+  ["q_chest1","Ces murs ont été scellés par les miens. Il me faut un sceau pour les rouvrir.","sim/quests.gd:28"],
+  ["q_chest1_done","Ce sceau devrait ne faire qu'une bouchée de ces murs en pierre.","sim/quests.gd:29"],
+  ["q_chest2","Le Coffre Antique est quelque part derrière cette roche. Je dois creuser jusqu'à lui.","sim/quests.gd:30"],
+  ["q_chest2_done","Le voilà. Intact, après tout ce temps.","sim/quests.gd:31"],
+  ["q_chest3","Il ne reste qu'à l'ouvrir.","sim/quests.gd:32"],
+  ["q_chest3_done","De quoi stocker nos réserves. Le sanctuaire peut enfin s'organiser.","sim/quests.gd:33"],
+  ["q_comp","Un animal ? Il est faible...","sim/quests.gd:118"],
+  ["q_mar_wait","Un dôme d'or s'est levé au sud. La Martyre de Byrsa m'attend : personne d'autre ne peut passer.","sim/martyre.gd:114"],
+  ["q_mar_duel","Ses salves laissent toujours une brèche : je dois la lire, m'y glisser, puis frapper quand elle reprend son souffle.","sim/martyre.gd:115"],
+  ["q_oeil_duel","Il vise avant de tirer : je dois sortir de son axe, puis frapper l'œil quand il est grand ouvert.","sim/oeil.gd:107"],
+ ]},
+ {t:"Bannières « Reçu »", w:"Bannière bleue avec l'objet à gauche", s:"rec", rows:[
+  ["rec_cannon","Reçu : ARBALESTRIE\nL'arme de base de tous les Exilés, la vôtre n'ayant pas survécu au voyage temporel. Consomme de l'énergie spirituelle à chaque tir. Faites-en bon usage.","ui/banner/item_banner.gd:20"],
+  ["rec_combi","Reçu : COMBINAISON\nUne combinaison sommaire commune à tous les Exilés, votre armure n'ayant pas supporté le voyage temporel. Il existe peut-être des moyens de la renforcer ?","ui/banner/item_banner.gd:21"],
+ ]},
+ {t:"Ouverture, Ancre, capsule", w:"Notification, bannière bleue", s:"note", rows:[
+  ["n_anchor_off","L'Ancre s'est éteinte. Sélectionnez l'Ingénieur, puis clic droit sur l'Ancre (ou R) pour la réactiver.","sim/simulation.gd:125"],
+  ["n_shield","Un bouclier d'énergie enveloppe la grotte.","sim/opening.gd:176"],
+  ["n_wall","Le mur sud a cédé. Postez vos troupes sur les remparts · premier assaut au matin du jour [N].","sim/opening.gd:210"],
+  ["n_guards","Les gardes tyriennes de l'entrée se rallument · premier assaut au matin. (ou « … dans 20 s. »)","sim/simulation.gd:429, 431"],
+  ["n_anchor_on","L'Ancre est éveillée. L'Ingénieur peut y prier.","sim/simulation.gd:439"],
+  ["n_anchor_first","L'Ancre doit d'abord être réactivée par l'Ingénieur.","sim/simulation.gd:1224"],
+  ["n_wait_out","Attendez la sortie de l'Ingénieur.","sim/simulation.gd:449"],
+  ["n_weak","L'Ingénieur est trop affaibli pour prier.","sim/simulation.gd:779"],
+  ["n_eng_down","L'Ingénieur est tombé · retour à la capsule dans [N] s.\n[Boss] retrouve toutes ses forces.","sim/simulation.gd:1702"],
+  ["n_eng_back","L'Ingénieur est de retour dans la capsule · E pour en sortir.","sim/simulation.gd:1728"],
+  ["n_turret_on","Garde tyrienne active · portée [N] · dégâts [N].","sim/combat.gd:1185"],
+  ["n_turret_off","Garde tyrienne endormie · elle s'éveillera quand l'Ingénieur aura réactivé l'Ancre.","sim/combat.gd:1187"],
+ ]},
+ {t:"Exploration, minage, coffres", w:"Notification, bannière bleue", s:"note", rows:[
+  ["n_gallery","Galerie découverte ! ([n] / [total])","world/terrain/terrain_ops.gd:227"],
+  ["n_gallery_pyl","… · un Pylône de Merenor s'y dresse : sa corruption ronge l'Ingénieur et ses gardiens renaissent tant qu'il n'est pas canalisé.","world/terrain/terrain_ops.gd:229"],
+  ["n_vault","Une réserve tyrienne scellée ! Un coffre antique y repose.","world/terrain/terrain_ops.gd:105"],
+  ["n_mat_research","[Matériau] : recherche « [recherche] » requise ([bâtiment]).","sim/simulation.gd:505"],
+  ["n_adepts_mine","Les adeptes récoltent le matériau du bloc.","sim/simulation.gd:1030"],
+  ["n_only_eng","Seul l'Ingénieur sait ouvrir ce reliquaire.","sim/simulation.gd:914, 933"],
+  ["n_only_bare","Seul l'Ingénieur, sans son armure, peut ouvrir ce coffre.","sim/simulation.gd:944"],
+  ["n_to_chest","L'Ingénieur rejoint le coffre antique.","sim/simulation.gd:920"],
+  ["n_chest_open","Coffre antique ouvert · la réserve de la base (100 cases) reçoit désormais les objets minés (touche C).","sim/simulation.gd:958"],
+  ["n_grove_grow","[N] bosquet(s) pétrifié(s) repousse(nt).","sim/simulation.gd:624"],
+  ["n_grove_fall","Le bosquet pétrifié s'effondre : il repoussera dans trois vagues. (ou « … : le gisement est épuisé. »)","sim/simulation.gd:639"],
+ ]},
+ {t:"Sanctum", w:"Notification, bannière bleue", s:"note", rows:[
+  ["n_s_reliq","Reliquaire ouvert : [objet].","sim/sanctum.gd:94"],
+  ["n_s_tablet","Tablette déchiffrée : +[N] Savoir.","sim/sanctum.gd:100"],
+  ["n_s_arms","Salle d'armes : [objet].","sim/sanctum.gd:106"],
+  ["n_s_bless","Bénédiction de l'oratoire : dégâts accrus pendant une minute.","sim/sanctum.gd:113"],
+ ]},
+ {t:"Pylônes de Merenor", w:"Notification, bannière bleue", s:"note", rows:[
+  ["n_p_info","Le Pylône de Merenor est indestructible. Un esprit de chaque dieu doit prier autour pour le canaliser ; collé au socle, l'Ingénieur le bénit avec E.","sim/simulation.gd:1261"],
+  ["n_p_join","Les esprits rejoignent le Pylône de Merenor. Manque : [dieux].","sim/simulation.gd:1273"],
+  ["n_p_bless","L'Ingénieur bénit le Pylône de Merenor : chaque seconde de prière retarde d'autant le retour des monstres. E pour arrêter.","sim/pylons.gd:420"],
+  ["n_p_left","Un esprit a quitté le Pylône de Merenor : la corruption revient et ses gardiens renaîtront.","sim/pylons.gd:164"],
+  ["n_p_done","Pylône de Merenor canalisé : la corruption se retire, plus aucun gardien n'en renaîtra.","sim/pylons.gd:166"],
+ ]},
+ {t:"Construction", w:"Notification, bannière bleue", s:"note", rows:[
+  ["n_b_lock","[Bâtiment] : construisez d'abord un [bâtiment]. (ou « : recherche « [X] » requise ([bâtiment]). »)","sim/simulation.gd:1205 · ui/hud/hud_model.gd:61"],
+  ["n_b_cost","[Bâtiment] : [coût] requis.","sim/simulation.gd:1209, 1432"],
+  ["n_b_place","[Bâtiment] · [coût] · cliquez un emplacement libre. Échap : annuler.","sim/simulation.gd:1213"],
+  ["n_b_explore","Explorez tout l'emplacement avant de construire.","sim/simulation.gd:1423"],
+  ["n_b_ground","Emplacement impossible : il faut un sol dégagé (grotte, galerie creusée ou jungle).","sim/simulation.gd:1427"],
+  ["n_b_adept","Il faut un adepte [de Dieu] en prière pour bâtir ce [bâtiment].","sim/simulation.gd:1438"],
+  ["n_b_start","Chantier lancé · [bâtiment] · [N] s.","sim/simulation.gd:1454"],
+  ["n_b_done","[Bâtiment] achevé. Nouveau : [bâtiments].","sim/simulation.gd:369"],
+ ]},
+ {t:"Adeptes, prière, production", w:"Notification, bannière bleue", s:"note", rows:[
+  ["n_a_pray","Les adeptes rejoignent leur temple pour prier. (ou « Aucun temple de leur dieu n'est achevé. »)","sim/simulation.gd:1246"],
+  ["n_a_sigil","Les adeptes de Sigil prient au [bâtiment] · deux fois plus lentement.","sim/simulation.gd:1288"],
+  ["n_a_med","L'Ingénieur rejoint le [bâtiment] pour méditer · +[N] [ressource] / s.","sim/simulation.gd:1292"],
+  ["n_a_full","[Bâtiment] : les [N] postes sont occupés.","sim/production.gd:534"],
+  ["n_a_staff","[Bâtiment] · [n] / [N] au poste.","sim/production.gd:536"],
+  ["n_a_deity","[Bâtiment] n'accepte que les adeptes de [dieu].","sim/production.gd:538"],
+  ["n_a_miners","[Bâtiment] : déjà [N] mineurs.","sim/production.gd:554"],
+  ["n_a_mine","L'adepte mine pour le [bâtiment] et rapportera des lots de [N].","sim/production.gd:557"],
+  ["n_a_recipe","[Objet] : recherche « [X] » requise ([bâtiment]).","sim/production.gd:566"],
+  ["n_a_loop","[Bâtiment] · fabrique en boucle : [objet] (ou « fabrication arrêtée »)","sim/production.gd:570"],
+  ["n_a_red","L'Ingénieur récupère [N] objet(s) du coffre rouge.","sim/production.gd:609"],
+  ["n_a_red_empty","Le coffre rouge est vide. (ou « Aucun Ingénieur disponible. »)","sim/simulation.gd:1632"],
+  ["n_a_arba","Recherche achevée : Arbalestrie modulaire !\nChoisissez vos munitions au barillet, à gauche de votre barre de vie.","sim/simulation.gd:1827"],
+ ]},
+ {t:"Unités, invocation, caserne", w:"Notification, bannière bleue", s:"note", rows:[
+  ["n_u_pop","Population au plafond ([n]/[N]) : il faut une Chambre à coucher tenue par un adepte de Medeina.","sim/simulation.gd:1498"],
+  ["n_u_qfull","File d'invocation pleine.","sim/simulation.gd:1509"],
+  ["n_u_qcost","Invocation : [coût] requis.","sim/simulation.gd:1516"],
+  ["n_u_tfull","File d'entraînement pleine.","sim/simulation.gd:1597"],
+  ["n_u_tcost","Entraînement : [coût] requis.","sim/simulation.gd:1603"],
+  ["n_u_train","[Adepte] à l'entraînement · [N] s.","sim/simulation.gd:1609"],
+  ["n_u_out","[Adepte] sort de la caserne. (ou « de l'École »)","sim/simulation.gd:1657"],
+  ["n_u_lvl","[Nom] passe au niveau [N] · +1 dégât, +1 défense.","sim/combat.gd:154"],
+  ["n_u_down","[Nom] est tombé · le Puits des Âmes peut le rappeler.","sim/simulation.gd:1677"],
+  ["n_u_well_off","Le Puits des Âmes est à l'arrêt : il faut un adepte de Medeina au poste.","sim/simulation.gd:1737"],
+  ["n_u_res_cost","Résurrection : [coût] requis.","sim/simulation.gd:1744"],
+  ["n_u_back","[Nom] revient du Puits des Âmes · niveau [N].","sim/simulation.gd:1773"],
+  ["n_h_click","Cliquez sur l'Ancre pour invoquer le héros Tireur.","sim/simulation.gd:1221"],
+  ["n_h_cost","Héros Tireur : [coût] requis.","sim/simulation.gd:1229"],
+  ["n_h_portal","Le portail s'éveille…","sim/simulation.gd:1237"],
+  ["n_h_arrive","Le héros Tireur franchit le portail.","sim/simulation.gd:1235"],
+  ["n_u_hold","Les unités maintiennent leur position.","sim/simulation.gd:1092"],
+  ["n_u_cd","Compétence en recharge.","sim/simulation.gd:1119"],
+  ["n_k_pal","PALADIN — Égide : boucliers renforcés.","sim/simulation.gd:1131"],
+  ["n_k_heal","SOIGNEUR — Restauration de zone.","sim/simulation.gd:1144"],
+  ["n_k_shoot","TIREUR — Tir de précision.","sim/simulation.gd:1154"],
+  ["n_k_indra","DISCIPLES D'INDRA — Discipline martiale.","sim/simulation.gd:1163"],
+ ]},
+ {t:"Objets posés et barricades", w:"Notification, bannière bleue", s:"note", rows:[
+  ["n_o_nopose","Cet objet ne se pose pas.","sim/placeables.gd:66"],
+  ["n_o_stock","[Objet] : aucun en stock.","sim/placeables.gd:68"],
+  ["n_o_explore","Explorez la case avant d'y poser un objet.","sim/placeables.gd:72"],
+  ["n_o_ground","Il faut une case de sol dégagé.","sim/placeables.gd:76"],
+  ["n_o_obj","Un objet occupe déjà cette case.","sim/placeables.gd:78"],
+  ["n_o_bld","Un bâtiment occupe cette case.","sim/placeables.gd:81"],
+  ["n_o_unit","Une unité se tient sur cette case.","sim/placeables.gd:83"],
+  ["n_o_last","La barricade fermerait le dernier passage vers l'Ancre.","sim/placeables.gd:103"],
+  ["n_o_broke","Une barricade a cédé.","sim/placeables.gd:150"],
+  ["n_o_post","Ordre : se poster au poste de tir.","sim/placeables.gd:205"],
+ ]},
+ {t:"Oublieux", w:"Notification, bannière bleue", s:"note", rows:[
+  ["n_ob_out","La nuit tombe : l'Oublieux sort de l'Église.","sim/oublieux.gd:82"],
+  ["n_ob_full","Le coffre de l'Église des Oublieux est plein.","sim/oublieux.gd:155"],
+  ["n_ob_back","L'Oublieux rentre à l'aube : [N] objet(s) dans le coffre de l'Église.","sim/oublieux.gd:241"],
+  ["n_ob_down","L'Oublieux est tombé · il reviendra la nuit prochaine.","sim/oublieux.gd:265"],
+ ]},
+ {t:"Météo", w:"Notification, bannière bleue", s:"note", rows:[
+  ["n_w_couvert","Le ciel se couvre au-dessus de la jungle.","core/weather.gd:44"],
+  ["n_w_pluie","La pluie tombe sur la jungle : on y avance moins vite, la rivière monte, le feu ne prend plus.","core/weather.gd:45"],
+  ["n_w_orage","Un orage éclate : la rivière déborde et la foudre frappe au dehors, loin des bâtiments.","core/weather.gd:46"],
+  ["n_w_clair","Le ciel se dégage.","core/weather.gd:47"],
+  ["n_w_brume","La brume se lève sur la jungle : dehors, les tireurs portent moins loin.","core/weather.gd:48"],
+ ]},
+ {t:"Interface et raccourcis de test", w:"Notification, bannière bleue", s:"note", rows:[
+  ["n_i_map","Minicarte : TAB ou M pour l'afficher en plein écran.","ui/hud/hud.gd:320"],
+  ["n_i_mar","La Martyre de Byrsa est déjà sur le terrain.","ui/hud/hud.gd:348"],
+  ["n_i_border","Pas de frontière sur cette carte.","ui/hud/hud.gd:358"],
+  ["n_i_stock","Stock de base plein : libérez des emplacements pour ajouter les objets.","ui/hud/hud.gd:385"],
+  ["n_i_100","100 de chaque objet craftable ajoutés au stock de base.","ui/hud/hud.gd:389"],
+ ]},
+ {t:"Alertes de vague", w:"Pas la bannière bleue : texte rouge au-dessus de la minicarte", s:"red", rows:[
+  ["r_wave","Assaut [N] : [N] escouade(s) remonte(nt) la jungle par le sud !","sim/combat.gd:1013"],
+  ["r_night","La nuit tombe : des squelettes se lèvent dans le no man's land.","sim/night.gd:53"],
+  ["r_packs","[N] meute(s) de Merenor quitte(nt) son pylône / leurs pylônes et marche(nt) sur l'Ancre !","sim/night.gd:137"],
+ ]},
+ {t:"Fin de partie", w:"Pas la bannière bleue : grand panneau au centre", s:"end", rows:[
+  ["e_won","SANCTUM PRÉSERVÉ\nLes Exilés et les disciples d'Indra ont repoussé l'assaut.","ui/hud/hud.gd:1212"],
+  ["e_lost","L'ANCRE EST PERDUE\nMaj + R pour recommencer.","ui/hud/hud.gd:1215"],
+ ]},
+];
+
+const LABEL = {keep:"Garder", hide:"Masquer", edit:"Modifier"};
+const choices = {};   // id -> {choice, text}
+let db = null, col = null, filter = "all", canWrite = true;
+const $ = s => document.querySelector(s);
+
+function esc(s){return s.replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]))}
+function fmt(s){return esc(s).replace(/\[[^\]]+\]/g,m=>`<span class="ph">${m}</span>`)}
+function cls(s){return s==="obj"?"teal":s==="red"?"red":""}
+function prefix(s){return s==="eng"?`<span class="who">Ingénieur Exilé : </span>`:""}
+
+function render(){
+  const list = $("#list"); list.textContent = "";
+  for(const g of GROUPS){
+    const rows = g.rows.filter(([id])=>{const c=choices[id]?.choice; return filter==="all" || (filter==="todo"?!c:c===filter);});
+    if(!rows.length) continue;
+    const sec = document.createElement("section");
+    sec.innerHTML = `<h2>${esc(g.t)}</h2><p class="where">${esc(g.w)}</p>`;
+    for(const [id,text,src] of rows){
+      const c = choices[id] || {};
+      const it = document.createElement("div");
+      it.className = "item" + (c.choice?" "+c.choice:"");
+      it.innerHTML = `<div class="snes ${cls(g.s)} ${c.choice==="edit"?"orig":""}">${prefix(g.s)}${fmt(text)}</div>
+        <div class="meta"><span class="src">${esc(src)}</span>
+        <div class="seg" role="group" aria-label="Décision">${["keep","hide","edit"].map(v=>
+          `<button data-id="${id}" data-v="${v}" aria-pressed="${c.choice===v}" ${canWrite?"":"disabled"}>${LABEL[v]}</button>`).join("")}</div></div>`;
+      if(c.choice==="edit"){
+        const ta = document.createElement("textarea");
+        ta.id = "ta_"+id; ta.value = c.text ?? text; ta.disabled = !canWrite;
+        ta.setAttribute("aria-label","Nouveau texte");
+        ta.addEventListener("change",()=>save(id,{choice:"edit",text:ta.value}));
+        const h = document.createElement("div"); h.className="hint"; h.textContent="Gardez les [crochets] là où le jeu insère une valeur.";
+        it.append(ta,h);
+      }
+      sec.append(it);
+    }
+    list.append(sec);
+  }
+  if(!list.children.length) list.innerHTML = `<p class="lede">Aucune réplique dans ce filtre.</p>`;
+  counts();
+}
+function counts(){
+  let n=0,k=0,h=0,e=0;
+  for(const g of GROUPS) for(const [id] of g.rows){n++; const c=choices[id]?.choice; if(c==="keep")k++; else if(c==="hide")h++; else if(c==="edit")e++;}
+  $("#counts").innerHTML = `<span class="c-todo"><b>${n-k-h-e}</b> à trier</span><span class="c-keep"><b>${k}</b> gardées</span><span class="c-hide"><b>${h}</b> masquées</span><span class="c-edit"><b>${e}</b> modifiées</span><span>sur ${n}</span>`;
+}
+async function save(id, val){
+  const prev = choices[id];
+  choices[id] = val; render();
+  if(!col){ $("#status").textContent = "Enregistrement indisponible : vos choix ne seront pas conservés."; return; }
+  try{ await col.doc(id).set({...val, at: Date.now()}); $("#status").textContent = "Enregistré."; }
+  catch(e){ choices[id] = prev; render(); $("#status").textContent = "Échec de l'enregistrement ("+(e?.code||"erreur")+"). Réessayez."; }
+}
+$("#list").addEventListener("click", e=>{
+  const b = e.target.closest(".seg button"); if(!b || b.disabled) return;
+  const id = b.dataset.id, v = b.dataset.v, cur = choices[id];
+  if(cur?.choice===v && v!=="edit"){ save(id,{choice:"",text:""}); return; }
+  save(id, v==="edit" ? {choice:"edit", text: cur?.text || GROUPS.flatMap(g=>g.rows).find(r=>r[0]===id)[1]} : {choice:v, text:""});
+});
+$("#filters").addEventListener("click", e=>{
+  const b = e.target.closest("button"); if(!b) return;
+  filter = b.dataset.f;
+  for(const x of $("#filters").children) x.setAttribute("aria-pressed", x===b);
+  render();
+});
+
+render();
+(async()=>{
+  const timer = setTimeout(()=>{$("#status").textContent="L'enregistrement ne répond pas : les choix ne sont pas conservés pour l'instant.";},10000);
+  try{
+    db = await claude.use("db");
+    if(!db){ clearTimeout(timer); $("#status").textContent = "Enregistrement indisponible ici : vos choix ne seront pas conservés."; return; }
+    const user = await claude.use("user");
+    if(user && user.can && user.can("data.write")===false){ canWrite=false; }
+    col = db.collection("choix");
+    col.onSnapshot(snap=>{
+      clearTimeout(timer);
+      for(const d of snap.docs){ const v=d.data(); if(v) choices[d.id] = {choice:v.choice||"", text:v.text||""}; }
+      for(const ch of snap.docChanges()) if(ch.type==="removed") delete choices[ch.doc.id];
+      const active = document.activeElement;
+      if(!(active && active.tagName==="TEXTAREA")) render(); else counts();
+      $("#status").textContent = canWrite ? "Vos choix sont enregistrés à chaque clic." : "Lecture seule.";
+    }, err=>{ clearTimeout(timer); $("#status").textContent = "Lecture impossible ("+(err?.code||"erreur")+")."; });
+  }catch(e){ clearTimeout(timer); $("#status").textContent = "Enregistrement indisponible."; }
+})();
+</script>

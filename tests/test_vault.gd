@@ -19,7 +19,7 @@ func test_vault_sealed_until_wall_mined() -> void:
 	for z in range(int(CaveShape.VAULT_Z0), int(CaveShape.VAULT_Z1)):
 		check(not state.is_gallery(CaveShape.VAULT_X0 - 0.5, z + 0.5) and not CaveShape.in_cave(CaveShape.VAULT_X0 - 3.5, z + 0.5), "paroi de roche z=%d" % z)
 	# Case de bord de salle (mi-roche), creusable depuis la salle.
-	var p := Vector2(56.0, -145.0)
+	var p := Vector2(55.0, -146.0)
 	check(state.walkable(p.x, p.y), "Ingénieur dans la salle")
 	check(state.dig_cell_at(14, -37, p) != null, "case de paroi creusable")
 	ops.dig_cell(14, -37)

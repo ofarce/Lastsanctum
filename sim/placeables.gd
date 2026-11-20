@@ -201,5 +201,3 @@ static func order_post(sim: Simulation, o: Dictionary) -> void:
 		u.stance = "hold"
 		u.force_move = true
 	GameState.hud_mode = ""
-	if n > 0:
-		sim.say("Ordre : se poster au poste de tir.", 1.0)

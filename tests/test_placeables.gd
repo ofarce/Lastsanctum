@@ -90,7 +90,7 @@ func test_caltrops_damage() -> void:
 	check_near(away.hp, 500.0, 1e-9, "hors de la case : intact")
 
 
-func test_firing_post_doubles_reach() -> void:
+func test_firing_post_extends_reach() -> void:
 	var sim := game()
 	_reveal(sim)
 	_stock("firing_post")
@@ -99,7 +99,7 @@ func test_firing_post_doubles_reach() -> void:
 	var base := Catalog.unit_reach(archer)
 	var melee := Catalog.unit_reach(lame)
 	check(P.place(sim, "firing_post", SPOT), "poste posé")
-	check_near(Catalog.unit_reach(archer), base * 2.0, 1e-9, "archer posté : portée doublée")
+	check_near(Catalog.unit_reach(archer), base * 1.5, 1e-9, "archer posté : portée augmentée de moitié")
 	check_near(Catalog.unit_reach(lame), melee, 1e-9, "corps à corps : inchangé")
 	archer.x += 10.0
 	check_near(Catalog.unit_reach(archer), base, 1e-9, "loin du poste : portée normale")

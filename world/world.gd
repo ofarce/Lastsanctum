@@ -58,6 +58,8 @@ var _enemy_meta := {}
 var _turret_views := {}
 ## Surimpression à la résolution de l'écran (libellés, incantation, mode construction), sous l'éclairage.
 var overlay: WorldOverlay
+## Tirs ennemis esquivables, dans leur calque au-dessus de l'éclairage (EnemyShotsView).
+var enemy_shots_view: EnemyShotsView
 ## Étincelle de réactivation de l'Ancre (caméra qui la suit, halo), dans la surimpression.
 var anchor_spark: AnchorSpark
 ## Surcharge de l'Ancre après l'armement des balistes (colonne, nova, bouclier, pièces d'armure).
@@ -146,6 +148,12 @@ func _ready() -> void:
 		ofx.ground = not is_air
 		add_child(ofx)
 		move_child(ofx, ysort.get_index() + (1 if is_air else 0))
+	# Gorge-Cuivre (sim/gorge.gd) : annonces et blocs qui tombent par-dessus les sprites.
+	var gmarks := GorgeMarks.new()
+	gmarks.name = "GorgeMarks"
+	gmarks.world = self
+	add_child(gmarks)
+	move_child(gmarks, ysort.get_index() + 1)
 	# Séquence d'ouverture (sim/opening.gd) : remparts et onde au sol sous les sprites ; portail, bouclier,
 	# canons et fumées par-dessus.
 	for is_air: bool in [false, true]:
@@ -181,6 +189,15 @@ func _ready() -> void:
 	rain_view = RainView.new()
 	rain_view.world = self
 	rain_layer.add_child(rain_view)
+	# Tirs ennemis au-dessus de l'obscurité et de la pluie (même calque que la pluie, ajouté après elle).
+	var shots_layer := CanvasLayer.new()
+	shots_layer.name = "EnemyShotsLayer"
+	shots_layer.layer = 2
+	add_child(shots_layer)
+	enemy_shots_view = EnemyShotsView.new()
+	enemy_shots_view.name = "EnemyShots"
+	enemy_shots_view.world = self
+	shots_layer.add_child(enemy_shots_view)
 	jungle_life = JungleLife.new()
 	jungle_life.name = "JungleLife"
 	jungle_life.world = self
@@ -292,6 +309,12 @@ func reset_world(seed: int) -> void:
 		var gate := EyeGateView.new()
 		gate.setup(terrain_state)
 		ysort.add_child(gate)
+	# Bornes et colonne de la capsule, triées avec les sprites (le puits et les invites restent hors tri : _ready).
+	for part: String in ["back", "front"]:
+		var cap := CapsuleView.new()
+		cap.name = "Capsule" + part.capitalize()
+		cap.layer = part
+		ysort.add_child(cap)
 	vault_hint = VaultHint.new()
 	vault_hint.name = "VaultHint"
 	vault_hint.setup(terrain_state)

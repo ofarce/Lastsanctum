@@ -15,6 +15,8 @@ var owner: Unit:
 	set(value):
 		_owner = weakref(value) if value else null
 var _owner: WeakRef = null
+## Tâche du bâtisseur avant le chantier (prière), qu'il reprend à l'achèvement.
+var builder_prev: Variant = null
 ## Temps d'Énonciation écoulé (sur BUILDINGS[type].time).
 var progress := 0.0
 var complete := false
@@ -35,14 +37,23 @@ var finished_at := INF
 ## Cumul de prière pour les popups « +5 » (t._acc).
 var acc := 0.0
 ## Production (sim/production.gd) : recette fabriquée en boucle (choisie dans le panneau, "" aucune) et sa
-## progression ; coffre bleu (ingrédients livrés) et coffre rouge (objets fabriqués), piles {item, quantity} ;
-## derniers dépôt et retrait (animation d'ouverture des coffres).
+## progression ; coffre bleu (ingrédients) et coffre rouge (objets fabriqués) : tous deux des accès au réseau
+## global des coffres (GameState.base_inventory, l'espace du coffre antique) ; derniers dépôt et retrait
+## (animation d'ouverture des coffres).
 var requested_items: Array[String] = []
 var warehouse_page := 0
 var recipe := ""
 var craft := 0.0
-var input_box: Array[Dictionary] = []
-var output_box: Array[Dictionary] = []
+var input_box: Array[Dictionary]:
+	get:
+		return GameState.base_inventory
+	set(_value):
+		pass
+var output_box: Array[Dictionary]:
+	get:
+		return GameState.base_inventory
+	set(_value):
+		pass
 var chest_in_at := -INF
 var chest_out_at := -INF
 ## Église des Oublieux (sim/oublieux.gd) : identifiant de l'Oublieux dehors (-1 sinon), nuit où il est tombé

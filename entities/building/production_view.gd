@@ -35,7 +35,7 @@ func setup(b: Building, w: World) -> void:
 func _process(_delta: float) -> void:
 	var b := building
 	var bv := world.building_view(b) if world else null
-	visible = b.complete and Production.staffed(b) and (bv == null or bv.visible)
+	visible = b.complete and (Production.staffed(b) or Production.has_chests(b)) and (bv == null or bv.visible)
 	if visible:
 		queue_redraw()
 

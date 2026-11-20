@@ -9,9 +9,7 @@ static var _main: Node
 
 
 func _game() -> Node:
-	if _main == null:
-		_main = load("res://main/main.tscn").instantiate()
-		(Engine.get_main_loop() as SceneTree).root.add_child(_main)
+	_main = shared_main()
 	var sim: Simulation = _main.get_node("Simulation")
 	sim.paused = true
 	sim.new_game(20261114)
@@ -93,13 +91,15 @@ func test_enter_completes_line_of_full_dialogue() -> void:
 	check(not b.active(), "Entrée sur la dernière ligne complète : fermeture")
 
 
-func test_closes_when_speaker_hidden() -> void:
+func test_stays_open_when_speaker_hidden() -> void:
 	var b := _bubble()
 	var sim: Simulation = _main.get_node("Simulation")
 	var u := _emerge(sim)
+	# Les répliques passent par la bannière du haut de l'écran, plus par une bulle accrochée à l'orateur :
+	# elles restent affichées quand il se cache (il parle aussi depuis la capsule).
 	u.hidden = true
 	b.tick(DT)
-	check(not b.active(), "fermée quand l'orateur disparaît")
+	check(b.active(), "reste ouverte quand l'orateur se cache")
 
 
 func test_equipment_dialogue_after_turrets() -> void:
@@ -190,10 +190,7 @@ func test_banners_and_notice_match_js() -> void:
 	GameState.core_hp = 0.0
 	hud.show_banner(false)
 	check_eq("%s<br><small>%s</small>" % [hud._banner_title.text, hud._banner_small.text], js["banner_core"], "Ancre perdue")
-	GameState.core_hp = 50.0
-	GameState.units[0].hp = 0.0
-	hud.show_banner(false)
-	check_eq("%s<br><small>%s</small>" % [hud._banner_title.text, hud._banner_small.text], js["banner_engineer"], "Ingénieur tombé")
+	# Plus de bannière « L’Ingénieur est tombé » : seule l'Ancre détruite termine la partie (test_defeat).
 	_game()
 	check_eq(hud._notice_label.text, js["init_notice"], "notice d'ouverture")
 	check(not hud._banner.visible, "init() masque la bannière")

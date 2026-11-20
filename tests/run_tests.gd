@@ -2,7 +2,8 @@ extends SceneTree
 ## Lanceur de tests headless :
 ##   godot --headless --path . -s res://tests/run_tests.gd
 ##   godot --headless --path . -s res://tests/run_tests.gd -- --only=full_game   # fichiers contenant « full_game »
-##   … -- --jobs=4      # nombre de processus (défaut : un par fil du processeur) ; --jobs=1 : tout dans ce processus
+##   … -- --jobs=4      # nombre de processus (défaut : la moitié des fils du processeur) ; --jobs=1 : tout dans ce processus
+##   … -- --rebaseline  # régénère les références de terrain depuis le jeu actuel (tests/rebaseline.gd)
 ##   … -- --verbose     # recopie aussi la sortie brute des processus (erreurs de script, traces)
 ## Découvre res://tests/test_*.gd, exécute chaque méthode test_*(), affiche PASS/FAIL et quitte avec le
 ## code 1 si au moins un test échoue (ou si aucun test n'est trouvé).
@@ -17,6 +18,28 @@ const DURATIONS := "res://tests/.durations.json"
 const MARK := "@@TEST@@ "
 ## Durée supposée d'un test jamais chronométré (ms).
 const UNKNOWN_MS := 3000.0
+
+## Relève les erreurs de script du moteur : un test interrompu par une erreur (accès hors bornes, appel sur
+## null…) s'arrête là sans rien inscrire dans `failures` et passerait pour réussi.
+class ErrorTrap extends Logger:
+	var lock := Mutex.new()
+	var errors: PackedStringArray = []
+
+	func _log_error(_function: String, file: String, line: int, code: String, rationale: String, _editor_notify: bool,
+			error_type: int, _script_backtraces: Array[ScriptBacktrace]) -> void:
+		if error_type != ERROR_TYPE_SCRIPT:
+			return
+		lock.lock()
+		errors.append("erreur de script : %s (%s:%d)" % [rationale if not rationale.is_empty() else code, file.get_file(), line])
+		lock.unlock()
+
+	func take() -> PackedStringArray:
+		lock.lock()
+		var out := errors.duplicate()
+		errors.clear()
+		lock.unlock()
+		return out
+
 
 var _lock := Mutex.new()
 ## Résultats reçus : {file, name, ms, failures}.
@@ -39,14 +62,22 @@ func _arg(name: String, fallback := "") -> String:
 
 func _main() -> void:
 	_verbose = OS.get_cmdline_user_args().has("--verbose")
-	var batch := _arg("batch")
-	if batch:
+	# Un processus de lot ne relance jamais de processus, même avec un lot vide.
+	if _arg("batch", "-") != "-":
+		var batch := _arg("batch")
 		await _run_files(batch.split(",", false), true)
+		quit(0)
+		return
+	if OS.get_cmdline_user_args().has("--rebaseline"):
+		load("res://sim/simulation.gd").play_opening = false
+		load("res://sim/simulation.gd").autostart = false
+		print("Références régénérées depuis le jeu actuel :")
+		load("res://tests/rebaseline.gd").new().rebaseline()
 		quit(0)
 		return
 	var t0 := Time.get_ticks_msec()
 	var files := _test_files()
-	var jobs := mini(int(_arg("jobs", str(OS.get_processor_count()))), files.size())
+	var jobs := mini(int(_arg("jobs", str(maxi(1, OS.get_processor_count() / 2)))), files.size())
 	if jobs <= 1:
 		await _run_files(files, false)
 	else:
@@ -59,8 +90,11 @@ func _main() -> void:
 func _run_files(files: PackedStringArray, as_batch: bool) -> void:
 	# Les tests du jeu complet partent de l'ancien enchaînement ; test_opening.gd rallume la séquence.
 	load("res://sim/simulation.gd").play_opening = false
+	load("res://sim/simulation.gd").autostart = false
 	# Un lot dont le lanceur a disparu (Ctrl+C) s'arrête au test suivant au lieu de tourner dans le vide.
 	var parent := int(_arg("parent", "0"))
+	var trap := ErrorTrap.new()
+	OS.add_logger(trap)
 	for file in files:
 		var script := load(TESTS_DIR + file) as GDScript
 		# Un fichier qui ne compile pas compte comme un échec (sinon ses tests disparaîtraient en silence).
@@ -74,12 +108,20 @@ func _run_files(files: PackedStringArray, as_batch: bool) -> void:
 			if parent > 0 and DirAccess.dir_exists_absolute("/proc/self") and not DirAccess.dir_exists_absolute("/proc/%d" % parent):
 				return
 			var instance: RefCounted = script.new()
+			trap.take()
 			var t0 := Time.get_ticks_msec()
 			instance.call(name)
 			var ms := Time.get_ticks_msec() - t0
+			var failures := Array(instance.get("failures"))
+			# Erreurs de script levées pendant le test (les mêmes en boucle ne sont citées qu'une fois).
+			var seen := {}
+			for error in trap.take():
+				if not seen.has(error) and seen.size() < 5:
+					seen[error] = true
+					failures.append(error)
 			# Une image entre deux tests : les messages différés (redessins, libérations) sont traités.
 			await process_frame
-			_emit({"file": file, "name": name, "ms": ms, "failures": Array(instance.get("failures"))}, as_batch)
+			_emit({"file": file, "name": name, "ms": ms, "failures": failures}, as_batch)
 		if as_batch:
 			print(MARK + JSON.stringify({"file": file, "done": true}))
 
@@ -107,9 +149,16 @@ func _run_parallel(files: PackedStringArray, jobs: int) -> void:
 	var threads: Array[Thread] = []
 	var done: Array[Dictionary] = []
 	for batch: PackedStringArray in batches:
+		if batch.is_empty():
+			continue
 		var args := PackedStringArray(["--headless", "--path", ProjectSettings.globalize_path("res://"), "-s", "res://tests/run_tests.gd",
 			"--", "--batch=" + ",".join(batch), "--parent=%d" % OS.get_process_id()])
-		var p := OS.execute_with_pipe(OS.get_executable_path(), args)
+		# Priorité basse : la machine reste utilisable pendant les tests.
+		var exe := OS.get_executable_path()
+		if FileAccess.file_exists("/usr/bin/nice"):
+			args = PackedStringArray(["-n", "10", exe]) + args
+			exe = "/usr/bin/nice"
+		var p := OS.execute_with_pipe(exe, args)
 		if p.is_empty():
 			for file in batch:
 				_results.append({"file": file, "name": "", "ms": 0, "failures": ["processus de test impossible à lancer"]})
@@ -163,7 +212,8 @@ func _split(files: PackedStringArray, jobs: int) -> Array:
 		var ms: float = known.get(file, -1.0)
 		if ms < 0.0:
 			ms = UNKNOWN_MS * FileAccess.get_file_as_string(TESTS_DIR + file).count("\nfunc test_")
-		weighted.append([ms, file])
+		# Jamais de poids nul : des fichiers instantanés s'entasseraient tous dans le même lot.
+		weighted.append([maxf(ms, 500.0), file])
 	weighted.sort_custom(func(a: Array, b: Array) -> bool: return a[0] > b[0])
 	var batches: Array = []
 	var loads: Array[float] = []

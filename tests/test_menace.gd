@@ -3,7 +3,12 @@ extends "res://tests/fight_case.gd"
 
 func test_wave_scaling_and_snapshot() -> void:
 	var sim := game()
-	for sample: Array in [[0, 3, 13, 1.0, 0], [300, 3, 19, 1.12, 0], [1000, 3, 33, 1.4, 2], [1500, 6, 52, 1.6, 3]]:
+	var W: Dictionary = Catalog.MENACE_WAVE
+	# [menace, vague] ; effectif, PV et armure suivent le barème (Catalog.MENACE_WAVE) au palier de la menace.
+	for pair: Array in [[0, 3], [300, 3], [1000, 3], [1500, 6]]:
+		var tier := Catalog.menace_tier(pair[0])
+		var sample: Array = [pair[0], pair[1], int(W["base"]) + pair[1] * int(W["per_wave"]) + int(W["count"]) * tier,
+			1.0 + float(W["hp"]) * tier, floori(float(tier) / W["armor_step"])]
 		GameState.menace = sample[0]
 		GameState.wave = sample[1] - 1
 		sim.combat.start_wave()
@@ -60,8 +65,8 @@ func test_pylon_guards_follow_current_menace() -> void:
 		GameState.menace = sample[0]
 		var e := _respawned_guard(sim, p)
 		check(e != null and not e.alpha, "gardien renaît")
-		check_near(e.max_hp, 22.0 * sample[1], 1e-6, "PV du gardien")
-		check_near(e.damage, 4.0 * sample[2], 1e-6, "dégâts du gardien")
+		check_near(e.max_hp, Catalog.ENEMY["beast"]["hp"] * sample[1], 1e-6, "PV du gardien")
+		check_near(e.damage, Catalog.ENEMY["beast"]["damage"] * sample[2], 1e-6, "dégâts du gardien")
 
 
 func test_hud_explains_tier() -> void:
@@ -81,8 +86,9 @@ func test_pylon_escalation_keeps_existing_stats_and_no_menace_reward() -> void:
 	var original: Enemy = p["slots"][1]["enemy"]
 	GameState.menace = 1000
 	var reinforced := _respawned_guard(sim, p)
-	check_near(original.max_hp, 22.0 * (Pylons.ALPHA if original.alpha else 1.0), 1e-6, "gardien en place inchangé")
-	check_near(reinforced.max_hp, 39.6, 1e-6, "gardien renaissant renforcé")
+	var beast_hp: float = Catalog.ENEMY["beast"]["hp"]
+	check_near(original.max_hp, beast_hp * (Pylons.ALPHA if original.alpha else 1.0), 1e-6, "gardien en place inchangé")
+	check_near(reinforced.max_hp, beast_hp * 1.8, 1e-6, "gardien renaissant renforcé")
 	reinforced.hp = 0.0
 	sim.combat.finish_tick(0.0, GameState.units)
 	check_eq(GameState.menace, 1000, "aucune menace pour un gardien tué")

@@ -9,9 +9,7 @@ static var _main: Node
 
 
 func _game() -> Node:
-	if _main == null:
-		_main = load("res://main/main.tscn").instantiate()
-		(Engine.get_main_loop() as SceneTree).root.add_child(_main)
+	_main = shared_main()
 	var sim: Simulation = _main.get_node("Simulation")
 	sim.paused = true
 	sim.new_game(SEED)
@@ -93,7 +91,15 @@ func test_orb_reactivation() -> void:
 	check_near(GameState.res["savoir"], GameState.res["forge"], 1e-6, "les 4 ressources au même rythme")
 
 	var before := GameState.res.duplicate()
+	GameState.core_hp = 50.0
 	sim.set_job(u, {"type": "anchor_pray"})
+	_run(sim, 2.0)
+	# La prière répare l'Ancre (elle remplace la réparation instantanée), sans dépasser son maximum.
+	check_near(GameState.core_hp, 50.0 + 2.0 * Simulation.ANCHOR_REPAIR, 0.05, "deux secondes de prière réparent l’Ancre")
+	GameState.core_hp = Simulation.CORE_MAX - 0.01
+	_run(sim, 1.0)
+	check_eq(GameState.core_hp, Simulation.CORE_MAX, "réparation plafonnée")
+	before = GameState.res.duplicate()
 	_run(sim, 2.0)
 	for resource: String in Catalog.RES_ORDER:
 		check_near(GameState.res[resource] - before[resource], 2.0 * Simulation.ANCHOR_PRAY, 0.05, "deux secondes à l’Ancre")
@@ -119,7 +125,7 @@ func test_engineer_digs_and_chains() -> void:
 	_run(sim, 3.1)
 	var u := _engineer()
 	GameState.selected = [u]
-	check(sim.order_adepts(Vector2(64, -138)), "clic droit sur la roche : creusement")
+	check(sim.order_adepts(Vector2(58, -138)), "clic droit sur la roche : creusement")
 	check(u.job != null and u.job["type"] == "dig", "tâche de creusement")
 	var first: Vector2i = Vector2i(u.job["cell"]["i"], u.job["cell"]["j"])
 	# Trajet depuis le portail jusqu'à la paroi est (environ 70 unités), puis 1 case par seconde.

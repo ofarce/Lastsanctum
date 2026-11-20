@@ -4,11 +4,11 @@ const Storage := preload("res://sim/item_storage.gd")
 
 func mine_one(sim: Simulation) -> void:
 	var u := engineer()
-	u.x = 63.4
+	u.x = 55.4
 	u.z = -136.3
 	u.tx = u.x
 	u.tz = u.z
-	var cell: Dictionary = sim.state().diggable_cell(Vector2(64, -138))
+	var cell: Dictionary = sim.state().diggable_cell(Vector2(58, -138))
 	u.job = {"type": "dig", "cell": cell, "at": cell["at"], "work": 0.0}
 	for i in range(4):
 		sim.update_adepts(0.25)
@@ -18,10 +18,10 @@ func mine_one(sim: Simulation) -> void:
 func test_mined_rock_routes_to_character_and_only_once() -> void:
 	var sim := game()
 	engineer().unarmored = true
-	GameState.research_done["mining_artifact"] = true
+	GameState.mining_seal = true
 	mine_one(sim)
 	check_eq(engineer().inventory, [{"item": "rock", "quantity": 1}], "une roche dans le paquetage")
-	check(sim.state().dug.has(Vector2i(16, -35)), "bloc réellement miné")
+	check(sim.state().dug.has(Vector2i(14, -35)), "bloc réellement miné")
 	check(GameState.ground_items.is_empty(), "aucun doublon au sol")
 	sim.update_adepts(1.0)
 	check_eq(engineer().inventory.size(), 1, "pas de deuxième drop")
@@ -32,10 +32,10 @@ func test_locked_inventory_and_full_character_drop_on_ground() -> void:
 	mine_one(sim)
 	check_eq(engineer().inventory.size(), 0, "pas de paquetage avant perte armure")
 	check_eq(GameState.ground_items.size(), 1, "reste au sol sans inventaire")
-	check_eq(GameState.ground_items[0]["position"], Vector2(66, -138), "position du bloc")
+	check_eq(GameState.ground_items[0]["position"], Vector2(58, -138), "position du bloc")
 	sim = game()
 	engineer().unarmored = true
-	GameState.research_done["mining_artifact"] = true
+	GameState.mining_seal = true
 	for i in range(10):
 		engineer().inventory.append({"item": "rock", "quantity": Storage.MAX_STACK})
 	mine_one(sim)
@@ -51,7 +51,7 @@ func test_base_priority_and_full_base_never_falls_back() -> void:
 	check(engineer().inventory.is_empty(), "paquetage vide")
 	sim = game()
 	engineer().unarmored = true
-	GameState.research_done["mining_artifact"] = true
+	GameState.mining_seal = true
 	GameState.base_inventory_unlocked = true
 	for i in range(Storage.BASE_CAPACITY):
 		GameState.base_inventory.append({"item": "rock", "quantity": Storage.MAX_STACK})
@@ -67,23 +67,25 @@ func test_base_priority_and_full_base_never_falls_back() -> void:
 
 func test_definition_resistance_and_unknown_material() -> void:
 	var sim := game()
-	var definition := sim.state().block_definition(16, -35)
+	var definition := sim.state().block_definition(14, -35)
 	check_eq(definition["material_name"], "Roche", "matière")
 	check_eq(definition["drop_item"], "rock", "item")
 	check_eq(definition["resistance"], 4, "résistance de la roche")
 	var u := engineer()
-	u.x = 63.4
+	u.x = 55.4
 	u.z = -136.3
-	var cell: Dictionary = sim.state().diggable_cell(Vector2(64, -138))
+	var cell: Dictionary = sim.state().diggable_cell(Vector2(58, -138))
 	u.job = {"type": "dig", "cell": cell, "at": cell["at"], "work": 0.0}
-	sim.update_adepts(0.75)
-	check(not sim.state().dug.has(Vector2i(16, -35)), "trois coups insuffisants")
+	# Un coup de l'Ingénieur dure HIT_TIME / (ENGINEER_DIG × DIG_HITS) : trois coups et demi, puis le quatrième.
+	var hit := TerrainState.HIT_TIME / (TerrainState.ENGINEER_DIG * TerrainState.DIG_HITS)
+	sim.update_adepts(3.5 * hit)
+	check(not sim.state().dug.has(Vector2i(14, -35)), "trois coups insuffisants")
 	check(GameState.ground_items.is_empty(), "aucun drop avant destruction")
-	sim.update_adepts(0.25)
-	check(sim.state().dug.has(Vector2i(16, -35)), "quatrième coup détruit")
+	sim.update_adepts(hit)
+	check(sim.state().dug.has(Vector2i(14, -35)), "quatrième coup détruit")
 	check_eq(GameState.ground_items[0]["item"], "rock", "item issu de la définition")
-	sim.state().block_types[Vector2i(17, -35)] = "unknown"
-	check(sim.state().dig_cell_at(17, -35, u.pos()) == null, "matière non enregistrée non minable")
+	sim.state().block_types[Vector2i(15, -35)] = "unknown"
+	check(sim.state().dig_cell_at(15, -35, u.pos()) == null, "matière non enregistrée non minable")
 
 
 func test_stack_limit_overflow_and_full_inventory_merging() -> void:

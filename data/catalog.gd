@@ -31,20 +31,21 @@ const BUILDINGS := {
 		"lore": "Ses adeptes y prient pour la Discipline."},
 	"library": {"name": "Bibliothèque", "cost": {"savoir": 50}, "deity": "", "requires": "sigil", "art": "da-library", "key": "l", "icon": "book", "time": 8.0, "size": 2,
 		"lore": "Les rouleaux de Sigil y sont rassemblés."},
-	"forge": {"name": "Forge", "cost": {"forge": 50}, "deity": "", "requires": "aether", "art": "da-forge", "key": "f", "icon": "hammer", "time": 8.0, "size": 2,
-		"lore": "L’enclume d’Aether y résonne."},
+	"forge": {"name": "Fonderie", "cost": {"forge": 50}, "deity": "", "requires": "aether", "art": "da-forge", "key": "f", "icon": "hammer", "time": 8.0, "size": 2,
+		"lore": "Le minerai d’Aether y fond en lingots de cuivre, de fer et d’or."},
 	"workshop": {"name": "Atelier", "cost": {"forge": 50}, "deity": "", "requires": "aether", "art": "da-workshop", "key": "t", "icon": "repair", "time": 8.0, "size": 2,
 		"lore": "Établis et outils des artisans d’Aether."},
 	"bedroom": {"name": "Chambre à coucher", "cost": {"vie": 50}, "deity": "", "requires": "medeina", "art": "da-bedroom", "key": "n", "icon": "people", "time": 8.0, "size": 2,
-		"lore": "Le repos que Medeina accorde aux Exilés. Avec un adepte de Medeina au poste, elle loge 10 Exilés de plus ; chaque nouvelle Chambre coûte le double de la précédente."},
+		"lore": "Le repos que Medeina accorde aux Exilés. Elle loge 10 Exilés de plus, sans personnel ; chaque nouvelle Chambre coûte le double de la précédente."},
 	"soulwell": {"name": "Puits des Âmes", "cost": {"vie": 50}, "deity": "", "requires": "medeina", "art": "da-soulwell", "key": "u", "icon": "spirit", "time": 8.0, "size": 2,
 		"heal_radius": 12.0, "heal_per_second": 5.0,
 		"lore": "Soigne les unités proches de 5 PV par seconde dans un rayon de 12. Medeina y rend aussi leur souffle aux défunts, avec toute leur expérience."},
 	"caserne": {"name": "Caserne", "cost": {"discipline": 50}, "deity": "", "requires": "indra", "art": "da-caserne", "key": "c", "icon": "shield", "time": 8.0, "size": 2,
 		"lore": "Les disciples d’Indra y forment les combattants."},
-	## Écart voulu (fabrication, 2026-11-17) : absent du prototype ; dessin de la Forge en attendant le sien.
-	"creuset": {"name": "Creuset des Exilés", "cost": {"forge": 300}, "deity": "", "requires": "forge", "art": "da-creuset", "key": "k", "icon": "sword", "time": 8.0, "size": 2,
-		"lore": "On y coule les armes et armures que portent les Exilés."},
+	## Écart voulu (fabrication, 2026-11-17) : absent du prototype. Id « creuset » gardé ; renommé Armurerie le 2026-11-20
+	## (armes et armures à partir des lingots de la Fonderie), coût baissé de 300 à 80 pour les soldats du début.
+	"creuset": {"name": "Armurerie", "cost": {"forge": 80}, "deity": "", "requires": "forge", "art": "da-creuset", "key": "k", "icon": "sword", "time": 8.0, "size": 2,
+		"lore": "On y façonne, à partir des lingots de la Fonderie, les armes et armures que portent les Exilés."},
 	## Écart voulu (biomes, 2026-11-20) : absent du prototype. Chaque nuit, son Oublieux ramasse le butin (sim/oublieux.gd).
 	"eglise": {"name": "Église des Oublieux", "cost": {"vie": 150}, "deity": "", "requires": "soulwell", "art": "da-eglise", "key": "o", "icon": "spirit", "time": 8.0, "size": 2,
 		"lore": "Chaque nuit, un Oublieux en sort ramasser ce qui est tombé, douze objets par trajet, et le rapporte à son coffre. Tué, il revient la nuit suivante."},
@@ -54,13 +55,22 @@ const BUILDINGS := {
 		"lore": "Au bord du Fleuve des Limbes, des Exilés apprennent à laisser le cristal les gagner : Guérisseuse, Chantre, Envoûteur."},
 	"warehouse": {"name": "Entrepôt logistique", "cost": {"savoir": 50}, "deity": "", "requires": "sigil", "art": "da-warehouse", "key": "p", "icon": "wood", "time": 8.0, "size": 2,
 		"lore": "Les adeptes de Sigil y reçoivent le bois et les minerais pour les ateliers voisins."},
+	## Écart voulu (découpage de la fabrication, 2026-11-20) : absents du prototype. La Scierie refend le bois brut,
+	## l'Archerie en tire arcs et flèches (dessins de planches/batiments-v4-propositions.html).
+	"scierie": {"name": "Scierie", "cost": {"forge": 50}, "deity": "", "requires": "aether", "art": "da-scierie", "key": "y", "icon": "wood", "time": 8.0, "size": 2,
+		"lore": "La grande scie d’Aether refend les rondins en fibre de bois, pour l’Archerie et les recettes de niveau supérieur."},
+	"archerie": {"name": "Archerie", "cost": {"forge": 50}, "deity": "", "requires": "scierie", "art": "da-archerie", "key": "j", "icon": "bow", "time": 8.0, "size": 2,
+		"lore": "L’étuve attendrit les lattes, le gabarit les plie : on y fait les arcs et les flèches des archers."},
 }
 
 ## Personnel des bâtiments (2026-11-17, sim/production.gd) : un bâtiment non-temple ne fonctionne qu'avec au moins
 ## un travailleur au poste (adepte du culte indiqué, ou l'Ingénieur) ; la vitesse est proportionnelle au nombre de
 ## travailleurs présents. Un seul culte par bâtiment.
-const STAFF_ROLE := {"warehouse": "sigil", "library": "sigil", "forge": "aether", "workshop": "aether", "creuset": "aether",
-	"bedroom": "medeina", "soulwell": "medeina", "eglise": "medeina", "ecole": "medeina", "caserne": "indra"}
+## Chambre et Église des Oublieux (2026-11-20) : sans personnel, elles fonctionnent seules dès qu'elles sont achevées.
+const STAFF_ROLE := {"warehouse": "sigil", "library": "sigil", "forge": "aether", "workshop": "aether", "creuset": "aether", "scierie": "aether", "archerie": "aether",
+	"soulwell": "medeina", "ecole": "medeina", "caserne": "indra"}
+## Culte du bâtisseur des bâtiments sans personnel (le chantier reste confié à un adepte de Medeina).
+const BUILD_ROLE := {"bedroom": "medeina", "eglise": "medeina"}
 const STAFF_MAX := 5
 ## Mineurs d'un bâtiment : adeptes d'Aether qui exploitent un gisement inépuisable et rapportent des lots au dépôt.
 ## Ils ne comptent pas dans la vitesse ; limite distincte de celle des postes.
@@ -68,7 +78,7 @@ const MINER_ROLE := "aether"
 const MINERS_MAX := 5
 const MINE_BATCH := 5
 
-## Population (2026-11-19) : POP_BASE places, +POP_PER_BEDROOM par Chambre achevée et tenue par un adepte de
+## Population (2026-11-19) : POP_BASE places, +POP_PER_BEDROOM par Chambre achevée (sans personnel depuis le 2026-11-20) ; ancien texte : tenue par un adepte de
 ## Medeina. Un combattant de caserne occupe POP_WEIGHT places, toute autre unité une seule. Le plafond ne
 ## bloque que les nouvelles arrivées (invocation, entraînement, héros, résurrection).
 const POP_BASE := 10
@@ -96,13 +106,10 @@ static func building_cost(type: String) -> Dictionary:
 	return out
 
 
-## Recherches uniques du sceau de minage, partagées entre tous les bâtiments.
+## Coût par défaut d'une recherche sans « cost » propre. Le Sceau de minage n'est plus une recherche :
+## il est remis à la première entrée dans la capsule (Capsule.toggle, GameState.mining_seal).
 const MINING_COST := {"forge": 10, "vie": 10, "discipline": 10, "savoir": 10}
 const RESEARCH := {
-	"mining_concept": {"name": "Concept - Sceau de Minage", "building": "library", "requires": []},
-	"mining_spark": {"name": "Etincelle - Sceau de Minage", "building": "soulwell", "requires": []},
-	"mining_power": {"name": "Puissance - Sceau de Minage", "building": "caserne", "requires": []},
-	"mining_artifact": {"name": "Artefact - Sceau de Minage", "building": "forge", "requires": ["mining_concept", "mining_spark", "mining_power"]},
 	# Bibliothèque (2026-11-19) : coût propre (« cost »), sinon MINING_COST.
 	"minimap": {"name": "Minicarte", "building": "library", "requires": [], "cost": {"savoir": 500}, "icon": "move",
 		"desc": "La minicarte reste affichée pendant l’incarnation."},
@@ -121,7 +128,7 @@ const RESEARCH := {
 		"desc": "Archers : + 25 % de dégâts. Leur carquois porte des pointes de cuivre."},
 	"verdigris_balm": {"name": "Baume de vert-de-gris", "building": "soulwell", "requires": [], "cost": {"vie": 400}, "items": {"copper_ingot": 10},
 		"desc": "Soin du Puits des Âmes : 5 → 8 PV par seconde."},
-	"copper_seal": {"name": "Sceau de cuivre", "building": "forge", "requires": ["mining_artifact"], "cost": {"forge": 300}, "items": {"copper": 20}, "glyph": "copper_ingot",
+	"copper_seal": {"name": "Sceau de cuivre", "building": "forge", "requires": [], "cost": {"forge": 300}, "items": {"copper": 20}, "glyph": "copper_ingot",
 		"desc": "La roche de vert-de-gris du biome 2 se creuse (8 coups)."},
 	# Biome 2 : payée en lingots de cuivre.
 	"limbo_mastery": {"name": "Maîtrise du Fleuve des Limbes", "building": "soulwell", "requires": [], "cost": {"vie": 400}, "items": {"copper_ingot": 10}, "glyph": "copper_ingot",
@@ -269,7 +276,7 @@ const MOULINET := {"charges": 3, "r": 2.8, "dmg": 24}
 const FLAME_DEATH := {"dmg": 45, "r": 3.0}
 const SILLON := {"cd": 4.0, "len": 8.0, "w": 0.9, "dmg": 12, "wall": 2.0, "burn": 3.0, "slow": 0.6}
 ## Expérience gagnée en achevant un ennemi (KILL_XP).
-const KILL_XP := {"creep": 10, "spitter": 15, "brute": 35, "beast": 6, "skeleton": 4, "scout": 12, "soldier": 22, "shield": 28, "archer": 15, "strazhar": 60, "martyre": 200, "oeil": 300, "oeil_pupille": 15}
+const KILL_XP := {"creep": 10, "spitter": 15, "brute": 35, "beast": 6, "skeleton": 4, "skeleton_bubo": 6, "skeleton_bomb": 5, "scout": 12, "soldier": 22, "shield": 28, "archer": 15, "strazhar": 60, "martyre": 200, "oeil": 300, "oeil_pupille": 15}
 ## Menace gagnée à la mort d'un ennemi de vague, selon son type (les gardiens de pylône, errants, squelettes et
 ## meutes nocturnes n'en rapportent pas : Enemy.beast). Type absent : 1.
 const KILL_MENACE := {"creep": 1, "scout": 2, "archer": 2, "spitter": 2, "soldier": 4, "shield": 5, "brute": 6, "strazhar": 12,
@@ -308,35 +315,50 @@ const WAVE_PACE := 1.3
 ## |x| ≤ X, à FLANK unités au moins du flanc de la montagne (jamais dans la grotte ni à sa porte) et à CLEAR
 ## unités au moins de toute unité alliée.
 const NIGHT_FLOW := {"from": 0.62, "to": 0.92, "early": 7.0, "peak": 3.0, "rate": 0.15, "min_gap": 1.2,
-	"x": 150.0, "flank": 25.0, "clear": 30.0}
+	"x": 150.0, "flank": 25.0, "clear": 30.0,
+	# Part de chaque type parmi les levées (un collier = un trio).
+	"mix": {"skeleton": 0.3, "skeleton_bubo": 0.4, "skeleton_bomb": 0.3}}
 ## Meute nocturne d'un pylône non canalisé (sim/night.gd) : une par nuit, lancée à la fraction AT de la journée ;
 ## BASE chiens + PER_TIER par palier de menace (CAP au plus), statistiques des gardiens (MENACE_PORTAL).
 const NIGHT_RAID := {"at": 0.7, "base": 3, "per_tier": 1, "cap": 12}
 
+## Soldats du Credo (fiches ENNEMI · CREDO et CREDO SOUILLÉ) : vitesse ×1,15 sur celle d'ENEMY (2026-11-20, demande),
+## appliquée par Enemy.make. Ceux sans arme de tir (CREDO_MELEE) accélèrent encore de CREDO_RUSH ×1,2 dès qu'ils ont
+## détecté une cible vivante, pour aller au contact au plus vite (Combat).
+const CREDO_KINDS := ["scout", "soldier", "archer", "creep", "spitter", "brute"]
+const CREDO_MELEE := ["scout", "creep", "brute"]
+const CREDO_SPEED := 1.15
+const CREDO_RUSH := 1.2
+
 ## Ennemis (spawn, Index.html ; rejetons : updateEvilPortals, galleries.js).
+## Portée des tireurs (archer, soldier, spitter, beast) et détection des ennemis doublées le 2026-11-20 (demande).
+## Dégâts des monstres doublés le 2026-11-20 (demande), boss exceptés (gorge, martyre, oeil).
 const ENEMY := {
-	"creep": {"hp": 35, "speed": 3.2, "range": 1.5, "damage": 12, "cd": 1.15},
+	"creep": {"hp": 35, "speed": 3.2, "range": 1.5, "damage": 24, "cd": 1.15},
 	## Squelette du flot nocturne (sim/night.gd) : frêle, sans sprite propre pour l'instant (dessiné en fanatique pâle).
-	"skeleton": {"hp": 20, "speed": 3.4, "range": 1.5, "damage": 7, "cd": 1.15, "art": "creep"},
-	"spitter": {"hp": 48, "speed": 2.0, "range": 10.0, "damage": 10, "cd": 1.15},
-	"brute": {"hp": 110, "speed": 1.4, "range": 1.5, "damage": 22, "cd": 1.7},
-	"beast": {"hp": 88, "speed": 8.0, "range": 1.5, "damage": 4, "cd": 1.15},
-	"scout": {"hp": 45, "speed": 3.7, "range": 1.5, "damage": 12, "cd": 1.05, "armor": 1},
-	"soldier": {"hp": 75, "speed": 2.1, "range": 5.0, "damage": 18, "cd": 1.3, "armor": 3},
-	"shield": {"hp": 85, "speed": 1.7, "range": 1.5, "damage": 14, "cd": 1.5, "armor": 9},
-	"archer": {"hp": 45, "speed": 3.4, "range": 10.0, "damage": 11, "cd": 1.4, "armor": 1},
-	"strazhar": {"hp": 600, "speed": 8.4, "range": 1.7, "damage": 64.0 / 3.0, "cd": 0.85, "armor": 8},
+	# Squelettes de la nuit (sim/skeletons.gd) : à collier (par trois), à bubons (lent), explosif (court, fragile).
+	"skeleton": {"hp": 20, "speed": 3.4, "range": 1.5, "damage": 14, "cd": 1.15},
+	"skeleton_bubo": {"hp": 30, "speed": 2.7, "range": 1.5, "damage": 14, "cd": 1.3},
+	"skeleton_bomb": {"hp": 14, "speed": 6.0, "range": 1.5, "damage": 10, "cd": 1.0},
+	"spitter": {"hp": 48, "speed": 2.0, "range": 40.0, "damage": 20, "cd": 1.15},
+	"brute": {"hp": 110, "speed": 1.4, "range": 1.5, "damage": 44, "cd": 1.7},
+	"beast": {"hp": 88, "speed": 8.0, "range": 32.0, "damage": 8, "cd": 1.15},
+	"scout": {"hp": 45, "speed": 3.7, "range": 1.5, "damage": 24, "cd": 1.05, "armor": 1},
+	"soldier": {"hp": 75, "speed": 2.1, "range": 10.0, "damage": 36, "cd": 1.3, "armor": 3},
+	"shield": {"hp": 85, "speed": 1.7, "range": 1.5, "damage": 28, "cd": 1.5, "armor": 9},
+	"archer": {"hp": 45, "speed": 3.4, "range": 20.0, "damage": 22, "cd": 1.4, "armor": 1},
+	"strazhar": {"hp": 600, "speed": 8.4, "range": 1.7, "damage": 128.0 / 3.0, "cd": 0.85, "armor": 8},
 	## Faune des Veines de vert-de-gris (biome 2, errants des galeries : sim/roamers.gd). Chiffres de la planche.
-	"tick": {"hp": 40, "speed": 1.6, "range": 1.5, "damage": 5, "cd": 1.5, "armor": 4},
+	"tick": {"hp": 40, "speed": 1.6, "range": 1.5, "damage": 10, "cd": 1.5, "armor": 4},
 	## Boss de fin du biome 2 (sim/gorge.gd) : armure des anneaux ; dégâts doublés gueule ouverte.
 	"gorge": {"hp": 2400, "speed": 0.0, "range": 0.0, "damage": 30, "cd": 99.0, "armor": 5},
 	## Anguille des puits : immobile dans son bassin (sim/wildlife.gd), sa décharge touche tout ce qui en approche.
-	"eel": {"hp": 60, "speed": 0.0, "range": 13.5, "damage": 8, "cd": 3.0},
-	"bat": {"hp": 18, "speed": 7.0, "range": 1.5, "damage": 3, "cd": 1.2},
+	"eel": {"hp": 60, "speed": 0.0, "range": 13.5, "damage": 16, "cd": 3.0},
+	"bat": {"hp": 18, "speed": 7.0, "range": 1.5, "damage": 6, "cd": 1.2},
 	## Premier boss (sim/martyre.gd) : jamais dans les vagues ; dégâts fixes à l'Ingénieur, impact différé.
 	## Faune hostile de la jungle (sim/wildlife.gd en surcharge les valeurs).
-	"croc": {"hp": 160, "speed": 3.4, "range": 1.6, "damage": 14, "cd": 1.6, "armor": 4},
-	"feline": {"hp": 90, "speed": 4.3, "range": 1.4, "damage": 10, "cd": 0.9, "armor": 1},
+	"croc": {"hp": 160, "speed": 3.4, "range": 1.6, "damage": 28, "cd": 1.6, "armor": 4},
+	"feline": {"hp": 90, "speed": 4.3, "range": 1.4, "damage": 20, "cd": 0.9, "armor": 1},
 	"martyre": {"hp": 2000, "speed": 2.2, "range": 2.4, "damage": 10, "cd": 3.0 / 1.3},
 	## Boss de la frontière (sim/oeil.gd) : immobile au centre de sa salle ; racines au contact.
 	"oeil": {"hp": 5600, "speed": 0.0, "range": 0.0, "damage": 10, "cd": 1.2},
@@ -348,6 +370,11 @@ const EVIL := {"interval": 7.0, "cap": 8}
 ## Balistes (TURRET_CONFIG, turret-game.js).
 ## Coups annoncés (planches/unites-maj-propositions.html, L4) : l'ennemi arme son geste pendant ce temps (s, à la
 ## cadence de la vague) avant que le coup ne tombe ; hors de portée à ce moment-là, la cible l'esquive.
+## Portée de détection des chiens de la Bête (cases), partout : vagues, errants des galeries, meutes de pylône.
+const BEAST_SIGHT := 32.0
+## Les chiens ne mordent plus (2026-11-20) : ils ne font que cracher, jusqu'à leur portée (ENEMY.beast.range), et
+## s'arrêtent à cette distance de leur cible quand la ligne de tir est dégagée (sinon ils s'approchent encore).
+const BEAST_STANDOFF := 6.0
 const ENEMY_WINDUP := {"brute": 0.4, "strazhar": 0.25}
 ## Marge de portée au moment où le coup tombe (unités de monde).
 const ENEMY_WINDUP_SLACK := 0.8
@@ -365,7 +392,9 @@ const ENEMY_INFO := {
 	"gorge": {"name": "Gorge-Cuivre", "kind": "BOSS · DÉVOREUSE DE FILONS", "lore": "Un mille-pattes cuirassé long comme une galerie. Elle a mangé tous les filons de la grande salle et dort dessous. Ses anneaux arrêtent les coups ; sa gueule, non."},
 	"eel": {"name": "Anguille des puits", "kind": "FAUNE · NEUTRE", "lore": "Une crête d’épines de cuivre lui sort du dos. Elle ne quitte jamais son bassin ; sa décharge frappe tout ce qui s’en approche, Exilés comme ennemis."},
 	"bat": {"name": "Chauve-souris patinée", "kind": "FAUNE · VERT-DE-GRIS", "lore": "Poitrail plaqué de cuivre, ailes trouées. Elles chassent en nuées et piquent droit."},
-	"skeleton": {"name": "Squelette", "kind": "ENNEMI · NUIT", "lore": "Il monte de la jungle à la nuit tombée, seul ou par poignées, et ne s’arrête qu’à l’Ancre."},
+	"skeleton": {"name": "Squelette à collier", "kind": "ENNEMI · NUIT", "lore": "Ils se lèvent par trois, enchaînés par le cou : aucun ne s’éloigne des deux autres. Frappé, il lâche des éclats d’os et de fer."},
+	"skeleton_bubo": {"name": "Squelette à bubons", "kind": "ENNEMI · NUIT", "lore": "Voûté, couvert de bubons de bile. Chaque coup en fait éclater un, qui brûle tout ce qui l’entoure, sauf les siens."},
+	"skeleton_bomb": {"name": "Squelette explosif", "kind": "ENNEMI · NUIT", "lore": "Une braise lui tient lieu de cœur. Abattu, il tombe à genoux, puis explose et crache dix boules de feu."},
 	"scout": {"name": "Infanterie légère", "kind": "ENNEMI · CREDO", "lore": "Un éclaireur rapide, légèrement protégé, qui ouvre la marche des soldats du Credo."},
 	"soldier": {"name": "Soldat du Credo", "kind": "ENNEMI · CREDO", "lore": "Casque à crête et cuirasse : l’infanterie régulière du Credo lance son pilum à courte portée."},
 	"shield": {"name": "Bouclier doré", "kind": "ENNEMI · BYRSA", "lore": "Un soldat humain en armure, protégé par un grand bouclier doré. Sa défense absorbe l’essentiel des frappes légères."},

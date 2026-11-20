@@ -740,8 +740,156 @@
         "fps": 12.0,
         "duration": 3.0
       }
+    },
+    "skeleton": {
+      "ax": 32,
+      "ay": 43,
+      "stride": 4,
+      "self_bob": true,
+      "h": 31,
+      "idle": {
+        "frame_w": 64,
+        "frame_h": 52,
+        "cols": 12,
+        "rows": 4,
+        "count": 48,
+        "fps": 12
+      },
+      "walk": {
+        "frame_w": 64,
+        "frame_h": 52,
+        "cols": 12,
+        "rows": 2,
+        "count": 24,
+        "fps": 24
+      },
+      "attack": {
+        "frame_w": 64,
+        "frame_h": 52,
+        "cols": 12,
+        "rows": 2,
+        "count": 24,
+        "fps": 24,
+        "duration": 1
+      },
+      "death": {
+        "frame_w": 64,
+        "frame_h": 52,
+        "cols": 12,
+        "rows": 3,
+        "count": 36,
+        "fps": 24
+      },
+      "hit": {
+        "frame_w": 64,
+        "frame_h": 52,
+        "cols": 12,
+        "rows": 1,
+        "count": 6,
+        "fps": 24,
+        "duration": 0.25
+      }
+    },
+    "skeleton_bubo": {
+      "ax": 32,
+      "ay": 43,
+      "stride": 4,
+      "self_bob": true,
+      "h": 31,
+      "idle": {
+        "frame_w": 64,
+        "frame_h": 52,
+        "cols": 12,
+        "rows": 4,
+        "count": 48,
+        "fps": 12
+      },
+      "walk": {
+        "frame_w": 64,
+        "frame_h": 52,
+        "cols": 12,
+        "rows": 2,
+        "count": 24,
+        "fps": 24
+      },
+      "attack": {
+        "frame_w": 64,
+        "frame_h": 52,
+        "cols": 12,
+        "rows": 2,
+        "count": 24,
+        "fps": 24,
+        "duration": 1
+      },
+      "death": {
+        "frame_w": 64,
+        "frame_h": 52,
+        "cols": 12,
+        "rows": 3,
+        "count": 36,
+        "fps": 24
+      },
+      "hit": {
+        "frame_w": 64,
+        "frame_h": 52,
+        "cols": 12,
+        "rows": 1,
+        "count": 6,
+        "fps": 24,
+        "duration": 0.25
+      }
+    },
+    "skeleton_bomb": {
+      "ax": 32,
+      "ay": 43,
+      "stride": 5,
+      "self_bob": true,
+      "h": 31,
+      "idle": {
+        "frame_w": 64,
+        "frame_h": 52,
+        "cols": 12,
+        "rows": 4,
+        "count": 48,
+        "fps": 12
+      },
+      "walk": {
+        "frame_w": 64,
+        "frame_h": 52,
+        "cols": 12,
+        "rows": 2,
+        "count": 24,
+        "fps": 24
+      },
+      "attack": {
+        "frame_w": 64,
+        "frame_h": 52,
+        "cols": 12,
+        "rows": 2,
+        "count": 24,
+        "fps": 24,
+        "duration": 1
+      },
+      "death": {
+        "frame_w": 64,
+        "frame_h": 52,
+        "cols": 12,
+        "rows": 2,
+        "count": 24,
+        "fps": 24
+      },
+      "hit": {
+        "frame_w": 64,
+        "frame_h": 52,
+        "cols": 12,
+        "rows": 1,
+        "count": 6,
+        "fps": 24,
+        "duration": 0.25
+      }
     }
   },
   "refonte": "planches/refonte-16bits-export.html (tools/refonte/serve.py) : archer, creep, croc, feline, scout, shield, soldier, spitter",
-  "g1": "planches/brute-strazhar-propositions.html (tools/unites-maj/export_g1.py) : brute B, strazhar A"
+  "g1": "planches/brute-strazhar-propositions.html (tools/unites-maj/export_g1.py) : brute B, strazhar A",
+  "squelettes": "planches/squelettes-planche.html (tools/squelettes/export.py) : skeleton, skeleton_bubo, skeleton_bomb"
 }

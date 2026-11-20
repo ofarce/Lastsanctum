@@ -8,8 +8,11 @@ func test_lodes_generated() -> void:
 	var st := TerrainState.new()
 	for map_seed in [0, 1, 17, SEED]:
 		st.generate_galleries(map_seed)
-		for item in ["copper", "iron", "gold"]:
-			check(st.lodes.values().has(item), "filon de %s, graine %d" % [item, map_seed])
+		# Temple (biome 1) : cuivre seul ; le fer et l'or n'ont de filons que plus au nord.
+		check(st.lodes.values().has("copper"), "filon de cuivre, graine %d" % map_seed)
+		for o: Vector2i in st.lodes:
+			if CaveShape.in_start(o.x * 4.0 + 4.0, o.y * 4.0 + 4.0):
+				check_eq(st.lodes[o], "copper", "filon de la zone d'origine, graine %d" % map_seed)
 		check_eq(st.lode_cells.size(), st.lodes.size() * 4, "2 × 2 cases par filon")
 		for o: Vector2i in st.lodes:
 			var item: String = st.lodes[o]

@@ -58,8 +58,8 @@ const ITEMS := {
 		"desc": "Module d’exo. L’Exilé creuse la roche deux fois plus vite."},
 	"module_iris": {"name": "Iris de la Matrice", "slot": "Module", "rarity": "uncommon", "module": "iris",
 		"desc": "Module d’exo. Les ennemis apparaissent sur la minicarte à travers la roche."},
-	"combinaison": {"name": "Combinaison", "slot": "Torse", "piece": "combinaison",
-		"desc": "Combinaison d’Exilé remise par la capsule."},
+	"combinaison": {"name": "Combinaison", "slot": "Torse", "piece": "combinaison", "armor": 1,
+		"desc": "Combinaison d’Exilé remise par la capsule. Défense très faible."},
 }
 
 

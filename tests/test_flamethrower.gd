@@ -32,7 +32,11 @@ func test_continuous_fire_at_range_12() -> void:
 
 func test_out_of_range_walks_closer() -> void:
 	var u := _flamer()
-	foe("creep", u.x + 26.0, u.z, 400.0)
+	# Hors de portée (24) mais dans la marge d'engagement (Combat.ENGAGE_MARGIN, 2 unités au-delà).
+	foe("creep", u.x + 25.0, u.z, 400.0)
+	# Une unité ne va qu'au-devant d'un ennemi visible : un bâtiment allié éclaire l'endroit.
+	built("sigil", u.x + 25.0, u.z + 5.0)
+	game_sim().world.fog.refresh(game_sim().state())
 	var alive: Array[Unit] = [u]
 	var x0 := u.x
 	game_sim().combat.update_units(0.1, alive)

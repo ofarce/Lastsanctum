@@ -26,7 +26,10 @@ const FISSURE_W := 3.2
 const SKY := 260.0
 ## Éclats d'or : orientations précalculées, liseré, ombre au sol.
 const SHARD_ROT := 16
-const SHARD_RIM := [Color("#c07a18"), Color(1.0, 0.82, 0.36, 0.5), Color(1.0, 0.78, 0.3, 0.22)]
+## Bord de l'éclat, de l'intérieur vers l'extérieur : double bord sombre, sans halo (planche « Visibilité des balles »,
+## piste 3·C, 2026-11-20 : le cœur clair touche un bord sombre et se détache de la faille et du dôme dorés).
+## Avant : liseré ambre #c07a18 puis halo d'or à 50 % et 22 %.
+const SHARD_RIM := [Color("#1e0e04"), Color("#1e0e04")]
 const SHARD_GLOW := Color8(255, 214, 120)
 const SHARD_LIGHTS := 48
 const SHADOW := Color(0.03, 0.016, 0.008, 0.45)
@@ -287,8 +290,8 @@ static func _glyph(ci: CanvasItem, at: Vector2, g: int, c: Color) -> void:
 
 # ---------------------------------------------------------------- Salves
 
-## Losange d'or d'une orientation (rang sur SHARD_ROT), petit (19 px) ou gros (31 px) : cœur blanc, liseré d'ambre
-## et halo d'or sur deux pixels.
+## Losange d'or d'une orientation (rang sur SHARD_ROT), petit (19 px) ou gros (31 px) : cœur blanc, corps d'or et
+## bord sombre (SHARD_RIM, un rang de pixels par couleur).
 static func shard(big: bool, rot: int) -> Texture2D:
 	var key := (SHARD_ROT if big else 0) + rot
 	if _shards.has(key):
@@ -300,7 +303,7 @@ static func shard(big: bool, rot: int) -> Texture2D:
 	var sa := sin(a)
 	var h := (n - 1) / 2.0
 	var img := Image.create(n, n, false, Image.FORMAT_RGBA8)
-	# Rang de chaque pixel : 1 dans le losange, 2 liseré, 3 et 4 halo.
+	# Rang de chaque pixel : 1 dans le losange, puis un rang par couleur de SHARD_RIM.
 	var lvl := PackedByteArray()
 	lvl.resize(n * n)
 	for y in n:
@@ -313,7 +316,7 @@ static func shard(big: bool, rot: int) -> Texture2D:
 			lvl[y * n + x] = 1
 			var c: Color = Color.WHITE if q < 0.42 else ((LIGHT[6] if u > 0.0 else LIGHT[5]) if q < 0.72 else (LIGHT[4] if u > 0.0 else LIGHT[3]))
 			img.set_pixel(x, y, c)
-	for k in range(2, 5):
+	for k in range(2, 2 + SHARD_RIM.size()):
 		var c: Color = SHARD_RIM[k - 2]
 		for y in n:
 			for x in n:

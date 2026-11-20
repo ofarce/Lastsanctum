@@ -51,11 +51,16 @@ func _ready() -> void:
 	(main.get_node("Hud") as Hud).hide_notice()
 	var st := _sim.state()
 	print("pylônes : ", st.portals.size())
+	# Avec « --open » : la galerie du pylône 5 est découverte et un tunnel creusé jusqu'à la salle de départ.
+	if OS.get_cmdline_user_args().has("--open"):
+		var q: Dictionary = st.portals[5]
+		_world.terrain_ops.reveal_galleries_near(q["x"] - 20.0, q["z"] - 20.0, q["x"] + 20.0, q["z"] + 20.0)
+		for i in range(floori(float(q["x"]) / 4.0) - 1, -13):
+			for j in [floori(float(q["z"]) / 4.0), floori(float(q["z"]) / 4.0) + 1]:
+				_world.terrain_ops.dig_cell(i, j)
 	for p: Dictionary in st.portals:
-		var from := st.push_out_of_rock(Vector2(float(p["x"]), float(p["z"]) + 6.5))
-		if p["active"] or is_same(p, Night.nearest_open(st)):
-			print("  pylône %s (%.0f, %.0f) actif %s · chemin vers l'Ancre %s" % [p["id"], p["x"], p["z"], p["active"],
-				_world.pathfinder.find_path(from, CaveShape.CORE) != null])
+		if Night.raid_start(_sim, p) != null:
+			print("  pylône %s (%.0f, %.0f) actif %s · relié à l'Ancre" % [p["id"], p["x"], p["z"], p["active"]])
 	var spawned := 0
 	var seen := {}
 	var shot := false
@@ -64,6 +69,9 @@ func _ready() -> void:
 		GameState.next_wave = 1e9
 		_sim.tick(0.04)
 		for e: Enemy in GameState.enemies:
+			if e.raid and not seen.has(e):
+				seen[e] = null
+				print("  chien de meute né en ", e.pos(), " · dans la salle de départ : ", CaveShape.in_cave(e.x, e.z))
 			if e.kind == "skeleton" and not seen.has(e):
 				seen[e] = Vector2(e.x, e.z)
 				if not CaveShape.outdoors(e.x, e.z) or not st.walkable(e.x, e.z):
@@ -89,8 +97,8 @@ func _ready() -> void:
 			print("%s f=%.2f · squelettes sortis %d, vivants %d · chiens de meute %d (au plus près de l'Ancre : %.0f u) · menace %d" % [
 				DayNight.clock(GameState.sim_time), DayNight.fraction(GameState.sim_time), spawned, _count("skeleton"), _count("beast", true),
 				far, GameState.menace])
-	var xs: Array = seen.values().map(func(p: Vector2) -> float: return p.x)
-	var zs: Array = seen.values().map(func(p: Vector2) -> float: return p.y)
+	var xs: Array = seen.values().filter(func(v: Variant) -> bool: return v != null).map(func(p: Vector2) -> float: return p.x)
+	var zs: Array = seen.values().filter(func(v: Variant) -> bool: return v != null).map(func(p: Vector2) -> float: return p.y)
 	print("levés entre x %.0f..%.0f, z %.0f..%.0f" % [xs.min(), xs.max(), zs.min(), zs.max()])
 	var near := 1e9
 	for e: Enemy in GameState.enemies:

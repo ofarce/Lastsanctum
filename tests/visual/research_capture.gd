@@ -31,7 +31,7 @@ func _ready() -> void:
 	Ctx.apply(sim, c, true)
 	GameState.opening_stage = ""
 	GameState.orb_active = true
-	GameState.research_done["mining_concept"] = true
+	GameState.research_done["minimap"] = true
 	GameState.research_done["minimap"] = true
 	GameState.research_jobs["firing_post"] = {"building": GameState.buildings[0], "progress": 4.0}
 	world.camera.reset()

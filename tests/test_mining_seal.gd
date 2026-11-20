@@ -1,45 +1,17 @@
 extends "res://tests/econ_case.gd"
 
 
-func test_research_cost_duration_prerequisites_and_unique_completion() -> void:
+func test_seal_is_not_a_research_and_comes_from_the_capsule() -> void:
 	var sim := game()
-	give(100.0)
-	var forge := built("forge", 0, -130)
-	staff(sim, forge, 1)
-	check(not Simulation.can_research(forge, "mining_artifact"), "artefact verrouillé sans prérequis")
-	for id: String in ["mining_concept", "mining_spark", "mining_power"]:
-		var b := built(Catalog.RESEARCH[id]["building"], 10, -130)
-		staff(sim, b, 1)
-		sim.start_research(b, id)
-		sim.start_research(b, id)
-		check_eq(GameState.research_jobs.size(), 1, "pas de recherche en double")
-		sim.update_research(9.9)
-		check(not GameState.research_done.has(id), "pas achevée avant dix secondes")
-		var menace := GameState.menace
-		sim.update_research(0.1)
-		check(GameState.research_done.has(id), "recherche achevée")
-		check_eq(GameState.menace, menace + 20, "+20 menace à la fin")
-		check(not Simulation.can_research(b, id), "recherche unique")
-	check(Simulation.can_research(forge, "mining_artifact"), "artefact déverrouillé")
-	var spoken: Array = []
-	sim.engineer_spoke.connect(func(_u: Unit, text: String) -> void: spoken.append(text))
+	for id: String in ["mining_concept", "mining_spark", "mining_power", "mining_artifact"]:
+		check(not Catalog.RESEARCH.has(id), "plus de recherche " + id)
+	check(not GameState.mining_seal, "pas de sceau en début de partie")
 	engineer().unarmored = true
 	check(not Simulation.can_mine(engineer()), "sans armure ni sceau, minage impossible")
-	sim.start_research(forge, "mining_artifact")
-	for resource: String in Catalog.RES_ORDER:
-		check_near(GameState.res[resource], 60.0, 1e-9, "quatre recherches coûtent 40 par ressource")
-	sim.update_research(10.0)
+	GameState.mining_seal = true
 	check(Simulation.can_mine(engineer()), "sceau rétablit le minage sans armure")
-	check_eq(GameState.menace, 80, "80 menace pour les quatre recherches")
-	check_eq(spoken, ["Ce sceau devrait ne faire qu'une bouchée de ces murs en pierre."], "réplique de fabrication")
-	GameState.selected.clear()
-	GameState.hud_building = forge
-	var action := HudModel.panel_actions(sim)[0]
-	check(action["disabled"], "recherche terminée grisée")
-	check(action["completed"], "statut vert")
-	check_eq(action["status"], "Déjà achevée", "libellé achevé")
 	sim.new_game(SEED)
-	check(GameState.research_done.is_empty() and GameState.research_jobs.is_empty(), "recherches réinitialisées")
+	check(not GameState.mining_seal, "sceau réinitialisé")
 
 
 func test_unarmored_engineer_cannot_start_or_continue_mining() -> void:
@@ -50,7 +22,7 @@ func test_unarmored_engineer_cannot_start_or_continue_mining() -> void:
 	var spoken: Array = []
 	sim.engineer_spoke.connect(func(_u: Unit, text: String) -> void: spoken.append(text))
 	GameState.selected = [u]
-	check(sim.order_adepts(Vector2(64, -138)), "clic droit minage intercepté")
+	check(sim.order_adepts(Vector2(58, -138)), "clic droit minage intercepté")
 	check(u.job == null, "clic droit sans sceau refusé")
 	spoken.clear()
 	sim.set_job(u, {"type": "dig"})

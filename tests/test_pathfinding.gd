@@ -58,7 +58,7 @@ func test_reaches_chest_reserve() -> void:
 	check(sim.state().vault_open, "réserve ouverte")
 	var u: Unit = GameState.units[0]
 	var dt := 1.0 / 60.0
-	for start: Vector2 in [Vector2(24, -104), Vector2(50, -120), Vector2(58, -135), Vector2(4, -99), Vector2(-32, -99)]:
+	for start: Vector2 in [Vector2(24, -104), Vector2(50, -120), Vector2(54, -135), Vector2(4, -99), Vector2(-32, -99)]:
 		for leg in 2:
 			var from := start if leg == 0 else CaveShape.CHEST_SPOT
 			var to := CaveShape.CHEST_SPOT if leg == 0 else start

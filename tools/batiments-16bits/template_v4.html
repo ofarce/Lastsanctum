@@ -1,0 +1,109 @@
+<title>Nouveaux bâtiments de fabrication</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;600&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
+<style>
+/* Mise en page : bandeau de commandes collant, puis une section par bâtiment = grille de vignettes à échelle entière (×3). Planche à un seul aspect, sombre comme la caverne du jeu. */
+:root{color-scheme:dark;--bg:#0d1114;--panel:#141c21;--line:#27363d;--txt:#e2dcc2;--mut:#93a3a4;--acc:#e8c870;--hot:#cfd4e2;
+ --disp:'Pixelify Sans',ui-monospace,monospace;--body:'Atkinson Hyperlegible',system-ui,sans-serif;--s:3}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--txt);font:16px/1.5 var(--body)}
+.wrap{max-width:1260px;margin:auto;padding-block:20px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+h1{font:600 28px/1.15 var(--disp);letter-spacing:.06em;color:var(--acc);margin:0 0 8px;text-wrap:balance}
+h2{font:600 23px/1.2 var(--disp);letter-spacing:.05em;color:var(--acc);margin:0 0 4px}
+h3{font:600 17px/1.25 var(--disp);letter-spacing:.03em;color:var(--hot);margin:0}
+p{margin:0;max-width:68ch}.mut{color:var(--mut)}b{color:var(--txt)}
+.bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);border-block:1px solid var(--line)}
+.bar .wrap{padding-block:8px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.bar nav{display:flex;flex-wrap:wrap;gap:6px;margin-left:auto}
+button,.bar a{font:400 15px/1 var(--disp);color:var(--txt);background:var(--panel);border:1px solid var(--line);padding:8px 11px;cursor:pointer;text-decoration:none}
+button:hover,.bar a:hover,button[aria-pressed=true]{border-color:var(--acc);color:var(--acc)}
+button:focus-visible,a:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin-top:16px}
+.note{background:var(--panel);border:1px solid var(--line);padding:14px 16px;min-width:0}
+.note h3{margin-bottom:6px}.note ul{margin:0;padding-left:18px;color:var(--mut)}.note li+li{margin-top:4px}
+section{margin-top:40px;scroll-margin-top:70px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,calc(132px*var(--s)));gap:14px;margin-top:14px;justify-content:start}
+figure{margin:0;background:var(--panel);border:1px solid var(--line);display:flex;flex-direction:column;min-width:0}
+figure.cur{border-style:dashed}figure.cur h3{color:var(--mut)}
+canvas{display:block;width:calc(132px*var(--s));height:calc(136px*var(--s));max-width:100%;image-rendering:pixelated}
+figcaption{padding:10px 12px 12px;display:flex;flex-direction:column;gap:6px}
+figcaption p{color:var(--mut);font-size:14.5px;line-height:1.45}
+.chips{display:flex;flex-wrap:wrap;gap:4px;list-style:none;margin:0;padding:0}
+.chips li{font:400 13px/1.2 var(--disp);color:var(--hot);border:1px solid var(--line);padding:3px 6px}
+table{border-collapse:collapse;width:100%;font-size:15px}th,td{text-align:left;padding:7px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font:600 14px var(--disp);color:var(--hot);letter-spacing:.04em}td{color:var(--mut)}td:first-child{color:var(--txt);white-space:nowrap}
+.scroll{overflow-x:auto;margin-top:12px}
+@media(max-width:460px){:root{--s:2}}
+.pick{align-self:flex-start;margin-top:2px}
+figure.sel{border-color:var(--acc);box-shadow:inset 0 0 0 2px var(--acc)}figure.sel h3{color:var(--acc)}
+figure.sel .pick{background:var(--acc);color:var(--bg);border-color:var(--acc)}
+.none{margin-top:12px}
+.send{background:var(--panel);border:1px solid var(--line);padding:16px;display:flex;flex-direction:column;gap:12px;margin-top:14px;max-width:760px}
+.send ul{margin:0;padding-left:18px;color:var(--mut)}.send li b{color:var(--txt)}
+textarea{font:15px/1.4 var(--body);color:var(--txt);background:var(--bg);border:1px solid var(--line);padding:10px;min-height:76px;width:100%;resize:vertical}
+#bSend{align-self:flex-start;border-color:var(--acc);color:var(--acc);font-size:17px;padding:10px 16px}
+#status{color:var(--mut);font-size:14.5px;min-height:1.4em}#count{color:var(--acc);font:400 15px var(--disp)}
+</style>
+<div class="wrap">
+<h1>SCIERIE · ARCHERIE · ARMURERIE</h1>
+<p class="mut">Suite du découpage de la fabrication : la Fonderie ne fait plus que des lingots, l’Armurerie façonne armes et armures. Ici, les deux nouveaux bâtiments qui soulagent l’Atelier — <b>Scierie</b> (planches, fibre de bois) et <b>Archerie</b> (arcs, flèches) — et un dessin propre à l’<b>Armurerie</b>, qui porte encore celui du Creuset. Même rendu que les bâtiments choisis : machines en plein air, finition 16 bits, emprise 2 × 2 cases agrandie trois fois. Chaque piste a sa boucle « au travail » et « au repos » (bouton en haut).</p>
+<p class="mut" style="margin-top:8px"><b>Pour choisir :</b> bouton « Choisir » sous la piste voulue, puis « Envoyer mon choix » en bas de page.</p>
+</div>
+<div class="bar"><div class="wrap">
+ <button id="bWork" aria-pressed="true">Au travail</button>
+ <button id="bNight" aria-pressed="false">Jour</button>
+ <button id="bPause" aria-pressed="false">Pause</button>
+ <span id="count"></span>
+ <nav id="nav" aria-label="Bâtiments"></nav>
+</div></div>
+<div class="wrap">
+<div id="groups"></div>
+<section id="choix"><h2>Mon choix</h2>
+<div class="send"><ul id="recap"></ul>
+<label for="note" class="mut">Remarques, mélanges (« la roue du 1 avec le feu du 4 »), ce qui manque :</label>
+<textarea id="note"></textarea>
+<button id="bSend">Envoyer mon choix</button><div id="status" role="status"></div></div></section>
+</div>
+<script>
+/*ENGINE*/
+</script>
+<script>
+'use strict';
+const ACTUELS=/*ACTUELS*/{};
+const W=BAT.W,H=BAT.H,views=[],root=document.getElementById('groups'),nav=document.getElementById('nav');
+let pick={},night=false,work=1,paused=matchMedia('(prefers-reduced-motion: reduce)').matches,t=2,last,acc=1;
+try{pick=JSON.parse(localStorage.getItem('bat16v4-choix')||'{}')||{}}catch(e){}
+const figs={};
+function currentScene(id){const S={base:BAT.floorScene(),ok:false,im:new Image(),render(g,hour){this.base.render(g,hour,0);if(this.ok){g.globalAlpha=hour<6?.6:1;g.drawImage(this.im,0,0);g.globalAlpha=1}}};S.im.onload=()=>{S.ok=true;S.dirty&&S.dirty()};S.im.src=ACTUELS[id];return S}
+for(const G of BAT.GROUPS){const sec=document.createElement('section');sec.id=G.id;sec.innerHTML=`<h2>${G.name}</h2><p class="mut">${G.note}</p><div class="grid"></div><button class="none" data-g="${G.id}" data-n="0" aria-pressed="false">Aucune de ces cinq</button>`;root.append(sec);
+ const a=document.createElement('a');a.href='#'+G.id;a.textContent=G.name.split(' ')[0];nav.append(a);const grid=sec.querySelector('.grid');figs[G.id]=[sec.querySelector('.none')];
+ const mk=(title,desc,anims,n,make)=>{const f=document.createElement('figure');if(!n)f.className='cur';f.innerHTML=`<canvas width="${W}" height="${H}" role="img" aria-label="${title}"></canvas><figcaption><h3>${title}</h3><p>${desc}</p>${anims?`<ul class="chips">${anims.map(a=>`<li>${a}</li>`).join('')}</ul><button class="pick" data-g="${G.id}" data-n="${n}" aria-pressed="false">Choisir</button>`:''}</figcaption>`;grid.append(f);
+  const cv=f.querySelector('canvas'),v={cv,g:cv.getContext('2d'),make,S:null,vis:false,dirty:true,anim:!!n};views.push(v);if(n)figs[G.id][n]=f;return v};
+ if(ACTUELS[G.id]){const v=mk('Actuel','Le dessin du jeu aujourd’hui, à la même échelle.',null,0,()=>{const S=currentScene(G.id);S.dirty=()=>{v.dirty=true};return S})}
+ let n=0;BAT.ITEMS.forEach((it,i)=>{if(it.g!==G.id)return;n++;const title=`${n} · ${it.name}`;mk(title,it.desc,it.anims,n,()=>{try{return BAT.vignette(i)}catch(e){console.error(title,e);return{render(g){g.fillStyle='#400';g.fillRect(0,0,W,H);g.fillStyle='#fff';g.font='8px monospace';String(e).match(/.{1,26}/g).slice(0,8).forEach((l,k)=>g.fillText(l,2,12+k*10))}}}})})}
+const io=new IntersectionObserver(es=>{for(const e of es){const v=views.find(v=>v.cv===e.target);if(v){v.vis=e.isIntersecting;v.dirty=true}}},{rootMargin:'250px'});views.forEach(v=>io.observe(v.cv));
+// ---------- choix ----------
+const names=g=>BAT.ITEMS.filter(it=>it.g===g).map(it=>it.name),recap=document.getElementById('recap'),count=document.getElementById('count'),note=document.getElementById('note'),status=document.getElementById('status');
+function showPick(){let done=0;recap.innerHTML='';for(const G of BAT.GROUPS){const n=pick[G.id];figs[G.id].forEach((el,k)=>{if(!el)return;const on=n===k;if(k===0)el.setAttribute('aria-pressed',on);else{el.classList.toggle('sel',on);const b=el.querySelector('.pick');b.setAttribute('aria-pressed',on);b.textContent=on?'Choisi':'Choisir'}});
+  if(n!==undefined&&n!==null)done++;const li=document.createElement('li');li.innerHTML=`<b>${G.name}</b> : ${n===undefined||n===null?'pas encore choisi':n===0?'aucune des cinq':n+' · '+names(G.id)[n-1]}`;recap.append(li)}
+ count.textContent=`${done} / ${BAT.GROUPS.length} choisis`;try{localStorage.setItem('bat16v4-choix',JSON.stringify(pick))}catch(e){}}
+document.addEventListener('click',e=>{const b=e.target.closest('[data-g]');if(!b)return;const g=b.dataset.g,n=+b.dataset.n;if(pick[g]===n)delete pick[g];else pick[g]=n;status.textContent='';showPick()});
+if(typeof pick.note==='string'){note.value=pick.note}note.oninput=()=>{pick.note=note.value;try{localStorage.setItem('bat16v4-choix',JSON.stringify(pick))}catch(e){}};
+showPick();
+const summary=()=>BAT.GROUPS.map(G=>{const n=pick[G.id];return`${G.name} ${n===undefined||n===null?'?':n===0?'aucune':n}`}).join(', ')+(note.value.trim()?' — '+note.value.trim():'');
+let db=null;(async()=>{try{db=await window.claude?.use?.('db')}catch(e){}if(!db)return;try{const s=await db.doc('choix/courant').get();if(s.exists){const d=s.data()||{};let any=false;for(const G of BAT.GROUPS)if(pick[G.id]!==undefined)any=true;if(!any){for(const G of BAT.GROUPS)if(typeof d[G.id]==='number')pick[G.id]=d[G.id];if(typeof d.note==='string'&&!note.value){note.value=d.note;pick.note=d.note}showPick();status.textContent='Dernier choix envoyé rechargé.'}}}catch(e){}})();
+document.getElementById('bSend').onclick=async()=>{const data={note:note.value.trim(),resume:summary(),envoye:new Date().toISOString()};for(const G of BAT.GROUPS){const n=pick[G.id];data[G.id]=n===undefined||n===null?-1:n;data[G.id+'_nom']=n>0?names(G.id)[n-1]:''}
+ if(!db){status.textContent='Envoi indisponible ici. Copie cette ligne dans la conversation : '+summary();return}
+ status.textContent='Envoi…';try{await db.doc('choix/courant').set(data);status.textContent='Choix envoyé. Dis « c’est choisi » dans la conversation et Claude le lira ici.'}catch(e){status.textContent='L’envoi a échoué ('+(e&&e.code||'erreur')+'). Copie cette ligne dans la conversation : '+summary()}};
+// ---------- animation ----------
+const bW=document.getElementById('bWork'),bN=document.getElementById('bNight'),bP=document.getElementById('bPause');
+const sync=()=>{BAT.setWork(work);bW.setAttribute('aria-pressed',!!work);bW.textContent=work?'Au travail':'Au repos';bN.setAttribute('aria-pressed',night);bN.textContent=night?'Nuit':'Jour';bP.setAttribute('aria-pressed',paused);bP.textContent=paused?'Reprendre':'Pause';views.forEach(v=>v.dirty=true)};
+bW.onclick=()=>{work=work?0:1;sync()};bN.onclick=()=>{night=!night;sync()};bP.onclick=()=>{paused=!paused;sync()};
+function paint(v){if(!v.S)v.S=v.make();v.S.render(v.g,night?21:11,Math.floor(t*12)/12);v.dirty=false}
+function loop(now){const dt=last===undefined?0:Math.min((now-last)/1000,.1);last=now;if(!paused)t+=dt;acc+=dt;if(acc>=1/12){acc=0;for(const v of views)if(v.vis&&(v.dirty||(v.anim&&!paused)))paint(v)}requestAnimationFrame(loop)}
+const Q=new URLSearchParams(location.search);
+if(Q.get('shot')){t=+(Q.get('t')??2);work=+(Q.get('k')??1);night=Q.get('n')==='1';sync();
+ if(Q.get('c')){const st=document.createElement('style');st.textContent='figcaption p,.chips,.pick,.none,section>p,h1,h1+p,h1~p,.bar,#choix{display:none!important}section{margin-top:4px!important}.wrap{padding-block:0!important;max-width:none!important}h2{font-size:13px!important}.grid{gap:4px!important;margin-top:2px!important;grid-template-columns:repeat(6,calc(132px*var(--s)))!important}figcaption{padding:1px 6px!important}h3{font-size:12px!important}';document.head.append(st)}
+ const s=Q.get('s');if(s)document.documentElement.style.setProperty('--s',s);const g=Q.get('g');views.forEach(v=>{paint(v);if(v.S&&v.S.im)v.S.im.addEventListener('load',()=>{v.S.ok=true;paint(v)})})}
+else{sync();requestAnimationFrame(loop)}
+</script>

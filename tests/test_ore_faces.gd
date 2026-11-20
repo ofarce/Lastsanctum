@@ -7,8 +7,7 @@ const Blocks := preload("res://data/mineable_blocks.gd")
 
 
 func _world() -> Array:
-	var main: Node = load("res://main/main.tscn").instantiate()
-	(Engine.get_main_loop() as SceneTree).root.add_child(main)
+	var main := shared_main()
 	var sim: Simulation = main.get_node("Simulation")
 	sim.paused = true
 	sim.new_game(SEED)
@@ -52,7 +51,6 @@ func test_ore_flank_appears_and_leaves_with_the_cell() -> void:
 	check_eq(layer.offset, (face as Sprite2D).offset, "calque calé sur la paroi")
 	world.dig_cell(ore.x, ore.y)
 	check(_face_at(world, below) == null, "creuser le filon retire sa paroi et son calque")
-	main.queue_free()
 
 
 func test_plain_rock_flank_has_no_ore() -> void:
@@ -74,7 +72,6 @@ func test_plain_rock_flank_has_no_ore() -> void:
 	world.dig_cell(rock.x, rock.y + 1)
 	var face := _face_at(world, rock + Vector2i.DOWN)
 	check(face != null and not face.has_node("OreFace"), "paroi de roche simple sans minerai")
-	main.queue_free()
 
 
 func test_ore_atlas_layout() -> void:

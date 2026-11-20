@@ -9,9 +9,7 @@ static var _main: Node
 
 
 func game() -> Simulation:
-	if _main == null:
-		_main = load("res://main/main.tscn").instantiate()
-		(Engine.get_main_loop() as SceneTree).root.add_child(_main)
+	_main = shared_main()
 	var sim: Simulation = _main.get_node("Simulation")
 	sim.paused = true
 	sim.new_game(SEED)
@@ -22,6 +20,8 @@ func game() -> Simulation:
 	u.z = -130.0
 	u.tx = u.x
 	u.tz = u.z
+	# Brouillard recalculé autour de l'Ingénieur déplacé : un ennemi posé près de lui est visible, donc attaquable.
+	sim.world.fog.refresh(sim.state())
 	return sim
 
 
@@ -68,6 +68,13 @@ func built(type: String, x: float, z: float) -> Building:
 	b.finished_at = -10.0
 	GameState.buildings.append(b)
 	return b
+
+
+## Loge `places` Exilés de plus (Catalog.POP_PER_BEDROOM par Chambre achevée, sans personnel) : la
+## population plafonne sinon à Catalog.POP_BASE et refuse les formations.
+func house(_sim: Simulation, places: int) -> void:
+	for k in ceili(float(places) / Catalog.POP_PER_BEDROOM):
+		built("bedroom", -70.0 + 6.0 * k, -150.0)
 
 
 ## Bâtiment servi (sim/production.gd) : `n` adeptes de son culte déjà à leur poste.

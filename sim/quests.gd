@@ -5,7 +5,7 @@ extends RefCounted
 ##   1. Réactiver l'Ancre : l'Ancre est restaurée (GameState.orb_active).
 ##   2. La Salamandre : démarre quand l'Ingénieur perd son armure (Unit.unarmored, surcharge de l'Ancre) ;
 ##      quatre autels indépendants, un par divinité (un deuxième temple de Sigil ne compte pas deux fois).
-##   3. Le Coffre Antique : Sceau de Minage fabriqué (recherche mining_artifact), Ingénieur entré dans la
+##   3. Le Coffre Antique (Sceau de minage déjà remis par la capsule) : Ingénieur entré dans la
 ##      réserve scellée (CaveShape.in_vault), coffre ouvert (GameState.base_inventory_unlocked).
 ##   4. Un mystérieux compagnon : annoncée « Bientôt ! », jamais active.
 ## Objectif prioritaire : « Éliminer la Martyre de Byrsa en combat singulier » tant que le boss vit
@@ -25,8 +25,6 @@ const ALTAR_QUOTES := {
 const ALTAR_QUOTE_TIME := 6.0
 ## Étapes du Coffre Antique : libellé, réplique, réplique une fois l'étape validée.
 const CHEST_STEPS := [
-	["Fabriquer un Sceau de Minage", "Ces murs ont été scellés par les miens. Il me faut un sceau pour les rouvrir.",
-		"Ce sceau devrait ne faire qu’une bouchée de ces murs en pierre."],
 	["Ouvrir un chemin vers le Coffre Antique", "Le Coffre Antique est quelque part derrière cette roche. Je dois creuser jusqu’à lui.",
 		"Le voilà. Intact, après tout ce temps."],
 	["Ouvrir le Coffre Antique", "Il ne reste qu’à l’ouvrir.",
@@ -72,11 +70,9 @@ func _advance() -> void:
 			quest = "chest"
 			chest_step = 0
 	if quest == "chest":
-		if chest_step == 0 and GameState.research_done.has("mining_artifact"):
+		if chest_step == 0 and _engineer_in_vault():
 			chest_step = 1
-		if chest_step == 1 and _engineer_in_vault():
-			chest_step = 2
-		if chest_step == 2 and GameState.base_inventory_unlocked:
+		if chest_step == 1 and GameState.base_inventory_unlocked:
 			quest = "companion"
 
 

@@ -1,0 +1,418 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Arbalestrie · effets de tir</title>
+<style>
+/* Planche de propositions : animation de tir de l'Arbalestrie (commune) et signature de tir par munition. */
+:root{--bg:#14161b;--panel:#1d2028;--line:#2c313c;--ink:#e6e8ee;--mute:#9aa1b0;--acc:#7ab0ff;
+  --ok:#5fbf7a;--redo:#e0b04a;--no:#e0583a;color-scheme:dark}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,sans-serif}
+main{max-width:1400px;margin:0 auto;padding:24px 16px 60px}
+h1{font-size:26px;margin:0 0 4px}
+h2{font-size:19px;margin:34px 0 10px;display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+h2 small{color:var(--mute);font-weight:400;font-size:13px}
+.sub{color:var(--mute);margin:0 0 14px;max-width:980px}
+.note{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px 14px;color:#c9cdd6;font-size:14px;max-width:980px}
+.note b{color:var(--ink)}
+.bar{position:sticky;top:0;background:var(--bg);padding:8px 0;z-index:5;display:flex;gap:6px;flex-wrap:wrap;align-items:center;border-bottom:1px solid var(--line);margin:14px 0 6px}
+.bar .lab{color:var(--mute);font-size:13px}
+button{background:#2a2f3a;color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:5px 10px;cursor:pointer;font:inherit;font-size:13px}
+button:hover{border-color:#4a5262}
+button.on{background:#26364f;border-color:#3e5d8a}
+button:focus-visible,textarea:focus-visible{outline:2px solid var(--acc);outline-offset:1px}
+#tally{margin-left:auto;font-size:13px;color:var(--mute)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,600px),1fr));gap:14px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px 14px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.card[data-v="garder"]{border-color:#2f6a40}.card[data-v="revoir"]{border-color:#7a6226}.card[data-v="rejeter"]{border-color:#7a3a2a;opacity:.75}
+.card.ref{border-style:dashed}
+.card h3{margin:0;font-size:16px}
+.card h3 .tag{font:12px/1 ui-monospace,monospace;color:var(--mute);font-weight:400;margin-left:6px}
+.card p{margin:0;color:#c9cdd6;font-size:14px}
+.card ul{margin:0;padding-left:18px;color:#c9cdd6;font-size:14px}
+.spec{font:12px/1.45 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--mute)}
+.view{display:flex;gap:6px;align-items:stretch}
+.view figure{margin:0;min-width:0;display:flex;flex-direction:column;gap:3px;font-size:11px;color:var(--mute)}
+.view .main{flex:200 1 0}.view .loupe{flex:92 1 0}
+canvas.px{image-rendering:pixelated;width:100%;height:auto;display:block;border-radius:4px;background:#000}
+.ammo{display:flex;align-items:center;gap:10px;margin:22px 0 8px;font-weight:600}
+.ammo i{width:12px;height:12px;border-radius:50%;display:inline-block;border:1px solid #0a0a0c}
+.ammo small{color:var(--mute);font-weight:400}
+.verdict{display:flex;gap:6px;flex-wrap:wrap}
+.verdict button{flex:1 1 0;min-width:0}
+.verdict button.sel[data-v="garder"]{background:#1f3a28;border-color:var(--ok)}
+.verdict button.sel[data-v="revoir"]{background:#3a321b;border-color:var(--redo)}
+.verdict button.sel[data-v="rejeter"]{background:#3a2019;border-color:var(--no)}
+textarea{background:#171a21;color:var(--ink);border:1px solid var(--line);border-radius:6px;font:inherit;font-size:13px;padding:6px 8px;resize:vertical;min-height:32px;width:100%;box-sizing:border-box}
+#out{display:none;margin-top:10px;min-height:160px;font-family:ui-monospace,monospace}
+</style>
+</head>
+<body>
+<main>
+<h1>Arbalestrie · effets de tir</h1>
+<p class="sub">Deux chantiers : une animation de tir pour l'arme elle-même, commune à toutes les munitions, puis une signature de départ propre à chaque munition, à la bouche du canon. Rien ne change dans les dégâts, la cadence ou les coûts : tout est visuel. Les scènes sont en pixels natifs du jeu (8 px par unité), la balle file à 40 unités/s ; le vol et l'impact sont ceux déjà en jeu.</p>
+<div class="note"><b>Mode d'emploi.</b> À gauche la scène, à droite la loupe sur la bouche du canon. Passez en <b>Rafale</b> pour juger chaque effet à la cadence réelle (4 tirs/s, 6 pour les spirituelles) et en <b>× 0,1</b> pour le détail. Section 1 : les pistes se cumulent, gardez-en autant que vous voulez. Section 2 : gardez une piste par munition. « Copier le bilan » produit le texte à me coller.</div>
+
+<div class="note" style="margin-top:8px"><b>Second bilan du 20/11 intégré en jeu.</b> Culasse et Souffle pour toutes les munitions ; Arc de rupture (spirituelles), Gueule de feu (Indra), Feu follet (Medeina), Prisme (Sigil), Rond d’orbite (Aether) ; son par munition, lueur colorée et couleur de la munition sur l’arme. La planche reste pour référence.</div>
+
+<div class="bar">
+  <span class="lab">Vitesse</span>
+  <button data-speed="1" class="on">× 1</button><button data-speed="0.35">× 0,35</button><button data-speed="0.1">× 0,1</button>
+  <button id="pause">Pause</button>
+  <span class="lab" style="margin-left:10px">Tir</span>
+  <button data-burst="0" class="on">Coup par coup</button><button data-burst="1">Rafale</button>
+  <button id="copy">Copier le bilan</button>
+  <span id="tally"></span>
+</div>
+<textarea id="out" readonly></textarea>
+
+<h2>1 · Animation de tir de l'Arbalestrie <small>commune à toutes les munitions, montrée avec les balles spirituelles ; pistes cumulables</small></h2>
+<div class="grid" id="anim"></div>
+
+<h2>2 · Signature de tir par munition <small>une piste à garder par munition ; Medeina et Sigil ont deux nouvelles pistes (3 et 4)</small></h2>
+<div id="sig"></div>
+
+<h2>3 · Autour du tir</h2>
+<div class="grid" id="around"></div>
+</main>
+<script src="assets/engineer-colosse.js"></script>
+<script src="assets/engineer-exile.js"></script>
+<script src="assets/engineer-cannon.js"></script>
+<script>
+'use strict';
+// ====================== Données ======================
+const PAL={
+ spirit:['#0a2a33','#12596b','#1f9fb8','#5ce8ff','#c8fbff','#ffffff'],
+ indra:['#2a1204','#7a3208','#d0680e','#ff9a2a','#ffd08a','#fff4e0'],
+ medeina:['#0c2410','#1f5a26','#3c9a3e','#6fd36b','#c4f5b0','#f4fff0'],
+ sigil:['#1e1f24','#4a4c54','#8a8c94','#c4c3bf','#e8e4da','#ffffff'],
+ aether:['#0e1030','#2a2e7a','#4f55c8','#8a8cf0','#c8c8ff','#ffffff'],
+};
+const AM={
+ spirit:{name:'Balles spirituelles',cd:1/6,n:1,why:'6 tirs/s : l’effet doit tenir en 0,1 s'},
+ indra:{name:'Balles d’Indra',cd:.25,n:1,why:'+50 % de dégâts : le tir le plus lourd'},
+ medeina:{name:'Balles de Medeina',cd:.25,n:1,why:'soigne : le tir le plus doux'},
+ sigil:{name:'Balles de Sigil',cd:.25,n:2,why:'deux balles : tout va par deux'},
+ aether:{name:'Balles d’Aether',cd:.25,n:1,splash:true,why:'onde à l’impact : le départ l’annonce'},
+};
+const FLASH={spirit:'#ffffff',indra:'#ff9a2a',medeina:'#c4f5b0',sigil:'#ffffff',aether:'#8a8cf0'};
+
+// ====================== Verdicts ======================
+const KEY='arbalestrie-tir-v1';
+let store={};try{store=JSON.parse(localStorage.getItem(KEY)||'{}')}catch(e){}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(store))}catch(e){}tally()}
+function tally(){const v=Object.values(store).map(s=>s.v);document.getElementById('tally').innerHTML=
+ `<b style="color:var(--ok)">${v.filter(x=>x==='garder').length}</b> gardés · <b style="color:var(--redo)">${v.filter(x=>x==='revoir').length}</b> à revoir · <b style="color:var(--no)">${v.filter(x=>x==='rejeter').length}</b> rejetés`}
+function verdict(card,id,title){
+ card.dataset.id=id;card.dataset.title=title;const s=store[id]||{};
+ const box=document.createElement('div');box.className='verdict';
+ for(const [v,l] of [['garder','Garder'],['revoir','À revoir'],['rejeter','Rejeter']]){
+  const b=document.createElement('button');b.dataset.v=v;b.textContent=l;if(s.v===v)b.classList.add('sel');
+  b.onclick=()=>{const cur=store[id]||{};cur.v=cur.v===v?undefined:v;store[id]=cur;card.dataset.v=cur.v||'';
+   box.querySelectorAll('button').forEach(x=>x.classList.toggle('sel',x.dataset.v===cur.v));save()};box.append(b)}
+ const t=document.createElement('textarea');t.placeholder='Note (facultative)';t.value=s.note||'';t.rows=1;
+ t.oninput=()=>{const cur=store[id]||{};cur.note=t.value;store[id]=cur;save()};
+ if(s.v)card.dataset.v=s.v;card.append(box,t)}
+document.getElementById('copy').onclick=()=>{
+ const lines=['Bilan · planches/arbalestrie-tir-planche.html'];
+ document.querySelectorAll('.card[data-id]').forEach(c=>{const s=store[c.dataset.id]||{};
+  lines.push(`- ${c.dataset.title} : ${s.v?({garder:'GARDER',revoir:'À REVOIR',rejeter:'REJETER'})[s.v]:'—'}${s.note?' · '+s.note:''}`)});
+ const o=document.getElementById('out');o.style.display='block';o.value=lines.join('\n');o.select();
+ try{navigator.clipboard.writeText(o.value).catch(()=>{})}catch(e){}};
+
+// ====================== Pixels ======================
+function nctx(w,h){const c=document.createElement('canvas');c.width=w;c.height=h;c.className='px';return c}
+let G=null;
+function P(x,y,col,a=1){if(a<=0)return;G.globalAlpha=Math.min(1,a);G.fillStyle=col;G.fillRect(Math.round(x),Math.round(y),1,1);G.globalAlpha=1}
+function rng(seed){let s=seed|0||1;return()=>{s^=s<<13;s^=s>>>17;s^=s<<5;return((s>>>0)%10000)/10000}}
+const INK='#0a0a0c',TAU=6.283;
+const R8=[[-1,-1],[0,-1],[1,-1],[-1,0],[1,0],[-1,1],[0,1],[1,1]],PLUS=[[0,0],[-1,0],[1,0],[0,-1],[0,1]];
+// Lueur additive (lumière colorée du tir sur le décor et l'Ingénieur).
+function glow(x,y,r,col,a){if(a<=0)return;G.globalCompositeOperation='lighter';
+ for(let j=-r;j<=r;j++)for(let i=-r;i<=r;i++){const d=Math.hypot(i,j)/r;if(d<1)P(x+i,y+j,col,a*(1-d)*(1-d))}
+ G.globalCompositeOperation='source-over'}
+function ell(x,y,rx,ry,col,a,keep){const n=Math.max(8,Math.round((rx+ry)*3.2));
+ for(let k=0;k<n;k++){const th=k/n*TAU,c=Math.cos(th),s=Math.sin(th);if(!keep||keep(c,s,k))P(x+c*rx,y+s*ry,col,a)}}
+// Particule balistique qui rebondit au sol (gy).
+function part(x,y,vx,vy,g,t,gy){let X=x+vx*t,Y=y+vy*t+g*t*t/2;if(Y>gy)Y=gy-Math.abs(Math.sin(t*16))*2*Math.max(0,1-t*1.6);return[X,Y]}
+function floor(w,h){const c=document.createElement('canvas');c.width=w;c.height=h;const g=c.getContext('2d');const r=rng(7);
+ const T=['#3c3f4a','#454855','#4d505e','#565a68'];
+ for(let y=0;y<h;y+=8){const off=(y/8)%2?8:0;for(let x=-16;x<w;x+=16){g.fillStyle=T[(r()*4)|0];g.fillRect(x+off,y,15,7);
+  g.fillStyle='rgba(255,255,255,.06)';g.fillRect(x+off,y,15,1);g.fillStyle='#24262e';g.fillRect(x+off,y+7,16,1);g.fillRect(x+off+15,y,1,8)}}
+ for(let i=0;i<w*h/60;i++){g.fillStyle=r()<.5?'rgba(255,255,255,.05)':'rgba(0,0,0,.12)';g.fillRect((r()*w)|0,(r()*h)|0,1,1)}
+ return c}
+// Ingénieur à l'Arbalestrie (cannonBody), une image par cran de recul, avec ou sans l'éclair cyan d'origine.
+const ENG={};
+function engImg(rec,flash){const k=rec+(flash?'f':'');return ENG[k]||(ENG[k]=render(cannonBody({ang:0,rec,flash}),1))}
+const MUZ={x:42,y:30},FEET={x:24,y:46};
+function engineer(x,y,rec,flash){
+ G.globalAlpha=.35;G.fillStyle='#000';G.beginPath();G.ellipse(x,y,8,2.5,0,0,7);G.fill();G.globalAlpha=1;
+ G.drawImage(engImg(rec,flash),Math.round(x-FEET.x),Math.round(y-FEET.y))}
+const scout=new Image();scout.src='../assets/imported/enemies/scout_idle.png';
+const TINT=document.createElement('canvas');TINT.width=40;TINT.height=42;
+function enemy(x,y,flash,t){
+ const f=Math.floor(t*10)%24,sx=(f%12)*40,sy=Math.floor(f/12)*42;
+ G.globalAlpha=.35;G.fillStyle='#000';G.beginPath();G.ellipse(x,y,7,2.5,0,0,7);G.fill();G.globalAlpha=1;
+ if(!(scout.complete&&scout.naturalWidth))return;
+ const o=TINT.getContext('2d');o.clearRect(0,0,40,42);o.save();o.translate(40,0);o.scale(-1,1);o.drawImage(scout,sx,sy,40,42,0,0,40,42);o.restore();
+ if(flash){o.globalCompositeOperation='source-atop';o.globalAlpha=flash.a;o.fillStyle=flash.c;o.fillRect(0,0,40,42);o.globalAlpha=1;o.globalCompositeOperation='source-over'}
+ G.drawImage(TINT,Math.round(x-25),Math.round(y-40))}
+
+// ---- Balles en vol et impacts : ceux du jeu (planche arbalestrie-modulaire) ----
+function ballSpirit(x,y,age,seed){for(const[a,b]of R8)P(x+a,y+b,INK);P(x,y,'#5b6068');
+ const r=rng(seed+Math.floor(age*30)*7);
+ for(let k=0;k<3;k++){if(r()<.25)continue;let a=r()*TAU,sx=x+Math.round(Math.cos(a)*2),sy=y+Math.round(Math.sin(a)*2);
+  for(let s=0;s<2;s++){P(sx,sy,s?PAL.spirit[3]:'#e9fbff');const b=a+(s&1?.9:-.9);sx+=Math.round(Math.cos(b));sy+=Math.round(Math.sin(b))}}}
+function ballIndra(x,y,age,seed){const C=PAL.indra,r=rng(seed+Math.floor(age*30)*7);
+ for(let i=1;i<=6;i++){const a=1-i/7;P(x-2-i,y,i<3?C[3]:C[2],a);P(x-2-i,y+(i%2?-1:1),C[2],a*.6)}
+ for(let b=-2;b<=2;b++)for(let a=-2;a<=2;a++){if(Math.abs(a)===2&&Math.abs(b)===2)continue;P(x+a,y+b,Math.abs(a)<2&&Math.abs(b)<2?C[3]:INK)}
+ P(x,y,C[5]);P(x+1,y,C[4]);P(x-1,y-1,C[4]);P(x,y-1,C[5],.8);P(x+1,y+1,C[2]);P(x-1,y+1,C[2]);
+ if(r()<.4)P(x-4-((r()*3)|0),y-3-((r()*2)|0),C[4])}
+function ballMedeina(x,y,age){const C=PAL.medeina;for(const[a,b]of R8)P(x+a,y+b,INK);P(x,y,C[3]);P(x-1,y-1,C[4],.8);
+ for(let k=0;k<2;k++){const a=age*18+k*Math.PI;P(x+Math.round(Math.cos(a)*3),y+Math.round(Math.sin(a)*2),k?C[4]:C[3])}
+ for(let i=1;i<4;i++)P(x-2-i*2,y+Math.round(i*.6+Math.sin(age*20+i)),C[2],.6-i*.15)}
+function ballSigil(x,y,age){const C=PAL.sigil;
+ for(const[a,b]of[[-1,-1],[0,-1],[-1,0]])P(x+a,y+b,C[3]);for(const[a,b]of[[1,-1],[1,0],[-1,1],[0,1],[1,1]])P(x+a,y+b,INK);P(x,y,C[4]);
+ const ph=Math.floor(age*24)%3;P(x-1+ph,y-1+Math.min(ph,1),C[5]);P(x-4,y,C[4],.8);P(x-5,y,C[4],.5);P(x-8,y,C[3],.5)}
+function ballAether(x,y,age){const C=PAL.aether;
+ for(let a=0;a<12;a++){const t=a/12*TAU;const ox=Math.round(Math.cos(t)*3.5),oy=Math.round(Math.sin(t)*1.5);if(Math.abs(ox)>1||Math.abs(oy)>1)P(x+ox,y+oy,C[2],.55)}
+ for(const[a,b]of R8)P(x+a,y+b,INK);P(x,y,C[4]);const t=age*14;P(x+Math.round(Math.cos(t)*3.5),y+Math.round(Math.sin(t)*1.5),C[5]);P(x-4,y,C[2],.4)}
+const BALL={spirit:ballSpirit,indra:ballIndra,medeina:ballMedeina,sigil:ballSigil,aether:ballAether};
+function hitSmall(x,y,age,C){const p=age/.28;if(p>1)return;
+ if(p<.4){for(const[a,b]of PLUS)P(x+a,y+b,C[5]);for(const[a,b]of[[-3,-2],[2,-3],[3,2],[-2,3]])P(x+a,y+b,C[3])}
+ else for(const[a,b]of[[-2,-2],[1,-1],[0,-3]])P(x+a,y+b-Math.round(p*3),C[3],.6*(1-p))}
+function hitIndra(x,y,age){const C=PAL.indra,p=age/.45;if(p>1)return;
+ if(p<.3){for(let i=-3;i<=3;i++){P(x+i,y,C[Math.abs(i)<2?5:3]);P(x,y+i,C[Math.abs(i)<2?5:3])}}
+ const R=Math.round(3+p*5);for(let k=0;k<16;k++){const a=k/16*TAU;P(x+Math.round(Math.cos(a)*R),y+Math.round(Math.sin(a)*R*.6),C[2],.7*(1-p))}}
+function hitAether(x,gy,age){const C=PAL.aether,p=Math.min(1,age/.3);if(age>.55)return;const f=age<.3?1:1-(age-.3)/.25;
+ const R=2+p*30;const n=Math.round(R*5);for(let k=0;k<n;k++){const a=k/n*TAU;P(x+Math.cos(a)*R,gy+Math.sin(a)*R,k%3?C[3]:C[4],.85*f)}
+ for(let k=0;k<8;k++){const a=k/8*TAU+.3;P(x+Math.cos(a)*R,gy+Math.sin(a)*R-Math.round(p*4),C[5],f)}}
+
+// ====================== Poses de l'arme ======================
+// rec : recul du canon en px ; flash : éclair cyan d'origine ; dx : décalage du corps.
+const POSE_NOW=t=>t<.05?{rec:2,flash:true}:t<.12?{rec:1}:{rec:0};      // en jeu aujourd'hui
+const POSE_MUTE=t=>t<.05?{rec:2}:t<.12?{rec:1}:{rec:0};                // même recul, éclair remplacé par la signature
+const steps=(...s)=>t=>{for(const[lim,rec,dx,flash]of s)if(t<lim)return{rec,dx:dx||0,flash:!!flash};return{rec:0}};
+
+// ====================== 1 · Animations de l'arme ======================
+const SMOKE=['#c9cdd6','#9aa1b0','#6d7482'];
+const ANIM=[
+ {id:'now',ref:true,am:'spirit',name:'Actuel',tag:'référence',pose:POSE_NOW,
+  desc:'Ce qui est en jeu : le canon recule de 2 px puis 1 px, petit éclair cyan à la bouche pendant 0,05 s.',
+  spec:'recul 2 → 1 → 0 px en 0,12 s'},
+ {id:'amorti',am:'spirit',name:'A · Recul amorti',
+  pose:steps([.03,3,-1,true],[.07,3,-1],[.11,2],[.16,1]),
+  over(t,C){const c=PAL.spirit,M=C.M;if(t<.03)for(const[a,b]of[[-1,-3],[-1,3],[2,-2],[2,2]])P(M.x+a-3,M.y+b,c[4]);
+   else if(t<.07)for(const[a,b]of[[1,-4],[1,4],[5,-3],[5,3],[7,0]])P(M.x+a-3,M.y+b,c[3],.8)},
+  desc:'Le coup se lit dans le corps : le canon recule franchement de 3 px, l’Ingénieur encaisse d’1 px vers l’arrière, puis l’arme revient en trois crans. L’éclair de bouche s’ouvre en étoile sur deux images.',
+  spec:'recul 3 → 3 → 2 → 1 → 0 px en 0,16 s · corps −1 px pendant 0,07 s'},
+ {id:'culasse',am:'spirit',name:'B · Culasse',pose:POSE_NOW,
+  over(t,C){const c=PAL.spirit,M=C.M,r=rng(C.sd),bx=M.x-12,by=M.y-2;
+   if(t<.75){const[x,y]=part(bx,by,-22-r()*14,-58-r()*12,300,t,C.gy+1),a=t<.5?1:1-(t-.5)/.25;
+    P(x,y,t<.12?c[4]:t<.3?c[2]:'#6d7482',a);P(x+1,y,t<.12?c[3]:'#3e434d',a)}
+   if(t<.4)for(let k=0;k<3;k++){const q=t/.4;P(bx+1-k+Math.sin(t*14+k)*1.2,by-2-q*(6+k*2),SMOKE[k],.6*(1-q))}},
+  desc:'Chaque tir éjecte une douille de mana par la culasse : elle part vers l’arrière encore cyan, s’éteint en gris, rebondit une fois au sol et s’efface. Un filet de vapeur monte de la culasse. En rafale, les douilles pleuvent derrière l’Ingénieur.',
+  spec:'douille 2 px, 0,75 s · vapeur 0,4 s · recul actuel'},
+ {id:'souffle',am:'spirit',name:'C · Souffle',pose:POSE_NOW,
+  under(t,C){const M=C.M;if(t<.28){const q=t/.28,e=1-(1-q)*(1-q);
+    ell(M.x+3,C.gy+1,3+e*13,1+e*3.5,'#8d8f98',.55*(1-q),(c,s,k)=>k%2===0);ell(M.x+3,C.gy+1,2+e*8,.6+e*2.2,'#6d7482',.35*(1-q))}
+   if(t<.3)for(let k=0;k<3;k++){const q=t/.3;P(C.E.x-7-q*(5+k*2),C.gy-k-q*2,SMOKE[k],.6*(1-q))}},
+  over(t,C){const M=C.M;if(t>=.02&&t<.1){const q=(t-.02)/.08,x=M.x+3+q*6;
+    for(let j=-4;j<=4;j++)P(x+1.6*(1-(j/4)*(j/4)),M.y+j,'#e9fbff',.7*(1-q))}},
+  desc:'Le tir déplace de l’air : un anneau de poussière s’ouvre au sol sous la bouche du canon, un arc de choc part vers l’avant sur 6 px, et un peu de poussière glisse derrière les bottes.',
+  spec:'anneau au sol 16 × 4,5 px en 0,28 s · arc de choc 0,08 s · recul actuel'},
+ {id:'chauffe',am:'spirit',name:'D · Chauffe',pose:POSE_NOW,
+  over(t,C){const c=PAL.spirit,M=C.M;G.globalCompositeOperation='lighter';
+   if(t<.14){const x=M.x-1-t/.14*11;for(let j=-1;j<=1;j++){P(x,M.y+j,c[4],.9);P(x+1,M.y+j,c[3],.5)}}
+   const h=Math.max(0,1-t/.7);for(let i=1;i<=10;i++)P(M.x-i,M.y,c[2],.3*h*(1-i/14));
+   G.globalCompositeOperation='source-over';
+   if(t>.1&&t<.7){const q=(t-.1)/.6;P(M.x-2+Math.sin(t*9+C.sd)*1.5,M.y-3-q*9,SMOKE[1],.28*(1-q))}},
+  desc:'L’arme vit après le tir : une impulsion cyan remonte le canon de la bouche à la main en 0,14 s, et le fût garde une lueur qui retombe en 0,7 s. Au coup par coup c’est discret ; en rafale la lueur s’additionne, le canon reste allumé et se met à fumer.',
+  spec:'impulsion 0,14 s · lueur résiduelle 0,7 s, cumulée en rafale · recul actuel'},
+];
+
+// ====================== 2 · Signatures par munition ======================
+const SIG=[
+ // ---- Spirituelles ----
+ {id:'spirit-1',am:'spirit',name:'Étincelle',pose:POSE_MUTE,
+  over(t,C){const c=PAL.spirit,M=C.M;if(t<.035){for(let i=-2;i<=2;i++){P(M.x+1+i,M.y,c[5]);P(M.x+1,M.y+i,c[5])}P(M.x+4,M.y,c[3])}
+   else if(t<.07)for(const[a,b]of[[-2,-2],[3,-3],[3,3],[-2,2],[5,0]])P(M.x+1+a,M.y+b,c[3],.85);
+   glow(M.x+1,M.y,6,c[2],.5*(1-t/.07))},
+  desc:'Le strict minimum, fait pour la cadence : une croix blanche d’une image, quatre étincelles cyan à l’image suivante, une lueur de 6 px.',
+  spec:'0,07 s · recul actuel · lueur cyan faible'},
+ {id:'spirit-2',am:'spirit',name:'Arc de rupture',pose:POSE_MUTE,
+  over(t,C){const c=PAL.spirit,M=C.M;if(t<.09){const bx=M.x+t*320,r=rng(C.sd+Math.floor(t*60)*13);let o=0;
+    for(let x=M.x+1;x<bx-2;x++){if(r()<.45)o=Math.max(-2,Math.min(2,o+(r()<.5?-1:1)));P(x,M.y+o,(x&1)?c[5]:c[3],.95-t*4)}
+    glow(M.x+1,M.y,5,c[2],.45)}
+   else if(t<.3){const r=rng(C.sd);for(let k=0;k<2;k++){const[x,y]=part(M.x,M.y,10+r()*20,-20-r()*20,260,t-.09,C.gy);P(x,y,c[3+k],1-(t-.09)/.21)}}},
+  desc:'Un filament d’éclair relie la bouche du canon à la balle pendant ses 25 premiers pixels, se retrace à chaque image puis casse ; deux étincelles retombent. La balle semble arrachée à l’arme.',
+  spec:'filament 0,09 s · étincelles 0,2 s · recul actuel'},
+ // ---- Indra ----
+ {id:'indra-1',am:'indra',name:'Gueule de feu',
+  pose:steps([.05,4,-1],[.1,3,-1],[.16,2],[.22,1]),
+  over(t,C){const c=PAL.indra,M=C.M;
+   if(t<.14){const p=t/.14,L=Math.round(12*Math.min(1,p/.25));
+    for(let i=0;i<=L;i++){const hw=Math.sin((i+1)/(L+2)*Math.PI)*3.4*(1-p*.5);
+     for(let j=-Math.round(hw);j<=Math.round(hw);j++){const heat=1-i/14-p*.55-Math.abs(j)/(hw+1)*.45;
+      if(heat>0)P(M.x+1+i,M.y+j,heat>.6?c[5]:heat>.42?c[4]:heat>.22?c[3]:c[2])}}}
+   if(t<.22)glow(M.x+4,M.y,15,c[2],.42*(1-t/.22));
+   const r=rng(C.sd);for(let k=0;k<4;k++){const vx=18+r()*45,vy=-55+r()*40,life=.45+r()*.25;
+    if(t<life){const[x,y]=part(M.x+3,M.y,vx,vy,230,t,C.gy+1);P(x,y,t<life*.5?c[4]:c[3],1-t/life)}}},
+  desc:'Le canon crache : une flamme de 12 px, blanche au cœur, se gonfle puis se résorbe en 0,14 s ; quatre braises retombent et rebondissent au sol ; l’Ingénieur et les dalles prennent une lueur orange. Le recul double : 4 px au canon, 1 px au corps.',
+  spec:'flamme 0,14 s · braises 0,7 s · lueur orange forte · recul 4 px'},
+ {id:'indra-2',am:'indra',name:'Enclume',
+  pose:steps([.05,3,-1],[.1,2],[.16,1]),shake:t=>t<.035?1:t<.07?-1:0,
+  under(t,C){const c=PAL.indra,M=C.M;if(t<.32){const q=t/.32,e=1-(1-q)*(1-q);
+    ell(M.x+2,C.gy+1,4+e*15,1.5+e*4.5,c[3],.85*(1-q));ell(M.x+2,C.gy+1,3+e*10,1+e*3,c[2],.5*(1-q))}},
+  over(t,C){const c=PAL.indra,M=C.M;
+   if(t<.04){for(let j=-5;j<=5;j++){P(M.x+1,M.y+j,c[5]);if(Math.abs(j)<4)P(M.x+2,M.y+j,c[4])}glow(M.x+2,M.y,12,c[3],.5)}
+   else if(t<.16){const q=(t-.04)/.12;for(const off of[0,4]){const x=M.x+3+q*9-off;if(x<M.x+2)continue;
+     for(let j=-4;j<=4;j++)P(x+1.8*(1-(j/4)*(j/4)),M.y+j,off?c[3]:c[4],(off?.5:.9)*(1-q))}}},
+  desc:'Un coup de marteau plutôt qu’une flamme : barre blanche verticale d’une image, deux arcs de choc orange qui avancent, un anneau de chaleur qui s’ouvre au sol, et l’écran tressaute d’1 px pendant deux images.',
+  spec:'0,32 s · secousse d’écran 1 px (0,07 s) · recul 3 px'},
+ // ---- Medeina ----
+ {id:'medeina-1',am:'medeina',name:'Pollen',
+  pose:steps([.08,1]),
+  over(t,C){const c=PAL.medeina,M=C.M,r=rng(C.sd);glow(M.x+2,M.y,6,c[2],.4*(1-t/.12));
+   for(let k=0;k<12;k++){const a=(r()-.5)*1.1,v=30+r()*70,life=.5+r()*.4,ph=r()*TAU;if(t>=life)continue;
+    const d=v*(1-Math.exp(-7*t))/7;P(M.x+2+Math.cos(a)*d+Math.sin(t*6+ph)*1.2,M.y+Math.sin(a)*d+t*t*14,c[3+k%3],1-t/life)}},
+  desc:'Pas de détonation : une bouffée de douze spores vertes sort en éventail, ralentit aussitôt et retombe en flottant pendant près d’une seconde. Le canon recule à peine. En rafale, l’Ingénieur tire dans un nuage de pollen.',
+  spec:'spores 0,5 à 0,9 s · recul 1 px · lueur verte faible'},
+ {id:'medeina-2',am:'medeina',name:'Pousses',
+  pose:steps([.08,1]),
+  under(t,C){const c=PAL.medeina,M=C.M;for(let k=0;k<5;k++){const tt=t-k*.03;if(tt<0||tt>.7)continue;
+    const x=M.x+1+k*5,y=C.gy+(k%2?2:-1),h=Math.min(3,Math.floor(tt/.04)+1),a=tt<.35?1:1-(tt-.35)/.35,old=tt>.45;
+    for(let i=0;i<h;i++)P(x,y-i,old?c[1]:i===h-1?c[4]:c[2],a);if(h===3)P(x+(k%2?1:-1),y-2,old?c[2]:c[3],a)}},
+  over(t,C){const c=PAL.medeina,M=C.M;if(t<.3)for(let k=0;k<2;k++){const a=t*22+k*Math.PI,R=2+t*12;P(M.x+2+Math.cos(a)*R*.7,M.y+Math.sin(a)*R,c[4-k],1-t/.3)}},
+  desc:'La vie suit le tir : cinq pousses lèvent du sol l’une après l’autre sous la trajectoire, déplient une feuille puis fanent ; deux feuilles s’échappent de la bouche en spirale.',
+  spec:'pousses 0,7 s, au sol · feuilles 0,3 s · recul 1 px'},
+ // ---- Sigil ----
+ {id:'sigil-1',am:'sigil',name:'Sceau',pose:POSE_MUTE,
+  over(t,C){const c=PAL.sigil,M=C.M,x0=M.x+5;if(t>.32)return;const q=t<.06?0:(t-.06)/.26,a=1-q;
+   ell(x0,M.y,2.2,6.5,q?c[4]:c[5],a,(cc,s)=>true);
+   const d=q*9;for(const sg of[-1,1]){P(x0+q*10,M.y+sg*(6.5+d),c[5],a);P(x0-2+q*10,M.y+sg*(3+d),c[4],a);P(x0+2+q*10,M.y+sg*(3+d),c[4],a)}
+   if(!q){for(let i=-1;i<=1;i++){P(x0+i,M.y,c[5]);P(x0,M.y+i*2,c[5])}glow(x0,M.y,8,c[2],.45)}},
+  desc:'Un sceau de glyphes s’allume devant la bouche, vu de profil (ovale de 13 px). Les deux balles le traversent : il blanchit une image, puis ses marques se séparent vers le haut et le bas en suivant chacune sa balle, et s’effacent.',
+  spec:'sceau 0,06 s puis séparation 0,26 s · recul actuel'},
+ {id:'sigil-2',am:'sigil',name:'Double détente',
+  pose:steps([.035,2],[.07,0],[.105,2],[.15,1]),
+  over(t,C){const c=PAL.sigil,M=C.M;
+   for(const[sg,t0]of[[-1,0],[1,.07]]){const tt=t-t0;if(tt<0||tt>.07)continue;
+    for(let i=1;i<=7;i++){const on=tt<.035?i<=6:i>=3;if(on)P(M.x+i,M.y+sg*i*.42,tt<.035?c[5]:c[4],tt<.035?1:.6)}
+    glow(M.x+2,M.y+sg*2,5,c[2],.4)}
+   const r=rng(C.sd);for(let k=0;k<5;k++){const life=.35+r()*.2;if(t<life){const[x,y]=part(M.x+1,M.y,-8+r()*26,-28+r()*20,240,t,C.gy+1);P(x,y,c[2+k%3],1-t/life)}}},
+  desc:'L’arme claque deux fois : un trait blanc part vers le haut, un second vers le bas 0,07 s plus tard, et le canon recule à chaque fois. Des éclats de marbre tombent de la bouche. Les deux balles partent toujours ensemble : seul le geste est dédoublé.',
+  spec:'deux éclairs à 0,07 s d’écart · double recul 2 px · éclats 0,5 s'},
+ // ---- Aether ----
+ {id:'aether-1',am:'aether',name:'Rond d’orbite',pose:POSE_MUTE,
+  over(t,C){const c=PAL.aether,M=C.M;glow(M.x+2,M.y,9,c[2],.5*(1-t/.1));if(t>.34)return;
+   const q=t/.34,e=1-(1-q)*(1-q),x=M.x+2+e*13,rx=1+e*2.2,ry=3+e*7;
+   ell(x,M.y,rx,ry,c[3],.9*(1-q));ell(x-1,M.y,rx*.6,ry*.7,c[2],.45*(1-q));
+   const a=t*34;P(x+Math.cos(a)*rx,M.y+Math.sin(a)*ry,c[5],1-q)},
+  desc:'La bouche souffle un anneau, comme un rond de fumée : il avance de 13 px en s’élargissant jusqu’à 20 px de haut, une étoile court sur son bord. Il annonce en petit l’onde qui s’ouvrira à l’impact.',
+  spec:'anneau 0,34 s · lueur bleu-violet · recul actuel'},
+ {id:'aether-2',am:'aether',name:'Implosion',pose:steps([.04,-1],[.09,3],[.14,2],[.2,1]),
+  over(t,C){const c=PAL.aether,M=C.M;
+   if(t<.04){for(let j=-3;j<=3;j++)for(let i=-3;i<=3;i++)if(i*i+j*j<=9)P(M.x+2+i,M.y+j,INK);ell(M.x+2,M.y,3.5,3.5,c[2],.9)}
+   if(t<.1){const R=13*(1-t/.1);for(let k=0;k<8;k++){const a=k/8*TAU+t*12;P(M.x+2+Math.cos(a)*R,M.y+Math.sin(a)*R,c[5]);P(M.x+2+Math.cos(a)*(R+2),M.y+Math.sin(a)*(R+2),c[3],.6)}}
+   else if(t<.17){for(let i=-3;i<=3;i++){P(M.x+2+i,M.y,c[5]);P(M.x+2,M.y+i,c[5])}glow(M.x+2,M.y,9,c[3],.5)}
+   for(let k=0;k<4;k++){const tt=t-.03-k*.022;if(tt<0||tt>.5)continue;const x=M.x+7+k*7,y=M.y+(k%2?-2:2),b=Math.abs(Math.sin(tt*22+k))*(1-tt/.5);
+    P(x,y,c[5],b);if(b>.6)for(const[a,bb]of PLUS.slice(1))P(x+a,y+bb,c[3],b*.7)}},
+  desc:'Le tir aspire avant de pousser : un disque noir d’une image à la bouche, huit étoiles qui s’y précipitent en spirale, puis une croix blanche. Le canon avance d’1 px avant de reculer de 3. Quatre étoiles restent à scintiller sur les premiers pixels de la trajectoire.',
+  spec:'aspiration 0,1 s · croix 0,07 s · étoiles 0,5 s · recul −1 puis 3 px'},
+ // ---- Nouvelles pistes (bilan du 20/11 : Medeina et Sigil à revoir) ----
+ {id:'medeina-3',am:'medeina',fresh:true,name:'Feu follet',pose:steps([.08,1]),
+  over(t,C){const c=PAL.medeina,M=C.M;if(t>.55)return;const q=t/.55,x=M.x+3+10*(1-Math.exp(-5*t))+Math.sin(t*16)*1.2,y=M.y-q*q*14,a=q<.6?1:1-(q-.6)/.4;
+   glow(x,y,6,c[2],.45*a);for(const[i,j]of R8)P(x+i,y+j,c[2],.55*a);P(x,y,c[5],a);P(x,y-1,c[4],a);P(x+(Math.floor(t*20)%2?1:-1),y-2,c[3],a);P(x,y+1,c[3],a)},
+  desc:'L’esprit de Medeina accompagne le tir : une petite flamme sylvestre verte se détache de la bouche du canon, flotte en vacillant vers l’avant, monte et s’éteint en une demi-seconde. Un seul objet lisible au lieu d’une poussière.',
+  spec:'flamme 3 × 4 px, 0,55 s · lueur verte · recul 1 px'},
+ {id:'medeina-4',am:'medeina',fresh:true,name:'Reflux',pose:steps([.08,1]),
+  over(t,C){const c=PAL.medeina,M=C.M;
+   if(t<.2){const q=t/.2,r=Math.round(1+q*3);for(const[i,j]of[[1,0],[-1,0],[0,1],[0,-1]])for(let k=1;k<=r;k++)P(M.x+2+i*k,M.y+j*k,k===r?c[5]:c[3],1-q*.7);P(M.x+2,M.y,c[5])}
+   if(t>.05&&t<.3){const q=(t-.05)/.25,x=M.x-2-q*16;G.globalCompositeOperation='lighter';for(let j=-1;j<=1;j++){P(x,M.y+j,c[4],.8*(1-q*.5));P(x+1,M.y+j,c[2],.5)}G.globalCompositeOperation='source-over'}
+   if(t>.28&&t<.5)glow(C.E.x+2,C.E.y-18,7,c[2],.6*(1-(t-.28)/.22))},
+  desc:'Le tir annonce le soin : une fleur à quatre pétales s’ouvre à la bouche du canon, puis un filet vert remonte l’arme à contresens jusqu’à la poitrine de l’Ingénieur, qui luit un instant. La vie revient vers lui avant même l’impact.',
+  spec:'fleur 0,2 s · reflux le long du canon 0,25 s · lueur à la poitrine 0,22 s · recul 1 px'},
+ {id:'sigil-3',am:'sigil',fresh:true,name:'Glyphes jumeaux',pose:POSE_MUTE,
+  over(t,C){const c=PAL.sigil,M=C.M,r=rng(C.sd);
+   ['111101111100100','101101010101101'].forEach((g,n)=>{const x0=M.x+3,y0=M.y+(n?4:-8);
+    for(let i=0;i<15;i++){const d=r()*.06,vx=(r()-.5)*24,gr=60+r()*120;if(g[i]!=='1')continue;const px=x0+i%3,py=y0+((i/3)|0);
+     if(t<.08+d)P(px,py,t<.03?c[5]:c[4]);else{const tt=t-.08-d;if(tt<.35)P(px+vx*tt,py+tt*tt*gr,c[3],1-tt/.35)}}});
+   if(t<.05)glow(M.x+4,M.y,9,c[2],.4)},
+  desc:'Le Savoir s’écrit : deux glyphes de 3 × 5 pixels s’allument au-dessus et au-dessous de la bouche, un par balle, tiennent 0,08 s puis s’effritent en poussière de marbre qui tombe.',
+  spec:'glyphes 0,08 s · effritement 0,35 s · recul actuel'},
+ {id:'sigil-4',am:'sigil',fresh:true,name:'Prisme',pose:POSE_MUTE,
+  over(t,C){const c=PAL.sigil,M=C.M,x0=M.x+6;
+   if(t<.03)for(let i=1;i<=11;i++)P(M.x-i,M.y,c[5],.8);
+   if(t<.1){const a=t<.05?1:1-(t-.05)/.05;for(let k=0;k<=4;k++)for(const[sx,sy]of[[1,1],[1,-1],[-1,1],[-1,-1]])P(x0+sx*k,M.y+sy*(4-k),t<.05?c[5]:c[4],a);if(t<.05)glow(x0,M.y,8,c[2],.4)}
+   if(t>.03&&t<.22){const q=(t-.03)/.19,L=Math.min(24,q*60);for(const sg of[-1,1])for(let i=0;i<L;i++)P(x0+4+i,M.y+sg*(i*.25+1),i%2?c[5]:c[4],(1-q)*(1-i/30))}},
+  desc:'Un trait blanc traverse le canon, frappe un losange de 9 px devant la bouche et en ressort dédoublé : deux rayons fins partent sur 24 px dans l’axe des deux balles. Géométrique et net, sans particule.',
+  spec:'trait 0,03 s · losange 0,1 s · rayons 0,19 s · recul actuel'},
+];
+
+// ====================== Scènes ======================
+const W=200,H=92,FL=floor(W,H),SPEED=320,SPREAD=Math.tan(4.5*Math.PI/180);
+let burst=false;
+const scenes=[];
+function scene(def,idx){
+ const am=AM[def.am],c=nctx(W,H),g=c.getContext('2d'),z=nctx(60,60),zg=z.getContext('2d');
+ g.imageSmoothingEnabled=false;zg.imageSmoothingEnabled=false;
+ const E={x:46,y:70},T={x:168,y:70},M={x:E.x-FEET.x+MUZ.x,y:E.y-FEET.y+MUZ.y},C={M,E,gy:E.y,sd:1};
+ const hx=T.x-6,dur=(hx-M.x)/SPEED;
+ return{c,z,draw(clock){
+  const period=burst?am.cd:1.7,k=Math.floor(clock/period),t0=clock-k*period;
+  G=g;g.fillStyle='#000';g.fillRect(0,0,W,H);g.save();g.translate(0,def.shake?def.shake(t0):0);g.drawImage(FL,0,0);
+  const shots=[];for(let j=Math.max(0,k-8);j<=k;j++){const t=clock-j*period;if(t<1.5)shots.push({t,sd:idx*977+j*7919+3})}
+  for(const s of shots){C.sd=s.sd;if(def.under)def.under(s.t,C);if(am.splash&&s.t>=dur)hitAether(T.x,T.y,s.t-dur)}
+  const p=def.pose(t0);engineer(E.x+(p.dx||0),E.y,p.rec||0,!!p.flash);
+  let fl=null;for(const s of shots){const a=s.t-dur;if(a>=0&&a<.1)fl={c:FLASH[def.am],a:.55}}
+  enemy(T.x,T.y,fl,clock);
+  for(const s of shots){C.sd=s.sd;const t=s.t,d=t*SPEED,after=t-dur;
+   if(t<dur){if(am.n===2)for(const sg of[-1,1])ballSigil(Math.round(M.x+d),Math.round(M.y+sg*d*SPREAD),t);
+    else BALL[def.am](Math.round(M.x+d),Math.round(M.y),t,s.sd)}
+   else if(def.am==='indra')hitIndra(hx,M.y,after);
+   else if(am.n===2){const off=Math.round((hx-M.x)*SPREAD);hitSmall(hx,M.y-off,after,PAL.sigil);hitSmall(hx,M.y+off,after,PAL.sigil)}
+   else hitSmall(hx,M.y,after,PAL[def.am]);
+   if(def.over)def.over(t,C)}
+  g.restore();zg.drawImage(c,34,24,60,60,0,0,60,60)}}}
+function card(def,idx,title,vid){
+ const el=document.createElement('div');el.className='card'+(def.ref?' ref':'');
+ const s=scene(def,idx);scenes.push(s);
+ el.innerHTML=`<h3>${def.name}${def.tag?`<span class="tag">${def.tag}</span>`:''}</h3><p>${def.desc}</p>`;
+ const v=document.createElement('div');v.className='view';
+ for(const[cv,cls,cap]of[[s.c,'main','Scène · pixels natifs'],[s.z,'loupe','Loupe · bouche du canon']]){const f=document.createElement('figure');f.className=cls;f.append(cv,cap);v.append(f)}
+ el.append(v);el.insertAdjacentHTML('beforeend',`<div class="spec">${def.spec}</div>`);
+ if(!def.ref)verdict(el,vid,title);return el}
+{
+ const host=document.getElementById('anim');
+ ANIM.forEach((d,i)=>host.append(card(d,i,'Animation de l’arme · '+d.name,'anim-'+d.id)));
+ const sig=document.getElementById('sig');
+ for(const id of Object.keys(AM)){const am=AM[id];
+  sig.insertAdjacentHTML('beforeend',`<div class="ammo"><i style="background:${PAL[id][3]}"></i>${am.name}<small>${am.why}</small></div>`);
+  const grid=document.createElement('div');grid.className='grid';sig.append(grid);
+  SIG.filter(d=>d.am===id).forEach((d,i)=>{d.name=(i+1)+' · '+d.name;if(d.fresh)d.tag='nouvelle piste';grid.append(card(d,20+SIG.indexOf(d),am.name+' · '+d.name,'sig-'+d.id))})}
+ // ---- 3 · Autour du tir ----
+ const around=document.getElementById('around');
+ const extra=[
+  ['son','Un son de tir par munition','Aujourd’hui les cinq munitions partagent le son « arbalestrie ». Proposition : le garder comme base et le décliner. Indra plus grave avec une queue de souffle ; Medeina feutré, presque un « pfft » ; Sigil en double clic sec ; Aether avec une note tenue qui monte ; spirituelles inchangées.'],
+  ['lueur','Lueur colorée dans la caverne','Chaque tir éclaire brièvement le sol et l’Ingénieur de la couleur de la munition (visible dans les scènes ci-dessus), branché sur l’éclairage du jeu pour que ça porte dans le noir et la nuit : rayon d’un bloc, 0,1 à 0,2 s. Forte pour Indra, faible pour les autres.'],
+  ['changement','Changement de munition visible sur l’arme','Quand on tourne le barillet (molette), le point lumineux de la culasse prend la couleur de la munition choisie et le garde. On sait ce qu’on tire sans regarder le HUD.'],
+  ['duel','Pendant le duel contre la Martyre','Les signatures restent, mais sans lueur ni secousse d’écran : l’écran est déjà chargé et la traînée cyan de lisibilité des balles garde la priorité.'],
+ ];
+ for(const[id,t,d]of extra){const el=document.createElement('div');el.className='card';el.innerHTML=`<h3>${t}</h3><p>${d}</p>`;verdict(el,'autour-'+id,'Autour du tir · '+t);around.append(el)}
+}
+
+// ====================== Boucle ======================
+let speed=1,paused=false,clock=0,last=performance.now();
+document.querySelectorAll('[data-speed]').forEach(b=>b.onclick=()=>{speed=+b.dataset.speed;document.querySelectorAll('[data-speed]').forEach(x=>x.classList.toggle('on',x===b))});
+document.querySelectorAll('[data-burst]').forEach(b=>b.onclick=()=>{burst=b.dataset.burst==='1';clock=0;document.querySelectorAll('[data-burst]').forEach(x=>x.classList.toggle('on',x===b))});
+document.getElementById('pause').onclick=e=>{paused=!paused;e.target.classList.toggle('on',paused);e.target.textContent=paused?'Reprendre':'Pause'};
+function frame(now){const dt=Math.min(.05,(now-last)/1000);last=now;if(!paused)clock+=dt*speed;
+ for(const s of scenes)s.draw(clock);requestAnimationFrame(frame)}
+// Accès de mise au point : fige l'horloge sur un instant donné.
+window.__seek=t=>{paused=true;clock=t;for(const s of scenes)s.draw(clock)};
+requestAnimationFrame(frame);tally();
+</script>
+</body>
+</html>

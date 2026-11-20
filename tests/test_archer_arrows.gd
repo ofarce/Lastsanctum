@@ -24,6 +24,9 @@ func test_shot_consumes_one_arrow() -> void:
 	game_sim().combat.barracks_strike(u, e)
 	check_eq(Storage.count("arrows"), n0 - 1, "un tir : une flèche en moins")
 	check(e.hp < 400.0, "la flèche touche")
+	# Le chiffre de dégâts naît à l'arrivée de la flèche, pas au départ.
+	var nums := GameState.damage_numbers.filter(func(d: Dictionary) -> bool: return d["target"] == e)
+	check(not nums.is_empty() and nums[0]["age"] < 0.0, "chiffre de dégâts masqué jusqu'à l'impact")
 
 
 func test_no_arrow_no_shot() -> void:

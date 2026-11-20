@@ -7,13 +7,13 @@ extends RefCounted
 ## Un repaire vidé se repeuple au bout de RESPAWN_WAVES vagues. Les félins voient plus loin la nuit.
 
 const KINDS := {
-	"croc": {"hp": 160.0, "speed": 3.4, "range": 1.6, "damage": 14.0, "cd": 1.6, "armor": 4.0, "aggro": 4.0, "leash": 6.0},
-	"feline": {"hp": 90.0, "speed": 4.3, "range": 1.4, "damage": 10.0, "cd": 0.9, "armor": 1.0, "aggro": 6.0, "leash": 12.0},
+	"croc": {"hp": 160.0, "speed": 3.4, "range": 1.6, "damage": 28.0, "cd": 1.6, "armor": 4.0, "aggro": 4.0, "leash": 6.0},
+	"feline": {"hp": 90.0, "speed": 4.3, "range": 1.4, "damage": 20.0, "cd": 0.9, "armor": 1.0, "aggro": 6.0, "leash": 12.0},
 	# Biome 2 (Veines de vert-de-gris). Tique de filon : collée à un filon illimité, ne mord que ce qui vient le lui
 	# disputer. Anguille des puits : au centre d'un bassin, immobile ; « zap » : sa décharge frappe d'un coup tout
 	# ce qui se tient à portée du bassin, Exilés comme ennemis des vagues.
-	"tick": {"hp": 40.0, "speed": 1.6, "range": 1.5, "damage": 5.0, "cd": 1.5, "armor": 4.0, "aggro": 4.0, "leash": 7.0},
-	"eel": {"hp": 60.0, "speed": 0.0, "range": 13.5, "damage": 8.0, "cd": 3.0, "armor": 0.0, "aggro": 13.5, "leash": 20.0, "zap": true},
+	"tick": {"hp": 40.0, "speed": 1.6, "range": 1.5, "damage": 10.0, "cd": 1.5, "armor": 4.0, "aggro": 4.0, "leash": 7.0},
+	"eel": {"hp": 60.0, "speed": 0.0, "range": 13.5, "damage": 16.0, "cd": 3.0, "armor": 0.0, "aggro": 13.5, "leash": 20.0, "zap": true},
 }
 ## Instant de la décharge dans l'animation d'attaque de l'anguille (elle dresse la tête, puis décharge).
 const ZAP_WINDUP := 0.7

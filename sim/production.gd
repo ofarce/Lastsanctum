@@ -3,12 +3,11 @@ extends RefCounted
 ## Bâtiments servis par des adeptes (règles validées le 2026-11-17).
 ##  - Un bâtiment non-temple de Catalog.STAFF_ROLE ne fonctionne qu'avec au moins un travailleur au poste : adepte
 ##    de son culte, ou l'Ingénieur. Jusqu'à STAFF_MAX travailleurs ; vitesse proportionnelle à leur nombre.
-##  - Fabrication (Atelier, Forge, Creuset) : la recette choisie est fabriquée en boucle, ingrédients pris dans le
-##    coffre bleu, produit déposé dans le coffre rouge (il y reste).
-##  - Ingrédient manquant : un adepte au poste va le chercher (coffre rouge d'un autre bâtiment, coffre antique ou
-##    sac de l'Ingénieur), le rapporte au coffre bleu, puis reprend son poste. L'Ingénieur ne transporte pas.
+##  - Réseau des coffres (2026-11-20) : coffres bleus, rouges et coffre antique forment un seul stockage infini
+##    (GameState.base_inventory). Fabrication (Atelier, Forge, Creuset) : la recette choisie est fabriquée en
+##    boucle, ingrédients pris dans le réseau, produit déposé dans le réseau. Plus de trajets d'approvisionnement.
 ##  - Mineurs (adeptes d'Aether, MINERS_MAX, hors vitesse) : exploitent un gisement inépuisable et rapportent des
-##    lots de MINE_BATCH au coffre antique ou à un entrepôt.
+##    lots de MINE_BATCH au coffre le plus proche du réseau (coffre antique ou coffre d'un bâtiment).
 ## Tâche d'une unité : {"type": "staff", "building", "post": "worker" | "miner", "step": "post" | "fetch" |
 ## "return" | "mine" | "deliver", "fetch": {item, qty, src}, "cell", "mined"}. Le bâtiment ne garde aucune
 ## référence aux unités : son personnel se lit dans les tâches.
@@ -18,8 +17,8 @@ const Recipes := preload("res://data/recipes.gd")
 
 ## Distance d'arrivée à un point de travail, à un coffre.
 const REACH := 0.7
-## Cases des coffres bleu et rouge (piles de 9 999).
-const BOX_CAPACITY := 16
+## Cases des coffres bleu et rouge : ceux du réseau, sans limite (piles de 9 999).
+const BOX_CAPACITY := ItemStorage.BASE_CAPACITY
 ## Ingrédients demandés d'avance, en nombre de fabrications.
 const STOCK_TARGET := 2
 const WAREHOUSE_TARGET := 5
@@ -200,7 +199,7 @@ static func src_valid(src: Dictionary) -> bool:
 		"building":
 			return GameState.buildings.has(src["building"]) and source_open(src["building"])
 		"vault":
-			return GameState.base_inventory_unlocked
+			return ItemStorage.network_open()
 		"engineer":
 			return ItemStorage.character_available(src["unit"])
 	return false
@@ -268,7 +267,6 @@ func update(dt: float) -> void:
 	for b: Building in GameState.buildings:
 		if not b.complete or not staffed(b):
 			continue
-		_dispatch(b)
 		if Recipes.has_station(b.type):
 			_craft(b, dt)
 		elif Catalog.TRAINERS.has(b.type):
@@ -279,11 +277,8 @@ static func craft_workers(b: Building) -> int:
 	var cost: Dictionary = Recipes.RECIPES.get(b.type, {}).get(b.recipe, {})
 	if cost.is_empty() or not has_items(b.input_box, cost):
 		return 0
-	var n := at_post(b)
-	if n == 0:
-		return 0
-	var probe := b.output_box.duplicate(true)
-	return n if put_into(probe, b.recipe, Recipes.output_quantity(b.recipe)) == 0 else 0
+	# Le réseau des coffres n'a pas de limite : le produit trouve toujours sa place.
+	return at_post(b)
 
 
 func _craft(b: Building, dt: float) -> void:
@@ -320,40 +315,6 @@ func _train(b: Building, dt: float) -> void:
 	for k: String in items:
 		take_from(b.input_box, k, int(items[k]))
 	sim.spawn_trained(b, b.queue.pop_front())
-
-
-## Envoie au plus un adepte chercher un ingrédient manquant.
-func _dispatch(b: Building) -> void:
-	var need := needs(b)
-	for item: String in need:
-		var stock := b.output_box if b.type == "warehouse" else b.input_box
-		var missing: int = int(need[item]) - count_in(stock, item) - in_transit(b, item)
-		if missing <= 0:
-			continue
-		var carrier := _free_carrier(b)
-		if carrier == null:
-			return
-		var src := find_source(b, item, carrier)
-		if src.is_empty():
-			continue
-		var qty := mini(CARRY_CAPACITY, mini(missing, int(src["available"])))
-		src.erase("available")
-		carrier.job["step"] = "fetch"
-		carrier.job["fetch"] = {"item": item, "qty": qty, "src": src}
-		return
-
-
-## Adepte au poste disponible pour un transport (jamais l'Ingénieur).
-func _free_carrier(b: Building) -> Unit:
-	var fallback: Unit = null
-	for u: Unit in members(b, "worker"):
-		if u.role == "engineer" or u.job.get("step") != "post":
-			continue
-		if u.working:
-			return u
-		if fallback == null:
-			fallback = u
-	return fallback
 
 
 ## Tâche « staff » d'une unité, appelée par Simulation.update_adepts.
@@ -401,37 +362,32 @@ func update_unit(u: Unit, dt: float) -> void:
 			_mine(u, j, dt)
 
 
-## Un dépôt plein ou fermé est écarté à chaque étape du trajet.
+## Le lot est déposé au coffre du réseau le plus proche : coffre antique (ouvert) ou coffre d'un bâtiment achevé.
 func deliver_harvest(u: Unit) -> bool:
 	var item: String = u.carrying["item"]
-	var target := CaveShape.CHEST_SPOT
+	var target := Vector2.INF
 	var distance := INF
-	if GameState.base_inventory_unlocked and ItemStorage.has_room(GameState.base_inventory, ItemStorage.BASE_CAPACITY, item):
+	var at: Building = null
+	if GameState.base_inventory_unlocked:
+		target = CaveShape.CHEST_SPOT
 		distance = u.pos().distance_squared_to(target)
-	var warehouse: Building = null
 	for b: Building in GameState.buildings:
-		if b.type != "warehouse" or not source_open(b):
+		if not b.complete or not has_chests(b):
 			continue
-		var spot := src_pos({"kind": "building", "building": b})
+		var spot := chest_pos(b, chest_kinds(b)[0]) + Vector2(0.0, 1.0)
 		var d := u.pos().distance_squared_to(spot)
-		if d < distance and ItemStorage.has_room(b.output_box, BOX_CAPACITY, item):
-			warehouse = b
+		if d < distance:
+			at = b
 			target = spot
 			distance = d
-	if (warehouse != null or GameState.base_inventory_unlocked) and not _go(u, target):
+	if target != Vector2.INF and not _go(u, target):
 		return false
-	if warehouse == null:
-		for i in int(u.carrying["quantity"]):
-			ItemStorage.deposit(item, null, u.pos())
-		u.carrying = {}
-	else:
-		var left := put_into(warehouse.output_box, item, u.carrying["quantity"])
-		warehouse.chest_out_at = GameState.sim_time
-		Sfx.at("coffre", warehouse.x, warehouse.z)
-		if left > 0:
-			u.carrying["quantity"] = left
-			return false
-		u.carrying = {}
+	for i in int(u.carrying["quantity"]):
+		ItemStorage.deposit(item, null, u.pos())
+	u.carrying = {}
+	if at:
+		at.chest_in_at = GameState.sim_time
+		Sfx.at("coffre", at.x, at.z)
 	return true
 
 
@@ -493,10 +449,6 @@ func _mine(u: Unit, j: Dictionary, dt: float) -> void:
 		u.carrying = {"item": item, "quantity": j["mined"]}
 		GameState.effects.append({"type": "mining_gain", "miner": u, "item": item, "age": 0.0, "duration": 1.0})
 		c["at"] = sim.next_lode_spot(key, c["at"])
-		if sim._spend_wood(u, key):
-			j["exhausted"] = true
-			j["step"] = "deliver"
-			return
 		if j["mined"] >= Catalog.MINE_BATCH:
 			j["step"] = "deliver"
 			return
@@ -570,13 +522,9 @@ func select_recipe(b: Building, item: String) -> void:
 	sim.say("%s · %s" % [b.def()["name"], ("fabrique en boucle : " + Recipes.name_of(item)) if b.recipe != "" else "fabrication arrêtée"], 2.0)
 
 
-## L'Ingénieur va vider le coffre rouge dans le stock (coffre antique, sinon son sac, sinon au sol).
-func order_collect(b: Building) -> bool:
-	var eng := sim.builder()
-	if eng == null or b == null or b.output_box.all(func(s: Dictionary) -> bool: return s.is_empty()):
-		return false
-	sim.set_job(eng, {"type": "collect", "building": b})
-	return true
+## Ancien « Vider le coffre rouge » : le coffre rouge fait partie du réseau, il n'y a plus rien à rapporter.
+func order_collect(_b: Building) -> bool:
+	return false
 
 
 ## Tâche « collect » de l'Ingénieur.
@@ -596,14 +544,4 @@ func update_collect(u: Unit) -> void:
 			b.chest_out_at = GameState.sim_time
 		Events.production_chest_requested.emit(b, kind, u)
 		return
-	var n := 0
-	for stack: Dictionary in b.output_box:
-		if stack.is_empty():
-			continue
-		for i in int(stack["quantity"]):
-			ItemStorage.deposit(stack["item"], u, u.pos(), String(stack.get("owner", "")))
-			n += 1
-	b.output_box.clear()
-	b.chest_out_at = GameState.sim_time
 	u.job = null
-	sim.say("L’Ingénieur récupère %d objet%s du coffre rouge." % [n, "s" if n > 1 else ""], 2.0)

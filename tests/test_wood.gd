@@ -48,18 +48,27 @@ func test_medeina_never_depletes() -> void:
 	check(sim.state().grove_cells.has(r[1]), "toujours là")
 
 
-func test_other_adept_fells_tree() -> void:
+## Bosquets inépuisables pour tous depuis le 2026-11-20 : un adepte d'un autre culte ne l'abat plus.
+func test_other_adept_never_depletes() -> void:
 	var sim := game()
 	var r := _miner(sim, "indra")
-	for i in 19:
+	for i in 30:
 		sim.update_adepts(Simulation.adept_mining_seconds(r[0]))
 		sim.update_adepts(0.0)
-	check_eq(sim.state().wood_left[r[1]], 1, "19 bois récoltés")
-	sim.update_adepts(Simulation.adept_mining_seconds(r[0]))
-	sim.update_adepts(0.0)
-	var c := Vector2(r[1] * 4) + Vector2(4, 4)
-	check(not sim.state().wood_left.has(r[1]) and sim.state().walkable(c.x, c.y), "bosquet abattu après 20 bois, sol libre")
-	check(r[0].job == null, "le mineur s'arrête")
+	check_eq(sim.state().wood_left[r[1]], Blocks.WOOD_YIELD, "intact")
+	check(sim.state().grove_cells.has(r[1]), "toujours là")
+
+
+## Clic droit sur le dessin du bosquet : la sélection reçoit une tâche de récolte sur l'une de ses cases.
+func test_order_grove() -> void:
+	var sim := game()
+	var o := _start(sim.state())
+	var c := Vector2(o * 4) + Vector2(4, 12)
+	var u := sim.spawn("Adepte", c.x, c.y, "indra")
+	GameState.selected = [u] as Array[Unit]
+	check(sim.order_grove(o), "ordre de récolte")
+	var cell: Dictionary = u.job["cell"]
+	check(sim.state().grove_cells.get(Vector2i(cell["i"], cell["j"])) == o, "case du bosquet")
 
 
 func test_indra_double_damage() -> void:

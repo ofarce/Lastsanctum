@@ -101,7 +101,7 @@ func test_units_enemies_adepts() -> void:
 					_check_sheet(BAKED + "%s/%s_%s.png" % [group, name, anim], entries[name][anim], "%s %s" % [name, anim])
 	check_eq(int(m["units"]["roles"]["engineer"]["walk"]["count"]), 12, "marche de l'Ingénieur (EngineerKit)")
 	_check_sheet(BAKED + "units/engineer_kneel.png", m["units"]["roles"]["engineer"]["kneel"], "agenouillement")
-	check_eq(m["adepts"]["roles"].size(), 7, "rôles d'adeptes")
+	check(m["adepts"]["roles"].size() >= 7, "rôles d'adeptes (les 7 du prototype et ceux ajoutés depuis)")
 	for role: String in m["adepts"]["roles"]:
 		var modes: Dictionary = m["adepts"]["roles"][role]["modes"]
 		if m["adepts"]["roles"][role].get("spirit", false):
@@ -110,7 +110,9 @@ func test_units_enemies_adepts() -> void:
 			for mode: String in modes:
 				check_eq(int(modes[mode]["count"]), 24, "%s %s : 24 images" % [role, mode])
 		else:
-			check_eq(int(modes["idle"]["count"]) + int(modes["walk"]["count"]) + int(modes["work"]["count"]), 7, role + " : 1 + 2 + 4 images")
+			# Refonte 16 bits : le nombre d'images par mode n'est plus fixe ; repos, marche et travail existent.
+			for mode: String in ["idle", "walk", "work"]:
+				check(int(modes[mode]["count"]) >= 1, "%s : mode %s présent" % [role, mode])
 		for mode: String in modes:
 			_check_sheet(BAKED + "adepts/%s_%s.png" % [role, mode], modes[mode], "%s %s" % [role, mode])
 

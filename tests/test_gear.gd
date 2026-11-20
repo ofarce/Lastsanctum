@@ -8,6 +8,10 @@ const Inventory := preload("res://ui/inventory/engineer_inventory.gd")
 func test_every_piece_has_layers_for_every_animation() -> void:
 	TyrienArt.load_all()
 	for item: String in Gear.ITEMS:
+		# Les modules d'exo n'ont pas de calque dessiné sur l'Exilé.
+		# La combinaison est le corps même de l'Exilé (calque « base »), pas une pièce posée dessus.
+		if not Gear.ITEMS[item].has("piece") or item == "combinaison":
+			continue
 		var piece: String = Gear.ITEMS[item]["piece"]
 		check(TyrienArt.frames.has(piece), "calque %s exporté" % piece)
 		check_eq(TyrienArt.slot_of(piece), Gear.slot_of(item), "emplacement de %s" % item)

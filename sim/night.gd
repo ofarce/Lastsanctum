@@ -5,11 +5,10 @@ extends RefCounted
 ## - Flot nocturne : des squelettes épars se lèvent un peu partout sur le no man's land (dehors, au sud du
 ##   flanc de la montagne ; jamais dans la grotte ni les galeries), du crépuscule à la fin de nuit. Rares au début, plus serrés au cœur de la nuit, plus aucun avant l'aube
 ##   (Catalog.NIGHT_FLOW). Chaque palier de menace resserre le flot et renforce les squelettes.
-## - Meutes des pylônes : chaque nuit, tout Pylône de Merenor éveillé (galerie découverte) et non canalisé lâche
-##   une meute de chiens qui marche sur l'Ancre (Catalog.NIGHT_RAID), d'autant plus nombreuse et forte que la
-##   menace est haute. Les gardiens du pylône, eux, restent en laisse (sim/pylons.gd). Toute la carte étant
-##   reliée (32 pylônes), les pylônes endormis ne lâchent rien, sauf le plus proche de l'Ancre parmi les non
-##   canalisés : il y a donc toujours au moins une meute, et la faire taire demande d'aller le canaliser.
+## - Meutes des pylônes : chaque nuit, un Pylône de Merenor non canalisé lâche une meute de chiens qui marche
+##   sur l'Ancre (Catalog.NIGHT_RAID), si et seulement si un chemin praticable relie le pylône à l'Ancre
+##   (galerie ouverte et raccordée à la base). La meute naît au pied du pylône, jamais ailleurs. Elle est
+##   d'autant plus nombreuse et forte que la menace est haute. Les gardiens restent en laisse (sim/pylons.gd).
 ##
 ## Squelettes et meutes sont hors menace et hors fin de vague (Enemy.beast) : ils ne rapportent pas de menace
 ## et ne retardent pas l'assaut du matin.
@@ -59,11 +58,10 @@ static func _flow(sim: Simulation, now: float, f: float) -> void:
 	var at: Variant = spot(sim)
 	if at == null:
 		return
-	var e := Enemy.make("skeleton", at.x, at.y, 0.3 + sim.rng.randf() * 0.7, Catalog.menace_stats(tier))
-	e.beast = true
-	# Il sort de terre en silhouette noire, puis prend ses couleurs (UnitView).
-	e.risen_at = now
-	GameState.enemies.append(e)
+	# Collier (par trois), bubons ou explosif (sim/skeletons.gd). Un trio compte double dans le rythme du flot.
+	var kind := Skeletons.roll(sim.rng)
+	if Skeletons.raise(sim, kind, at, Catalog.menace_stats(tier), now).size() > 1:
+		GameState.night_next += g
 
 
 ## Place où un squelette se lève : dehors, praticable, loin du flanc de la montagne et des alliés ; null si
@@ -94,18 +92,18 @@ static func raid_size(tier: int) -> int:
 	return mini(int(R["cap"]), int(R["base"]) + int(R["per_tier"]) * tier)
 
 
-## Pylône non canalisé le plus proche de l'Ancre ({} s'il n'en reste aucun).
-static func nearest_open(st: TerrainState) -> Dictionary:
-	var best := {}
-	var best_d := INF
-	for p: Dictionary in st.portals:
-		if bool(p.get("channeled", false)):
-			continue
-		var d := CaveShape.CORE.distance_squared_to(Vector2(float(p["x"]), float(p["z"])))
-		if d < best_d:
-			best_d = d
-			best = p
-	return best
+## Pied du pylône d'où part sa meute : une place praticable à quelques unités du socle, d'où un chemin mène à
+## l'Ancre ; null si le pylône est encore scellé dans la roche ou coupé de la base.
+static func raid_start(sim: Simulation, p: Dictionary) -> Variant:
+	var st := sim.state()
+	var c := Vector2(float(p["x"]), float(p["z"]))
+	for r: float in [6.5, 8.5, 10.5]:
+		for k in 8:
+			# Sud d'abord, puis le tour du socle.
+			var at := c + Vector2.from_angle(PI * 0.5 + float(k) * TAU / 8.0) * r
+			if st.walkable(at.x, at.y):
+				return at if sim.world.pathfinder.find_path(at, CaveShape.CORE) != null else null
+	return null
 
 
 static func _raids(sim: Simulation, day: int) -> void:
@@ -113,17 +111,16 @@ static func _raids(sim: Simulation, day: int) -> void:
 		return
 	var st := sim.state()
 	var packs := 0
-	var near := nearest_open(st)
 	for p: Dictionary in st.portals:
 		if int(p.get("raid_day", 0)) == day:
 			continue
 		p["raid_day"] = day
-		if bool(p.get("channeled", false)) or not (bool(p["active"]) or is_same(p, near)):
+		if bool(p.get("channeled", false)):
 			continue
-		# Au sud du socle (infranchissable) ; sans chemin jusqu'à l'Ancre (galerie encore scellée), pas de meute.
-		var from := st.push_out_of_rock(Vector2(float(p["x"]), float(p["z"]) + 6.5))
-		if sim.world.pathfinder.find_path(from, CaveShape.CORE) == null:
+		var start: Variant = raid_start(sim, p)
+		if start == null:
 			continue
+		var from: Vector2 = start
 		var tier := Catalog.menace_tier(GameState.menace) + Biomes.threat_tiers(int(p.get("threat", 1)))
 		var stats := Catalog.menace_stats(tier, true)
 		var n := raid_size(Catalog.menace_tier(GameState.menace))

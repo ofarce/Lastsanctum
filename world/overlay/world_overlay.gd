@@ -24,7 +24,7 @@ const FORMULAS := {
 }
 ## Vers de chaque bâtiment (BUILDINGS[].verse, buildings.js).
 const VERSE_OF := {"sigil": "templeJob", "aether": "foundryJob", "medeina": "sawmillJob", "indra": "barracksJob",
-	"warehouse": "templeJob", "library": "templeJob", "forge": "foundryJob", "workshop": "foundryJob", "creuset": "foundryJob", "bedroom": "sawmillJob", "soulwell": "sawmillJob",
+	"warehouse": "templeJob", "library": "templeJob", "forge": "foundryJob", "workshop": "foundryJob", "creuset": "foundryJob", "scierie": "foundryJob", "archerie": "foundryJob", "bedroom": "sawmillJob", "soulwell": "sawmillJob",
 	"caserne": "barracksJob", "eglise": "sawmillJob", "ecole": "sawmillJob"}
 
 var world: World

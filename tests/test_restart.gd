@@ -8,7 +8,7 @@ func test_restart_resets_everything() -> void:
 	var world: World = _main.get_node("World")
 	var seed0 := world.gallery_seed
 	var st := sim.state()
-	var cell: Variant = st.diggable_cell(Vector2(64.0, -138.0))
+	var cell: Variant = st.diggable_cell(Vector2(58.0, -138.0))
 	world.dig_cell(cell["i"], cell["j"])
 	built("sigil", -26.0, -118.0)
 	GameState.orb_active = true

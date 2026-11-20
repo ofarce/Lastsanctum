@@ -3,10 +3,10 @@ extends "res://tests/fight_case.gd"
 ## prototype (73b410f). Référence : assets/baked/hud/combat.json (tools/baker/hud.js).
 
 
-## Écarts voulus après 73b410f, le reste reste identique : D13, portées relevées (archer ×4) ; D15, lance-flammes
+## Écarts voulus après 73b410f, le reste reste identique : D13, portées (archer 20, ramenée de 112 avec les postes de tir) ; D15, lance-flammes
 ## à portée 12, tir continu, sans sillon de feu (statut réécrit).
 const D13 := {"flammes": {"seek": 36.0, "reach": 24.0, "status": "Garde l’Ancre · flammes en continu ; explose à sa mort"},
-	"archer": {"seek": 136.0, "reach": 112.0},
+	"archer": {"seek": 26.0, "reach": 20.0},
 	"engineer": {"seek": 6.0, "reach": 1.9, "dmg": 5, "ranged": false, "status": "Prêt à recevoir vos ordres · corps à corps"}}
 const ItemStorage := preload("res://sim/item_storage.gd")
 
@@ -76,14 +76,15 @@ func test_archer_charge_matches_js() -> void:
 		i += 1
 
 
-func test_engineer_only_attacks_in_melee() -> void:
+func test_engineer_never_attacks_on_his_own() -> void:
 	var u := setup("engineer", 1)
 	u.unarmored = true  # en armure, l'Ingénieur frappe à 1 000 et à 250 de portée (test_requested_changes)
 	var e := foe("brute", 5.0, -120.0, 100.0)
 	game_sim().combat.update_units(0.0, [u])
 	check_near(e.hp, 100.0, 1e-9, "aucune attaque à distance")
 	check(GameState.effects.is_empty(), "aucun projectile à distance")
+	# L'Ingénieur n'attaque plus que sur ordre (clic droit, Combat.aimed_attack) : au contact non plus.
 	e.x = 1.0
 	game_sim().combat.update_units(0.0, [u])
-	check_near(e.hp, 95.0, 1e-9, "5 dégâts au corps à corps")
-	check_near(u.sw_t0, GameState.sim_time, 1e-9, "animation de frappe en mêlée")
+	check_near(e.hp, 100.0, 1e-9, "aucune attaque automatique au contact")
+	check(not game_sim().combat.aimed_attack(u, e.pos()), "sans arme du Creuset, pas d'attaque sur ordre")

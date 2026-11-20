@@ -37,7 +37,7 @@ const PRAY_RING := 6.2
 ## Un esprit canalise dès qu'il est à 3 cases (12 unités) du socle ou moins.
 const CHANNEL_REACH := 12.0
 ## Garde de la meute : distance de repérage, laisse autour du pylône.
-const AGGRO := 7.0
+const AGGRO := 14.0
 const LEASH := 15.0
 ## Ronde de la meute autour du socle, en file derrière l'alpha : rayon de la piste, écart entre deux bêtes
 ## (radians), allure (unités/s), durée d'une marche et d'une halte (secondes, tirées dans l'intervalle).
@@ -329,27 +329,37 @@ static func act(sim: Simulation, e: Enemy, dt: float, alive: Array[Unit]) -> voi
 	var bd := INF
 	var ex := e.x
 	var ez := e.z
+	var sight := Catalog.BEAST_SIGHT if e.kind == "beast" else AGGRO
+	# Laisse d'un chien : comptée depuis sa ronde (PATROL_R du socle), pas depuis le socle, sinon quiconque
+	# passe devant lui côté extérieur (à plus de LEASH du socle) n'est jamais repéré.
+	var leash := PATROL_R + sight if e.kind == "beast" else LEASH
 	for u in alive:
 		# Écart sur un seul axe déjà hors de vue : la distance (≥ |dx| et ≥ |dz|) l'est aussi.
 		var dx := u.x - ex
-		if dx >= AGGRO or dx <= -AGGRO:
+		if dx >= sight or dx <= -sight:
 			continue
 		var dz := u.z - ez
-		if dz >= AGGRO or dz <= -AGGRO or u.hidden:
+		if dz >= sight or dz <= -sight or u.hidden:
 			continue
 		var d := Combat.hyp(dx, dz)
-		if d < AGGRO and d < bd and u.pos().distance_to(center) < LEASH:
+		if d < sight and d < bd and u.pos().distance_to(center) < leash:
 			target = u
 			bd = d
 	# Frappé de loin (tireur hors de la laisse) : il riposte quand même s'il le voit.
 	if target == null and e.hp < e.max_hp and e.memo.has("hurt_by"):
 		var src: Unit = e.memo["hurt_by"]
-		if src != null and src.alive() and src.pos().distance_to(center) < LEASH + AGGRO:
+		if src != null and src.alive() and src.pos().distance_to(center) < leash + AGGRO:
 			target = src
 	var goal := patrol_spot(sim.state(), p, e) if target == null else target.pos()
 	var dist := Combat.hyp(goal.x - e.x, goal.y - e.z)
 	# En marche, il colle à sa place qui avance (sans à-coups) ; à la halte, il s'arrête dès qu'il y est.
 	var limit := e.reach if target != null else 0.3 if p["halted"] else 0.02
+	# Chien de la Bête : il ne fait que cracher (comme dans Combat.update_enemies), arrêté à distance de tir, ou plus
+	# près tant qu'un mur lui cache sa cible.
+	var spits := e.kind == "beast"
+	if target != null and spits:
+		EnemyShots.spit(sim, e, target, target.pos(), dist)
+		limit = Catalog.BEAST_STANDOFF if dist > Catalog.BEAST_STANDOFF or sim.combat.clear_shot(e.pos(), target.pos()) else Combat.MELEE_REACH
 	if dist > limit:
 		var spd := e.speed * (Catalog.SILLON["slow"] if e.slow_until > GameState.sim_time else 1.0) * Weather.speed_at(e.x, e.z)
 		if target == null:
@@ -362,7 +372,7 @@ static func act(sim: Simulation, e: Enemy, dt: float, alive: Array[Unit]) -> voi
 				e.x = step.x
 				e.z = step.y
 			e.face = -1 if dir.x < 0.0 else 1
-	if target != null and dist <= e.reach and e.cooldown <= 0.0:
+	if target != null and not spits and dist <= e.reach and e.cooldown <= 0.0:
 		e.attack_started = GameState.sim_time
 		e.face = -1 if target.x < e.x else 1
 		var dmg := e.damage

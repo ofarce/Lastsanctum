@@ -66,9 +66,11 @@ func _process(_delta: float) -> void:
 	_engineer_keys()
 	if GameState.incarnated != null:
 		_incarnated_attack()
-		# Sceau de Minage : le mur à un bloc de l'Exilé incarné est mis en surbrillance (clic droit : le miner).
-		var aim := ground(get_viewport().get_mouse_position())
-		_mining_hover.cell = sim.incarnated_mining_cell(GameState.incarnated, aim)
+		# Sceau de Minage : le mur sous le pointeur, à toute distance, est mis en surbrillance (clic droit : y aller
+		# le miner) ; rien en combat.
+		var pointer := get_viewport().get_mouse_position()
+		var ui_blocked := not _pointer_inside or get_viewport().gui_get_hovered_control() != null or _box_on
+		_mining_hover.cell = null if ui_blocked else _incarnated_wall(ground(pointer))
 		_mining_hover.selected_cells = _visible_mining_cells()
 		_mining_hover.queue_redraw()
 		return
@@ -95,6 +97,8 @@ func _engineer_keys() -> void:
 	if GameState.ended or Input.is_key_pressed(KEY_CTRL) or Input.is_key_pressed(KEY_META) \
 			or get_viewport().gui_get_focus_owner() is LineEdit:
 		_eng_driving = false
+		if GameState.incarnated != null:
+			GameState.incarnated.direct_move = false
 		return
 	var s := Vector2(
 		float(_label_down(KEY_D)) - float(_label_down(KEY_Q)),
@@ -114,14 +118,18 @@ func _engineer_keys() -> void:
 			eng.tx = eng.x
 			eng.tz = eng.z
 			_eng_driving = false
+		eng.direct_move = false
 		return
 	var c := get_viewport().get_visible_rect().size * 0.5
 	var dir := ground(c + s.normalized() * 100.0) - ground(c)
 	if dir.length() < 0.001:
 		return
-	if not _eng_driving:
+	# Début du pilotage, ou trajet vers un coffre en cours (clic droit) : le clavier reprend la main.
+	if not _eng_driving or (eng.job != null and eng.job.get("type") in ["chest", "collect"]):
 		sim.cancel_work(eng)
 	_eng_driving = true
+	# Pas direct, sans pathfinding (Simulation.move glisse le long des murs) : bilan « Visibilité des balles », 2026-11-20.
+	eng.direct_move = true
 	var t := eng.pos() + dir.normalized() * 1.5
 	eng.tx = t.x
 	eng.tz = t.y
@@ -145,6 +153,7 @@ func _incarnated_pick(p: Vector2) -> void:
 			best = d
 			near = u
 	GameState.hud_enemy = null
+	GameState.hud_grove = null
 	GameState.hud_menu = ""
 	GameState.hud_mode = ""
 	if near and best < maxf(18.0, 1.3 * zoom_k()):
@@ -156,17 +165,16 @@ func _incarnated_pick(p: Vector2) -> void:
 		GameState.selected = []
 		GameState.hud_building = b
 		return
+	var grove: Variant = hit_grove(p)
+	if grove != null:
+		# Bosquet pétrifié : sa fiche ouvre le bandeau, comme un bâtiment.
+		Sfx.play("ui_selection")
+		GameState.hud_building = null
+		GameState.selected = []
+		GameState.hud_grove = grove
+		return
 	if HudModel.incarnated_panel():
 		_close_incarnated_panel()
-
-
-## Le point visé désigne la case : dessous, ou case de mur retenue au survol comme hors incarnation.
-func _clicks_cell(point: Vector2, cell: Dictionary) -> bool:
-	var key := Vector2i(cell["i"], cell["j"])
-	if Vector2i((point / 4.0).floor()) == key:
-		return true
-	var hovered: Variant = world.terrain_state.diggable_cell(point)
-	return hovered != null and Vector2i(hovered["i"], hovered["j"]) == key
 
 
 ## Incarnation : alliés sélectionnés au clic gauche (adeptes, unités militaires), hors Exilé incarné.
@@ -180,6 +188,7 @@ func _incarnated_allies() -> Array[Unit]:
 
 func _close_incarnated_panel() -> void:
 	GameState.hud_building = null
+	GameState.hud_grove = null
 	GameState.hud_mode = ""
 	GameState.hud_menu = ""
 	if GameState.incarnated:
@@ -215,6 +224,12 @@ func _visible_mining_cells() -> Array[Dictionary]:
 
 
 func _input(event: InputEvent) -> void:
+	# F11 : plein écran ou fenêtre, à tout moment (cinématique et aide comprises).
+	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_F11:
+		var full := DisplayServer.window_get_mode() == DisplayServer.WINDOW_MODE_FULLSCREEN
+		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED if full else DisplayServer.WINDOW_MODE_FULLSCREEN)
+		get_viewport().set_input_as_handled()
+		return
 	if Opening.cinematic() or HelpPanel.open:
 		return
 	# Capsule : E entre (désincarne) ou sort (réincarne).
@@ -238,7 +253,9 @@ func _input(event: InputEvent) -> void:
 			if not py.is_empty() and sim.channel_pylon(py):
 				get_viewport().set_input_as_handled()
 				return
-			var first: Variant = mining_hover_cell(event.position)
+			# Incarné : le premier mur passe par _unhandled_input (bâtiments, coffres et alliés d'abord, et le tir
+			# bloqué) ; le glisser et le relâchement se traitent ici.
+			var first: Variant = mining_hover_cell(event.position) if GameState.incarnated == null else null
 			if first != null:
 				_mining_drag_on = true
 				_mining_drag_cells.clear()
@@ -253,7 +270,12 @@ func _input(event: InputEvent) -> void:
 	elif event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_RIGHT and not event.pressed and _mining_drag_on:
 		_collect_mining_segment(_mining_drag_last, event.position)
 		_mining_drag_on = false
-		if not _mining_drag_cells.is_empty():
+		if _mining_drag_cells.is_empty():
+			pass
+		elif GameState.incarnated != null:
+			sim.incarnated_dig(GameState.incarnated, _mining_drag_cells)
+			_rc_building = false
+		else:
 			sim.order_mining_cells(_mining_drag_cells)
 		_mining_drag_cells.clear()
 		_mining_drag_keys.clear()
@@ -266,9 +288,38 @@ func _collect_mining_segment(from: Vector2, to: Vector2) -> void:
 		var pointer := from.lerp(to, float(i) / steps)
 		if get_viewport().gui_get_hovered_control() != null:
 			continue
-		var cell: Variant = mining_hover_cell(pointer)
+		var cell: Variant = _drag_candidate(pointer)
 		if cell != null:
 			_add_mining_cell(cell)
+
+
+## Clic droit maintenu : seule une case minable voisine (4 côtés) d'une case déjà sélectionnée s'ajoute, même
+## encore enfouie (elle s'ouvrira quand sa voisine sera creusée ; Simulation.mining_order). Le mur résolu sous
+## le pointeur d'abord, sinon la case de roche sous lui.
+func _drag_candidate(pointer: Vector2) -> Variant:
+	if _mining_drag_cells.is_empty() or (GameState.incarnated != null and Simulation.in_combat(GameState.incarnated)):
+		return null
+	var hovered: Variant = _incarnated_wall(ground(pointer)) if GameState.incarnated != null else mining_hover_cell(pointer)
+	if hovered != null and _drag_neighbor(Vector2i(hovered["i"], hovered["j"])) != null:
+		return hovered
+	var vis: Variant = world.terrain_state.visual_block(ground(pointer))
+	if vis == null:
+		return null
+	var key: Vector2i = vis
+	if _mining_drag_keys.has(key) or not world.terrain_state.minable_block(key.x, key.y):
+		return null
+	var near: Variant = _drag_neighbor(key)
+	if near == null:
+		return null
+	return {"i": key.x, "j": key.y, "at": near["at"]}
+
+
+## Case sélectionnée voisine (4 côtés) de `key`, ou null.
+func _drag_neighbor(key: Vector2i) -> Variant:
+	for c: Dictionary in _mining_drag_cells:
+		if absi(int(c["i"]) - key.x) + absi(int(c["j"]) - key.y) == 1:
+			return c
+	return null
 
 
 func _add_mining_cell(cell: Dictionary) -> void:
@@ -284,15 +335,29 @@ func mining_hover_cell(pointer: Vector2, ui_blocked := false) -> Variant:
 	if ui_blocked or GameState.ended or not GameState.hud_mode.is_empty() 			or not get_viewport().get_visible_rect().has_point(pointer):
 		return null
 	for u: Unit in GameState.selected:
-		if u.alive() and not u.hidden and (Catalog.is_adept(u) or (u.role == "engineer" and GameState.research_done.has("mining_artifact"))):
-			return _mining_cell(ground(pointer))
+		if u.alive() and not u.hidden and (Catalog.is_adept(u) or (u.role == "engineer" and GameState.mining_seal)):
+			# Feuillage d'un bosquet sous le pointeur : il l'emporte sur la roche qu'il recouvre.
+			var grove: Variant = hit_grove(pointer)
+			var cell: Variant = sim.grove_cell(grove) if grove != null else null
+			return cell if cell != null else _mining_cell(ground(pointer))
+	return null
+
+
+## Incarnation : mur minable sous le pointeur (Simulation.incarnated_mining_cell), s'il est découvert.
+func _incarnated_wall(point: Vector2) -> Variant:
+	if GameState.ended or not GameState.hud_mode.is_empty() or not world.fog.visible_at(point):
+		return null
+	var cell: Variant = sim.incarnated_mining_cell(GameState.incarnated, point)
+	if cell != null and world.fog.visible_at(Vector2(cell["i"] * 4 + 2, cell["j"] * 4 + 2)):
+		return cell
 	return null
 
 
 func _mining_cell(point: Vector2) -> Variant:
 	if not world.fog.visible_at(point):
 		return null
-	var target: Variant = world.terrain_state.diggable_cell(point)
+	# Le dessin de la roche (paroi et dessus remontés), pas son emprise au sol.
+	var target: Variant = world.terrain_state.pointed_cell(point)
 	if target != null and world.fog.visible_at(Vector2(target["i"] * 4 + 2, target["j"] * 4 + 2)):
 		return target
 	return null
@@ -322,7 +387,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		if event is InputEventMouseButton and event.pressed:
 			GameState.hud_chest = {}
 		if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_RIGHT:
-			var wall: Variant = sim.incarnated_mining_cell(GameState.incarnated, ground(event.position)) if event.pressed else null
+			var wall: Variant = _incarnated_wall(ground(event.position)) if event.pressed else null
 			var allies := _incarnated_allies()
 			var box := hit_production_chest(event.position) if event.pressed else {}
 			if not box.is_empty():
@@ -344,8 +409,12 @@ func _unhandled_input(event: InputEvent) -> void:
 				if post.is_empty():
 					post = P.firing_post_at(gp + Vector2(0.0, 4.0))
 				var target := hit_building(gp)
+				var grove: Variant = hit_grove(event.position)
 				if not post.is_empty():
 					P.order_post(sim, post)
+				elif grove != null and sim.order_grove(grove):
+					# Bosquet pétrifié sous le clic : les adeptes sélectionnés y récoltent.
+					pass
 				elif target != null and (sim.order_pray(target) or sim.order_staff(target)):
 					# Bâtiment sous le clic : l'adepte y prie (temple) ou y prend un poste, comme désincarné.
 					pass
@@ -357,10 +426,16 @@ func _unhandled_input(event: InputEvent) -> void:
 				# sur le bâtiment lui-même, il l'annule.
 				_rc_building = true
 				_set_rally(HudModel.selected_building(), ground(event.position))
-			elif wall != null and _clicks_cell(ground(event.position), wall):
-				# Mur en surbrillance sous le pointeur : le miner au lieu de tirer.
+			elif wall != null:
+				# Mur en surbrillance : l'Exilé y va et le mine (à un bloc et demi) au lieu de tirer.
+				# Maintenu et glissé : d'autres murs s'ajoutent (_collect_mining_segment) ; l'ordre part au relâchement
+				# (_input), et le tir reste bloqué jusque-là.
 				_rc_building = true
-				sim.incarnated_dig(GameState.incarnated, wall)
+				_mining_drag_on = true
+				_mining_drag_cells.clear()
+				_mining_drag_keys.clear()
+				_mining_drag_last = event.position
+				_add_mining_cell(wall)
 			elif event.pressed:
 				var b := hit_building(ground(event.position))
 				_rc_building = b != null
@@ -428,6 +503,7 @@ func _unhandled_input(event: InputEvent) -> void:
 ## Clic gauche (pointerdown, Index.html).
 func _left_click(p: Vector2, shift: bool) -> void:
 	GameState.hud_chest = {}
+	GameState.hud_grove = null
 	if GameState.hud_mode.is_empty():
 		GameState.hud_building = null
 	if GameState.hud_mode == "build":
@@ -476,12 +552,21 @@ func _left_click(p: Vector2, shift: bool) -> void:
 		return
 	var b := hit_building(ground(p))
 	GameState.hud_enemy = null
+	var grove: Variant = hit_grove(p) if b == null else null
 	if b:
 		Sfx.play("ui_selection")
 		GameState.selected = []
 		GameState.anchor_selected = false
 		GameState.hud_menu = ""
 		GameState.hud_building = b
+	elif grove != null:
+		# Bosquet pétrifié : fiche dans le HUD et halo au sol.
+		Sfx.play("ui_selection")
+		GameState.selected = []
+		GameState.anchor_selected = false
+		GameState.hud_mode = ""
+		GameState.hud_menu = ""
+		GameState.hud_grove = grove
 	else:
 		GameState.selected = []
 		GameState.anchor_selected = false
@@ -616,7 +701,7 @@ func _right_click(p: Vector2) -> void:
 	if not box.is_empty():
 		GameState.hud_chest = box
 		if eng and preload("res://sim/item_storage.gd").character_available(eng):
-			sim.set_job(eng, {"type": "collect", "building": box["building"], "open_box": box["kind"]})
+			sim.open_production_chest(eng, box["building"], box["kind"])
 			return
 	if hit_chest(p) and sim.order_chest(eng):
 		GameState.hud_chest = {"kind": "vault"}
@@ -624,6 +709,10 @@ func _right_click(p: Vector2) -> void:
 	var turret: Variant = hit_turret(p)
 	if turret != null:
 		sim.combat.order_turret(turret)
+		return
+	# Bosquet pétrifié sous le clic (tout son dessin, feuillage compris) : les adeptes vont y récolter.
+	var grove: Variant = hit_grove(p)
+	if grove != null and sim.order_grove(grove):
 		return
 	if _mining_cell(ground(p)) != null and sim.order_adepts(ground(p)):
 		return
@@ -666,13 +755,31 @@ func hit_pylon(p: Vector2) -> Dictionary:
 	return Pylons.at(world.terrain_state, ground(p)) if world.fog.visible_at(ground(p)) else {}
 
 
+## Bosquet pétrifié visible dont le dessin (emprise 2 × 2 et feuillage au-dessus, GroveView) est sous le point
+## écran : son origine Vector2i, ou null. Bosquets superposés : le plus au sud (dessiné devant) l'emporte.
+func hit_grove(p: Vector2) -> Variant:
+	if GameState.ended or not GameState.hud_mode.is_empty():
+		return null
+	var best: Variant = null
+	for origin: Vector2i in world.terrain_state.wood_left:
+		var x0 := origin.x * 4.0
+		var z0 := origin.y * 4.0
+		if not world.fog.visible_at(Vector2(x0 + 4.0, z0 + 4.0)):
+			continue
+		var a := project(x0 - 1.0, 0.0, z0 - 4.0)
+		var b := project(x0 + 9.0, 0.0, z0 + 8.0)
+		if Rect2(a, b - a).has_point(p) and (best == null or origin.y > (best as Vector2i).y):
+			best = origin
+	return best
+
+
 ## Coffre de production (bleu « in », grenat « out ») sous le point écran : {"building", "kind"}, ou vide.
 func hit_production_chest(p: Vector2) -> Dictionary:
 	if GameState.ended or not GameState.hud_mode.is_empty():
 		return {}
 	var k := float(world.camera.px)
 	for b: Building in GameState.buildings:
-		if not b.complete or not Production.has_chests(b) or not Production.staffed(b) \
+		if not b.complete or not Production.has_chests(b) \
 				or not world.fog.visible_at(Vector2(b.x, b.z)):
 			continue
 		for kind: String in Production.chest_kinds(b):
@@ -746,6 +853,11 @@ func hud_key(k: String) -> bool:
 			if not a["disabled"]:
 				(a["run"] as Callable).call()
 			return true
+	# Bâtiment d'un onglet fermé du menu Construire : sa touche marche toujours.
+	var inc := GameState.incarnated
+	if GameState.hud_menu == "build" and inc != null and inc.role == "engineer" \
+			or GameState.in_capsule and HudModel.selected_building() == null and (GameState.selected.is_empty() or GameState.selected.all(func(u: Unit) -> bool: return u.hidden)):
+		return HudModel.build_key(sim, k)
 	return false
 
 

@@ -26,6 +26,8 @@ func setup(role: String, level: int) -> Unit:
 		u.hp = Catalog.ADEPT[role]["hp"]
 		u.max_hp = u.hp
 	u.level = level
+	# Brouillard recalculé autour de l'unité : les ennemis posés près d'elle sont visibles, donc ciblés.
+	sim.world.fog.refresh(sim.state())
 	return u
 
 

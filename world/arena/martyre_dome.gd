@@ -1,7 +1,8 @@
 class_name MartyreDome
 extends Node2D
 ## Bouclier de la Martyre de Byrsa (sim/martyre.gd) : un mur circulaire d'or du Credo, tramé, qui s'éteint
-## vers le haut, avec un liseré doré au sol ponctué de carmin. Deux nœuds : un voile au sol sous les sprites,
+## vers le haut, avec un liseré doré au sol ponctué de carmin. Deux nœuds : l'aura au sol sous les sprites (sol
+## recoloré en améthyste depuis ses pieds, AuraTint + shaders/martyre_aura.gdshader ; elle remplace le voile d'or),
 ## puis le mur (moitié arrière au nord, moitié avant plus pâle au sud) et ses étincelles par-dessus. Le mur s'allume en
 ## RISE s à l'apparition et s'éteint en clignotant pendant Martyre.COLLAPSE s à la chute. En phase III il se resserre
 ## (Martyre.radius) : les textures du mur, faites au rayon plein, sont mises à l'échelle autour du centre, et il
@@ -15,6 +16,7 @@ const FPS := 5.0
 const RISE := 1.0
 const GOLD := [Color("#a07424"), Color("#d0a038"), Color("#f0cc66"), Color("#fff2b0")]
 const CARMINE := Color("#e2382e")
+## Ancien voile d'or du sol (plus dessiné : remplacé par l'aura améthyste, 2026-11-20).
 const VEIL := Color(0.82, 0.63, 0.22, 0.07)
 const BAYER := [[0, 8, 2, 10], [12, 4, 14, 6], [3, 11, 1, 9], [15, 7, 13, 5]]
 const SPARKS := 90
@@ -22,12 +24,55 @@ const SPARKS := 90
 var world: World
 var front := false
 static var _tex := {}
+## Aura (planches/martyre-aura-propositions.html, bilan 2026-11-20) : enfant dessiné avant ce nœud, donc après le sol
+## et avant les failles ; il lit l'écran (hint_screen_texture) et suit les pieds de la Martyre.
+const AURA_SHADER := preload("res://shaders/martyre_aura.gdshader")
+var _aura: Node2D
+var _aura_mat := ShaderMaterial.new()
+var _feet := Vector2.ZERO
+
+
+func _ready() -> void:
+	if front:
+		return
+	_aura_mat.shader = AURA_SHADER
+	_aura = Node2D.new()
+	_aura.name = "AuraTint"
+	_aura.show_behind_parent = true
+	_aura.material = _aura_mat
+	_aura.draw.connect(_draw_aura)
+	add_child(_aura)
 
 
 func _process(_delta: float) -> void:
 	visible = _strength() > 0.0
 	if visible:
 		queue_redraw()
+		if _aura != null:
+			_aura.queue_redraw()
+
+
+## Rayon du front de l'aura (pixels natifs) : il part de ses pieds au lever du mur, y rentre à sa chute
+## (piste 4·B « Front tramé » : le bord est tramé dans le shader).
+static func aura_front(reach: float) -> float:
+	var t := GameState.sim_time
+	if Martyre.active():
+		return smoothstep(0.0, 1.0, (t - GameState.martyre_at) / RISE) * reach
+	return (1.0 - smoothstep(0.0, 1.0, (t - GameState.martyre_down_at) / Martyre.COLLAPSE)) * reach
+
+
+func _draw_aura() -> void:
+	var c := Proj.nat(GameState.martyre_center.x, 0.0, GameState.martyre_center.y).round()
+	var rc := radius_px() * Martyre.radius() / Martyre.RADIUS
+	var e: Enemy = GameState.martyre
+	if e != null:
+		_feet = Proj.nat(e.x, 0.0, e.z)
+	_aura_mat.set_shader_parameter("px", float(world.camera.px) if world != null else 1.0)
+	_aura_mat.set_shader_parameter("dome_center", c)
+	_aura_mat.set_shader_parameter("dome_radius", rc)
+	_aura_mat.set_shader_parameter("feet", _feet)
+	_aura_mat.set_shader_parameter("front", aura_front(2.0 * rc + 26.0))
+	_aura.draw_rect(Rect2(c - Vector2(rc, rc), Vector2(2.0 * rc, 2.0 * rc)), Color.WHITE)
 
 
 ## 0 : aucun bouclier ; 1 : levé. Montée à l'apparition, extinction clignotante à la chute.
@@ -99,12 +144,7 @@ func _draw() -> void:
 	var sc := Martyre.radius() / Martyre.RADIUS
 	var rc := r * sc
 	if not front:
-		# Sous les sprites : seulement le voile au sol.
-		var pts := PackedVector2Array()
-		for k in 64:
-			var ang := TAU * k / 64.0
-			pts.append(c + Vector2(cos(ang), sin(ang)) * rc)
-		draw_colored_polygon(pts, Color(VEIL, VEIL.a * s))
+		# Sous les sprites : l'aura (enfant AuraTint, dessiné avant) remplace l'ancien voile d'or VEIL.
 		# Attaques à distance, partie au sol (faille, cercles des sceaux).
 		MartyreFx.ground(self)
 		return
@@ -118,8 +158,9 @@ func _draw() -> void:
 	draw_texture(textures(false)[f], Vector2(-r, -r - hp), tint)
 	draw_texture(textures(true)[f], Vector2(-r, -hp), tint)
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
-	# Étincelles d'or (et quelques carmin) qui montent le long du mur.
-	for j in SPARKS:
+	# Étincelles d'or (et quelques carmin) qui montent le long du mur, sauf pendant le duel : elles ressemblaient aux
+	# éclats (planche « Visibilité des balles », piste 3·C).
+	for j in (0 if Martyre.active() else SPARKS):
 		var ang := _h(j, 1) * TAU
 		var per := 1.6 + _h(j, 2) * 1.8
 		var p := fposmod(t + _h(j, 3) * per, per) / per

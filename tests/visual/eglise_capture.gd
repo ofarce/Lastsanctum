@@ -393,7 +393,7 @@ func _biome2(sim: Simulation, eng: Unit) -> void:
 	var cell := {"i": i2, "j": j2, "at": Vector2(i2 * 4.0, z2)}
 	sim.set_job(eng, {"type": "dig", "cells": [cell], "index": 0, "cell": cell, "at": cell["at"]})
 	print("creuser sans sceau · tâche ", eng.job)
-	GameState.research_done["mining_artifact"] = true
+	GameState.mining_seal = true
 	var forge := Building.create(80, "forge", eng.x + 10.0, eng.z - 12.0)
 	forge.complete = true
 	forge.finished_at = -10.0

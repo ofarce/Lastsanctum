@@ -67,15 +67,15 @@ const TABS := [
 		"lore": "Un adepte prie, ou travaille. Jamais les deux.",
 		"blocks": [
 			{"table": {"head": ["Culte", "Mana produit", "Bâtiments qu’il sert"], "rows": [
-				["Aether", "Forge", "Atelier, Forge, Creuset, mineurs"],
+				["Aether", "Forge", "Atelier, Scierie, Archerie, Fonderie, Armurerie, mineurs"],
 				["Sigil", "Savoir", "Bibliothèque"],
 				["Medeina", "Vie", "Puits, Chambre"],
 				["Indra", "Discipline", "Caserne"],
 			]}},
 			{"list": [
 				"Un bâtiment ne fonctionne qu’avec au moins un adepte au poste. Jusqu’à cinq : chacun accélère le travail.",
-				"Coffre bleu : ce que le bâtiment consomme. Coffre rouge : ce qu’il a produit.",
-				"S’il manque un ingrédient, un adepte part le chercher dans un autre coffre rouge ou au Coffre Antique.",
+				"Le bâtiment puise ses ingrédients dans les coffres et y range ce qu’il produit.",
+				"Tous les coffres (bleus, rouges et Coffre Antique) forment un seul réseau de stockage infini, accessible partout.",
 				"Les mineurs d’Aether creusent les filons et rapportent le minerai par lots de cinq.",
 			]},
 		],
@@ -86,8 +86,9 @@ const TABS := [
 		"blocks": [
 			{"table": {"head": ["Bâtiment", "À quoi il sert"], "rows": [
 				["Temples", "Les adeptes y prient et produisent le mana de leur culte."],
-				["Atelier · Forge · Creuset", "Fabriquent en boucle la recette choisie : outils, armes, armures."],
-				["Bibliothèque", "Recherches : Sceau de Minage, grande carte, Arbalestrie modulaire."],
+				["Atelier · Scierie · Archerie", "Outils et défenses ; fibre de bois ; arcs et flèches."],
+				["Fonderie · Armurerie", "Lingots ; armes et armures faites de lingots. Chacun fabrique en boucle la recette choisie."],
+				["Bibliothèque", "Recherches : grande carte, Arbalestrie modulaire."],
 				["Caserne", "Entraîne les soldats. Chaque soldat réclame son jeu d’armes."],
 				["Puits · Chambre", "Soins et résurrection."],
 			]}},

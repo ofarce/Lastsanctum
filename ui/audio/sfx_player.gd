@@ -20,7 +20,8 @@ const VOLUME_DB := {
 	"fanatique": -18, "aberration": -14, "ennemi_mort": -18, "strazhar": -8, "martyre": -8, "croc": -13,
 	"felin": -14, "portail": -10, "expulsion": -10, "porte_barree": -10, "ancre_trait": -12, "capsule": -11,
 	"bouclier_forme": -11, "canon": -10, "onde": -7, "vague": -9, "aube": -14, "crepuscule": -14, "quete": -10,
-	"defaite": -6, "arbalestrie": -15,
+	"defaite": -6, "arbalestrie": -15, "arbalestrie_indra": -13, "arbalestrie_medeina": -17, "arbalestrie_sigil": -15,
+	"arbalestrie_aether": -15,
 }
 
 ## Intervalle minimal entre deux lectures du même son (secondes réelles). Défaut : DEFAULT_GAP.
@@ -31,7 +32,8 @@ const MIN_GAP := {
 	"fleche_impact": 0.08, "flammes": 0.9, "tourelle": 0.12, "exile_blesse": 0.3, "ennemi_mort": 0.12,
 	"fanatique": 0.35, "automate": 0.25, "bouclier_dore": 0.4, "pilum": 0.15, "sort_lumiere": 0.15,
 	"aberration": 3.0, "croc": 0.5, "felin": 1.5, "soin": 0.4, "canon": 0.25, "coffre": 0.15,
-	"chausse_trapes": 0.5, "forge": 0.4, "arbalestrie": 0.2,
+	"chausse_trapes": 0.5, "forge": 0.4, "arbalestrie": 0.2, "arbalestrie_indra": 0.2, "arbalestrie_medeina": 0.2, "arbalestrie_sigil": 0.2,
+	"arbalestrie_aether": 0.2,
 }
 
 ## Caméra du monde (posée par le HUD) : sert à couper les sons hors écran.

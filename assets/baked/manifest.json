@@ -1773,20 +1773,32 @@
      160,
      168
     ],
-    "top": 93,
-    "bottom": 198,
+    "top": 108,
+    "bottom": 197,
     "scale": 1,
     "anim": {
      "frame_w": 320,
      "frame_h": 240,
      "cols": 12,
-     "rows": 6,
-     "count": 72,
-     "seconds": 6,
+     "rows": 4,
+     "count": 48,
+     "seconds": 4,
      "fps": 12,
      "exact": true,
      "seam_pixels": 0
-    }
+    },
+    "rest": {
+     "frame_w": 320,
+     "frame_h": 240,
+     "cols": 12,
+     "rows": 4,
+     "count": 48,
+     "seconds": 4,
+     "fps": 12,
+     "exact": true,
+     "seam_pixels": 0
+    },
+    "pick": "Presse à emboutir"
    },
    "da-warehouse": {
     "anchor": [
@@ -1943,6 +1955,70 @@
      "seam_pixels": 0
     },
     "pick": "Géode ouverte"
+   },
+   "da-scierie": {
+    "anchor": [
+     160,
+     168
+    ],
+    "top": 126,
+    "bottom": 197,
+    "scale": 1,
+    "anim": {
+     "frame_w": 320,
+     "frame_h": 240,
+     "cols": 12,
+     "rows": 6,
+     "count": 72,
+     "seconds": 6,
+     "fps": 12,
+     "exact": true,
+     "seam_pixels": 0
+    },
+    "rest": {
+     "frame_w": 320,
+     "frame_h": 240,
+     "cols": 12,
+     "rows": 6,
+     "count": 72,
+     "seconds": 6,
+     "fps": 12,
+     "exact": true,
+     "seam_pixels": 0
+    },
+    "pick": "Grande scie d’Aether"
+   },
+   "da-archerie": {
+    "anchor": [
+     160,
+     168
+    ],
+    "top": 106,
+    "bottom": 198,
+    "scale": 1,
+    "anim": {
+     "frame_w": 320,
+     "frame_h": 240,
+     "cols": 12,
+     "rows": 5,
+     "count": 60,
+     "seconds": 5,
+     "fps": 12,
+     "exact": true,
+     "seam_pixels": 0
+    },
+    "rest": {
+     "frame_w": 320,
+     "frame_h": 240,
+     "cols": 12,
+     "rows": 5,
+     "count": 60,
+     "seconds": 5,
+     "fps": 12,
+     "exact": true,
+     "seam_pixels": 0
+    },
+    "pick": "Cintreuse à vapeur"
    }
   },
   "constants": {

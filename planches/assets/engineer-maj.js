@@ -136,17 +136,43 @@ function engFront(o){
   blob(b,X-5.8,28+Yb,2.8,2.2,'skin',.12);blob(b,X+5.8,28+Yb,2.8,2.2,'skin',.08);rect(b,X-2,25+Yb,4,3,'skin',.1);
   if(D){px(b,X-3,27+Yb,'skin',.3);px(b,X-2,27+Yb,'skin',.32);px(b,X+2,27+Yb,'skin',.32);px(b,X+3,27+Yb,'skin',.3)}
  }
- const L=X-8,Rr=X+7,GL=TP?'iron':'skin',FL=TP?'cy':'linen';
- arm(L,sw);
- if(U&&aim){rect(b,Rr-1,24+Yb+r,3,5,TP?'wool':'skin');blob(b,Rr+.5,23+Yb+r,1.9,1.7,GL,.15);if(TP)px(b,Rr,23+Yb+r,'cy',.9);
+ const L=X-8,Rr=X+7,GL=TP?'iron':'skin',FL=TP?'cy':'linen',SL=TP?'wool':'skin',can=o.cannon,cs=o.cshoot;
+ const hand=(x,y,s)=>{blob(b,x,y,1.9,1.7,GL,.12+(s||0));if(TP)px(b,x,y,'cy',glow+(s||0))};
+ // Arbalestrie de face : portée sur l'épaule droite (côté gauche de l'image), main sur la poignée.
+ if(!cs){
+ if(!(D&&can))arm(L,sw); // de face au canon : bras gauche de l'image dessiné avec l'arme, après la capuche
+ if(D&&can)arm(Rr,-sw);
+ else if(U&&can)arm(Rr,-1);
+ else if(U&&aim){rect(b,Rr-1,24+Yb+r,3,5,TP?'wool':'skin');blob(b,Rr+.5,23+Yb+r,1.9,1.7,GL,.15);if(TP)px(b,Rr,23+Yb+r,'cy',.9);
   if(aim.flash)for(const[u,v,l]of[[0,-2,1],[1,-2,.9],[0,-3,.8],[-1,-3,.7],[1,-3,.7],[0,-4,.6],[-2,-4,.5],[2,-4,.5]])px(b,Rr+u,23+Yb+r+v,FL,l)}
  else if(D&&aim){rect(b,X+3,30+Yb,3,3,TP?'wool':'skin');blob(b,X+4.5,34+Yb-r*.5,2.2,2,GL,.2);if(TP)px(b,X+4,34+Yb-r*.5,'cy',aim.pulse?1:.8);
   if(aim.flash)for(const[u,v,l]of[[0,3,1],[1,3,.9],[0,4,.8],[-1,4,.7],[2,4,.7],[0,5,.6],[-2,5,.5],[3,5,.5]])px(b,X+4+u,34+Yb-r*.5+v,FL,l)}
  else arm(Rr,-sw);
+ }
  if(TP){blob(b,X,27.5+Yb,8.5,2.8,'linen',.1);if(D)for(let x=-2;x<=2;x++)px(b,X+x,26+Yb,'linen',.55);else blob(b,X,26+Yb,3.4,2.4,'linen',.2)}
+ if(D&&can){const a=can.ang??-118,G=[L+1.5,32.5+Yb+(can.dy||0)];
+  rect(b,L-1,29+Yb,3,3,SL,.05);cannonDraw(b,G[0],G[1],a,true);hand(G[0],G[1])}
+ // Tir de l'Arbalestrie vers le sud (de face) : canon à la hanche droite (droite de l'image), pointé
+ // vers le bas le long de la jambe, raccourci (K) ; recul vers le haut.
+ if(D&&cs){const r=cs.rec||0,K=.7,G=[X+7,32+Yb-r],T=[G[0]-.5,G[1]+4.2];
+  capsule(b,X+6.5,29.5+Yb,G[0]+.5,G[1]-1,1.6,SL,0);
+  capsule(b,X-6.5,29.5+Yb,X-6,33+Yb,1.7,SL,-.05);capsule(b,X-6,33+Yb,T[0]-1.5,T[1],1.4,SL,-.08);
+  cannonDraw(b,G[0],G[1],90,true,-9,K);hand(G[0],G[1]-.5);hand(T[0]-1.5,T[1],-.05);
+  if(cs.flash){const mx=G[0],my=G[1]+11.5*K+1;for(const[u,v,l]of[[0,0,1],[0,1,1],[-1,1,.85],[1,1,.85],[0,2,.8],[-2,2,.55],[2,2,.55],[0,3,.6]])px(b,mx+u,my+v,'cy',l)}}
+ // Tir vers le nord (de dos) : canon levé devant lui, le tube dépasse au-dessus de l'épaule droite ; recul vers le bas.
+ if(U&&cs){const r=cs.rec||0,K=.8,G=[X+6,27+Yb+r];
+  rect(b,L-1,29+Yb,3,3,SL,-.05);rect(b,Rr-1,25+Yb+r,3,6,SL);
+  cannonDraw(b,G[0],G[1],-90,false,-9,K);hand(G[0],G[1]+1,-.1);
+  if(cs.flash){const mx=G[0],my=G[1]-11.5*K-1;for(const[u,v,l]of[[0,0,1],[0,-1,1],[-1,-1,.85],[1,-1,.85],[0,-2,.8],[-2,-2,.55],[2,-2,.55],[0,-3,.6]])px(b,mx+u,my+v,'cy',l)}}
+ // Arbalestrie de dos : portée sur l'épaule droite, seule la partie qui dépasse de l'épaule se voit.
+ if(U&&can){const a=can.ang??-62;cannonDraw(b,X+4.5,31+Yb+(can.dy||0),a,false,1.5)}
  engHead(b,X+hd[0],21+Yb+hd[1],o.dir,o,!TP);
  for(const[x,y,m,l]of o.fx||[])px(b,x,y,m,l);
  return b}
+// Arbalestrie (cannonA) dont la poignée est en (hx, hy), tube orienté de ang degrés ; flip = dessus du tube de l'autre
+// côté ; from = ne dessine que la partie au-delà de u = from (le reste est caché par le corps) ; k = raccourci du tube.
+function cannonDraw(b,hx,hy,ang,flip,from=-9,k=1){const c=Math.cos(ang*DEG),sn=Math.sin(ang*DEG),f=flip?-1:1;
+ for(let y=0;y<48;y++)for(let x=0;x<48;x++){const dx=x+.5-hx,dy=y+.5-hy,u=(dx*c+dy*sn)/k;if(u<from)continue;const r=cannonA(u,f*(-dx*sn+dy*c));if(r)px(b,x,y,r[0],r[1])}}
 function eng(o){return o.dir==='d'||o.dir==='u'?engFront(o):engSide(o)}
 
 // ---------- Animations ----------
@@ -215,6 +241,12 @@ const ENG_ANIMS={
    armF:{a:[55,65,40,20,8,0][i],e:25},armB:{a:[-45,-50,-30,-15,-5,0][i],e:10},coat:[-1,-2,-1,0,0,0][i]})},
  c_idle:{n:48,cols:12,fps:12,note:'repos, Arbalestrie baissée, tenue à deux mains',f:i=>({...breath(i,24),blink:i===30||i===31,cannon:{ang:12+((i%24)>11?1:0)},rune:pulse(i,24)})},
  c_walk:{n:12,cols:12,note:'marche, Arbalestrie baissée qui balance',f:i=>{const w=walkPose(i);return{...w,lean:0,cannon:{ang:12+3*Math.sin(i/12*4*Math.PI)}}}},
+ c_idle_d:{n:24,cols:12,fps:12,note:'repos de face, Arbalestrie basse en travers du corps',f:i=>({dir:'d',...breath(i,24),blink:i===19||i===20,rune:pulse(i,24),cannon:{}})},
+ c_walk_d:{n:12,cols:12,note:'marche de face, Arbalestrie en travers qui balance',f:i=>({...frontWalk(i,'d'),cannon:{ang:-118-2*Math.sin(i/12*4*Math.PI)}})},
+ c_idle_u:{n:24,cols:12,fps:12,note:'repos de dos, Arbalestrie sur l’épaule',f:i=>({dir:'u',...breath(i,24),rune:pulse(i,24),cannon:{}})},
+ c_walk_u:{n:12,cols:12,note:'marche de dos, Arbalestrie sur l’épaule',f:i=>({...frontWalk(i,'u'),cannon:{ang:-62+2*Math.sin(i/12*4*Math.PI)}})},
+ c_shoot_d:{n:6,cols:6,fps:12,note:'tir de l’Arbalestrie vers le sud (de face), canon raccourci pointé vers le bas',f:i=>({dir:'d',cshoot:{rec:[0,2,1.5,1,.5,0][i],flash:i<2},ub:i===1||i===2?1:0,rune:i<2?1:.7})},
+ c_shoot_u:{n:6,cols:6,fps:12,note:'tir de l’Arbalestrie vers le nord (de dos), canon levé',f:i=>({dir:'u',cshoot:{rec:[0,2,1.5,1,.5,0][i],flash:i<2},ub:i===1||i===2?1:0})},
  c_shoot:{n:6,cols:6,fps:12,note:'tir de l’Arbalestrie : pied arrière qui cale, manteau soufflé',
   f:i=>({cannon:{ang:[0,-4,-2,-1,0,0][i],rec:[0,2,1.5,1,.5,0][i],flash:i<2},legB:{x:[0,-1.5,-2,-1.5,-1,0][i]},coat:[0,2,2,1,0,0][i],dy:i===1||i===2?1:0,rune:i<2?1:.7})},
 };
@@ -222,3 +254,15 @@ function frontWalk(i,dir){const p=i/12*2*Math.PI,s=Math.sin(p);
  return{dir,liftL:Math.round(2.4*Math.max(0,s)),liftR:Math.round(2.4*Math.max(0,-s)),dy:Math.abs(s)>.5?-1:0,sw:Math.round(2*Math.sin(p-.5)),sway:Math.round(Math.sin(p-.8)),hd:[0,i%6===1?1:0]}}
 // Image i de l'animation, pour le corps « templier » ou « exil ».
 function engFrame(name,i,body='templier'){const a=ENG_ANIMS[name];return eng({body,...a.f(i%a.n,body==='templier')})}
+// Casque de combat de face (dir 'd') ou de dos ('u'), calque seul, p = 0 relevé → 1 fermé : les plaques montent du
+// col comme de profil (helmetLayer, engineer-cannon.js). Tête au repos en (24, 21) ; décaler de la hauteur de tête.
+function helmetFront(p,dir){const b=buf(48,48);if(p<=0)return b;const hx=24,hy=21,top=hy+6-p*11.5,D=dir==='d';
+ blob(b,hx,hy-.3,5.3,5.3,'iron',.12,(x,y)=>y>=top);
+ if(hy+2>=top-2)rect(b,hx-5,hy+2,11,3,'iron',-.05);
+ for(const y of[hy-3,hy+1])if(y>=top)for(let x=hx-4;x<=hx+4;x++)px(b,x,y,'iron',.35);
+ if(D){if(p>=.75)for(let x=hx-3;x<=hx+3;x++)px(b,x,hy,'cy',p>=1?(Math.abs(x-hx)<=1?1:.75):.45);
+  if(p>=1)px(b,hx,hy+2,'iron',.8)}
+ else for(let y=Math.ceil(Math.max(top,hy-4));y<=hy+3;y++)px(b,hx,y,'iron',.6);
+ if(top<=hy-5)px(b,hx,hy-5,'cy',.8);
+ for(let x=hx-4;x<=hx+4;x++)if(hy+5>=top)px(b,x,hy+5,'brz',.6);
+ return b}

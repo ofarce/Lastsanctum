@@ -72,7 +72,9 @@ static func target_closest(source: Variant, list: Array, range_ := 1e9, observer
 # ---------------------------------------------------------------- Dégâts et expérience
 
 ## damage : `src` gagne l'expérience du monstre qu'il achève.
-func damage(t: Unit, amount: float, src: Unit = null) -> void:
+## `delay` : secondes avant l'arrivée du projectile ; les PV baissent tout de suite, mais le chiffre de dégâts et le
+## cri de blessure attendent l'impact.
+func damage(t: Unit, amount: float, src: Unit = null, delay := 0.0) -> void:
 	# Bouclier de la Martyre : seul l'Ingénieur, sous le bouclier, l'atteint.
 	if t is Enemy and (t as Enemy).kind == Martyre.KIND:
 		if not Martyre.can_hurt(src):
@@ -109,13 +111,20 @@ func damage(t: Unit, amount: float, src: Unit = null) -> void:
 		if (t as Enemy).kind == "shield" and amount < raw * 0.5 and raw >= 4.0:
 			Sfx.at("bouclier_dore", t.x, t.z)
 	t.hp = maxf(0.0, t.hp - amount)
+	if amount > 0.0 and t == GameState.incarnated:
+		GameState.incarnated_hurt_at = GameState.sim_time
+	if amount > 0.0 and was > 0.0:
+		Loot.note_hit(t, src)
+	# Squelettes de la nuit : éclats du collier, bubon qui éclate.
+	if t is Enemy and amount > 0.0 and was > 0.0 and Skeletons.KINDS.has((t as Enemy).kind):
+		Skeletons.on_hit(sim, t as Enemy)
 	# Gardien d'un Pylône de Merenor : il retient son agresseur pour riposter.
 	if src and t is Enemy and ((t as Enemy).pylon != null or (t as Enemy).roam != null):
 		t.memo["hurt_by"] = src
 	if amount > 0.0 and was > 0.0:
-		damage_number(t, amount)
+		damage_number(t, amount, delay)
 		if not t.is_enemy() and amount >= 2.0:
-			Sfx.at("exile_blesse", t.x, t.z)
+			Sfx.at("exile_blesse", t.x, t.z, delay)
 	if src and t.is_enemy() and was > 0.0 and t.hp <= 0.0:
 		_log("%s achève %s" % [src.name, (t as Enemy).kind])
 		gain_xp(src, Catalog.KILL_XP.get((t as Enemy).kind, 10))
@@ -126,7 +135,11 @@ func damage(t: Unit, amount: float, src: Unit = null) -> void:
 const DAMAGE_MERGE := 0.3
 
 
-static func damage_number(t: Unit, amount: float) -> void:
+static func damage_number(t: Unit, amount: float, delay := 0.0) -> void:
+	if delay > 0.0:
+		# Chiffre d'un projectile : il naît à l'impact (âge négatif, masqué d'ici là), sans se cumuler.
+		GameState.damage_numbers.append({"target": t, "x": t.x, "z": t.z, "amount": amount, "age": -delay, "duration": 0.9})
+		return
 	for i in range(GameState.damage_numbers.size() - 1, -1, -1):
 		var e: Dictionary = GameState.damage_numbers[i]
 		if e["target"] == t and e["age"] < DAMAGE_MERGE and e["age"] >= 0.0 and not e.get("heal", false):
@@ -148,7 +161,6 @@ func gain_xp(u: Unit, n: int) -> void:
 		flash(u.x, u.z, Color("#ffe08a"))
 		Sfx.at("niveau", u.x, u.z)
 		_log("%s niveau %d" % [u.name, u.level])
-		sim.say("%s passe au niveau %d · +1 dégât, +1 défense." % [u.name, u.level], 2.0)
 
 
 ## afterArmor : dégâts subis après la défense, au moins 15 % des dégâts d'origine.
@@ -163,8 +175,8 @@ static func _fx(e: Dictionary) -> void:
 	GameState.effects.append(e)
 
 
-static func flash(x: float, z: float, c: Color) -> void:
-	_fx({"type": "hit", "x": x, "z": z, "age": 0.0, "duration": 0.22, "color": c})
+static func flash(x: float, z: float, c: Color, size := 1.0, delay := 0.0) -> void:
+	_fx({"type": "hit", "x": x, "z": z, "age": -delay, "duration": 0.22, "color": c, "size": size})
 
 
 ## Foudre d'orage (core/weather.gd) : elle frappe un combattant au dehors, ennemi, bête ou allié, tiré
@@ -283,35 +295,39 @@ const ENEMY_STAFF := Vector2(2.0, 31.0)
 
 
 ## arrow : flèche de l'archer, puis étincelles à l'impact. `from` : départ (devant, hauteur) en pixels natifs.
-func arrow(a: Unit, b: Variant, from := Vector2(12.0, 24.0)) -> void:
+func arrow(a: Unit, b: Variant, from := Vector2(12.0, 24.0)) -> float:
 	var face := -1 if b.x - a.x < 0.0 else 1
 	var dur := maxf(0.09, dist(a, b) * 0.02)
 	_fx({"type": "arrow", "x": a.x, "z": a.z, "tx": b.x, "tz": b.z, "face": face, "ox": from.x, "oy": from.y, "age": 0.0, "duration": dur, "seed": _seed()})
 	_fx({"type": "arrowhit", "x": b.x, "z": b.z, "age": -dur, "duration": 0.24, "seed": _seed()})
 	Sfx.at("arc", a.x, a.z)
 	Sfx.at("fleche_impact", b.x, b.z, dur)
+	return dur
 
 
 ## pilum : javelot du soldat du Credo, lancé en cloche à courte portée, puis éclats à l'impact.
-func pilum(a: Unit, b: Variant) -> void:
+func pilum(a: Unit, b: Variant) -> float:
 	var face := -1 if b.x - a.x < 0.0 else 1
 	var dur := maxf(0.14, dist(a, b) * 0.05)
 	_fx({"type": "pilum", "x": a.x, "z": a.z, "tx": b.x, "tz": b.z, "face": face, "ox": ENEMY_PILUM.x, "oy": ENEMY_PILUM.y, "age": 0.0, "duration": dur, "seed": _seed()})
 	Sfx.at("pilum", a.x, a.z)
 	_fx({"type": "arrowhit", "x": b.x, "z": b.z, "age": -dur, "duration": 0.24, "seed": _seed()})
+	return dur
 
 
 ## spell : orbe de lumière souillée du Thuriféraire, tirée du haut de son bâton, puis éclatement sur la cible.
-func spell(a: Unit, b: Variant) -> void:
+func spell(a: Unit, b: Variant) -> float:
 	var face := -1 if b.x - a.x < 0.0 else 1
 	var dur := maxf(0.18, dist(a, b) * 0.035)
 	_fx({"type": "orb", "x": a.x, "z": a.z, "tx": b.x, "tz": b.z, "face": face, "ox": ENEMY_STAFF.x, "oy": ENEMY_STAFF.y, "age": 0.0, "duration": dur, "seed": _seed()})
 	Sfx.at("sort_lumiere", a.x, a.z)
 	_fx({"type": "orbhit", "x": b.x, "z": b.z, "age": -dur, "duration": 0.32, "seed": _seed()})
+	return dur
 
 
-## volley : trois carreaux du Tireur, chacun suivi d'une explosion sur la cible.
-func volley(a: Unit, b: Unit) -> void:
+## volley : trois carreaux du Tireur, chacun suivi d'une explosion sur la cible. Rend la durée du vol d'un carreau
+## (le n-ième arrive VOLLEY[n] + durée après le tir).
+func volley(a: Unit, b: Unit) -> float:
 	a.sh_t0 = GameState.sim_time
 	a.face = -1 if (b.x - b.z) - (a.x - a.z) < 0.0 else 1
 	var dur := maxf(0.07, dist(a, b) * 0.013)
@@ -321,6 +337,8 @@ func volley(a: Unit, b: Unit) -> void:
 		var jz := (_rand() - 0.5) * 0.8
 		_fx({"type": "xbolt", "x": a.x, "z": a.z, "tx": b.x + jx, "tz": b.z + jz, "face": a.face, "age": -v, "duration": dur, "seed": _seed()})
 		_fx({"type": "xboom", "x": b.x + jx, "z": b.z + jz, "age": -v - dur, "duration": 0.45, "seed": _seed()})
+	return dur
+
 
 
 ## swordStrike : coup d'épée (animation du Paladin, orientation).
@@ -360,13 +378,14 @@ func barracks_strike(u: Unit, e: Enemy) -> void:
 	var w := Catalog.gear_weapon(u)
 	if w.has("ammo"):
 		Catalog.ItemStorage.take_ammo(w["ammo"])
-	# Chaque tir d'archer prend une flèche à la réserve globale ; sans flèche, il ne tire pas.
-	if u.role == "archer" and not Catalog.ItemStorage.take_ammo("arrows"):
+	# Chaque tir d'archer prend une flèche à la réserve globale ; sans flèche, il ne tire pas (sauf archer de debug).
+	if u.role == "archer" and not u.free_ammo and not Catalog.ItemStorage.take_ammo("arrows"):
+		return
+	if u.role == "archer":
+		damage(e, dmg, u, arrow(u, e))
 		return
 	damage(e, dmg, u)
-	if u.role == "archer":
-		arrow(u, e)
-	elif F.get("ranged", false) or w.has("reach"):
+	if F.get("ranged", false) or w.has("reach"):
 		blast(u, e, Color("#bed7df"))
 		flash(e.x, e.z, Color("#bed7df"))
 		Sfx.at("tourelle", u.x, u.z)
@@ -437,7 +456,12 @@ func gear_attack(u: Unit, point: Vector2) -> void:
 		Catalog.ItemStorage.take_ammo(w["ammo"])
 	u.sh_t0 = GameState.sim_time
 	# Arbalestrie : son de tir dédié ; « canon » reste aux canons de Byrsa.
-	Sfx.at("arbalestrie" if w.has("mana") else "canon", u.x, u.z)
+	Sfx.at(Ammo.sound(ammo) if w.has("mana") else "canon", u.x, u.z)
+	if w.has("mana"):
+		# Effets de tir à la bouche du canon (EffectsDrawer._xbow_fire) ; graine hors du hasard de la simulation.
+		u.sh_ammo = ammo
+		_fx({"type": "xbow_fire", "x": u.x, "z": u.z, "unit": u, "face": u.face, "dx": d.x, "dz": d.y, "ammo": ammo,
+			"seed": int(GameState.sim_time * 1000.0) % 100000, "age": 0.0, "duration": 0.8})
 	var A: Dictionary = Ammo.AMMO[ammo]
 	var count := int(A.get("count", 1))
 	for i in count:
@@ -453,14 +477,18 @@ func _ball(u: Unit, d: Vector2, dmg: float, ammo: String) -> void:
 	var hit := ball_target(u, d)
 	var end: Vector2 = hit["end"]
 	var dur := maxf(0.04, end.distance_to(Vector2(u.x, u.z)) / BALL_SPEED)
-	_fx({"type": "cball", "x": u.x, "z": u.z, "tx": end.x, "tz": end.y, "age": 0.0, "duration": dur, "seed": _seed(), "ammo": ammo})
+	var ball := {"type": "cball", "x": u.x, "z": u.z, "tx": end.x, "tz": end.y, "age": 0.0, "duration": dur, "seed": _seed(), "ammo": ammo}
+	# Arbalestrie : la balle sort de la bouche du canon (dessin seul, la trajectoire simulée ne change pas).
+	if Catalog.gear_weapon(u).has("mana"):
+		ball["muz"] = u.face if u.face != 0 else 1
+	_fx(ball)
 	Sfx.at("fleche_impact", end.x, end.y, dur)
 	_fx({"type": "cballhit", "x": end.x, "z": end.y, "age": -dur, "duration": 0.45 if ammo == "indra" else 0.3, "seed": _seed(), "ammo": ammo})
 	var target: Enemy = hit["enemy"]
 	if target == null:
 		return
 	var before := target.hp
-	damage(target, dmg, u)
+	damage(target, dmg, u, dur)
 	var dealt := before - target.hp
 	# Aether : onde d'un bloc autour de la cible, un quart des dégâts à chaque autre ennemi visible dedans.
 	if A.has("splash"):
@@ -469,9 +497,9 @@ func _ball(u: Unit, d: Vector2, dmg: float, ammo: String) -> void:
 		for e: Enemy in GameState.enemies.duplicate():
 			if e == target or not _can_hit(e) or Vector2(e.x - target.x, e.z - target.z).length() > r:
 				continue
-			damage(e, dmg * float(A["splash_mult"]), u)
-			# Étincelle d'Aether sur le voisin quand l'onde (0,3 s pour un bloc) l'atteint.
+			# Étincelle d'Aether (et chiffre) sur le voisin quand l'onde (0,3 s pour un bloc) l'atteint.
 			var reach := dur + Vector2(e.x - target.x, e.z - target.z).length() / r * 0.3
+			damage(e, dmg * float(A["splash_mult"]), u, reach)
 			_fx({"type": "cballhit", "x": e.x, "z": e.z, "age": -reach, "duration": 0.25, "seed": _seed(), "ammo": "aether_spark"})
 	# Medeina : l'Ingénieur regagne les dégâts réellement faits (armure déduite), sans dépasser ses PV max.
 	if A.get("heal", false) and dealt > 0.0 and u.alive():
@@ -739,23 +767,25 @@ func update_units(dt: float, alive: Array[Unit]) -> void:
 				var dmg := float(base + Catalog.lvl_bonus(u))
 				if u.buff > 0.0:
 					dmg *= 1.5
-				damage(enemy, dmg, u)
-				if u.role != "paladin":
-					if u.role == "guard" or u.role == "indra":
-						arrow(u, enemy)
-					elif u.role == "shooter":
-						volley(u, enemy)
-					elif u.role == "engineer":
-						rivet(u, enemy)
-					else:
-						blast(u, enemy, Color("#f4d780") if u.role == "shooter" else Color("#bed7df"))
-						Sfx.at("tourelle", u.x, u.z)
+				if u.role == "guard" or u.role == "indra":
+					damage(enemy, dmg, u, arrow(u, enemy))
+				elif u.role == "shooter":
+					# Chiffre à l'arrivée du premier carreau.
+					damage(enemy, dmg, u, volley(u, enemy))
 				else:
+					damage(enemy, dmg, u)
+				if u.role == "paladin":
 					flash(enemy.x, enemy.z, Color("#f0dba4"))
 					sword_strike(u, enemy)
+				elif u.role == "engineer":
+					rivet(u, enemy)
+				elif not ["guard", "indra", "shooter"].has(u.role):
+					blast(u, enemy, Color("#bed7df"))
+					Sfx.at("tourelle", u.x, u.z)
 				u.attack = {"paladin": 0.88, "shooter": 0.78, "indra": 0.55}.get(u.role, 1.15)
 		elif not holding or u.force_move:
-			sim.move(u, sim.steer(u, Vector2(u.tx, u.tz)), dt)
+			var goal := Vector2(u.tx, u.tz)
+			sim.move(u, goal if u.direct_move and u.force_move and u == GameState.incarnated else sim.steer(u, goal), dt)
 		if u.role == "healer" and u.attack <= 0.0:
 			var hurt := alive.filter(func(t: Unit) -> bool: return t.hp < t.max_hp * 0.75 and dist(t, u) < 8.0)
 			hurt.sort_custom(func(a: Unit, b: Unit) -> bool: return a.hp / a.max_hp < b.hp / b.max_hp)
@@ -802,7 +832,7 @@ func update_enemies(dt: float, alive: Array[Unit]) -> void:
 			continue
 		var espd := e.speed * (Catalog.SILLON["slow"] if e.slow_until > GameState.sim_time else 1.0) * Weather.speed_at(e.x, e.z)
 		var coordinated := not e.tactical_group.is_empty()
-		var target: Variant = tactics.target(e, alive) if coordinated else target_closest(e, alive, maxf(e.reach * Weather.reach_at(e.x, e.z), 4.5) if RANGED_KINDS.has(e.kind) else 4.5)
+		var target: Variant = tactics.target(e, alive) if coordinated else target_closest(e, alive, maxf(e.reach * Weather.reach_at(e.x, e.z), 9.0) if RANGED_KINDS.has(e.kind) else Catalog.BEAST_SIGHT if e.kind == "beast" else 9.0)
 		# Errant des galeries : il ne vise que ce qui entre sur son territoire, jamais l'Ancre.
 		var roaming := e.roam != null
 		if roaming:
@@ -815,6 +845,11 @@ func update_enemies(dt: float, alive: Array[Unit]) -> void:
 		if target != null and (Martyre.blocks(e, target) or OeilMatrice.blocks(e, target)):
 			target = null
 		var is_core := target == null
+		# Credo sans arme de tir : cible détectée, il se rue au contact (Catalog.CREDO_RUSH).
+		var rush := 1.0
+		if not is_core and Catalog.CREDO_MELEE.has(e.kind):
+			rush = Catalog.CREDO_RUSH
+			espd *= rush
 		if is_core and roaming:
 			Roamers.wander(sim, e, espd, dt)
 			continue
@@ -827,24 +862,38 @@ func update_enemies(dt: float, alive: Array[Unit]) -> void:
 					e.face = -1 if float(bar["x"]) < e.x else 1
 					e.cooldown = Catalog.ENEMY[e.kind]["cd"]
 					Simulation.Placeables.hit(sim, bar, e.damage)
+					# Chien : il la brûle d'un crachat à bout portant (il ne mord plus).
+					if e.kind == "beast":
+						flash(float(bar["x"]), float(bar["z"]), Color("#ff8a7a"))
+						Sfx.at("flammes", e.x, e.z)
 				continue
 		var tx: float = core["x"] if is_core else target.x
 		var tz: float = core["z"] if is_core else target.z
 		var d := Combat.hyp(e.x - tx, e.z - tz)
+		# L'Ancre se frappe (et se vise) au bord de son socle infranchissable, pas en son centre.
+		var aim := Vector2(tx, tz)
+		if is_core:
+			aim = Capsule.anchor_edge(e.pos())
+			d = e.pos().distance_to(aim)
 		var ordered: bool = coordinated and e.tactical_goal != null
 		# Chien de la Bête : il crache une petite boule de feu en pleine course, sans s'arrêter.
-		if e.kind == "beast" and not is_core:
-			EnemyShots.spit(sim, e, target, d)
+		# C'est sa seule attaque (plus de morsure) : il crache aussi sur l'Ancre.
+		if e.kind == "beast":
+			EnemyShots.spit(sim, e, null if is_core else target, aim if is_core else Vector2(tx, tz), d)
 		# Au contact, la mêlée se défend même pendant le rassemblement ou la réserve.
 		# Les flèches ne traversent pas les murs : sans ligne de tir dégagée, l'archer s'approche au lieu de tirer.
 		# Brume : les tireurs portent moins loin dehors.
 		var reach := e.reach * Weather.reach_at(e.x, e.z) if RANGED_KINDS.has(e.kind) else e.reach
-		if e.kind == "archer" and d > MELEE_REACH and not clear_shot(e.pos(), Vector2(tx, tz)):
+		if e.kind == "archer" and d > MELEE_REACH and not clear_shot(e.pos(), aim):
 			reach = minf(reach, MELEE_REACH)
+		# Chien : il s'arrête à distance de tir, ou s'approche encore tant qu'un mur lui cache sa cible.
+		if e.kind == "beast":
+			reach = Catalog.BEAST_STANDOFF if d > Catalog.BEAST_STANDOFF or clear_shot(e.pos(), aim) else MELEE_REACH
 		var in_contact: bool = not is_core and d <= reach
 		var retreating: bool = e.tactical_retreating
 		if ordered and (not in_contact or retreating):
-			_move_enemy(e, e.tactical_goal, minf(espd, e.tactical_speed), dt)
+			# Une allure bridée par l'escouade (rang qui attend) le reste ; une course libre profite de la ruée.
+			_move_enemy(e, e.tactical_goal, minf(espd, e.tactical_speed * (rush if e.tactical_speed >= e.speed else 1.0)), dt)
 		elif d > reach:
 			if coordinated:
 				_move_enemy(e, Vector2(tx, tz), espd, dt)
@@ -858,7 +907,7 @@ func update_enemies(dt: float, alive: Array[Unit]) -> void:
 				e.x += dx / length * espd * dt
 				e.z += dz / length * espd * dt
 				sim.clamp_world(e)
-		if d <= reach and e.cooldown <= 0.0 and not retreating:
+		if d <= reach and e.cooldown <= 0.0 and not retreating and e.kind != "beast":
 			e.attack_started = GameState.sim_time
 			e.face = -1 if tx < e.x else 1
 			e.cooldown = Catalog.ENEMY[e.kind]["cd"]
@@ -872,36 +921,39 @@ func update_enemies(dt: float, alive: Array[Unit]) -> void:
 				e.strike_at = GameState.sim_time + e.windup / maxf(e.pace, 0.01)
 				e.strike_target = null if is_core else target
 				continue
-			_enemy_hit(e, null if is_core else target, core)
+			var victim: Unit = null if is_core else target
+			var shot_to: Variant = core if is_core else target
 			if e.kind == "archer":
-				arrow(e, core if is_core else target, ENEMY_BOW)
+				_enemy_hit(e, victim, core, arrow(e, shot_to, ENEMY_BOW))
 			elif e.kind == "soldier" and d > MELEE_REACH:
-				pilum(e, core if is_core else target)
+				_enemy_hit(e, victim, core, pilum(e, shot_to))
 			elif e.kind == "spitter":
-				spell(e, core if is_core else target)
+				_enemy_hit(e, victim, core, spell(e, shot_to))
 			else:
+				_enemy_hit(e, victim, core)
 				Sfx.at(ENEMY_MELEE_SFX.get(e.kind, "fanatique"), e.x, e.z)
 			e.cooldown = Catalog.ENEMY[e.kind]["cd"]
 
 
 ## Dégâts d'un coup d'ennemi sur sa cible (null = l'Ancre) : bouclier, garde et armure de la cible, éclair d'impact.
-func _enemy_hit(e: Enemy, target: Unit, core: Dictionary) -> void:
+## `delay` : vol du projectile, l'éclair et le chiffre attendent l'impact.
+func _enemy_hit(e: Enemy, target: Unit, core: Dictionary, delay := 0.0) -> void:
 	var dmg := e.damage
 	if target != null:
-		hit_unit(target, dmg)
+		hit_unit(target, dmg, delay)
 	else:
 		GameState.core_hp = maxf(0.0, GameState.core_hp - dmg)
-		flash(core["x"], core["z"], Color("#e17b63"))
+		flash(core["x"], core["z"], Color("#e17b63"), 1.0, delay)
 
 
 ## Coup d'ennemi de dmg sur une unité : bouclier, garde et armure de la cible, éclair d'impact.
-func hit_unit(target: Unit, dmg: float) -> void:
+func hit_unit(target: Unit, dmg: float, delay := 0.0) -> void:
 	if target.shield > 0.0:
 		dmg *= 0.35
 	if Catalog.FIGHT.has(target.role) and Catalog.FIGHT[target.role].has("guard"):
 		dmg *= Catalog.FIGHT[target.role]["guard"]
-	damage(target, after_armor(target, dmg))
-	flash(target.x, target.z, Color("#e17b63"))
+	damage(target, after_armor(target, dmg), null, delay)
+	flash(target.x, target.z, Color("#e17b63"), 1.0, delay)
 
 
 ## Fin de l'armement d'un coup annoncé : il porte si la cible vit encore et n'est pas sortie de portée (esquive).
@@ -918,7 +970,7 @@ func _land_strike(e: Enemy, core: Dictionary) -> void:
 	if target != null:
 		if target.hp <= 0.0 or target.hidden or dist(target, e) > e.reach + Catalog.ENEMY_WINDUP_SLACK:
 			return
-	elif Combat.hyp(e.x - core["x"], e.z - core["z"]) > e.reach + Catalog.ENEMY_WINDUP_SLACK:
+	elif e.pos().distance_to(Capsule.anchor_edge(e.pos())) > e.reach + Catalog.ENEMY_WINDUP_SLACK:
 		return
 	_enemy_hit(e, target, core)
 
@@ -1164,10 +1216,8 @@ func update_turrets(dt: float) -> void:
 func order_turret(b: Dictionary) -> void:
 	if GameState.ended:
 		return
-	if b["complete"]:
-		sim.say("Garde tyrienne active · portée %d · dégâts %d." % [int(Catalog.TURRET["range"]), Catalog.TURRET["damage"]], 2.0)
-		return
-	sim.say("Garde tyrienne endormie · elle s’éveillera quand l’Ingénieur aura réactivé l’Ancre.", 3.0)
+	# Messages de la garde tyrienne masqués (tri des répliques du 2026-11-20).
+	pass
 
 
 # ---------------------------------------------------------------- Fin de partie et vagues
@@ -1187,6 +1237,8 @@ func finish_tick(dt: float, alive: Array[Unit]) -> void:
 		if e.hp <= 0.0:
 			e.dead = true
 			e.died_at = GameState.sim_time
+			Skeletons.on_death(e)
+			EnemyShots.on_death(e)
 			Sfx.at("ennemi_mort", e.x, e.z)
 			Loot.roll(e)
 			GameState.enemy_corpses.append(e)

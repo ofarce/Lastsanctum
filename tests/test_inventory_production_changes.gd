@@ -6,18 +6,20 @@ const Storage := preload("res://sim/item_storage.gd")
 
 func test_batches_transport_and_inventory() -> void:
 	var sim := game()
-	var workshop := built("workshop", 26.0, -112.0)
-	var crew := staff(sim, workshop, 1)
-	workshop.recipe = "arrows"
-	Production.put_into(workshop.input_box, "wood", 1)
+	var archerie := built("archerie", 26.0, -112.0)
+	staff(sim, archerie, 1)
+	archerie.recipe = "arrows"
+	Production.put_into(archerie.input_box, "wood", 1)
 	run(sim, 10.0)
-	check_eq(Production.count_in(workshop.output_box, "arrows"), 15, "un bois produit 15 flèches")
-	workshop.input_box.clear()
-	Production.put_into(workshop.input_box, "wood", 1)
-	workshop.output_box.clear()
+	check_eq(Production.count_in(archerie.output_box, "arrows"), 15, "un bois produit 15 flèches")
+	archerie.input_box.clear()
+	Production.put_into(archerie.input_box, "wood", 1)
+	archerie.output_box.clear()
 	for i in Production.BOX_CAPACITY:
-		workshop.output_box.append({"item": "arrows" if i == 0 else "filler%d" % i, "quantity": Storage.MAX_STACK - 14 if i == 0 else Storage.MAX_STACK})
-	check_eq(Production.craft_workers(workshop), 0, "le lot entier doit tenir dans le coffre")
+		archerie.output_box.append({"item": "arrows" if i == 0 else "filler%d" % i, "quantity": Storage.MAX_STACK - 14 if i == 0 else Storage.MAX_STACK})
+	check_eq(Production.craft_workers(archerie), 0, "le lot entier doit tenir dans le coffre")
+	var workshop := built("workshop", 10.0, -126.0)
+	var crew := staff(sim, workshop, 1)
 	var forge := built("forge", -6.0, -112.0)
 	Production.put_into(forge.output_box, "wood", 20)
 	workshop.recipe = "barricade"

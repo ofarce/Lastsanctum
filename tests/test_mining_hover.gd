@@ -12,7 +12,7 @@ func test_hover_requires_seal_selected_visible_engineer_and_valid_rock() -> void
 	var pointer := input.project(66, 0, -138)
 	GameState.selected = [engineer()]
 	check(input.mining_hover_cell(pointer) == null, "sceau nécessaire même avec armure")
-	GameState.research_done["mining_artifact"] = true
+	GameState.mining_seal = true
 	var cell: Variant = input.mining_hover_cell(pointer)
 	check(cell != null, "case survolée détectée")
 	if cell == null:
@@ -43,7 +43,7 @@ func test_hover_updates_after_mining_camera_change_and_reset() -> void:
 	var input: InputController = sim.get_node("../Input")
 	input.world.camera.set_view(Vector2(66, -138), 2)
 	GameState.selected = [engineer()]
-	GameState.research_done["mining_artifact"] = true
+	GameState.mining_seal = true
 	var pointer := input.project(66, 0, -138)
 	check(input.mining_hover_cell(pointer) != null, "survol initial")
 	input.world.camera.set_view(Vector2(0, -138), 2)

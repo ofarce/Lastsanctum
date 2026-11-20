@@ -58,6 +58,8 @@ func _ready() -> void:
 	add_child(preload("res://ui/hud/ammo_barrel.gd").new())
 	# Barre d'objets (sceau de minage, Arbalestrie, balles), sous la barre PV.
 	add_child(ItemBar.new())
+	# Paquetage de l'Ingénieur (10 cases), en bas de l'écran.
+	add_child(PackBar.new())
 
 
 func _schedule_hide() -> void:

@@ -1,6 +1,6 @@
 extends Node
 ## Captures des bannières « Reçu : … » à la première entrée dans la capsule : Arbalestrie, puis Combinaison
-## posée par-dessus après une action, puis fermeture.
+## qui remplace la première après une action, puis fermeture.
 ## godot --path . res://tests/visual/item_banner_capture.tscn
 const OUT := "res://tests/visual/out/item_banner/"
 const MAIN = preload("res://main/main.tscn")

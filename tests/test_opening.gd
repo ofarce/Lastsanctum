@@ -7,9 +7,7 @@ static var _main: Node
 
 
 func _game() -> Simulation:
-	if _main == null:
-		_main = load("res://main/main.tscn").instantiate()
-		(Engine.get_main_loop() as SceneTree).root.add_child(_main)
+	_main = shared_main()
 	var sim: Simulation = _main.get_node("Simulation")
 	sim.paused = true
 	sim.opening = true

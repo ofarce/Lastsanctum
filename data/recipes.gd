@@ -1,8 +1,11 @@
 extends RefCounted
-## Fabrication : recettes de l'Atelier, de la Forge et du Creuset des Exilés (spec du 2026-11-17).
+## Fabrication : recettes de l'Atelier, de la Scierie, de l'Archerie, de la Fonderie et de l'Armurerie (spec du 2026-11-17).
+## Scierie (fibre de bois) et Archerie (arc, flèches) prises à l'Atelier le 2026-11-20.
+## Découpage du 2026-11-20 : la Fonderie (id « forge ») ne fait que des lingots ; l'Armurerie (id « creuset »)
+## fait toutes les armes et armures, uniquement à partir de lingots.
 ## Les ingrédients sont pris dans le stock (coffre de base, puis sac de l'Ingénieur : ItemStorage.take) au
 ## moment de la mise en file ; chaque objet sort après la durée propre au bâtiment et rejoint le stock (ItemStorage.deposit).
-## Les objets du Creuset s'équipent sur l'Ingénieur sans armure : leurs emplacements et statistiques sont dans
+## Les objets de l'Armurerie s'équipent sur l'Ingénieur sans armure : leurs emplacements et statistiques sont dans
 ## data/gear_items.gd.
 
 const CRAFT_QUEUE := 5
@@ -15,29 +18,32 @@ const ITEMS := {
 		"desc": "Se pose par terre ou sur un mur ; halo de lumière de 3 cases."},
 	"pickaxe": {"name": "Pioche", "color": Color("#8a8f96"), "pending": true,
 		"desc": "Consommée par un adepte pour pouvoir miner."},
-	"arrows": {"name": "Flèches", "color": Color("#b89a6a"),
-		"desc": "Munitions des archers. Fabriquées par lots de 15."},
 	"chest": {"name": "Coffre", "color": Color("#8a6038"), "pending": true,
 		"desc": "Se pose par terre ; 10 emplacements de stockage."},
-	"wood_fiber": {"name": "Fibre de bois", "color": Color("#c8b080"),
-		"desc": "Ingrédient des recettes de niveau supérieur."},
 	"firing_post": {"name": "Poste de tir", "color": Color("#7a5a38"),
 		"desc": "Une unité de tir postée derrière voit sa portée augmentée de moitié ; ne bloque pas les lignes de vue. Se pose sur une case (Ingénieur · Poser)."},
 	"barricade": {"name": "Barricade", "color": Color("#6e6a60"),
 		"desc": "Mur qui force le passage des attaquants ; ne bloque pas les lignes de vue. Se pose sur une case (Ingénieur · Poser)."},
 	"fishing_rod": {"name": "Canne à pêche", "color": Color("#a08858"), "pending": true,
 		"desc": "Non utilisée pour le moment."},
-	"bow": {"name": "Arc", "color": Color("#9a7040"),
-		"desc": "Nécessaire pour recruter un archer (un par archer)."},
 	"caltrops": {"name": "Chausse-trappe", "color": Color("#5a5650"),
 		"desc": "Piège posé au sol : 25 dégâts par seconde à chaque ennemi qui marche dessus. Se pose sur une case (Ingénieur · Poser)."},
 	"focus_staff": {"name": "Bâton à focale", "color": Color("#b8e8d8"),
 		"desc": "Nécessaire pour former un mage cristallisé (un par mage)."},
-	# Forge
+	# Scierie
+	"wood_fiber": {"name": "Fibre de bois", "color": Color("#c8b080"),
+		"desc": "Ingrédient des recettes de niveau supérieur."},
+	# Archerie
+	"bow": {"name": "Arc", "color": Color("#9a7040"),
+		"desc": "Nécessaire pour recruter un archer (un par archer)."},
+	"arrows": {"name": "Flèches", "color": Color("#b89a6a"),
+		"desc": "Munitions des archers. Fabriquées par lots de 15."},
+	# Armurerie
 	"sword": {"name": "Épée", "color": Color("#b8c0c8"),
 		"desc": "Nécessaire pour recruter un Épée et bouclier (une par soldat)."},
 	"shield": {"name": "Bouclier", "color": Color("#9aa4ae"),
 		"desc": "Nécessaire pour recruter un Épée et bouclier (un par soldat)."},
+	# Fonderie
 	"copper_ingot": {"name": "Lingot de cuivre", "color": Color("#d4885e"),
 		"desc": "Ingrédient des recettes de niveau supérieur."},
 	"iron_ingot": {"name": "Lingot de fer", "color": Color("#9aa8b4"),
@@ -46,31 +52,35 @@ const ITEMS := {
 		"desc": "Ingrédient des recettes de niveau supérieur."},
 }
 
-## Recettes par bâtiment, dans l'ordre des boutons. Les objets du Creuset sont décrits dans gear_items.gd.
+## Recettes par bâtiment, dans l'ordre des boutons. Les pièces d'équipement de l'Armurerie sont décrites dans gear_items.gd.
 const RECIPES := {
 	"workshop": {
 		"torch": {"wood": 1},
 		"pickaxe": {"wood": 1, "iron": 1},
-		"arrows": {"wood": 1},
 		"chest": {"wood": 5, "iron": 1},
-		"wood_fiber": {"wood": 1},
 		"firing_post": {"wood": 10},
 		"barricade": {"wood": 10, "rock": 10},
 		"fishing_rod": {"wood": 2, "iron": 1, "wood_fiber": 1},
-		"bow": {"wood": 1, "wood_fiber": 1},
 		"caltrops": {"wood": 25},
 		"focus_staff": {"wood": 2, "quartz": 2},
 	},
+	"scierie": {
+		"wood_fiber": {"wood": 1},
+	},
+	"archerie": {
+		"bow": {"wood": 1, "wood_fiber": 1},
+		"arrows": {"wood": 1},
+	},
 	"forge": {
-		"sword": {"copper": 10},
-		"shield": {"copper": 10},
 		"copper_ingot": {"copper": 5},
 		"iron_ingot": {"iron": 5},
 		"gold_ingot": {"gold": 5},
 	},
 	"creuset": {
-		"copper_armor": {"copper": 100},
-		"iron_armor": {"iron": 200},
+		"sword": {"copper_ingot": 2},
+		"shield": {"copper_ingot": 2},
+		"copper_armor": {"copper_ingot": 20},
+		"iron_armor": {"iron_ingot": 40},
 		"iron_greatsword": {"iron_ingot": 10},
 		"iron_sword": {"iron_ingot": 5},
 		"iron_shield": {"iron_ingot": 5},
@@ -98,7 +108,7 @@ static func output_quantity(item: String) -> int:
 
 
 static func craft_time(building_type: String) -> float:
-	return 9.0 if building_type in ["workshop", "forge"] else 3.0
+	return 9.0 if building_type in ["workshop", "forge", "scierie", "archerie"] else 3.0
 
 
 static func has_station(building_type: String) -> bool:

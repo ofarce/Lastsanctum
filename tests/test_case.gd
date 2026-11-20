@@ -5,6 +5,21 @@ extends RefCounted
 
 var failures: PackedStringArray = []
 
+static var _shared_main: Node
+
+
+## Scène du jeu (main.tscn), une seule par processus de test : chaque instance pèse ~500 Mo et plusieurs
+## secondes de chargement. Rendue en pause, séquence d'ouverture coupée ; à chaque test de lancer sa partie
+## (Simulation.new_game).
+static func shared_main() -> Node:
+	if _shared_main == null:
+		_shared_main = load("res://main/main.tscn").instantiate()
+		(Engine.get_main_loop() as SceneTree).root.add_child(_shared_main)
+	var sim: Node = _shared_main.get_node("Simulation")
+	sim.paused = true
+	sim.opening = false
+	return _shared_main
+
 
 func check(condition: bool, message: String = "condition fausse") -> void:
 	if not condition:

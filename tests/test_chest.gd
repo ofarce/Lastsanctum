@@ -65,7 +65,7 @@ func test_wall_hint() -> void:
 	u.tz = u.z
 	run(sim, 0.2)
 	check(lines.is_empty(), "sans le Sceau : rien")
-	GameState.research_done["mining_artifact"] = true
+	GameState.mining_seal = true
 	run(sim, 0.2)
 	run(sim, 0.2)
 	check_eq(lines.size(), 1, "réplique dite une fois")

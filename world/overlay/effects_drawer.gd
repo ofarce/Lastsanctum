@@ -7,9 +7,12 @@ extends RefCounted
 
 const ItemIcon := preload("res://ui/inventory/item_icon.gd")
 
-const RIVET_GLOW: Array[Color] = [Color("#4a2206"), Color("#8a420c"), Color("#d0781a"), Color("#ffb03c"), Color("#ffe08a")]
-const RIVET_BRASS := Color("#f0cc6a")
-const RIVET_DARK := Color("#6a4a14")
+## Rivet de l'Ingénieur en cyan des Exilés (planche « Visibilité des balles », piste 5·B, 2026-11-20) : le jaune est
+## laissé aux tirs ennemis. Avant : traînée #4a2206 → #ffe08a, corps laiton #f0cc6a, flanc #6a4a14, pointe #fff0b0.
+const RIVET_GLOW: Array[Color] = [Color("#0a2a33"), Color("#12596b"), Color("#1f9fb8"), Color("#5ce8ff"), Color("#c8fbff")]
+const RIVET_BRASS := Color("#5ce8ff")
+const RIVET_DARK := Color("#12596b")
+const RIVET_TIP := Color("#c8fbff")
 const ARROW_SHAFT := Color("#6c4c2e")
 const ARROW_HEAD := Color("#d6d9dc")
 const ARROW_TIP := Color("#bcdcff")
@@ -128,6 +131,7 @@ func draw_all(now: float) -> void:
 		_loot_beam(nat_p(cache["x"], cache["z"]) * px - Vector2(0, 9 * px), Loot.RARITY[Loot.best_rarity(cache["loot"])]["color"], now)
 	_mage_marks(now)
 	_fire_walls(now)
+	_skel_chains()
 	for e in GameState.effects:
 		if e.has("x") and e.has("z") and not world.fog.visible_at(Vector2(e["x"], e["z"])):
 			continue
@@ -147,16 +151,80 @@ func draw_all(now: float) -> void:
 			"suspend": _suspend(e, now)
 			"slash": _slash(e)
 			"cball": _cball(e)
+			"xbow_fire": _xbow_fire(e)
 			"cballhit": _cball_hit(e)
 			"aether_wave": _aether_wave(e)
 			"heal_motes": _heal_motes(e)
+			"skel_bile", "skel_boom": _skel_wave(e)
 			_: _simple(e)
 	_planted_pitons(now)
-	_enemy_shots(now)
 	for e in GameState.damage_numbers:
 		if world.fog.visible_at(Vector2(e["x"], e["z"])):
 			_damage_number(e)
 	_turret_bolts()
+
+
+# ---------------------------------------------------------------- Squelettes de la nuit (sim/skeletons.gd)
+
+const SKEL_BILE: Array[Color] = [Color("#5e6212"), Color("#98a022"), Color("#ccd24a"), Color("#f2f6a0")]
+const SKEL_FIRE: Array[Color] = [Color("#c23a08"), Color("#f2800e"), Color("#ffc83a"), Color("#fff6c0")]
+const SKEL_CHAIN: Array[Color] = [Color("#7a8496"), Color("#d6dce8")]
+## Hauteur du collier au-dessus des pieds, en pixels natifs.
+const SKEL_NECK := 20.0
+
+
+## Chaîne entre les colliers d'un même groupe : pendante tant qu'il y a du mou, blanche et droite à bout de course.
+func _skel_chains() -> void:
+	for e: Enemy in GameState.enemies:
+		if e.kind != Skeletons.COLLAR or e.hp <= 0.0 or not e.memo.has("pack"):
+			continue
+		for o: Enemy in e.memo["pack"]:
+			# Chaque paire une seule fois.
+			if o.hp <= 0.0 or o.get_instance_id() <= e.get_instance_id():
+				continue
+			if not world.fog.visible_at(e.pos()) and not world.fog.visible_at(o.pos()):
+				continue
+			var d := e.pos().distance_to(o.pos())
+			var taut := d > Skeletons.TETHER - 0.5
+			var a := nat_p(e.x, e.z) - Vector2(0.0, SKEL_NECK)
+			var b := nat_p(o.x, o.z) - Vector2(0.0, SKEL_NECK)
+			var sag := minf(10.0, 0.08 * Proj.K * sqrt(maxf(0.0, Skeletons.TETHER * Skeletons.TETHER - d * d)))
+			# Maillons de 2 × 2 pixels, un clair, un sombre, cernés de noir pour rester lisibles sur l'herbe et sur les os.
+			var n := maxi(2, roundi(a.distance_to(b) / 3.0))
+			for pass_i in 2:
+				for k in n + 1:
+					var t := float(k) / n
+					var p := a.lerp(b, t)
+					var y := p.y + sag * 4.0 * t * (1.0 - t)
+					if pass_i == 0:
+						for q: Vector2 in [Vector2(-1, 0), Vector2(2, 0), Vector2(-1, 1), Vector2(2, 1), Vector2(0, -1), Vector2(1, -1), Vector2(0, 2), Vector2(1, 2)]:
+							npx(p.x + q.x, y + q.y, INK)
+					else:
+						var c: Color = Color.WHITE if taut else SKEL_CHAIN[k % 2]
+						for q: Vector2 in [Vector2(0, 0), Vector2(1, 0), Vector2(0, 1), Vector2(1, 1)]:
+							npx(p.x + q.x, y + q.y, c)
+
+
+## Onde de bile (bubon) ou souffle (explosif) : anneaux de pixels qui s'ouvrent jusqu'au rayon réel, puis s'effacent.
+func _skel_wave(e: Dictionary) -> void:
+	var p: float = e["age"] / e["duration"]
+	var pal: Array[Color] = SKEL_BILE if e["type"] == "skel_bile" else SKEL_FIRE
+	var c := nat_p(e["x"], e["z"])
+	var open := minf(1.0, p / 0.45)
+	var r: float = float(e["r"]) * Proj.K * (1.0 - (1.0 - open) * (1.0 - open))
+	var al := 1.0 - p * p
+	if e["type"] == "skel_boom" and p < 0.15:
+		ndisc(c.x, c.y - 8.0, 10.0, SKEL_FIRE[3], 1.0)
+	for ring: Array in [[1.0, 3, 1], [0.86, 2, 2], [0.66, 1, 3], [0.42, 0, 4]]:
+		var rr: float = r * float(ring[0])
+		var n := maxi(8, ceili(rr * 3.0))
+		for k in n:
+			if (k / int(ring[2])) % 2 == 1 and int(ring[2]) > 1:
+				continue
+			var t := TAU * k / n + p * float(ring[2])
+			dpx(c.x + cos(t) * rr, c.y + sin(t) * rr, pal[int(ring[1])], al)
+			if int(ring[2]) == 1:
+				dpx(c.x + cos(t) * (rr - 1.0), c.y + sin(t) * (rr - 1.0), pal[2], al)
 
 
 ## Point au-dessus de la tête de `u` (barre de vie), ou null si son nœud n'est pas affiché.
@@ -271,7 +339,7 @@ func _rivet(e: Dictionary) -> void:
 		npx(q.x - ux * i + uy, q.y - uy * i - ux, INK)
 		npx(q.x - ux * i - uy * 2.0, q.y - uy * i + ux * 2.0, INK)
 	for i in 4:
-		npx(q.x - ux * i, q.y - uy * i, Color("#fff0b0") if i < 1 else RIVET_BRASS)
+		npx(q.x - ux * i, q.y - uy * i, RIVET_TIP if i < 1 else RIVET_BRASS)
 		npx(q.x - ux * i - uy, q.y - uy * i + ux, RIVET_DARK)
 	npx(q.x + ux, q.y + uy, Color.WHITE)
 
@@ -293,7 +361,7 @@ func _rivet_hit(e: Dictionary) -> void:
 			var d := 1.0 + q * 6.0
 			if R.next() > q * 0.7:
 				npx(hx + cos(a) * d, cy + sin(a) * d * 0.7, RIVET_GLOW[4 if q < 0.5 else 3])
-	var c := Color("#fff0b0") if p < 0.3 else (RIVET_GLOW[3] if p < 0.6 else (RIVET_GLOW[2] if p < 0.85 else RIVET_GLOW[1]))
+	var c := RIVET_TIP if p < 0.3 else (RIVET_GLOW[3] if p < 0.6 else (RIVET_GLOW[2] if p < 0.85 else RIVET_GLOW[1]))
 	npx(hx, cy, c)
 	npx(hx - face, cy, c)
 	npx(hx - face * 2.0, cy, RIVET_DARK)
@@ -354,13 +422,207 @@ const AMMO_PAL := {
 	"aether": [Color("#0e1030"), Color("#2a2e7a"), Color("#4f55c8"), Color("#8a8cf0"), Color("#c8c8ff"), Color("#ffffff")],
 }
 const RING8: Array[Vector2] = [Vector2(-1, -1), Vector2(0, -1), Vector2(1, -1), Vector2(-1, 0), Vector2(1, 0), Vector2(-1, 1), Vector2(0, 1), Vector2(1, 1)]
+## Liseré clair autour du cerne d'encre 3 × 3 des balles (5 × 5 aux coins rognés) : détache la balle du sol sombre.
+const RIM12: Array[Vector2] = [Vector2(-1, -2), Vector2(0, -2), Vector2(1, -2), Vector2(-1, 2), Vector2(0, 2), Vector2(1, 2),
+		Vector2(-2, -1), Vector2(-2, 0), Vector2(-2, 1), Vector2(2, -1), Vector2(2, 0), Vector2(2, 1)]
 const CROSS5: Array[Vector2] = [Vector2(0, 0), Vector2(-1, 0), Vector2(1, 0), Vector2(0, -1), Vector2(0, 1)]
+
+
+# ---------------------------------------------------------------- Tir de l'Arbalestrie
+
+## Bouche et culasse de l'Arbalestrie sur les images de tir (c_shoot), en pixels natifs depuis le point au sol,
+## Ingénieur tourné vers la droite.
+const XBOW_MUZZLE := Vector2(19.0, -15.0)
+const XBOW_BREECH := Vector2(8.0, -18.0)
+## Tir vers le sud (c_shoot_d, canon à la hanche) et vers le nord (c_shoot_u, canon levé) : bouche et culasse.
+const XBOW_MUZZLE_D := Vector2(7.0, -4.0)
+const XBOW_BREECH_D := Vector2(7.0, -14.0)
+const XBOW_MUZZLE_U := Vector2(6.0, -28.0)
+const XBOW_BREECH_U := Vector2(6.0, -17.0)
+
+
+## Bouche (ou culasse) de l'Arbalestrie par rapport aux pieds, pour un tir dans la direction `d` (x, z du monde) :
+## même règle que la pose de UnitView (surtout vers le sud ou le nord : de face ou de dos, sinon de profil).
+static func xbow_point(face: float, d: Vector2, breech := false) -> Vector2:
+	var m := XBOW_BREECH if breech else XBOW_MUZZLE
+	if absf(d.y) > absf(d.x) * 1.2:
+		if d.y > 0.0:
+			m = XBOW_BREECH_D if breech else XBOW_MUZZLE_D
+		else:
+			m = XBOW_BREECH_U if breech else XBOW_MUZZLE_U
+	return Vector2(m.x * face, m.y)
+const XBOW_SMOKE: Array[Color] = [Color("#c9cdd6"), Color("#9aa1b0"), Color("#6d7482")]
+## Vitesse de la balle à l'écran, en pixels natifs par seconde (Combat.BALL_SPEED × 8).
+const XBOW_BALL_PX := 320.0
+
+
+## Ellipse en pointillé (un pixel sur `step`).
+func _ell(x: float, y: float, rx: float, ry: float, c: Color, step := 1) -> void:
+	var n := maxi(8, roundi((rx + ry) * 3.2))
+	for k in range(0, n, step):
+		var a := TAU * k / n
+		npx(x + cos(a) * rx, y + sin(a) * ry, c)
+
+
+## Particule lancée de `from` à la vitesse `v`, qui rebondit au sol (`gy`).
+func _bounce(from: Vector2, v: Vector2, g: float, t: float, gy: float) -> Vector2:
+	var p := from + v * t + Vector2(0, g * t * t * 0.5)
+	if p.y > gy:
+		p.y = gy - absf(sin(t * 16.0)) * 2.0 * maxf(0.0, 1.0 - t * 1.6)
+	return p
+
+
+## Arc de choc de 2·`half` + 1 pixels, bombé vers `d`.
+func _shock_arc(at: Vector2, d: Vector2, half: int, c: Color) -> void:
+	var side := Vector2(-d.y, d.x)
+	for j in range(-half, half + 1):
+		var k := float(j) / half
+		var q := at + side * j + d * (1.6 * (1.0 - k * k))
+		npx(q.x, q.y, c)
+
+
+## Tir de l'Arbalestrie (planches/arbalestrie-tir-planche.html, second bilan du 2026-11-20). Pour toute munition :
+## Culasse (douille éjectée, vapeur) et Souffle (anneau de poussière, arc de choc, poussière aux bottes). Puis la
+## signature de la munition : Arc de rupture (spirituelles), Gueule de feu (Indra), Feu follet (Medeina), Prisme
+## (Sigil), Rond d'orbite (Aether).
+func _xbow_fire(e: Dictionary) -> void:
+	var t := float(e["age"])
+	if t < 0.0:
+		return
+	var face := float(e["face"]) if float(e["face"]) != 0.0 else 1.0
+	var feet := nat_p(e["x"], e["z"])
+	var d := Vector2(e["dx"], e["dz"]).normalized()
+	var M := feet + xbow_point(face, d)
+	var B := feet + xbow_point(face, d, true)
+	var side := Vector2(-d.y, d.x)
+	var ammo := String(e["ammo"])
+	var C: Array = AMMO_PAL.get(ammo, CY)
+	var sd := int(e["seed"])
+	var gy := feet.y + 1.0
+	# --- Souffle
+	if t < 0.28:
+		var q := t / 0.28
+		var k := 1.0 - (1.0 - q) * (1.0 - q)
+		_ell(M.x + 3.0 * face, gy, 3.0 + k * 13.0, 1.0 + k * 3.5, Color(Color("#8d8f98"), 0.55 * (1.0 - q)), 2)
+		_ell(M.x + 3.0 * face, gy, 2.0 + k * 8.0, 0.6 + k * 2.2, Color(XBOW_SMOKE[2], 0.35 * (1.0 - q)))
+	if t < 0.3:
+		var q := t / 0.3
+		for k in 3:
+			npx(feet.x - face * (7.0 + q * (5.0 + k * 2.0)), feet.y - k - q * 2.0, Color(XBOW_SMOKE[k], 0.6 * (1.0 - q)))
+	if t >= 0.02 and t < 0.1:
+		var q := (t - 0.02) / 0.08
+		_shock_arc(M + d * (3.0 + q * 6.0), d, 4, Color(Color("#e9fbff"), 0.7 * (1.0 - q)))
+	# --- Culasse
+	var R := Rng.new(sd)
+	var shell_v := Vector2(-face * (22.0 + R.next() * 14.0), -58.0 - R.next() * 12.0)
+	if t < 0.75:
+		var q := _bounce(B, shell_v, 300.0, t, gy)
+		var a := 1.0 if t < 0.5 else 1.0 - (t - 0.5) / 0.25
+		npx(q.x, q.y, Color(C[4] if t < 0.12 else (C[2] if t < 0.3 else XBOW_SMOKE[2]), a))
+		npx(q.x + 1.0, q.y, Color(C[3] if t < 0.12 else Color("#3e434d"), a))
+	if t < 0.4:
+		var q := t / 0.4
+		for k in 3:
+			npx(B.x + face * (1.0 - k) + sin(t * 14.0 + k) * 1.2, B.y - 2.0 - q * (6.0 + k * 2.0), Color(XBOW_SMOKE[k], 0.6 * (1.0 - q)))
+	# --- Signature de la munition
+	match ammo:
+		"spirit":
+			# Arc de rupture : filament d'éclair entre la bouche et la balle, retracé à chaque image, puis deux étincelles.
+			if t < 0.09:
+				var Z := Rng.new(sd + int(t * 60.0) * 13)
+				var o := 0.0
+				for i in range(1, int(t * XBOW_BALL_PX) - 1):
+					if Z.next() < 0.45:
+						o = clampf(o + (-1.0 if Z.next() < 0.5 else 1.0), -2.0, 2.0)
+					var q := M + d * i + side * o
+					npx(q.x, q.y, Color(CY[5] if i % 2 else CY[3], 0.95 - t * 4.0))
+			elif t < 0.3:
+				for k in 2:
+					var q := _bounce(M, Vector2(d.x * (10.0 + R.next() * 20.0), -20.0 - R.next() * 20.0), 260.0, t - 0.09, gy)
+					npx(q.x, q.y, Color(CY[3 + k], 1.0 - (t - 0.09) / 0.21))
+		"indra":
+			# Gueule de feu : flamme de 12 px blanche au cœur, qui se gonfle puis se résorbe, et quatre braises.
+			if t < 0.14:
+				var p := t / 0.14
+				var reach := 12.0 * minf(1.0, p / 0.25)
+				var i := 0.0
+				while i <= reach:
+					var hw := sin((i + 1.0) / (reach + 2.0) * PI) * 3.4 * (1.0 - p * 0.5)
+					var j := -hw
+					while j <= hw:
+						var heat := 1.0 - i / 14.0 - p * 0.55 - absf(j) / (hw + 1.0) * 0.45
+						if heat > 0.0:
+							var q := M + d * (1.0 + i) + side * j
+							npx(q.x, q.y, C[5] if heat > 0.6 else (C[4] if heat > 0.42 else (C[3] if heat > 0.22 else C[2])))
+						j += 0.75
+					i += 0.75
+			for k in 4:
+				var v := Vector2(d.x * (18.0 + R.next() * 45.0), -55.0 + R.next() * 40.0 + d.y * 20.0)
+				var life := 0.45 + R.next() * 0.25
+				if t < life:
+					var q := _bounce(M + d * 3.0, v, 230.0, t, gy)
+					npx(q.x, q.y, Color(C[4] if t < life * 0.5 else C[3], 1.0 - t / life))
+		"medeina":
+			# Feu follet : une petite flamme verte se détache de la bouche, flotte en vacillant, monte et s'éteint.
+			if t < 0.55:
+				var p := t / 0.55
+				var a := 1.0 if p < 0.6 else 1.0 - (p - 0.6) / 0.4
+				var q := M + d * (3.0 + 10.0 * (1.0 - exp(-5.0 * t))) + Vector2(sin(t * 16.0) * 1.2, -p * p * 14.0)
+				for o: Vector2 in RING8:
+					npx(q.x + o.x, q.y + o.y, Color(C[2], 0.55 * a))
+				npx(q.x, q.y, Color(C[5], a))
+				npx(q.x, q.y - 1.0, Color(C[4], a))
+				npx(q.x + (1.0 if int(t * 20.0) % 2 else -1.0), q.y - 2.0, Color(C[3], a))
+				npx(q.x, q.y + 1.0, Color(C[3], a))
+		"sigil":
+			# Prisme : un trait blanc traverse le canon, frappe un losange et en ressort en deux rayons.
+			var c0 := M + d * 6.0
+			if t < 0.03:
+				for i in range(1, 12):
+					npx(M.x - face * i, M.y, Color(C[5], 0.8))
+			if t < 0.1:
+				var a := 1.0 if t < 0.05 else 1.0 - (t - 0.05) / 0.05
+				for k in 5:
+					for sg: Vector2 in [Vector2(1, 1), Vector2(1, -1), Vector2(-1, 1), Vector2(-1, -1)]:
+						var q := c0 + d * (sg.x * k) + side * (sg.y * (4 - k))
+						npx(q.x, q.y, Color(C[5] if t < 0.05 else C[4], a))
+			if t > 0.03 and t < 0.22:
+				var p := (t - 0.03) / 0.19
+				for sg: float in [-1.0, 1.0]:
+					for i in int(minf(24.0, p * 60.0)):
+						var q := c0 + d * (4.0 + i) + side * (sg * (i * 0.25 + 1.0))
+						npx(q.x, q.y, Color(C[5] if i % 2 else C[4], (1.0 - p) * (1.0 - i / 30.0)))
+		"aether":
+			# Rond d'orbite : anneau soufflé par la bouche, qui avance en s'élargissant, une étoile sur son bord.
+			if t < 0.34:
+				var p := t / 0.34
+				var k := 1.0 - (1.0 - p) * (1.0 - p)
+				var c0 := M + d * (2.0 + k * 13.0)
+				var rx := 1.0 + k * 2.2
+				var ry := 3.0 + k * 7.0
+				var n := maxi(8, roundi((rx + ry) * 3.2))
+				for i in n:
+					var a := TAU * i / n
+					var q := c0 + d * (cos(a) * rx) + side * (sin(a) * ry)
+					npx(q.x, q.y, Color(C[3], 0.9 * (1.0 - p)))
+					var q2 := c0 - d + d * (cos(a) * rx * 0.6) + side * (sin(a) * ry * 0.7)
+					npx(q2.x, q2.y, Color(C[2], 0.45 * (1.0 - p)))
+				var star := c0 + d * (cos(t * 34.0) * rx) + side * (sin(t * 34.0) * ry)
+				npx(star.x, star.y, Color(C[5], 1.0 - p))
+
+
+## Taille des balles de l'Arbalestrie en vol (×1,5 le 2026-11-20).
+const BALL_SCALE := 1.5
 
 
 ## Balle de l'Arbalestrie en vol, selon sa munition (balles spirituelles : bille noire et micro-éclairs cyan).
 func _cball(e: Dictionary) -> void:
 	var p := clampf(float(e["age"]) / float(e["duration"]), 0.0, 1.0)
 	var n := Proj.nat(lerpf(e["x"], e["tx"], p), 1.3, lerpf(e["z"], e["tz"], p)) + world.native_offset
+	# Arbalestrie : départ à la bouche du canon, puis la balle rejoint sa ligne de tir.
+	if e.has("muz"):
+		var wd := Vector2(float(e["tx"]) - float(e["x"]), float(e["tz"]) - float(e["z"]))
+		n += (xbow_point(float(e["muz"]), wd) + Vector2(0.0, 1.3 * Proj.KH)) * (1.0 - p)
 	var x := jr(n.x)
 	var y := jr(n.y)
 	var age := float(e["age"])
@@ -368,6 +630,9 @@ func _cball(e: Dictionary) -> void:
 	# Sens du vol à l'écran (traînées vers l'arrière).
 	var d := Proj.nat(e["tx"], 0.0, e["tz"]) - Proj.nat(e["x"], 0.0, e["z"])
 	d = d.normalized() if d.length() > 0.01 else Vector2.RIGHT
+	# Balle agrandie de BALL_SCALE autour de son centre (pixels du dessin compris, traînée et halo du duel aussi).
+	var c := Vector2(x + 0.5, y + 0.5) * px
+	ci.draw_set_transform(c * (1.0 - BALL_SCALE), 0.0, Vector2(BALL_SCALE, BALL_SCALE))
 	# Duel contre la Martyre : traînée cyan et halo clair, pour lire ses propres tirs parmi les éclats d'or.
 	if Martyre.active():
 		_duel_trail(x, y, d, age)
@@ -377,6 +642,7 @@ func _cball(e: Dictionary) -> void:
 		"sigil": _ball_sigil(x, y, d, age)
 		"aether": _ball_aether(x, y, d, age)
 		_: _ball_spirit(x, y, age, sd)
+	ci.draw_set_transform(Vector2.ZERO)
 
 
 ## Traînée d'une balle de l'Ingénieur pendant le duel : 10 pixels cyan qui s'effacent vers l'arrière (raccourcie
@@ -397,8 +663,15 @@ func _duel_trail(x: float, y: float, d: Vector2, age: float) -> void:
 		npx(x + q.x, y + q.y, Color(CY[3], 0.5))
 
 
+## Liseré clair (RIM12) d'une balle, sous ses autres pixels.
+func _ball_rim(x: float, y: float, c: Color) -> void:
+	for q: Vector2 in RIM12:
+		npx(x + q.x, y + q.y, Color(c, 0.9))
+
+
 func _ball_spirit(x: float, y: float, age: float, sd: int) -> void:
-	# Balle réduite (2026-11-19) : 3 × 3 pixels, cœur sombre cerné d'encre.
+	# Balle réduite (2026-11-19) : 3 × 3 pixels, cœur sombre cerné d'encre, liseré cyan clair.
+	_ball_rim(x, y, CY[4])
 	for q: Vector2 in RING8:
 		npx(x + q.x, y + q.y, INK)
 	npx(x, y, Color("#5b6068"))
@@ -446,6 +719,7 @@ func _ball_indra(x: float, y: float, d: Vector2, age: float, sd: int) -> void:
 ## Medeina : graine verte, deux feuilles qui tournent autour, poussière verte derrière.
 func _ball_medeina(x: float, y: float, d: Vector2, age: float) -> void:
 	var C: Array = AMMO_PAL["medeina"]
+	_ball_rim(x, y, C[4])
 	for q: Vector2 in RING8:
 		npx(x + q.x, y + q.y, INK)
 	npx(x, y, C[3])
@@ -461,6 +735,7 @@ func _ball_medeina(x: float, y: float, d: Vector2, age: float) -> void:
 ## Sigil : bille de marbre clair (encre en bas à droite), éclat qui parcourt la veine, tirets de glyphe.
 func _ball_sigil(x: float, y: float, d: Vector2, age: float) -> void:
 	var C: Array = AMMO_PAL["sigil"]
+	_ball_rim(x, y, C[5])
 	for q: Vector2 in [Vector2(-1, -1), Vector2(0, -1), Vector2(-1, 0)]:
 		npx(x + q.x, y + q.y, C[3])
 	for q: Vector2 in [Vector2(1, -1), Vector2(1, 0), Vector2(-1, 1), Vector2(0, 1), Vector2(1, 1)]:
@@ -481,6 +756,7 @@ func _ball_aether(x: float, y: float, d: Vector2, age: float) -> void:
 		var o := Vector2(roundf(cos(t) * 3.5), roundf(sin(t) * 1.5))
 		if absf(o.x) > 1 or absf(o.y) > 1:
 			npx(x + o.x, y + o.y, Color(C[2], 0.55))
+	_ball_rim(x, y, C[4])
 	for q: Vector2 in RING8:
 		npx(x + q.x, y + q.y, INK)
 	npx(x, y, C[4])
@@ -729,11 +1005,12 @@ func _orb(e: Dictionary) -> void:
 
 
 func _orb_at(q: Vector2) -> void:
-	for o: Vector2 in [Vector2(-2, 0), Vector2(2, 0), Vector2(0, -2), Vector2(0, 2), Vector2(-1, -1), Vector2(1, -1), Vector2(-1, 1), Vector2(1, 1)]:
-		npx(q.x + o.x, q.y + o.y, ORB[0] if absf(o.x) + absf(o.y) > 1.5 else ORB[1])
-	for o: Vector2 in [Vector2(-1, 0), Vector2(1, 0), Vector2(0, -1), Vector2(0, 1)]:
-		npx(q.x + o.x, q.y + o.y, ORB[2])
-	npx(q.x, q.y, ORB[3])
+	# Doublé le 2026-11-20 (demande) : 9 px de large au lieu de 5, liseré noir d'un pixel pour ressortir du décor.
+	_disc(q.x, q.y, 5.5, Color.BLACK)
+	_disc(q.x, q.y, 4.5, ORB[0])
+	_disc(q.x, q.y, 3.5, ORB[1])
+	_disc(q.x, q.y, 2.2, ORB[2])
+	_disc(q.x - 0.5, q.y - 0.5, 1.0, ORB[3])
 
 
 ## Trajet presque droit (légère cloche) du haut du bâton vers la poitrine de la cible.
@@ -769,15 +1046,68 @@ func _orb_hit(e: Dictionary) -> void:
 ## Hauteur de vol des balles (pixels natifs) : la poitrine, comme les tirs à coup sûr.
 const SHOT_LIFT := 14.0
 const SHOT_SHADOW := Color(0.0, 0.0, 0.0, 0.4)
-const SHOT_WARN := Color("#f0cc66")
+## Annonces des tirs (ligne de visée, cercle du pilum) : pointillé carmin (piste 5·B ; avant : jaune #f0cc66 plein).
+const SHOT_WARN := Color("#e2382e")
+## Halo pâle sous chaque balle (piste 1·C) : rayon en pixels natifs et opacité au centre.
+const SHOT_HALO_R := 6.0
+const SHOT_HALO := Color(1.0, 0.94, 0.86, 0.35)
+## Crachat annoncé des chiens (EnemyShots.SPIT.warn) : longueur du trait au sol en pixels natifs.
+const SPIT_LINE := 18.0
+static var _halo_tex: GradientTexture2D
 ## Boule de feu des chiens de la Bête : braise, orange, jaune, cœur pâle.
-const FIREBALL: Array[Color] = [Color("#8a1c0c"), Color("#e8641c"), Color("#ffc23a"), Color("#fff3c0")]
+## Boule de feu (chiens de la Bête, squelettes explosifs) : braise rouge à cœur blanc cerclée de sombre (planche
+## « Visibilité des balles », piste 4·B, 2026-11-20). Rangs : traînée sombre, traînée, corps, nez, cœur, cœur pâle, anneau.
+## Avant : #8a1c0c, #e8641c, #ffc23a, #fff3c0, sans anneau.
+const FIREBALL: Array[Color] = [Color("#5a0a14"), Color("#a8182a"), Color("#d42a3a"), Color("#ff8a7a"), Color.WHITE, Color("#ffd8d0"), Color("#2a040c")]
+## Goutte d'ichor du Fanatique (planche « Motifs statiques », 2·V) : bord, corps, intérieur, cœur.
+const ICHOR_DROP: Array[Color] = [Color("#0e0614"), Color("#4a1e66"), Color("#9a62d0"), Color("#f4eaff")]
+## Éclat d'os-chair du Strazhar (3·C) : liseré, chair, os sombre, os, pointe.
+const BONE_SHARD: Array[Color] = [Color("#140808"), Color("#a02838"), Color("#b8a888"), Color("#e4d8bc"), Color.WHITE]
+## Annonce de l'anneau d'ichor : rayon du cercle carmin (u) ; montée des gouttes et des éclats à leur départ (s).
+const ICHOR_WARN_R := 1.6
+const ICHOR_RISE := 0.15
+const BONE_RISE := 0.12
 
 
-## Annonces (ligne de visée de l'archer, point de chute du pilum), balles en vol avec leur ombre au sol, et
-## zone touchée de l'Exilé incarné (point blanc) quand une balle approche.
+## Calque des tirs ennemis (EnemyShotsView, au-dessus de l'obscurité et de la pluie : piste 1·C de la planche
+## « Visibilité des balles », 2026-11-20). ci : nœud du calque, repère de l'écran.
+func draw_enemy_layer(now: float) -> void:
+	px = float(world.camera.px)
+	_enemy_shots(now)
+
+
+## Halo pâle sous une balle, centré sur q (pixels natifs à l'écran).
+func _shot_halo(q: Vector2) -> void:
+	if _halo_tex == null:
+		var g := Gradient.new()
+		g.set_color(0, SHOT_HALO)
+		g.set_color(1, Color(SHOT_HALO, 0.0))
+		_halo_tex = GradientTexture2D.new()
+		_halo_tex.gradient = g
+		_halo_tex.fill = GradientTexture2D.FILL_RADIAL
+		_halo_tex.fill_from = Vector2(0.5, 0.5)
+		_halo_tex.fill_to = Vector2(1.0, 0.5)
+		_halo_tex.width = 32
+		_halo_tex.height = 32
+	ci.draw_texture_rect(_halo_tex, Rect2((q - Vector2(SHOT_HALO_R, SHOT_HALO_R)) * px, Vector2.ONE * SHOT_HALO_R * 2.0 * px), false)
+
+
+## Ligne pixel en pointillés (4 pixels, 2 vides), tramée selon al.
+func _dash_line(a: Vector2, b: Vector2, c: Color, al: float) -> void:
+	var n := maxi(1, ceili(maxf(absf(b.x - a.x), absf(b.y - a.y))))
+	for k in n + 1:
+		if k % 6 < 4:
+			var p := a.lerp(b, float(k) / n)
+			dpx(p.x, p.y, c, al)
+
+
+## Annonces (ligne de visée de l'archer, point de chute du pilum, braise dans la gueule des chiens), balles en vol
+## avec leur halo et leur ombre au sol, et zone touchée de l'Exilé incarné (point blanc) quand une balle approche.
 func _enemy_shots(now: float) -> void:
 	for en: Enemy in GameState.enemies:
+		if en.kind == "beast" and en.spit_fire_at != INF and en.hp > 0.0:
+			_spit_warn(en, now)
+			continue
 		if en.shot_aim == null or en.strike_at == INF or en.kind != "archer" or not world.fog.visible_at(en.pos()):
 			continue
 		var aim: Vector2 = en.shot_aim
@@ -785,7 +1115,7 @@ func _enemy_shots(now: float) -> void:
 		var a := nat_p(en.x, en.z)
 		var b := nat_p(en.x + dir.x * EnemyShots.ARROW["range"], en.z + dir.y * EnemyShots.ARROW["range"])
 		var left: float = clampf((en.strike_at - now) / maxf(en.windup, 0.01), 0.0, 1.0)
-		nline(a, b, SHOT_WARN, 0.2 + 0.35 * (1.0 - left))
+		_dash_line(a, b, SHOT_WARN, 0.35 + 0.45 * (1.0 - left))
 	if GameState.enemy_shots.is_empty():
 		return
 	var u := GameState.incarnated
@@ -797,11 +1127,24 @@ func _enemy_shots(now: float) -> void:
 			continue
 		if not world.fog.visible_at(Vector2(s["x"], s["z"])):
 			continue
+		if kind == "ichor_warn":
+			_ichor_warn(s, now)
+			continue
+		if kind == "spike":
+			_spike(s, now)
+			continue
 		if u != null and absf(s["x"] - u.x) < 3.0 and absf(s["z"] - u.z) < 3.0:
 			near = true
 		var g := nat_p(s["x"], s["z"])
-		var q := g - Vector2(0.0, SHOT_LIFT)
+		# Gouttes et éclats partent du sol (corps, éclat fiché) et montent à hauteur de poitrine.
+		var lift := SHOT_LIFT
+		if kind == "ichor":
+			lift = minf(SHOT_LIFT, 4.0 + (now - s["born"]) / ICHOR_RISE * (SHOT_LIFT - 4.0))
+		elif kind == "bone":
+			lift = minf(SHOT_LIFT, 2.0 + (now - s["born"]) / BONE_RISE * (SHOT_LIFT - 2.0))
+		var q := g - Vector2(0.0, lift)
 		var d := (nat_p(s["x"] + s["vx"], s["z"] + s["vz"]) - g).normalized()
+		_shot_halo(q)
 		for i in range(-1, 2):
 			npx(g.x + i, g.y, SHOT_SHADOW)
 		match kind:
@@ -812,19 +1155,27 @@ func _enemy_shots(now: float) -> void:
 			"orb":
 				var R := Rng.new(s["seed"])
 				for i in range(3, 0, -1):
-					npx(q.x - d.x * i * 2.5 + (R.next() - 0.5) * 2.0, q.y - d.y * i * 2.5 + sin(now * 14.0 + i) * 1.2, ORB[1 if i > 1 else 2])
+					_disc(q.x - d.x * (3.0 + i * 3.0) + (R.next() - 0.5) * 2.0, q.y - d.y * (3.0 + i * 3.0) + sin(now * 14.0 + i) * 1.2, 1.5, ORB[1 if i > 1 else 2])
 				_orb_at(q)
 			"fire":
-				# Petite boule de feu : traînée de braises, halo orange, cœur jaune pâle qui vacille.
+				# Braise : traînée, anneau sombre, corps rouge, cœur blanc qui vacille.
 				var F := Rng.new(s["seed"])
-				for i in range(4, 0, -1):
-					dpx(q.x - d.x * i * 1.6 + (F.next() - 0.5) * 2.0, q.y - d.y * i * 1.6 + sin(now * 22.0 + i * 1.7) * 1.0,
-						FIREBALL[0 if i > 2 else 1], 1.0 - i * 0.18)
-				for o: Vector2 in [Vector2(-1, 0), Vector2(1, 0), Vector2(0, -1), Vector2(0, 1)]:
-					npx(q.x + o.x, q.y + o.y, FIREBALL[1])
-				npx(q.x - d.x * 2.0, q.y - d.y * 2.0, FIREBALL[1])
-				npx(q.x, q.y, FIREBALL[3] if fmod(now * 16.0 + F.next(), 2.0) < 1.0 else FIREBALL[2])
-				npx(q.x + d.x, q.y + d.y, FIREBALL[2])
+				for i in range(6, 2, -1):
+					dpx(q.x - d.x * i * 3.3 + (F.next() - 0.5) * 4.5, q.y - d.y * i * 3.3 + sin(now * 22.0 + i * 1.7) * 2.2,
+						FIREBALL[0 if i > 4 else 1], 1.15 - i * 0.15)
+				# Grossie deux fois le 2026-11-20 : 13 px de large (5 puis 9 avant), queue de flamme de 9 px.
+				for i in range(6, 2, -1):
+					_disc(q.x - d.x * i * 1.5, q.y - d.y * i * 1.5, 3.9 - (i - 3) * 0.9, FIREBALL[1])
+				_disc(q.x, q.y, 6.3, FIREBALL[6])
+				_disc(q.x, q.y, 4.8, FIREBALL[2])
+				_disc(q.x + d.x * 1.5, q.y + d.y * 1.5, 3.0, FIREBALL[3])
+				_disc(q.x + d.x * 1.5, q.y + d.y * 1.5, 1.5, FIREBALL[4] if fmod(now * 16.0 + F.next(), 2.0) < 1.0 else FIREBALL[5])
+				ci.draw_rect(Rect2((g.x - 5.0) * px, g.y * px, 11.0 * px, px), SHOT_SHADOW)
+				ci.draw_rect(Rect2((g.x - 3.0) * px, (g.y + 1.0) * px, 7.0 * px, px), SHOT_SHADOW)
+			"ichor":
+				_ichor_at(q, d, 1.0)
+			"bone":
+				_bone_at(q, d)
 			_:
 				# Éclat du pilum : losange de fer, pointe blanche.
 				for o: Vector2 in [Vector2(-1, 0), Vector2(1, 0), Vector2(0, -1), Vector2(0, 1)]:
@@ -839,6 +1190,104 @@ func _enemy_shots(now: float) -> void:
 				npx(c.x + x, c.y + y, Color.WHITE if absi(x) < 2 and absi(y) < 2 else Color("#10123a"))
 
 
+## Crachat annoncé d'un chien (piste 6·B) : braise qui grossit dans la gueule pendant SPIT.warn s et trait pointillé
+## au sol dans l'axe du tir.
+func _spit_warn(en: Enemy, now: float) -> void:
+	var m := EnemyShots.mouth(en)
+	if not world.fog.visible_at(m):
+		return
+	var w: float = clampf(1.0 - (en.spit_fire_at - now) / float(EnemyShots.SPIT["warn"]), 0.0, 1.0)
+	var g := nat_p(m.x, m.y)
+	var q := g - Vector2(0.0, SHOT_LIFT)
+	var tg: Variant = en.spit_target
+	if tg != null and tg.alive():
+		var d: Vector2 = (tg.pos() - m).normalized()
+		var g0 := g + d * 4.0
+		_dash_line(g0, g0 + d * SPIT_LINE * w, FIREBALL[2], 0.6)
+	ci.draw_circle(q * px, (2.0 + 3.0 * w) * px, Color(FIREBALL[3], 0.25 + 0.45 * w))
+	npx(q.x, q.y, FIREBALL[4] if int(now * 30.0) % 2 == 0 else FIREBALL[5])
+
+
+## Goutte d'ichor : disque de 7 px un peu étiré dans le sens du vol d, cœur décalé vers la lumière (haut gauche).
+func _ichor_at(q: Vector2, d: Vector2, a: float) -> void:
+	for y in range(-3, 4):
+		for x in range(-3, 4):
+			var u := (x * d.x + y * d.y) / 1.2
+			var v := -x * d.y + y * d.x
+			var r := sqrt(u * u + v * v)
+			if r > 3.1:
+				continue
+			var ri := Vector2(x + 0.5, y + 0.5).length()
+			var c: Color = ICHOR_DROP[0] if r > 2.3 else ICHOR_DROP[3] if ri < 0.9 else ICHOR_DROP[2] if ri < 1.7 else ICHOR_DROP[1]
+			if a >= 1.0:
+				npx(q.x + x, q.y + y, c)
+			else:
+				dpx(q.x + x, q.y + y, c, a)
+
+
+## Anneau d'ichor annoncé sur le corps du Fanatique : cercle pointillé carmin, la brèche laissée vide, et les gouttes
+## qui gonflent à leur place de départ.
+func _ichor_warn(s: Dictionary, now: float) -> void:
+	var k: float = clampf((now - s["born"]) / maxf(s["until"] - s["born"], 0.01), 0.0, 1.0)
+	var g := nat_p(s["x"], s["z"])
+	var back: float = s["back"]
+	var gap: float = EnemyShots.ICHOR["gap"] / 2.0 * TAU / float(EnemyShots.ICHOR["n"])
+	var r := ICHOR_WARN_R * Proj.K
+	for i in 48:
+		if i % 3 == 2:
+			continue
+		var a := TAU * i / 48.0
+		if absf(wrapf(a - back, -PI, PI)) < gap:
+			continue
+		dpx(g.x + cos(a) * r, g.y + sin(a) * r * 0.9, SHOT_WARN, 0.35 + 0.45 * k)
+	for a: float in EnemyShots.ichor_angles(back):
+		var d := Vector2(cos(a), sin(a))
+		var q: Vector2 = g + d * float(EnemyShots.ICHOR["r0"]) * Proj.K - Vector2(0.0, 4.0)
+		if k < 0.5:
+			dpx(q.x, q.y, ICHOR_DROP[1], 0.4 + k)
+			dpx(q.x, q.y - 1.0, ICHOR_DROP[3], k * 1.6)
+		else:
+			_ichor_at(q, d, 0.3 + 0.7 * k)
+
+
+## Éclat d'os-chair en vol : 3 px de large, liseré sombre, pointe blanche, os puis chair vers l'arrière.
+func _bone_at(q: Vector2, d: Vector2) -> void:
+	var n := Vector2(-d.y, d.x)
+	for i in range(-1, 7):
+		npx(q.x - d.x * i + n.x, q.y - d.y * i + n.y, BONE_SHARD[0])
+		npx(q.x - d.x * i - n.x, q.y - d.y * i - n.y, BONE_SHARD[0])
+	npx(q.x + d.x * 2.0, q.y + d.y * 2.0, BONE_SHARD[0])
+	for i in 6:
+		npx(q.x - d.x * i, q.y - d.y * i, BONE_SHARD[4] if i < 1 else BONE_SHARD[3] if i < 3 else BONE_SHARD[2] if i < 4 else BONE_SHARD[1])
+	npx(q.x + d.x, q.y + d.y, BONE_SHARD[4])
+
+
+## Éclat fiché dans le sillage du Strazhar (inoffensif : c'est l'annonce) : pique penchée, chair à la base, trait
+## carmin pointillé au sol dans chacun des deux axes de départ, qui s'allonge ; scintille juste avant de partir.
+func _spike(s: Dictionary, now: float) -> void:
+	var w: float = clampf((now - s["born"]) / maxf(s["until"] - s["born"], 0.01), 0.0, 1.0)
+	var g := nat_p(s["x"], s["z"])
+	for a: float in [s["a1"], s["a2"]]:
+		var d := Vector2(cos(a), sin(a))
+		_dash_line(g + d * 3.0, g + d * (5.0 + 10.0 * w), SHOT_WARN, 0.45 + 0.45 * w)
+	var top := g + Vector2(float(s["lean"]), -7.0)
+	for i in 8:
+		var p := g.lerp(top, i / 7.0)
+		npx(p.x - 1.0, p.y, BONE_SHARD[0])
+		npx(p.x + 2.0, p.y, BONE_SHARD[0])
+	npx(top.x, top.y - 1.0, BONE_SHARD[0])
+	npx(top.x + 1.0, top.y - 1.0, BONE_SHARD[0])
+	for i in 8:
+		var p := g.lerp(top, i / 7.0)
+		npx(p.x, p.y, BONE_SHARD[1] if i < 2 else BONE_SHARD[2] if i < 4 else BONE_SHARD[3])
+		npx(p.x + 1.0, p.y, BONE_SHARD[1] if i < 2 else BONE_SHARD[2])
+	var glint := w > 0.8 and int(now * 30.0) % 2 == 0
+	npx(top.x, top.y, Color.WHITE if glint else BONE_SHARD[3])
+	npx(top.x + 1.0, top.y, Color.WHITE if glint else BONE_SHARD[2])
+	for i in range(-2, 4):
+		npx(g.x + i, g.y + 1.0, SHOT_SHADOW)
+
+
 ## Pilum en cloche vers son point de chute, marqué au sol par un cercle qui se remplit.
 func _shot_pilum(s: Dictionary, now: float) -> void:
 	var to := Vector2(s["tx"], s["tz"])
@@ -848,16 +1297,28 @@ func _shot_pilum(s: Dictionary, now: float) -> void:
 	var t := nat_p(to.x, to.y)
 	var r: float = EnemyShots.PILUM["radius"] * Proj.K
 	for k in 40:
-		dpx(t.x + cos(TAU * k / 40.0) * r, t.y + sin(TAU * k / 40.0) * r, SHOT_WARN, 0.45 + 0.4 * p)
+		if k % 3 != 2:
+			dpx(t.x + cos(TAU * k / 40.0) * r, t.y + sin(TAU * k / 40.0) * r, SHOT_WARN, 0.45 + 0.4 * p)
 	ndisc(t.x, t.y, r * p * 0.75, SHOT_WARN, 0.12 + 0.2 * p)
+	# Éclats à venir : quatre traits de fer pâle dans le cercle, dans l'axe où ils partiront (EnemyShots.tick).
+	if p > PILUM_TICKS_FROM:
+		var a0 := (to - Vector2(s["x"], s["z"])).angle()
+		var al := 0.35 + 0.5 * (p - PILUM_TICKS_FROM) / (1.0 - PILUM_TICKS_FROM)
+		for i in EnemyShots.PILUM["shards"]:
+			var c := a0 + i * TAU / float(EnemyShots.PILUM["shards"])
+			for j in range(3, 8):
+				dpx(t.x + cos(c) * j, t.y + sin(c) * j, PILUM_IRON[1], al)
 	var from := nat_p(s["x"], s["z"]) + Vector2(float(s["face"]) * ENEMY_PILUM_FROM.x, -ENEMY_PILUM_FROM.y)
 	var p0 := maxf(0.0, p - 0.05)
 	var q := from.lerp(t, p) - Vector2(0.0, 120.0 * p * (1.0 - p))
 	var q0 := from.lerp(t, p0) - Vector2(0.0, 120.0 * p0 * (1.0 - p0))
 	var d: Vector2 = (q - q0).normalized() if q.distance_to(q0) > 0.01 else Vector2(float(s["face"]), -1.0).normalized()
+	_shot_halo(q)
 	_pilum_at(q, d)
 
 
+## Part du vol du pilum à partir de laquelle ses éclats sont annoncés.
+const PILUM_TICKS_FROM := 0.35
 ## Départ du pilum (devant, hauteur) en pixels natifs : Combat.ENEMY_PILUM.
 const ENEMY_PILUM_FROM := Vector2(3.0, 21.0)
 
@@ -943,7 +1404,7 @@ func _simple(e: Dictionary) -> void:
 		"hit":
 			# sphere3 : disque à dégradé radial (#f2f3eb, couleur à 15 %, #090c14), centre décalé vers le haut à gauche.
 			var c := cam.project(e["x"], 1.4, e["z"])
-			var sz := 0.4 * a * _z()
+			var sz := 0.4 * a * _z() * float(e.get("size", 1.0))
 			if sz < 0.5:
 				return
 			var steps := 10
@@ -1070,6 +1531,15 @@ func nline(a: Vector2, b: Vector2, c: Color, al: float = 1.0) -> void:
 			npx(p.x, p.y, c)
 		else:
 			dpx(p.x, p.y, c, al)
+
+
+## Disque plein en pixels natifs, un rectangle par ligne (bien moins d'appels que ndisc pour un grand rayon).
+func _disc(cx: float, cy: float, r: float, c: Color) -> void:
+	var x0 := jr(cx)
+	var y0 := jr(cy)
+	for y in range(-floori(r), floori(r) + 1):
+		var h := floorf(sqrt(r * r - y * y))
+		ci.draw_rect(Rect2((x0 - h) * px, (y0 + y) * px, (2.0 * h + 1.0) * px, px), c)
 
 
 func ndisc(cx: float, cy: float, r: float, c: Color, a: float) -> void:

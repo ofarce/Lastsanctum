@@ -33,6 +33,7 @@ func test_queue_full() -> void:
 	var b := built("caserne", 26.0, -112.0)
 	GameState.res["discipline"] = 1000.0
 	stock_caserne_items(6)
+	house(sim, 12)
 	for i in 6:
 		sim.train_unit(b, "archer")
 	check_eq(b.queue.size(), 5, "file de 5 au plus")

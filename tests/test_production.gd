@@ -18,7 +18,7 @@ func test_assign_respects_cult_and_five_posts() -> void:
 	var wrong := sim.spawn("Adepte de Sigil", 20.0, -100.0, "sigil")
 	_select([wrong])
 	check(sim.order_staff(b), "clic droit traité")
-	check(not Production.is_member(wrong, b), "un adepte de Sigil n'entre pas à la Forge")
+	check(not Production.is_member(wrong, b), "un adepte de Sigil n'entre pas à la Fonderie")
 	var adepts: Array[Unit] = []
 	for i in 6:
 		adepts.append(sim.spawn("Adepte d’Aether", 20.0 + i, -100.0, "aether"))
@@ -45,7 +45,7 @@ func test_engineer_activates_but_never_carries() -> void:
 	check_eq(Production.count_in(other.output_box, "copper"), 10, "pas de transport par l'Ingénieur")
 	Production.put_into(b.input_box, "copper", 5)
 	run(sim, Recipes.craft_time(b.type) + 0.2)
-	check_eq(Production.count_in(b.output_box, "copper_ingot"), 1, "la Forge tourne avec l'Ingénieur")
+	check_eq(Production.count_in(b.output_box, "copper_ingot"), 1, "la Fonderie tourne avec l'Ingénieur")
 
 
 func test_adept_fetches_from_another_red_chest() -> void:
@@ -59,7 +59,7 @@ func test_adept_fetches_from_another_red_chest() -> void:
 	check_eq(String(crew[0].job.get("step")), "fetch", "l'adepte part chercher les lingots")
 	check(Production.reserved({"kind": "building", "building": forge}, "copper_ingot") > 0, "lingots réservés")
 	run(sim, 40.0)
-	check_eq(Production.count_in(forge.output_box, "copper_ingot"), 0, "lingots pris au coffre rouge de la Forge")
+	check_eq(Production.count_in(forge.output_box, "copper_ingot"), 0, "lingots pris au coffre rouge de la Fonderie")
 	check_eq(Production.count_in(creuset.output_box, "copper_sword"), 2, "deux épées coulées")
 	check(crew[0].carrying.is_empty(), "plus rien à porter")
 
@@ -91,9 +91,12 @@ func test_carried_items_are_not_lost() -> void:
 func test_miner_brings_batches_of_five() -> void:
 	var sim := game()
 	var st := sim.state()
-	sim.world.dig_cell(14, -37)
-	sim.world.dig_cell(15, -37)
-	var key := TerrainState.VAULT_COPPER
+	# Gisement inépuisable : une case d'un filon au sol.
+	var key: Vector2i = st.lodes.keys()[0]
+	# Sa clairière est dans une galerie pas encore découverte : on les ouvre toutes.
+	st.open = st.mask.duplicate()
+	st.found = st.count
+	st.version += 1
 	var cell: Variant = st.dig_cell_at(key.x, key.y, Vector2(key.x * 4 + 2, key.y * 4 + 6))
 	check(cell != null, "gisement atteignable")
 	var drop: String = st.block_definition(key.x, key.y)["drop_item"]
@@ -107,7 +110,7 @@ func test_miner_brings_batches_of_five() -> void:
 	crew[0].z = at.y
 	_select(crew)
 	check(sim.order_mining_cells([cell]), "ordre de minage")
-	check(Production.is_member(crew[0], b, "miner"), "l'adepte devient mineur de la Forge")
+	check(Production.is_member(crew[0], b, "miner"), "l'adepte devient mineur de la Fonderie")
 	check_eq(Production.at_post(b), 0, "un mineur ne compte pas au poste")
 	var seen_four := false
 	for i in 60 * 30:
@@ -143,12 +146,12 @@ func test_research_and_soulwell_need_staff() -> void:
 	var sim := game()
 	give(1000.0)
 	var lib := built("library", 26.0, -112.0)
-	sim.start_research(lib, "mining_concept")
+	sim.start_research(lib, "minimap")
 	run(sim, Catalog.RESEARCH_TIME + 0.5)
-	check(not GameState.research_done.has("mining_concept"), "bibliothèque sans adepte : recherche figée")
+	check(not GameState.research_done.has("minimap"), "bibliothèque sans adepte : recherche figée")
 	staff(sim, lib, 2)
 	run(sim, Catalog.RESEARCH_TIME / 2.0 + 0.5)
-	check(GameState.research_done.has("mining_concept"), "deux adeptes de Sigil : deux fois plus vite")
+	check(GameState.research_done.has("minimap"), "deux adeptes de Sigil : deux fois plus vite")
 	var well := built("soulwell", -20.0, -112.0)
 	var hurt := sim.spawn("Blessé", well.x, well.z + 6.0, "indra")
 	hurt.hp = 10.0

@@ -50,19 +50,21 @@ func test_dig_cell_at_rules() -> void:
 	state.generate_galleries(20261114)
 	# Une case de la salle (praticable) n'est pas creusable ; la roche voisine de la paroi est l'est.
 	check(state.dig_cell_at(0, -35, Vector2(2, -138)) == null, "case praticable")
-	var c: Variant = state.diggable_cell(Vector2(64, -138))
+	var c: Variant = state.diggable_cell(Vector2(58, -138))
 	check(c != null, "roche à l'est de la salle")
 	if c != null:
 		check(state.walkable((c["at"] as Vector2).x, (c["at"] as Vector2).y), "position de travail praticable")
-	# Mur des portails : interdit.
-	check(state.dig_cell_at(0, -43, Vector2(2, -165)) == null, "mur des portails")
+	# Le mur nord de la salle (ancien mur des portails) se creuse désormais ; seul le bord de la carte résiste.
+	check(state.dig_cell_at(0, -43, Vector2(2, -165)) != null, "mur nord creusable")
+	var edge := floori(CaveShape.WORLD_X0 / 4.0)
+	check(state.dig_cell_at(edge, -35, Vector2(edge * 4.0 + 5.0, -138)) == null, "bord de la carte")
 
 
 func test_engineer_dig_reach() -> void:
 	var state := TerrainState.new()
 	state.groves = false
 	state.generate_galleries(20261114)
-	var c: Variant = state.diggable_cell(Vector2(64, -138))
+	var c: Variant = state.diggable_cell(Vector2(58, -138))
 	check(c != null, "roche à l'est de la salle")
 	if c == null:
 		return

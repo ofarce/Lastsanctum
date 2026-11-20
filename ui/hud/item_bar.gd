@@ -1,6 +1,6 @@
 extends Control
 ## Barre d'objets de l'Ingénieur incarné : trois cases sous sa barre de PV (ExileGallery), en bas de l'écran.
-## Sceau de minage (recherche faite), Arbalestrie (en main droite), balles en service (data/ammo.gd).
+## Sceau de minage (remis par la capsule), Arbalestrie (en main droite), balles en service (data/ammo.gd).
 ## Une case vide reste dessinée, assombrie. Survol : bulle 16 bits avec le nom de l'objet. Les clics traversent.
 
 const Ammo := preload("res://data/ammo.gd")
@@ -40,13 +40,15 @@ static func has_crossbow() -> bool:
 func _slot(i: int) -> Rect2:
 	var screen := get_viewport_rect().size
 	var w := COUNT * SLOT + (COUNT - 1) * GAP
-	return Rect2(roundf((screen.x - w) / 2.0) + i * (SLOT + GAP), screen.y - MARGIN - SLOT, SLOT, SLOT)
+	# Le paquetage (ui/hud/pack_bar.gd) prolonge la rangée à droite : l'ensemble reste centré.
+	var extra := PackBar.row_extra()
+	return Rect2(roundf((screen.x - w - extra) / 2.0) + i * (SLOT + GAP), screen.y - MARGIN - SLOT, SLOT, SLOT)
 
 
 ## Nom affiché au survol de la case `i` ("" : case vide).
 func _name_of(i: int) -> String:
 	match i:
-		0: return "Sceau de minage" if GameState.research_done.has("mining_artifact") else ""
+		0: return "Sceau de minage" if GameState.mining_seal else ""
 		1: return "Arbalestrie" if has_crossbow() else ""
 		2: return String(Ammo.AMMO[Ammo.current()]["name"]) if has_crossbow() else ""
 	return ""
@@ -87,7 +89,7 @@ func _draw() -> void:
 	for i in COUNT:
 		var r := _slot(i)
 		var filled := not _name_of(i).is_empty()
-		_case(r, filled, _hover == i)
+		paint_case(self, r, filled, _hover == i)
 		if not filled:
 			continue
 		var c := r.get_center()
@@ -103,20 +105,21 @@ func _draw() -> void:
 
 
 ## Case carrée 16 bits (mêmes teintes que le barillet) : contour sombre, liseré blanc, fond bleu en bandes.
-func _case(r: Rect2, filled: bool, hover: bool) -> void:
-	draw_rect(Rect2(r.position + Vector2(3, 4), r.size), Color(0, 0, 0, 0.35))
-	draw_rect(r, SnesBanner.EDGE)
-	draw_rect(r.grow(-1.0), SnesBanner.RIM if filled else SnesBanner.RIM_LO)
-	draw_rect(r.grow(-3.0), SnesBanner.RIM_LO)
+## Partagée avec le paquetage (ui/hud/pack_bar.gd).
+static func paint_case(ci: CanvasItem, r: Rect2, filled: bool, hover: bool) -> void:
+	ci.draw_rect(Rect2(r.position + Vector2(3, 4), r.size), Color(0, 0, 0, 0.35))
+	ci.draw_rect(r, SnesBanner.EDGE)
+	ci.draw_rect(r.grow(-1.0), SnesBanner.RIM if filled else SnesBanner.RIM_LO)
+	ci.draw_rect(r.grow(-3.0), SnesBanner.RIM_LO)
 	var inner := r.grow(-4.0)
 	var bands := 8
 	for k in bands:
 		var t := float(k) / (bands - 1)
 		var col := SnesBanner.SKY.lerp(SnesBanner.DEEP, t)
-		draw_rect(Rect2(inner.position.x, inner.position.y + k * inner.size.y / bands, inner.size.x, inner.size.y / bands),
+		ci.draw_rect(Rect2(inner.position.x, inner.position.y + k * inner.size.y / bands, inner.size.x, inner.size.y / bands),
 			col if filled else col.darkened(0.55))
 	if hover and filled:
-		draw_rect(r.grow(-1.0), Color.WHITE, false, 2.0)
+		ci.draw_rect(r.grow(-1.0), Color.WHITE, false, 2.0)
 
 
 ## La balle en service, dessinée comme en vol (EffectsDrawer), en pixels de ICON_PX.

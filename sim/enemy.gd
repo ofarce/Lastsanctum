@@ -36,6 +36,18 @@ var strike_target: Unit = null
 var shot_aim: Variant = null
 ## Chien de la Bête : instant du prochain crachat de feu (EnemyShots.spit) ; -INF = pas encore tiré au sort.
 var spit_at := -INF
+## Crachat annoncé (EnemyShots.SPIT.warn) : instant du départ (INF = rien en attente) et cible visée.
+var spit_fire_at := INF
+var spit_target: Unit = null
+## Crachat annoncé sur l'Ancre (pas de cible vivante).
+var spit_core := false
+## Strazhar : point où a été fiché le dernier éclat de son sillage (EnemyShots.BONE), et instant de la pose ;
+## null = pas de course en cours près de l'Exilé incarné.
+var trail_from: Variant = null
+var trail_t := 0.0
+## Prime sans touche (Loot.FLAWLESS) : l'Exilé a frappé ce boss ; l'Exilé a été touché pendant qu'il le combattait.
+var engineer_hit := false
+var touched_engineer := false
 ## Incantation (sceaux) et réaction aux coups de la Martyre de Byrsa : début des animations martyre_cast, martyre_hit.
 var cast_started := -INF
 var hurt_at := -INF
@@ -76,7 +88,7 @@ static func make(k: String, px: float, pz: float, cd: float, scaling: Dictionary
 	e.hp = E["hp"] * scaling.get("hp", 1.0)
 	e.tactical_last_hp = e.hp
 	e.max_hp = e.hp
-	e.speed = E["speed"]
+	e.speed = E["speed"] * (Catalog.CREDO_SPEED if Catalog.CREDO_KINDS.has(k) else 1.0)
 	e.reach = E["range"]
 	e.damage = E["damage"] * scaling.get("damage", 1.0)
 	e.armor = E.get("armor", 0.0) + scaling.get("armor", 0.0)
@@ -110,6 +122,10 @@ const BODY := {
 	"soldier": {"half_w": 0.9, "top": 4.0, "foot": 0.5, "melee": 0.0},
 	"shield": {"half_w": 1.0, "top": 4.0, "foot": 0.5, "melee": 0.0},
 	"archer": {"half_w": 1.2, "top": 3.9, "foot": 0.5, "melee": 0.0},
+	# Squelettes de la nuit (tools/squelettes/export.py) : os fins, la lame du collier n'est pas comptée.
+	"skeleton": {"half_w": 0.8, "top": 3.9, "foot": 0.5, "melee": 0.0},
+	"skeleton_bubo": {"half_w": 1.0, "top": 3.9, "foot": 0.5, "melee": 0.0},
+	"skeleton_bomb": {"half_w": 0.8, "top": 3.9, "foot": 0.5, "melee": 0.0},
 	# Champion couronné, à quatre pattes dans toutes ses animations (cadre 68 × 48, export_g1.py).
 	"strazhar": {"half_w": 3.1, "top": 4.2, "foot": 0.5, "melee": 0.8},
 	# Faune du biome 2 (tools/biomes-persos/export_monstres.py). La chauve-souris vole : sa silhouette monte jusqu'à elle.

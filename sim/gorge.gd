@@ -101,7 +101,6 @@ static func tick(sim: Simulation) -> void:
 		r["mode"] = "dead"
 		(r["marks"] as Array).clear()
 		r.erase("furrow")
-		sim.say(QUOTE_DONE, 5.0)
 
 
 static func _in_room(p: Vector2, grow := 0.0) -> bool:

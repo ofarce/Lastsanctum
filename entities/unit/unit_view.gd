@@ -6,6 +6,7 @@ extends Node2D
 ## badge de niveau.
 ## Origine du nœud : point au sol continu ; le sprite est aligné sur la grille native par le shader.
 
+const Ammo := preload("res://data/ammo.gd")
 const SPR_FRAMES := 24
 ## Repos : 12 i/s (grille commune 12 / 24 i/s), soit 2 s pour 24 images.
 const IDLE_FPS := 12.0
@@ -141,7 +142,7 @@ func setup(u: Unit, meta: Dictionary, sim: Simulation, w: World = null) -> void:
 		TyrienArt.load_all()
 		for exil: bool in [false, true]:
 			var pack := {"meta": TyrienArt.meta["anims"]}
-			for anim: String in ["idle", "walk", "kneel", "pray", "settle", "lotus", "idle_d", "walk_d", "idle_u", "walk_u", "hit", "c_idle", "c_walk", "helm"]:
+			for anim: String in ["idle", "walk", "kneel", "pray", "settle", "lotus", "idle_d", "walk_d", "idle_u", "walk_u", "hit", "c_idle", "c_walk", "c_idle_d", "c_walk_d", "c_idle_u", "c_walk_u", "helm"]:
 				if TyrienArt.meta["anims"].has(anim):
 					pack[anim] = TyrienArt.anim_of(anim, exil)
 			_bare_sets[exil] = pack
@@ -304,9 +305,6 @@ func _update() -> void:
 		scale = Vector2.ONE * (Pylons.ALPHA if ge.alpha else 1.0)
 		var rk := clampf((GameState.sim_time - ge.risen_at) / 1.4, 0.0, 1.0)
 		modulate = Color(lerpf(0.06, 1.0, rk), lerpf(0.05, 1.0, rk), lerpf(0.08, 1.0, rk), 1.0)
-		# Squelette du flot nocturne : pas encore de planche, fanatique blafard en attendant.
-		if ge.kind == "skeleton":
-			modulate *= Color(0.72, 0.86, 1.0, 1.0)
 	_track_hurt(u, GameState.sim_time)
 	if enemy and u.dead:
 		var age := maxf(0.0, GameState.sim_time - (u as Enemy).died_at)
@@ -368,7 +366,7 @@ func _update() -> void:
 		_feel.turn(_face, Time.get_ticks_msec() / 1000.0)
 		return
 	var cannon := bare and String(Gear.weapon(u).get("piece", "")) == "cannon" and _bare.has("c_walk")
-	var walk_frames: Array[AtlasTexture] = (_bare["walk_" + _vdir] if _vdir != "" else (_bare["c_walk"] if cannon else _bare["walk"])) if bare else _walk
+	var walk_frames: Array[AtlasTexture] = (_bare[("c_walk_" if cannon and _bare.has("c_walk_d") else "walk_") + _vdir] if _vdir != "" else (_bare["c_walk"] if cannon else _bare["walk"])) if bare else _walk
 	var wn := walk_frames.size()
 	var wi := floori(_wp * wn) % wn
 	var bob_i := floori(_wp * 6.0) if enemy else wi
@@ -383,7 +381,7 @@ func _update() -> void:
 		# Boucle de repos à sa propre cadence (Martyre de Byrsa : 74 images à 24 i/s).
 		frame = _idle[floori(t * (u as Enemy).pace * float(_meta["idle"]["fps"])) % _idle.size()]
 	else:
-		var idle_frames: Array = (_bare["idle_" + _vdir] if _vdir != "" else (_bare["c_idle"] if cannon else _bare["idle"])) if bare else _idle
+		var idle_frames: Array = (_bare[("c_idle_" if cannon and _bare.has("c_idle_d") else "idle_") + _vdir] if _vdir != "" else (_bare["c_idle"] if cannon else _bare["idle"])) if bare else _idle
 		var it := t * ((u as Enemy).pace if enemy else 1.0)
 		frame = idle_frames[(floori(it * IDLE_FPS) + (key & 7) * 3) % idle_frames.size()]
 	var ax := float(_meta["ax"])
@@ -513,18 +511,22 @@ func _update() -> void:
 	# planches/armes-attaques.html ; démarre à sw_t0 (épées) ou sh_t0 (canon).
 	if bare and not winded and med.is_empty():
 		var anim := String(Gear.weapon(u).get("anim", ""))
-		# Tir surtout vers le sud ou le nord : pose de face ou de dos (sinon profil).
-		# Arbalestrie : toujours de profil, canon en main.
+		# Tir surtout vers le sud ou le nord : pose de face ou de dos (sinon profil), au gantelet comme à l'Arbalestrie.
+		var vertical := anim == "shoot" and absf(u.aim_dir.y) > absf(u.aim_dir.x) * 1.2
+		var down := u.aim_dir.y > 0.0
 		if anim == "shoot" and cannon and TyrienArt.meta["anims"].has("c_shoot"):
 			anim = "c_shoot"
-		elif anim == "shoot" and absf(u.aim_dir.y) > absf(u.aim_dir.x) * 1.2:
-			var vert := "shoot_d" if u.aim_dir.y > 0.0 else "shoot_u"
+			if vertical and TyrienArt.meta["anims"].has("c_shoot_d"):
+				anim = "c_shoot_d" if down else "c_shoot_u"
+		elif vertical:
+			var vert := "shoot_d" if down else "shoot_u"
 			if TyrienArt.meta["anims"].has(vert):
 				anim = vert
 		if anim != "" and TyrienArt.meta["anims"].has(anim):
 			var fps := TyrienArt.fps(anim)
 			var frames := TyrienArt.anim(anim)
-			var age := t - (u.sh_t0 if anim.begins_with("shoot") else u.sw_t0)
+			# Tirs (shoot, shoot_d/u, c_shoot, c_shoot_d/u de l'Arbalestrie) : depuis sh_t0 ; tailles : depuis sw_t0.
+			var age := t - (u.sh_t0 if anim.begins_with("shoot") or anim.begins_with("c_shoot") else u.sw_t0)
 			if age >= 0.0 and age < frames.size() / fps:
 				frame = frames[mini(frames.size() - 1, floori(age * fps))]
 				kick = 0
@@ -539,6 +541,7 @@ func _update() -> void:
 	_body.offset = Vector2(-ax - kick, -ay)
 	_sync_gear(frame if tyrien else null)
 	_sync_helm(frame, cannon, t)
+	_sync_tip(frame, cannon)
 	var jolt := 0.0
 	if enemy:
 		# Fente vers la cible, recoil d'un coup reçu, tremblement d'étourdissement (1 px, 15 Hz).
@@ -546,7 +549,7 @@ func _update() -> void:
 		if (u as Enemy).stun > 0.0:
 			jolt += 1.0 if floori(t * 30.0) % 2 == 0 else -1.0
 	else:
-		jolt = _recoil_px(t)
+		jolt = _recoil_px(t) + _shot_kick(t)
 	# Éclair du coup encaissé, sur le sprite seul : la barre de vie ne clignote pas.
 	_body.modulate = _flash_color(Color.WHITE, maxf(_hurt_flash(t), tell))
 	# Demi-tour en trois images (largeurs intermédiaires, un pixel d'affaissement), horloge réelle.
@@ -576,7 +579,7 @@ func _update() -> void:
 
 
 ## Casque de combat : progression vers fermé tant que le dernier tir date de moins de HELM_HOLD s, puis relevé ;
-## affiché sur les images de profil à l'Arbalestrie, décalé avec la tête (buste au repos, pas de marche).
+## affiché sur les images de l'Arbalestrie (profil, face, dos), décalé avec la tête.
 func _sync_helm(frame: Texture2D, cannon: bool, t: float) -> void:
 	# Sans canon et casque déjà relevé (tous les ennemis, la plupart des alliés) : rien à chercher dans les planches.
 	if not cannon and _helm_p <= 0.0:
@@ -591,7 +594,18 @@ func _sync_helm(frame: Texture2D, cannon: bool, t: float) -> void:
 	var step := ceili(_helm_p * 4.0 - 0.001)
 	var dy := 0
 	var show := false
-	for anim: String in ["c_idle", "c_walk", "c_shoot"]:
+	var layer := "helm"
+	# De face ou de dos (canon sur l'épaule, tir vers le sud / le nord) : calques helm_d / helm_u, hauteur de tête
+	# mesurée à l'export (templier.json « head_dy »).
+	var heads: Dictionary = TyrienArt.meta.get("head_dy", {})
+	for anim: String in heads:
+		var i := TyrienArt.anim(anim).find(frame)
+		if i >= 0 and TyrienArt.meta["anims"].has("helm_d"):
+			show = true
+			layer = "helm_d" if anim.ends_with("_d") else "helm_u"
+			dy = int(heads[anim][i])
+			break
+	for anim: String in ([] if show else ["c_idle", "c_walk", "c_shoot"]):
 		var i := TyrienArt.anim(anim).find(frame)
 		if i >= 0:
 			show = true
@@ -612,9 +626,73 @@ func _sync_helm(frame: Texture2D, cannon: bool, t: float) -> void:
 		_helm.use_parent_material = true
 		_body.add_child(_helm)
 	_helm.visible = true
-	_helm.texture = TyrienArt.anim("helm")[step - 1]
+	_helm.texture = TyrienArt.anim(layer)[step - 1]
 	_helm.offset = _body.offset + Vector2(0, dy)
 	_helm.z_index = 1
+
+
+## Recul du corps propre à la munition tirée (planches/arbalestrie-tir-planche.html) : Indra recule d'un pixel de
+## plus pendant 0,1 s (Gueule de feu).
+func _shot_kick(t: float) -> float:
+	var a := t - unit.sh_t0
+	return -float(_face) if unit.sh_ammo == "indra" and a >= 0.0 and a < 0.1 else 0.0
+
+
+## Lumière du bout du canon, par image (x, y dans le cadre de 48 px) : repos, marche, tir.
+const TIP_WALK_Y: Array[int] = [33, 33, 32, 32, 31, 32, 33, 33, 32, 32, 31, 32]
+const TIP_SHOOT: Array[Vector2i] = [Vector2i(40, 27), Vector2i(37, 28), Vector2i(38, 28), Vector2i(38, 27), Vector2i(39, 27), Vector2i(40, 27)]
+var _tip: Sprite2D
+static var _tip_tex: ImageTexture
+
+
+## Munition choisie visible sur l'arme : la lumière du bout du canon prend sa couleur (cyan d'origine pour les
+## balles spirituelles, rien à recouvrir).
+func _sync_tip(frame: Texture2D, cannon: bool) -> void:
+	var ammo := Ammo.current() if cannon else "spirit"
+	var at := Vector2i.ZERO
+	var size := Vector2(2, 1)
+	if ammo != "spirit":
+		var i := TyrienArt.anim("c_idle").find(frame)
+		if i >= 0:
+			at = Vector2i(39, 32 if i % 24 < 12 else 33)
+		else:
+			i = TyrienArt.anim("c_walk").find(frame)
+			if i >= 0:
+				at = Vector2i(39, TIP_WALK_Y[i % TIP_WALK_Y.size()])
+			else:
+				i = TyrienArt.anim("c_shoot").find(frame)
+				if i >= 0:
+					at = TIP_SHOOT[mini(i, TIP_SHOOT.size() - 1)]
+					size = Vector2(2, 2)
+				else:
+					# De face ou de dos (canon sur l'épaule, ou tir vers le sud / le nord) : lumière mesurée à l'export
+					# (templier.json « tips »).
+					var tips: Dictionary = TyrienArt.meta.get("tips", {})
+					for anim: String in tips:
+						i = TyrienArt.anim(anim).find(frame)
+						if i >= 0:
+							var p: Array = tips[anim][i]
+							at = Vector2i(int(p[0]), int(p[1]))
+							size = Vector2(3 if anim.ends_with("_d") and not anim.begins_with("c_shoot") else 2, 2)
+							break
+	if at == Vector2i.ZERO:
+		if _tip:
+			_tip.visible = false
+		return
+	if _tip == null:
+		if _tip_tex == null:
+			var img := Image.create(1, 1, false, Image.FORMAT_RGBA8)
+			img.fill(Color.WHITE)
+			_tip_tex = ImageTexture.create_from_image(img)
+		_tip = Sprite2D.new()
+		_tip.centered = false
+		_tip.texture = _tip_tex
+		_tip.z_index = 1
+		_body.add_child(_tip)
+	_tip.visible = true
+	_tip.modulate = EffectsDrawer.AMMO_PAL[ammo][4]
+	_tip.scale = size
+	_tip.position = Vector2(at) + _body.offset
 
 
 ## Empile sur _body les calques des pièces portées par l'Ingénieur (aucun hors tenue tyrienne).

@@ -18,7 +18,7 @@ const EVIL := Color8(255, 70, 40)
 ## Écart voulu D16 (charte graphique) : une couleur par culte, l'Ancre pourpre.
 const ANCRE := Color8(154, 58, 184)
 const CULT := {"medeina": Color8(122, 224, 112), "indra": Color8(255, 138, 42), "sigil": Color8(228, 234, 246), "aether": Color8(122, 128, 255)}
-const CULT_OF := {"sigil": "sigil", "warehouse": "sigil", "library": "sigil", "aether": "aether", "forge": "aether", "workshop": "aether", "creuset": "aether",
+const CULT_OF := {"sigil": "sigil", "warehouse": "sigil", "library": "sigil", "aether": "aether", "forge": "aether", "workshop": "aether", "creuset": "aether", "scierie": "aether", "archerie": "aether",
 	"medeina": "medeina", "bedroom": "medeina", "soulwell": "medeina", "eglise": "medeina", "ecole": "medeina", "indra": "indra", "caserne": "indra"}
 const PORTAL := Vector2(0.0, -167.7)
 const ORB_TIME := 8.0
@@ -70,6 +70,12 @@ func _ready() -> void:
 	_white = ImageTexture.create_from_image(img)
 
 
+## Lueur d'une boule de feu : rayon en cases et teinte.
+const FIREBALL_R := 5.5
+## Rouge braise depuis la piste 4·B de la planche « Visibilité des balles » (avant : orange 255, 150, 60).
+const FIREBALL := Color8(255, 86, 92)
+
+
 static func flick(t: float, i: float, a: float = 0.06) -> float:
 	return 1.0 + sin(t * 9.0 + i * 1.7) * a + sin(t * 23.0 + i) * a * 0.5
 
@@ -118,6 +124,20 @@ func collect() -> Array[Dictionary]:
 			if e.get("light", false):
 				_decor_lights.append({"x": e["x"], "z": e["z"], "r": 4.5, "rgb": ArtStyle.QUARTZ_LIGHT, "glow": 0.14})
 	L.append_array(_decor_lights)
+	# Boules de feu des chiens de la Bête et des squelettes (sim/enemy_shots.gd) : petite lueur rouge qui vacille.
+	for s: Dictionary in GameState.enemy_shots:
+		if s["kind"] == "fire" and s.get("lit", true):
+			L.append({"x": s["x"], "z": s["z"], "r": FIREBALL_R * flick(t, float(s["seed"] % 97), 0.12), "rgb": FIREBALL, "glow": 0.2})
+	# Tirs de l'Arbalestrie : éclair de la couleur de la munition à la bouche du canon (fort pour Indra).
+	for e: Dictionary in GameState.effects:
+		if e["type"] != "xbow_fire":
+			continue
+		var strong: bool = e["ammo"] == "indra"
+		var hold := 0.2 if strong else 0.12
+		var age := float(e["age"])
+		if age >= 0.0 and age < hold:
+			L.append({"x": float(e["x"]) + 2.4 * float(e["face"]), "z": e["z"], "r": 8.0 if strong else 5.0,
+				"rgb": CULT.get(e["ammo"], FROST), "glow": (0.3 if strong else 0.14) * (1.0 - age / hold)})
 	L.append_array(fireflies(t))
 	L.append_array(moonlit(t))
 	return L

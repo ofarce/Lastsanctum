@@ -32,12 +32,19 @@ func test_whole_map_deterministic() -> void:
 	check(_snapshot(x)["full"] != _snapshot(y)["full"], "graines différentes, cartes différentes")
 
 
+## Carte sans les galeries de l'extension (les galeries d'origine ont leur propre tirage).
+class NoExtension extends TerrainState:
+	func _generate_extension(_r: Rng) -> void:
+		pass
+
+
 ## Hors de la zone d'origine et des passages, les galeries de l'extension ne modifient pas la zone d'origine.
+## (La comparaison se faisait avec le mode « parité » du prototype ; les galeries d'origine s'en écartent
+## depuis qu'elles font au moins deux blocs de large.)
 func test_start_zone_unchanged_by_extension() -> void:
 	var with := TerrainState.new()
 	with.generate_galleries(SEEDS[1])
-	var parity := TerrainState.new()
-	parity.groves = false
+	var parity := NoExtension.new()
 	parity.generate_galleries(SEEDS[1])
 	var w := TerrainState.GAL_W
 	var differ := 0

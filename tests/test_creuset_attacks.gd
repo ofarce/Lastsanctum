@@ -1,9 +1,10 @@
 extends "res://tests/econ_case.gd"
 ## Attaques des armes du Creuset (planches/armes-attaques.html) : taille d'épée en arc à 1,5 bloc devant l'Ingénieur,
-## balle de canon arrêtée par le premier obstacle, animations d'attaque du Tyrien.
+## balle de l'Arbalestrie (ancien canon) arrêtée par le premier obstacle, animations d'attaque du Tyrien.
 
 const Storage := preload("res://sim/item_storage.gd")
 const Gear := preload("res://data/gear_items.gd")
+const Ammo := preload("res://data/ammo.gd")
 
 
 func _armed(item: String, slot := "Main droite") -> Unit:
@@ -50,18 +51,23 @@ func test_greatsword_slash_is_two_handed_arc() -> void:
 func test_cannon_ball_stops_at_first_enemy() -> void:
 	var sim := game()
 	var u := _armed("cannon")
-	GameState.base_inventory_unlocked = true
-	for i in 3:
-		Storage.store(GameState.base_inventory, Storage.BASE_CAPACITY, "iron")
+	# Arbalestrie : chaque tir coûte de la mana (data/ammo.gd), plus de munition de fer.
+	give(100.0)
 	var first := _dummy(u.x + 5.0, u.z)
 	var second := _dummy(u.x + 9.0, u.z)
 	sim.combat.aimed_attack(u, Vector2(u.x + 20.0, u.z))
 	check(first.hp < 500.0, "la balle touche le premier ennemi")
 	check_eq(second.hp, 500.0, "et s'y arrête")
-	check_near(u.attack, 0.5, 1e-6, "2 balles par seconde")
+	var nums := GameState.damage_numbers.filter(func(d: Dictionary) -> bool: return d["target"] == first)
+	check(nums.size() == 1 and nums[0]["age"] < 0.0, "chiffre de dégâts masqué jusqu'à l'arrivée de la balle")
+	var cd: float = Gear.ITEMS["cannon"]["cd"] * float(Ammo.AMMO[Ammo.current()].get("cd_mult", 1.0))
+	check_near(u.attack, cd, 1e-6, "cadence de l'arme et de la munition")
+	check_near(GameState.res["forge"], 100.0 - float(Gear.ITEMS["cannon"]["mana"]), 1e-6, "mana du tir payée")
 	var ball: Array = GameState.effects.filter(func(e: Dictionary) -> bool: return e["type"] == "cball")
 	check_eq(ball.size(), 1, "une balle tirée")
-	check_near(float(ball[0]["tx"]), first.x, 0.01, "arrêtée sur l'ennemi")
+	# La balle s'arrête au bord de la silhouette (Enemy.BODY), devant le centre de l'ennemi.
+	var tx := float(ball[0]["tx"])
+	check(tx > u.x + 1.0 and tx <= first.x + 0.01, "arrêtée sur l'ennemi (%.2f)" % tx)
 
 
 func test_tyrien_attack_animations_exported() -> void:

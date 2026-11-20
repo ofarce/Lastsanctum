@@ -46,9 +46,20 @@ const MARGIN := 0.6
 
 
 static func solid_rects() -> Array[Rect2]:
-	var anchor := Rect2(CaveShape.CORE.x - 3.7, CaveShape.CORE.y - 1.9, 7.4, 3.5)
 	var capsule := Rect2(POS.x - 2.1, POS.y - 1.5, 4.2, 1.9)
-	return [anchor.grow(MARGIN), capsule.grow(MARGIN)]
+	return [anchor_solid(), capsule.grow(MARGIN)]
+
+
+## Socle infranchissable de l'Ancre (élargi de MARGIN).
+static func anchor_solid() -> Rect2:
+	return Rect2(CaveShape.CORE.x - 3.7, CaveShape.CORE.y - 1.9, 7.4, 3.5).grow(MARGIN)
+
+
+## Point du bord du socle de l'Ancre le plus proche de `p` : c'est lui qu'un assaillant atteint, le centre du
+## puits est hors d'allonge depuis que le socle ne se traverse plus.
+static func anchor_edge(p: Vector2) -> Vector2:
+	var r := anchor_solid()
+	return Vector2(clampf(p.x, r.position.x, r.end.x), clampf(p.y, r.position.y, r.end.y))
 
 
 static func set_solid(st: TerrainState) -> void:
@@ -133,13 +144,14 @@ static func toggle(sim: Simulation) -> bool:
 		sim.cancel_work(eng)
 	GameState.in_capsule = true
 	if not GameState.capsule_gift:
-		# Première entrée : soin complet et canon dans la main droite.
+		# Première entrée : soin complet, canon dans la main droite, combinaison et Sceau de minage.
 		GameState.capsule_gift = true
+		GameState.mining_seal = true
 		eng.hp = eng.max_hp
 		eng.equipment["Main droite"] = "cannon"
 		eng.equipment["Torse"] = "combinaison"
 		if sim:
-			Events.items_received.emit(["cannon", "combinaison"])
+			Events.items_received.emit(["cannon", "combinaison", "mining_seal"])
 			_first_intruders(sim)
 	ExileGallery.disincarnate()
 	eng.hidden = true

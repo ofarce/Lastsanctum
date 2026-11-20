@@ -149,7 +149,7 @@ func test_objective_interrupts_then_resumes_quest() -> void:
 	check(o.get("interrupt", false), "interrompt la quête affichée")
 	var eng := _bare()
 	_into_dome(eng)
-	sim.combat.damage(e, 1000.0, eng)
+	sim.combat.damage(e, e.hp + 1.0, eng)
 	sim.combat.finish_tick(DT, [eng])
 	Martyre.tick(sim)
 	check_eq(GameState.martyre_state, "defeated")

@@ -14,6 +14,8 @@ var squad := 0
 var squad_capacity := 0
 ## Unité de caserne unique : ×4 dégâts, ×4 armure (et ×4 PV à la sortie).
 var power := 1.0
+## Debug (bouton « Faire venir un archer ») : tire sans prendre de flèche à la réserve.
+var free_ammo := false
 var rejoining := false
 var x := 0.0
 var z := 0.0
@@ -34,6 +36,9 @@ var hidden := false
 var dead := false
 ## Ordre de déplacement explicite : l'unité ignore les ennemis jusqu'à destination.
 var force_move := false
+## Exilé piloté au clavier (InputController._engineer_keys) : il avance en pas direct vers (tx, tz), qui n'est qu'à
+## 1,5 u devant lui, sans passer par le pathfinding.
+var direct_move := false
 var job: Variant = null
 var build_job: Variant = null
 var orb_job := false
@@ -85,6 +90,8 @@ var revived_from := Vector2.ZERO
 var sw_t0 := -INF
 var sw := -1
 var sh_t0 := -INF
+## Munition du dernier tir de l'Arbalestrie (recul propre à la munition, entities/unit/unit_view.gd).
+var sh_ammo := ""
 
 
 ## Ennemi ? (les ennemis dérivent de Unit pour partager le rendu et le déplacement.)

@@ -19,7 +19,7 @@ extends RefCounted
 ##   Pupilles errantes : trois pupilles volantes (ennemis PUPIL_KIND, cibles fragiles) tournent et tirent ;
 ##   Fixation : une marque se pose sous l'Ingénieur, le suit moins vite que lui, se resserre puis éclate ;
 ##   Clignement : la salle s'assombrit, l'œil se rouvre dans un éclair (couronne à deux brèches), et recommence ;
-##   Les mille yeux : une fois, à l'entrée en phase III, les parois lâchent des murs d'yeux à une brèche, que la
+##   Les mille yeux : à l'entrée en phase II puis en phase III, les parois lâchent des murs d'yeux à une brèche, que la
 ##   masse arrête.
 ## - Racines : l'Ingénieur collé à la base est frappé (ROOT_DAMAGE toutes les ROOT_EVERY s).
 ## - Trois phases (PHASE_HP) : chacune ajoute des attaques, balles plus rapides ; en phase III, le Regard vise deux
@@ -40,10 +40,10 @@ const IFRAMES := 0.6
 ## Multiplicateur de tous les coups portés à l'Ingénieur (2026-11-19 : dégâts des boss doublés).
 const DAMAGE_MULT := 2.0
 const ROOT_REACH := 1.8
-const ROOT_DAMAGE := 10.0
+const ROOT_DAMAGE := 20.0
 const ROOT_EVERY := 1.2
 ## Balles : rayons (petite, grosse), zone touchée chez l'Ingénieur, dégâts, hauteur de vol (px natifs), durée de vie.
-const BULLET := {"r": 0.33, "big_r": 0.56, "hit": 0.375, "damage": 4.0, "big_damage": 8.0, "lift": 17.0, "life": 6.0}
+const BULLET := {"r": 0.40, "big_r": 0.68, "hit": 0.375, "damage": 8.0, "big_damage": 16.0, "lift": 17.0, "life": 6.0}
 ## Regard : annonce, tirs du torrent (nombre, cadence, vitesse, écart, une grosse balle sur `big`), yeux chercheurs
 ## (un tous les `seek_every` tirs, vitesse, virage max en rad/s, durée du guidage), ouverture avant le premier,
 ## pause après chaque regard ; écart du second axe en phase III.
@@ -52,7 +52,8 @@ const LANE := {"warn": 0.7, "shots": 18, "every": 0.05, "speed": 21.25, "jitter"
 const PHASE_HP := [2.0 / 3.0, 1.0 / 3.0]
 const PHASE_SPEED := [1.0, 1.12, 1.25]
 const PHASE_ROUNDS := [3, 4, 5]
-## Enchaînement des attaques par phase ; INTRO se joue une fois à l'entrée en phase III.
+## Enchaînement des attaques par phase ; INTRO (l'attaque de la phase III) se joue à l'entrée en phase II, puis
+## de nouveau à l'entrée en phase III (2026-11-20).
 const ROTATION := [["regard", "larmes", "cils"], ["regard", "strabisme", "pupilles", "larmes", "cils"],
 	["regard", "fixation", "clignement", "pupilles", "cils"]]
 const INTRO := "milleyeux"
@@ -79,7 +80,7 @@ const PUPIL_BODY := {"half_w": 1.1, "top": 5.4, "foot": 0.6, "melee": 0.0}
 ## Fixation : marques par phase, durée, rayon de départ et final, poursuite (u/s par phase), yeux chercheurs par
 ## marque, couronnes (nombre, vitesse ; grosses balles), dégâts de l'éclatement, pause entre deux marques.
 const FIX := {"open": 0.3, "count": [2, 3, 4], "dur": 1.9, "r0": 6.25, "r1": 1.9, "follow": [7.75, 9.5, 11.25], "seekers": 4,
-	"ring": [14, 16, 18], "ring_speed": 7.25, "big": 6, "big_speed": 4.25, "damage": 8.0, "gap": 0.35}
+	"ring": [14, 16, 18], "ring_speed": 7.25, "big": 6, "big_speed": 4.25, "damage": 16.0, "gap": 0.35}
 ## Clignement : noir initial, paupière fermée avant chaque couronne suivante, couronnes par phase, yeux par couronne,
 ## demi-largeur des deux brèches, écart max de la brèche visée, vitesse (+ step par couronne), intervalle.
 const BLINK := {"dark": 1.0, "shut": 0.32, "rings": [3, 4, 5], "n": 42, "gap": 0.24, "aim": 0.6, "speed": 7.75, "step": 0.875,
@@ -209,7 +210,6 @@ static func tick(sim: Simulation) -> void:
 				GameState.oeil_state = "duel"
 				var r := run()
 				r["next_at"] = GameState.sim_time + FIRST_PATTERN
-				sim.say("Combat singulier : l’Œil de la Matrice se tourne vers moi.", 3.0)
 			elif GameState.oeil_state == "duel" and u == null:
 				GameState.oeil_state = "waiting"
 				_extinguish(false)
@@ -261,7 +261,6 @@ static func _defeat(sim: Simulation) -> void:
 	st.eye_gate_closed = false
 	st.version += 1
 	Combat.flash(0.0, TerrainState.frontier_z(), Color("#e2382e"))
-	sim.say(QUOTE_DONE, 4.5)
 
 
 # ---------------------------------------------------------------- Combat
@@ -337,7 +336,7 @@ static func _check_phase(sim: Simulation, e: Enemy, r: Dictionary, now: float) -
 	r["cast"] = false
 	_clear_vis(r)
 	r["idx"] = 0
-	if ph == 2:
+	if ph >= 1:
 		r["intro"] = INTRO
 	r.erase("lock")
 	r["busy_until"] = now + PHASE_PAUSE
@@ -852,5 +851,5 @@ static func objective() -> Dictionary:
 		return {}
 	var e: Enemy = GameState.oeil
 	return {"id": "oeil", "quest": "L’Œil de la Matrice", "interrupt": true,
-		"label": "Abattre l’Œil de la Matrice pour ouvrir la frontière", "quote": QUOTE_DUEL, "done_quote": QUOTE_DONE,
+		"label": "Abattre l’Œil de la Matrice pour ouvrir la frontière", "quote": "", "done_quote": "",
 		"value": "%d PV" % ceili(e.hp), "progress": 1.0 - e.hp / e.max_hp}

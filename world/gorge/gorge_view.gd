@@ -2,8 +2,8 @@ class_name GorgeView
 extends Node2D
 ## Rendu de la Gorge-Cuivre (sim/gorge.gd) : un atlas par état du combat (assets/imported/gorge, exportés par
 ## tools/biomes-persos/export_gorge.py), dessiné à sa taille native (cadre 104 × 88, quatre fois la surface d’un soldat) ;
-## les annonces au sol (cercle de la Percée, points de chute de la Pluie, ligne du sillon) et les blocs qui tombent.
-## Origine : le point au sol du boss, dans le tri en profondeur du monde.
+## les annonces au sol (cercle de la Percée, points de chute de la Pluie, ligne du sillon) et les blocs qui tombent,
+## dessinés à part par GorgeMarks (draw_marks). Origine : le point au sol du boss, dans le tri en profondeur du monde.
 
 const DIR := "res://assets/imported/gorge/"
 const SCALE := 1.0
@@ -66,10 +66,8 @@ func _draw() -> void:
 	if enemy == null:
 		return
 	var m := meta()
-	var r := Gorge.run()
 	var now := GameState.sim_time
 	var seen := world == null or world.fog.visible_at(enemy.pos())
-	_draw_marks(r, now)
 	if not seen:
 		return
 	var pose := _pose()
@@ -95,15 +93,12 @@ func _draw() -> void:
 	draw_set_transform(Vector2.ZERO)
 
 
-func _local(x: float, z: float) -> Vector2:
-	return Proj.nat(x, 0.0, z) - position
-
-
-## Annonces au sol : cercles pointillés qui se remplissent, ligne du sillon, blocs en chute.
-func _draw_marks(r: Dictionary, now: float) -> void:
+## Annonces au sol : cercles pointillés qui se remplissent, ligne du sillon, blocs en chute. Dessinées par GorgeMarks,
+## au-dessus des sprites (bilan « Visibilité des balles », 2026-11-20 : un arbre ne les cache plus), en pixels natifs.
+static func draw_marks(ci: CanvasItem, w: World, r: Dictionary, now: float) -> void:
 	for m: Dictionary in r.get("marks", []):
 		var at := Vector2(m["x"], m["z"])
-		if world != null and not world.fog.visible_at(at):
+		if w != null and not w.fog.visible_at(at):
 			continue
 		var k := clampf((now - float(m["from"])) / maxf(0.01, float(m["at"]) - float(m["from"])), 0.0, 1.0)
 		var rr := float(m["r"])
@@ -111,21 +106,21 @@ func _draw_marks(r: Dictionary, now: float) -> void:
 			if (i + int(now * 8.0)) % 2 == 0:
 				continue
 			var a := TAU * i / 40.0
-			var p := _local(at.x + cos(a) * rr, at.y + sin(a) * rr).round()
-			draw_rect(Rect2(p, Vector2.ONE), Color(WARN, 0.9))
+			var p := _nat(at.x + cos(a) * rr, at.y + sin(a) * rr).round()
+			ci.draw_rect(Rect2(p, Vector2.ONE), Color(WARN, 0.9))
 		for i in 24:
 			var a := TAU * i / 24.0
-			var p := _local(at.x + cos(a) * rr * k, at.y + sin(a) * rr * k).round()
-			draw_rect(Rect2(p, Vector2.ONE), Color(WARN, 0.55))
+			var p := _nat(at.x + cos(a) * rr * k, at.y + sin(a) * rr * k).round()
+			ci.draw_rect(Rect2(p, Vector2.ONE), Color(WARN, 0.55))
 		if m["kind"] == "rain":
 			# Bloc de minerai : tombe de 90 px natifs, son ombre grossit.
-			var c := _local(at.x, at.y).round()
+			var c := _nat(at.x, at.y).round()
 			var h := roundf((1.0 - k * k) * 90.0)
-			draw_rect(Rect2(c + Vector2(-2 - 2 * k, -1), Vector2(4 + 4 * k, 2)), Color(0, 0, 0, 0.35))
-			draw_rect(Rect2(c + Vector2(-4, -h - 7), Vector2(8, 8)), ROCK[0])
-			draw_rect(Rect2(c + Vector2(-3, -h - 6), Vector2(6, 6)), ROCK[1])
-			draw_rect(Rect2(c + Vector2(-3, -h - 6), Vector2(4, 3)), ROCK[2])
-			draw_rect(Rect2(c + Vector2(-2, -h - 5), Vector2(2, 1)), ROCK[3])
+			ci.draw_rect(Rect2(c + Vector2(-2 - 2 * k, -1), Vector2(4 + 4 * k, 2)), Color(0, 0, 0, 0.35))
+			ci.draw_rect(Rect2(c + Vector2(-4, -h - 7), Vector2(8, 8)), ROCK[0])
+			ci.draw_rect(Rect2(c + Vector2(-3, -h - 6), Vector2(6, 6)), ROCK[1])
+			ci.draw_rect(Rect2(c + Vector2(-3, -h - 6), Vector2(4, 3)), ROCK[2])
+			ci.draw_rect(Rect2(c + Vector2(-2, -h - 5), Vector2(2, 1)), ROCK[3])
 	if r.has("furrow"):
 		var fu: Dictionary = r["furrow"]
 		var a: Vector2 = fu["a"]
@@ -137,5 +132,9 @@ func _draw_marks(r: Dictionary, now: float) -> void:
 				continue
 			var q := a.lerp(b, float(i) / n)
 			for s: float in [-1.0, 1.0]:
-				var p := _local(q.x + side.x * s, q.y + side.y * s).round()
-				draw_rect(Rect2(p, Vector2.ONE), Color(WARN, 0.9))
+				var p := _nat(q.x + side.x * s, q.y + side.y * s).round()
+				ci.draw_rect(Rect2(p, Vector2.ONE), Color(WARN, 0.9))
+
+
+static func _nat(x: float, z: float) -> Vector2:
+	return Proj.nat(x, 0.0, z)

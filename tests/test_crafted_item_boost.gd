@@ -13,7 +13,7 @@ func test_button_adds_all_recipes_to_stock() -> void:
 	for click in 2:
 		button.pressed.emit()
 		check(GameState.base_inventory_unlocked, "stock accessible")
-		for station: String in ["workshop", "forge", "creuset"]:
+		for station: String in ["workshop", "scierie", "archerie", "forge", "creuset"]:
 			for item: String in Simulation.Recipes.RECIPES[station]:
 				check_eq(Production.count_in(GameState.base_inventory, item), 100 * (click + 1), item + " ajouté au stock")
 	GameState.base_inventory.clear()
