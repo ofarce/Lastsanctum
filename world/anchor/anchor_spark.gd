@@ -18,6 +18,9 @@ signal engineer_reached(unit: Unit)
 ## shaders/spark_glow.gdshader les aligne sur la grille native, trame le palier faible et ajoute la lueur
 ## sous les pixels de l'étincelle.
 
+## Étincelle masquée depuis le retrait des balistes (séquence d'ouverture) : le minutage et le retour
+## caméra vers l'Ingénieur restent, rien n'est dessiné et la caméra ne la suit plus.
+const SHOW := false
 const T1 := 0.7  # fin de la charge sur la sphère
 const T2 := 3.7  # arrivée à l'entrée
 const T3 := 3.95  # division
@@ -239,7 +242,7 @@ func _return_tick(delta: float) -> void:
 		_return_speaker = null
 		return
 	_return_elapsed += delta
-	var progress := clampf(_return_elapsed / RETURN_DURATION, 0.0, 1.0)
+	var progress := clampf(_return_elapsed / (RETURN_DURATION if SHOW else 1.0), 0.0, 1.0)
 	var cursor := smoothstep(0.0, 1.0, progress) * (_return_path.size() - 1)
 	var i := mini(floori(cursor), _return_path.size() - 2)
 	_return_path[_return_path.size() - 1] = _return_speaker.pos()
@@ -285,6 +288,8 @@ func _process(delta: float) -> void:
 		return
 	if not _return_path.is_empty():
 		_return_tick(delta)
+	if not SHOW:
+		return
 	_t = spark_time()
 	if _t < 0.0:
 		if _drawn:
@@ -532,7 +537,7 @@ func _events(t: float) -> void:
 func lights() -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	var t := spark_time()
-	if t < 0.0 or _main == null or _key != GameState.orb_finished_at:
+	if not SHOW or t < 0.0 or _main == null or _key != GameState.orb_finished_at:
 		return out
 	for h in _heads(t):
 		out.append({"x": h.x / UNIT, "z": h.y / UNIT, "r": 5.0, "rgb": LIGHT_RGB, "glow": 0.2})

@@ -1,26 +1,48 @@
 extends "res://tests/test_case.gd"
-## Étape 3 (v2) : galeries, praticabilité et cases à creuser identiques au prototype (fixtures 73b410f).
+## Galeries orthogonales, génération déterministe et praticabilité du terrain.
 
 const Fixtures := preload("res://tests/fixtures.gd")
 const GALLERY_SEED := 20261114
 
 
-func test_galleries_match_js_for_5_seeds() -> void:
-	var f := Fixtures.load_json("galleries")
-	check_eq(f["results"].size(), 5, "graines")
-	var state := TerrainState.new()
-	for res: Dictionary in f["results"]:
+class TunnelTrace extends TerrainState:
+	var points: Array[Vector2] = []
+
+	func _stamp(x: float, z: float, _radius: float) -> void:
+		points.append(Vector2(x, z))
+
+	func _stamp_free(x: float, z: float, _radius: float) -> void:
+		points.append(Vector2(x, z))
+
+
+func test_tunnel_steps_are_orthogonal() -> void:
+	for map_seed in [1, 42, 12345, GALLERY_SEED, 987654321]:
+		for direction in 4:
+			var trace := TunnelTrace.new()
+			trace._worm(Rng.new(map_seed), -140.0, -250.0, direction, 200, 2.5, {"room": 0.0, "branch": 0.0})
+			for i in range(1, trace.points.size()):
+				var delta := trace.points[i] - trace.points[i - 1]
+				check(is_zero_approx(delta.x) or is_zero_approx(delta.y), "pas orthogonal : %s" % delta)
+	var passage := TunnelTrace.new()
+	passage._carve_axis_segment(Vector2(-150, -250), Vector2(-150, -258))
+	passage._carve_axis_segment(Vector2(-150, -258), Vector2(-120, -258))
+	for i in range(1, passage.points.size()):
+		var delta := passage.points[i] - passage.points[i - 1]
+		check(is_zero_approx(delta.x) or is_zero_approx(delta.y), "raccordement orthogonal : %s" % delta)
+	check_eq(passage.points[-1], Vector2(-120, -258), "raccordement jusqu'à l'extrémité")
+
+
+func test_galleries_are_deterministic_for_5_seeds() -> void:
+	for map_seed in [1, 42, 12345, GALLERY_SEED, 987654321]:
+		var state := TerrainState.new()
 		state.groves = false
-		state.generate_galleries(int(res["seed"]))
-		var cells := 0
-		for v in state.mask:
-			cells += v
-		check_eq(cells, int(res["cells"]), "graine %d : cases de galerie" % res["seed"])
-		check_eq(state.mask_sha1(), res["mask_sha1"], "graine %d : masque" % res["seed"])
-		check_eq(state.count, int(res["count"]), "graine %d : réseaux" % res["seed"])
-		check_eq(state.portals.size(), res["portals"].size(), "graine %d : portails" % res["seed"])
-		for n in mini(state.portals.size(), res["portals"].size()):
-			check_eq(Vector2(state.portals[n]["x"], state.portals[n]["z"]), Vector2(res["portals"][n]["x"], res["portals"][n]["z"]), "portail %d" % n)
+		state.generate_galleries(map_seed)
+		var other := TerrainState.new()
+		other.groves = false
+		other.generate_galleries(map_seed)
+		check_eq(state.mask, other.mask, "même graine, mêmes galeries")
+		check(state.count > 0, "réseaux générés")
+		check_eq(state.portals, other.portals, "portails déterministes")
 
 
 func test_walkable_matches_js() -> void:

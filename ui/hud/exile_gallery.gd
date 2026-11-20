@@ -3,7 +3,7 @@ extends Control
 ## Galerie des Exilés débloqués (en bas à gauche, au-dessus de la minicarte). Seul l'Ingénieur est un
 ## Exilé au départ ; ni les adeptes ni les soldats n'en sont. Au survol d'un portrait, il s'éclaire et un
 ## bouton « Incarner » apparaît au-dessus. Pendant l'incarnation (GameState.incarnated), la galerie est
-## masquée et un bouton « Désincarner » s'affiche en bas de l'écran.
+## masquée (plus de bouton « Désincarner » depuis le 2026-11-19 : seule la capsule désincarne, Échap ne le fait plus).
 
 const PORTRAITS := "res://assets/baked/hud/portraits/%s.png"
 const EXILE_ROLES := ["engineer"]
@@ -16,7 +16,6 @@ var world: World
 
 var _slots: Array[_Slot] = []
 var _incarnate := _TextButton.new("Incarner")
-var _disincarnate := _TextButton.new("Désincarner")
 var _hover: _Slot = null
 var _hide_at := INF
 
@@ -55,16 +54,47 @@ func _ready() -> void:
 	_incarnate.mouse_entered.connect(func() -> void: _hide_at = INF)
 	_incarnate.mouse_exited.connect(_schedule_hide)
 	add_child(_incarnate)
-	_disincarnate.visible = false
-	_disincarnate.pressed.connect(disincarnate)
-	add_child(_disincarnate)
+	# Barillet des munitions de l'Arbalestrie, à gauche de la barre PV (Arbalestrie modulaire).
+	add_child(preload("res://ui/hud/ammo_barrel.gd").new())
+	# Barre d'objets (sceau de minage, Arbalestrie, balles), sous la barre PV.
+	add_child(ItemBar.new())
 
 
 func _schedule_hide() -> void:
 	_hide_at = Time.get_ticks_msec() + 150.0
 
 
+## Incarné : vie de l'Exilé en bas de l'écran (cadre 16 bits, SnesBanner).
+const HP_W := 260.0
+const HP_H := 34.0
+const ItemBar := preload("res://ui/hud/item_bar.gd")
+## Écart entre le bas de la barre PV et le bas de l'écran : la barre d'objets se loge dessous.
+const HP_BOTTOM := ItemBar.MARGIN + ItemBar.SLOT + ItemBar.HP_GAP
+
+
+func _draw() -> void:
+	var inc := GameState.incarnated
+	if inc == null or not inc.alive() or HudModel.incarnated_panel():
+		return
+	var screen := get_viewport_rect().size
+	var r := Rect2(roundf((screen.x - HP_W) / 2.0), screen.y - HP_BOTTOM - HP_H, HP_W, HP_H)
+	SnesBanner.paint(self, r)
+	var f := HudStyle.font()
+	var k := clampf(inc.hp / maxf(1.0, inc.max_hp), 0.0, 1.0)
+	var bar := Rect2(r.position + Vector2(46, 12), Vector2(HP_W - 58, 10))
+	draw_string(f, r.position + Vector2(12, 23), "PV", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, SnesBanner.INK)
+	draw_rect(bar, Color("#0a0c26"))
+	var col := UnitView.HP_ALLY if k > 0.5 else (Color("#e8c04a") if k > 0.25 else Color("#e05a4a"))
+	draw_rect(Rect2(bar.position, Vector2(roundf(bar.size.x * k), bar.size.y)), col)
+	draw_rect(Rect2(bar.position, Vector2(roundf(bar.size.x * k), 2)), Color(1, 1, 1, 0.3))
+	var txt := "%d / %d" % [ceili(inc.hp), roundi(inc.max_hp)]
+	var tw := f.get_string_size(txt, HORIZONTAL_ALIGNMENT_LEFT, -1, 12).x
+	draw_string(f, bar.position + Vector2((bar.size.x - tw) / 2.0 + 1, 10), txt, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, SnesBanner.SHADOW)
+	draw_string(f, bar.position + Vector2((bar.size.x - tw) / 2.0, 9), txt, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, SnesBanner.INK)
+
+
 func _process(_delta: float) -> void:
+	queue_redraw()
 	var inc := GameState.incarnated
 	if inc and (not inc.alive() or inc.hidden or GameState.ended):
 		disincarnate()
@@ -99,10 +129,7 @@ func _process(_delta: float) -> void:
 		_incarnate.size = Vector2(maxf(SIZE + 30.0, _incarnate.min_width()), BTN_H)
 		_incarnate.position = Vector2(_hover.position.x + (SIZE - _incarnate.size.x) * 0.5, _hover.position.y - 4.0 - BTN_H)
 		_incarnate.position.x = maxf(4.0, _incarnate.position.x)
-	_disincarnate.visible = inc != null
 	if inc:
-		_disincarnate.size = Vector2(_disincarnate.min_width() + 20.0, 36.0)
-		_disincarnate.position = Vector2((screen.x - _disincarnate.size.x) * 0.5, screen.y - 18.0 - _disincarnate.size.y)
 		if world:
 			world.camera.set_view(inc.pos(), world.camera.px)
 

@@ -33,13 +33,14 @@ var _loader: DecorLoader
 var native_offset := Vector2.ZERO
 ## Points alignés sur la grille native de l'écran (portails), replacés à chaque changement de vue.
 var _anchors: Array[ScreenAnchor] = []
-var _portal_meta := {}
 ## Éclairage (étape 4) : créé après le décor, donc dessiné par-dessus.
 var lighting: Lighting
 ## Vie décorative de la jungle (oiseaux, papillons, poissons, pollen, brume).
 var jungle_life: JungleLife
 ## Objets posés le long des chemins (RoadProps.place).
 var road_props: Array[Dictionary] = []
+## Crue affichée par river_view (unités), pour ne la renvoyer au shader que quand elle change.
+var _flood_shown := -1.0
 ## Pluie et éclairs à l'écran (core/weather.gd).
 var rain_view: RainView
 ## Simulation (étape 5) : fournit les unités à dessiner.
@@ -78,11 +79,15 @@ var _caps: Array = []
 var _caps_version := -1
 ## Ambiances de la montagne (bassins sous les objets triés ; champignons, lianes, faune dans le tri).
 var ambience_ground := Node2D.new()
+## Nappes de corruption des Pylônes de Merenor (PylonZone), au sol sous les objets triés.
+var pylon_ground := Node2D.new()
 ## Rendu de la rivière de la jungle (null sans rivière).
 var river_view: RiverView
 ## Nœuds de la petite végétation (null sans végétation).
 var flora_view: FloraView
 var ambience := {}
+## Décor et salles à thème du Temple (world/sanctum).
+var sanctum_view := SanctumView.new()
 
 @onready var camera: WorldCamera = $Camera
 @onready var terrain: Terrain = $Terrain
@@ -106,6 +111,15 @@ func _ready() -> void:
 	ambience_ground.name = "AmbienceGround"
 	add_child(ambience_ground)
 	move_child(ambience_ground, ysort.get_index())
+	sanctum_view.name = "SanctumView"
+	sanctum_view.world = self
+	add_child(sanctum_view)
+	add_child(sanctum_view.ground)
+	move_child(sanctum_view.ground, ysort.get_index())
+	pylon_ground.name = "PylonGround"
+	pylon_ground.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	add_child(pylon_ground)
+	move_child(pylon_ground, ysort.get_index())
 	build_grid = BuildGrid.new()
 	build_grid.name = "BuildGrid"
 	build_grid.world = self
@@ -124,6 +138,36 @@ func _ready() -> void:
 		dome.front = is_front
 		add_child(dome)
 		move_child(dome, ysort.get_index() + (1 if is_front else 0))
+	# Œil de la Matrice (sim/oeil.gd) : couloirs au sol sous les sprites, balles par-dessus.
+	for is_air: bool in [false, true]:
+		var ofx := OeilFx.new()
+		ofx.name = "OeilFxAir" if is_air else "OeilFxGround"
+		ofx.world = self
+		ofx.ground = not is_air
+		add_child(ofx)
+		move_child(ofx, ysort.get_index() + (1 if is_air else 0))
+	# Séquence d'ouverture (sim/opening.gd) : remparts et onde au sol sous les sprites ; portail, bouclier,
+	# canons et fumées par-dessus.
+	for is_air: bool in [false, true]:
+		var ov := OpeningView.new()
+		ov.name = "OpeningAir" if is_air else "OpeningGround"
+		ov.world = self
+		ov.ground = not is_air
+		add_child(ov)
+		move_child(ov, ysort.get_index() + (1 if is_air else 0))
+	# Capsule de l'Ingénieur (sim/capsule.gd), à la place du portail central.
+	for is_ground: bool in [true, false]:
+		var capsule := CapsuleView.new()
+		capsule.name = "CapsuleLink" if is_ground else "Capsule"
+		capsule.ground = is_ground
+		add_child(capsule)
+		move_child(capsule, ysort.get_index() + (0 if is_ground else 1))
+	# Puits de l'Ancre tyrienne, sous les sprites (le reste est trié avec eux : _attach_visuals).
+	var anchor_well := AnchorView.new()
+	anchor_well.name = "AnchorWell"
+	anchor_well.ground = true
+	add_child(anchor_well)
+	move_child(anchor_well, ysort.get_index())
 	# Arrivée des esprits à l'autel (Germe) : repère du monde, par-dessus les sprites.
 	spirit_arrival = SpiritArrivalFx.new()
 	spirit_arrival.name = "SpiritArrival"
@@ -159,12 +203,14 @@ func _ready() -> void:
 	lighting.providers.append(_unit_lights)
 	lighting.providers.append(_building_lights)
 	lighting.providers.append(_combat_lights)
+	lighting.providers.append(MartyreFx.lights)
 	lighting.providers.append(anchor_spark.lights)
 	fog.spark_lights = anchor_spark.lights
 	lighting.providers.append(anchor_overload.lights)
 	lighting.providers.append(_vault_lights)
 	lighting.providers.append(_grove_lights)
 	lighting.providers.append(_ambience_lights)
+	lighting.providers.append(sanctum_view.lights)
 	add_child(lighting)
 	var fog_layer := CanvasLayer.new()
 	fog_layer.layer = 3
@@ -175,7 +221,8 @@ func _ready() -> void:
 	veil.material = _fog_material
 	fog_layer.add_child(veil)
 	veil.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	reset_world(randi())
+	# Pas de reset_world ici : la partie (Simulation.new_game) ou l'outil qui instancie le monde seul le
+	# fait aussitôt avec sa graine ; le générer ici doublait le coût (~25 s) pour rien.
 
 
 ## Remet le monde à son état initial (init() du prototype) avec une graine de galeries donnée :
@@ -184,6 +231,8 @@ func reset_world(seed: int) -> void:
 	gallery_seed = seed
 	terrain.build()
 	for child in ysort.get_children():
+		child.free()
+	for child in pylon_ground.get_children():
 		child.free()
 	_unit_views.clear()
 	_building_views.clear()
@@ -227,6 +276,7 @@ func reset_world(seed: int) -> void:
 		ore.setup(terrain_state, key)
 		ysort.add_child(ore)
 	_build_ambience()
+	sanctum_view.reset()
 	flora_view = null
 	if terrain_state.flora:
 		flora_view = FloraView.new()
@@ -235,11 +285,19 @@ func reset_world(seed: int) -> void:
 	chest_view.name = "Chest"
 	chest_view.setup(terrain_state)
 	ysort.add_child(chest_view)
+	var door := DoorView.new()
+	door.name = "SouthDoor"
+	ysort.add_child(door)
+	if terrain_state.frontier:
+		var gate := EyeGateView.new()
+		gate.setup(terrain_state)
+		ysort.add_child(gate)
 	vault_hint = VaultHint.new()
 	vault_hint.name = "VaultHint"
 	vault_hint.setup(terrain_state)
 	ysort.add_child(vault_hint)
 	terrain_ops = TerrainOps.new(terrain_state, decor, TerrainPainter.new(terrain, terrain_state))
+	terrain_ops.reshape_cave()
 	print("Graine des galeries : %d (%d réseaux)" % [seed, terrain_state.count])
 	apply_view()
 
@@ -440,80 +498,44 @@ func _update_caps() -> void:
 	_caps_version = terrain_state.version
 	var keep: Array = []
 	for c: Array in _caps:
-		var cap: Sprite2D = c[0]
-		if not is_instance_valid(cap):
+		# Vérifié avant l'affectation typée : un sprite libéré (nouvelle partie) la ferait échouer.
+		if not is_instance_valid(c[0]):
 			continue
+		var cap: Sprite2D = c[0]
 		var top := floorf(float(c[2]) / 4.0) * 4.0 - 4.0
 		cap.visible = terrain_state.ground(float(c[1]) + 2.0, top - 2.0)
 		keep.append(c)
 	_caps = keep
 
 
-## Ajoute aux emplacements spéciaux leur rendu de l'étape 4 : arcs de l'orbe, portails, effets divins.
+## Ajoute aux emplacements spéciaux leur rendu : arcs de l'orbe, faces de filon, pylônes de Merenor.
 func _attach_visuals(e: Dictionary) -> void:
-	if _portal_meta.is_empty():
-		_portal_meta = JSON.parse_string(FileAccess.get_file_as_string("res://assets/baked/manifest.json"))["portals"]
 	var slot: Node2D = e.get("node")
 	if slot == null:
 		return
 	if String(e.get("s", "")).begins_with("face5_"):
 		_attach_ore_face(e, slot)
 		return
-	var P: Dictionary = _portal_meta
 	if e.get("orb", false):
+		# Ancre tyrienne (AnchorView) : l'ancien sprite de l'orbe reste comme repère (survol, tests) mais ne
+		# se dessine plus ; son porteur trié reçoit bornes, chaînes et sphère, calé devant les bornes avant.
 		var orb: Sprite2D = _special["orb"]
-		var arcs := OrbArcs.new()
-		arcs.name = "Arcs"
-		orb.add_child(arcs)
-	elif e.has("portal"):
-		var ex: Dictionary = P["exiles"]
-		var spr := _portal_sprite(slot, Vector2(e["x"], e["z"]), "exiles", 1.0, Vector2(ex["ox"], ex["oy"]))
-		spr.active_texture = load(ex["atlas"])
-		spr.frames = int(ex["frames"])
-		spr.cols = int(ex["cols"])
-		spr.frame_size = Vector2i(ex["frame_w"], ex["frame_h"])
-	elif e.has("dportal"):
-		var id: String = e["dportal"]
-		var dp: Dictionary = P["deity"]
-		var spr := _portal_sprite(slot, Vector2(e["x"], e["z"]), "deity", float(dp["scale"]), Vector2(P["exiles"]["ox"], P["exiles"]["oy"]))
-		spr.deity_id = id
-		spr.active_texture = load("res://assets/baked/portals/deity_%s.png" % id)
-		spr.off_texture = load("res://assets/baked/portals/deity_off.png")
-		spr.cols = int(dp[id]["cols"])
-		spr.frame_size = Vector2i(dp[id]["frame_w"], dp[id]["frame_h"])
-	elif e.has("deity_fx"):
-		var fx := DeityFx.new()
-		fx.deity_id = e["deity_fx"]
-		fx.deity_x = e["x"]
-		fx.world = self
-		for hex: String in P["deity"]["look"][fx.deity_id]["glow"]:
-			fx.glow.append(Color(hex))
-		slot.add_child(fx)
+		orb.self_modulate.a = 0.0
+		var holder: Node2D = _special["orb_holder"]
+		holder.position.y = 8.0 * (CaveShape.CORE.y + AnchorView.FRONT)
+		var view := AnchorView.new()
+		view.name = "AnchorView"
+		view.orb = orb
+		holder.add_child(view)
 	elif e.has("evil"):
-		var ev: Dictionary = P["evil"]
-		var spr := _portal_sprite(slot, Vector2(e["x"], e["z"]), "evil", float(ev["scale"]), Vector2(P["exiles"]["ox"], P["exiles"]["oy"]))
-		spr.active_texture = load("res://assets/baked/portals/evil.png")
-		spr.cols = int(ev["sheet"]["cols"])
-		spr.frame_size = Vector2i(ev["sheet"]["frame_w"], ev["sheet"]["frame_h"])
-		var embers := EvilEmbers.new()
-		embers.world = self
-		embers.world_xz = Vector2(e["x"], e["z"])
-		for hex: String in ev["look"]:
-			embers.look.append(Color(hex))
-		slot.add_child(embers)
-
-
-func _portal_sprite(slot: Node2D, xz: Vector2, kind: String, k: float, origin_offset: Vector2) -> PortalSprite:
-	var anchor := ScreenAnchor.new()
-	anchor.world_xz = xz
-	slot.add_child(anchor)
-	_anchors.append(anchor)
-	var spr := PortalSprite.new()
-	spr.kind = kind
-	anchor.add_child(spr)
-	spr.setup(k, origin_offset)
-	anchor.place(native_offset)
-	return spr
+		# Pylône de Merenor (sim/pylons.gd) à la place du portail maléfique : obélisque trié, nappe au sol.
+		var p: Dictionary = e["evil"]
+		var view := PylonView.new()
+		slot.add_child(view)
+		view.setup(p, slot)
+		var zone := PylonZone.new()
+		zone.setup(terrain_state, p)
+		pylon_ground.add_child(zone)
 
 
 ## Image du sol de la case (i, j) (32 × 32 pixels natifs), relevée avant qu'elle soit creusée : la roche
@@ -528,6 +550,12 @@ func cell_image(i: int, j: int) -> Image:
 func dig_cell(i: int, j: int) -> void:
 	terrain_ops.dig_cell(i, j)
 	# Les nœuds ajoutés reçoivent les paramètres courants des matériaux.
+	apply_view()
+
+
+## Mur sud soufflé par l'explosion du bouclier (sim/opening.gd) : la brèche s'ouvre sur les remparts.
+func open_breach() -> void:
+	terrain_ops.open_breach()
 	apply_view()
 
 
@@ -550,11 +578,20 @@ func _process(_delta: float) -> void:
 	if flora_view:
 		flora_view.refresh()
 	if terrain_state.river:
+		# River.flood est tenu à jour par la simulation (Weather.tick) ; ici, seulement le rendu.
 		var fl := Weather.flood()
-		if fl != terrain_state.river.flood:
-			terrain_state.river.flood = fl
+		if fl != _flood_shown:
+			_flood_shown = fl
 			if river_view:
 				river_view.set_flood(fl)
+
+
+## Bosquets replantés par la Sylviculture (Simulation.regrow_groves) : leur vue rejoint le tri en profondeur.
+func add_groves(origins: Array[Vector2i]) -> void:
+	for origin: Vector2i in origins:
+		var grove := GroveView.new()
+		grove.setup(terrain_state, origin)
+		ysort.add_child(grove)
 
 
 ## Crée ou retire les nœuds des unités pour suivre GameState.units (les unités mortes ne sont pas dessinées).
@@ -586,6 +623,12 @@ func _sync_units() -> void:
 		if not live.has(u):
 			var v: Node = _unit_views[u]
 			if is_instance_valid(v):
+				# Mort d'un soldat de la Caserne ou d'un esprit : chute ou dissipation à sa place.
+				if v is AdeptView and u.hp <= 0.0 and not u.hidden:
+					var fx := AllyDeathFx.new()
+					if fx.setup(v as AdeptView):
+						fx.name = "Death_%d" % u.id
+						ysort.add_child(fx)
 				v.queue_free()
 			_unit_views.erase(u)
 
@@ -656,14 +699,25 @@ func _sync_enemies() -> void:
 		_enemy_meta = EnemyArt.all()
 	var live := {}
 	for e: Enemy in GameState.enemies + GameState.enemy_corpses:
-		if (e.hp <= 0.0 and not e.dead) or not _enemy_meta.has(e.kind):
+		if (e.hp <= 0.0 and not e.dead) or not (_enemy_meta.has(e.role) or e.kind == OeilMatrice.KIND or e.kind == Gorge.KIND):
 			continue
 		live[e] = true
-		if not _enemy_views.has(e):
+		if not _enemy_views.has(e) and e.kind == Gorge.KIND:
+			var gv := GorgeView.new()
+			ysort.add_child(gv)
+			gv.setup(e, self)
+			_enemy_views[e] = gv
+			continue
+		if not _enemy_views.has(e) and e.kind == OeilMatrice.KIND:
+			var ov := OeilView.new()
+			ysort.add_child(ov)
+			ov.setup(e, self)
+			_enemy_views[e] = ov
+		elif not _enemy_views.has(e):
 			var v := UnitView.new()
 			v.name = "Enemy_%s" % e.kind
 			ysort.add_child(v)
-			v.setup(e, _enemy_meta[e.kind], simulation, self)
+			v.setup(e, _enemy_meta[e.role], simulation, self)
 			_enemy_views[e] = v
 	for e: Enemy in _enemy_views.keys():
 		if not live.has(e):
@@ -730,6 +784,11 @@ func _grove_lights() -> Array[Dictionary]:
 func _build_ambience() -> void:
 	for child in ambience_ground.get_children():
 		child.free()
+	# Sol teinté par sous-zone, sous la rivière.
+	if terrain_state.flora:
+		var zones := GroundZones.new()
+		zones.setup(terrain_state.flora)
+		ambience_ground.add_child(zones)
 	river_view = null
 	if terrain_state.river:
 		river_view = RiverView.new()
@@ -833,6 +892,7 @@ func apply_view() -> void:
 	for a in _anchors:
 		if is_instance_valid(a):
 			a.place(native_offset)
+	_fog_material.set_shader_parameter("px", float(px))
 	_snap.set_shader_parameter("px", float(px))
 	_sprites_mat.set_shader_parameter("px", float(px))
 	_sprites_mat.set_shader_parameter("world_origin", position)

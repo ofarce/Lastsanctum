@@ -1,0 +1,400 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Boss de la Bête</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0c0d10;--panel:#14161b;--line:#2c3038;--txt:#e2dccb;--mut:#9a9ca2;--acc:#d84a3a;--gold:#d0a038}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--txt);font:15px/1.45 'Pixelify Sans',system-ui,sans-serif}
+header,main{max-width:1280px;margin:auto;padding:18px 16px}h1{margin:0;font-weight:600;letter-spacing:.08em;font-size:26px;color:var(--acc)}
+h2{font-weight:600;font-size:20px;color:var(--gold);margin:34px 0 6px;letter-spacing:.05em}
+p.lead{color:var(--mut);margin:6px 0 0;max-width:1000px}p.lead b{color:var(--txt);font-weight:600}
+.lore{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:8px;margin-top:12px;max-width:1100px}
+.lore div{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--acc);padding:7px 10px;font-size:13px;color:var(--mut)}.lore b{color:var(--txt);font-weight:600;display:block}
+button{font:inherit;color:var(--txt);background:#1c1f26;border:1px solid var(--line);padding:6px 12px;cursor:pointer}button:hover,button[aria-pressed=true]{border-color:var(--acc);background:#2a1a1a}
+.bar{display:flex;gap:8px;align-items:center;margin-top:14px;flex-wrap:wrap}
+figure{margin:0 0 22px;background:var(--panel);border:1px solid var(--line);min-width:0}
+canvas{image-rendering:pixelated;display:block;width:100%;height:auto}
+.row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr)}
+.big{background:#07080a;border-right:1px solid var(--line)}
+.side{display:flex;flex-direction:column;min-width:0}
+.game{background:#07080a;padding:6px;border-bottom:1px solid var(--line)}.game small,.big small{display:block;color:var(--mut);font-size:12px;padding:4px 6px}
+figcaption{padding:10px 14px 14px}figcaption b{color:var(--acc);font-weight:600;font-size:20px}figcaption i{display:block;font-style:normal;color:var(--gold);font-size:13px;letter-spacing:.06em;margin-top:2px}
+figcaption p{margin:6px 0 0;color:var(--mut);font-size:14px}figcaption ul{margin:8px 0 0;padding-left:18px;font-size:14px}figcaption li{margin:2px 0}figcaption li span{color:var(--acc)}
+.meta{display:flex;gap:14px;flex-wrap:wrap;margin-top:8px;font-size:13px;color:var(--mut)}.meta em{font-style:normal;color:var(--txt)}
+.sw{display:flex;gap:3px;margin-top:8px;flex-wrap:wrap}.sw div{display:flex}.sw span{width:12px;height:14px;display:block}
+.rec{border-color:var(--gold)}.rec figcaption b::after{content:' · recommandée';color:var(--gold);font-size:13px;letter-spacing:.06em}
+table{border-collapse:collapse;width:100%;max-width:1100px;margin-top:10px;font-size:14px}td,th{border-bottom:1px solid var(--line);padding:7px 10px;text-align:left;vertical-align:top}
+th{color:var(--gold);font-weight:600}td{color:var(--mut)}td b{color:var(--txt);font-weight:600}
+@media (max-width:820px){.row{grid-template-columns:1fr}.big{border-right:0;border-bottom:1px solid var(--line)}}
+</style></head><body>
+<header><h1>BOSS DU SANCTUM · LA BÊTE · 5 PROPOSITIONS</h1>
+<p class="lead">Cinq boss imposants tirés de ce que le jeu dit déjà de la Bête. Chacun mesure <b>trois à quatre fois l’Ingénieur</b> (la Martyre est à taille humaine). À gauche, le détail agrandi ; à droite, <b>le même dessin à l’échelle du jeu</b>, avec l’Ingénieur et une Aberration ordinaire pour comparer.</p>
+<div class="lore">
+<div><b>Le carmin est à elle</b>Charte : le rouge marque la Bête, l’or le Credo de Laetan. Aucun allié ne porte ces couleurs.</div>
+<div><b>Chair pâle, gueules multiples</b>Les Aberrations du Dévoreur sont « vomies par les galeries ».</div>
+<div><b>Ichor noir, maître caché</b>Les Fanatiques du Credo souillé frappent pour un maître qu’on ne voit pas.</div>
+<div><b>Tissus vivants</b>L’équipement de Byrsa (Strazhar) est lié aux tissus de la Bête.</div>
+<div><b>Énergie rouge des Pylônes</b>Les Pylônes de Merenor battent de veines rouges dans une mousse noire.</div>
+<div><b>Sanctum Lacertae</b>Le sanctuaire du Lézard, que les Exilés défendent.</div>
+</div>
+<div class="bar"><button id="m-cycle" aria-pressed="true">Repos → attaque</button><button id="m-idle">Repos</button><button id="m-atk">Attaque</button><button id="pause">Pause</button></div></header>
+<main>
+<div id="list"></div>
+
+<h2>Comparatif</h2>
+<table>
+<tr><th>Boss</th><th>Ce qu’il est</th><th>Mouvement</th><th>Fenêtre de dégâts</th><th>Lien avec l’existant</th></tr>
+<tr><td><b>1 · La Matrice</b></td><td>La source des Aberrations</td><td>Immobile</td><td>Gueules ouvertes, tour à tour</td><td>Aberrations, galeries</td></tr>
+<tr><td><b>2 · Le Grand Reliquaire</b></td><td>Colosse de Byrsa, cœur de la Bête</td><td>Lent</td><td>Cage ouverte pendant l’attaque</td><td>Martyre, Strazhar, Automate doré</td></tr>
+<tr><td><b>3 · Le Lacerte écorché</b></td><td>Gardien dévoré du Sanctum</td><td>Poursuit, charge</td><td>Muscle nu entre les écailles</td><td>Ruée du Strazhar quadrupède</td></tr>
+<tr><td><b>4 · Merenor</b></td><td>La mère des Pylônes</td><td>Immobile, nappe qui s’étend</td><td>Après canalisation par les 4 esprits</td><td>Pylônes, canalisation, corruption</td></tr>
+<tr><td><b>5 · La Bête affleurante</b></td><td>Le Dévoreur lui-même</td><td>Tête fixe, mains qui frappent</td><td>Tête abaissée, gueule centrale</td><td>Toute la faction ; boss final du biome</td></tr>
+</table>
+<p class="lead">Les cinq gardent le schéma de la Martyre (vagues suspendues, dôme, Ingénieur seul), sauf Merenor, qui a besoin des esprits. Il faudra un <b>dôme plus large</b> que les 24 cases de la Martyre pour qu’on puisse tourner autour. Les PV sont indicatifs (la Martyre en a 500).</p>
+</main>
+<script>
+// Boss du Sanctum : cinq avatars de la Bête. Rendu pixel procédural (contour noir, trame de Bayer 4×4).
+// Cadre 200 × 160, pieds à FY. Le même tampon sert au détail (agrandi) et à la vue « échelle du jeu » (×1,
+// à côté de l'Ingénieur, 38 px de haut) : les proportions sont donc honnêtes.
+'use strict';
+const Bete=(()=>{
+const W=200,H=184,CX=100,FY=174,OUT='#0b090b';
+const B4=[[0,8,2,10],[12,4,14,6],[3,11,1,9],[15,7,13,5]].map(r=>r.map(v=>(v+.5)/16));
+const bay=(x,y)=>B4[y&3][x&3];
+const cl=(v,a=0,b=1)=>v<a?a:v>b?b:v;
+const ease=x=>{x=cl(x);return x*x*(3-2*x)};
+const lerp=(a,b,t)=>a+(b-a)*t;
+function rng(s){return()=>{s|=0;s=s+0x6D2B79F5|0;let t=Math.imul(s^s>>>15,1|s);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+
+/* ---------- palettes (charte : carmin = la Bête, or = Byrsa/Credo ; ni cyan, ni pourpre) ---------- */
+const PAL={
+ pale:['#2c2024','#4c3a3c','#76605e','#a08a82','#c8b4a8','#ecdcd0'],
+ flesh:['#2a0a0c','#4e1416','#7a2422','#a03a32','#c4604e','#e08c74'],
+ blood:['#200406','#4a0a0e','#7e1216','#b41c20','#e2382e','#ff8a6a'],
+ bone:['#1e1a16','#3a3228','#625644','#8e8068','#b8ac90','#e0d8c4'],
+ horn:['#1e120a','#3a2412','#5c3c1e','#86602e','#b08a48','#d8b878'],
+ gold:['#3a280c','#6a4a16','#a07424','#d0a038','#f0cc66','#fff2b0'],
+ night:['#0a0a0e','#141218','#201c24','#2e2830','#40383e','#544a50'],
+ ichor:['#060606','#121014','#1e1a1e','#2c2628'],
+ slate:['#1b2028','#232933','#2b323d','#333a46','#404955'],
+};
+const HEX={};const rgb=h=>HEX[h]||(HEX[h]=[1,3,5].map(i=>parseInt(h.slice(i,i+2),16)));
+
+/* ---------- tampon pixel ---------- */
+class Px{constructor(){this.c=new Array(W*H).fill(null);this.fx=new Array(W*H).fill(null)}
+ has(x,y){x=Math.round(x);y=Math.round(y);return x>=0&&y>=0&&x<W&&y<H&&!!this.c[y*W+x]}
+ set(x,y,c){x=Math.round(x);y=Math.round(y);if(x<0||y<0||x>=W||y>=H||!c)return;this.c[y*W+x]=c}
+ paint(x,y,c){if(this.has(x,y))this.set(x,y,c)}// peint seulement sur la matière déjà posée
+ clear(x,y){x=Math.round(x);y=Math.round(y);if(x>=0&&y>=0&&x<W&&y<H)this.c[y*W+x]=null}
+ fxs(x,y,c,a=1){x=Math.round(x);y=Math.round(y);if(x<0||y<0||x>=W||y>=H||!c)return;if(a<1&&a<=bay(x,y))return;this.fx[y*W+x]=c}}
+const sh=(r,v,x,y)=>{v=cl(v);const f=v*(r.length-1),i=Math.floor(f);return r[Math.min(r.length-1,f-i>bay(x,y)?i+1:i)]};
+function ell(P,cx,cy,rx,ry,r,o={}){const v0=o.v??.6,l=o.l??.32,edge=o.edge??.22;
+ for(let y=Math.floor(cy-ry-1);y<=cy+ry+1;y++)for(let x=Math.floor(cx-rx-1);x<=cx+rx+1;x++){
+  const dx=(x+.5-cx)/rx,dy=(y+.5-cy)/ry,d=dx*dx+dy*dy;if(d>1)continue;
+  let v=v0+l*(-dx*.55-dy*.6)-(o.rim??.1)*d;
+  const dx2=(x+1.5-cx)/rx,dy2=(y+1.5-cy)/ry;if(edge&&(dx2*dx2+dy*dy>1||dx*dx+dy2*dy2>1))v-=edge;
+  if(o.mask&&!o.mask(x,y))continue;
+  (o.on?P.paint:P.set).call(P,x,y,sh(r,v,x,y))}}
+function inPoly(pts,x,y){let c=false;for(let i=0,j=pts.length-1;i<pts.length;j=i++){const[a,b]=pts[i],[e,f]=pts[j];if((b>y)!==(f>y)&&x<(e-a)*(y-b)/(f-b)+a)c=!c}return c}
+function poly(P,pts,r,o={}){let x0=1e9,x1=-1e9,y0=1e9,y1=-1e9;for(const[x,y]of pts){x0=Math.min(x0,x);x1=Math.max(x1,x);y0=Math.min(y0,y);y1=Math.max(y1,y)}
+ const cx=(x0+x1)/2,cy=(y0+y1)/2,hw=Math.max(1,(x1-x0)/2),hh=Math.max(1,(y1-y0)/2),v0=o.v??.55,l=o.l??.3,edge=o.edge??.2;
+ for(let y=Math.floor(y0);y<=y1;y++)for(let x=Math.floor(x0);x<=x1;x++){if(!inPoly(pts,x+.5,y+.5))continue;
+  const nx=(x+.5-cx)/hw,ny=(y+.5-cy)/hh;let v=v0+l*(-nx*.5-ny*.35);
+  if(o.grad)v+=o.grad*((y-y0)/(y1-y0||1)-.5);
+  if(o.stripe)v+=o.stripe*Math.sin((x*.9+y*.5)*o.freq||0);
+  if(edge&&(!inPoly(pts,x+1.5,y+.5)||!inPoly(pts,x-.5,y+.5)||!inPoly(pts,x+.5,y+1.5)))v-=edge;
+  if(o.mask&&!o.mask(x,y))continue;
+  P.set(x,y,sh(r,v,x,y))}}
+function seg(P,a,b,w0,r,o={}){const w1=o.w1??w0,[ax,ay]=a,[bx,by]=b,L=Math.hypot(bx-ax,by-ay)||1,ux=(bx-ax)/L,uy=(by-ay)/L,M=Math.max(w0,w1)/2;
+ for(let y=Math.floor(Math.min(ay,by)-M-1);y<=Math.max(ay,by)+M+1;y++)for(let x=Math.floor(Math.min(ax,bx)-M-1);x<=Math.max(ax,bx)+M+1;x++){
+  const px=x+.5-ax,py=y+.5-ay,t=cl((px*ux+py*uy)/L),qx=px-ux*L*t,qy=py-uy*L*t,d=Math.hypot(qx,qy),R=lerp(w0,w1,t)/2;if(d>R)continue;
+  let v=(o.v??.58)+(o.l??.3)*(-qx/R*.55-qy/R*.45);if(d>R-1)v-=o.edge??.18;
+  if(o.stripe)v+=o.stripe*Math.sin(t*L*(o.freq??1.2));
+  P.set(x,y,sh(r,v,x,y))}}
+function bez(p,t){const u=1-t;return[0,1].map(k=>u*u*u*p[0][k]+3*u*u*t*p[1][k]+3*u*t*t*p[2][k]+t*t*t*p[3][k])}
+function tube(P,pts,r0,r1,ramp,o={}){const n=o.n??48;for(let i=0;i<=n;i++){const t=i/n,[x,y]=bez(pts,t),r=r0+(r1-r0)*t;
+ ell(P,x,y,Math.max(.7,r),Math.max(.7,r),ramp,{v:(o.v??.5)+t*(o.dv??.1)+(o.ring?((i%o.ring)<1?-.18:0):0),l:.42,edge:0,rim:.28})}}
+function line(P,x0,y0,x1,y1,c,mode,a){const n=Math.max(1,Math.ceil(Math.max(Math.abs(x1-x0),Math.abs(y1-y0))));
+ for(let i=0;i<=n;i++){const x=x0+(x1-x0)*i/n,y=y0+(y1-y0)*i/n;mode==='fx'?P.fxs(x,y,c,a):mode==='on'?P.paint(x,y,c):P.set(x,y,c)}}
+function glow(P,cx,cy,r,c,a=1){for(let y=Math.floor(cy-r);y<=cy+r;y++)for(let x=Math.floor(cx-r);x<=cx+r;x++){const d=Math.hypot(x+.5-cx,y+.5-cy)/r;if(d<1)P.fxs(x,y,c,a*(1-d)*(1-d))}}
+// veines : marche aléatoire depuis (x,y), peinte sur la matière ; pulse ∈ [0,1] allume la veine en fx
+function veins(P,R,x,y,n,len,dir,pulse,col=PAL.blood){for(let k=0;k<n;k++){let px=x+(R()-.5)*6,py=y,a=dir+(R()-.5)*1.4;const L=len*(.6+R()*.6);
+ for(let i=0;i<L;i++){a+=(R()-.5)*.6;px+=Math.cos(a);py+=Math.sin(a);if(!P.has(px,py))break;P.paint(px,py,col[2]);
+  const lit=pulse*(1-i/L);if(lit>.05)P.fxs(px,py,lit>.55?col[5]:col[4],lit);if(R()<.06){const b=a+(R()<.5?1:-1)*.9;let qx=px,qy=py;for(let j=0;j<L*.3;j++){qx+=Math.cos(b);qy+=Math.sin(b);P.paint(qx,qy,col[1])}}}}}
+// gueule : lèvres de chair, intérieur noir, rangées de dents, fond rouge qui luit
+function maw(P,cx,cy,w,h,open,o={}){const oh=Math.max(.6,h*open),lip=o.lip??PAL.flesh;
+ ell(P,cx,cy,w/2+2.2,oh/2+2.4,lip,{v:.48,l:.3,edge:.25,on:o.on});
+ if(open<.08){line(P,cx-w/2,cy,cx+w/2,cy,PAL.ichor[0]);return}
+ for(let y=Math.floor(cy-oh/2);y<=cy+oh/2;y++)for(let x=Math.floor(cx-w/2);x<=cx+w/2;x++){const dx=(x+.5-cx)/(w/2),dy=(y+.5-cy)/(oh/2);if(dx*dx+dy*dy>1)continue;
+  P.set(x,y,sh(PAL.ichor,.2+.5*(1-dx*dx-dy*dy)*.0+.25*(dy>.3?1:0),x,y));const d=dx*dx+dy*dy;if(d<.35)P.fxs(x,y,d<.12?PAL.blood[4]:PAL.blood[3],(1-d/.35)*open)}
+ const step=o.step??3;for(let x=Math.ceil(cx-w/2+1);x<cx+w/2-1;x+=step){const dx=(x-cx)/(w/2),e=Math.sqrt(Math.max(0,1-dx*dx))*oh/2,tl=Math.min(o.teeth??3,e+.6);
+  for(let j=0;j<tl;j++){P.set(x,cy-e+j,j<1?PAL.bone[5]:PAL.bone[4]);P.set(x,cy+e-j,j<1?PAL.bone[4]:PAL.bone[3])}}}
+function eye(P,x,y,r,lit=1,blink=0){if(blink>.5){line(P,x-r,y,x+r,y,PAL.ichor[0]);return}
+ ell(P,x,y,r+.8,r*.8+.6,PAL.ichor,{v:.1,l:0,edge:0});ell(P,x,y,r,r*.75,PAL.blood,{v:.75,l:.25,edge:.1});P.set(x-.3,y-.3,PAL.blood[5]);glow(P,x,y,r*3,PAL.blood[4],.55*lit)}
+function spike(P,base,tip,w,r){const[bx,by]=base,[tx,ty]=tip,L=Math.hypot(tx-bx,ty-by),nx=-(ty-by)/L,ny=(tx-bx)/L;poly(P,[[bx+nx*w/2,by+ny*w/2],[tx,ty],[bx-nx*w/2,by-ny*w/2]],r,{v:.6,l:.35})}
+function drip(P,x,y0,len,t,sp=1){const k=((t*sp)%1),y=y0+k*len;line(P,x,y0,x,y0+Math.min(len,k*len*.6),PAL.ichor[2],'fx',1);P.fxs(x,y,PAL.ichor[3],1-k);P.fxs(x,y+1,PAL.ichor[1],1-k)}
+
+/* =====================================================================================================
+   1 · La Matrice — masse de chair pâle enracinée, gueules qui s'ouvrent tour à tour, vomit les Aberrations
+   ===================================================================================================== */
+function matrice(P,t,a){const R=rng(11),br=Math.sin(t*1.7)*1.4;
+ // tentacules de la base (derrière)
+ for(let i=0;i<5;i++){const s=i<2?-1:1,bx=CX+s*(38+i%2*16)+(i===4?-6:0),sw=Math.sin(t*1.3+i*1.7)*6,ex=bx+s*(26+i*3);
+  tube(P,[[bx,FY-14],[bx+s*10,FY-30+sw*.4],[ex-s*6,FY-4+sw],[ex+s*6+sw,FY-12-sw*.6]],5.5,1.2,PAL.pale,{v:.45,dv:.15,ring:4})}
+ // épines d'os au sommet
+ for(let i=0;i<7;i++){const x=CX-40+i*13+(R()-.5)*4,y=FY-80-Math.sqrt(Math.max(0,1-((x-CX)/70)**2))*16-br;spike(P,[x,y+8],[x+(x-CX)*.18+(R()-.5)*6,y-12-R()*12],7,PAL.bone)}
+ // corps et lobes
+ ell(P,CX,FY-46-br*.5,72,48+br,PAL.pale,{v:.56,l:.38,rim:.18});
+ ell(P,CX-46,FY-16,32,18,PAL.pale,{v:.5,l:.34});ell(P,CX+50,FY-14,30,17,PAL.pale,{v:.46,l:.34});
+ // plis
+ for(let k=0;k<6;k++){const y0=FY-82+k*12+br*.3;for(let x=CX-70;x<=CX+70;x++){const y=y0+Math.sin(x*.07+k*1.3)*3+((x-CX)/70)**2*10;P.paint(x,y,PAL.pale[1]);P.paint(x,y+1,PAL.pale[4])}}
+ veins(P,R,CX,FY-6,6,60,-Math.PI/2,(Math.sin(t*3.2)*.5+.5)*.45+a*.35);
+ veins(P,R,CX-40,FY-30,3,34,-Math.PI*.75,(Math.sin(t*3.2-1)*.5+.5)*.35);veins(P,R,CX+44,FY-30,3,34,-Math.PI*.25,(Math.sin(t*3.2-2)*.5+.5)*.35);
+ // yeux en grappes
+ const bl=(Math.sin(t*.9)>.96)?1:0;[[CX-18,FY-86],[CX-10,FY-90],[CX-24,FY-80],[CX+30,FY-76],[CX+36,FY-82],[CX+8,FY-96]].forEach(([x,y],i)=>eye(P,x,y-br,i%3===0?2.2:1.5,.7,i%2?bl:0));
+ // gueules secondaires qui s'ouvrent tour à tour
+ [[CX-36,FY-58,16],[CX+38,FY-50,14],[CX-2,FY-72,12]].forEach(([x,y,w],i)=>maw(P,x,y-br*.6,w,9,cl(Math.sin(t*1.1+i*2.1)*1.3),{on:true,step:2.5,teeth:2}));
+ // grande gueule frontale : s'ouvre à l'attaque
+ maw(P,CX+2,FY-26,40,26,.12+a*.88,{step:3.2,teeth:4});
+ if(a>.55){const k=(a-.55)/.45;ell(P,CX+2,FY-26+k*6,8+k*4,5+k*3,PAL.pale,{v:.6,l:.3});eye(P,CX+5,FY-28+k*6,1.2,1);glow(P,CX+2,FY-26,24,PAL.blood[4],.5*k)}
+ for(let i=0;i<4;i++)drip(P,CX-14+i*10,FY-14,10,t+i*.37,.6);
+}
+
+/* =====================================================================================================
+   2 · Le Grand Reliquaire — colosse d'or de Byrsa, chair liée aux plaques, cœur de la Bête dans la cage
+   ===================================================================================================== */
+function reliquaire(P,t,a){const R=rng(23),br=Math.sin(t*1.5)*1,beat=Math.max(0,Math.sin(t*5.2))**6,arm=ease(a);
+ const hy=FY-128-br,sp=arm*6;// ouverture de la cage
+ // auréole brisée (derrière)
+ const rot=t*.25;for(let i=0;i<14;i++){if(i%5===2)continue;const an=rot+i/14*6.283,r=30;const x=CX+Math.cos(an)*r,y=hy+2+Math.sin(an)*r*.95;spike(P,[CX+Math.cos(an)*(r-6),hy+2+Math.sin(an)*(r-6)*.95],[x+Math.cos(an)*6,y+Math.sin(an)*6],5,PAL.gold)}
+ // jambes
+ for(const s of[-1,1]){seg(P,[CX+s*13,FY-58],[CX+s*19,FY-28],17,PAL.flesh,{w1:13});seg(P,[CX+s*19,FY-30],[CX+s*20,FY-4],13,PAL.gold,{w1:16,v:.55});
+  poly(P,[[CX+s*10,FY-2],[CX+s*30,FY-2],[CX+s*27,FY-9],[CX+s*13,FY-9]],PAL.gold,{v:.5});ell(P,CX+s*19,FY-30,5,4,PAL.gold,{v:.62})}
+ // tassettes
+ for(let i=-3;i<=3;i++)poly(P,[[CX+i*9-5,FY-62],[CX+i*9+5,FY-62],[CX+i*10.5+5,FY-40+Math.abs(i)*-1],[CX+i*10.5-5,FY-40+Math.abs(i)*-1]],PAL.gold,{v:.5+(i%2?.06:0),l:.35});
+ // bras gauche (pendant, griffes)
+ seg(P,[CX-36,FY-104-br],[CX-48,FY-74],15,PAL.flesh,{w1:12,stripe:.08});seg(P,[CX-48,FY-74],[CX-54,FY-46],13,PAL.gold,{w1:15});
+ for(let i=0;i<4;i++)seg(P,[CX-54+i*2.5-4,FY-42],[CX-58+i*3.2,FY-28+Math.abs(i-1.5)*-2],3,PAL.bone,{w1:1.5});
+ // bras droit : hampe, se lève à l'attaque
+ const hx=CX+50+arm*4,hyy=lerp(FY-52,FY-118,arm);
+ seg(P,[CX+36,FY-104-br],[lerp(CX+48,CX+52,arm),lerp(FY-76,FY-112,arm)],15,PAL.flesh,{w1:12});seg(P,[lerp(CX+48,CX+52,arm),lerp(FY-76,FY-112,arm)],[hx,hyy],13,PAL.gold,{w1:15});
+ const st=[hx,hyy];seg(P,[st[0],st[1]+34-arm*10],[st[0]+2,st[1]-56+arm*0],4,PAL.gold,{v:.6});
+ const tp=[st[0]+2,st[1]-58];poly(P,[[tp[0]-2,tp[1]+4],[tp[0]+16,tp[1]-10],[tp[0]+10,tp[1]+2],[tp[0]+20,tp[1]+10],[tp[0]+2,tp[1]+8]],PAL.gold,{v:.62});
+ if(arm>.3)glow(P,tp[0]+8,tp[1],14,PAL.blood[4],arm);
+ // torse : chair, plaques latérales d'or
+ poly(P,[[CX-38,FY-110-br],[CX+38,FY-110-br],[CX+22,FY-60],[CX-22,FY-60]],PAL.flesh,{v:.5,l:.35,stripe:.07,freq:.9});
+ veins(P,R,CX,FY-62,5,40,-Math.PI/2,.4+beat*.4);
+ for(const s of[-1,1])poly(P,[[CX+s*(20+sp),FY-108-br],[CX+s*38,FY-108-br],[CX+s*24,FY-62],[CX+s*(14+sp*.5),FY-66]],PAL.gold,{v:.55,l:.4});
+ // fêlures de l'or où la chair pousse
+ for(const s of[-1,1])for(let i=0;i<3;i++){const y=FY-100+i*12;line(P,CX+s*24,y,CX+s*30,y+5,PAL.flesh[3],'on');line(P,CX+s*25,y+1,CX+s*30,y+6,PAL.blood[2],'on')}
+ // cage : côtes d'or autour du cœur
+ const hcx=CX,hcy=FY-88-br;
+ ell(P,hcx,hcy,15+sp,16,PAL.ichor,{v:.25,l:.1,edge:0});
+ const hr=8+beat*2+a*1.5;ell(P,hcx,hcy+1,hr,hr*1.1,PAL.blood,{v:.6+beat*.2,l:.35});veins(P,R,hcx,hcy+1,3,10,-1.2,beat,PAL.flesh);
+ glow(P,hcx,hcy,24+beat*6,PAL.blood[4],.45+beat*.35+a*.2);
+ for(let i=0;i<4;i++){const y=hcy-12+i*8,s=1;for(const d of[-1,1]){const x0=hcx+d*(14+sp),x1=hcx+d*(3+sp*.8*(1-i/4));for(let x=Math.min(x0,x1);x<=Math.max(x0,x1);x++){const k=Math.abs(x-x0)/Math.abs(x1-x0);P.set(x,y+Math.sin(k*3.1)*-2,PAL.gold[3+(k<.3?1:0)]);P.set(x,y+1+Math.sin(k*3.1)*-2,PAL.gold[1])}}}
+ seg(P,[hcx,hcy-18],[hcx,hcy-14],3,PAL.gold);
+ // épaulières
+ for(const s of[-1,1]){ell(P,CX+s*38,FY-110-br,15,10,PAL.gold,{v:.58,l:.4});spike(P,[CX+s*42,FY-116-br],[CX+s*54,FY-130-br],6,PAL.gold);
+  tube(P,[[CX+s*30,FY-104],[CX+s*40,FY-96],[CX+s*44,FY-88],[CX+s*46,FY-80]],2,1,PAL.flesh,{v:.55})}
+ // tête : masque d'or, fentes qui fuient la lumière, chair qui déborde
+ ell(P,CX,hy+4,8,5,PAL.flesh,{v:.45});ell(P,CX,hy-6,11,13,PAL.gold,{v:.62,l:.42});
+ for(const s of[-1,1]){line(P,CX+s*4,hy-9,CX+s*4,hy-3,PAL.ichor[0]);P.fxs(CX+s*4,hy-6,PAL.blood[5]);glow(P,CX+s*4,hy-6,5,PAL.blood[4],.7);
+  for(let j=0;j<10;j++)P.fxs(CX+s*4+Math.sin(j+t*2)*.5,hy-2+j,PAL.blood[3],.6*(1-j/10))}
+ line(P,CX+3,hy-18,CX-1,hy-8,PAL.flesh[3]);line(P,CX+4,hy-18,CX,hy-8,PAL.blood[2]);
+ tube(P,[[CX+4,hy-16],[CX+10,hy-24],[CX+16,hy-20],[CX+18,hy-28+Math.sin(t*2)*2]],2,.8,PAL.flesh,{v:.6});
+}
+
+/* =====================================================================================================
+   3 · Le Lacerte écorché — ancien gardien du Sanctum, dévoré puis porté par la Bête ; charge et happe
+   ===================================================================================================== */
+function lacerte(P,t,a){const R=rng(37),br=Math.sin(t*2)*1,lu=ease(a),hx=CX+64+lu*10,hy=FY-62-lu*8+br;
+ // queue (derrière)
+ const tw=Math.sin(t*1.4)*6;tube(P,[[CX-46,FY-54+br],[CX-80,FY-58],[CX-92+tw,FY-18],[CX-62+tw,FY-8]],12,1.5,PAL.flesh,{v:.42,dv:.1,ring:5,n:70});
+ for(let i=0;i<8;i++){const[x,y]=bez([[CX-46,FY-54+br],[CX-80,FY-58],[CX-92+tw,FY-18],[CX-62+tw,FY-8]],i/9);spike(P,[x,y-8+i*.6],[x-3,y-16+i*.9],5-i*.4,PAL.bone)}
+ // pattes arrière gauche (derrière, plus sombre)
+ const st=Math.sin(t*1.2)*2;
+ seg(P,[CX-30,FY-48],[CX-46,FY-26],14,PAL.flesh,{w1:10,v:.38});seg(P,[CX-46,FY-26],[CX-40,FY-4],10,PAL.flesh,{w1:8,v:.36});
+ seg(P,[CX+34,FY-50],[CX+48,FY-30+st],13,PAL.flesh,{w1:10,v:.38});seg(P,[CX+48,FY-30+st],[CX+46,FY-4],9,PAL.flesh,{w1:7,v:.36});
+ // corps
+ ell(P,CX,FY-52+br,58,24,PAL.flesh,{v:.52,l:.36,rim:.15});ell(P,CX-6,FY-40+br,46,12,PAL.flesh,{v:.4,l:.2});
+ // stries de muscle
+ for(let k=0;k<16;k++){const x0=CX-52+k*7;for(let j=0;j<40;j++){const x=x0+j*.35,y=FY-74+j+br;P.paint(x,y,j%9<1?PAL.flesh[5]:PAL.flesh[2])}}
+ // lambeaux de peau écailleuse
+ for(const[cx,cy,rx,ry]of[[CX-24,FY-62,14,9],[CX+20,FY-58,12,8]]){for(let y=cy-ry;y<cy+ry+6;y++)for(let x=cx-rx;x<cx+rx;x++){const dx=(x-cx)/rx,dy=(y-cy)/ry;if(dx*dx+dy*dy>1&&!(y>cy&&Math.abs(dx)<.5&&y<cy+ry+5-Math.abs(dx)*8))continue;if(!P.has(x,y))continue;
+   const sc=((x>>1)+(y>>1))%2;P.set(x,y,sh(PAL.pale,.55+sc*.18-dy*.15,x,y))}}
+ veins(P,R,CX,FY-30,6,40,-Math.PI/2,(Math.sin(t*3)*.5+.5)*.5);
+ // crête dorsale
+ for(let i=0;i<10;i++){const x=CX-44+i*10,y=FY-74+((x-CX)/58)**2*16+br;spike(P,[x,y+6],[x-4,y-10-(i>2&&i<8?6:0)-R()*4],7,PAL.bone)}
+ // pattes avant (devant)
+ seg(P,[CX-22,FY-44+br],[CX-32,FY-22],15,PAL.flesh,{w1:11,v:.55});seg(P,[CX-32,FY-22],[CX-26,FY-4],11,PAL.flesh,{w1:9});ell(P,CX-32,FY-22,6,5,PAL.bone,{v:.6});
+ seg(P,[CX+40,FY-46+br],[CX+54,FY-26-st],15,PAL.flesh,{w1:11,v:.55});seg(P,[CX+54,FY-26-st],[CX+58,FY-4],11,PAL.flesh,{w1:9});ell(P,CX+54,FY-26-st,6,5,PAL.bone,{v:.6});
+ for(const fx of[CX-26,CX+58,CX-40,CX+46])for(let i=0;i<3;i++)seg(P,[fx-3+i*3,FY-4],[fx-5+i*5,FY+1],2.4,PAL.bone,{w1:1.2});
+ // cou et tête
+ tube(P,[[CX+44,FY-58+br],[CX+54,FY-66+br],[hx-14,hy-2],[hx-6,hy]],13,10,PAL.flesh,{v:.5,ring:4});
+ ell(P,hx+6,hy-2,22,10,PAL.bone,{v:.58,l:.4});ell(P,hx-2,hy-6,12,8,PAL.flesh,{v:.5,on:false});
+ const jaw=lu*.9+(Math.sin(t*.7)>.9?.15:0);
+ poly(P,[[hx-8,hy+4],[hx+26,hy+3+jaw*14],[hx+24,hy+8+jaw*16],[hx-6,hy+10]],PAL.bone,{v:.5});
+ if(jaw>.05){poly(P,[[hx-2,hy+4],[hx+26,hy+3],[hx+25,hy+3+jaw*14]],PAL.ichor,{v:.2,l:0,edge:0});for(let x=hx;x<hx+25;x+=3){P.set(x,hy+4,PAL.bone[5]);P.set(x,hy+5,PAL.bone[4]);const yy=hy+3+jaw*14*(x-hx+2)/28;P.set(x,yy,PAL.bone[4]);P.set(x,yy-1,PAL.bone[5])}glow(P,hx+16,hy+6,10,PAL.blood[4],jaw*.7)}
+ else for(let x=hx;x<hx+25;x+=3)P.set(x,hy+4,PAL.bone[5]);
+ for(let i=0;i<3;i++)eye(P,hx+4+i*6,hy-7+i*.5,1.6-i*.2,.8);
+ for(let i=0;i<3;i++)spike(P,[hx-4+i*7,hy-10],[hx-10+i*6,hy-20],4,PAL.horn);
+ for(let i=0;i<5;i++)drip(P,CX-30+i*14,FY-30,22,t+i*.29,.5);
+}
+
+/* =====================================================================================================
+   4 · Merenor, le Pylône-Mère — un corps décharné cousu à l'obélisque, la nappe de la Bête à ses pieds
+   ===================================================================================================== */
+function merenor(P,t,a){const R=rng(51),br=Math.sin(t*1.2)*1.2,sp=ease(a);
+ // éclats d'obsidienne en orbite (arrière)
+ const sh8=[];for(let i=0;i<6;i++){const an=t*.45+i/6*6.283,r=58+sp*14,x=CX+Math.cos(an)*r,y=FY-96+Math.sin(an)*12-Math.sin(t*1.3+i)*3;sh8.push([x,y,Math.sin(an)])}
+ for(const[x,y,z]of sh8)if(z<0)poly(P,[[x,y-9],[x+4,y],[x,y+7],[x-4,y]],PAL.night,{v:.5,l:.4});
+ // nappe
+ for(let y=FY-14;y<=FY+6;y++)for(let x=4;x<W-4;x++){const dx=(x-CX)/(92+Math.sin(y*.7+x*.05)*4),dy=(y-FY+4)/10;if(dx*dx+dy*dy>1)continue;const n=Math.sin(x*.9+y*1.7)*Math.cos(x*.31-y*.6);
+  P.set(x,y,n>.55?PAL.pale[1]:n>.35?PAL.night[3]:sh(PAL.ichor,.4-dy*.3,x,y))}
+ // obélisque
+ poly(P,[[CX-16,FY-6],[CX+16,FY-6],[CX+11,FY-128],[CX,FY-150],[CX-11,FY-128]],PAL.night,{v:.55,l:.45,grad:-.15});
+ // bras inférieurs plongés dans la nappe
+ for(const s of[-1,1]){seg(P,[CX+s*16,FY-74+br],[CX+s*40,FY-48],8,PAL.pale,{w1:6});seg(P,[CX+s*40,FY-48],[CX+s*50+Math.sin(t+s)*2,FY-6],6,PAL.pale,{w1:4});ell(P,CX+s*40,FY-48,3.5,3.5,PAL.pale,{v:.7})}
+ // torse décharné, côtes
+ poly(P,[[CX-20,FY-110+br],[CX+20,FY-110+br],[CX+13,FY-74+br],[CX-13,FY-74+br]],PAL.pale,{v:.55,l:.35});
+ for(let i=0;i<5;i++){const y=FY-104+i*6+br;for(let x=-16+i;x<=16-i;x++){if(Math.abs(x)<2)continue;P.paint(CX+x,y+Math.abs(x)*.25,PAL.pale[4]);P.paint(CX+x,y+1+Math.abs(x)*.25,PAL.pale[1])}}
+ line(P,CX,FY-108+br,CX,FY-76+br,PAL.pale[1],'on');
+ // coutures de chair sur la pierre
+ for(let i=0;i<6;i++){const y=FY-70-i*10-(i>2?40:0);if(y<FY-140)continue;for(let x=-10;x<=10;x+=2){P.paint(CX+x,y+Math.sin(x)*.8,PAL.flesh[3]);P.paint(CX+x,y+1,PAL.flesh[1])}}
+ // rainures / runes de l'obélisque qui battent
+ const pl=Math.sin(t*2.6)*.5+.5;for(let y=FY-140;y<FY-10;y+=5){if(y>FY-112&&y<FY-72)continue;const w=(y-(FY-140))/130*10;for(const s of[-1,1])P.paint(CX+s*w*.55,y,PAL.blood[2]);P.fxs(CX,y,PAL.blood[4],pl*.9);P.fxs(CX,y+1,PAL.blood[3],pl*.6)}
+ veins(P,R,CX,FY-8,4,50,-Math.PI/2,pl*.6+sp*.4);
+ // bras supérieurs : écartés, mains ouvertes, se lèvent à l'attaque
+ for(const s of[-1,1]){const ex=CX+s*lerp(44,52,sp),ey=lerp(FY-96,FY-130,sp)+br,hx=CX+s*lerp(60,70,sp),hy=lerp(FY-116,FY-146,sp)+br;
+  seg(P,[CX+s*18,FY-106+br],[ex,ey],8,PAL.pale,{w1:6});seg(P,[ex,ey],[hx,hy],6,PAL.pale,{w1:4});ell(P,ex,ey,3.5,3.5,PAL.pale,{v:.7});
+  for(let i=0;i<4;i++){const an=-Math.PI/2+s*(.2+i*.35);seg(P,[hx,hy],[hx+Math.cos(an)*7*s*(s>0?1:-1)*s,hy+Math.sin(an)*7],2.2,PAL.pale,{w1:1})}
+  if(sp>.2)glow(P,hx,hy,10,PAL.blood[4],sp)}
+ // tête penchée, cheveux de racines
+ const hdx=CX,hdy=FY-118+br+sp*-2;for(let i=0;i<7;i++)tube(P,[[hdx-6+i*2,hdy-6],[hdx-10+i*3,hdy+4],[hdx-12+i*4,hdy+14],[hdx-14+i*4.6+Math.sin(t+i)*1.5,hdy+24]],1.4,.6,PAL.night,{v:.6});
+ ell(P,hdx,hdy,8,9,PAL.pale,{v:.5,l:.4});for(const s of[-1,1])eye(P,hdx+s*3.5,hdy+1,1.6,.6+sp*.4);maw(P,hdx,hdy+6,6,4,.3+sp*.7,{step:2,teeth:1});
+ // couronne d'éclats flottants
+ for(let i=0;i<5;i++){const x=hdx-12+i*6,y=hdy-14-Math.abs(i-2)*-1-(i===2?6:0)+Math.sin(t*2+i)*1;poly(P,[[x,y-6-(i===2?4:0)],[x+2,y],[x,y+3],[x-2,y]],PAL.night,{v:.7,l:.4});P.fxs(x,y-1,PAL.blood[4],.8)}
+ for(const[x,y,z]of sh8)if(z>=0){poly(P,[[x,y-9],[x+4,y],[x,y+7],[x-4,y]],PAL.night,{v:.6,l:.45});P.fxs(x,y,PAL.blood[4],.6)}
+ if(sp>.1){for(let i=0;i<40;i++){const an=i/40*6.283,r=sp*90;P.fxs(CX+Math.cos(an)*r,FY-4+Math.sin(an)*r*.12,PAL.blood[4],1-sp*.6)}}
+}
+
+/* =====================================================================================================
+   5 · La Bête affleurante — le Dévoreur lui-même perce le dallage : la tête et les mains, le reste sous le Sanctum
+   ===================================================================================================== */
+function affleurante(P,t,a){const R=rng(67),br=Math.sin(t*1.1)*1.6,sl=a<.6?ease(a/.6):1,drop=a>.6?ease((a-.6)/.15):0;
+ const hy=FY-74+br+sl*6;
+ // fosse
+ for(let y=FY-16;y<=FY+6;y++)for(let x=CX-66;x<=CX+66;x++){const dx=(x-CX)/(62+Math.sin(y)*2),dy=(y-FY+5)/10;if(dx*dx+dy*dy>1)continue;P.set(x,y,sh(PAL.ichor,.3-dy*.4,x,y))}
+ // cornes (derrière la tête)
+ for(const s of[-1,1])tube(P,[[CX+s*26,hy-24],[CX+s*64,hy-40],[CX+s*86,hy-12],[CX+s*80+Math.sin(t*.6)*.5,hy-62]],11,1.4,PAL.horn,{v:.42,dv:.35,ring:5,n:80});
+ // épaules et nuque qui sortent de la fosse
+ ell(P,CX,FY-8,70,26,PAL.pale,{v:.36,l:.3,rim:.2});
+ for(let i=0;i<9;i++){const x=CX-56+i*14,y=FY-26+Math.abs(i-4)*2.2;spike(P,[x,y+6],[x+(i-4)*1.5,y-6-R()*5],6,PAL.bone)}
+ veins(P,R,CX-40,FY-2,3,30,-Math.PI*.6,.25);veins(P,R,CX+40,FY-2,3,30,-Math.PI*.4,.25);
+ // tête : crâne plus large en bas (mâchoire)
+ ell(P,CX,hy+14,40,30,PAL.pale,{v:.44,l:.35});
+ ell(P,CX,hy-4,44,38,PAL.pale,{v:.54,l:.4,rim:.2});
+ poly(P,[[CX-30,hy-28],[CX,hy-44],[CX+30,hy-28],[CX+18,hy-16],[CX,hy-24],[CX-18,hy-16]],PAL.bone,{v:.62,l:.4});
+ for(const s of[-1,1])poly(P,[[CX+s*32,hy-12],[CX+s*44,hy-4],[CX+s*40,hy+18],[CX+s*30,hy+8]],PAL.bone,{v:.5,l:.4});
+ veins(P,R,CX,hy+40,6,50,-Math.PI/2,(Math.sin(t*2.4)*.5+.5)*.45+a*.3);
+ const bl=Math.sin(t*.8+1)>.97?1:0;[[-19,-14,2.6],[19,-14,2.6],[-10,-20,1.8],[10,-20,1.8],[0,-32,2.2],[-27,-4,1.4],[27,-4,1.4]].forEach(([dx,dy,r],i)=>eye(P,CX+dx,hy+dy,r,1,i<2?0:bl));
+ for(const s of[-1,1])maw(P,CX+s*25,hy+14,12,8,cl(Math.sin(t*1.5+s)*1.2),{on:true,step:2.5,teeth:2});
+ const mo=.15+sl*.85;{const mw=10+mo*12,mh=34,my=hy+20;ell(P,CX,my,mw/2+3,mh/2+2,PAL.flesh,{v:.45,l:.3});
+  for(let y=Math.floor(my-mh/2);y<=my+mh/2;y++)for(let x=Math.floor(CX-mw/2);x<=CX+mw/2;x++){const dx=(x+.5-CX)/(mw/2),dy=(y+.5-my)/(mh/2);if(dx*dx+dy*dy>1)continue;P.set(x,y,PAL.ichor[1]);const d=dx*dx*2+dy*dy;if(d<.5)P.fxs(x,y,d<.15?PAL.blood[5]:PAL.blood[4],(1-d/.5)*mo)}
+  for(let y=Math.ceil(my-mh/2+2);y<my+mh/2-1;y+=3){const dy=(y-my)/(mh/2),e=Math.sqrt(Math.max(0,1-dy*dy))*mw/2;for(let j=0;j<Math.min(4,e);j++){P.set(CX-e+j,y,j<1?PAL.bone[5]:PAL.bone[4]);P.set(CX+e-j,y,j<1?PAL.bone[4]:PAL.bone[3])}}
+  if(mo>.4)glow(P,CX,my,30,PAL.blood[4],.5*mo)}
+ // lèvre de la fosse devant : dalles cassées qui cachent la base
+ for(let x=CX-70;x<=CX+70;x+=1){const dx=(x-CX)/70,y=FY+2+Math.sqrt(Math.max(0,1-dx*dx))*3;for(let j=0;j<4;j++)P.set(x,y+j-3+Math.round(Math.sin(x*.8)*1.2),sh(PAL.slate,.55-j*.1,x,y+j))}
+ for(let i=0;i<10;i++){const x=CX-62+i*14+R()*4,y=FY-2-R()*4+Math.sin(t*1.5+i)*.6;poly(P,[[x,y],[x+7,y-2],[x+6,y+4],[x-1,y+3]],PAL.slate,{v:.62,l:.3})}
+ // mains : l'avant-bras sort d'une brèche, les doigts griffent le dallage ; la droite se lève et frappe
+ for(const s of[-1,1]){const lift=s>0?(a<.6?ease(a/.6)*30:30*(1-drop)):0,hx=CX+s*76,wy=FY-24-lift;
+  for(let y=FY-8;y<=FY+5;y++)for(let x=hx-16;x<=hx+16;x++){const dx=(x-hx-s*6)/14,dy=(y-FY+2)/5;if(dx*dx+dy*dy<=1)P.set(x,y,sh(PAL.ichor,.35-dy*.4,x,y))}
+  seg(P,[hx+s*8,FY+2],[hx+s*2,wy],17,PAL.pale,{w1:14,v:.42,stripe:.06});
+  ell(P,hx,wy+3,13,8,PAL.pale,{v:.56,l:.4});
+  for(let i=0;i<4;i++){const o=(i-1.5),fx=hx+o*6.5,base=[fx,wy+5],tipY=(lift>0?wy+14:FY);
+   tube(P,[[base[0],base[1]],[fx+o*3,wy-2],[fx+o*5,wy+6],[fx+o*6,tipY-3]],3.4,2.2,PAL.pale,{v:.55,ring:6});
+   spike(P,[fx+o*6,tipY-3],[fx+o*6.5-s*1,tipY+3],3.6,PAL.bone)}
+  if(lift===0)for(let i=0;i<4;i++){const x=hx+(i-1.5)*6.5+(i-1.5)*6.5;line(P,x,FY+2,x+(i-1.5)*2,FY+4,PAL.ichor[0])}
+  if(s>0&&lift>4){const k=lift/30;for(let i=0;i<24;i++){const an=i/24*6.283;P.fxs(hx+Math.cos(an)*16,FY+2+Math.sin(an)*3,PAL.blood[4],.5+k*.4)}}
+  if(s>0&&drop>.8){for(let i=0;i<36;i++){const an=i/36*6.283,r=12+(drop-.8)*5*34;P.fxs(hx+Math.cos(an)*r,FY+2+Math.sin(an)*r*.2,PAL.blood[4],.9)}glow(P,hx,FY,30,PAL.blood[3],.6)}}
+}
+
+const PROPS=[
+ {key:'matrice',draw:matrice,name:'1 · La Matrice',title:'VENTRE DU DÉVOREUR',sw:['pale','blood','bone'],
+  lore:'Les Aberrations sont « vomies par les galeries ». Voici ce qui les vomit : une montagne de chair pâle qui a pris racine au cœur du Sanctum. Elle ne se déplace pas ; elle digère la pierre et rend des corps.',
+  pts:['<span>Immobile</span> : elle occupe le centre de l’arène, l’Ingénieur tourne autour.','<span>Gueules</span> : seules les bouches ouvertes prennent des dégâts ; elles s’ouvrent tour à tour.','<span>Attaque</span> : la grande gueule frontale vomit une Aberration toutes les quelques secondes.','<span>Racines</span> : ses tentacules balaient la base, il faut rester à distance moyenne.'],
+  size:'≈ 5 × 3 cases',hp:'1 400 PV'},
+ {key:'reliquaire',draw:reliquaire,name:'2 · Le Grand Reliquaire',title:'COLOSSE DE BYRSA · CHAIR LIÉE',sw:['gold','flesh','blood'],
+  lore:'Comme le Strazhar, son équipement est « lié aux tissus vivants de la Bête », mais ici tout a fusionné : un automate d’or haut de quatre hommes dont la cage thoracique protège un cœur arraché à la Bête. Le Credo le porte en procession.',
+  pts:['<span>Cœur exposé</span> : la cage d’or s’ouvre quand il lève sa hampe ; c’est la fenêtre de tir.','<span>Plaques</span> : chaque phase lui arrache une plaque d’or, la chair repousse dessous (plus rapide, moins protégé).','<span>Hampe</span> : balayage en arc devant lui, puis onde de lumière souillée.','Le plus proche de la Martyre : même famille Byrsa / Credo souillé, seuil de menace au-dessus.'],
+  size:'≈ 3 × 2 cases · 4,5 de haut',hp:'1 600 PV'},
+ {key:'lacerte',draw:lacerte,name:'3 · Le Lacerte écorché',title:'GARDIEN DÉVORÉ DU SANCTUM',sw:['flesh','bone','pale'],
+  lore:'Sanctum Lacertae, le sanctuaire du Lézard. Son ancien gardien a été mangé de l’intérieur : il ne reste que le muscle à vif, des lambeaux d’écailles et la crête d’os. La Bête le fait marcher comme un gant.',
+  pts:['<span>Mobile</span> : le seul boss qui poursuit, avec l’allure de ruée du Strazhar quadrupède, en plus lourd.','<span>Charge</span> : il fonce en ligne droite et laisse une traînée d’ichor qui blesse.','<span>Happe</span> : cou qui se détend, mâchoire qui s’ouvre à 90°.','<span>Lambeaux</span> : les plaques d’écailles encaissent ; le muscle nu prend double dégâts.'],
+  size:'≈ 6 × 2 cases',hp:'1 300 PV'},
+ {key:'merenor',draw:merenor,name:'4 · Merenor, le Pylône-Mère',title:'LA SOURCE DES PYLÔNES',sw:['night','pale','blood'],
+  lore:'Les Pylônes de Merenor portent son nom ; voici Merenor. Un corps décharné cousu à un obélisque, dont la nappe de mousse veinée nourrit tous les pylônes du biome. Il ne meurt pas tant que les cultes ne l’ont pas canalisé.',
+  pts:['<span>Réutilise la canalisation</span> : quatre esprits, un de chaque dieu, doivent prier aux quatre coins pour ouvrir sa garde.','<span>Nappe</span> : la corruption s’étend par vagues (1 PV/s pour l’Ingénieur, comme les pylônes).','<span>Éclats</span> : les obsidiennes en orbite sont lancées en couronne quand il lève les bras.','Combat d’équipe plutôt que duel : l’Ingénieur protège les esprits pendant qu’ils prient.'],
+  size:'≈ 2 × 2 cases (nappe 6 × 2) · 5 de haut',hp:'1 200 PV'},
+ {key:'affleurante',draw:affleurante,name:'5 · La Bête affleurante',title:'LE DÉVOREUR EN PERSONNE',sw:['pale','horn','blood'],
+  lore:'Pas un serviteur : la Bête elle-même, le « maître caché » du Credo souillé. Le dallage du Sanctum cède et seuls la tête et les mains passent ; le corps reste dessous. Sept yeux carmin, trois gueules, des cornes plus larges que l’arène.',
+  pts:['<span>Mains</span> : elles se lèvent et frappent le sol, marqueur au sol puis onde ; frapper une main la fait replonger.','<span>Tête</span> : quand les deux mains sont sous terre, la tête s’abaisse et la gueule centrale s’ouvre : fenêtre de dégâts.','<span>Gueules des joues</span> : crachent l’ichor en éventail (style Éclats, couleur carmin).','La plus imposante à l’écran : elle déborde du cadre, on ne voit jamais tout son corps.'],
+  size:'≈ 6 × 3 cases (tête 3 × 3)',hp:'2 000 PV',rec:true},
+];
+
+function render(key,t,a){const P=new Px();PROPS.find(p=>p.key===key).draw(P,t,a);return P}
+// écrit le tampon dans un ImageData (contour 1 px autour de la matière, puis la couche fx)
+function toImage(P,ctx,img){const d=img||ctx.createImageData(W,H);const D=d.data;D.fill(0);
+ for(let y=0;y<H;y++)for(let x=0;x<W;x++){const i=y*W+x;let c=P.c[i];
+  if(!c&&((x>0&&P.c[i-1])||(x<W-1&&P.c[i+1])||(y>0&&P.c[i-W])||(y<H-1&&P.c[i+W])))c=OUT;
+  if(P.fx[i])c=P.fx[i];if(!c)continue;const[r,g,b]=rgb(c);D[i*4]=r;D[i*4+1]=g;D[i*4+2]=b;D[i*4+3]=255}
+ return d}
+// dallage du Sanctum (ardoise), trame fixe
+function ground(w,h,seed){const c=document.createElement('canvas');c.width=w;c.height=h;const g=c.getContext('2d'),d=g.createImageData(w,h),R=rng(seed),S=PAL.slate;
+ const off=[];for(let r=0;r<h/10+2;r++)off.push(Math.floor(R()*16));
+ for(let y=0;y<h;y++)for(let x=0;x<w;x++){const row=Math.floor(y/10),xx=x+off[row],cx=xx%18,cy=y%10;let v=.45+Math.sin(x*.37+y*.91)*.08+((Math.floor(xx/18)*7+row*3)%5)*.04;
+  if(cx===0||cy===0)v=.05;else if(cx===1||cy===1)v+=.15;const col=rgb(sh(S,v,x,y)),i=(y*w+x)*4;d.data[i]=col[0];d.data[i+1]=col[1];d.data[i+2]=col[2];d.data[i+3]=255}
+ g.putImageData(d,0,0);return c}
+function shadow(g,x,y,rx,ry,al=.55){g.save();g.fillStyle=`rgba(0,0,0,${al})`;for(let j=-ry;j<=ry;j++){const w=Math.round(rx*Math.sqrt(1-(j/ry)**2));if(w>0)g.fillRect(Math.round(x-w),Math.round(y+j),w*2,1)}g.restore()}
+return{PROPS,PAL,render,toImage,ground,shadow,W,H,CX,FY,ease,cl,lerp};
+})();
+
+</script>
+<script>
+'use strict';
+const {PROPS,PAL,render,toImage,ground,shadow,W,H,cl,ease}=Bete;
+const ENG=new Image();ENG.src='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAA4AAAAmCAYAAAD0t6qKAAADPklEQVR4nI2VX2gUVxTGfxu2are6QRPiUjQOu9OYh/YlhhBwDWnVGAKKQhCpUsQHwcaWgKDFGMyDDUYQfAgVfBAR9cEnsVTskjT+Y1nCEqwPbQizm3EbZIgxYSfrWP/Q+LB7786dWakHljtz9n73O+e755wJ4LFQaOWS1+c4hYDXF/SC4o013j08mmTJC65yg7rjOgCR2tXKGm+s8UWinOIGA1hzC8V1/hXGrKOEXMUHzJpbkIyD37b7/g96Hcf3dcpn08hy6Jc7aHrUB/QxJkaSmEYWAE2Pcvn7LiUV8ezLEeBmbxdTpgVAgxZh8MY9VmgxPl18ztjfFo5TCATcoLu/XpGHXPx5EAA7b2P9t4Id29uYTqdY9e5frqVzao5rnqYBmN/QzJG+kxhGlrqnaZLvatFjGn+OJlj12bKyOKHQyqXx4aPKAeNv1wAwu6EZHTAypiqOAEUaGhU13eYFgUtVa2pSgq6nDGWTHtPITpt+oGAwjSxTpoWdt9E9d9exrR2AxnW1ZaC4YLGeOHcWw8gqYCNjEq4Oy3df5QASZJQiETk+zNg8D+llRrcwkzNzEiQY9ZgGwLLly1m082VGtzBSEA9jauwub16XKzQIcPqPhdLrah7PfsLED710xjcCkHs2LzdviYXZ31rN3nQp1JmcyUzOJL11D7V1ER8AoPXrTkXAIMC6+mIOVmnT+i++pL3rGwCim5Dh5v6xSIwkgVJ3iOoR9/jwZYidJaBb1XsPkjx+YuA4hYDSj5oepUGLKCEaGVOqWr/+c+lXgIIxn88XVS2BKtWqLIAfr95nbdVrAAb6TwLl+6sElowD/cfY31qsCm/FCObbvz2Qky4IxUndufNgsSdThrz86XSK6XQKO29z69qLyqEK6zvQwYnjPwEQrg7Td6CDxEiSU6VZ80FxAIZ6ujmyo0n6vEorQMcpBPZeuKMcYOdtH6AiozBRVqL/Lo2OfxzQNLJcGh3nScasOMX/l9Edttd8k/y7do1nLwoc3trCxd8n2PxVhF1tcQBajg5LZSsyXj4/gKZHGerp5vrYX9J/ZneT/Ez4GHOJYWUiCKWFVWR0nEKgvqPYXqLghV/8KuboZvYyeO09T9GJyj8e0NYAAAAASUVORK5CYII=';
+const AB=new Image();AB.src='data:image/png;base64,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';// 48 × 30, 12 colonnes, 24 images, pieds (21, 25), regard à droite
+const GW=380,GH=200,GB=192,BX=268;
+const list=document.getElementById('list'),cards=[];
+PROPS.forEach((p,i)=>{const f=document.createElement('figure');if(p.rec)f.className='rec';
+ const sw=p.sw.map(k=>`<div title="${k}">${PAL[k].map(c=>`<span style="background:${c}"></span>`).join('')}</div>`).join('');
+ f.innerHTML=`<div class="row"><div class="big"><small>Détail</small><canvas width="${W}" height="${H}"></canvas></div><div class="side">
+ <div class="game"><small>À l’échelle du jeu : l’Ingénieur et une Aberration, à gauche</small><canvas width="${GW}" height="${GH}"></canvas></div>
+ <figcaption><b>${p.name}</b><i>${p.title}</i><p>${p.lore}</p><ul>${p.pts.map(x=>`<li>${x}</li>`).join('')}</ul>
+ <div class="meta"><span>Emprise <em>${p.size}</em></span><span>Proposé <em>${p.hp}</em></span></div><div class="sw">${sw}</div></figcaption></div></div>`;
+ list.appendChild(f);const[c1,c2]=f.querySelectorAll('canvas');
+ const buf=document.createElement('canvas');buf.width=W;buf.height=H;
+ cards.push({p,c1,c2,buf,g1:ground(W,H,i*7+1),g2:ground(GW,GH,i*7+3)})});
+
+let mode='cycle',paused=false,t0=performance.now(),tp=0;
+const btn={cycle:'m-cycle',idle:'m-idle',atk:'m-atk'};
+for(const[m,id]of Object.entries(btn))document.getElementById(id).onclick=()=>{mode=m;for(const[k,j]of Object.entries(btn))document.getElementById(j).setAttribute('aria-pressed',k===m)};
+document.getElementById('pause').onclick=e=>{paused=!paused;e.target.textContent=paused?'Lecture':'Pause'};
+const CYC=6,ATK=2.6;
+const q=new URLSearchParams(location.search);if(q.has('t'))tp=+q.get('t');if(q.has('mode'))mode=q.get('mode');
+function attack(p,u){// u : temps dans la phase d'attaque, k ∈ [0,1]
+ const k=cl(u/ATK);if(p.key==='affleurante')return k;return Math.pow(Math.sin(Math.PI*k),.6)}
+function frame(now){if(!paused)tp+=(now-t0)/1000;t0=now;
+ for(const c of cards){const p=c.p;let a=0;
+  if(mode==='atk')a=attack(p,tp%ATK);else if(mode==='cycle'){const u=tp%CYC;if(u>CYC-ATK)a=attack(p,u-(CYC-ATK))}
+  const P=render(p.key,tp,a),b=c.buf.getContext('2d');b.putImageData(toImage(P,b),0,0);
+  const g=c.c1.getContext('2d');g.drawImage(c.g1,0,0);shadow(g,W/2,H-10,78,7,.5);g.drawImage(c.buf,0,0);
+  const h=c.c2.getContext('2d');h.imageSmoothingEnabled=false;h.drawImage(c.g2,0,0);
+  shadow(h,BX,GB-1,78,7,.5);h.drawImage(c.buf,BX-W/2,GB-H+10);
+  if(ENG.complete&&ENG.width){shadow(h,40,GB,6,1.8);h.drawImage(ENG,33,GB-ENG.height+1)}
+  if(AB.complete&&AB.width){const fi=Math.floor(tp*24)%24,sx=(fi%12)*48,sy=Math.floor(fi/12)*30;shadow(h,96,GB,8,1.8);h.save();h.translate(96,0);h.scale(-1,1);h.drawImage(AB,sx,sy,48,30,-21,GB-25,48,30);h.restore()}}
+ requestAnimationFrame(frame)}
+requestAnimationFrame(frame);
+</script>
+</body></html>

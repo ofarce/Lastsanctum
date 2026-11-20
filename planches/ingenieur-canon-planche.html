@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><title>Ingénieur et Arbalestrie</title>
+<style>
+body{background:#1d2a24;color:#efe6cf;font:14px Georgia,serif;padding:16px 24px;max-width:1300px}
+h1{margin:0 0 4px}h2{margin:28px 0 4px;color:#5ce8ff}p{margin:4px 0 10px;color:#c8bfa6}
+.row{display:flex;flex-wrap:wrap;gap:10px}.row>div{text-align:center}
+canvas{image-rendering:pixelated;background:#4f7a3a;display:block;border:1px solid #0b090b}
+.cap{font-size:12px;color:#c8bfa6;margin-top:3px}
+</style></head><body>
+<h1>Ingénieur (Templier technomancien) · Arbalestrie équipée</h1>
+<p>Main droite : l’Arbalestrie, 12 dégâts, 4 balles par seconde, portée 12. Le gantelet tient la poignée, la crosse passe sous l’avant-bras. Gabarit du jeu (32 × 34, élargi à 46 × 38 pour le canon), ici agrandi × 6 ; une miniature × 2 sous chaque piste montre la taille en jeu.</p>
+<div id="out"></div>
+<script src="assets/engineer-colosse.js"></script>
+<script src="assets/engineer-exile.js"></script>
+<script>
+'use strict';
+R.wood=['#1a0e08','#4a2a16','#7a4a26','#a8703a','#d09a5a'];MAT.push('wood');
+const D=Math.PI/180;
+// Trois façons de dessiner le canon ; u = long du tir depuis la main (px), v = travers (négatif = dessus).
+const GUNS={
+ A:{name:'A · Tube runique',sub:'canon de fer lisse, deux frettes de cuivre, rune cyan à la bouche',
+  f:(u,v)=>{if(u>=-4&&u<-1&&v>=0&&v<=2)return['wood',.5-u*.04];if(u>=-1&&u<=11&&Math.abs(v+.5)<=2){
+   if(u>=10.4)return['iron',.25];if(Math.abs(u-1)<.6||Math.abs(u-7)<.7)return['brz',v<0?.85:.5];if(u>8.5&&u<10.4&&v<-.5)return['cy',.8];return['iron',v<-1.5?.85:v>.8?.3:.6]}return null}},
+ B:{name:'B · Arbalète-canon',sub:'arc d’acier replié au-dessus du fût, carreau de mana lové dans la gorge',
+  f:(u,v)=>{if(u>=-4&&u<-1&&v>=0&&v<=2)return['wood',.5-u*.04];
+   if(u>=6&&u<=7.4&&v>=-6&&v<=-1.5)return['iron',.75-(v+5)*.05];
+   if(u>=-1&&u<=11&&Math.abs(v+.3)<=1.6){if(u>=10.4)return['iron',.25];if(u>1&&u<6&&v<-.3)return['cy',.6+u*.06];if(Math.abs(u)<.6)return['brz',.8];return['wood',v<0?.7:.35]}return null}},
+ C:{name:'C · Couleuvrine courte',sub:'gros calibre trapu, chambre de cuivre bombée, évent cyan',
+  f:(u,v)=>{if(u>=-3&&u<0&&v>=.5&&v<=2.5)return['wood',.45];
+   if(u>=-.5&&u<=4&&Math.abs(v+.5)<=2.8)return['brz',.85-(v+2.8)*.12];
+   if(u>4&&u<=9&&Math.abs(v+.5)<=2.2){if(u>=8.4)return['iron',.25];if(Math.abs(u-6.2)<.6&&v<-1.4)return['cy',.95];return['iron',v<-1.2?.85:v>.6?.3:.6]}return null}},
+};
+// L'Ingénieur de profil (vers la droite) et son canon : la main est au bout du bras tendu (cf. exile(), L = 6 − recul).
+function figure(v,{ang=0,rec=0,flash=false,pose='idle',f=0,ub=0}={}){
+ const b0=exile({v:'B',dir:'s',pose,f,ub,aim:{ang:ang*D,rec,pulse:flash}}),b=buf(46,38);
+ for(let y=0;y<b0.h;y++)for(let x=0;x<b0.w;x++){const i=y*b0.w+x,j=(y+4)*b.w+x+4;b.m[j]=b0.m[i];b.s[j]=b0.s[i]}
+ const step=pose==='walk'?[0,1,0,-1][f]:0,bob=pose==='walk'?(f%2?-1:0):0;
+ const c=Math.cos(ang*D),s=Math.sin(ang*D),sx=21,sy=19+bob+ub,L=6-rec,hx=sx+L*c,hy=sy+L*s,G=GUNS[v].f;
+ for(let y=0;y<b.h;y++)for(let x=0;x<b.w;x++){const dx=x+.5-hx,dy=y+.5-hy,u=dx*c+dy*s,w=-dx*s+dy*c,r=G(u,w);if(r)px(b,x,y,r[0],r[1])}
+ // poing par-dessus la poignée
+ blob(b,hx,hy,1.6,1.5,'iron',.15);px(b,hx,hy,'cy',flash?1:.7);
+ if(flash){const ml=v==='C'?9.5:11.5,mx=hx+ml*c,my=hy+ml*s;
+  for(const[a,bb,l]of[[0,0,1],[1,0,1],[2,0,.85],[1,-1,.8],[1,1,.8],[3,0,.6],[2,-2,.5],[2,2,.5]])px(b,mx+a*c-bb*s,my+a*s+bb*c,'cy',l)}
+ return b}
+const out=document.getElementById('out');
+function cv(b,k,cap){const c=render(b,k);const d=document.createElement('div');d.append(c);if(cap){const t=document.createElement('div');t.className='cap';t.textContent=cap;d.append(t)}return d}
+for(const v in GUNS){const G=GUNS[v];
+ const h=document.createElement('h2');h.textContent=G.name;const p=document.createElement('p');p.textContent=G.sub;out.append(h,p);
+ const r1=document.createElement('div');r1.className='row';
+ r1.append(cv(figure(v,{ang:12}),6,'repos, canon baissé'));
+ for(const a of[-60,-30,0,30,60])r1.append(cv(figure(v,{ang:a}),6,'visée '+a+'°'));
+ out.append(r1);
+ const r2=document.createElement('div');r2.className='row';
+ const rec=[0,2,1.5,1,.5,0];for(let i=0;i<6;i++)r2.append(cv(figure(v,{ang:0,rec:rec[i],flash:i<2}),4,'tir '+(i+1)+'/6'));
+ for(let i=0;i<4;i++)r2.append(cv(figure(v,{ang:12,pose:'walk',f:i}),4,'marche '+(i+1)+'/4'));
+ out.append(r2);
+ const r3=document.createElement('div');r3.className='row';
+ r3.append(cv(figure(v,{ang:12}),2,'× 2 (jeu)'),cv(figure(v,{ang:0,rec:2,flash:true}),2,'tir × 2'),cv(figure(v,{ang:-30}),2,'−30° × 2'));
+ out.append(r3)}
+// ---- Planche animée (en tête) : chaque piste en boucle, grand format ----
+{const top=document.createElement('div');top.innerHTML='<h2>Animations (× 9)</h2><p>Tir à 12 i/s · marche · balayage de la visée de −60° à +60°.</p>';
+ const anims=v=>{const rec=[0,2,1.5,1,.5,0],sweep=[-60,-45,-30,-15,0,15,30,45,60,45,30,15,0,-15,-30,-45];
+  return[['tir',12,[0,0,0,0,0,0,0,0,0,0,0,0].map((_,i)=>i<6?figure(v,{ang:0,rec:rec[i],flash:i<2}):figure(v,{ang:0}))],
+   ['marche',8,[0,1,2,3].map(f=>figure(v,{ang:12,pose:'walk',f}))],
+   ['visée',8,sweep.map(a=>figure(v,{ang:a}))],
+   ['marche + tir',12,Array.from({length:8},(_,i)=>figure(v,{ang:0,pose:'walk',f:Math.floor(i/2)%4,rec:i%4===0?2:i%4===1?1:0,flash:i%4===0}))]]};
+ for(const v in GUNS){const h=document.createElement('h2');h.textContent=GUNS[v].name;h.style.fontSize='16px';const row=document.createElement('div');row.className='row';
+  for(const[name,fps,fr]of anims(v)){const imgs=fr.map(b=>render(b,9)),c=document.createElement('canvas');c.width=imgs[0].width;c.height=imgs[0].height;
+   const g=c.getContext('2d');let i=0;const tick=()=>{g.clearRect(0,0,c.width,c.height);g.drawImage(imgs[i],0,0);i=(i+1)%imgs.length};tick();setInterval(tick,1000/fps);
+   const d=document.createElement('div');d.append(c);const t=document.createElement('div');t.className='cap';t.textContent=name;d.append(t);row.append(d)}
+  top.append(h,row)}
+ out.prepend(top)}
+// ---- Piste A retenue · casque de combat : se referme dès le premier tir, se relève 1 s après le dernier ----
+// p = 0 (relevé) → 1 (fermé). Les plaques montent du col et recouvrent le crâne ; visière cyan au niveau des yeux.
+function helmet(b,p,bob=0){if(p<=0)return;const hx=21,hy=10+bob,top=hy+6-p*11.5;
+ const cut=(x,y)=>y>=top;
+ blob(b,hx,hy-.3,5.3,5.3,'iron',.12,cut);
+ rect(b,hx-5,hy+2,9,3,'iron',-.05);for(let x=hx-5;x<hx+4;x++)if(hy+2<top)px(b,x,hy+2,'iron',-1);
+ for(const y of[hy-3,hy+1])if(y>=top)for(let x=hx-4;x<=hx+3;x++)px(b,x,y,'iron',.35);          // joints des lames
+ if(p>=.75)for(let x=hx;x<=hx+5;x++)px(b,x,hy,'cy',p>=1?(x===hx+4?1:.75):.45);                // visière
+ if(top<=hy-5)px(b,hx-1,hy-5,'cy',.8);                                                           // rune sommitale
+ for(let x=hx-4;x<=hx+3;x++)if(hy+5>=top)px(b,x,hy+5,'brz',.6)}                                  // collier de cuivre
+function figH(o,p){const b=figure('A',o);helmet(b,p,o.pose==='walk'?([0,-1,0,-1][o.f]):0);return b}
+{const sec=document.createElement('div');
+ sec.innerHTML='<h2>Retenue · A · casque de combat</h2><p>Au premier tir, le casque jaillit du col (4 images, 1/3 s) et se ferme, visière cyan. Une seconde après le dernier tir, il se relève et se replie dans le col.</p>';
+ // Chronologie à 12 i/s : 1 s au repos, rafale de 2 s (4 tirs/s), 1 s d'attente casque fermé, repli (4 images), 1 s au repos.
+ const F=[],rec=[2,1,0];const P=[.25,.5,.75,1];
+ for(let i=0;i<12;i++)F.push({o:{ang:12},p:0});
+ for(let i=0;i<24;i++)F.push({o:{ang:0,rec:rec[i%3],flash:i%3===0},p:i<4?P[i]:1});
+ for(let i=0;i<12;i++)F.push({o:{ang:12},p:1});
+ for(let i=0;i<4;i++)F.push({o:{ang:12},p:P[3-i]-.25});
+ for(let i=0;i<12;i++)F.push({o:{ang:12},p:0});
+ const W=[];for(let i=0;i<64;i++){const f=Math.floor(i/3)%4,sh=i>=8&&i<32;W.push({o:{pose:'walk',f,ang:sh?0:12,rec:sh?rec[i%3]:0,flash:sh&&i%3===0},p:i<8?0:i<12?P[i-8]:i<44?1:i<48?P[47-i]-.25:0})}
+ const row=document.createElement('div');row.className='row';
+ const lab=document.createElement('div');lab.className='cap';lab.style.fontSize='14px';
+ for(const[name,seq]of[['sur place',F],['en marchant',W]]){const imgs=seq.map(s=>render(figH(s.o,s.p),9)),c=document.createElement('canvas');c.width=imgs[0].width;c.height=imgs[0].height;
+  const g=c.getContext('2d');let i=0;setInterval(()=>{g.clearRect(0,0,c.width,c.height);g.drawImage(imgs[i],0,0);
+   const s=seq[i];if(name==='sur place')lab.textContent=s.o.flash||s.o.rec?'tir':s.p>=1?'casque fermé (attente 1 s)':s.p>0?'casque en mouvement':'repos';i=(i+1)%imgs.length},1000/12);
+  const d=document.createElement('div');d.append(c);const t=document.createElement('div');t.className='cap';t.textContent=name;d.append(t);row.append(d)}
+ sec.append(row,lab);
+ const st=document.createElement('div');st.className='row';st.style.marginTop='10px';
+ for(const p of[0,.25,.5,.75,1])st.append(cv(figH({ang:0},p),6,'fermeture '+Math.round(p*100)+' %'));
+ sec.append(st);out.prepend(sec)}
+</script></body></html>

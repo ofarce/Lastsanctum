@@ -23,4 +23,11 @@ func _ready() -> void:
 	simulation.world = world
 	world.simulation = simulation
 	hud.setup(simulation, world)
+	var cinema := CinemaLayer.new()
+	cinema.name = "Cinema"
+	cinema.simulation = simulation
+	cinema.world = world
+	cinema.hud = hud
+	add_child(cinema)
+	simulation.opening = Simulation.play_opening and not OS.get_cmdline_user_args().has("--sans-ouverture")
 	simulation.new_game()

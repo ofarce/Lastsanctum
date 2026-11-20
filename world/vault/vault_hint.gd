@@ -17,6 +17,9 @@ const HOT := Color("#c8fbff")
 const CRACK := Color("#0b0a0e")
 
 var state: TerrainState
+var _edge_state: TerrainState
+var _edge_version := -1
+var _edge_x := 0.0
 
 
 func setup(terrain_state: TerrainState) -> void:
@@ -25,9 +28,16 @@ func setup(terrain_state: TerrainState) -> void:
 
 ## Bord de roche de la rangée : premier point non praticable en partant de la salle, vers l'est.
 func edge_x() -> float:
+	# Parcours de ~100 appels à walkable : mis en cache tant que la praticabilité ne change pas (state.version,
+	# comme les chemins en cache) ; appelé à chaque image par le glyphe et par l'éclairage.
+	if _edge_state == state and _edge_version == state.version:
+		return _edge_x
 	var x := 50.0
 	while x < CaveShape.VAULT_X0 and state.walkable(x, ROW_Z):
 		x += 0.125
+	_edge_state = state
+	_edge_version = state.version
+	_edge_x = x
 	return x
 
 

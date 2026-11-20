@@ -207,7 +207,7 @@ func _draw() -> void:
 	var S := _shape()
 	var well: Vector2 = Proj.nat(u.revived_from.x, 0.0, u.revived_from.y) - view.position
 	if view is AdeptView:
-		well /= AdeptView.SCALE
+		well /= (view as AdeptView)._scale
 	var jet := well + Vector2(0, -JET_TOP)
 	var land := Vector2((float(S["c"].x) - float(S["ax"])) * view._face, float(S["c"].y) - float(S["ay"]))
 	# Jet qui monte pendant la formation de la bulle.

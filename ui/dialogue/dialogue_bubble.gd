@@ -5,31 +5,27 @@ extends Control
 ## texte de 13 px écrit lettre par lettre (24 ms par signe), fermeture automatique après
 ## longueur × 0,024 s + 3,5 s. Le mode complet (nom, choix, boutons) n'a aucun appel dans 73b410f.
 ## Entrée : affiche tout le texte puis passe à la suite ; Échap : ferme.
+## Depuis le 2026-11-19 : affichée comme bannière 16 bits en haut de l'écran (SnesBanner), « Nom : texte »,
+## au lieu d'une bulle reliée à la tête.
 
 const CHAR_TIME := 0.024
 const WIDTH := 240.0
 const PAD := Vector2(11, 8)
 const MARGIN := 12.0
-const GAP := 14.0
-const BG := Color("#111c18f7")
-const TAIL_BG := Color("#111c18")
-const BORDER := Color("#a38b5a")
 
 var camera: WorldCamera
 var dialogue: Dictionary = {}
 var index := 0
 var elapsed := 0.0
-var _text := HudStyle.label(13, Color("#e9e1ce"))
-var _tail_x := WIDTH / 2.0
-var _below := false
+var _text := SnesBanner.label()
+## Un blip « ui_texte » tous les TEXT_BLIP caractères affichés.
+const TEXT_BLIP := 4
+var _blips := 0
 
 
 func _ready() -> void:
 	visible = false
 	mouse_filter = Control.MOUSE_FILTER_STOP
-	_text.vertical_alignment = VERTICAL_ALIGNMENT_TOP
-	_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_text.add_theme_constant_override("line_spacing", 0)
 	add_child(_text)
 
 
@@ -43,6 +39,7 @@ func show_dialogue(d: Dictionary) -> void:
 	index = 0
 	_render_line()
 	visible = true
+	Sfx.play("ui_banniere")
 	_position()
 
 
@@ -54,7 +51,14 @@ func greet_engineer(speaker: Unit) -> void:
 
 func _render_line() -> void:
 	elapsed = 0.0
-	_text.text = line() if dialogue.get("any_button", false) else ""
+	_blips = 0
+	_text.text = _prefix() + (line() if dialogue.get("any_button", false) else "")
+
+
+## « Nom : » devant la réplique (bannière 16 bits).
+func _prefix() -> String:
+	var n := String(dialogue.get("name", ""))
+	return n + " : " if n != "" else ""
 
 
 func line() -> String:
@@ -70,7 +74,12 @@ func tick(dt: float) -> void:
 		close()
 		return
 	var count := line().length() if dialogue.get("any_button", false) or is_inf(elapsed) else floori(elapsed / CHAR_TIME)
-	_text.text = line().left(count)
+	# Blip de défilement tous les TEXT_BLIP caractères (pas quand la réplique s'affiche d'un coup).
+	var blips := floori(float(count) / TEXT_BLIP)
+	if count < line().length() and blips > _blips:
+		Sfx.play("ui_texte")
+	_blips = blips
+	_text.text = _prefix() + line().left(count)
 	_position()
 
 
@@ -78,7 +87,7 @@ func tick(dt: float) -> void:
 func advance() -> void:
 	if not active():
 		return
-	if not dialogue.get("any_button", false) and _text.text != line():
+	if not dialogue.get("any_button", false) and _text.text != _prefix() + line():
 		elapsed = INF
 		tick(0.0)
 		return
@@ -95,55 +104,25 @@ func close() -> void:
 	visible = false
 
 
-## positionCharacterDialogue : au-dessus de la tête (ou dessous, faute de place), pointe reliée à la tête.
+## Bannière en haut de l'écran, centrée ; elle grandit avec le texte déjà écrit.
 func _position() -> void:
 	var u: Unit = dialogue.get("speaker")
-	if u == null or not u.alive() or u.hidden:
+	if u == null or not u.alive():
 		close()
 		return
 	var view := get_viewport_rect().size
-	var head := camera.project(u.x, 2.8, u.z)
-	# Hauteur : texte déjà écrit (la bulle grandit vers le haut pendant l'écriture, comme dans le prototype).
-	var f := HudStyle.font()
-	var text_h := 0.0
-	if not _text.text.is_empty():
-		var lines := roundi(f.get_multiline_string_size(_text.text, HORIZONTAL_ALIGNMENT_LEFT, WIDTH - 2.0 * PAD.x - 2.0, 13).y / f.get_height(13))
-		text_h = 13.0 * 1.35 * maxi(1, lines)
-	var h := text_h + 2.0 * PAD.y + 2.0
-	size = Vector2(WIDTH, h)
-	_text.position = PAD + Vector2.ONE
-	_text.size = Vector2(WIDTH - 2.0 * PAD.x - 2.0, text_h + 2.0)
-	var left := maxf(MARGIN, minf(view.x - WIDTH - MARGIN, head.x - WIDTH / 2.0))
-	var above := head.y - GAP - h
-	_below = above < MARGIN
-	position = Vector2(left, head.y + GAP if _below else above)
-	_tail_x = clampf(head.x - left, 18.0, WIDTH - 18.0)
-	modulate.a = 0.0 if head.x < 0.0 or head.x > view.x or head.y < 0.0 or head.y > view.y else 1.0
+	var w := SnesBanner.width(view)
+	var h := SnesBanner.height(_text.text if _text.text != "" else " ", w)
+	size = Vector2(w, h)
+	position = Vector2(roundf((view.x - w) / 2.0), BossBar.top())
+	_text.position = SnesBanner.PAD
+	_text.size = size - 2.0 * SnesBanner.PAD
+	modulate.a = 1.0
 	queue_redraw()
 
 
 func _draw() -> void:
-	var r := Rect2(Vector2.ZERO, size)
-	var sb := StyleBoxFlat.new()
-	sb.bg_color = BG
-	sb.border_color = BORDER
-	sb.set_border_width_all(1)
-	sb.set_corner_radius_all(8)
-	sb.shadow_color = Color("#00000077")
-	sb.shadow_size = 14
-	sb.shadow_offset = Vector2(0, 8)
-	sb.anti_aliasing = true
-	draw_style_box(sb, r)
-	# Pointe : carré de 14 px tourné à 45°, centré 1 px sous le bord (bottom: -8px), bordé sur ses deux
-	# côtés extérieurs ; sa moitié intérieure recouvre le liseré de la bulle. Au-dessus en mode « dessous ».
-	var s := -1.0 if _below else 1.0
-	var d := 7.0 * sqrt(2.0)
-	var c := Vector2(_tail_x, (0.0 if _below else size.y) + s * 1.0)
-	var left := c + Vector2(-d, 0)
-	var right := c + Vector2(d, 0)
-	var tip := c + Vector2(0, s * d)
-	draw_colored_polygon(PackedVector2Array([left, c + Vector2(0, -s * d), right, tip]), TAIL_BG)
-	draw_polyline(PackedVector2Array([left, tip, right]), BORDER, 1.0, true)
+	SnesBanner.paint(self, Rect2(Vector2.ZERO, size))
 
 
 func _gui_input(event: InputEvent) -> void:

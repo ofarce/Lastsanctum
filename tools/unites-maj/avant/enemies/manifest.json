@@ -1,0 +1,508 @@
+{
+  "version": 1,
+  "source": "planches/ennemis-animations.html",
+  "death_duration": 1.8,
+  "enemies": {
+    "creep": {
+      "ax": 15,
+      "ay": 40,
+      "h": 31,
+      "stride": 4,
+      "self_bob": true,
+      "idle": {
+        "frame_w": 40,
+        "frame_h": 42,
+        "cols": 12,
+        "rows": 2,
+        "count": 24,
+        "fps": 10
+      },
+      "walk": {
+        "frame_w": 40,
+        "frame_h": 42,
+        "cols": 12,
+        "rows": 2,
+        "count": 24,
+        "fps": 24
+      },
+      "attack": {
+        "frame_w": 40,
+        "frame_h": 42,
+        "cols": 12,
+        "rows": 2,
+        "count": 24,
+        "fps": 24
+      },
+      "death": {
+        "frame_w": 60,
+        "frame_h": 47,
+        "cols": 12,
+        "rows": 4,
+        "count": 45,
+        "fps": 24
+      }
+    },
+    "spitter": {
+      "ax": 15,
+      "ay": 40,
+      "h": 31,
+      "stride": 4,
+      "self_bob": true,
+      "idle": {
+        "frame_w": 40,
+        "frame_h": 42,
+        "cols": 12,
+        "rows": 2,
+        "count": 24,
+        "fps": 10
+      },
+      "walk": {
+        "frame_w": 40,
+        "frame_h": 42,
+        "cols": 12,
+        "rows": 2,
+        "count": 24,
+        "fps": 24
+      },
+      "attack": {
+        "frame_w": 40,
+        "frame_h": 42,
+        "cols": 12,
+        "rows": 2,
+        "count": 24,
+        "fps": 24
+      },
+      "death": {
+        "frame_w": 60,
+        "frame_h": 47,
+        "cols": 12,
+        "rows": 4,
+        "count": 45,
+        "fps": 24
+      }
+    },
+    "brute": {
+      "ax": 20,
+      "ay": 40,
+      "h": 27,
+      "stride": 2.4,
+      "self_bob": true,
+      "idle": {
+        "frame_w": 40,
+        "frame_h": 42,
+        "cols": 12,
+        "rows": 2,
+        "count": 24,
+        "fps": 10
+      },
+      "walk": {
+        "frame_w": 40,
+        "frame_h": 42,
+        "cols": 12,
+        "rows": 2,
+        "count": 24,
+        "fps": 26.666666666666664
+      },
+      "attack": {
+        "frame_w": 40,
+        "frame_h": 42,
+        "cols": 12,
+        "rows": 4,
+        "count": 41,
+        "fps": 24
+      },
+      "death": {
+        "frame_w": 60,
+        "frame_h": 47,
+        "cols": 12,
+        "rows": 4,
+        "count": 45,
+        "fps": 24
+      }
+    },
+    "beast": {
+      "ax": 36,
+      "ay": 44,
+      "h": 28,
+      "stride": 4.125,
+      "self_bob": true,
+      "version": 2,
+      "idle": {
+        "frame_w": 84,
+        "frame_h": 48,
+        "cols": 12,
+        "rows": 4,
+        "count": 48,
+        "fps": 24,
+        "duration": 2.0,
+        "loop": true
+      },
+      "walk": {
+        "frame_w": 84,
+        "frame_h": 48,
+        "cols": 12,
+        "rows": 1,
+        "count": 12,
+        "fps": 24,
+        "duration": 0.5
+      },
+      "attack": {
+        "frame_w": 84,
+        "frame_h": 48,
+        "cols": 12,
+        "rows": 2,
+        "count": 18,
+        "fps": 24,
+        "duration": 0.75
+      },
+      "death": {
+        "frame_w": 84,
+        "frame_h": 48,
+        "cols": 12,
+        "rows": 3,
+        "count": 36,
+        "fps": 24,
+        "duration": 1.5
+      }
+    },
+    "scout": {
+      "ax": 15,
+      "ay": 40,
+      "h": 30,
+      "stride": 4,
+      "self_bob": true,
+      "idle": {
+        "frame_w": 40,
+        "frame_h": 42,
+        "cols": 12,
+        "rows": 2,
+        "count": 24,
+        "fps": 10
+      },
+      "walk": {
+        "frame_w": 40,
+        "frame_h": 42,
+        "cols": 12,
+        "rows": 2,
+        "count": 24,
+        "fps": 24
+      },
+      "attack": {
+        "frame_w": 40,
+        "frame_h": 42,
+        "cols": 12,
+        "rows": 2,
+        "count": 24,
+        "fps": 24
+      },
+      "death": {
+        "frame_w": 60,
+        "frame_h": 47,
+        "cols": 12,
+        "rows": 4,
+        "count": 45,
+        "fps": 24
+      }
+    },
+    "soldier": {
+      "ax": 15,
+      "ay": 40,
+      "h": 31,
+      "stride": 4,
+      "self_bob": true,
+      "idle": {
+        "frame_w": 40,
+        "frame_h": 42,
+        "cols": 12,
+        "rows": 2,
+        "count": 24,
+        "fps": 10
+      },
+      "walk": {
+        "frame_w": 40,
+        "frame_h": 42,
+        "cols": 12,
+        "rows": 2,
+        "count": 24,
+        "fps": 24
+      },
+      "attack": {
+        "frame_w": 40,
+        "frame_h": 42,
+        "cols": 12,
+        "rows": 2,
+        "count": 24,
+        "fps": 24
+      },
+      "death": {
+        "frame_w": 60,
+        "frame_h": 47,
+        "cols": 12,
+        "rows": 4,
+        "count": 45,
+        "fps": 24
+      }
+    },
+    "shield": {
+      "ax": 15,
+      "ay": 40,
+      "h": 31,
+      "stride": 4,
+      "self_bob": true,
+      "idle": {
+        "frame_w": 40,
+        "frame_h": 42,
+        "cols": 12,
+        "rows": 2,
+        "count": 24,
+        "fps": 10
+      },
+      "walk": {
+        "frame_w": 40,
+        "frame_h": 42,
+        "cols": 12,
+        "rows": 2,
+        "count": 24,
+        "fps": 24
+      },
+      "attack": {
+        "frame_w": 40,
+        "frame_h": 42,
+        "cols": 12,
+        "rows": 2,
+        "count": 24,
+        "fps": 24
+      },
+      "death": {
+        "frame_w": 60,
+        "frame_h": 47,
+        "cols": 12,
+        "rows": 4,
+        "count": 45,
+        "fps": 24
+      }
+    },
+    "archer": {
+      "ax": 15,
+      "ay": 40,
+      "h": 30,
+      "stride": 4,
+      "self_bob": true,
+      "idle": {
+        "frame_w": 40,
+        "frame_h": 42,
+        "cols": 12,
+        "rows": 2,
+        "count": 24,
+        "fps": 10
+      },
+      "walk": {
+        "frame_w": 40,
+        "frame_h": 42,
+        "cols": 12,
+        "rows": 2,
+        "count": 24,
+        "fps": 24
+      },
+      "attack": {
+        "frame_w": 40,
+        "frame_h": 42,
+        "cols": 12,
+        "rows": 2,
+        "count": 24,
+        "fps": 24
+      },
+      "death": {
+        "frame_w": 60,
+        "frame_h": 47,
+        "cols": 12,
+        "rows": 4,
+        "count": 45,
+        "fps": 24
+      }
+    },
+    "strazhar": {
+      "ax": 15,
+      "ay": 40,
+      "h": 37,
+      "stride": 4.125,
+      "self_bob": true,
+      "idle": {
+        "frame_w": 40,
+        "frame_h": 42,
+        "cols": 12,
+        "rows": 2,
+        "count": 24,
+        "fps": 10
+      },
+      "walk": {
+        "frame_w": 68,
+        "frame_h": 48,
+        "cols": 12,
+        "rows": 2,
+        "count": 24,
+        "fps": 42.857142857142854,
+        "ax": 33,
+        "ay": 45
+      },
+      "attack": {
+        "frame_w": 40,
+        "frame_h": 42,
+        "cols": 12,
+        "rows": 2,
+        "count": 21,
+        "fps": 24
+      },
+      "death": {
+        "frame_w": 60,
+        "frame_h": 47,
+        "cols": 12,
+        "rows": 4,
+        "count": 45,
+        "fps": 24
+      }
+    },
+    "martyre": {
+      "ax": 60,
+      "ay": 114,
+      "stride": 1.862,
+      "self_bob": true,
+      "version": 4,
+      "idle": {
+        "frame_w": 150,
+        "frame_h": 120,
+        "cols": 12,
+        "rows": 7,
+        "count": 74,
+        "fps": 24.05,
+        "duration": 3.0769,
+        "loop": true
+      },
+      "h": 83,
+      "walk": {
+        "frame_w": 150,
+        "frame_h": 120,
+        "cols": 12,
+        "rows": 2,
+        "count": 20,
+        "fps": 23.6364,
+        "duration": 0.8462
+      },
+      "attack": {
+        "frame_w": 150,
+        "frame_h": 120,
+        "cols": 12,
+        "rows": 2,
+        "count": 18,
+        "fps": 23.4,
+        "duration": 0.7692
+      },
+      "cast": {
+        "frame_w": 150,
+        "frame_h": 120,
+        "cols": 12,
+        "rows": 4,
+        "count": 41,
+        "fps": 24.2273,
+        "duration": 1.6923
+      },
+      "hit": {
+        "frame_w": 150,
+        "frame_h": 120,
+        "cols": 12,
+        "rows": 1,
+        "count": 9,
+        "fps": 23.4,
+        "duration": 0.3846
+      },
+      "death": {
+        "frame_w": 150,
+        "frame_h": 120,
+        "cols": 12,
+        "rows": 5,
+        "count": 59,
+        "fps": 23.9688,
+        "duration": 2.4615
+      }
+    },
+    "croc": {
+      "ax": 21,
+      "ay": 25,
+      "h": 9,
+      "stride": 2.4,
+      "self_bob": true,
+      "idle": {
+        "frame_w": 48,
+        "frame_h": 30,
+        "cols": 12,
+        "rows": 2,
+        "count": 24,
+        "fps": 8
+      },
+      "walk": {
+        "frame_w": 48,
+        "frame_h": 30,
+        "cols": 12,
+        "rows": 2,
+        "count": 24,
+        "fps": 24
+      },
+      "attack": {
+        "frame_w": 48,
+        "frame_h": 30,
+        "cols": 12,
+        "rows": 1,
+        "count": 12,
+        "fps": 24
+      },
+      "death": {
+        "frame_w": 48,
+        "frame_h": 30,
+        "cols": 12,
+        "rows": 4,
+        "count": 45,
+        "fps": 24
+      }
+    },
+    "feline": {
+      "ax": 21,
+      "ay": 24,
+      "h": 17,
+      "stride": 3.2,
+      "self_bob": true,
+      "idle": {
+        "frame_w": 48,
+        "frame_h": 30,
+        "cols": 12,
+        "rows": 2,
+        "count": 24,
+        "fps": 8
+      },
+      "walk": {
+        "frame_w": 48,
+        "frame_h": 30,
+        "cols": 12,
+        "rows": 2,
+        "count": 24,
+        "fps": 24
+      },
+      "attack": {
+        "frame_w": 48,
+        "frame_h": 30,
+        "cols": 12,
+        "rows": 1,
+        "count": 12,
+        "fps": 24
+      },
+      "death": {
+        "frame_w": 48,
+        "frame_h": 30,
+        "cols": 12,
+        "rows": 4,
+        "count": 45,
+        "fps": 24
+      }
+    }
+  },
+  "refonte": "planches/refonte-16bits-export.html (tools/refonte/serve.py) : archer, beast, creep, croc, feline, scout, shield, soldier, spitter"
+}

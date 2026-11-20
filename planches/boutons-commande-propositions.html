@@ -1,0 +1,336 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Boutons de commande</title>
+<style>
+@font-face{font-family:NotoHud;src:url(../assets/fonts/NotoSerif-Regular.ttf)}
+:root{--bg:#0b120e;--panel:#111b14;--line:#2a3a2c;--txt:#dcd8bc;--mut:#93a08a;--acc:#e8c870}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--txt);font:15px/1.45 system-ui,sans-serif}
+header,main{max-width:900px;margin:auto;padding:18px 16px}
+h1{margin:0;font-weight:600;letter-spacing:.08em;font-size:24px;color:var(--acc)}
+header p,section>p{color:var(--mut);margin:6px 0 0}
+section>p b{color:var(--txt);font-weight:600}
+section{margin:34px 0 56px}
+h2{color:var(--acc);font-weight:600;letter-spacing:.05em;margin:0;font-size:21px}
+h3{margin:26px 0 0;font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:var(--mut);font-weight:600}
+p.sub{margin:0 0 4px;color:var(--txt);font-style:italic}
+.wrap{position:relative}
+.wrap.panel{margin-top:96px}
+.wrap.strip{margin-top:14px}
+.wrap canvas{display:block;max-width:100%;image-rendering:pixelated;image-rendering:crisp-edges}
+.hint{color:var(--mut);font-size:13px;margin-top:6px}
+.labels{display:grid;max-width:100%;text-align:center;color:var(--mut);font-size:12px;margin-top:4px;line-height:1.25}
+.why{border:1px solid var(--line);background:var(--panel);padding:12px 16px;color:var(--mut)}
+.why b{color:var(--txt)}
+.bubble{position:absolute;z-index:4;pointer-events:none;font-family:NotoHud,serif;font-size:15px;line-height:1.25;padding:6px 10px;max-width:420px;display:flex;flex-direction:column;gap:1px}
+.bubble[hidden]{display:none}
+.bubble b{font-weight:400;font-size:17px}
+.bubble i{font-style:normal}.bubble i.short{opacity:.55;text-decoration:underline wavy}
+.bubble small{font-size:13px;opacity:.8}
+.bubble em{font-style:normal;font-size:13px}
+.bb-brass .bubble{background:#10140d;border:2px solid #c29148;color:#eee3c9}.bb-brass .bubble b{color:#ffe5ac}.bb-brass .bubble em{color:#e8a090}.bb-brass .bubble em.ok{color:#a8d890}
+.bb-folio .bubble{background:#efe4c8;border:2px solid #5a3a22;color:#3a2214}.bb-folio .bubble em{color:#a02c24}.bb-folio .bubble em.ok{color:#8a6414}
+.bb-glass .bubble{background:#0e1014;border:2px solid #3a3e46;color:#d4dae4}.bb-glass .bubble b{color:#f8e0a0}.bb-glass .bubble em{color:#e8907e}.bb-glass .bubble em.ok{color:#f8e0a0}
+.bb-snes .bubble{background:linear-gradient(#5a6ad0,#141c6a);border:2px solid #e6e8f4;outline:2px solid #0a0c26;color:#fff;text-shadow:1px 1px 0 #10123a}.bb-snes .bubble em{color:#ffc8b8}.bb-snes .bubble em.ok{color:#a8f0a0}
+@media(max-width:560px){.bubble{font-size:13px;max-width:300px}.bubble b{font-size:15px}.wrap.panel{margin-top:120px}}
+</style></head><body>
+<header><h1>BOUTONS DE COMMANDE · HABILLAGES</h1>
+<p>Les ordres (Construire, Poser, Réparer, Réactiver, Offrande, Prier, Compétence, Position, Déplacer, page d’Entrepôt, Retour) passent eux aussi en icône seule + touche ; le nom et l’effet s’affichent au survol. Tous gardent le cadre Laiton. La question est de savoir comment un ordre se distingue d’un objet ou d’une unité, qui sont déjà en couleur. Passe la souris sur les boutons.</p></header>
+<main id="root"></main>
+<main><section><h2>À trancher</h2><p class="why"><b>Choisis un habillage</b> (1 à 4), ou un mélange, par exemple « 1, avec la recharge en anneau de 3 ». Mon conseil : <b>1 · Gravure de laiton</b>. La règle se lit d’un coup d’œil (couleur = objet ou unité, or = ordre), le panneau reste calme, et c’est le plus simple à poser en jeu : les pictogrammes sont teintés à la volée, comme le trait d’or des recherches.</p></section></main>
+<script>
+'use strict';
+/* Objets 32 × 32 extraits de rendus-objets-propositions.html (palettes M, raster R, DRAW). */
+const OUT = '#0b090b';
+const M = {
+  wood:['#3e2617','#6e4830','#9c7048','#c49a68'], bark:['#2e2016','#4e3826','#6e5238','#8e7050'],
+  iron:['#3c4550','#6a7784','#9aa8b4','#d0dae0'], copper:['#5e2e1c','#a45a34','#d4885e','#f2b890'],
+  gold:['#6a4614','#b8862a','#e8c060','#fff0a8'], rock:['#1e232b','#333a46','#4e5866','#6e7a88'],
+  fiber:['#6a5634','#a08a5c','#c8b080','#ecdcb0'], flame:['#a8401a','#e07a20','#f8c040','#fff4c8'],
+  cord:['#6a5a40','#a8946c','#d8c8a0','#f0e4c4'], blue:['#1c2c4c','#2e4c80','#4c76b0','#7ea4d8'],
+  red:['#4c1a18','#802c24','#b04a3a','#d87a64'], marble:['#4a4c50','#6e7074','#94969a','#bcbcb8'],
+  moss:['#22301e','#34482a','#4e6a3a','#6e8a4e'], cyan:['#1f6a74','#35a8b8','#5fe0f0','#c8f8ff'],
+};
+
+/* ---------- Petit raster ---------- */
+function R(w,h){ return {w,h,p:new Array(w*h).fill(null)}; }
+function px(r,x,y,c){ x=Math.round(x); y=Math.round(y); if(x>=0&&y>=0&&x<r.w&&y<r.h) r.p[y*r.w+x]=c; }
+function get(r,x,y){ return (x>=0&&y>=0&&x<r.w&&y<r.h)? r.p[y*r.w+x] : null; }
+function rect(r,x,y,w,h,c){ for(let j=0;j<h;j++) for(let i=0;i<w;i++) px(r,x+i,y+j,c); }
+function line(r,x0,y0,x1,y1,c){ const n=Math.max(Math.abs(x1-x0),Math.abs(y1-y0))||1; for(let i=0;i<=n;i++) px(r,x0+(x1-x0)*i/n,y0+(y1-y0)*i/n,c); }
+function disc(r,cx,cy,rad,c){ for(let y=Math.floor(cy-rad);y<=cy+rad;y++) for(let x=Math.floor(cx-rad);x<=cx+rad;x++) if((x-cx)**2+(y-cy)**2<=rad*rad+0.3) px(r,x,y,c); }
+function poly(r,pts,c){ let x0=1e9,x1=-1e9,y0=1e9,y1=-1e9; pts.forEach(([x,y])=>{x0=Math.min(x0,x);x1=Math.max(x1,x);y0=Math.min(y0,y);y1=Math.max(y1,y);});
+  for(let y=Math.floor(y0);y<=y1;y++) for(let x=Math.floor(x0);x<=x1;x++){ let ins=false; for(let i=0,j=pts.length-1;i<pts.length;j=i++){ const [xi,yi]=pts[i],[xj,yj]=pts[j]; if(((yi>y+.5)!=(yj>y+.5))&&(x+.5<(xj-xi)*(y+.5-yi)/(yj-yi)+xi)) ins=!ins; } if(ins) px(r,x,y,c);} }
+/* Bâton épais modelé : ombre dessous, lumière dessus. */
+function rod(r,x0,y0,x1,y1,rad,m){ const n=Math.ceil(Math.hypot(x1-x0,y1-y0)*2)||1;
+  for(let i=0;i<=n;i++){ const t=i/n; disc(r,x0+(x1-x0)*t,y0+(y1-y0)*t+0.6,rad,m[0]); }
+  for(let i=0;i<=n;i++){ const t=i/n; disc(r,x0+(x1-x0)*t,y0+(y1-y0)*t,rad,m[1]); }
+  if(rad>=1) for(let i=0;i<=n;i++){ const t=i/n; px(r,x0+(x1-x0)*t-0.4,y0+(y1-y0)*t-rad+0.4,m[2]); } }
+function outline(r,c=OUT){ const add=[]; for(let y=0;y<r.h;y++) for(let x=0;x<r.w;x++) if(!get(r,x,y)&&(get(r,x+1,y)||get(r,x-1,y)||get(r,x,y+1)||get(r,x,y-1))) add.push([x,y]); add.forEach(([x,y])=>px(r,x,y,c)); }
+
+/* ---------- Objets (32 × 32) ---------- */
+function ingot(r,m,glyph){
+  poly(r,[[5,20],[27,20],[29,25],[3,25]],m[0]);          // flanc avant
+  poly(r,[[3,25],[29,25],[28,27],[4,27]],m[0]);
+  poly(r,[[8,12],[24,12],[27,20],[5,20]],m[1]);          // face oblique avant
+  poly(r,[[10,9],[22,9],[24,12],[8,12]],m[2]);           // dessus
+  line(r,10,9,22,9,m[3]); line(r,8,12,24,12,m[3]); px(r,6,19,m[2]); line(r,9,13,7,18,m[2]);
+  if(glyph){ line(r,14,15,18,15,m[0]); line(r,16,14,16,18,m[0]); }
+}
+const DRAW = {
+  wood(r){ rod(r,6,22,24,10,4,M.bark); rod(r,9,25,27,17,3.5,M.bark);
+    [[24,10,4],[27,17,3.5]].forEach(([x,y,s])=>{ disc(r,x,y,s,M.wood[2]); disc(r,x,y,s-1.4,M.wood[3]); disc(r,x,y,s-2.6,M.wood[1]); px(r,x,y,M.wood[2]); }); },
+  rock(r){ poly(r,[[6,20],[9,11],[17,7],[25,10],[28,19],[22,26],[10,26]],M.rock[1]); poly(r,[[9,11],[17,7],[25,10],[20,15],[12,15]],M.rock[3]); poly(r,[[20,15],[25,10],[28,19],[22,26]],M.rock[2]); poly(r,[[6,20],[12,15],[20,15],[22,26],[10,26]],M.rock[1]); line(r,12,15,20,15,M.rock[0]); line(r,20,15,22,25,M.rock[0]); px(r,14,10,'#e8e4da'); px(r,15,10,'#bcb8ae'); },
+  torch(r){ rod(r,10,27,19,13,1.6,M.wood); rect(r,17,10,5,5,M.fiber[1]); line(r,17,11,21,11,M.fiber[3]); line(r,17,13,21,13,M.fiber[0]);
+    poly(r,[[16,10],[23,10],[22,5],[20,1],[18,4]],M.flame[1]); poly(r,[[17,10],[22,10],[21,6],[20,3],[19,6]],M.flame[2]); rect(r,19,7,2,3,M.flame[3]); },
+  pickaxe(r){ rod(r,8,27,21,9,1.6,M.wood);
+    const pts=[]; for(let a=-1.15;a<=1.15;a+=0.08) pts.push([18+Math.sin(a)*11-Math.cos(a)*1, 11-Math.cos(a)*4+Math.sin(a)*4]);
+    pts.forEach(([x,y],i)=>disc(r,x,y+0.7,1.7,M.iron[0])); pts.forEach(([x,y])=>disc(r,x,y,1.5,M.iron[2])); pts.forEach(([x,y])=>px(r,x,y-1,M.iron[3])); rect(r,19,9,3,4,M.iron[1]); },
+  arrows(r){ [[0,0],[3,3],[-3,3]].forEach(([dx,dy])=>{ line(r,6+dx,26+dy-3,22+dx,7+dy,M.wood[2]); line(r,7+dx,26+dy-3,23+dx,7+dy,M.wood[1]);
+      poly(r,[[21+dx,6+dy],[26+dx,3+dy],[24+dx,9+dy]],M.iron[2]); px(r,24+dx,5+dy,M.iron[3]);
+      poly(r,[[5+dx,22+dy],[3+dx,25+dy],[7+dx,26+dy],[9+dx,24+dy]],M.red[2]); px(r,5+dx,24+dy,M.red[3]); }); },
+  bow(r){ const pts=[]; for(let a=-1.2;a<=1.2;a+=0.05) pts.push([9+Math.cos(a)*11, 16+Math.sin(a)*12]);
+    line(r,pts[0][0],pts[0][1],pts[pts.length-1][0],pts[pts.length-1][1],M.cord[3]);
+    pts.forEach(([x,y])=>disc(r,x,y,1.3,M.wood[1])); pts.forEach(([x,y])=>px(r,x+0.5,y,M.wood[3])); rect(r,18,14,3,5,M.fiber[1]); line(r,18,15,20,15,M.fiber[3]); },
+  sword(r){ poly(r,[[25,3],[28,4],[14,19],[12,17]],M.iron[2]); line(r,26,4,13,18,M.iron[3]); line(r,27,5,14,19,M.iron[1]);
+    rod(r,9,15,17,23,1.2,M.gold); rod(r,11,21,6,26,1.3,M.wood); disc(r,5,27,1.8,M.gold[2]); },
+  shield(r){ disc(r,16,17,11.5,M.wood[0]); disc(r,16,16,11,M.iron[1]); disc(r,16,16,9.5,M.wood[1]); for(let x=8;x<=24;x+=4) line(r,x,8,x,25,M.wood[0]);
+    disc(r,16,16,3.3,M.iron[1]); disc(r,15.5,15.5,2.2,M.iron[2]); px(r,15,15,M.iron[3]); for(let a=0;a<6.28;a+=0.4) px(r,16+Math.cos(a)*10.3-0.4,16+Math.sin(a)*10.3-0.6,a>3.6&&a<5.8?M.iron[3]:M.iron[2]); },
+  chest(r){ rect(r,5,15,22,11,M.wood[1]); rect(r,5,24,22,2,M.wood[0]); poly(r,[[5,15],[27,15],[26,8],[6,8]],M.wood[2]); line(r,6,8,26,8,M.wood[3]);
+    for(let x=6;x<27;x+=5) line(r,x,16,x,23,M.wood[0]); [8,22].forEach(x=>{ rect(r,x,8,2,18,M.iron[1]); line(r,x,8,x,25,M.iron[2]); }); rect(r,14,14,4,5,M.iron[2]); px(r,15,16,OUT); px(r,16,16,OUT); },
+  wood_fiber(r){ for(let i=0;i<7;i++){ const y=9+i*2.2; const c=M.fiber[i%2?1:2]; line(r,5,y+3,27,y-1,c); line(r,5,y+4,27,y,M.fiber[0]); }
+    rect(r,11,7,3,16,M.cord[0]); line(r,11,7,11,22,M.cord[2]); rect(r,19,5,3,16,M.cord[0]); line(r,19,5,19,20,M.cord[2]); },
+  firing_post(r){ for(let i=0;i<5;i++){ const x=6+i*4; poly(r,[[x,10],[x+4,9],[x+4,26],[x,26]],M.wood[i%2?1:2]); line(r,x,10,x,26,M.wood[0]); poly(r,[[x,10],[x+2,6],[x+4,9]],M.wood[3]); }
+    rect(r,6,15,20,2,M.wood[0]); rect(r,6,21,20,2,M.wood[0]); rect(r,14,12,4,2,OUT); },
+  barricade(r){ rod(r,4,25,26,8,1.8,M.wood); rod(r,6,8,28,24,1.8,M.wood); rod(r,3,17,29,17,1.6,M.bark);
+    poly(r,[[9,27],[13,22],[20,22],[24,27]],M.rock[2]); line(r,13,22,20,22,M.rock[3]); line(r,9,27,24,27,M.rock[0]); },
+  fishing_rod(r){ line(r,4,28,27,4,M.wood[1]); line(r,5,28,27,5,M.wood[2]); rod(r,4,28,8,24,1.4,M.bark); disc(r,9,23,2.2,M.iron[1]); px(r,9,22,M.iron[3]);
+    for(let y=5;y<22;y++) px(r,27+Math.sin(y*0.4)*0.6,y,M.cord[3]); disc(r,27,23,1.5,M.red[2]); px(r,26,22,M.red[3]); line(r,27,25,27,27,M.iron[2]); px(r,26,28,M.iron[2]); px(r,25,27,M.iron[2]); },
+  caltrops(r){ [[10,20],[21,23],[18,12]].forEach(([x,y])=>{ line(r,x,y,x-4,y+3,M.iron[1]); line(r,x,y,x+4,y+3,M.iron[1]); line(r,x,y,x,y+4,M.iron[0]); line(r,x,y,x+1,y-5,M.iron[2]); px(r,x+1,y-5,M.iron[3]); disc(r,x,y,1,M.iron[2]); }); },
+  copper_ingot(r){ ingot(r,M.copper,true); }, iron_ingot(r){ ingot(r,M.iron,true); }, gold_ingot(r){ ingot(r,M.gold,true); },
+};
+function lum(h){ const n=parseInt(h.slice(1),16); return ((n>>16)*0.3+((n>>8)&255)*0.59+(n&255)*0.11)/255; }
+
+</script>
+<script>
+/* Sprites des portraits du HUD (assets/baked/hud/portraits), réduits à 34 px de haut. */
+const SPRITES = {"flammes":{"w":24,"h":34,"pal":["#141820","#d6dce8","#98a2b4","#646e80","#3a4250","#7a3008","#ffc070","#2a0e04","#5a2c1c","#a0583a","#f4c093","#d88e62","#f08a2a","#c23a08","#fff6c0","#c25a12","#8a5428","#5a1404"],"rows":[".........ÀÀÀÀÀÀ.........","........ÀÁÁÁÁÁÂÀ........",".......ÀÁÁÁÁÁÁÂÃÀ.......",".....ÀÀÁÁÁÁÁÁÂÂÃÄÀÀ.....",".....ÀÀÁÁÁÁÁÂÂÂÃÄÀÀ.....",".....ÀÀÁÁÁÁÁÂÂÂÂÂÀÀ.....",".....ÀÀÁÁÁÁÁÂÂÂÂÂÀÀ.....",".......ÀÅÅÆÅÆÅÆÅÆÇÇ.....",".......ÈÉÊÉÉÉÉÉÉÈ.......","....À..ÈËÊÊËËËËÉÈ..À....","..ÀÀÂÀÀÃÌÊËÉÉÉÉÉÄÀÀÂÀÀ..",".ÀÁÁÁÁÁÂÄËËËËÉÉÉÁÁÁÁÁÂÀ.","ÀÁÁÁÁÁÁÂÃÄÀÈÈÈÃÁÁÁÁÁÁÂÃÀ","ÀÁÁÁÅÂÂÂÃÆÆÆÌÌÌÁÁÁÁÅÂÂÃÀ","ÀÂÂÂÄÂÂÃÄÆÆÆÆÌÌÂÂÂÂÄÂÃÄÀ",".ÀÃÃÃÃÃÄÆÆÆÆÆÌÌÅÃÃÃÃÃÄÀ.",".ÀÃÃÂÃÃÄÆÆÆÆÌÌÌÄÃÄÄÄÀÀ..",".ÀÃÃÂÃÃÄÆÆÆÆÌÌÌÄÃÄÄÄÀÀ..",".ÀÃÃÃÃÃÄÆÆÆÍÎÍÌÃÃÄÄÀ....",".ÀÃÁÃÃÃÄÌÌÌÌÅÌÏÃÃÄÄÀ....",".ÀÁÁÃÁÁÄÌÌÌÌÏÏÏÃÁÄÄÀ....",".ÀÂÂÁÁÁÂÌÏÏÏÏÏÅÁÁÂÂÀ....","..ÀÄÂÂÂÃÂÂÂÂÂÃÃÃÃÃÃÌÇ...","...ÀÀÄÄÐÂÂÂÃÃÃÃÃÄÄÄÍÑ...",".....ÀÀÂÃÃÄÀÀÂÃÃÄÀÀÑ....",".....ÀÀÂÃÃÄÀÀÂÃÃÄÀÀ.....",".....ÀÀÃÃÄÄÀÀÃÃÄÄÀÀ.....",".....ÀÀÃÃÄÄÀÀÃÃÄÄÀÀ.....",".....ÀÀÃÃÄÄÀÀÃÃÄÄÀÀ.....",".....ÀÀÃÁÄÄÀÀÃÁÄÄÀÀ.....",".....ÀÀÂÃÃÄÀÀÂÃÃÄÀÀ.....",".....ÀÀÃÃÄÄÀÀÃÃÄÄÀÀ.....",".....ÀÀÃÃÄÄÀÀÃÃÄÄÀÀ.....",".......ÀÀÀÀ..ÀÀÀÀ......."]},"archer":{"w":24,"h":34,"pal":["#2a0e04","#ffc070","#f08a2a","#c25a12","#a0583a","#f4c093","#d88e62","#7a3008","#ffffff","#1c1008","#d4a462","#8a5428","#20120a","#2a2418","#fffbe8","#a8743a","#dca460","#b67a3c","#5a3418","#a8784e","#4a3020","#7a5236","#1e140e","#5a5f72","#3e4250","#272a33","#7a4c24","#4a2c14","#141519"],"rows":[".........ÀÀ.............",".......ÀÀÁÁÀÀÀ..........","......ÀÁÁÁÁÁÁÂÀ.........",".....ÀÁÁÁÁÁÁÁÂÂÀ........","....ÀÁÁÁÁÁÁÂÂÂÂÃÀ.......","....ÀÁÁÁÄÄÄÄÄÂÃÃÀ.......","....ÀÁÁÄÅÅÅÆÆÄÃÇÀ.......","....ÀÂÁÅÅÅÆÆÆÄÃÇÀ.......","....ÀÂÂÆÈÆÆÄÄÈÇÇÀ.É.....","....ÀÂÂÆÈÆÆÄÄÈÇÇÀ.É.....",".....ÀÃÄÄÄÄÄÄÄÇÀ.ÉÊÉ....","......ÀÃÄÄÄÄÄÇËËÌÍÎÊÉ...","....ÀÀÁÁÁÁÁÂÂÂÃËÌÍÎÏÉ...","...ÀÂÁÁÁÂÂÂÂÂÃÃÇÇÀÎÍÏÉ..","....ÀÀÃÃÃÃÃÇÇÇÇÀËÌÎÍÏÉ..",".ÌÌÀÃÐÐÐÐÐÐÑÑÑÑËÇÀÎÍÉÏÉ.","ÌÑËÒÐÐÐÐÐÐÐÑÑÑÑËÒÌÎÍÉÏÉ.","ÌËËÒÐÐÐÐÐÐÑÑÑÑÑËËÒÎÐÐÑÒÌ","ÌËËÒÐÐÐÐÐÑÑÑÑÑËËÒÒÎÑÑËÒÌ","ÌËÐÒÑÑÑÑÑÑÑÑÑËËËÒÌÎÍÌÏÉ.","ÌÐÐÑÑÑÑÑÑÑËËËËËÒÒÌÎÍÉÏÉ.","ÌÑÑËËËÑËËËËËËÒÒÒÒÌÎÍÉÏÉ.",".ÌÒÌÓÓÓÔÔÔÕÕÕÕÕÔÔÖÎÍÏÉ..","..ÌÖÓÕÕÕÕÕÕÔÔÔÔÔÔÖÎÍÏÉ..","...ÀÇ×ØÙÙÇÇ××ØØÙÇÀÎÏÉ...","...ÀÇ×ØÙÙÇÇ××ØØÙÇÀÎÏÉ...","...ÀÇ×ØØÙÇÇ××ØØÙÇÀÎÚÉ...","...ÀÇØØÙÙÇÇØØØÙÙÇÀÛÉ....","...ÀÇØØÙÙÇÇØØØÙÙÇÀÉ.....","....ÀØØÙÙÜÀØØØÙÙÜ.......","....ÌÑËËÒÌÌÑÑËËÒÌ.......","....ÌËËÒÒÌÌËËËÒÒÌ.......","....ÌËËÒÒÌÌËËËÒÒÌ.......",".....ÌÌÌÌ..ÌÌÌÌÌ........"]},"lame":{"w":27,"h":34,"pal":["#2a0e04","#ffc070","#f08a2a","#c25a12","#7a3008","#3a4250","#141820","#d6dce8","#98a2b4","#a0583a","#5a2c1c","#d88e62","#646e80","#b67a3c","#5a3418","#8a5428","#20120a","#5a5f72","#3e4250","#272a33","#141519"],"rows":["..........ÀÀÀÀÀÀ...........",".........ÀÁÁÁÁÁÂÀ..........","........ÀÁÁÁÁÁÁÂÃÀ.........","......ÀÀÁÁÁÁÁÁÂÂÃÄÀ........","......ÀÀÁÁÁÁÁÂÂÂÃÄÀ........","......ÀÀÁÁÁÁÁÂÂÂÂÂÀ........","......ÀÀÁÁÁÁÁÂÂÂÂÂÀ........","........ÀÅÅÅÅÅÅÅÅÅÆ........","........ÆÇÇÇÇÇÈÈÈÆ.........","........ÆÇÇÇÈÈÈÈÈÆ.........","....ÆÆÆÆ.ÆÉÉÉÉÉÉÉÊÆÆÆÆ.....","...ÆÇÇÇÇÆÊËËËËÉÉÉÊÇÇÇÇÆ....","..ÆÇÇÇÇÇÈÆÊÊÊÊÊÊÊÇÇÇÇÇÈÆ...",".ÆÇÇÇÇÈÈÌÅÇÇÇÈÈÈÇÇÇÇÇÈÌÅÆ..","ÆÈÈÈÈÌÌÌÌÌÇÄÄÄÄÄÈÈÈÈÈÌÅÆ...","ÆÈÄÄÄÄÄÄÄÌÇÂÂÃÃÃÈÌÌÌÌÅÅÆ...","ÆÈÂÂÃÃÃÃÃÌÇÂÂÃÃÃÈÌÅÌÌÌÅÆ...","ÆÈÂÂÃÃÃÃÃÌÇÂÂÃÃÃÈÌÅÌÌÌÅÆ...","ÆÈÂÃÃÇÃÃÃÌÇÂÂÇÃÃÌÌÅÌÌÌÅÆ...","ÆÈÂÃÈÇÈÈÄÌÈÂÂÌÃÄÌÌÅÌÌÇÅÆ...","ÆÈÂÃÄÈÄÄÄÌÈÂÃÄÃÄÌÅÅÇÇÇÈÆ...","ÆÈÃÃÃÄÃÃÄÌÌÂÃÃÃÄÅÅÅÈÈÈÌÆ...",".ÆÈÃÃÃÄÄÌÍÎÎÎÎÏÏÏÎÎÎÎÅÇÏÐ..",".ÆÈÃÃÃÄÄÌÏÏÏÏÏÎÎÎÎÎÐÐÆÈÆ...","..ÆÈÃÃÌÌÑÒÓÂÃÃÄÄÒÓÔ...ÆÈÆ..","...ÆÈÌÆÆÑÒÒÃÃÃÄÄÒÓÔ...ÆÈÆ..","....ÆÆÔÔÒÒÓÓÔÀÒÒÓÓÔ...ÆÈÆ..","......ÔÔÒÒÓÓÔÔÒÒÓÓÔ....ÆÈÆ.","......ÔÔÒÒÓÓÔÔÒÒÓÓÔ....ÆÈÆ.","......ÔÔÒÇÓÓÔÔÒÇÓÓÔ....ÆÈÆ.","......ÆÆÈÌÌÅÆÆÈÌÌÅÆ....ÆÈÈÆ","......ÆÆÌÌÅÅÆÆÌÌÅÅÆ.....ÆÆ.","......ÆÆÌÌÅÅÆÆÌÌÅÅÆ........","........ÆÆÆÆ..ÆÆÆÆ........."]},"medeina":{"w":23,"h":34,"pal":["#a7f295","#b1f79b","#94f08d","#73e47c","#78e87f","#70df78","#7be981","#7beb82","#78ea81","#71e27b","#b0f197","#8ee984","#7ded82","#8cff91","#71e378","#73e679","#77e77d","#77ea7e","#78e87d","#71e278","#63d96e","#71e179","#80ee85","#e9ffee","#ffffff","#92f696","#7ee885","#64de70","#6ee174","#5ed669","#66dc70","#7deb83","#bdffbf","#74e27b","#6ce276","#68de73","#74e67c","#78ea7e","#8ae790","#8ff293","#75e77d","#72e57a","#70e67b","#68dc73","#8ada8e","#8be48e","#59d468","#b6f297","#bcf59e","#3dbf51","#86d78c","#ecffed","#fafffa","#85d98e","#b5f399","#bef59e","#76d180","#94dd98","#95df98","#3dbe50","#80d588","#93de97","#ceffd0","#ceffd1","#93de96","#81d689","#4dc65c","#3bbe50","#64ce68","#3bbc4e","#70d17b","#7bd183","#7ad382","#70ce79","#49c25b","#9de88c","#a9ed92","#70d670","#3bbf50","#97e687","#a2ea8e","#3dbf50","#45c251"],"rows":[".......................",".......................",".......................",".......................","....ÀÁÂÃÄ...ÅÆÇÈÉ......",".....ÊËÌÍÎÏÐÑÒÓÔ.......","......ÕÖ×ØØØÙÚÛ...Ü....",".....ÝÞßØØØØØàáâãäå....",".......æØØØØØØçèéêë....",".......ìØØØØØØíî....ïð.","......ñòóØØØØôõ.....ö÷.",".......øùØØØØúø........","......û.üýþÿĀāĂ.ă......",".....Ą.ą.ĆćĈĉĊ.........","....ċČč.û.Ď.Ď.ă........","....ďĐ...ą.û.ă.........","........đ.û.ñ..........",".......................","..........Ē............",".......................",".......................",".......................",".......................",".......................",".......................",".......................",".......................",".......................",".......................",".......................",".......................",".......................",".......................","......................."]},"shooter":{"w":39,"h":34,"pal":["#0a0a0c","#575b64","#26262c","#46464e","#34343b","#1a1a1e","#c8ccd0","#9da2a9","#767b84","#3e414a","#cbc1a4","#a99e82","#847a62","#d8d8d0","#2a2c33","#ac3438","#8a222c","#ffe08a","#3e2a18","#2a1c10","#ffb03c"],"rows":[".............ÀÀ........................",".............ÀÀ........................","...........ÀÀÁÁÀÀÀ.....................","........ÀÀÀÀÀÁÁÀÀÂÀÀ...................","........ÀÀÀÀÀÁÁÀÀÂÀÀ...................","......ÀÀÃÃÄÃÃÄÄÄÄÂÀÀ...................","......ÀÀÃÃÄÃÃÄÄÄÄÂÀÀ...................","......ÀÀÄÄÃÄÄÄÄÂÂÂÂÂÀÀ.................","......ÀÀÄÄÃÄÄÄÄÂÂÂÂÂÀÀ.................","......ÀÀÃÃÄÄÄÄÄÄÄÂÂÂÂÂÀÀ...............","......ÀÀÄÄÃÄÄÄÄÂÂÀÀÀÀÀÀÀ...............","......ÀÀÄÄÃÄÄÄÄÂÂÀÀÀÀÀÀÀ...............","......ÀÀÃÃÄÄÄÄÄÄÄÂÂÂÂÂÀÀ...............","......ÀÀÃÃÄÄÄÄÄÄÄÂÂÂÂÂÀÀ...............","......ÀÀÄÄÄÂÂÄÄÂÂÂÅÅÀÀ.................","........ÀÀÀÀÀÀÀÀÀÀÀÀ...................","........ÀÀÀÀÀÀÀÀÀÀÀÀ...................",".....ÀÀÀÀÀÀÆÆÇÇÇÇÈÀÀÀÀ.................",".....ÀÀÀÀÀÀÆÆÇÇÇÇÈÀÀÀÀ.................","ÀÀÀÀÀÃÄÄÄÄÇÇÇÈÈÈÈÁÁÁÂÂÀÀÀÀÀÀÀ..........","ÀÀÀÀÀÃÄÄÄÄÇÇÇÈÈÈÈÁÁÁÂÂÀÀÀÀÀÀÀ..........","ÆÆÆÆÆÇÇÇÇÇÄÁÁÁÁÉÉÉÇÇÇÇÈÈÈÈÈÁÁÀ.........","ÆÆÆÇÇÇÈÈÈÈÁÊÊËËËËÇÈÈÈÈÈÈÈÁÁÉÉÉÀÀ.......","ÆÆÆÇÇÇÈÈÈÈÁÊÊËËËËÇÈÈÈÈÈÈÈÁÁÉÉÉÀÀ.......","ÇÇÇÈÈÈÈÈÁÁÁËËËËÌÌÈÈÈÈÈÁÁÁÍÍÇÇÎÀÀ.......","ÇÇÇÈÈÈÈÈÁÁÁËËËËÌÌÈÈÈÈÈÁÁÁÍÍÇÇÎÀÀ.......","ÇÈÈÁÁÁÁÁÉÉÂÏÏÐÐËËÄÄÄÂÂÉÉÍÎÎÄÄÅÅÅÀÀ.....","ÄÄÄÄÄÄÂÂÂÂËÐÐÐÐÌÌÄÂÂÂÂÑÑÂÅÅÅÅÃÀÀ.......","ÄÄÄÄÄÄÂÂÂÂËÐÐÐÐÌÌÄÂÂÂÂÑÑÂÅÅÅÅÃÀÀ.......","ÀÄÄÄÄÂÒÒÒÒÄÃÃÄÄÄÄÄÄÄÂÂÄÄÂÂÂÂÂÃÀÀÀÀÀÀÀ..","ÀÄÄÄÄÂÒÒÒÒÄÃÃÄÄÄÄÄÄÄÂÂÄÄÂÂÂÂÂÃÀÀÀÀÀÀÀ..",".ÀÀÀÀÀÒÒÓÓÄÄÄÄÄÂÂÄÂÂÇÇÇÇÇÇÇÇÇÇÇÇÇÇÇÇÔÀÀ",".ÀÀÀÀÀÒÒÓÓÄÄÄÄÄÂÂÄÂÂÇÇÇÇÇÇÇÇÇÇÇÇÇÇÇÇÔÀÀ",".....ÀÒÒÒÒÒÃÃÄÄÃÃÃÄÄÄÄÂÂÂÅÅÀÀÃÀÀÀÀÀÀÀ.."]}};
+'use strict';
+/* Boutons de commande (ordres, menus, Ancre) : 4 habillages, pictogramme seul + touche,
+   nom et effet au survol ; ils cohabitent avec les boutons d'objets et d'unités déjà en Laiton. */
+const W = 66, H = 46, GAP = 3, PAD = 3, SG = 14, SCALE = 2.5;
+
+/* ---------- outils ---------- */
+const BAY = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5].map(v => (v + .5) / 16);
+const bay = (x, y) => BAY[(y & 3) * 4 + (x & 3)];
+const ramp = (C, v, x, y) => { const n = C.length - 1, i = Math.floor(Math.max(0, Math.min(1, v)) * n + bay(x, y) - .5); return C[Math.max(0, Math.min(n, i))]; };
+function fill(r, x, y, w, h, C, f) { for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) px(r, x + i, y + j, ramp(C, f(i / (w - 1), j / (h - 1)), x + i, y + j)); }
+function frame(r, x, y, w, h, c) { line(r, x, y, x + w - 1, y, c); line(r, x, y + h - 1, x + w - 1, y + h - 1, c); line(r, x, y, x, y + h - 1, c); line(r, x + w - 1, y, x + w - 1, y + h - 1, c); }
+const hex = c => parseInt(c.slice(1), 16);
+const toHex = (r, g, b) => '#' + [r, g, b].map(v => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0')).join('');
+function shade(c, k) { const n = hex(c); return toHex((n >> 16) * k, ((n >> 8) & 255) * k, (n & 255) * k); }
+function blit(dst, src, dx, dy, map) { for (let y = 0; y < src.h; y++) for (let x = 0; x < src.w; x++) { const c = src.p[y * src.w + x]; if (!c) continue; const o = map ? map(c, x, y) : c; if (o) px(dst, dx + x, dy + y, o); } }
+const tone = C => c => c === OUT ? C[0] : C[1 + Math.min(C.length - 2, Math.floor(lum(c) * (C.length - 1) * 1.05))];
+const F = {'0': '111101101101111', '1': '010110010010111', '2': '111001111100111', '3': '111001111001111', '4': '101101111001001',
+  '5': '111100111001111', '6': '111100111101111', '7': '111001001010010', '8': '111101111101111', '9': '111101111001111',
+  'B': '110101110101110', 'P': '111101111100100', 'R': '110101110101101', 'O': '111101101101111', 'Y': '101101010010010',
+  'H': '101101111101101', 'M': '101111111101101', 'T': '111010010010010', 'S': '111100111001111', '›': '100010001010100'};
+const tw = s => s.length * 4 - 1;
+function text(r, s, x, y, c, sh, k = 1) {
+  const pass = (col, ox) => { let cx = x; for (const ch of s) { const g = F[ch]; if (g) for (let j = 0; j < 5; j++) for (let i = 0; i < 3; i++) if (g[j * 3 + i] === '1') rect(r, cx + i * k + ox, y + j * k + ox, k, k, col); cx += 4 * k; } };
+  if (sh) pass(sh, 1); pass(c, 0);
+}
+function padlock(r, x, y, c, d) { frame(r, x + 1, y, 3, 3, c); rect(r, x, y + 2, 5, 4, c); px(r, x + 2, y + 3, d); px(r, x + 2, y + 4, d); }
+// Touche : lettre, ou barre d'espace dessinée.
+function keyCap(r, x, y, key, bg, border, col) {
+  const w = key === ' ' ? 13 : tw(key) + 4;
+  rect(r, x, y, w, 9, bg); frame(r, x, y, w, 9, border);
+  if (key === ' ') { line(r, x + 3, y + 5, x + 9, y + 5, col); px(r, x + 3, y + 4, col); px(r, x + 9, y + 4, col); } else text(r, key, x + 2, y + 2, col);
+}
+
+/* ---------- pictogrammes 32 × 32 ---------- */
+const P = {
+  build(r) { rod(r, 8, 27, 19, 14, 1.6, M.wood); poly(r, [[14, 9], [24, 4], [28, 11], [19, 16]], M.iron[1]); poly(r, [[14, 9], [24, 4], [25, 6], [15, 11]], M.iron[3]); line(r, 19, 16, 28, 11, M.iron[0]); },
+  place(r) { poly(r, [[7, 25], [16, 21], [26, 25], [16, 29]], M.rock[1]); line(r, 7, 25, 16, 21, M.rock[3]);
+    for (let i = 0; i < 4; i++) { const x = 11 + i * 3; poly(r, [[x, 22], [x + 2, 21], [x + 2, 12], [x + 1, 10], [x, 12]], M.wood[i % 2 ? 1 : 2]); }
+    poly(r, [[16, 2], [21, 7], [18, 7], [18, 9], [14, 9], [14, 7], [11, 7]], '#eee3c9'); },
+  repair(r) { rod(r, 9, 25, 21, 13, 1.8, M.iron); disc(r, 23, 10, 5, M.iron[1]); disc(r, 22.5, 9.5, 3.8, M.iron[2]); poly(r, [[23, 4], [27, 8], [24, 11], [20, 7]], null);
+    for (let y = 3; y < 10; y++) for (let x = 21; x < 29; x++) if (x - y > 15 && x - y < 20 && y < 9) px(r, x, y, null); disc(r, 9, 25, 2.6, M.iron[1]); px(r, 9, 25, M.iron[0]);
+    [[5, 9], [7, 6], [4, 13]].forEach(([x, y]) => { px(r, x, y, M.flame[2]); px(r, x + 1, y, M.flame[3]); }); },
+  orb(r) { for (let a = 0; a < 6.283; a += .785) line(r, 16 + Math.cos(a) * 9, 16 + Math.sin(a) * 9, 16 + Math.cos(a) * 14, 16 + Math.sin(a) * 14, M.cyan[1]);
+    disc(r, 16, 16, 8, M.cyan[0]); disc(r, 15.5, 15.5, 6.8, M.cyan[1]); disc(r, 14.5, 14.5, 4.5, M.cyan[2]); disc(r, 13.5, 13.5, 1.8, M.cyan[3]); },
+  offering(r) { poly(r, [[6, 18], [26, 18], [23, 25], [9, 25]], M.copper[1]); line(r, 6, 18, 26, 18, M.copper[3]); line(r, 9, 25, 23, 25, M.copper[0]); rect(r, 13, 25, 6, 3, M.copper[0]); line(r, 10, 28, 22, 28, M.copper[1]);
+    poly(r, [[11, 18], [21, 18], [19, 11], [16, 4], [13, 10]], M.flame[1]); poly(r, [[13, 18], [19, 18], [18, 12], [16, 8], [14, 12]], M.flame[2]); rect(r, 15, 13, 2, 5, M.flame[3]); },
+  pray(r) { rect(r, 12, 14, 8, 14, M.fiber[3]); line(r, 12, 14, 12, 27, M.fiber[2]); line(r, 19, 14, 19, 27, M.fiber[1]); rect(r, 9, 27, 14, 2, M.copper[1]);
+    line(r, 16, 13, 16, 11, OUT); poly(r, [[16, 2], [19, 7], [18, 10], [14, 10], [13, 7]], M.moss[3]); poly(r, [[16, 5], [17, 8], [15, 8]], '#c8f5b0'); },
+  ability(r) { for (let a = 0; a < 6.283; a += .05) px(r, 16 + Math.cos(a) * 10, 16 + Math.sin(a) * 10, M.red[2]); for (let a = 0; a < 6.283; a += .08) px(r, 16 + Math.cos(a) * 5, 16 + Math.sin(a) * 5, M.red[2]);
+    [[16, 3, 16, 9], [16, 23, 16, 29], [3, 16, 9, 16], [23, 16, 29, 16]].forEach(a => line(r, ...a, M.iron[3])); disc(r, 16, 16, 1.3, M.red[3]); },
+  hold(r) { rod(r, 10, 29, 10, 4, 1.2, M.wood); poly(r, [[11, 5], [25, 6], [22, 11], [25, 16], [11, 15]], M.blue[2]); line(r, 11, 5, 25, 6, M.blue[3]); line(r, 11, 15, 25, 16, M.blue[0]);
+    poly(r, [[15, 8], [19, 8], [19, 11], [17, 13], [15, 11]], M.gold[2]); poly(r, [[5, 29], [16, 29], [14, 26], [7, 26]], M.rock[2]); },
+  move(r) { poly(r, [[10, 6], [17, 6], [17, 19], [25, 21], [26, 26], [10, 26]], M.wood[1]); line(r, 10, 6, 17, 6, M.wood[3]); line(r, 17, 19, 25, 21, M.wood[2]); rect(r, 10, 26, 16, 2, M.bark[0]); rect(r, 10, 9, 7, 2, M.wood[0]);
+    [[3, 12], [3, 17], [5, 22]].forEach(([x, y]) => line(r, x, y, x + 4, y, M.cord[3])); },
+  page(r) { poly(r, [[4, 8], [15, 10], [15, 26], [4, 24]], M.fiber[3]); poly(r, [[17, 10], [28, 8], [28, 24], [17, 26]], M.fiber[2]); rect(r, 15, 10, 2, 17, M.wood[1]);
+    for (let y = 13; y < 23; y += 3) { line(r, 6, y, 13, y + 1, M.fiber[0]); line(r, 19, y + 1, 26, y, M.fiber[0]); }
+    poly(r, [[22, 2], [30, 6], [22, 10]], M.gold[2]); },
+  back(r) { const pts = []; for (let a = -.3; a <= 3.6; a += .05) pts.push([17 + Math.cos(a) * 9, 18 - Math.sin(a) * 9]); pts.forEach(([x, y]) => disc(r, x, y, 1.8, M.iron[2])); pts.forEach(([x, y]) => px(r, x, y - 1, M.iron[3]));
+    poly(r, [[3, 16], [13, 16], [8, 24]], M.iron[2]); },
+};
+const ICON = {};
+Object.keys(P).forEach(k => { const r = R(32, 32); P[k](r); outline(r); ICON[k] = r; });
+['torch'].forEach(k => { const r = R(32, 32); DRAW[k](r); outline(r); ICON[k] = r; });
+{ const s = SPRITES.shooter, r = R(s.w, s.h); s.rows.forEach((row, y) => [...row].forEach((ch, x) => { if (ch !== '.') px(r, x, y, s.pal[ch.charCodeAt(0) - 192]); })); ICON.shooter = r; }
+
+/* ---------- données ---------- */
+// fam : construction, ancre (culte), combat, navigation ; obj : bouton d'objet ou d'unité déjà en Laiton.
+const CMDS = [
+  {ic: 'build', key: 'B', fam: 'c', name: 'Construire', eff: 'Ouvre le menu des temples et des bâtiments'},
+  {ic: 'place', key: 'P', fam: 'c', name: 'Poser', eff: 'Poste de tir, barricade, chausse-trappe', count: 7},
+  {ic: 'repair', key: 'R', fam: 'c', name: 'Réparer', eff: 'Répare l’Ancre · +15 % d’intégrité', st: {cd: .55, cdText: '12'}},
+  {ic: 'orb', key: 'R', fam: 'a', name: 'Réactiver', eff: 'L’Ingénieur réactive l’Ancre · 8 s', st: {active: true}},
+  {ic: 'offering', key: 'O', fam: 'a', name: 'Offrande tyrienne', eff: '100 de chaque mana · +50 menace · réutilisable', st: {poor: true}},
+  {ic: 'pray', key: 'Y', fam: 'a', name: 'Prier', eff: 'Prier au temple de son dieu', st: {locked: true}, why: 'Aucun temple de son dieu'},
+  {ic: 'ability', key: ' ', fam: 'f', name: 'Tir de précision', eff: 'Compétence · recharge 20 s', st: {cd: .3, cdText: '6'}},
+  {ic: 'hold', key: 'H', fam: 'f', name: 'Position', eff: 'Tenir position', st: {active: true}},
+  {ic: 'move', key: 'M', fam: 'f', name: 'Déplacer', eff: 'Choisir une destination'},
+  {ic: 'page', key: 'P', fam: 'n', name: 'Atelier ›', eff: 'Catégorie suivante · Forge'},
+  {ic: 'back', key: 'B', fam: 'n', name: 'Retour', eff: 'Revenir aux ordres de l’Ingénieur (B ou Échap)'},
+  {ic: 'torch', key: '1', obj: true, name: 'Torche', eff: '1 Bois (8) · 9 s', count: 12},
+  {ic: 'shooter', key: 'T', obj: true, name: 'Tireur', eff: '100 de chaque mana · héros invoqué à l’Ancre'}];
+const STRIP = [['Repos', {}], ['Survol', {hover: true}], ['Armé / actif', {active: true}], ['Recharge', {cd: .6, cdText: '12'}], ['Mana insuffisant', {poor: true}], ['Indisponible', {locked: true}]];
+const FAM = {c: ['#5a3a10', '#a06a1c', '#e8a840'], a: ['#14404a', '#2a7a88', '#5fc8d8'], f: ['#4a1414', '#8a2a24', '#d0584a'], n: ['#2a2e36', '#4e5866', '#8a94a2']};
+
+/* ---------- bouton Laiton commun (fond, cadre, touche) ---------- */
+function brass(r, x, y, s) {
+  const lit = !s.locked && (s.active || s.hover);
+  if (lit) fill(r, x, y, W, H, ['#7a561e', '#5a4018', '#382c14', '#201e12'], (u, v) => Math.hypot((u - .5) * 1.1, v - .3) * 1.5);
+  else fill(r, x, y, W, H, s.locked ? ['#24261f', '#1a1c17', '#101510'] : ['#2d2b21', '#22231b', '#181c15', '#121712'], (u, v) => u * .4 + v * .6);
+  frame(r, x, y, W, H, s.locked ? '#565443' : lit ? '#ffe0a0' : '#aa8851');
+  frame(r, x + 1, y + 1, W - 2, H - 2, lit ? '#c29148' : '#131710');
+  if (s.active) { frame(r, x + 2, y + 2, W - 4, H - 4, '#ffe0a0'); }
+  return lit;
+}
+function brassKey(r, x, y, s, lit) {
+  keyCap(r, x + 3, y + 3, s.key, '#10140d', s.poor ? '#c0584c' : s.locked ? '#4d4f40' : '#8c744b', s.poor ? '#f0a090' : s.locked ? '#7c7c6c' : lit ? '#ffe5ac' : '#eee3c9');
+}
+// Recharge : voile sombre qui se retire de bas en haut, secondes au centre en grand.
+function cooldown(r, x, y, s, veil, ink, sh) {
+  if (!s.cd) return;
+  const hh = Math.round((H - 4) * s.cd);
+  for (let j = 0; j < hh; j++) for (let i = 0; i < W - 4; i++) if ((i + j) % 2 === 0) px(r, x + 2 + i, y + 2 + j, veil);
+  line(r, x + 2, y + 2 + hh, x + W - 3, y + 2 + hh, ink);
+  const t = s.cdText; text(r, t, x + Math.round((W - tw(t) * 2) / 2), y + 16, ink, sh, 2);
+}
+function count(r, x, y, n) { if (!n) return; const t = String(n), w = tw(t) + 6;
+  rect(r, x + W - 3 - w, y + H - 12, w, 9, '#5a1e22'); frame(r, x + W - 3 - w, y + H - 12, w, 9, '#c0584c'); text(r, t, x + W - w, y + H - 10, '#ffe0d4'); }
+// Bouton d'objet / d'unité tel qu'il est en jeu (piste Laiton), pour juger de la cohabitation.
+function objectButton(r, x, y, d, s) {
+  const lit = brass(r, x, y, s), src = ICON[d.ic];
+  blit(r, src, x + Math.round((W - src.w) / 2), src.h > 32 ? y + H - src.h - 3 : y + 6, s.locked ? c => shade(c, .45) : null);
+  brassKey(r, x, y, s, lit); count(r, x, y, d.count);
+}
+
+/* ---------- 4 habillages ---------- */
+const T = [];
+const BRASS = ['#0b090b', '#5a4018', '#a07a3a', '#d8b070', '#ffe5ac'], BRASS_LIT = ['#0b090b', '#7a5a24', '#c8a050', '#f0d090', '#fff4d0'], ASH = ['#0b090b', '#3a3a30', '#5a5a4c', '#7c7c6c', '#8a8a7a'];
+
+T.push({id: 1, name: 'Gravure de laiton', cls: 'bb-brass',
+  sub: 'le pictogramme frappé dans le laiton, en camaïeu d’or',
+  intent: 'Même bouton Laiton que les objets, mais le pictogramme est <b>monochrome, en camaïeu d’or</b>, comme gravé dans le cadre. Au premier coup d’œil, la couleur dit « objet ou unité » et l’or dit « ordre ». Armé, le bouton prend un second filet clair ; en recharge, un voile se retire de bas en haut et les secondes s’inscrivent en grand.',
+  button(r, x, y, d, s) {
+    if (d.obj) return objectButton(r, x, y, d, s);
+    const lit = brass(r, x, y, s);
+    blit(r, ICON[d.ic], x + 17, y + 6, tone(s.locked ? ASH : lit ? BRASS_LIT : BRASS));
+    cooldown(r, x, y, s, '#0a0c08', '#ffe5ac', '#0a0c08');
+    brassKey(r, x, y, s, lit); count(r, x, y, d.count);
+    if (s.locked) padlock(r, x + 4, y + H - 10, '#8a8a7a', '#24261f');
+  }});
+
+T.push({id: 2, name: 'Pictogramme en couleur', cls: 'bb-brass',
+  sub: 'les ordres dessinés en couleur, exactement comme les objets',
+  intent: 'Un seul langage pour tout le panneau : l’ordre est un petit objet en couleur (marteau, botte, bannière, orbe), avec contour noir franc. C’est le plus riche et le plus homogène, mais <b>ordres et objets se confondent</b> dans l’Atelier ou au menu Poser, où ils voisinent.',
+  button(r, x, y, d, s) {
+    if (d.obj) return objectButton(r, x, y, d, s);
+    const lit = brass(r, x, y, s);
+    blit(r, ICON[d.ic], x + 17, y + 6, s.locked ? c => shade(c, .4) : null);
+    cooldown(r, x, y, s, '#0a0c08', '#ffe5ac', '#0a0c08');
+    brassKey(r, x, y, s, lit); count(r, x, y, d.count);
+    if (s.locked) padlock(r, x + 4, y + H - 10, '#8a8a7a', '#24261f');
+  }});
+
+T.push({id: 3, name: 'Médaillon rond', cls: 'bb-brass',
+  sub: 'l’ordre est un médaillon de bronze serti dans le bouton',
+  intent: 'La <b>forme</b> sépare les deux familles : objets et unités sur fond carré, ordres dans un médaillon rond de bronze, pictogramme en relief ivoire et ombre. En recharge, l’anneau du médaillon se remplit dans le sens des aiguilles d’une montre, comme une horloge.',
+  button(r, x, y, d, s) {
+    if (d.obj) return objectButton(r, x, y, d, s);
+    const lit = brass(r, x, y, s), cx = x + 33, cy = y + 23;
+    const C = s.locked ? ['#2a2a24', '#3a3a30', '#4a4a3e'] : lit ? ['#5a3e22', '#9a7044', '#d4a872'] : ['#3a2616', '#6a4a2c', '#a07448'];
+    disc(r, cx + .5, cy + 1, 18.5, OUT); disc(r, cx, cy, 18.3, C[0]); disc(r, cx, cy, 17, C[1]); disc(r, cx - .5, cy - .5, 15.5, shade(C[1], .8));
+    for (let a = 3.4; a < 5.4; a += .03) px(r, cx + Math.cos(a) * 17, cy + Math.sin(a) * 17, C[2]);
+    if (s.cd) for (let a = 0; a < 6.283 * (1 - s.cd); a += .02) { const t = a - Math.PI / 2; px(r, cx + Math.cos(t) * 17.4, cy + Math.sin(t) * 17.4, '#ffe0a0'); px(r, cx + Math.cos(t) * 16.6, cy + Math.sin(t) * 16.6, '#ffe0a0'); }
+    const ink = s.locked ? ['#0b090b', '#2a2a24', '#5a5a4c', '#6a6a58', '#7a7a68'] : ['#0b090b', shade(C[1], .55), '#cdb894', '#ecdcb0', '#fff6dc'];
+    blit(r, ICON[d.ic], cx - 16, cy - 15, tone(ink));
+    brassKey(r, x, y, s, lit); count(r, x, y, d.count);
+    if (s.locked) padlock(r, x + 4, y + H - 10, '#8a8a7a', '#24261f');
+    if (s.cd) { const t = s.cdText; rect(r, x + W - 6 - tw(t), y + 3, tw(t) + 4, 9, '#10140d'); text(r, t, x + W - 4 - tw(t), y + 5, '#ffe5ac'); }
+  }});
+
+T.push({id: 4, name: 'Émail par famille', cls: 'bb-brass',
+  sub: 'une plaque émaillée dont la couleur dit le domaine de l’ordre',
+  intent: 'Le pictogramme ivoire est posé sur une <b>plaque d’émail</b> : ambre pour la construction, cyan pour l’Ancre et le culte, rouge pour le combat, ardoise pour la navigation. On retrouve un ordre par sa couleur avant de le lire ; mais c’est quatre couleurs de plus dans un HUD déjà chargé.',
+  button(r, x, y, d, s) {
+    if (d.obj) return objectButton(r, x, y, d, s);
+    const lit = brass(r, x, y, s), E = s.locked ? ['#1a1c17', '#2a2c24', '#3a3c32'] : FAM[d.fam];
+    const ex = x + 13, ey = y + 5, ew = 40, eh = 36;
+    fill(r, ex, ey, ew, eh, lit ? [E[1], E[2], E[1]] : [E[0], E[1], E[0]], (u, v) => Math.hypot(u - .5, v - .4) * 1.4);
+    frame(r, ex - 1, ey - 1, ew + 2, eh + 2, s.locked ? '#4d4f40' : '#c29148'); frame(r, ex, ey, ew, eh, OUT);
+    blit(r, ICON[d.ic], ex + 4, ey + 2, tone(s.locked ? ASH : ['#0b090b', shade(E[0], .6), '#cdb894', '#ecdcb0', '#fff6dc']));
+    cooldown(r, x, y, s, '#0a0c08', '#ffe5ac', '#0a0c08');
+    brassKey(r, x, y, s, lit); count(r, x, y, d.count);
+    if (s.locked) padlock(r, x + 4, y + H - 10, '#8a8a7a', '#24261f');
+  }});
+
+/* ---------- rendu ---------- */
+function toCanvasInto(c, r) { c.width = r.w; c.height = r.h; const g = c.getContext('2d'), im = g.createImageData(r.w, r.h);
+  r.p.forEach((col, i) => { if (!col || col[0] !== '#') return; const n = hex(col); im.data[i * 4] = n >> 16; im.data[i * 4 + 1] = n >> 8 & 255; im.data[i * 4 + 2] = n & 255; im.data[i * 4 + 3] = 255; });
+  g.putImageData(im, 0, 0); }
+const BASE = {active: false, locked: false, poor: false, hover: false, cd: 0};
+const COLS = 7, ROWS = Math.ceil(CMDS.length / COLS);
+const PW = COLS * W + (COLS - 1) * GAP + 2 * PAD, PH = ROWS * H + (ROWS - 1) * GAP + 2 * PAD;
+const cellPos = i => [PAD + (i % COLS) * (W + GAP), PAD + (i / COLS | 0) * (H + GAP)];
+const SW = STRIP.length * W + (STRIP.length - 1) * SG + 2 * PAD;
+const bubbleHTML = d => `<b>${d.name}</b><span>${d.eff}</span>${d.why ? `<em>${d.why}</em>` : d.st && d.st.cd ? `<em>Recharge · ${d.st.cdText} s</em>` : d.st && d.st.poor ? '<em>Mana insuffisant</em>' : ''}`;
+const views = [], root = document.getElementById('root');
+T.forEach(tr => {
+  const sec = document.createElement('section'); sec.className = tr.cls;
+  sec.innerHTML = `<h2>${tr.id} · ${tr.name}</h2><p class="sub">${tr.sub}</p><p>${tr.intent}</p>
+  <div class="wrap panel"><canvas style="width:${PW * 2}px"></canvas><div class="bubble" hidden></div></div>
+  <div class="hint">Ordres de l’Ingénieur, de l’Ancre, d’un adepte et de l’Entrepôt réunis ; les deux derniers boutons (Torche, Tireur) sont un objet et une unité tels qu’ils sont en jeu.</div>
+  <div class="wrap strip"><canvas style="width:${SW * 1.6}px"></canvas></div>
+  <div class="labels" style="width:${SW * 1.6}px;grid-template-columns:repeat(${STRIP.length},1fr)">${STRIP.map(s => `<span>${s[0]}</span>`).join('')}</div>`;
+  root.appendChild(sec);
+  const [pc, sc] = sec.querySelectorAll('canvas'), pb = sec.querySelector('.bubble');
+  const v = {tr, pc, sc, pb, hover: -1}; views.push(v);
+  pc.addEventListener('mousemove', e => { const b = pc.getBoundingClientRect(), s = b.width / PW, mx = (e.clientX - b.left) / s, my = (e.clientY - b.top) / s;
+    let h = -1; CMDS.forEach((_, i) => { const [x, y] = cellPos(i); if (mx >= x && mx < x + W && my >= y && my < y + H) h = i; });
+    if (h !== v.hover) { v.hover = h; place(v); } });
+  pc.addEventListener('mouseleave', () => { v.hover = -1; place(v); });
+});
+function place(v) {
+  if (v.hover < 0) { v.pb.hidden = true; return; }
+  const [x, y] = cellPos(v.hover), s = v.pc.getBoundingClientRect().width / PW;
+  v.pb.innerHTML = bubbleHTML(CMDS[v.hover]); v.pb.hidden = false;
+  v.pb.style.left = Math.max(0, Math.min(v.pc.clientWidth - v.pb.offsetWidth, (x + W / 2) * s - v.pb.offsetWidth / 2)) + 'px';
+  v.pb.style.top = (PAD * s - v.pb.offsetHeight - 6) + 'px';
+}
+function frameAll() {
+  views.forEach(v => {
+    const r = R(PW, PH); fill(r, 0, 0, PW, PH, ['#171c15', '#121612', '#0e120e'], (u, w) => w); frame(r, 0, 0, PW, PH, '#6e5a36');
+    CMDS.forEach((d, i) => { const [x, y] = cellPos(i); v.tr.button(r, x, y, d, Object.assign({}, BASE, d.st || {}, {key: d.key, hover: i === v.hover})); });
+    toCanvasInto(v.pc, r);
+    const q = R(SW, H + 2 * PAD);
+    STRIP.forEach(([, o], j) => v.tr.button(q, PAD + j * (W + SG), PAD, CMDS[8], Object.assign({}, BASE, {key: 'M'}, o)));
+    toCanvasInto(v.sc, q);
+  });
+}
+frameAll();
+</script>
+</body></html>

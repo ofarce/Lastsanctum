@@ -32,7 +32,7 @@ func test_appears_alone_at_500_menace_and_cancels_the_assault() -> void:
 	check(GameState.martyre == null, "pas avant 500")
 	var e := _boss(sim)
 	check(e != null and e.kind == Martyre.KIND, "elle apparaît")
-	check_eq(e.max_hp, 500.0, "500 PV")
+	check_eq(e.max_hp, 2000.0, "2000 PV")
 	check(GameState.spawn_queue.is_empty(), "le reste de l'assaut est annulé")
 	check_eq(GameState.martyre_state, "waiting")
 	Martyre.tick(sim)
@@ -58,11 +58,11 @@ func test_shield_blocks_everyone_but_the_engineer() -> void:
 	eng.x = e.x + Martyre.RADIUS + 5.0
 	eng.z = e.z
 	sim.combat.damage(e, 50.0, eng)
-	check_eq(e.hp, 500.0, "Ingénieur dehors")
+	check_eq(e.hp, 2000.0, "Ingénieur dehors")
 	var adept := sim.spawn("A", e.x + 3.0, e.z, "indra")
 	sim.combat.damage(e, 50.0, adept)
 	sim.combat.damage(e, 50.0)
-	check_eq(e.hp, 500.0, "autres sources")
+	check_eq(e.hp, 2000.0, "autres sources")
 	check(Combat.target_closest(eng, GameState.enemies, 1e9) == null, "rien ne vise à travers le bouclier")
 	check(Combat.target_closest({"x": e.x - Martyre.RADIUS - 2.0, "z": e.z}, GameState.enemies, 1e9) == null, "ni les balistes")
 	# L'adepte est repoussé au bord, l'Ingénieur passe.
@@ -72,7 +72,7 @@ func test_shield_blocks_everyone_but_the_engineer() -> void:
 	Martyre.enforce(sim)
 	check(Martyre.inside(eng), "l'Ingénieur traverse")
 	sim.combat.damage(e, 50.0, eng)
-	check(e.hp < 500.0, "l'Ingénieur la blesse de l'intérieur")
+	check(e.hp < 2000.0, "l'Ingénieur la blesse de l'intérieur")
 	check(Combat.target_closest(eng, GameState.enemies, 1e9) == e, "et peut la viser")
 
 
@@ -103,7 +103,7 @@ func test_duel_starts_inside_and_hits_for_ten() -> void:
 	run(sim, Martyre.IMPACT * 0.5)
 	check_eq(eng.hp, before, "pas avant l'impact")
 	run(sim, Martyre.IMPACT * 0.6)
-	check_near(before - eng.hp, Martyre.DAMAGE, 1e-6, "10 dégâts")
+	check_near(before - eng.hp, Martyre.DAMAGE * Martyre.DAMAGE_MULT, 1e-6, "20 dégâts")
 
 
 func test_stepping_away_dodges_the_blow() -> void:
@@ -134,7 +134,7 @@ func test_leaving_the_dome_ends_the_duel_without_healing() -> void:
 	sim.tick(DT)
 	check_eq(GameState.martyre_state, "waiting")
 	run(sim, 3.0)
-	check(e.hp < 500.0, "pas de soin")
+	check(e.hp < 2000.0, "pas de soin")
 
 
 func test_objective_interrupts_then_resumes_quest() -> void:
@@ -176,14 +176,14 @@ func _range_duel(sim: Simulation, dist: float, fissure: bool, seals: bool) -> Ar
 	e.z = Martyre.center().y
 	_into_dome(eng, Vector2(dist, 0.0))
 	var now := GameState.sim_time
-	GameState.martyre_ready = {"fissure": now if fissure else INF, "seals": now if seals else INF}
+	GameState.martyre_next = ["fissure"] if fissure else ["rosace"] if seals else []
+	GameState.martyre_next_at = now if fissure or seals else INF
 	return [e, eng]
 
 
 func test_cadence_is_thirty_percent_faster() -> void:
 	check_near(Catalog.ENEMY[Martyre.KIND]["cd"], 3.0 / 1.3, 1e-6, "recharge de la frappe")
 	check_near(Martyre.IMPACT, 0.5 / 1.3, 1e-6, "impact")
-	check_near(Martyre.FISSURE["cd"], 7.0 / 1.3, 1e-6)
 	check_near(Martyre.SEALS["charge"], 1.3 / 1.3, 1e-6)
 	var meta: Dictionary = EnemyArt.all()[Martyre.KIND]
 	check_near(float(meta["attack"]["duration"]), 1.0 / 1.3, 1e-3, "animation de frappe")
@@ -198,12 +198,12 @@ func test_fissure_runs_to_the_aimed_spot_then_erupts() -> void:
 	check_eq(GameState.martyre_hit_kind, "fissure", "geste de la fissure")
 	run(sim, Martyre.IMPACT + 0.05)
 	var f: Array = GameState.martyre_fx.filter(func(o: Dictionary) -> bool: return o["type"] == "fissure")
-	check_eq(f.size(), 1, "la faille part")
-	var end := Vector2(f[0]["x1"], f[0]["z1"])
+	check_eq(f.size(), Martyre.FISSURE["count"], "trois failles en éventail")
+	var end := Vector2(f[1]["x1"], f[1]["z1"])
 	check(end.distance_to(eng.pos()) < 0.5, "vers la position visée")
 	var before := eng.hp
 	run(sim, float(f[0]["erupt"]) - GameState.sim_time + 0.05)
-	check_near(before - eng.hp, Martyre.FISSURE["damage"], 1e-6, "12 dégâts à l'éruption")
+	check_near(before - eng.hp, Martyre.FISSURE["damage"] * Martyre.DAMAGE_MULT, 1e-6, "24 dégâts à l'éruption")
 	check(eng.stunned_until > GameState.sim_time, "étourdi")
 	run(sim, Martyre.FISSURE["erupt"] + Martyre.FISSURE["cool"] + 0.1)
 	check(GameState.martyre_fx.is_empty(), "la faille s'éteint")
@@ -214,9 +214,11 @@ func test_leaving_the_aimed_spot_dodges_the_fissure() -> void:
 	var pair := _range_duel(sim, 12.0, true, false)
 	var eng: Unit = pair[1]
 	sim.tick(DT)
-	_into_dome(eng, Vector2(12.0, 6.0))
+	# Hors de l'éventail : au-delà de la faille latérale (35°).
+	_into_dome(eng, Vector2(12.0, 14.0))
 	var before := eng.hp
-	run(sim, 1.6)
+	# Avant que l'anneau de l'éruption ou les braises n'atteignent l'écart.
+	run(sim, 1.2)
 	check_eq(eng.hp, before, "esquivée")
 
 
@@ -235,7 +237,7 @@ func test_seals_fall_under_the_engineer() -> void:
 	run(sim, Martyre.SEALS["charge"] * 0.5)
 	check_eq(eng.hp, before, "pas pendant la charge")
 	run(sim, Martyre.SEALS["charge"] * 0.6)
-	check_near(before - eng.hp, Martyre.SEALS["damage"], 1e-6, "14 dégâts")
+	check_near(before - eng.hp, Martyre.SEALS["damage"] * Martyre.DAMAGE_MULT, 1e-6, "28 dégâts")
 
 
 func test_stunned_engineer_neither_moves_nor_attacks() -> void:
@@ -283,3 +285,58 @@ func test_view_plays_cast_and_hurt() -> void:
 	v._update()
 	check((body.texture as AtlasTexture).atlas.resource_path.ends_with("martyre_hit.png"), "touchée")
 	v.queue_free()
+
+
+func test_bullet_hits_once_then_engineer_is_invulnerable() -> void:
+	var sim := game()
+	var pair := _range_duel(sim, 10.0, false, false)
+	var eng: Unit = pair[1]
+	sim.tick(DT)
+	var before := eng.hp
+	for k in 3:
+		Martyre.shoot(eng.x - 0.1 * k, eng.z, 0.0, 0.0)
+	sim.tick(DT)
+	check_near(before - eng.hp, Martyre.BULLET["damage"] * Martyre.DAMAGE_MULT, 1e-6, "une seule balle porte")
+	check(GameState.martyre_iframe_until > GameState.sim_time, "invulnérable un instant")
+	run(sim, Martyre.IFRAMES * 0.5)
+	check_near(before - eng.hp, Martyre.BULLET["damage"] * Martyre.DAMAGE_MULT, 1e-6, "les autres le traversent")
+
+
+func test_litanie_walls_leave_the_announced_gap() -> void:
+	var sim := game()
+	var pair := _range_duel(sim, 10.0, false, false)
+	GameState.martyre_next = ["litanie"]
+	GameState.martyre_next_at = GameState.sim_time
+	sim.tick(DT)
+	run(sim, Martyre.LITANIE["warn"] + 0.05)
+	var lanes: Array = GameState.martyre_fx.filter(func(f: Dictionary) -> bool: return f["type"] == "lane")
+	check_eq(lanes.size(), 1, "un couloir annoncé")
+	check(GameState.martyre_bullets.size() > 30, "le mur part")
+	var th: float = lanes[0]["th"]
+	var g: float = lanes[0]["g"]
+	var p := Vector2(-sin(th), cos(th))
+	check(GameState.martyre_bullets.all(func(b: Dictionary) -> bool:
+		return absf((Vector2(b["x"], b["z"]) - Martyre.center()).dot(p) - g) >= Martyre.LITANIE["gap"] - 1e-3), "brèche libre")
+	check(pair[1] != null, "duel")
+
+
+func test_phase_change_extinguishes_bullets_then_phase_three_shrinks_the_dome() -> void:
+	var sim := game()
+	var pair := _range_duel(sim, 10.0, false, false)
+	var e: Enemy = pair[0]
+	var eng: Unit = pair[1]
+	sim.tick(DT)
+	Martyre.ring(e.x, e.z, 12, 3.0, 0.0)
+	e.hp = e.max_hp * 0.5
+	sim.tick(DT)
+	check_eq(GameState.martyre_phase, 1, "phase II")
+	check(GameState.martyre_bullets.is_empty(), "balles éteintes")
+	check(GameState.martyre_fx.any(func(f: Dictionary) -> bool: return f["type"] == "mote"), "en éclats")
+	check_near(Martyre.radius(), Martyre.RADIUS, 1e-6, "bouclier entier")
+	e.hp = e.max_hp * 0.2
+	sim.tick(DT)
+	check_eq(GameState.martyre_phase, 2, "phase III")
+	eng.hp = 1e6
+	run(sim, Martyre.SHRINK + 0.1)
+	check_near(Martyre.radius(), Martyre.RADIUS_III, 1e-6, "18 cases")
+	check(Martyre.inside(eng), "l'Ingénieur reste dedans")

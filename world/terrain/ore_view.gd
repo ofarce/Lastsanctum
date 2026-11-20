@@ -9,6 +9,9 @@ var state: TerrainState
 var cell: Vector2i
 var region: Rect2
 var phase: float
+## Reflet présent sur la dernière image dessinée.
+var _glint := false
+const GLINT_NEAR := 0.6
 
 
 func setup(terrain_state: TerrainState, key: Vector2i) -> void:
@@ -27,13 +30,16 @@ func _process(_delta: float) -> void:
 		queue_free()
 		return
 	visible = cell != TerrainState.VAULT_COPPER or state.vault_open
-	if visible:
+	# Le reflet ne paraît que lorsque le sinus dépasse 0,90 : redessin seulement à son approche (marge large, le
+	# temps de simulation peut encore avancer avant le dessin) et une dernière fois pour l'effacer.
+	if visible and (_glint or sin(GameState.sim_time * 1.65 + phase) > GLINT_NEAR):
 		queue_redraw()
 
 
 func _draw() -> void:
 	draw_texture_rect_region(atlas, Rect2(-16, -16, 32, 32), region)
 	var light := clampf((sin(GameState.sim_time * 1.65 + phase) - 0.90) * 10.0, 0.0, 1.0)
+	_glint = light > 0.0
 	if light > 0.0:
 		var glint := Color(1, 0.96, 0.87, light * 0.85)
 		draw_rect(Rect2(-5, -3, 3, 1), glint)

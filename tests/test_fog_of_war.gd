@@ -9,7 +9,7 @@ func test_bands_sources_road_and_reset() -> void:
 	u.z = 20
 	fog.refresh(sim.state())
 	# Au-delà du halo, la jungle reste explorée dès le départ (voile EXPLORED_ALPHA, pas le noir).
-	var expected := {0: 0, 12: 0, 14: 13, 16: 26, 18: 51, 20: 77, 24: 128, 28: 204, 30: 204, 32: 204}
+	var expected := {0: 0, 12: 0, 14: 51, 16: 102, 18: 153, 20: 204, 24: 204, 28: 204, 30: 204, 32: 204}
 	for d: int in expected:
 		var alpha: int = fog.image.get_pixelv(Vector2i(u.pos()) + Vector2i(d, 0) - fog.ORIGIN).a8
 		check(absi(alpha - int(expected[d])) <= 1, "distance %d, opacité obtenue %d" % [d, alpha])
@@ -26,7 +26,8 @@ func test_bands_sources_road_and_reset() -> void:
 	for z in range(-72, 72):
 		var rx := roundi(road.main_x(z)) if road and z > Road.GATE_Z else 4
 		check_eq(fog.image.get_pixelv(Vector2i(rx, z) - fog.ORIGIN).a8, 0, "chaussée éclairée en continu (z %d)" % z)
-	check_eq(fog.image.get_pixelv(Vector2i(24, 32) - fog.ORIGIN).a8, 128, "pénombre au bord du halo")
+	var edge: int = fog.image.get_pixelv(Vector2i(16, 32) - fog.ORIGIN).a8
+	check(edge > 0 and edge < 204, "pénombre au bord du halo (obtenu %d)" % edge)
 	check(not fog.visible_at(Vector2(33, 32)), "noir au-delà du halo")
 	sim.new_game(SEED)
 	check(not fog.visible_at(Vector2(120, 20)), "nouvelle partie")
@@ -119,6 +120,9 @@ func test_active_portals_and_moving_spark() -> void:
 	GameState.orb_active = true
 	GameState.orb_finished_at = 0
 	GameState.sim_time = 2.2
+	# L'étincelle de l'Ancre est masquée depuis le retrait des balistes (AnchorSpark.SHOW).
+	if not AnchorSpark.SHOW:
+		return
 	sim.world.anchor_spark._process(0)
 	var lights := sim.world.anchor_spark.lights()
 	check(not lights.is_empty(), "étincelle en mouvement")

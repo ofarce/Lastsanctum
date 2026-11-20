@@ -1,0 +1,337 @@
+<title>Galeries du Temple</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Cormorant+SC:wght@500;700&display=swap">
+<style>
+/* Planche de jeu, sombre par choix : une rangée par proposition, texte à gauche, vignette en pixels natifs du monde à droite,
+   posée sur le dallage et la roche réels de la grotte. Accent = quartz laiteux, la lumière de l'ardoise tyrienne. */
+:root{--bg:#12141a;--panel:#1a1d26;--line:#2f3440;--fg:#dcdde4;--mute:#8c92a3;--acc:#efeadc;--acc-dk:#5d6678;
+ --disp:"Cormorant SC",Georgia,serif;--mono:"Share Tech Mono",ui-monospace,monospace;color-scheme:dark}
+body{background:var(--bg);color:var(--fg);font:14px/1.5 system-ui,sans-serif;margin:0;
+ padding-block:24px 60px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+main{max-width:1080px;margin:0 auto;display:flex;flex-direction:column;gap:26px}
+h1{font-family:var(--disp);font-size:2.3rem;line-height:1.1;margin:0;letter-spacing:.04em;text-wrap:balance}
+.lead{color:var(--mute);max-width:70ch;margin:.5rem 0 0}
+.reco{border-left:3px solid var(--acc-dk);padding:2px 0 2px 14px;max-width:76ch}
+.reco p{margin:.3rem 0 0}
+.reco b{color:var(--acc);font-weight:600}
+.tools{position:sticky;top:env(safe-area-inset-top,0px);background:var(--bg);padding:10px 0;z-index:3;display:flex;flex-wrap:wrap;gap:10px;align-items:center;font-family:var(--mono);font-size:12px;border-bottom:1px solid var(--line)}
+.tools span{color:var(--mute)}
+button{font:inherit;font-family:var(--mono);font-size:12px;background:var(--panel);color:var(--fg);border:1px solid var(--line);padding:5px 12px;cursor:pointer}
+button:hover{border-color:var(--acc-dk)}
+button:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+button[aria-pressed="true"]{background:var(--acc-dk);border-color:var(--acc);color:#fff}
+.part{display:flex;flex-direction:column;gap:6px;padding-top:10px}
+.part>h2{font-size:1.9rem}
+.part>p{margin:0;color:var(--mute);max-width:72ch}
+section.m{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,560px);gap:8px 24px;align-items:start;padding-top:22px;border-top:1px solid var(--line)}
+@media (max-width:820px){section.m{grid-template-columns:minmax(0,1fr)}}
+.txt{min-width:0}
+h2{font-family:var(--disp);font-size:1.6rem;line-height:1.15;margin:0;text-wrap:balance}
+h2 i{font-family:var(--mono);font-style:normal;font-size:1rem;color:var(--acc);margin-right:10px}
+.txt p{margin:.45rem 0 0;max-width:60ch}
+.txt dl{margin:.7rem 0 0;display:grid;grid-template-columns:auto minmax(0,1fr);gap:3px 12px;font-size:13px}
+.txt dt{font-family:var(--mono);font-size:12px;color:var(--mute);padding-top:1px}
+.txt dd{margin:0}
+figure{margin:0;background:var(--panel);border:1px solid var(--line);padding:6px;min-width:0}
+canvas{width:100%;max-width:100%;height:auto;image-rendering:pixelated;display:block;background:#000}
+figcaption{font-family:var(--mono);font-size:12px;color:var(--mute);padding-top:5px}
+</style>
+
+<main>
+<header>
+ <h1>Galeries du Temple · décor et salles</h1>
+ <p class="lead">Deux pistes pour meubler le premier biome et la grotte de départ. Chaque vignette est dessinée à la taille des pixels du jeu, sur le dallage et la roche réels, avec la charte de l'ardoise tyrienne : pierre bleu-gris, fer sombre, quartz laiteux pour la lumière. Ni or ni pourpre.</p>
+</header>
+
+<div class="reco">
+ <h2>Ma recommandation</h2>
+ <p>Pour le décor, <b>D1 Colonnade</b> et <b>D5 Quartz et éboulis</b> partout : la première dit « ruine tyrienne », la seconde apporte la lumière. <b>D3 Racines</b> seulement près du flanc sud, là où la jungle s'infiltre. Les familles se mélangent : le générateur tire dans celles que vous retenez.</p>
+ <p>Pour les salles, <b>S1 Crypte</b> et <b>S4 Oratoire</b> d'abord. Elles donnent deux récompenses différentes (un objet, une bénédiction) sans nouveau système. La grotte de départ reprend les mêmes pièces, posées à la main.</p>
+ <p>Répondez par les numéros, par exemple « D1, D5, S1, S4 ».</p>
+</div>
+
+<div class="tools">
+ <button id="pause" type="button" aria-pressed="false">Pause</button>
+ <span>Vignettes en pixels du monde, agrandies ×3 · un personnage mesure environ 36 px</span>
+</div>
+
+<div class="part"><h2>Décor des galeries</h2><p>Des objets semés par le générateur le long des galeries, sans effet sur le jeu sauf mention contraire. Aujourd'hui l'intérieur des galeries ne reçoit aucun décor.</p></div>
+<div id="listD" style="display:contents"></div>
+
+<div class="part"><h2>Salles à thème</h2><p>Le générateur élargit déjà certaines galeries en salles, vides pour l'instant. Chaque thème leur donne un contenu et une raison d'y aller.</p></div>
+<div id="listS" style="display:contents"></div>
+</main>
+
+<script>
+/* ---------- palettes ---------- */
+const S=[0x1c1f27,0x2f3440,0x444b5a,0x5d6678,0x7c869a,0xa3adbf];       // ardoise tyrienne
+const I=[0x15161b,0x282a33,0x3d404c,0x585c6b,0x8a8f9f];                // fer sombre
+const Q=[0x8f8a80,0xc9c4b6,0xefeadc];                                  // quartz laiteux
+const WD=[0x2a1d14,0x4a3322,0x6b4a30,0x8c6844];                        // bois
+const BN=[0x6e6a5c,0xa8a28e,0xd8d2bc];                                 // os
+const MS=[0x1f3a24,0x2f5a34,0x4a7d48,0x7fae6a];                        // mousse
+const FR=[0x8a2f10,0xd8651c,0xf0a23a,0xffe08a];                        // feu
+const MB=[0x6c6f78,0x8d9099,0xb4b6bc,0xd6d7da];                        // marbre gris veiné
+const RU=[0x4a2c1e,0x7a4a2c,0x9c6a3c];                                 // rouille
+const WT=[0x0c161d,0x15303a,0x22505c,0x4a8088];                        // eau sombre
+const LN=[0x4c463c,0x7a705c,0xa39678];                                 // lin, paille
+const SAND=0x8a7a5a,GLY=0x7fd6d8,INK=0x0a0b10,TAU=Math.PI*2,FACE=13;
+
+/* ---------- moteur : tampon de matière, contour sombre automatique, lumières par-dessus ---------- */
+let W=0,H=0,buf=null,img=null,M=null,DK=1,T=0,EXPORT=false;const post=[];
+const hs=n=>{const s=Math.sin(n*127.1+311.7)*43758.5453;return s-Math.floor(s)};
+function mix(a,b,k){k=k<0?0:k>1?1:k;const r=(a>>16&255),g=(a>>8&255),bl=a&255;
+ return ((r+((b>>16&255)-r)*k)|0)<<16|((g+((b>>8&255)-g)*k)|0)<<8|((bl+((b&255)-bl)*k)|0)}
+function px(x,y,c){x=Math.round(x);y=Math.round(y);if(x>=0&&y>=0&&x<W&&y<H)buf[y*W+x]=c}
+function rect(x,y,w,h,c){for(let j=0;j<h;j++)for(let i=0;i<w;i++)px(x+i,y+j,c)}
+function ell(cx,cy,rx,ry,c,f){for(let y=Math.floor(cy-ry);y<=Math.ceil(cy+ry);y++)for(let x=Math.floor(cx-rx);x<=Math.ceil(cx+rx);x++){
+ const dx=(x-cx)/rx,dy=(y-cy)/ry;if(dx*dx+dy*dy<=1){const cc=f?f(x,y,dx,dy):c;if(cc!==null&&cc!==undefined)px(x,y,cc)}}}
+function line(x0,y0,x1,y1,c){const n=Math.max(Math.abs(x1-x0),Math.abs(y1-y0),1)|0;for(let i=0;i<=n;i++)px(x0+(x1-x0)*i/n,y0+(y1-y0)*i/n,c)}
+function poly(pts,c){let y0=1e9,y1=-1e9;for(const p of pts){y0=Math.min(y0,p[1]);y1=Math.max(y1,p[1])}
+ for(let y=Math.round(y0);y<=Math.round(y1);y++){const xs=[];for(let i=0;i<pts.length;i++){const a=pts[i],b=pts[(i+1)%pts.length];
+  if((a[1]<=y&&b[1]>y)||(b[1]<=y&&a[1]>y))xs.push(a[0]+(y-a[1])/(b[1]-a[1])*(b[0]-a[0]))}
+  xs.sort((a,b)=>a-b);for(let k=0;k+1<xs.length;k+=2)for(let x=Math.round(xs[k]);x<=Math.round(xs[k+1]);x++)px(x,y,c)}}
+/* décalque à plat (sans contour), assombri comme le sol */
+function blend(x,y,c,a){if(EXPORT){if(a<.5)return;a=1}x=Math.round(x);y=Math.round(y);if(x<0||y<0||x>=W||y>=H)return;const i=(y*W+x)*4;
+ img[i]+=((c>>16&255)*DK-img[i])*a;img[i+1]+=((c>>8&255)*DK-img[i+1])*a;img[i+2]+=((c&255)*DK-img[i+2])*a}
+function gell(cx,cy,rx,ry,c,a){for(let y=Math.floor(cy-ry);y<=Math.ceil(cy+ry);y++)for(let x=Math.floor(cx-rx);x<=Math.ceil(cx+rx);x++){
+ const dx=(x-cx)/rx,dy=(y-cy)/ry;if(dx*dx+dy*dy<=1)blend(x,y,c,a)}}
+function bline(x0,y0,x1,y1,c,a){const n=Math.max(Math.abs(x1-x0),Math.abs(y1-y0),1)|0;for(let i=0;i<=n;i++)blend(x0+(x1-x0)*i/n,y0+(y1-y0)*i/n,c,a)}
+function gring(cx,cy,rx,ry,c,a){for(let i=0;i<90;i++){const an=i/90*TAU;blend(cx+Math.cos(an)*rx,cy+Math.sin(an)*ry,c,a)}}
+/* halo additif en trois paliers */
+function light(cx,cy,rx,ry,c,a){const r=(c>>16&255)*a,g=(c>>8&255)*a,b=(c&255)*a;for(const k of[1,.66,.36]){const RX=rx*k,RY=ry*k;
+ for(let y=Math.max(0,Math.floor(cy-RY));y<=Math.min(H-1,Math.ceil(cy+RY));y++)for(let x=Math.max(0,Math.floor(cx-RX));x<=Math.min(W-1,Math.ceil(cx+RX));x++){
+  const dx=(x-cx)/RX,dy=(y-cy)/RY;if(dx*dx+dy*dy<=1){const i=(y*W+x)*4;img[i]+=r;img[i+1]+=g;img[i+2]+=b}}}}
+function compose(){for(let y=0;y<H;y++)for(let x=0;x<W;x++){const i=y*W+x;let c=buf[i];
+ if(c<0){if(!((x>0&&buf[i-1]>=0)||(x<W-1&&buf[i+1]>=0)||(y>0&&buf[i-W]>=0)||(y<H-1&&buf[i+W]>=0)))continue;c=INK}
+ img[i*4]=(c>>16&255)*DK;img[i*4+1]=(c>>8&255)*DK;img[i*4+2]=(c&255)*DK}}
+const shadow=(x,y,rx,ry)=>{if(!EXPORT)gell(x,y,rx,ry,0x05060a,.38)};
+const ft=x=>{for(let y=0;y<H;y++)if(M(x,y))return y;return H};      // premier pixel de sol sous le mur nord
+const fb=x=>{for(let y=H-1;y>=0;y--)if(M(x,y))return y+1;return 0};  // bord sud du sol
+
+/* ---------- pièces de décor (x, y = pied de l'objet) ---------- */
+function column(x,y,h,brk,m){m=m||[S[1],S[2],S[3],S[4],S[5]];shadow(x+3,y,9,2.5);
+ rect(x-6,y-3,12,3,m[1]);rect(x-6,y-3,12,1,m[3]);rect(x+3,y-3,3,3,m[0]);
+ for(let j=0;j<h;j++){const yy=y-4-j;let w1=3;if(brk&&j>h-5){w1=3-Math.floor(hs(x*3.1+j*1.7)*3)-(h-j<3?2:0);if(w1<-3)continue}
+  for(let i=-4;i<=w1;i++)px(x+i,yy,j%6===5?m[0]:i<-2?m[3]:i<0?m[2]:i<2?m[1]:m[0])}
+ if(!brk){rect(x-6,y-7-h,12,3,m[2]);rect(x-6,y-7-h,12,1,m[4]);rect(x+3,y-6-h,3,2,m[1])}}
+function drum(x,y,m){m=m||S;shadow(x+1,y,9,2);for(let j=0;j<7;j++)rect(x-5,y-7+j,11,1,j<1?m[5]:j<3?m[4]:j<5?m[3]:m[2]);
+ ell(x-5,y-3.5,2.5,3.5,m[3]);ell(x-5,y-3.5,1.1,1.8,m[1]);rect(x,y-6,1,5,m[2]);rect(x+3,y-6,1,5,m[2])}
+function rubble(x,y,seed,n,sp){sp=sp||14;for(let i=0;i<n;i++){const ox=(hs(seed+i*2.3)-.5)*sp,oy=(hs(seed+i*5.1)-.5)*sp*.4,r=1.2+hs(seed+i*9.7)*2.2;
+ ell(x+ox,y+oy,r,r*.75,S[2+(i%2)]);px(x+ox-1,y+oy-r*.75,S[4]);px(x+ox,y+oy-r*.75,S[4])}}
+function boulder(x,y,r){shadow(x+1,y,r+2,r*.4);ell(x,y-r*.7,r,r*.8,0,(xx,yy,dx,dy)=>dx+dy<-.55?S[4]:dx+dy<.1?S[3]:dx+dy<.8?S[2]:S[1]);
+ line(x-r*.3,y-r*.9,x+r*.2,y-r*.3,S[1])}
+function slab(x,y,g,lit){for(let j=0;j<9;j++)for(let i=0;i<14;i++)blend(x-7+i,y-4+j,i===0||j===0?S[4]:i===13||j===8?S[0]:S[2],.92);
+ const G=[[[3,2,10,2],[3,2,3,6],[10,2,10,6],[5,4,8,4]],[[3,6,6,2],[6,2,10,6],[4,4,9,4]],[[3,2,10,6],[10,2,3,6],[6,1,7,1],[6,7,7,7]]][g%3];
+ for(const s of G)bline(x-7+s[0],y-4+s[1],x-7+s[2],y-4+s[3],lit?Q[2]:S[0],1);
+ if(lit)post.push(()=>light(x,y,13,8,Q[1],.07+.03*Math.sin(T*2+x)))}
+function brazier(x,y,lit){shadow(x,y,7,2.2);line(x-4,y,x-2,y-7,I[3]);line(x+4,y,x+2,y-7,I[1]);line(x,y,x,y-6,I[2]);
+ ell(x,y-9,5.4,3.4,0,(xx,yy,dx,dy)=>dy<-.25?null:dx<-.3?I[4]:dx>.5?I[1]:I[3]);rect(x-5,y-10,11,1,I[4]);rect(x-4,y-10,9,1,lit?FR[1]:I[0]);
+ if(lit)post.push(()=>{for(let k=0;k<3;k++){const fx=x+(k-1)*2.6,fh=5+2.5*Math.sin(T*9+k*2.1+x)+2*hs(Math.floor(T*10)+k+x);
+   for(let j=0;j<fh;j++){const w=Math.round((1-j/fh)*1.5),o=Math.round(Math.sin(T*7+j*.8+k)*.7);for(let i=-w;i<=w;i++)blend(fx+i+o,y-11-j,j<fh*.3?FR[3]:j<fh*.65?FR[2]:FR[1],1)}}
+  for(let k=0;k<3;k++){const u=(T*.8+hs(k*3.3+x))%1;blend(x+(hs(k*7.7+x)-.5)*8+Math.sin(T*3+k)*2,y-14-u*16,FR[2],1-u)}
+  light(x,y-6,34,22,FR[1],.085+.015*Math.sin(T*11+x))})}
+function root(x,y,len,seed){let cx=x;for(let j=0;j<len;j++){cx+=(hs(seed+j*1.7)-.5)*1.7;const w=j<len*.45?2:1;for(let i=0;i<w;i++)px(cx+i,y+j,(j+i)%4===0?WD[1]:WD[2]);
+ if(j%7===5&&j<len-3){const d=hs(seed+j)>.5?1:-1;for(let k=1;k<6;k++)px(cx+d*k,y+j+k*.7,WD[1])}}}
+function vine(x,y,len,seed){let cx=x;for(let j=0;j<len;j++){cx+=(hs(seed+j*2.1)-.5)*1.2;blend(cx,y+j,MS[2],1);if(j%3===1)blend(cx+(hs(seed+j)>.5?1:-1),y+j,MS[3],1)}}
+function moss(x,y,rx,ry,seed){for(let i=0;i<rx*ry*1.6;i++){const a=hs(seed+i*1.3)*TAU,r=Math.sqrt(hs(seed+i*2.9));blend(x+Math.cos(a)*r*rx,y+Math.sin(a)*r*ry,i%3?MS[1]:MS[2],.85)}}
+function tuft(x,y,seed){for(let i=-2;i<=2;i++){const h=2+hs(seed+i)*4;line(x+i,y,x+i*1.6,y-h,i%2?MS[2]:MS[3])}}
+function shrooms(x,y,n,seed){for(let i=0;i<n;i++){const ox=(hs(seed+i*3.1)-.5)*12,oy=(hs(seed+i*4.7)-.5)*5,h=1+Math.floor(hs(seed+i)*3);
+  rect(x+ox,y+oy-h,1,h,Q[0]);ell(x+ox,y+oy-h-1,2.2,1.3,Q[1]);px(x+ox-1,y+oy-h-2,Q[2])}
+ post.push(()=>light(x,y-2,15,9,0x9fd6a8,.07+.035*Math.sin(T*1.7+seed)))}
+function puddle(x,y,rx,ry){gell(x,y,rx,ry,WT[1],.9);gell(x-rx*.2,y-ry*.2,rx*.5,ry*.4,WT[2],.7);
+ const u=(T*.5+hs(x))%1;gring(x+rx*.2,y,rx*.7*u,ry*.7*u,WT[3],1-u)}
+function bones(x,y,seed){shadow(x,y+1,7,2);ell(x-4,y-2,2.6,2.3,BN[2]);px(x-5,y-2,INK);px(x-3,y-2,INK);rect(x-5,y,3,1,BN[1]);
+ for(let k=0;k<3;k++){line(x+1+k*2,y-4,x+k*2,y-1,BN[1]);px(x+1+k*2,y-4,BN[2])}line(x-2,y+2,x+7,y+1,BN[1]);if(hs(seed)>.4)line(x+4,y-6,x+9,y-3,BN[0])}
+function sword(x,y,rust){rect(x,y-9,1,8,rust?RU[2]:I[4]);rect(x+1,y-8,1,7,rust?RU[1]:I[3]);rect(x-2,y-10,6,1,I[2]);rect(x,y-13,2,3,WD[1]);px(x,y-14,I[4]);px(x+1,y-14,I[3])}
+function shield(x,y,rust){shadow(x+1,y+1,6,2.5);ell(x,y-1,5.5,3.6,0,(xx,yy,dx,dy)=>{const d=dx*dx+dy*dy;return d>.7?(rust?RU[1]:I[3]):d<.1?I[4]:dx+dy<0?WD[2]:WD[1]});line(x-3,y-3,x+3,y+1,rust?RU[0]:I[1])}
+function banner(x,y,h){rect(x-5,y,11,1,I[3]);px(x-5,y+1,I[2]);px(x+5,y+1,I[2]);
+ for(let j=1;j<=h;j++)for(let i=-3;i<=3;i++){if(j>h-4&&hs(x+i*3.3+j)>.55+(h-j)*.12)continue;const sw=j>h*.5?Math.round(Math.sin(T*1.4+x)*.6):0;
+  px(x+i+sw,y+j,j%6===3?LN[0]:i<-1?LN[2]:i>1?LN[0]:LN[1])}
+ rect(x-1,y+4,3,3,S[1]);px(x,y+5,LN[2])}
+function crate(x,y,brk){shadow(x+1,y,8,2.2);rect(x-6,y-8,12,8,WD[1]);rect(x-6,y-8,12,1,WD[3]);rect(x-6,y-8,1,8,WD[2]);rect(x-6,y-4,12,1,WD[0]);rect(x-1,y-8,1,8,WD[0]);
+ if(brk){poly([[x+2,y-8],[x+6,y-8],[x+6,y-3]],-1);line(x+2,y-8,x+6,y-3,WD[0]);line(x+7,y-1,x+11,y,WD[2])}}
+function quartz(x,y,n,seed,sc){sc=sc||1;for(let i=0;i<n;i++){const ox=(i-(n-1)/2)*3.2*sc+(hs(seed+i)-.5)*2,h=(5+hs(seed+i*3.7)*8)*sc,lean=(hs(seed+i*5.3)-.5)*4;
+  poly([[x+ox-1.6,y],[x+ox-2+lean*.5,y-h*.6],[x+ox+lean,y-h],[x+ox+2+lean*.5,y-h*.55],[x+ox+1.6,y]],Q[1]);
+  line(x+ox-1.6,y,x+ox+lean,y-h,Q[2]);line(x+ox+1.6,y,x+ox+2+lean*.5,y-h*.55,Q[0])}
+ rubble(x,y+1,seed,3,10);post.push(()=>{light(x,y-5*sc,22*sc,13*sc,Q[1],.075+.03*Math.sin(T*1.3+seed));
+  const u=(T*.7+hs(seed))%1;if(u<.25)blend(x+(hs(seed+Math.floor(T*.7))-.5)*8,y-4-hs(seed*2+Math.floor(T*.7))*8*sc,0xffffff,1)})}
+function stalag(x,y,h){shadow(x+1,y,4,1.5);for(let j=0;j<h;j++){const w=Math.max(0,Math.round((1-j/h)*3.2));for(let i=-w;i<=w;i++)px(x+i,y-j,i<-w*.4?S[4]:i>w*.4?S[1]:S[3])}}
+function lamp(x,y){shadow(x,y,4,1.5);rect(x-2,y-1,5,1,I[2]);rect(x,y-9,1,8,I[3]);rect(x-2,y-10,5,1,I[4]);
+ poly([[x-2,y-11],[x,y-17],[x+2,y-11]],Q[1]);line(x-2,y-11,x,y-17,Q[2]);
+ post.push(()=>light(x,y-12,30,20,Q[1],.08+.02*Math.sin(T*1.6+x)))}
+function sarco(x,y,open){shadow(x+1,y+1,15,3);rect(x-12,y-5,24,5,S[1]);rect(x-12,y-5,24,1,S[0]);for(let i=-9;i<=9;i+=6)rect(x+i,y-3,2,2,S[2]);
+ rect(x-12,y-14,24,9,I[0]);if(open){ell(x-4,y-10,2,1.6,BN[1]);rect(x-1,y-10,6,1,BN[0])}
+ const lx=open?x-4:x-12,ly=open?y-17:y-14;
+ rect(lx,ly,24,9,S[3]);rect(lx,ly,24,1,S[5]);rect(lx,ly,1,9,S[4]);rect(lx,ly+8,24,1,S[2]);rect(lx+23,ly,1,9,S[2]);
+ rect(lx+6,ly+3,13,3,S[4]);ell(lx+5,ly+4.5,2,2,S[4]);rect(lx+8,ly+5,10,1,S[2]);if(open)rect(lx,ly+9,24,1,S[1])}
+function dais(x,y,w,h){rect(x-w/2,y-h/2,w,h,S[3]);rect(x-w/2,y-h/2,w,1,S[5]);rect(x-w/2,y-h/2,1,h,S[4]);rect(x-w/2,y+h/2,w,3,S[1]);rect(x-w/2,y+h/2,w,1,S[2]);
+ for(let i=-w/2+3;i<w/2-2;i+=6)px(x+i,y+h/2+1,S[0])}
+function chest(x,y){rect(x-6,y-6,13,6,S[2]);rect(x-6,y-9,13,3,S[4]);rect(x-6,y-9,13,1,S[5]);rect(x-6,y-6,13,1,INK);rect(x+5,y-5,2,5,S[1]);
+ for(let i=-4;i<=4;i+=2)px(x+i,y-3,GLY);rect(x,y-6,1,2,I[4]);
+ post.push(()=>{const p=.6+.4*Math.sin(T*2.4);for(let i=-4;i<=4;i+=2)blend(x+i,y-3,0xd8ffff,p*.7);light(x,y-4,14,9,GLY,.05+.03*p)})}
+function shelf(x,y,w){const h=18;rect(x,y-h,w,h,MB[1]);rect(x,y-h,w,1,MB[3]);rect(x,y-h,1,h,MB[2]);rect(x+w-1,y-h,1,h,MB[0]);
+ for(let r=0;r<3;r++){const yy=y-h+2+r*5;rect(x+2,yy,w-4,4,I[0]);for(let i=x+3;i<x+w-3;i+=2){const k=hs(i*1.3+r*7+x);if(k>.3)rect(i,yy+(k>.7?0:1),1,k>.7?4:3,k>.8?LN[2]:k>.55?LN[1]:Q[0])}}
+ rect(x,y-1,w,1,MB[0])}
+function toppled(x,y){shadow(x+1,y+3,16,4);poly([[x-15,y-5],[x+9,y-12],[x+15,y-3],[x-9,y+4]],MB[1]);line(x-15,y-5,x+9,y-12,MB[3]);line(x-9,y+4,x+15,y-3,MB[0]);
+ for(let k=0;k<3;k++){const ax=x-10+k*8,ay=y-4-k*2.3;poly([[ax,ay],[ax+5,ay-1.5],[ax+7,ay+2],[ax+2,ay+3.5]],I[0])}}
+function scroll(x,y,a){const dx=Math.cos(a)*2.5,dy=Math.sin(a)*1.5;line(x-dx,y-dy,x+dx,y+dy,Q[1]);px(x-dx,y-dy,LN[0]);px(x+dx,y+dy,LN[0])}
+function lectern(x,y){shadow(x,y,6,2);rect(x-3,y-8,6,8,MB[1]);rect(x-3,y-8,2,8,MB[2]);rect(x-4,y-1,8,1,MB[0]);
+ poly([[x-6,y-9],[x+5,y-11],[x+6,y-13],[x-5,y-11]],MB[3]);rect(x-3,y-12,6,1,Q[2]);
+ post.push(()=>{light(x,y-12,30,19,0xe6e8f0,.085+.02*Math.sin(T*2));for(let k=0;k<4;k++){const u=(T*.4+k/4)%1;blend(x+Math.sin(k*2.4+T)*5,y-14-u*14,0xffffff,(1-u)*.9)}})}
+function rack(x,y){rect(x-9,y-12,2,12,WD[1]);rect(x+8,y-12,2,12,WD[1]);rect(x-9,y-9,19,1,WD[3]);rect(x-9,y-3,19,1,WD[2]);
+ for(const i of[-6,-2,2,6]){rect(x+i,y-18,1,17,i===2?WD[2]:I[3]);px(x+i,y-19,I[4]);px(x+i,y-20,I[4]);if(i===2){rect(x+i-2,y-18,5,3,I[3]);rect(x+i-2,y-18,5,1,I[4])}}}
+function dummy(x,y){shadow(x,y,6,2);rect(x-3,y-1,7,1,WD[0]);rect(x,y-12,1,12,WD[1]);rect(x-5,y-11,11,2,WD[2]);
+ ell(x+.5,y-7,3,4,0,(xx,yy,dx)=>dx<-.2?LN[2]:dx>.5?LN[0]:LN[1]);rect(x-2,y-7,5,1,LN[0]);ell(x+.5,y-14.5,2.3,2.3,LN[2]);px(x+2,y-14,LN[0])}
+function stand(x,y){shadow(x,y,5,2);rect(x,y-12,1,12,WD[1]);rect(x-2,y-1,5,1,WD[0]);poly([[x-4,y-13],[x+4,y-13],[x+3,y-5],[x-3,y-5]],I[2]);rect(x-4,y-13,2,8,I[4]);rect(x+2,y-12,2,7,I[1]);
+ rect(x-5,y-14,3,3,I[3]);rect(x+3,y-14,3,3,I[2]);ell(x,y-17,2.4,2.4,I[3]);px(x-1,y-18,I[4])}
+function statue(x,y){shadow(x+1,y,10,2.5);rect(x-7,y-6,14,6,S[2]);rect(x-7,y-6,14,1,S[4]);rect(x+4,y-5,3,5,S[1]);
+ poly([[x-4,y-7],[x-3,y-20],[x+3,y-20],[x+4,y-7]],MB[2]);rect(x-4,y-19,2,12,MB[3]);rect(x+2,y-19,2,12,MB[0]);
+ ell(x,y-22,3.6,3.6,MB[2]);ell(x-1,y-23,2,2,MB[3]);rect(x-1,y-22,3,3,I[0]);rect(x-3,y-14,6,1,MB[3]);rect(x-2,y-13,4,1,Q[1])}
+function menhir(x,y,h){shadow(x+1,y,6,2);for(let j=0;j<h;j++){const k=j/h,w=Math.round(k>.8?3.5-(k-.8)*14:3.5+Math.sin(k*3)*.6);for(let i=-w;i<=w;i++)px(x+i,y-j,k>.82&&i<1?MS[2]:i<-w*.3?S[4]:i>w*.4?S[1]:S[3])}
+ px(x-1,y-h*.5,S[1]);px(x,y-h*.5+1,S[1])}
+function candle(x,y){rect(x,y-3,1,3,Q[2]);post.push(()=>{blend(x,y-4-(Math.sin(T*8+x)>.3?1:0),FR[3],1);blend(x,y-4,FR[2],1);light(x,y-4,9,6,FR[2],.06)})}
+function water(x0,y0,x1,y1,hole){for(let y=y0;y<y1;y++)for(let x=x0;x<x1;x++){if(hole&&hole(x,y))continue;
+  let c=y-y0<3||(hole&&hole(x,y-1))||(hole&&hole(x,y-2))?WT[0]:WT[1];const w=Math.sin(x*.35+y*.9+T*1.6)+Math.sin(x*.13-y*.5-T*1.1);
+  if(w>1.6)c=WT[3];else if(w>1.25)c=WT[2];blend(x,y,c,1)}
+ for(let x=x0-1;x<=x1;x++){blend(x,y0-1,S[4],1);blend(x,y1,S[1],1)}for(let y=y0;y<y1;y++){blend(x0-1,y,S[4],1);blend(x1,y,S[1],1)}}
+function ripple(x,y,ph){const u=(T*.45+ph)%1;gring(x,y,9*u,4*u,WT[3],(1-u)*.9);if(u<.08)blend(x,y-1,0xffffff,.8)}
+function wheel(x,y){shadow(x,y,7,2.2);rect(x-1,y-8,3,8,I[2]);rect(x-1,y-8,1,8,I[4]);ell(x,y-11,5.5,3,0,(xx,yy,dx,dy)=>{const d=dx*dx+dy*dy;return d>.55?I[3]:null});
+ const a=T*.0;line(x-5,y-11,x+5,y-11,I[3]);line(x,y-14,x,y-8,I[3]);px(x,y-11,I[4]);px(x-5,y-12,I[4])}
+
+/* ---------- formes de galerie ---------- */
+const gal=seed=>(x,y)=>{const bx=Math.floor(x/8),top=31+Math.round((hs(seed+bx*.91)-.5)*2)*4-(bx>=13&&bx<=16?12:0),bot=83+Math.round((hs(seed*2+bx*1.3)-.5)*2)*4;return y>=top&&y<bot};
+const room=(x,y)=>{if(x>=16&&x<160&&y>=30&&y<110){const cx=Math.min(x-16,159-x),cy=Math.min(y-30,109-y);return !(cx<8&&cy<8)}
+ if(x>=76&&x<100&&y>=110)return true;return y>=62&&y<82&&x<16};
+
+/* ---------- propositions ---------- */
+const DECOR=[
+ {n:"D1",nom:"Colonnade ruinée",mask:gal(3),dark:.86,
+  txt:"Colonnes d'ardoise le long des parois, certaines brisées, tambours et gravats au sol, dalles gravées de glyphes tyriens.",
+  pour:"Dit tout de suite « ruine tyrienne ». Les colonnes donnent du relief et des repères dans des galeries qui se ressemblent.",
+  contre:"Les colonnes hautes masquent un peu ce qui passe derrière. À poser contre les murs, jamais au milieu du passage.",
+  jeu:"Décor pur. Sept sprites : colonne entière, brisée, moignon, tambour, gravats, deux dalles.",
+  d(){slab(62,58,0);slab(120,64,2);slab(96,50,1);
+   for(const x of[20,52,84,156])column(x,ft(x)+8,x===52?12:20,x===52);
+   rubble(60,ft(52)+12,4,5);drum(72,68);rubble(84,72,9,4);
+   column(38,fb(38)-3,6,true);column(140,fb(140)-3,20,false);rubble(46,fb(46)-5,2,4)}},
+ {n:"D2",nom:"Voie des braseros",mask:gal(5),dark:.5,
+  txt:"Des braseros de fer sur trépied jalonnent les galeries. Ils sont éteints à la découverte ; une unité qui passe à côté peut les rallumer.",
+  pour:"La seule famille qui change l'ambiance : les galeries explorées restent éclairées, on voit d'un coup d'œil où l'on est déjà passé.",
+  contre:"Touche à l'éclairage et demande un ordre « rallumer ». La flamme orange se rapproche de la couleur d'Indra.",
+  jeu:"Interactif léger : un état allumé/éteint par brasero, une lumière, un repère possible sur la minicarte.",
+  d(){slab(88,58,1);for(const[x,l]of[[28,1],[92,1],[150,0]])brazier(x,ft(x)+10,l);rubble(120,60,3,3);for(const[x,l]of[[58,1],[124,0]])brazier(x,fb(x)-4,l)}},
+ {n:"D3",nom:"Racines et mousse",mask:gal(8),dark:.8,
+  txt:"La jungle descend dans la montagne : racines qui percent la voûte et courent au sol, lianes sur les parois, tapis de mousse, champignons pâles qui luisent, flaques où tombe une goutte.",
+  pour:"Fait le lien avec la jungle du sud et adoucit la pierre. Les champignons donnent une seconde source de lumière, plus froide.",
+  contre:"Le vert est la couleur de Medeina : à doser. Loin du flanc sud, la présence de racines s'explique moins bien.",
+  jeu:"Décor pur. Densité à faire décroître vers le nord. Les champignons pourraient devenir une ressource plus tard.",
+  d(){moss(40,60,16,7,1);moss(118,70,20,8,2);moss(150,48,10,5,3);puddle(84,66,9,4);
+   for(const[x,l]of[[14,9],[70,11],[110,8],[162,10]])vine(x,ft(x)-FACE+1,l,x);
+   for(const[x,l]of[[30,22],[58,14],[98,26],[142,18]])root(x,ft(x)-4,l,x);
+   tuft(46,58,1);tuft(124,66,2);tuft(22,70,3);shrooms(132,56,5,4);shrooms(60,74,4,7);tuft(110,fb(110)-3,5);shrooms(34,fb(34)-5,3,9)}},
+ {n:"D4",nom:"Vestiges du siège",mask:gal(11),dark:.84,
+  txt:"On s'est battu ici il y a longtemps : ossements, épées rouillées fichées dans les joints, boucliers abandonnés, caisses éventrées, bannières en lambeaux aux murs.",
+  pour:"Raconte une histoire sans texte et prépare la rencontre avec les errants. Petites pièces basses, qui ne gênent pas la lecture.",
+  contre:"Le plus sombre des cinq thèmes. Les objets au sol peuvent se confondre avec du butin à ramasser.",
+  jeu:"Décor pur. Variante possible : les caisses se brisent et donnent quelques ressources.",
+  d(){for(const x of[40,116])banner(x,ft(x)-FACE+2,13);
+   crate(22,ft(22)+12,false);crate(34,ft(34)+15,true);bones(66,54,1);sword(84,62,true);shield(98,66,true);
+   bones(132,60,2);sword(150,56,false);line(108,74,126,70,WD[2]);px(127,70,I[4]);px(128,69,I[4]);
+   shield(54,74,false);bones(144,fb(144)-6,.2);sword(70,fb(70)-4,true)}},
+ {n:"D5",nom:"Quartz et éboulis",mask:gal(14),dark:.62,
+  txt:"La roche reprend ses droits : grappes de quartz laiteux qui pulsent doucement, stalagmites, tas d'éboulis au pied des parois.",
+  pour:"Reprend la lumière déjà choisie pour l'ardoise tyrienne. Éclaire les galeries sans rien demander au joueur.",
+  contre:"Purement minéral : seule, cette famille ne raconte pas le Temple.",
+  jeu:"Décor pur, plus une lumière par grappe. Les grappes peuvent signaler un filon de quartz proche.",
+  d(){for(const x of[26,74])stalag(x,ft(x)+5,9+(x%5));quartz(48,ft(48)+7,4,1);quartz(120,ft(120)+9,5,5,1.2);
+   boulder(92,58,6);rubble(100,62,3,6,18);stalag(150,56,12);stalag(158,60,7);puddle(66,68,7,3);
+   quartz(138,fb(138)-4,3,8);boulder(30,fb(30)-4,5);rubble(40,fb(40)-5,6,5);stalag(84,fb(84)-3,8);quartz(16,62,2,3,.8)}}
+];
+const ROOMS=[
+ {n:"S1",nom:"Crypte des veilleurs",mask:room,dark:.6,
+  txt:"Des sarcophages d'ardoise alignés autour d'un dais. Sur le dais, un reliquaire tyrien scellé, éclairé par deux lampes à quartz. Un des couvercles a glissé.",
+  rec:"Un reliquaire à ouvrir : une pièce d'équipement ou un lot de ressources.",
+  pour:"Réutilise l'ordre « ouvrir le coffre » qui existe déjà pour la réserve. Lecture immédiate : il y a quelque chose à prendre.",
+  contre:"Rien de neuf côté jeu, c'est un coffre dans un beau cadre.",
+  jeu:"Faible coût : gabarit de salle, table de butin, vue du coffre existante.",
+  d(){for(const x of[44,88])sarco(x,54,false);sarco(128,54,true);bones(146,62,1);lamp(64,70);lamp(112,70);
+   dais(88,80,34,16);chest(88,82);sarco(44,100,false);sarco(132,100,false);rubble(30,70,2,3)}},
+ {n:"S2",nom:"Bibliothèque effondrée",mask:room,dark:.62,
+  txt:"Des rayonnages de marbre gris contre le mur du fond, un autre renversé au milieu des rouleaux éparpillés. Au centre, un lutrin dont la tablette luit encore d'une lumière blanche.",
+  rec:"Lire la tablette donne un lot de points de recherche, ou révèle la carte autour de la salle.",
+  pour:"Récompense qui nourrit la Bibliothèque et la recherche. Le marbre et la lumière blanche rappellent Sigil.",
+  contre:"Demande de décider ce que vaut un « lot de recherche » dans l'équilibrage.",
+  jeu:"Coût moyen : un ordre « lire », une récompense à brancher sur la recherche.",
+  d(){shelf(30,49,34);shelf(108,49,34);shelf(70,49,26);column(24,98,18,false,MB.concat([MB[3]]));column(150,70,8,true,MB.concat([MB[3]]));
+   for(let k=0;k<9;k++)scroll(40+hs(k*2.3)*60,62+hs(k*5.9)*36,hs(k)*3);
+   toppled(54,84);lectern(96,78);rubble(140,96,5,4);scroll(120,92,.4);scroll(128,66,1.2)}},
+ {n:"S3",nom:"Salle d'armes",mask:room,dark:.66,
+  txt:"Un cercle de sable entouré de braseros, un mannequin de paille, des râteliers de lances contre le mur, des boucliers accrochés, une armure sur son support.",
+  rec:"Une arme ou une armure à prendre sur le support. Variante : les soldats qui s'y entraînent gagnent un bonus temporaire.",
+  pour:"Parle aux joueurs qui montent une armée. Le sable et les braseros font écho à l'Arène de sable de la Caserne.",
+  contre:"Les braseros allumés supposent que quelqu'un vit là : à réserver aux salles gardées par des errants.",
+  jeu:"Coût moyen : butin d'équipement. Bon candidat pour une salle défendue.",
+  d(){gell(88,78,36,17,SAND,.62);gring(88,78,36,17,S[1],1);gring(88,78,35,16.4,S[4],.6);for(let k=0;k<26;k++)blend(60+hs(k*1.9)*56,68+hs(k*4.1)*20,0x6a5c42,.8);
+   for(const x of[76,88,100])ell(x,ft(x)-6,3.6,3.6,0,(xx,yy,dx,dy)=>dx*dx+dy*dy>.55?I[3]:dx+dy<0?RU[2]:RU[1]);
+   rack(44,50);rack(130,50);crate(28,62,false);stand(146,66);brazier(34,92,1);dummy(88,82);brazier(142,96,1);sword(66,96,false)}},
+ {n:"S4",nom:"Oratoire oublié",mask:room,dark:.58,
+  txt:"Une statue encapuchonnée sur son socle, une vasque d'eau claire à ses pieds, quatre pierres levées couvertes de mousse, quelques cierges qui brûlent encore.",
+  rec:"Une unité qui s'y recueille reçoit une bénédiction temporaire (soin, vitesse ou dégâts selon l'oratoire).",
+  pour:"Récompense qui n'est pas un objet : on y revient avant un assaut. La prière de l'Ingénieur existe déjà.",
+  contre:"Une bénédiction de plus à équilibrer avec celles des pylônes.",
+  jeu:"Coût moyen : réutilise la méditation, ajoute un effet à durée limitée.",
+  d(){moss(54,70,10,5,2);moss(124,96,12,5,5);for(const x of[36,140])vine(x,ft(x)-FACE+1,10,x);
+   statue(88,52);candle(74,54);candle(78,57);candle(100,56);candle(104,53);menhir(52,66,15);menhir(124,66,17);
+   gell(88,78,13,6.5,S[1],1);gring(88,78,13,6.5,S[4],1);gell(88,78.5,10.5,4.8,WT[2],1);gell(86,77.5,5,2,WT[3],.8);
+   const u=(T*.35)%1;gring(88,78,20+u*16,10+u*8,Q[2],(1-u)*.5);post.push(()=>light(88,76,26,15,0xcfe8e6,.07+.02*Math.sin(T*1.5)));
+   menhir(46,98,13);menhir(130,100,14);tuft(60,100,3);tuft(118,70,4)}},
+ {n:"S5",nom:"Citerne",mask:room,dark:.66,
+  txt:"Un grand bassin occupe la salle. Une chaussée dallée mène à un îlot central où se dresse une roue de vanne en fer ; des colonnes sortent de l'eau, des gouttes tombent de la voûte.",
+  rec:"À définir. Pistes : un point d'eau où les adeptes récupèrent, ou une vanne qui assèche une galerie inondée plus loin.",
+  pour:"La salle la plus différente des autres au premier regard. Prépare le thème de l'eau avant la rivière et sa crue.",
+  contre:"L'eau bloque le passage : il faut gérer le contournement, et la récompense reste à inventer.",
+  jeu:"Coût le plus élevé : terrain infranchissable dans une salle, effet à concevoir.",
+  d(){const hole=(x,y)=>(x>=70&&x<106&&y>=64&&y<88)||(x>=80&&x<96&&y>=88);water(34,46,142,104,hole);
+   for(let x=70;x<106;x++){blend(x,88,S[1],1);if(x<80||x>=96)blend(x,89,S[0],1)}
+   ripple(50,60,0);ripple(124,92,.4);ripple(120,58,.7);ripple(52,94,.2);
+   column(46,56,16,false);column(130,56,16,false);quartz(26,60,2,4,.8);wheel(88,76);slab(88,82,0,true);
+   column(46,98,9,true);column(130,98,16,false)}}
+];
+
+/* ---------- page ---------- */
+const views=[];
+function build(list,host,rows){for(const m of list){const s=document.createElement('section');s.className='m';
+ const dl=rows.map(([k,l])=>`<dt>${l}</dt><dd>${m[k]}</dd>`).join('');
+ s.innerHTML=`<div class="txt"><h2><i>${m.n}</i>${m.nom}</h2><p>${m.txt}</p><dl>${dl}</dl></div><figure></figure>`;
+ const c=document.createElement('canvas'),w=176,h=list===DECOR?112:128;c.width=w;c.height=h;c.setAttribute('role','img');c.setAttribute('aria-label',m.nom+' : '+m.txt);
+ s.querySelector('figure').appendChild(c);const cap=document.createElement('figcaption');cap.textContent=m.n+' · '+w+' × '+h+' px du monde';s.querySelector('figure').appendChild(cap);
+ host.appendChild(s);const ctx=c.getContext('2d');views.push({m,w,h,ctx,id:ctx.createImageData(w,h),buf:new Int32Array(w*h),bg:null})}}
+build(DECOR,document.getElementById('listD'),[['pour','Pour'],['contre','Contre'],['jeu','En jeu']]);
+build(ROOMS,document.getElementById('listS'),[['rec','Récompense'],['pour','Pour'],['contre','Contre'],['jeu','En jeu']]);
+
+let FL=null,RK=null;
+const tile=(t,x,y)=>{const i=(((y%t.h)+t.h)%t.h*t.w+((x%t.w)+t.w)%t.w)*4;return t.d[i]<<16|t.d[i+1]<<8|t.d[i+2]};
+function makeBg(v,k){const {w,h}=v,mask=v.m.mask,dk=v.m.dark,d=new Uint8ClampedArray(w*h*4);
+ for(let y=0;y<h;y++)for(let x=0;x<w;x++){let c;
+  if(mask(x,y)){c=tile(FL,x+k*37,y+k*53);for(let j=1;j<=5;j++)if(!mask(x,y-j)){c=mix(c,0x05060a,(6-j)*.085);break}}
+  else{let dist=0;for(let j=1;j<=FACE;j++)if(mask(x,y+j)){dist=j;break}
+   if(dist){const top=FACE-dist,row=Math.floor(top/6);c=mix(S[2],S[0],top/FACE*.85);
+    if(top<2)c=top===0?S[4]:S[3];else if(top%6===1||(x+row*5)%10===0)c=mix(c,INK,.45);
+    else if(hs(x*.37+row*3.1+Math.floor(x/10)*7)>.82)c=mix(c,S[3],.35);
+    if(dist<4&&hs(x*1.7+k)>.7)c=mix(c,INK,.5)}
+   else{c=mix(tile(RK,x+k*29,y+k*17),0x07080c,.25);if(mask(x,y-1))c=S[3];else if(mask(x,y-2))c=mix(c,S[2],.5)}}
+  const i=(y*w+x)*4;d[i]=(c>>16&255)*dk;d[i+1]=(c>>8&255)*dk;d[i+2]=(c&255)*dk;d[i+3]=255}
+ v.bg=d}
+function draw(v,t){W=v.w;H=v.h;T=t;buf=v.buf;M=v.m.mask;img=v.id.data;img.set(v.bg);buf.fill(-1);post.length=0;DK=v.m.dark;v.m.d();compose();DK=1;for(const f of post)f();v.ctx.putImageData(v.id,0,0)}
+function frame(t){for(const v of views)draw(v,t)}
+let time=2.2,last=0,paused=matchMedia('(prefers-reduced-motion:reduce)').matches,acc=0;
+function loop(now){const dt=Math.min(.1,(now-last)/1000||0);last=now;if(!paused){time+=dt;acc+=dt;if(acc>=1/20){acc=0;frame(time)}}requestAnimationFrame(loop)}
+function load(src){return new Promise(r=>{const im=new Image();im.onload=()=>{const c=document.createElement('canvas');c.width=im.width;c.height=im.height;const x=c.getContext('2d');x.drawImage(im,0,0);
+ r({w:im.width,h:im.height,d:x.getImageData(0,0,im.width,im.height).data})};im.src=src})}
+Promise.all([load("%%SOL%%"),load("%%ROCHE%%")]).then(([a,b])=>{FL=a;RK=b;views.forEach(makeBg);frame(time);requestAnimationFrame(loop)});
+const bp=document.getElementById('pause');
+function showPause(){bp.setAttribute('aria-pressed',String(paused));bp.textContent=paused?'Reprendre':'Pause'}showPause();
+bp.addEventListener('click',()=>{paused=!paused;showPause()});
+</script>

@@ -5,9 +5,12 @@ const Storage := preload("res://sim/item_storage.gd")
 const ItemIcon := preload("res://ui/inventory/item_icon.gd")
 const Blocks := preload("res://data/mineable_blocks.gd")
 const Gear := preload("res://data/gear_items.gd")
+const Recipes := preload("res://data/recipes.gd")
 const CYAN := Color("#5ce8ff")
 const MUTED := Color("#5aa6b4")
-const SLOTS := ["Tête", "Torse", "Gants", "Main droite", "Bottes", "Capteur oculaire", "Dos", "Anneau", "Main gauche", "Minage"]
+const QTY_SIZE := 17
+const QTY_COLOR := Color("#fff4c8")
+const SLOTS := ["Tête", "Torse", "Gants", "Main droite", "Bottes", "Capteur oculaire", "Dos", "Anneau", "Main gauche", "Minage", "Module 1", "Module 2"]
 const SIL := [".........aaaaaa.........","........abbbbbba........",".......abccccccba.......",".......abcffffcba.......",".......abccccccba.......","........abbbbbba........",".........aabbaa.........",
 "....aaaaabbbbbbaaaaa....","...abbbbaccccccabbbba...","..abccbbacffffcabbccba..","..abcba.acccccca.abcba..","..abcba.abcffcba.abcba..","..abcba.abccccba.abcba..","..abcba.aabbbbaa.abcba..","..abcba.abbbbbba.abcba..",
 ".abccba..abbbba..abccba.",".abffba..aaaaaa..abffba.",".abccba.aabbbbaa.abccba.","..aaaa..abbbbbba..aaaa..","........abbaabba........",".......abba..abba.......",".......abca..acba.......",".......abca..acba.......",".......abfa..afba.......",
@@ -17,7 +20,9 @@ var _kind: String
 var _owner: Unit
 var opened := false
 var _drag_slot := {}
+var _consume_right_release := false
 var _font: Font = SystemFont.new()
+var _bold: Font = SystemFont.new()
 var _scale := 1.0
 var _origin := Vector2.ZERO
 
@@ -40,6 +45,8 @@ static func mining_item() -> String:
 
 func _ready() -> void:
 	(_font as SystemFont).font_names = PackedStringArray(["DejaVu Sans Mono", "monospace"])
+	(_bold as SystemFont).font_names = (_font as SystemFont).font_names
+	(_bold as SystemFont).font_weight = 700
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	visible = false
@@ -51,16 +58,19 @@ func _ready() -> void:
 			_owner = u
 			_drag_slot = {}
 			opened = true
+			Sfx.play("ui_inventaire")
 			show())
 	Events.game_reset.connect(close)
 	Events.inventory_requested.connect(func() -> void:
 		if not opened and available():
 			opened = true
+			Sfx.play("ui_inventaire")
 			show())
 	Events.game_over.connect(func(_won: bool) -> void: close())
 
 
 func close() -> void:
+	GameState.hud_chest = {}
 	_chest = null
 	_owner = null
 	opened = false
@@ -69,6 +79,12 @@ func close() -> void:
 
 
 func _input(event: InputEvent) -> void:
+	if HelpPanel.open:
+		return
+	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_RIGHT and not event.pressed and _consume_right_release:
+		_consume_right_release = false
+		get_viewport().set_input_as_handled()
+		return
 	if event is InputEventKey:
 		var key: Key = event.key_label if event.key_label != KEY_NONE else event.keycode
 		if key == KEY_C and not event.ctrl_pressed and not event.meta_pressed and not event.alt_pressed:
@@ -77,6 +93,7 @@ func _input(event: InputEvent) -> void:
 					close()
 				elif available():
 					opened = true
+					Sfx.play("ui_inventaire")
 					show()
 			get_viewport().set_input_as_handled()
 			return
@@ -86,6 +103,14 @@ func _input(event: InputEvent) -> void:
 			get_viewport().set_input_as_handled()
 			return
 	if opened:
+		if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_RIGHT and event.pressed:
+			_consume_right_release = true
+			_drag_slot = {}
+			var p: Vector2 = (event.position - _origin) / _scale
+			if not Rect2(20, 12, 1140, 796).has_point(p):
+				close()
+			else:
+				_equip_slot(slot_at(p))
 		if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
 			var p: Vector2 = (event.position - _origin) / _scale
 			if event.pressed:
@@ -100,11 +125,64 @@ func _input(event: InputEvent) -> void:
 				if not _drag_slot.is_empty() and not target.is_empty():
 					_drop(_drag_slot, target)
 				_drag_slot = {}
-		get_viewport().set_input_as_handled()
+		# Laisser le GUI suivre le survol pour afficher les infobulles natives.
+		if not event is InputEventMouseMotion:
+			get_viewport().set_input_as_handled()
+
+
+func _equip_slot(slot: Dictionary) -> void:
+	var stack := _slot_content(slot)
+	if stack.is_empty() or slot.has("equip"):
+		return
+	var destination := Gear.slot_of(stack["item"])
+	if destination.is_empty():
+		return
+	# Module d'exo : la première des deux cases libres (sinon la première).
+	if destination == Gear.MODULE:
+		var wearer := _owner if _owner else engineer()
+		destination = Gear.MODULE_SLOTS[0]
+		for ms: String in Gear.MODULE_SLOTS:
+			if wearer and not wearer.equipment.has(ms):
+				destination = ms
+				break
+	var source: Array[Dictionary] = _box() if slot.has("box") else slot["items"]
+	var index: int = slot["box"] if slot.has("box") else slot["index"]
+	Gear.equip(_owner if _owner else engineer(), source, index, destination)
+
+
+func _get_tooltip(at_position: Vector2) -> String:
+	if not opened or not _drag_slot.is_empty():
+		return ""
+	var stack := _slot_content(slot_at((at_position - _origin) / _scale))
+	if stack.is_empty():
+		return ""
+	var item: String = stack["item"]
+	var gear: Dictionary = Gear.ITEMS.get(item, {})
+	var lines: PackedStringArray = [Recipes.name_of(item)]
+	# Nom de l'ancien porteur, sous le titre (armes et armures prises à un ennemi).
+	if String(stack.get("owner", "")) != "":
+		lines.append("Porteur : " + String(stack["owner"]))
+	lines.append("Rareté : " + Loot.rarity_name(item))
+	lines.append("Quantité : %d" % stack["quantity"])
+	if gear.has("slot"):
+		lines.append("Emplacement : " + gear["slot"])
+	var stats := {"damage": "Dégâts", "armor": "Défense", "melee": "Portée (unités)", "reach": "Portée (unités)", "cd": "Recharge (s)"}
+	for stat: String in stats:
+		if gear.has(stat):
+			lines.append("%s : %s" % [stats[stat], str(gear[stat])])
+	if gear.get("two_hands", false):
+		lines.append("Arme à deux mains")
+	if gear.has("ammo"):
+		lines.append("Munition : " + Recipes.name_of(gear["ammo"]))
+	var description := Recipes.desc_of(item)
+	if not description.is_empty():
+		lines.append(description)
+	return "\n".join(lines)
 
 
 ## Glisser-déposer entre stock, paquetage et emplacements d'équipement (objets de data/gear_items.gd).
 func _drop(from: Dictionary, to: Dictionary) -> void:
+	Sfx.play("coffre")
 	if from.has("box"):
 		if to == from:
 			_withdraw(from["box"])
@@ -126,6 +204,9 @@ func _drop(from: Dictionary, to: Dictionary) -> void:
 
 
 static func equip_rect(i: int) -> Rect2:
+	# Modules d'exo : deux petites cases sous la silhouette.
+	if i >= 10:
+		return Rect2(846.0 + (i - 10) * 58.0, 574.0, 48, 48)
 	return Rect2(1060.0 if i >= 5 else 664.0, 156.0 + (i % 5) * 87, 68, 64)
 
 
@@ -197,6 +278,15 @@ func _draw() -> void:
 				draw_texture_rect(HudStyle.icon("mining_seal", 64), Rect2(x + 2, y, 64, 64), false)
 			else:
 				ItemIcon.draw_item(self, worn, Vector2(x + 34, y + 32), 1.8)
+				_rarity_edge(Rect2(x, y, 68, 64), worn)
+	for i in [10, 11]:
+		var mr := equip_rect(i)
+		var mod: String = u_eq.equipment.get(SLOTS[i], "") if u_eq else ""
+		_slot(mr, mod != "")
+		if mod != "":
+			ItemIcon.draw_item(self, mod, mr.get_center(), 1.4)
+			_rarity_edge(mr, mod)
+	_text(Vector2(772, 603), "MODULES", MUTED, 11)
 	_text(Vector2(662, 637), "MINAGE · " + ("SCEAU DE MINAGE ÉQUIPÉ" if not mining_item().is_empty() else "AUCUN SCEAU"), CYAN if not mining_item().is_empty() else MUTED, 13)
 	_panel(Rect2(250, 688, 680, 120))
 	_text(Vector2(268, 708), "// PAQUETAGE · 10", MUTED, 11)
@@ -219,7 +309,7 @@ func _slot_content(slot: Dictionary) -> Dictionary:
 	if slot.has("equip"):
 		var u := _owner if _owner else engineer()
 		var worn: String = u.equipment.get(slot["equip"], "") if u else ""
-		return {} if worn.is_empty() else {"item": worn, "quantity": 1}
+		return {} if worn.is_empty() else Storage.stack_of(worn, String(u.equipment_owner.get(slot["equip"], "")))
 	if slot.has("items"):
 		var items: Array = slot["items"]
 		return items[slot["index"]] if slot["index"] < items.size() else {}
@@ -254,7 +344,7 @@ func _draw_drag() -> void:
 		draw_rect(_slot_rect(target).grow(2), Color.WHITE, false, 2)
 	ItemIcon.draw_item(self, stack["item"], p, 1.8)
 	if stack["quantity"] > 1:
-		_text(p + Vector2(14, 26), str(stack["quantity"]), CYAN, 12)
+		_quantity(p + Vector2(34, 28), stack["quantity"])
 
 
 func _draw_base() -> void:
@@ -301,7 +391,7 @@ func _withdraw(index: int) -> void:
 		return
 	var bag := _owner.inventory
 	for i in bag.size():
-		if not bag[i].is_empty() and bag[i]["item"] == box[index]["item"]:
+		if Storage.same_kind(bag[i], box[index]["item"], String(box[index].get("owner", ""))):
 			Storage.move_stack(box, index, bag, i, _owner.inventory_capacity)
 			if box[index].is_empty():
 				return
@@ -311,16 +401,30 @@ func _withdraw(index: int) -> void:
 			return
 
 
+## Liseré de rareté (sim/loot.gd) : rien pour un objet normal, la couleur de la rareté au-delà.
+func _rarity_edge(rect: Rect2, item: String) -> void:
+	if Loot.rarity_of(item) != "normal":
+		draw_rect(rect.grow(-1.5), Loot.rarity_color(item), false, 2.0)
+
+
 func _draw_item(rect: Rect2, stack: Dictionary) -> void:
+	_rarity_edge(rect, stack["item"])
 	var item: String = stack["item"]
 	ItemIcon.draw_item(self, item, rect.get_center() - Vector2(0, 5), 1.8)
 	_text(rect.position + Vector2(4, rect.size.y - 5), preload("res://data/recipes.gd").name_of(item), CYAN, 10)
 
-	var quantity := str(stack["quantity"])
-	var width := _font.get_string_size(quantity, HORIZONTAL_ALIGNMENT_LEFT, -1, 11).x
-	var position := rect.position + Vector2(rect.size.x - width - 3, 12)
-	draw_rect(Rect2(position - Vector2(2, 10), Vector2(width + 4, 13)), Color("#06121aee"))
-	_text(position, quantity, CYAN, 11)
+	_quantity(rect.position + Vector2(rect.size.x - 3, 15), stack["quantity"])
+
+
+## Quantité d'une pile : gros chiffres clairs, cernés de noir, sur cartouche sombre.
+## `right` est le bord droit de la ligne de base.
+func _quantity(right: Vector2, amount: int) -> void:
+	var text := str(amount)
+	var width := _bold.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, QTY_SIZE).x
+	var p := right - Vector2(width, 0)
+	draw_rect(Rect2(p - Vector2(3, QTY_SIZE - 2), Vector2(width + 6, QTY_SIZE + 2)), Color("#02080de0"))
+	draw_string_outline(_bold, p, text, HORIZONTAL_ALIGNMENT_LEFT, -1, QTY_SIZE, 4, Color.BLACK)
+	draw_string(_bold, p, text, HORIZONTAL_ALIGNMENT_LEFT, -1, QTY_SIZE, QTY_COLOR)
 
 
 func slot_at(p: Vector2) -> Dictionary:
@@ -334,7 +438,7 @@ func slot_at(p: Vector2) -> Dictionary:
 				return {"items": GameState.base_inventory, "index": i, "capacity": 100}
 	var u := _owner if _owner else engineer()
 	if u:
-		for i in range(9):
+		for i in [0, 1, 2, 3, 4, 5, 6, 7, 8, 10, 11]:
 			if equip_rect(i).has_point(p):
 				return {"equip": SLOTS[i]}
 		for i in range(10):

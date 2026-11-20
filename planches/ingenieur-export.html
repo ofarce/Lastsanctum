@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><title>Export de l'Ingénieur</title>
+<style>body{background:#1d2a24;color:#efe6cf;font:14px Georgia,serif;padding:16px}canvas{image-rendering:pixelated;background:#4f7a3a;display:block;margin:8px 0}</style></head><body>
+<h1>Export de l'Ingénieur (Templier technomancien, ou ?body=exil : avant la combinaison)</h1>
+<p id="st">Rendu…</p>
+<canvas id="sheet"></canvas><canvas id="por"></canvas>
+<script src="assets/engineer-colosse.js"></script>
+<script src="assets/engineer-exile.js"></script>
+<script src="assets/engineer-cannon.js"></script>
+<script src="assets/engineer-ragged.js"></script>
+<script src="assets/engineer-maj.js"></script>
+<script>
+'use strict';
+// Même gabarit que tyrien.json (TyrienArt) : images 48 × 48, pieds en (24, 45), Ingénieur tourné vers la droite.
+// Export : python3 tools/ingenieur/export.py (capture ?shot=1 avec Firefox headless).
+// Dessin et animations : planches/assets/engineer-maj.js (ENG_ANIMS, membres articulés ; planche
+// planches/ingenieur-maj-propositions.html, 13 pistes retenues). Tenues : Templier technomancien, ou ?body=exil :
+// l'Ingénieur avant la combinaison (torse nu, chausses déchirées). Les rangées Arbalestrie (c_*) et le casque
+// restent ceux du Templier dans les deux planches.
+const FW=48,FH=48,AX=24,AY=45,OX=8,OY=15,D=DEG;
+const EXIL=new URLSearchParams(location.search).get('body')==='exil';
+const ORDER=['idle','walk','kneel','pray','settle','lotus','slash1','slash2','shoot','aim','shoot_d','shoot_u','idle_d','walk_d','idle_u','walk_u','hit','c_idle','c_walk','c_shoot'];
+const A={};
+for(const k of ORDER){const a=ENG_ANIMS[k];A[k]={cols:a.cols,rows:Math.ceil(a.n/a.cols),n:a.n,fps:a.fps,note:a.note,f:i=>engFrame(k,i,EXIL&&!k.startsWith('c_')?'exil':'templier')}}
+A.helm={cols:4,rows:1,n:4,note:'calque du casque de combat : fermeture 25 / 50 / 75 / 100 % (tête au repos, décaler de dy)',f:i=>helmetLayer((i+1)/4)};
+const W=19*FW;let y=0;for(const k in A){A[k].y=y;y+=A[k].rows*FH}
+const sheet=document.getElementById('sheet');sheet.width=W;sheet.height=y;const g=sheet.getContext('2d');
+for(const k in A){const a=A[k];for(let i=0;i<a.n;i++)g.drawImage(render(a.f(i),1),(i%a.cols)*FW,a.y+Math.floor(i/a.cols)*FH)}
+// Portrait du HUD : 48 × 48 doublé, posé en bas d'un carré 128 × 128.
+const por=document.getElementById('por');por.width=por.height=128;const pg=por.getContext('2d');pg.imageSmoothingEnabled=false;
+pg.drawImage(render(EXIL?raggedPortrait('A'):exilePortrait('B'),2),16,32);
+// Géométrie de la visée (épaule et bouche, recul 0), coordonnées de l'image.
+const sx=OX+16+1+.5,sy=OY+15+.5;
+const meta={source:'planches/assets/engineer-maj.js — planches/ingenieur-export.html',
+ frame_w:FW,frame_h:FH,ax:AX,ay:AY,h:31,stride:5.0,self_bob:true,overlays:false,anims:{},
+ aim:{angles:ANGLES,rows_def:[{recoil:0,pulse:.5},{recoil:1.5,pulse:.5},{recoil:3,pulse:.5},{recoil:0,pulse:1}],
+  muzzle:ANGLES.map(a=>[+(sx+7.5*Math.cos(a*D)).toFixed(1),+(sy+7.5*Math.sin(a*D)).toFixed(1)]),shoulder:[sx,sy]}};
+for(const k in A){const a=A[k],m={y:a.y,cols:a.cols,rows:a.rows,count:a.n,note:a.note};if(a.fps)m.fps=a.fps;meta.anims[k]=m}
+document.getElementById('st').textContent='Planche '+W+' × '+y;
+// ?shot=1 : planche à 1:1 en haut à gauche sur fond magenta, portrait dessous (capturé par tools/ingenieur/export.py).
+if(new URLSearchParams(location.search).get('shot')){document.body.style.cssText='margin:0;padding:0;background:#ff00ff';
+ for(const e of[...document.body.children])if(e.tagName!=='CANVAS'&&e.tagName!=='SCRIPT')e.remove();
+ for(const c of[sheet,por])c.style.cssText='margin:0;background:transparent;display:block'}
+window.ENGINEER_META=meta;
+</script></body></html>

@@ -13,6 +13,7 @@ extends Node2D
 ## Palette du miroir (TempleIncantation, O).
 const O: Array[Color] = [Color("#120a22"), Color("#24164a"), Color("#3c2a78"), Color("#5c46aa"), Color("#8a72d8"), Color("#c4b2ff"), Color("#efe6ff")]
 const HAND := Vector2(7, -15)
+const ItemIcon := preload("res://ui/inventory/item_icon.gd")
 ## Formules d'incantation : vers récités pendant le chantier, puis mot de clôture.
 const FORMULAS := {
 	"templeJob": {"verses": ["Ka·ren·thal", "Vos·me·dri", "Aun·tir·ae", "Sel·va·rün", "Ix·or·tha"], "end": "Thal·de·mor !"},
@@ -24,7 +25,7 @@ const FORMULAS := {
 ## Vers de chaque bâtiment (BUILDINGS[].verse, buildings.js).
 const VERSE_OF := {"sigil": "templeJob", "aether": "foundryJob", "medeina": "sawmillJob", "indra": "barracksJob",
 	"warehouse": "templeJob", "library": "templeJob", "forge": "foundryJob", "workshop": "foundryJob", "creuset": "foundryJob", "bedroom": "sawmillJob", "soulwell": "sawmillJob",
-	"caserne": "barracksJob"}
+	"caserne": "barracksJob", "eglise": "sawmillJob", "ecole": "sawmillJob"}
 
 var world: World
 var _bold: FontVariation
@@ -39,6 +40,9 @@ var _fp_meta: Dictionary
 var _effects := EffectsDrawer.new()
 ## Textes affichés (faux : comme ctx.fillText neutralisé par le scénario « text » du baker).
 var show_text := true
+## Contrôle des hitboxes (F3, InputController) : silhouette touchée par les balles et les clics (rectangle) et
+## rayon de corps compté par la mêlée autour des pieds (cercle), pour chaque ennemi visible.
+static var show_hitboxes := false
 
 
 func _ready() -> void:
@@ -85,6 +89,7 @@ func _draw() -> void:
 	if world == null or world.terrain_state == null:
 		return
 	_draw_building_labels()
+	_draw_pylons()
 	_effects.ci = self
 	_effects.world = world
 	_effects.draw_all(GameState.sim_time)
@@ -93,11 +98,114 @@ func _draw() -> void:
 	_draw_build_preview()
 	_draw_pray_feedback()
 	_draw_anchor()
+	if show_hitboxes:
+		_draw_hitboxes()
 	var b := HudModel.selected_building()
 	if b and b.rally_point != null:
-		var p := _project(b.rally_point.x, 0, b.rally_point.y)
-		draw_line(p, p + Vector2(0, -22), Color("#ffe095"), 2)
-		draw_colored_polygon(PackedVector2Array([p + Vector2(0, -22), p + Vector2(14, -17), p + Vector2(0, -12)]), Color("#5ce8ff"))
+		_draw_rally(b)
+
+
+# ---------------------------------------------------------------- Point de ralliement
+
+const RALLY_GOLD := Color("#f2c75c")
+const RALLY_GOLD_DARK := Color("#7a5418")
+const RALLY_OUTLINE := Color("#1a1208")
+
+
+## Ligne dorée en pointillés (qui défile vers le drapeau) du bâtiment au point, puis le drapeau.
+func _draw_rally(b: Building) -> void:
+	var t := Time.get_ticks_msec() / 1000.0
+	var from := _project(b.x, 0.0, b.z)
+	var to := _project(b.rally_point.x, 0.0, b.rally_point.y)
+	# Le drapeau suit le zoom de la caméra (taille fixe en pixels natifs, pas en pixels écran).
+	var k := clampf(float(_cam().px) * 0.6, 1.0, 3.0)
+	_draw_marching_dashes(from, to - (to - from).limit_length(8.0 * k), t)
+	draw_set_transform(to, 0.0, Vector2(k, k))
+	_draw_rally_flag(Vector2.ZERO, t)
+	draw_set_transform(Vector2.ZERO)
+
+
+func _draw_marching_dashes(from: Vector2, to: Vector2, t: float) -> void:
+	var length := from.distance_to(to)
+	if length < 1.0:
+		return
+	var dir := (to - from) / length
+	const DASH := 7.0
+	const GAP := 5.0
+	var d := -fmod(t * 18.0, DASH + GAP)
+	while d < length:
+		var a := from + dir * maxf(d, 0.0)
+		var e := from + dir * minf(d + DASH, length)
+		if d + DASH > 0.0:
+			draw_line(a, e, Color(RALLY_OUTLINE, 0.55), 4.0)
+			draw_line(a, e, RALLY_GOLD, 2.0)
+		d += DASH + GAP
+
+
+## Fanion bleu ondulant à liseré doré sur une hampe, avec ombre et anneau pulsé au sol.
+func _draw_rally_flag(p: Vector2, t: float) -> void:
+	# Anneau au sol qui pulse.
+	var pulse := fmod(t * 0.9, 1.0)
+	var ring := 6.0 + pulse * 10.0
+	_draw_ellipse_outline(p, Vector2(ring, ring * 0.45), Color(RALLY_GOLD, 0.8 * (1.0 - pulse)), 1.5)
+	# Ombre portée.
+	_draw_ellipse_filled(p + Vector2(2, 0), Vector2(7, 2.6), Color(0, 0, 0, 0.35))
+	const H := 30.0
+	var top := p + Vector2(0, -H)
+	# Hampe (contour sombre puis bois doré).
+	draw_line(p, top, RALLY_OUTLINE, 4.0)
+	draw_line(p, top + Vector2(0, 1), Color("#c9a25a"), 2.0)
+	draw_line(p + Vector2(-0.5, 0), top + Vector2(-0.5, 1), Color("#ffe8b0"), 0.8)
+	# Fanion à queue d'aronde, ondulant.
+	const W := 18.0
+	const FH := 12.0
+	var upper := PackedVector2Array()
+	var lower := PackedVector2Array()
+	var steps := 8
+	for i in range(steps + 1):
+		var u := float(i) / steps
+		var wave := sin(u * 5.0 - t * 6.0) * 1.8 * u
+		var x := 1.5 + u * W
+		upper.append(top + Vector2(x, 1.0 + wave))
+		lower.append(top + Vector2(x, 1.0 + FH - u * 1.5 + wave))
+	var notch := top + Vector2(1.5 + W * 0.72, 1.0 + FH * 0.5 + sin(3.6 - t * 6.0) * 1.3)
+	var poly := PackedVector2Array(upper)
+	poly.append(notch)
+	for i in range(lower.size() - 1, -1, -1):
+		poly.append(lower[i])
+	var outline := PackedVector2Array(poly)
+	outline.append(poly[0])
+	draw_polyline(outline, RALLY_OUTLINE, 3.0)
+	draw_colored_polygon(poly, Color("#2f7fd0"))
+	# Reflet supérieur et liseré doré.
+	var shine := PackedVector2Array()
+	for i in range(upper.size()):
+		shine.append(upper[i] + Vector2(0, 1.5))
+	draw_polyline(shine, Color("#7cc8ff"), 1.5)
+	draw_polyline(outline, RALLY_GOLD, 1.0)
+	# Emblème : petit losange doré.
+	var c := top + Vector2(1.5 + W * 0.32, 1.0 + FH * 0.5 + sin(1.6 - t * 6.0) * 0.6)
+	draw_colored_polygon(PackedVector2Array([c + Vector2(0, -3), c + Vector2(2.5, 0), c + Vector2(0, 3), c + Vector2(-2.5, 0)]), RALLY_GOLD)
+	# Pommeau doré.
+	draw_circle(top, 3.2, RALLY_OUTLINE)
+	draw_circle(top, 2.2, RALLY_GOLD)
+	draw_circle(top + Vector2(-0.7, -0.7), 0.9, Color("#fff4c8"))
+
+
+func _draw_ellipse_filled(c: Vector2, r: Vector2, col: Color) -> void:
+	var pts := PackedVector2Array()
+	for i in range(20):
+		var a := TAU * i / 20.0
+		pts.append(c + Vector2(cos(a) * r.x, sin(a) * r.y))
+	draw_colored_polygon(pts, col)
+
+
+func _draw_ellipse_outline(c: Vector2, r: Vector2, col: Color, w: float) -> void:
+	var pts := PackedVector2Array()
+	for i in range(25):
+		var a := TAU * i / 24.0
+		pts.append(c + Vector2(cos(a) * r.x, sin(a) * r.y))
+	draw_polyline(pts, col, w, true)
 
 
 # ---------------------------------------------------------------- Bâtiments
@@ -139,6 +247,88 @@ func _draw_building_labels() -> void:
 					rate += Simulation.pray_rate(u)
 			if n:
 				_text_c(_bold, Vector2(p.x, y + 13.0), "%d EN PRIÈRE · +%d %s / s" % [n, rate, String(Catalog.RES_INFO[Catalog.DEITY_RES[D["deity"]]]["name"]).to_upper()], 10, Color("#bfe8ff"))
+
+
+# ---------------------------------------------------------------- Pylônes de Merenor
+
+static var _pylon_style: StyleBoxFlat
+static var _beast_icon: AtlasTexture
+
+
+## Minuteur de renaissance au-dessus de l'obélisque (comme la formation des unités, en rouge), état de la
+## canalisation sous le socle.
+func _draw_pylons() -> void:
+	if _pylon_style == null:
+		_pylon_style = StyleBoxFlat.new()
+		_pylon_style.bg_color = Color("#100a0ce6")
+		_pylon_style.border_color = Color("#6e1a1c")
+		_pylon_style.set_border_width_all(2)
+		_pylon_style.set_corner_radius_all(4)
+		_beast_icon = AtlasTexture.new()
+		_beast_icon.atlas = load(EnemyArt.ROOT + "beast_idle.png")
+		_beast_icon.region = Rect2(18, 16, 48, 30)  # corps du chien dans le cadre 84 × 48
+	var kk := float(_cam().px)
+	for p: Dictionary in world.terrain_state.portals:
+		if not p["active"] or not p.has("slots") or not world.fog.visible_at(Vector2(p["x"], p["z"])):
+			continue
+		var base := _project(p["x"], 0.0, p["z"])
+		var praying: Array = p.get("praying", [])
+		_draw_prayer_beams(p, base, kk)
+		if p["channeled"]:
+			_text_c(_bold, base + Vector2(0, 7.0 * kk), "PYLÔNE CANALISÉ", 10, Color("#ece8dc"))
+		elif not praying.is_empty():
+			_text_c(_bold, base + Vector2(0, 7.0 * kk), "CANALISATION · %d / 4" % praying.size(), 10, Color("#ffb48a"))
+		var top := base - Vector2(0, 100.0 * kk)
+		# Bénédiction de l'Ingénieur : répit restant (il grandit pendant la prière, s'écoule ensuite).
+		var blessing := float(p.get("blessing", 0.0))
+		if blessing > 0.0:
+			var bw := 132.0
+			var bp := Rect2(top - Vector2(bw / 2.0, 26.0), Vector2(bw, 24.0))
+			draw_style_box(_job_panel(), bp)
+			var bs := ceili(blessing)
+			var label := "BÉNÉDICTION %d:%02d" % [bs / 60, bs % 60]
+			draw_string(_bold, bp.position + Vector2(0, 16), label, HORIZONTAL_ALIGNMENT_CENTER, bw, 11, Color("#5ce8ff") if p.get("blessing_now", false) else Color("#b8f6ff"))
+			top.y -= 30.0
+		var tm := Pylons.timer(p)
+		if tm.is_empty():
+			continue
+		var w := 96.0
+		var panel := Rect2(top - Vector2(w / 2.0, 44.0), Vector2(w, 44.0))
+		draw_style_box(_pylon_style, panel)
+		draw_rect(Rect2(panel.position + Vector2(5, 5), Vector2(32, 24)), Color("#2a1216"))
+		draw_texture_rect(_beast_icon, Rect2(panel.position + Vector2(-3, 2), Vector2(48, 30)), false)
+		var sec := ceili(float(tm["rem"]))
+		draw_string(_bold, panel.position + Vector2(44, 23), "%d:%02d" % [sec / 60, sec % 60], HORIZONTAL_ALIGNMENT_LEFT, -1, 15, Color("#ffb48a"))
+		if int(tm["waiting"]) > 0:
+			draw_string(_bold, panel.position + Vector2(78, 14), "+%d" % int(tm["waiting"]), HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color("#e0583a"))
+		var bar := Rect2(panel.position + Vector2(6, 33), Vector2(w - 12, 5))
+		draw_rect(bar, Color("#2a0c10"))
+		draw_rect(Rect2(bar.position, Vector2(bar.size.x * float(tm["progress"]), bar.size.y)), Color("#e0583a"))
+		draw_rect(bar, Color("#a8302a"), false)
+
+
+## Rayons de prière de la planche v2 : de la poitrine de chaque esprit qui canalise au foyer de
+## l'obélisque, couleur du culte éclaircie, trois étincelles blanches qui montent le long du rayon.
+const BEAM_CULT := {"aether": Color8(122, 134, 255), "indra": Color8(255, 154, 58), "medeina": Color8(111, 224, 122), "sigil": Color8(216, 212, 202)}
+
+
+func _draw_prayer_beams(p: Dictionary, base: Vector2, kk: float) -> void:
+	var focus := base - Vector2(0, Pylons.FOCUS * kk)
+	var t := GameState.sim_time
+	for u: Unit in GameState.units:
+		if not u.alive() or u.hidden or not u.working or not (u.job is Dictionary) \
+				or u.job.get("type") != "pray_pylon" or u.job.get("pylon") != p:
+			continue
+		var c: Color = BEAM_CULT.get(u.role, Color.WHITE)
+		var from := _project(u.x, 0.0, u.z) - Vector2(0, Pylons.BEAM_FROM * kk)
+		var i := Pylons.CULTS.find(u.role)
+		draw_line(from, focus, Color(c, 0.18), 3.0 * kk)
+		draw_line(from, focus, c.lerp(Color.WHITE, 0.35), kk)
+		draw_circle(from, 6.0 * kk, Color(c, 0.12))
+		for k in 3:
+			var q := fposmod(t * 0.8 + k / 3.0 + i * 0.1, 1.0)
+			draw_rect(Rect2(from.lerp(focus, q) - Vector2(kk, kk) * 0.5, Vector2(kk, kk) * 1.5), Color(1, 1, 1, 0.85))
+	draw_circle(focus, 10.0 * kk, Color(0.92, 0.91, 0.87, 0.10 * float(p.get("praying", []).size()) / 4.0))
 
 
 ## drawPrayFeedback : « +5 Savoir » qui monte et s'efface au-dessus du temple.
@@ -419,7 +609,7 @@ func _draw_anchor() -> void:
 		var pts := PackedVector2Array()
 		for i in 48:
 			var a := TAU * i / 48.0
-			pts.append(p + Vector2(cos(a) * 1.8 * z * 0.9, sin(a) * 1.8 * z * 0.42).rotated(-0.02))
+			pts.append(p + Vector2(cos(a) * 3.3 * z * 0.9, sin(a) * 3.3 * z * 0.42).rotated(-0.02))
 		draw_colored_polygon(pts, Color("#e8bc5b55"))
 	if not GameState.anchor_selected:
 		return
@@ -428,7 +618,7 @@ func _draw_anchor() -> void:
 		text = "ANCRE"
 	elif GameState.orb_owner and GameState.orb_progress > 0.0:
 		text = "ANCRE · RÉACTIVATION %d %%" % floori(GameState.orb_progress / Simulation.ORB_TIME * 100.0)
-	var q := _project(c.x, 0.0, c.y)
+	var q := _project(c.x, 0.0, c.y + 2.2)
 	_text_c(_bold, Vector2(q.x, q.y + 15.0 * 0.9), text, 10, Color("#c9afd0"))
 
 
@@ -440,46 +630,125 @@ static func building_jobs(b: Building) -> Array[Dictionary]:
 	for id: String in GameState.research_jobs:
 		var job: Dictionary = GameState.research_jobs[id]
 		if job["building"] == b:
-			jobs.append({"icon": "mining_seal", "progress": clampf(job["progress"] / Catalog.RESEARCH_TIME, 0, 1)})
+			jobs.append({"icon": String(Catalog.RESEARCH[id].get("icon", "mining_seal")), "progress": clampf(job["progress"] / Catalog.RESEARCH_TIME, 0, 1)})
 	if Simulation.Recipes.has_station(b.type) and b.recipe != "":
 		jobs.append({"icon": HudModel.CRAFT_ICON.get(b.recipe, "hammer"), "item": b.recipe,
 			"stock": Production.count_in(b.output_box, b.recipe),
 			"blocked": Production.craft_workers(b) == 0,
 			"progress": clampf(b.craft / Simulation.Recipes.craft_time(b.type), 0, 1)})
-	if b.type == "caserne" and not b.queue.is_empty():
-		for unit: Dictionary in Catalog.CASERNE_UNITS:
+	if Catalog.TRAINERS.has(b.type) and not b.queue.is_empty():
+		for unit: Dictionary in Catalog.TRAINERS[b.type]:
 			if unit["id"] == b.queue[0]:
 				jobs.append({"icon": unit["icon"], "progress": clampf(b.train / Catalog.CASERNE_TIME, 0, 1)})
+	# Temple : l'esprit qui naît à l'autel (portrait et progression), puis la file des suivants.
+	if b.is_temple():
+		var u := Simulation.temple_arrival(b)
+		if u != null or not b.queue.is_empty():
+			var waiting: Array[String] = []
+			waiting.assign(b.queue)
+			var progress := 0.0
+			var current := ""
+			if u != null:
+				current = u.role
+				progress = clampf(1.0 - (u.arrival_end - GameState.sim_time) / Simulation.ARRIVAL, 0, 1)
+			else:
+				current = waiting.pop_front()
+			jobs.append({"portrait": current, "progress": progress, "waiting": waiting})
 	return jobs
 
 
+## Piste 1 « Laiton et objet franc » (comme les boutons de fabrication) : tuile de laiton, objet 32 × 32 en pixels
+## entiers, jauge claire en pied, compteur grenat du coffre rouge et pastille « ! » quand l'atelier est bloqué.
 func _draw_job(at: Vector2, job: Dictionary) -> void:
-	var panel := Rect2(at - Vector2(38, 43), Vector2(76, 55))
-	var icon_at := at - Vector2(14, 38)
-	var label := ""
-	if job.has("stock"):
-		label = "En stock : %d" % job["stock"]
-		var width := _bold.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, 11).x
-		var padding := maxf(0, (width + 12 - panel.size.x) / 2)
-		panel = panel.grow_individual(padding, 16, padding, 0)
-		icon_at.y -= 16
-	draw_style_box(_job_panel(), panel)
-	if label != "":
-		draw_string(_bold, Vector2(panel.position.x, at.y - 8), label, HORIZONTAL_ALIGNMENT_CENTER, panel.size.x, 11)
-	# Arme du Creuset : son icône dessinée plutôt que le pictogramme générique.
-	var wi := TyrienArt.weapon_icon(String(job.get("item", "")))
-	if wi:
-		draw_texture_rect(wi, Rect2(icon_at - Vector2(2, 2), Vector2(32, 32)), false)
+	var tile := Rect2((at - Vector2(23, 44)).round(), Vector2(46, 46))
+	_laiton_panel(tile)
+	var center := tile.get_center() - Vector2(0, 2)
+	var icon_r := Rect2(center - Vector2(16, 16), Vector2(32, 32))
+	if job.has("portrait"):
+		_draw_portrait(icon_r, job["portrait"], 1.0)
+		_draw_waiting(Vector2(at.x, tile.position.y - 4.0), job["waiting"])
+	elif job.has("item"):
+		ItemIcon.draw_item(self, job["item"], center, 1.0)
 	else:
-		draw_texture_rect(HudStyle.icon(job["icon"], 28), Rect2(icon_at, Vector2(28, 28)), false)
+		var tint := Color.WHITE if job["icon"] == "mining_seal" else Color("#e9ce9e")
+		draw_texture_rect(HudStyle.icon(job["icon"], 28, 1.6), Rect2(center - Vector2(14, 14), Vector2(28, 28)), false, tint)
+	# Jauge : filet clair sur fond sombre, en pied de tuile.
+	var bar := Rect2(tile.position + Vector2(4, tile.size.y - 6), Vector2(tile.size.x - 8, 2))
+	draw_rect(bar, Color("#2a2414"))
+	draw_rect(Rect2(bar.position, Vector2(roundf(bar.size.x * job["progress"]), bar.size.y)), Color("#ffe0a0"))
+	if job.has("stock"):
+		_draw_stock(Vector2(tile.end.x + 4.0, tile.end.y - 9.0), job["stock"])
 	if job.get("blocked", false):
-		var badge := icon_at + Vector2(27, 4)
-		draw_circle(badge, 8, Color("#13212b"))
-		draw_string(_bold, badge + Vector2(-8, 5), "!", HORIZONTAL_ALIGNMENT_CENTER, 16, 15, Color("#ffdb44"))
-	var bar := Rect2(at + Vector2(-31, -2), Vector2(62, 6))
-	draw_rect(bar, Color("#132c33"))
-	draw_rect(Rect2(bar.position, Vector2(bar.size.x * job["progress"], bar.size.y)), Color("#5ce8ff"))
-	draw_rect(bar, Color("#1f9fb8"), false)
+		var badge := Rect2(tile.position + Vector2(tile.size.x - 9, -5), Vector2(14, 14))
+		draw_rect(badge, Color("#5a1e22"))
+		HudStyle.ring(self, badge, 1.0, Color("#ffdb44"))
+		draw_string(_bold, Vector2(badge.position.x, badge.position.y + 11), "!", HORIZONTAL_ALIGNMENT_CENTER, badge.size.x, 11, Color("#ffdb44"))
+
+
+## Tuile de laiton des boutons d'ordres (ActionButton, état normal).
+func _laiton_panel(r: Rect2) -> void:
+	HudStyle.linear_gradient(self, r, 145.0, [[0.0, Color("#2d2b21")], [0.65, Color("#121712")], [1.0, Color("#121712")]])
+	HudStyle.ring(self, r.grow(-1.0), 3.0, Color("#131710"))
+	HudStyle.ring(self, r, 1.0, Color("#aa8851"))
+
+
+## Compteur grenat du coffre rouge (pictogramme de coffre et nombre), ancré par son coin bas droit.
+func _draw_stock(bottom_right: Vector2, n: int) -> void:
+	var t := str(n)
+	var w := HudStyle.text_width(t, 10) + 16.0
+	var r := Rect2((bottom_right - Vector2(w, 13)).round(), Vector2(w, 13))
+	draw_rect(r, Color("#5a1e22"))
+	HudStyle.ring(self, r, 1.0, Color("#c0584c"))
+	var g := r.position + Vector2(3, 4)
+	draw_rect(Rect2(g, Vector2(7, 1)), Color("#ffd6c8"))
+	draw_rect(Rect2(g + Vector2(0, 2), Vector2(7, 4)), Color("#e8a090"))
+	draw_rect(Rect2(g + Vector2(3, 3), Vector2(1, 1)), Color("#5a1e22"))
+	draw_string(HudStyle.font(), Vector2(r.position.x + 13.0, r.position.y + 10.0), t, HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color("#ffe0d4"))
+
+
+const PORTRAITS := "res://assets/baked/hud/portraits/%s.png"
+const WAIT_SIZE := 24.0
+
+
+## Portraits composés une fois sur le fond du panneau (opaques) : le calque du monde blanchissait les pixels
+## semi-transparents des esprits, presque entièrement translucides.
+static var _portrait_cache := {}
+
+
+static func _opaque_portrait(role: String) -> Texture2D:
+	if _portrait_cache.has(role):
+		return _portrait_cache[role]
+	var tex: Texture2D = null
+	var path := PORTRAITS % role
+	if ResourceLoader.exists(path):
+		var src: Image = (load(path) as Texture2D).get_image()
+		src.convert(Image.FORMAT_RGBA8)
+		var img := Image.create(src.get_width(), src.get_height(), false, Image.FORMAT_RGBA8)
+		img.fill(Color("#06121a"))
+		img.blend_rect(src, Rect2i(Vector2i.ZERO, src.get_size()), Vector2i.ZERO)
+		tex = ImageTexture.create_from_image(img)
+	_portrait_cache[role] = tex
+	return tex
+
+
+func _draw_portrait(r: Rect2, role: String, alpha: float) -> void:
+	var tex := _opaque_portrait(role)
+	if tex:
+		draw_texture_rect(tex, r, false, Color(alpha, alpha, alpha))
+	draw_rect(r, Color("#1f9fb8"), false)
+
+
+## File d'attente : portraits des esprits suivants, centrés au-dessus du panneau, du prochain au dernier.
+func _draw_waiting(bottom: Vector2, waiting: Array) -> void:
+	if waiting.is_empty():
+		return
+	var gap := 3.0
+	var w := waiting.size() * WAIT_SIZE + (waiting.size() - 1) * gap
+	var strip := Rect2(Vector2(bottom.x - w / 2.0 - 4.0, bottom.y - WAIT_SIZE - 8.0), Vector2(w + 8.0, WAIT_SIZE + 8.0))
+	_laiton_panel(strip)
+	for i in waiting.size():
+		var r := Rect2(Vector2(strip.position.x + 4.0 + i * (WAIT_SIZE + gap), strip.position.y + 4.0), Vector2(WAIT_SIZE, WAIT_SIZE))
+		_draw_portrait(r, waiting[i], 0.75)
 
 
 static var _job_style: StyleBoxFlat
@@ -491,3 +760,27 @@ static func _job_panel() -> StyleBoxFlat:
 		_job_style.set_border_width_all(1)
 		_job_style.set_corner_radius_all(4)
 	return _job_style
+
+
+# ---------------------------------------------------------------- Hitboxes (F3)
+
+const HITBOX_RECT := Color("#ff4fd8")
+const HITBOX_MELEE := Color("#5fe8ff")
+
+
+func _draw_hitboxes() -> void:
+	var k := _z() * 0.86
+	for e: Enemy in GameState.enemies:
+		if not e.alive() or (world.fog != null and not world.fog.visible_at(e.pos())):
+			continue
+		var r := e.body_rect()
+		var a := _project(r.position.x, 0.0, r.position.y)
+		var b := _project(r.end.x, 0.0, r.end.y)
+		draw_rect(Rect2(a, b - a), Color(HITBOX_RECT, 0.12), true)
+		draw_rect(Rect2(a, b - a), HITBOX_RECT, false, 1.0)
+		var f := _project(e.x, 0.0, e.z)
+		var m := (Enemy.MELEE_BASE + e.melee_body()) * k
+		draw_arc(f, m, 0.0, TAU, 40, HITBOX_MELEE, 1.0)
+		draw_line(f - Vector2(3, 0), f + Vector2(3, 0), Color.WHITE, 1.0)
+		draw_line(f - Vector2(0, 3), f + Vector2(0, 3), Color.WHITE, 1.0)
+		_text_c(_bold, Vector2(f.x, b.y + 12.0), "%s%s" % [e.kind, " α" if e.alpha else ""], 10, HITBOX_RECT)

@@ -37,12 +37,17 @@ func test_layers_follow_body_frame_in_stack_order() -> void:
 	var u := engineer()
 	u.equipment = {"Torse": "gear_iron", "Tête": "gear_helm", "Main gauche": "gear_shield"}
 	var base := TyrienArt.anim("walk")[5]
+	# Corps « Templier » : la tenue tient lieu d'armure, aucun calque empilé.
+	check_eq(TyrienArt.overlays(base, Gear.pieces(u)).size(), 0, "templier : pas de calque d'équipement")
+	# L'ordre d'empilement reste valable si un corps les réactive.
+	TyrienArt.meta["overlays"] = true
 	var layers := TyrienArt.overlays(base, Gear.pieces(u))
 	check_eq(layers.size(), 3, "trois calques")
 	check(layers[0] == TyrienArt.frames["shield"]["walk"][5], "bouclier d'abord (côté éloigné)")
 	check(layers[1] == TyrienArt.frames["iron"]["walk"][5], "puis le plastron")
 	check(layers[2] == TyrienArt.frames["helm"]["walk"][5], "casque en dernier")
 	check(TyrienArt.overlays(TyrienArt.aim_frame(3, 18), Gear.pieces(u))[1] == TyrienArt.frames["iron"]["aim"][3 * 19 + 18], "visée : même image dans chaque calque")
+	TyrienArt.meta["overlays"] = false
 
 
 func test_inventory_drag_to_slot() -> void:

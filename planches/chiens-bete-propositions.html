@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Chiens de la Bête</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;600&display=swap" rel="stylesheet">
+<style>
+/* Planche : refonte HD des chiens de la Bête (ennemi « beast », vomi par les pylônes de Merenor).
+   Servie depuis la racine du dépôt (config launch « planches-chiens », port 8195) pour lire les atlas du jeu.
+   Dessin : planches/assets/bete/chiens-bete.js (moteur de l'Ingénieur + rampes de la refonte 16 bits). */
+:root{--bg:#0c0d10;--panel:#14161b;--line:#2c3038;--txt:#e2dccb;--mut:#9a9ca2;--acc:#d84a3a;--gold:#d0a038;--ok:#5fbf7a;--redo:#e0b04a;--no:#e0583a;color-scheme:dark}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--txt);font:15px/1.45 'Pixelify Sans',system-ui,sans-serif}
+header,main{max-width:1280px;margin:auto;padding:18px 16px}main{padding-bottom:80px}
+h1{margin:0;font-weight:600;letter-spacing:.08em;font-size:26px;color:var(--acc)}
+h2{font-weight:600;font-size:20px;color:var(--gold);margin:34px 0 6px;letter-spacing:.05em}
+p.lead{color:var(--mut);margin:6px 0 0;max-width:1000px}p.lead b{color:var(--txt);font-weight:600}
+.rules{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,290px),1fr));gap:10px;margin-top:14px}
+.rules div{background:var(--panel);border:1px solid var(--line);padding:10px 12px;font-size:14px;color:var(--mut)}.rules b{color:var(--gold);display:block;font-weight:600}
+button{font:inherit;color:var(--txt);background:#1c1f26;border:1px solid var(--line);padding:5px 11px;cursor:pointer}
+button:hover{border-color:#5a4030}button[aria-pressed=true]{border-color:var(--acc);background:#2a1a1a}
+button:focus-visible,textarea:focus-visible{outline:2px solid var(--gold);outline-offset:1px}
+.bar{position:sticky;top:0;z-index:5;background:var(--bg);border-bottom:1px solid var(--line);display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding:8px 16px;max-width:1280px;margin:auto}
+.bar .lab{color:var(--mut);font-size:13px;margin-left:6px}#tally{margin-left:auto;color:var(--mut);font-size:13px}
+.g3{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,380px),1fr));gap:14px;margin-top:12px}
+.card{background:var(--panel);border:1px solid var(--line);display:flex;flex-direction:column;min-width:0}
+.card[data-v=garder]{border-color:#2f6a40}.card[data-v=revoir]{border-color:#7a6226}.card[data-v=rejeter]{border-color:#7a3a2a;opacity:.72}
+canvas.px{image-rendering:pixelated;display:block;width:100%;height:auto;background:#3a3026}
+.cap{padding:10px 14px 12px;display:flex;flex-direction:column;gap:6px}
+.cap b.t{color:var(--acc);font-weight:600;font-size:18px}.cap p{margin:0;color:var(--mut);font-size:14px}
+.verdict{display:flex;gap:6px}.verdict button{flex:1 1 0;min-width:0;font-size:13px}
+.verdict button.sel[data-v=garder]{background:#1f3a28;border-color:var(--ok)}.verdict button.sel[data-v=revoir]{background:#3a321b;border-color:var(--redo)}.verdict button.sel[data-v=rejeter]{background:#3a2019;border-color:var(--no)}
+textarea{background:#101217;color:var(--txt);border:1px solid var(--line);font:13px system-ui,sans-serif;padding:6px 8px;resize:vertical;min-height:32px;width:100%}
+.wide{margin-top:12px}.strip{overflow-x:auto}.strip canvas.px{min-width:900px}
+#out{display:none;margin-top:10px;min-height:140px;font-family:ui-monospace,monospace}
+</style></head><body>
+<header><h1>CHIENS DE LA BÊTE · REFONTE HD</h1>
+<p class="lead">Les chiens vomis par les pylônes (« Aberration du Dévoreur » dans le code) sont aujourd’hui une ébauche de 19 px animée en 4 poses. Ils sont redessinés ici <b>plus grands et plus détaillés</b> (cadre 84 × 48, ~26 px au garrot, 40 px de long), avec un <b>squelette articulé</b> : pattes en cinématique inverse, échine qui se ploie, mâchoire, queue, et des <b>pieds d’appui fixés au sol</b> pendant la course. Trois modèles ; les animations suivent celui choisi dans la barre.</p>
+<div class="rules">
+ <div><b>Charte de la refonte</b>Rampes de 5 tons sans trame, contour coloré, lumière en haut à gauche — le moteur de l’Ingénieur.</div>
+ <div><b>Rouge = la Bête</b>Chair rouge, os ivoire, braises aux yeux. Ni or, ni cyan, ni pourpre.</div>
+ <div><b>Fluidité</b>24 images par seconde partout : repos 48 images, charge 12, bond 18, mort 36.</div>
+ <div><b>Prêt pour le jeu</b>Profil vers la droite comme l’atlas actuel ; ancre aux pieds (36, 44), foulée 3,25 unités.</div>
+</div>
+<div class="rules"><div style="grid-column:1/-1;border-color:#5a4030"><b>Version 4 · retours intégrés</b>Modèle <b style="display:inline;color:var(--txt)">C · Charognard aux trois gueules</b> gardé (A et B rejetés, laissés pour mémoire) ; repos gardé tel quel. Repos et bond gardés. Repris en v3 : la course devient une <b style="display:inline;color:var(--txt)">charge vers le joueur</b>, deux fois plus rapide en v4 (66 px/s, cycle de 0,5 s, bonds de 33 px) ; la mort <b style="display:inline;color:var(--txt)">éclate dès le coup fatal</b>, sans cabrage.</div></div></header>
+<div class="bar"><span class="lab">Modèle pour les animations :</span><button data-var="C" aria-pressed="true">C (retenu)</button><button data-var="A">A</button><button data-var="B">B</button><button id="pause">Pause</button><button id="slow">Ralenti ×¼</button><span id="tally"></span></div>
+<main>
+<h2>1 · À l’échelle du jeu</h2><p class="lead">×3, pieds alignés : le Templier, le félin et le chien actuels, puis les trois modèles au repos.</p>
+<div class="card wide"><canvas class="px" id="lineup" width="420" height="70"></canvas></div>
+
+<h2>2 · Modèles</h2><p class="lead">Au repos, ×5.</p>
+<div class="g3" id="vars"></div>
+
+<h2>3 · Animations</h2><p class="lead">Modèle choisi dans la barre, à 24 images par seconde. La course défile sur un sol qui avance à la vitesse exacte de la foulée : un pied posé ne doit pas glisser.</p>
+<div class="g3" id="anims"></div>
+
+<h2>4 · Décomposition</h2><p class="lead">Les 12 images de la charge, puis les 18 images du bond. L’impact est marqué.</p>
+<div class="card wide strip"><canvas class="px" id="strip" width="1512" height="104"></canvas></div>
+
+<h2>5 · En meute</h2><p class="lead">×2 comme dans le jeu : quatre chiens du modèle choisi chargent depuis la gauche, puis harcèlent le Templier.</p>
+<div class="card wide"><canvas class="px" id="pack" width="480" height="150"></canvas></div>
+
+<h2>Bilan</h2><p class="lead">Les choix sont gardés dans ce navigateur. « Copier le bilan » produit le texte à me renvoyer.</p>
+<div style="margin-top:10px;display:flex;gap:8px"><button id="copy">Copier le bilan</button><button id="clear">Tout effacer</button></div>
+<textarea id="out" readonly></textarea>
+</main>
+<script src="assets/engineer-colosse.js"></script><script src="assets/refonte-16bits.js"></script><script src="assets/bete/chiens-bete.js?v=4"></script>
+<script>
+'use strict';
+const C=CHIENS;let VAR='C';
+const B4=[[0,8,2,10],[12,4,14,6],[3,11,1,9],[15,7,13,5]];
+function ground(w,h,seed){const c=document.createElement('canvas');c.width=w;c.height=h;const g=c.getContext('2d'),im=g.createImageData(w,h),d=im.data,S=['#2a2016','#35291c','#413222','#4d3c29','#5c4932'];
+ const n=(x,y)=>{const v=Math.sin(x*12.9898+y*78.233+seed)*43758.5453;return v-Math.floor(v)};
+ for(let y=0;y<h;y++)for(let x=0;x<w;x++){let v=.35+(n(Math.floor(x/3),Math.floor(y/2))-.5)*.35+(n(x,y)-.5)*.15;if(n(Math.floor(x/5),Math.floor(y/4))>.93)v+=.35;
+  const f=Math.max(0,Math.min(.999,v))*(S.length-1),i=Math.floor(f),col=S[f-i>(B4[y&3][x&3]+.5)/16?i+1:i],k=(y*w+x)*4;d[k]=parseInt(col.slice(1,3),16);d[k+1]=parseInt(col.slice(3,5),16);d[k+2]=parseInt(col.slice(5,7),16);d[k+3]=255}
+ g.putImageData(im,0,0);return c}
+const shadow=(g,x,y,rx)=>{g.fillStyle='rgba(6,4,4,.45)';g.beginPath();g.ellipse(x,y,rx,rx*.26,0,0,Math.PI*2);g.fill()};
+// sol défilant : périodique en x
+function scroll(g,G0,off,w,h){const W=G0.width,o=((Math.round(off)%W)+W)%W;g.drawImage(G0,o,0,W-o,h,0,0,W-o,h);g.drawImage(G0,0,0,o,h,W-o,0,o,h);if(w>W)g.drawImage(G0,0,0,W,h,W,0,W,h)}
+const img=src=>{const i=new Image();i.src=src;return i};
+const TPL=img('../assets/imported/engineer/templier/templier_base.png'),FEL=img('../assets/imported/enemies/feline_idle.png'),OLD=img('../assets/imported/enemies/beast_walk.png');
+let MAN=null;fetch('../assets/imported/enemies/manifest.json').then(r=>r.json()).then(j=>MAN=j.enemies||j).catch(()=>{});
+function atlasFrame(g,im,fw,fh,ax,ay,i,cols,x,y){if(!im.complete||!im.naturalWidth)return;g.drawImage(im,(i%cols)*fw,Math.floor(i/cols)*fh,fw,fh,Math.round(x-ax),Math.round(y-ay),fw,fh)}
+function meta(k){const m=MAN&&MAN[k];return m?{ax:m.ax,ay:m.ay}:{ax:21,ay:25}}
+// ---- vignettes
+const items=[];
+function card(root,id,title,desc,w,h){const f=document.createElement('div');f.className='card';f.dataset.id=id;
+ f.innerHTML=`<canvas class="px" width="${w}" height="${h}"></canvas><div class="cap"><b class="t">${title}</b><p>${desc}</p><div class="verdict"></div><textarea placeholder="Remarques…"></textarea></div>`;
+ document.getElementById(root).appendChild(f);verdict(f);return f}
+const KEY='chiens-bete-v2';let V={};try{V=JSON.parse(localStorage.getItem(KEY)||'{}')}catch(e){V={}}
+const saveV=()=>{try{localStorage.setItem(KEY,JSON.stringify(V))}catch(e){}tally()};
+function tally(){const vs=Object.values(V).filter(v=>v.v);document.getElementById('tally').textContent=`${vs.filter(v=>v.v==='garder').length} gardés · ${vs.filter(v=>v.v==='revoir').length} à revoir · ${vs.filter(v=>v.v==='rejeter').length} rejetés`}
+function verdict(c){const id=c.dataset.id,box=c.querySelector('.verdict'),ta=c.querySelector('textarea');V[id]=V[id]||{};
+ box.innerHTML=['garder','revoir','rejeter'].map(v=>`<button data-v="${v}">${v[0].toUpperCase()+v.slice(1)}</button>`).join('');
+ const sync=()=>{c.dataset.v=V[id].v||'';box.querySelectorAll('button').forEach(b=>b.classList.toggle('sel',b.dataset.v===V[id].v))};
+ box.onclick=e=>{const b=e.target.closest('button');if(!b)return;V[id].v=V[id].v===b.dataset.v?'':b.dataset.v;sync();saveV()};ta.value=V[id].n||'';ta.oninput=()=>{V[id].n=ta.value;saveV()};sync()}
+for(const v of C.VARIANTS){const f=card('vars','var-'+v.id,v.name,v.desc,C.FW,C.FH);items.push({kind:'var',v,f,c:f.querySelector('canvas'),g:ground(C.FW,C.FH,v.id.charCodeAt(0))})}
+for(const a of C.ANIMS){const f=card('anims','anim-'+a.id,a.name,a.desc,C.FW,C.FH);items.push({kind:'anim',a,f,c:f.querySelector('canvas'),g:ground(C.FW*2,C.FH,a.id.length*7)})}
+const LG=ground(420,70,3),SG=ground(912,104,5),PG=ground(480,150,9);
+const seen=new Set(),io=new IntersectionObserver(es=>es.forEach(e=>e.isIntersecting?seen.add(e.target):seen.delete(e.target)));
+items.forEach(o=>io.observe(o.f));['lineup','strip','pack'].forEach(id=>io.observe(document.getElementById(id)));
+const dogAt=(g,v,anim,t,x,y,flip)=>{const f=C.frame(v,anim,t);if(flip){g.save();g.translate(x,0);g.scale(-1,1);g.drawImage(f,-C.AX,y-C.AY);g.restore()}else g.drawImage(f,Math.round(x-C.AX),y-C.AY)};
+function drawLineup(t){const c=document.getElementById('lineup'),g=c.getContext('2d');g.imageSmoothingEnabled=false;g.drawImage(LG,0,0);const Y=62;
+ shadow(g,24,Y,6);atlasFrame(g,TPL,48,48,24,45,Math.floor(t*10)%24,12,24,Y);
+ const fm=meta('feline');shadow(g,72,Y,10);atlasFrame(g,FEL,48,30,fm.ax,fm.ay,Math.floor(t*10)%24,12,72,Y);
+ const bm=meta('beast');shadow(g,128,Y,10);atlasFrame(g,OLD,48,30,bm.ax,bm.ay,Math.floor(t*24)%24,12,128,Y);
+ C.VARIANTS.forEach((v,i)=>{const x=200+i*80;shadow(g,x+1,Y,14);dogAt(g,v.id,'idle',t%2,x,Y)});
+ g.font='600 8px "Pixelify Sans",monospace';g.fillStyle='#e2dccb';g.textAlign='center';
+ [[24,'Templier'],[72,'Félin'],[128,'Chien actuel'],[200,'A'],[280,'B'],[360,'C']].forEach(([x,l])=>g.fillText(l,x,10))}
+function drawStrip(t){const c=document.getElementById('strip'),g=c.getContext('2d');g.imageSmoothingEnabled=false;g.drawImage(SG,0,0);
+ g.font='600 7px "Pixelify Sans",monospace';g.textAlign='center';
+ for(let i=0;i<12;i++){const x=i*84;g.fillStyle='rgba(0,0,0,.18)';if(i%2)g.fillRect(x,0,84,52);shadow(g,x+C.AX+1,48,13);g.drawImage(C.frame(VAR,'walk',i/24),x,48-C.AY);g.fillStyle='#bfb59c';g.fillText('charge '+(i+1),x+42,8)}
+ const IMP=C.ANIMS.find(a=>a.id==='attack').impact;for(let i=0;i<18;i++){const x=i*84;g.fillStyle='rgba(0,0,0,.18)';if(i%2===0)g.fillRect(x,52,84,52);shadow(g,x+C.AX+1,100,13);g.drawImage(C.frame(VAR,'attack',i/24),x,100-C.AY);g.fillStyle=i===IMP?'#ff7a5a':'#bfb59c';g.fillText(i===IMP?'impact '+(i+1):'bond '+(i+1),x+42,60)}}
+function drawPack(t){const c=document.getElementById('pack'),g=c.getContext('2d');g.imageSmoothingEnabled=false;
+ const u=t%6,run=u<2.6;g.drawImage(PG,0,0);
+ const tx=400,Y=0;shadow(g,tx,118,6);g.save();g.translate(tx,0);g.scale(-1,1);atlasFrame(g,TPL,48,48,24,45,Math.floor(t*10)%24,12,0,118);g.restore();
+ const D=[[290,92,0],[318,104,.31],[262,122,.57],[306,136,.8]];
+ D.forEach(([x,y,ph],i)=>{let anim,at;
+  if(run){anim='walk';at=(u+ph)%.5}else{const w=u-2.6,cyc=(w+ph*1.3)%1.9;anim=cyc<.75?'attack':'idle';at=cyc<.75?cyc:(w*1+ph)%2}
+  const xx=run?x-(2.6-u)*C.STRIDE/.5:x;shadow(g,xx+1,y,13);dogAt(g,VAR,anim,at,xx,y)})}
+const lerp=(a,b,t)=>a+(b-a)*t;
+let paused=false,rate=1,tp=0,t0=performance.now(),last=-1;
+document.getElementById('pause').onclick=e=>{paused=!paused;e.target.textContent=paused?'Lecture':'Pause'};
+document.getElementById('slow').onclick=e=>{rate=rate===1?.25:1;e.target.setAttribute('aria-pressed',rate!==1)};
+document.querySelectorAll('[data-var]').forEach(b=>b.onclick=()=>{VAR=b.dataset.var;document.querySelectorAll('[data-var]').forEach(o=>o.setAttribute('aria-pressed',o===b));last=-1});
+function draw(o,t){const g=o.c.getContext('2d');g.imageSmoothingEnabled=false;
+ if(o.kind==='var'){g.drawImage(o.g,0,0);shadow(g,C.AX+1,C.AY,14);g.drawImage(C.frame(o.v.id,'idle',t%2),0,0);return}
+ const a=o.a;const SP=C.STRIDE/.5;if(a.id==='walk')scroll(g,o.g,t*SP,C.FW,C.FH);else g.drawImage(o.g,0,0);
+ if(a.id==='walk'){const tx=C.FW+16-((t*SP)%(C.FW+40));g.save();g.translate(Math.round(tx),0);g.scale(-1,1);shadow(g,0,C.AY,6);atlasFrame(g,TPL,48,48,24,45,Math.floor(t*10)%24,12,0,C.AY);g.restore()} // le joueur arrive avec le sol : le chien fonce sur lui
+ const hold=a.id==='death'?1:a.id==='attack'?.4:0,u=t%(a.len+hold),uu=Math.min(u,a.len-1e-3);
+ if(a.id!=='death'||uu<1/24)shadow(g,C.AX+1,C.AY,14);g.drawImage(C.frame(VAR,a.id,uu),0,0)}
+function frame(now){if(!paused)tp+=(now-t0)/1000*rate;t0=now;const t=Math.floor(tp*24)/24;if(t!==last){last=t;for(const o of items)if(seen.has(o.f))draw(o,t);
+ if(seen.has(document.getElementById('lineup')))drawLineup(t);if(seen.has(document.getElementById('strip')))drawStrip(t);if(seen.has(document.getElementById('pack')))drawPack(t)}requestAnimationFrame(frame)}
+const PRE=+new URLSearchParams(location.search).get('t')||0;if(PRE)tp=PRE;
+requestAnimationFrame(frame);
+document.getElementById('copy').onclick=async()=>{const lines=[...document.querySelectorAll('.card[data-id]')].map(c=>{const id=c.dataset.id,v=V[id]||{},t=c.querySelector('b.t')?.textContent||id;return v.v||v.n?`${t} — ${v.v||'sans avis'}${v.n?' — '+v.n:''}`:null}).filter(Boolean);
+ const out=document.getElementById('out');out.style.display='block';out.value='Bilan · Chiens de la Bête HD (modèle des animations : '+VAR+')\n'+(lines.join('\n')||'(aucun choix)');try{await navigator.clipboard.writeText(out.value)}catch(e){}out.select()};
+document.getElementById('clear').onclick=()=>{V={};saveV();document.querySelectorAll('.card[data-id]').forEach(c=>verdict(c))};
+tally();
+window.__drawAll=t=>{items.forEach(o=>draw(o,t));drawLineup(t);drawStrip(t);drawPack(t)};
+__drawAll(PRE||1.3); // première image tout de suite, sans attendre l'observateur
+</script></body></html>

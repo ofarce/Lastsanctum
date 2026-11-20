@@ -1,0 +1,536 @@
+<title>Strates en détail</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=VT323&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Mise en page : une section par strate, dans l'ordre où on la construirait :
+   tuiles → décors → bestiaire animé → mini-boss → boss de fin et ses attaques. Thème sombre unique (planche de jeu). */
+:root{
+  color-scheme:dark;
+  --bg:#12131a; --panel:#1a1c26; --panel2:#222533; --line:#32364a;
+  --fg:#e4e2da; --mute:#9a9cae; --ink:#0b0a0f;
+  --verdigris:#5fa890; --rust:#b8683a; --gold:#ddb457; --exile:#5fd8e8; --beast:#c2202a;
+  --display:"VT323","Courier New",monospace; --body:"IBM Plex Sans",system-ui,sans-serif;
+  --acc:var(--fg);
+}
+body{background:var(--bg);color:var(--fg);font:15px/1.55 var(--body);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 64px}
+.wrap{max-width:1080px;margin:0 auto;display:flex;flex-direction:column;gap:48px}
+h1,h2,h3{font-family:var(--display);font-weight:400;text-wrap:balance;margin:0;line-height:1.1}
+h1{font-size:clamp(36px,6vw,56px)}
+h2{font-size:clamp(30px,4.4vw,40px);color:var(--acc)}
+h3{font-size:25px;margin-top:10px}
+p{margin:0;max-width:68ch}
+.lede{color:var(--mute);font-size:16px}
+.eyebrow{font-family:var(--display);font-size:17px;letter-spacing:.08em;text-transform:uppercase;color:var(--mute)}
+canvas{image-rendering:pixelated;display:block;max-width:100%;height:auto}
+.sommaire{display:flex;flex-wrap:wrap;gap:10px}
+.sommaire a{font-family:var(--display);font-size:20px;color:var(--fg);text-decoration:none;border:2px solid var(--ink);background:var(--panel);padding:4px 14px}
+.sommaire a:focus-visible{outline:2px solid var(--exile)}
+.strate{display:flex;flex-direction:column;gap:16px;border-top:3px solid var(--acc);padding-top:18px}
+.b2{--acc:var(--verdigris)}.b3{--acc:var(--rust)}.b4{--acc:var(--gold)}
+.head{display:flex;flex-wrap:wrap;gap:8px 24px;align-items:baseline;justify-content:space-between}
+.row{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:12px}
+.cell{display:flex;flex-direction:column;gap:6px;align-items:flex-start;min-width:0}
+.cell .box{background:var(--panel2);border:2px solid var(--ink);width:100%;display:flex;justify-content:center;align-items:flex-end;padding:8px;min-height:84px}
+.cell.t .box{padding:0;min-height:0;border-width:3px}
+.cell.t canvas{width:100%}
+.cell span{font-size:12.5px;color:var(--mute);line-height:1.3}
+.props{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
+.props .box{min-height:150px}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px}
+.card{background:var(--panel);border:2px solid var(--ink);display:flex;flex-direction:column;min-width:0}
+.card .art{background:var(--panel2);display:flex;justify-content:center;align-items:flex-end;padding:10px;min-height:190px}
+.card .txt{padding:10px 12px 14px;display:flex;flex-direction:column;gap:6px}
+.role{font-family:var(--display);font-size:16px;letter-spacing:.06em;text-transform:uppercase;color:var(--acc)}
+.card b.n{font-family:var(--display);font-weight:400;font-size:23px;line-height:1.1}
+.card p{font-size:13.5px;color:#c9c8c4}
+.stats{display:flex;flex-wrap:wrap;gap:4px 6px;font-size:12px;font-variant-numeric:tabular-nums}
+.stats span{background:var(--panel2);border:1px solid var(--line);padding:0 6px;border-radius:3px;white-space:nowrap}
+.loot{font-size:12.5px;color:var(--mute)}
+.boss{display:grid;grid-template-columns:minmax(0,380px) minmax(0,1fr);gap:20px;background:var(--panel);border:2px solid var(--ink);padding:16px}
+@media(max-width:760px){.boss{grid-template-columns:1fr}}
+.boss .art{background:var(--panel2);display:flex;justify-content:center;align-items:center;padding:12px;min-height:260px}
+.boss .fiche{display:flex;flex-direction:column;gap:8px;min-width:0}
+.boss ol{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:4px;font-size:14px}
+.atk{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
+.atk figure{margin:0;background:var(--panel);border:2px solid var(--ink);display:flex;flex-direction:column}
+.atk canvas{image-rendering:auto;width:100%;background:var(--panel2)}
+.atk figcaption{padding:10px 12px 14px;font-size:13.5px;color:#c9c8c4;display:flex;flex-direction:column;gap:4px}
+.atk figcaption b{font-family:var(--display);font-weight:400;font-size:21px;color:var(--fg);line-height:1.1}
+.tw{overflow-x:auto;border:2px solid var(--ink);background:var(--panel)}
+table{border-collapse:collapse;width:100%;min-width:680px;font-size:13.5px;font-variant-numeric:tabular-nums}
+th,td{text-align:left;padding:8px 12px;vertical-align:top;border-bottom:1px solid var(--line)}
+th{font-family:var(--display);font-weight:400;font-size:16px;letter-spacing:.06em;text-transform:uppercase;color:var(--mute);background:var(--panel2)}
+tr:last-child td{border-bottom:0}
+td:first-child{font-weight:600;white-space:nowrap}
+code{font:13px ui-monospace,Menlo,monospace;background:var(--panel2);padding:1px 5px;border-radius:3px}
+.note{font-size:13px;color:var(--mute)}
+</style>
+
+<div class="wrap">
+<header style="display:flex;flex-direction:column;gap:14px">
+  <div class="eyebrow">Exiles Defense · planche détaillée · suite de « Strates vers Byrsa » · 20 novembre 2026</div>
+  <h1>Les trois strates, pièce par pièce</h1>
+  <p class="lede">Les trois strates sont retenues telles quelles. Voici de quoi les construire : tuiles, décors, bestiaire animé avec ses chiffres, mini-boss, boss de fin et leurs attaques. Les chiffres sont calés sur les ennemis actuels (rampant 35 PV, brute 110, Strazhar 600).</p>
+  <nav class="sommaire" aria-label="Strates"><a href="#b2">2 · Vert-de-gris</a><a href="#b3">3 · Forges mortes</a><a href="#b4">4 · Cryptes de l’Aube</a><a href="#gen">Génération</a></nav>
+</header>
+
+<div id="strates" style="display:flex;flex-direction:column;gap:48px"></div>
+
+<section id="gen" class="strate">
+  <div class="head"><h2>Réglages de génération</h2><span class="eyebrow">pour data/biomes.gd</span></div>
+  <p>Les clés existantes gardent leur sens. Trois clés sont nouvelles : <code>lava</code> (coulées par 100 000 u²), <code>halls</code> (salles maçonnées rectangulaires) et <code>rock</code> (coups pour casser un bloc).</p>
+  <div class="tw"><table>
+    <tr><th>Clé</th><th>1 · Temple</th><th>2 · Vert-de-gris</th><th>3 · Forges mortes</th><th>4 · Cryptes</th></tr>
+    <tr><td>height</td><td>330</td><td>330</td><td>360</td><td>300</td></tr>
+    <tr><td>threat</td><td>1</td><td>2</td><td>3</td><td>4</td></tr>
+    <tr><td>rock</td><td>4</td><td>8</td><td>12</td><td>16</td></tr>
+    <tr><td>worms</td><td>7,5</td><td>8</td><td>9</td><td>4</td></tr>
+    <tr><td>radius</td><td>2,1 – 3,5</td><td>1,8 – 3,0</td><td>1,6 – 2,6</td><td>2,2 – 2,6</td></tr>
+    <tr><td>room</td><td>0,05</td><td>0,08 (salles noyées)</td><td>0,04</td><td>0,02</td></tr>
+    <tr><td>branch</td><td>0,025</td><td>0,03</td><td>0,045</td><td>0,02</td></tr>
+    <tr><td>clearings</td><td>2,5</td><td>0,8</td><td>0</td><td>0</td></tr>
+    <tr><td>pools</td><td>1,2</td><td>4,0</td><td>0</td><td>0</td></tr>
+    <tr><td>lava</td><td>0</td><td>0</td><td>1,5</td><td>0</td></tr>
+    <tr><td>halls</td><td>0</td><td>0</td><td>0</td><td>3,0</td></tr>
+    <tr><td>lodes / veins</td><td>2,0 / 12</td><td>2,5 / 14</td><td>2,5 / 16</td><td>1,0 / 8</td></tr>
+    <tr><td>ores</td><td>cuivre 0,8 – 1</td><td>cuivre 0 – 1 · fer 0,8 – 1</td><td>fer 0 – 1 · or 0,8 – 1</td><td>or 0 – 1 · quartz 0 – 1</td></tr>
+    <tr><td>pylônes</td><td>référence</td><td>× 1</td><td>× 2</td><td>× 0,5</td></tr>
+  </table></div>
+  <p class="note">La règle des passages de 2 blocs de large reste vraie partout. Le quartz laiteux reste la lumière naturelle des strates 2 et 3 ; dans les cryptes ce sont les cierges.</p>
+</section>
+</div>
+
+<script>
+
+const K='#0b0a0f', BEAST='#c2202a';
+const RK=['#1b2629','#28383b','#3a4f51'], VG=['#2f6a5c','#4f9a83','#8fd0b0'], CU=['#7a4530','#c47b58','#f0b088'], WA=['#17383f','#24565e','#3f8a8c'], MA=['#1c5540','#2f7d5a','#5fb888'];
+const BA=['#17151b','#2a2630','#443e4c'], RU=['#6a3220','#a3562e','#d08a4e'], FE=['#55626e','#8796a2','#c8d2da'], LA=['#b8281c','#f0602a','#ffc060'];
+const ST=['#2c2832','#4e4854','#7c7484'], GO=['#8a6a2a','#ddb457','#fae69a'], CR=['#4a1018','#8a1f2c','#b83a44'], BONE='#d8cfb8', SKIN='#e2c4a8', MAR='#a8a0ac';
+
+function rng(s){return()=>{s|=0;s=s+0x6D2B79F5|0;let t=Math.imul(s^s>>>15,1|s);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+
+function G(w,h){
+  const d=new Array(w*h).fill(null), g={w,h,d,sym:false};
+  g.px=(x,y,c)=>{x=Math.round(x);y=Math.round(y);if(y<0||y>=h)return;if(x>=0&&x<w)d[y*w+x]=c;if(g.sym){const m=w-1-x;if(m>=0&&m<w)d[y*w+m]=c}};
+  g.rect=(x,y,a,b,c)=>{for(let j=0;j<b;j++)for(let i=0;i<a;i++)g.px(x+i,y+j,c)};
+  g.ell=(cx,cy,rx,ry,c)=>{rx=Math.max(.6,rx);ry=Math.max(.6,ry);for(let y=Math.floor(cy-ry);y<=Math.ceil(cy+ry);y++)for(let x=Math.floor(cx-rx);x<=Math.ceil(cx+rx);x++){const u=(x-cx)/rx,v=(y-cy)/ry;if(u*u+v*v<=1)g.px(x,y,c)}};
+  g.blob=(cx,cy,rx,ry,p)=>{g.ell(cx,cy,rx,ry,p[0]);g.ell(cx,cy-.8,rx-1,ry-1,p[1]);g.ell(cx-rx*.2,cy-ry*.4,rx*.4,ry*.3,p[2])};
+  g.line=(x0,y0,x1,y1,c,t=1)=>{const n=Math.max(Math.abs(x1-x0),Math.abs(y1-y0),1);for(let i=0;i<=n;i++)g.rect(Math.round(x0+(x1-x0)*i/n),Math.round(y0+(y1-y0)*i/n),t,t,c)};
+  g.poly=(p,c)=>{const ys=p.map(q=>q[1]);for(let y=Math.min(...ys);y<=Math.max(...ys);y++){const xs=[];for(let i=0;i<p.length;i++){const[a,b]=p[i],[e,f]=p[(i+1)%p.length];if((b<=y&&f>y)||(f<=y&&b>y))xs.push(a+(y-b)/(f-b)*(e-a))}xs.sort((m,n)=>m-n);for(let k=0;k+1<xs.length;k+=2)for(let x=Math.round(xs[k]);x<=Math.round(xs[k+1]);x++)g.px(x,y,c)}};
+  g.ring=(cx,cy,r,c,t=1.4,dot=0)=>{for(let y=Math.floor(cy-r-2);y<=cy+r+2;y++)for(let x=Math.floor(cx-r-2);x<=cx+r+2;x++){const q=Math.hypot(x-cx,y-cy);if(Math.abs(q-r)<=t/2&&(!dot||((x+y)%dot===0)))g.px(x,y,c)}};
+  g.outline=(c=K)=>{g.sym=false;const s=d.slice();for(let y=0;y<h;y++)for(let x=0;x<w;x++){if(s[y*w+x])continue;if((x>0&&s[y*w+x-1])||(x<w-1&&s[y*w+x+1])||(y>0&&s[(y-1)*w+x])||(y<h-1&&s[(y+1)*w+x]))d[y*w+x]=c}};
+  g.blit=(ctx,ox,oy)=>{for(let y=0;y<h;y++)for(let x=0;x<w;x++){const c=d[y*w+x];if(c){ctx.fillStyle=c;ctx.fillRect(ox+x,oy+y,1,1)}}};
+  return g;
+}
+
+/* Martyre : même silhouette que celle de Byrsa, déclinée par strate (56 × 56). */
+function martyre(g,robe,trim,before,after){
+  before&&before(g);
+  g.ring(27.5,13,10,GO[1],1.8);
+  g.sym=true;
+  g.poly([[22,21],[28,21],[28,52],[12,52],[18,36]],robe[0]);
+  g.poly([[24,21],[28,21],[28,52],[19,52],[22,36]],robe[1]);
+  g.rect(27,23,1,29,trim);
+  g.line(22,23,10,17,robe[1],3);
+  g.ell(9,16,2,2,SKIN);
+  g.ell(27,14,4.5,5.5,robe[0]);
+  g.ell(27,15,3,3.4,SKIN);
+  g.px(26,15,K);
+  g.sym=false;
+  after&&after(g);
+  g.outline();
+}
+
+const S={
+/* ── biome 2 ── */
+'b2-eel':[40,40,g=>{
+  g.ell(20,32,16,5,WA[0]);g.ell(20,31,14,3.5,WA[1]);
+  const pt=t=>[7+22*t,31-21*Math.sin(Math.PI*t*.85)+2*Math.sin(t*12),2.1+1.7*Math.sin(Math.PI*t)];
+  for(let i=0;i<=44;i++){const[x,y,r]=pt(i/44);g.ell(x,y,r,r,VG[0])}
+  for(let i=4;i<=44;i+=2){const[x,y]=pt(i/44);g.px(x,y+1,VG[2])}
+  for(let i=6;i<=40;i+=5){const[x,y,r]=pt(i/44);g.px(x,y-r+1,WA[2])}
+  g.blob(30,20,4.2,3.4,VG);g.px(32,19,'#f6fff2');g.px(33,21,K);g.rect(31,22,3,1,VG[0]);
+  g.outline();
+  [[12,9],[26,6],[35,13],[5,20]].forEach(([x,y])=>{g.px(x,y,'#eafff6');g.px(x-1,y,'#9fe8d0');g.px(x+1,y,'#9fe8d0');g.px(x,y-1,'#9fe8d0');g.px(x,y+1,'#9fe8d0')});
+  g.rect(7,33,5,1,WA[2]);g.rect(26,34,6,1,WA[2]);
+}],
+'b2-tick':[40,40,g=>{
+  g.sym=true;
+  g.line(11,24,4,20,'#2a1a14',2);g.line(10,27,3,28,'#2a1a14',2);g.line(12,30,6,35,'#2a1a14',2);
+  g.ell(19,31,4,3.5,'#2a1a14');g.line(18,34,16,37,CU[2]);
+  g.blob(19,22,11,8.5,CU);
+  g.sym=false;
+  g.ell(13,20,3,2,VG[1]);g.ell(25,25,2.4,1.6,VG[1]);g.ell(22,17,1.6,1,VG[2]);g.px(12,19,VG[2]);
+  g.line(19,14,19,29,CU[0]);g.line(20,14,20,29,CU[0]);
+  g.px(17,31,'#f0f4d8');g.px(22,31,'#f0f4d8');
+  g.outline();
+}],
+'b2-bat':[40,40,g=>{
+  g.sym=true;
+  g.poly([[17,17],[4,9],[1,21],[5,18],[7,25],[10,20],[13,27],[17,23]],VG[0]);
+  g.line(17,18,4,10,VG[1]);g.line(16,19,7,24,VG[1]);g.line(16,20,13,26,VG[1]);
+  g.ell(19,21,3.4,6,'#22302f');g.ell(19,14,3.6,3.2,'#2c3c3a');
+  g.poly([[15,12],[16,6],[19,11]],'#2c3c3a');
+  g.px(18,14,'#f0f4d8');g.px(19,17,CU[1]);
+  g.sym=false;
+  g.outline();
+}],
+'b2-colosse':[56,56,g=>{
+  g.sym=true;
+  g.rect(18,40,8,13,VG[0]);g.rect(18,50,9,3,RK[2]);
+  g.poly([[13,19],[28,19],[28,41],[17,41]],VG[1]);
+  g.poly([[13,19],[19,19],[20,41],[17,41]],VG[0]);
+  g.rect(7,23,6,16,VG[1]);g.rect(7,23,2,16,VG[0]);
+  g.blob(12,21,6.5,5,VG);
+  g.blob(10,41,5,4.5,CU);
+  g.rect(22,7,6,10,VG[1]);g.rect(21,5,7,3,VG[2]);g.rect(25,2,3,4,CU[1]);
+  g.rect(23,11,5,1,CU[2]);
+  g.ell(27,29,3.5,4.5,CU[0]);g.ell(27,29,2.2,3.2,CU[2]);
+  g.sym=false;
+  g.line(17,24,22,31,K);g.line(36,35,40,26,K);g.line(22,31,20,36,K);
+  g.px(27,28,'#fff4e0');g.px(28,28,'#fff4e0');
+  [[15,33],[39,22],[33,38]].forEach(([x,y])=>g.rect(x,y,2,1,VG[2]));
+  g.outline();
+}],
+'b2-martyre':[56,56,g=>martyre(g,['#1f4a52','#2f6d73','#3f8a8c'],VG[2],null,g=>{
+  g.px(25,17,'#bfe8f0');g.px(25,18,'#bfe8f0');g.px(30,17,'#bfe8f0');g.px(30,18,'#bfe8f0');
+  g.ell(27.5,53,17,2.4,WA[1]);
+  [[6,30],[49,28],[4,42],[51,40],[14,8],[42,7]].forEach(([x,y])=>{g.px(x,y,'#bfe8f0');g.px(x,y+1,WA[2])});
+})],
+'b2-boss':[88,72,g=>{
+  g.ell(44,61,32,9,'#0d1214');
+  [[14,60],[22,66],[66,67],[74,60],[34,69],[54,69]].forEach(([x,y],i)=>g.blob(x,y,4+i%2,3,RK));
+  for(let i=0;i<7;i++){const cx=44+Math.sin(i*.8)*5,cy=58-i*6.6,rx=16-i*.5;
+    g.ell(cx,cy,rx,6.5,'#2b2228');g.ell(cx,cy-1,rx-1.5,4.6,'#4a343a');
+    g.rect(cx-rx*.55,cy-3,rx*1.1,3,CU[1]);g.rect(cx-rx*.55,cy-3,rx*1.1,1,CU[2]);
+    g.px(cx-rx+2,cy,VG[1]);g.px(cx+rx-3,cy+1,VG[1]);}
+  const hx=47,hy=15;
+  g.ell(hx,hy,15,13,'#2b2228');g.ell(hx,hy,13.5,11.5,CU[0]);g.ell(hx,hy-1,12.5,10,CU[1]);
+  g.ell(hx,hy+1,10,8.2,'#2a0a0e');g.ell(hx,hy+2,6.5,5.2,'#7a1218');g.ell(hx,hy+3,3.4,2.8,BEAST);g.px(hx,hy+3,'#ff7a6a');
+  for(let a=0;a<12;a++){const an=a/12*Math.PI*2,x=hx+Math.cos(an)*9,y=hy+1+Math.sin(an)*7.4;g.rect(x-1,y-1,2,2,'#fbe8d0');g.px(x-Math.cos(an)*2,y-Math.sin(an)*2,CU[2])}
+  [[35,8],[59,8],[33,17],[61,17],[41,3],[53,3]].forEach(([x,y])=>{g.px(x,y,BEAST);g.px(x+1,y,'#ff7a6a')});
+  g.outline();
+}],
+/* ── biome 3 ── */
+'b3-scorie':[40,40,g=>{
+  g.sym=true;
+  g.blob(14,19,4.5,3.5,['#1c181c','#3a3438','#57505a']);
+  g.blob(19,26,12,8.5,['#1c181c','#3a3438','#57505a']);
+  g.rect(14,24,3,2,LA[2]);g.rect(14,26,3,1,LA[1]);
+  g.line(8,29,13,31,LA[1]);g.line(13,31,16,29,LA[1]);g.px(11,24,LA[0]);g.px(10,27,LA[1]);
+  g.rect(17,31,3,2,LA[0]);g.rect(18,30,2,1,LA[2]);
+  g.sym=false;
+  g.line(24,18,22,22,LA[1]);g.px(22,23,LA[2]);g.rect(6,35,3,1,LA[0]);g.rect(30,36,4,1,LA[0]);
+  g.outline();
+  g.px(15,10,'#6a6068');g.px(16,7,'#6a6068');g.px(25,9,'#6a6068');g.px(24,5,'#57505a');
+}],
+'b3-vouivre':[40,40,g=>{
+  const pt=t=>[5+27*t,33-23*t+4*Math.sin(t*9),.9+2.9*Math.sin(Math.PI*Math.min(1,t*1.12))];
+  g.line(13,27,8,22,RU[0],2);g.line(15,29,20,34,RU[0],2);g.line(23,15,18,11,RU[0],2);g.line(25,18,31,22,RU[0],2);
+  for(let i=0;i<=50;i++){const[x,y,r]=pt(i/50);g.ell(x,y,r,r,RU[0])}
+  for(let i=6;i<=50;i++){const[x,y,r]=pt(i/50);g.ell(x-.5,y-.6,r-1,r-1,RU[1])}
+  for(let i=8;i<=46;i+=4){const[x,y]=pt(i/50);g.px(x,y-1,FE[2]);g.px(x+1,y,FE[1])}
+  g.blob(33,9,4,3.2,RU);g.px(35,8,LA[2]);g.px(36,10,K);g.px(37,11,LA[1]);g.px(38,12,LA[1]);
+  g.outline();
+}],
+'b3-limaille':[40,40,g=>{
+  g.blob(20,21,4,4,BA);g.px(19,20,LA[1]);g.px(21,22,LA[1]);
+  g.outline();
+  const r=rng(7);
+  for(let k=0;k<3;k++)for(let i=0;i<34;i++){const a=i/34*Math.PI*2+k,rad=7+k*4.5+Math.sin(a*3+k)*1.5;if(r()<.72){const x=20+Math.cos(a)*rad,y=21+Math.sin(a)*rad*.8;g.px(x,y,r()<.4?FE[2]:FE[1]);if(r()<.3)g.px(x+1,y,FE[0])}}
+}],
+'b3-forgeron':[56,56,g=>{
+  g.sym=true;
+  g.rect(19,42,7,11,BA[0]);g.rect(18,51,8,2,FE[0]);
+  g.poly([[14,22],[28,22],[28,43],[18,43]],BA[1]);g.poly([[14,22],[18,22],[20,43],[18,43]],BA[0]);
+  g.rect(22,27,6,8,K);g.rect(23,28,5,6,LA[1]);g.rect(25,29,3,4,LA[2]);g.rect(23,30,5,1,K);g.rect(23,32,5,1,K);
+  g.rect(8,25,6,14,BA[1]);g.rect(7,36,8,3,FE[1]);g.rect(7,36,8,1,FE[2]);g.blob(11,42,4,3.5,BA);
+  g.blob(12,23,6.5,5,FE);
+  g.ell(27,14,4.5,5,FE[0]);g.ell(27,14,3.5,4,FE[1]);g.rect(25,14,3,1,LA[2]);g.rect(27,16,1,4,FE[0]);
+  for(let i=0;i<7;i++){g.px(6-i*.8,40+i*2,i%2?FE[2]:FE[0]);g.px(7-i*.8,41+i*2,FE[1])}
+  g.sym=false;
+  g.line(44,40,50,15,'#6a4a30',2);g.rect(43,7,12,8,FE[1]);g.rect(43,7,12,2,FE[2]);g.rect(43,13,12,2,FE[0]);g.rect(53,9,2,4,LA[1]);
+  g.outline();
+}],
+'b3-martyre':[56,56,g=>martyre(g,['#3a2a2c','#5c4038','#7a5a48'],FE[2],g=>{
+  for(let a=0;a<10;a++){const an=a/10*Math.PI*2;g.line(27.5+Math.cos(an)*10,13+Math.sin(an)*10,27.5+Math.cos(an)*14,13+Math.sin(an)*14,FE[1])}
+},g=>{
+  for(let i=0;i<22;i++){const c=i%2?FE[2]:FE[0];g.px(17+i,26+i*.8,c);g.px(38-i,26+i*.8,c)}
+  for(let i=0;i<9;i++){g.px(9,19+i*2,i%2?FE[2]:FE[0]);g.px(46,19+i*2,i%2?FE[2]:FE[0])}
+  g.rect(8,38,3,3,FE[1]);g.rect(45,38,3,3,FE[1]);
+})],
+'b3-boss':[88,72,g=>{
+  const r=rng(3);
+  for(let a=0;a<11;a++){const an=a/11*Math.PI*2+.2,x=44+Math.cos(an)*38,y=38+Math.sin(an)*28;g.line(44+Math.cos(an)*20,38+Math.sin(an)*15,x,y,'#5a1218',2);g.px(x,y,BEAST)}
+  g.blob(44,38,27,21,['#2e0a10','#6a1620','#8f2430']);
+  for(let i=0;i<26;i++)g.px(22+r()*44,22+r()*32,r()<.5?'#8f2430':'#4a0e16');
+  g.ell(44,37,16,12.5,'#2e0a10');g.ell(44,37,14.5,11,'#e9dccb');g.ell(44,39,14,9,'#d2bfae');
+  g.ell(44,37,8.5,8.5,'#7a1218');g.ell(44,37,7,7,BEAST);g.ring(44,37,5,'#ff7a6a',1.2,2);
+  g.ell(44,37,2.2,7,K);g.rect(40,32,2,2,'#fff');
+  g.line(30,34,34,36,'#b8404a');g.line(58,41,54,39,'#b8404a');
+  [[8,14],[80,16],[10,60],[78,58]].forEach(([x,y])=>{g.blob(x,y,4.5,4.5,['#4a0e16',BEAST,'#ff7a6a'])});
+  g.outline();
+}],
+/* ── biome 4 ── */
+'b4-gisant':[40,40,g=>{
+  g.rect(6,35,28,3,ST[0]);g.rect(6,35,28,1,ST[1]);
+  g.sym=true;
+  g.rect(15,29,4,7,ST[1]);g.rect(15,14,5,16,ST[2]);g.rect(15,14,2,16,ST[1]);
+  g.rect(11,14,4,6,ST[2]);g.rect(11,20,3,7,ST[1]);
+  g.ell(19,9,3.6,4.2,ST[2]);g.rect(17,7,3,5,GO[1]);g.rect(17,7,3,1,GO[2]);g.rect(18,9,1,1,K);
+  g.rect(19,15,1,19,'#d8dce4');g.rect(16,18,4,2,ST[2]);g.rect(17,17,3,1,GO[1]);
+  g.sym=false;
+  g.line(13,24,15,28,K);g.px(26,22,K);g.px(27,23,K);
+  g.outline();
+  g.px(8,31,ST[2]);g.px(31,29,ST[2]);g.px(33,32,ST[1]);
+}],
+'b4-encensoir':[40,40,g=>{
+  for(let y=1;y<12;y++)g.px(19+(y%2),y,y%2?GO[0]:GO[1]);
+  g.sym=true;
+  g.poly([[17,12],[20,12],[20,16],[14,16]],GO[1]);g.rect(18,11,2,1,GO[2]);
+  g.blob(19,21,7,6,GO);
+  g.rect(13,20,7,1,GO[0]);
+  g.rect(15,22,2,2,K);g.px(15,23,LA[1]);g.px(16,22,LA[2]);g.rect(18,23,2,2,K);g.px(19,24,LA[1]);
+  g.poly([[17,27],[20,27],[20,31],[18,31]],GO[0]);
+  g.sym=false;
+  g.rect(19,32,2,3,GO[1]);g.px(19,35,GO[2]);
+  g.outline();
+  const sm=['#8e8894','#6e6878'];
+  [[26,13,3,2],[30,9,2.4,1.8],[28,5,2,1.4],[11,10,2.4,1.6],[8,6,1.8,1.2]].forEach(([x,y,a,b],i)=>g.ell(x,y,a,b,sm[i%2]));
+  [[25,11],[31,7],[10,8]].forEach(([x,y])=>g.px(x,y,'#b8b0c0'));
+}],
+'b4-rat':[40,40,g=>{
+  [[8,33,5],[22,34,6],[14,36,4]].forEach(([x,y,w])=>{g.rect(x,y,w,2,BONE);g.px(x-1,y,BONE);g.px(x+w,y+1,BONE)});
+  g.ell(30,35,3,2.4,BONE);g.px(29,35,K);g.px(31,35,K);
+  g.line(9,26,4,22,'#a88a90');g.line(4,22,5,16,'#a88a90');g.line(5,16,9,13,'#a88a90');
+  const f=['#2a2428','#4a4048','#6a5e68'];
+  g.blob(18,26,9.5,5.5,f);g.blob(28,25,4.6,3.6,f);g.ell(26,21,1.8,2,'#a88a90');
+  g.px(30,24,GO[2]);g.px(33,26,'#a88a90');g.px(32,27,'#a88a90');
+  g.rect(13,31,2,2,f[0]);g.rect(22,31,2,2,f[0]);
+  g.outline();
+}],
+'b4-gardien':[56,56,g=>{
+  g.sym=true;
+  g.poly([[11,22],[28,22],[28,52],[7,50]],CR[0]);
+  g.rect(20,43,6,10,GO[0]);g.rect(19,51,7,2,GO[1]);
+  g.poly([[15,20],[28,20],[28,43],[19,43]],GO[1]);g.poly([[15,20],[19,20],[21,43],[19,43]],GO[0]);
+  g.rect(8,25,6,13,GO[1]);g.rect(8,25,2,13,GO[0]);g.blob(11,40,4,3.5,GO);
+  g.blob(13,21,7,5.5,GO);
+  g.rect(23,8,5,10,GO[1]);g.rect(22,10,2,6,GO[0]);g.rect(24,12,4,1,K);g.rect(27,13,1,4,K);
+  g.poly([[26,8],[28,2],[28,8]],CR[2]);
+  g.poly([[20,24],[28,24],[28,47],[23,41]],CR[1]);g.poly([[21,25],[28,25],[28,27],[21,27]],GO[2]);
+  g.ell(27,33,2.6,4,GO[0]);g.ell(27,33,1.8,3,'#f4f0e0');
+  g.sym=false;
+  g.px(27,32,BONE);g.px(28,32,BONE);g.rect(27,34,2,1,'#b8b0a0');
+  g.outline();
+}],
+'b4-martyre':[56,56,g=>martyre(g,CR,GO[2],g=>{
+  g.ring(27.5,13,14,GO[0],1.6);
+  for(let a=0;a<16;a++){if(a%4===1)continue;const an=a/16*Math.PI*2;g.line(27.5+Math.cos(an)*15,13+Math.sin(an)*15,27.5+Math.cos(an)*18,13+Math.sin(an)*18,GO[1])}
+  g.rect(36,0,6,6,null);
+},g=>{
+  g.sym=true;g.poly([[23,9],[23,5],[25,8],[27,3],[28,8],[28,10]],GO[1]);g.px(27,6,CR[2]);g.sym=false;
+  g.rect(13,50,30,2,GO[0]);
+})],
+'b4-boss':[88,72,g=>{
+  g.ell(44,64,14,3,'#1c1820');
+  [[14,50],[72,52]].forEach(([x,y])=>{g.rect(x,y,5,10,'#2c2832');g.ell(x+2,y-2,2.4,2.4,'#2c2832');g.rect(x+5,y-6,1,16,GO[0]);g.px(x+2,y-2,GO[2]);g.rect(x+1,y+3,3,1,GO[1])});
+  g.sym=true;
+  g.poly([[40,31],[44,31],[44,63],[34,63],[38,46]],'#cfc6b4');g.poly([[42,31],[44,31],[44,63],[40,63]],'#f0e8d8');
+  g.rect(43,32,1,31,GO[1]);g.rect(34,61,10,2,GO[1]);
+  g.ell(43,26,3,3.4,SKIN);g.px(42,26,K);
+  g.poly([[40,23],[43,10],[44,10],[44,23]],GO[1]);g.rect(43,14,1,8,CR[1]);
+  g.sym=false;
+  g.line(48,36,56,40,'#cfc6b4',2);g.rect(57,16,2,48,GO[0]);
+  for(let a=0;a<12;a++){const an=a/12*Math.PI*2;g.line(58+Math.cos(an)*5,12+Math.sin(an)*5,58+Math.cos(an)*9,12+Math.sin(an)*9,GO[1])}
+  g.ell(58,12,5,5,GO[1]);g.ell(58,12,3.4,3.4,GO[2]);g.ell(58,12,1.6,1.6,'#fffbe8');
+  g.outline();
+  g.ring(44,42,31,GO[1],1.6,2);g.ring(44,42,28,GO[0],1,3);
+  [[44,11],[13,42],[75,42],[22,20],[66,20]].forEach(([x,y])=>{g.px(x,y,GO[2]);g.px(x-1,y,GO[1]);g.px(x+1,y,GO[1]);g.px(x,y-1,GO[1]);g.px(x,y+1,GO[1])});
+}],
+};
+
+function sprite(k){const[w,h,fn]=S[k];const g=G(w,h);fn(g);g.sym=false;return g}
+
+
+</script>
+<script>
+/* ── décors (nouveaux dessins, même moteur) ── */
+const WOOD=['#4a3420','#6a4a30','#8a6844'];
+Object.assign(S,{
+'p2-pompe':[32,46,g=>{g.rect(9,41,14,3,RK[2]);g.rect(13,2,6,40,CU[1]);g.rect(13,2,2,40,CU[2]);g.rect(17,2,2,40,CU[0]);
+  [8,20,32].forEach(y=>{g.rect(11,y,10,3,CU[0]);g.rect(11,y,10,1,CU[1])});
+  g.rect(15,12,2,5,VG[1]);g.rect(14,24,2,6,VG[1]);g.px(16,31,VG[2]);g.rect(17,36,2,4,VG[1]);
+  g.line(19,16,24,16,CU[0]);g.ring(25,16,4,CU[1],1.8);g.px(25,16,CU[2]);g.outline();g.px(15,45,WA[2]);g.px(20,44,WA[2])}],
+'p2-roue':[38,38,g=>{g.rect(3,32,32,3,WOOD[0]);g.rect(6,20,3,13,WOOD[1]);g.rect(29,20,3,13,WOOD[1]);
+  g.ring(18.5,17.5,13,WOOD[1],3);for(let a=0;a<8;a++){const an=a/8*Math.PI*2;g.line(18.5,17.5,18.5+Math.cos(an)*13,17.5+Math.sin(an)*13,WOOD[2]);g.rect(17+Math.cos(an)*14.5,16+Math.sin(an)*14.5,3,3,WOOD[2])}
+  g.ell(18.5,17.5,3,3,CU[1]);g.px(18,17,CU[2]);g.outline();g.rect(8,36,22,1,WA[2])}],
+'p2-malachite':[32,32,g=>{g.ell(16,29,13,2,RK[1]);
+  g.poly([[8,29],[12,7],[16,29]],MA[1]);g.poly([[12,7],[16,29],[13,29]],MA[2]);
+  g.poly([[15,29],[21,13],[26,29]],MA[1]);g.poly([[21,13],[26,29],[23,29]],MA[2]);
+  g.poly([[3,29],[6,20],[9,29]],MA[1]);g.poly([[25,29],[28,22],[30,29]],MA[0]);
+  g.line(10,17,13,17,MA[0]);g.line(9,23,14,23,MA[0]);g.line(18,21,23,21,MA[0]);g.line(17,26,24,26,MA[0]);g.outline()}],
+'p2-wagonnet':[38,30,g=>{g.poly([[6,10],[28,6],[30,18],[9,22]],WOOD[1]);g.poly([[6,10],[28,6],[28,9],[7,13]],WOOD[2]);
+  g.line(8,16,29,12,WOOD[0]);g.line(6,10,28,6,FE[1]);g.line(9,22,30,18,FE[0]);
+  g.ell(12,24,3,3,FE[0]);g.px(12,24,FE[2]);g.ell(27,21,3,3,FE[0]);g.px(27,21,FE[2]);
+  g.blob(32,25,3,2.4,CU);g.blob(35,21,2,1.8,CU);g.blob(27,27,2.4,1.8,CU);g.px(31,24,VG[1]);g.outline()}],
+'p2-quartz':[26,30,g=>{g.ell(13,27,10,2,RK[1]);g.poly([[9,27],[10,7],[14,3],[17,27]],'#b9c2dc');g.poly([[12,27],[13,6],[14,3],[17,27]],'#f4f6ff');
+  g.poly([[16,27],[19,14],[22,27]],'#dfe8ff');g.poly([[4,27],[6,17],[9,27]],'#b9c2dc');g.px(6,19,'#f4f6ff');g.outline()}],
+'p3-orgues':[36,36,g=>{for(let i=0;i<6;i++){const h=10+((i*7)%11),x=3+i*5;g.rect(x,31-h,5,h,BA[1]);g.rect(x,31-h,1,h,BA[0]);g.rect(x+4,31-h,1,h,BA[0]);g.rect(x,27-h,5,4,BA[2]);g.rect(x+1,27-h,3,1,'#5a5464')}g.outline()}],
+'p3-engrenage':[48,32,g=>{for(let a=0;a<14;a++){const an=a/14*Math.PI*2;g.rect(22+Math.cos(an)*19,24+Math.sin(an)*19,4,4,RU[1])}
+  g.ring(23.5,25.5,15,RU[1],6);g.ring(23.5,25.5,17,RU[2],1.2);g.ell(23.5,25.5,5,5,FE[0]);
+  for(let a=0;a<6;a++){const an=a/6*Math.PI*2;g.line(23.5,25.5,23.5+Math.cos(an)*13,25.5+Math.sin(an)*13,RU[0],2)}
+  for(let x=0;x<48;x++)for(let y=27;y<32;y++)g.d[y*48+x]=null;g.rect(1,27,46,3,BA[0]);g.rect(5,26,6,2,BA[2]);g.rect(34,26,8,2,BA[2]);g.outline()}],
+'p3-four':[32,34,g=>{g.rect(13,1,6,5,BA[1]);g.ell(16,10,11,6,RU[0]);g.rect(5,10,22,21,RU[0]);g.rect(5,10,3,21,'#4a2216');g.rect(6,9,20,1,RU[2]);
+  g.ell(16,17,6,5,'#1c0c0c');g.rect(10,17,13,12,'#1c0c0c');g.rect(11,23,11,6,LA[0]);g.rect(13,25,7,4,LA[1]);g.rect(15,26,3,3,LA[2]);
+  [[7,13],[24,13],[7,28],[24,28]].forEach(([x,y])=>g.px(x,y,FE[2]));g.rect(3,31,26,2,BA[2]);g.outline()}],
+'p3-enclume':[38,28,g=>{g.rect(4,9,16,4,FE[1]);g.rect(4,9,16,1,FE[2]);g.poly([[20,9],[27,11],[20,13]],FE[1]);g.rect(9,13,6,6,FE[0]);g.rect(6,19,12,3,FE[0]);g.rect(6,19,12,1,FE[1]);
+  g.rect(23,19,13,6,BA[2]);g.rect(24,20,5,3,LA[1]);g.rect(25,21,3,1,LA[2]);g.rect(30,20,5,3,FE[1]);g.rect(30,20,5,1,FE[2]);g.outline()}],
+'p3-scories':[34,26,g=>{const p=['#1c181c','#3a3438','#57505a'];g.blob(17,17,13,6.5,p);g.blob(10,12,5.5,4.5,p);g.blob(22,11,4,3.5,p);
+  g.px(8,16,LA[1]);g.px(9,17,LA[0]);g.px(19,18,LA[1]);g.px(24,15,LA[0]);g.px(14,20,LA[2]);g.outline();g.px(11,5,'#6a6068');g.px(12,2,'#57505a');g.px(22,5,'#6a6068')}],
+'p4-sarcophage':[40,28,g=>{g.rect(3,4,34,12,ST[2]);g.rect(3,16,34,8,ST[1]);g.rect(3,4,34,1,'#9a92a2');g.rect(3,19,34,1,GO[0]);g.rect(3,23,34,1,ST[0]);
+  g.ell(10,9,3,2.6,'#948c9c');g.rect(13,7,18,5,'#948c9c');g.rect(8,8,3,2,GO[1]);g.rect(14,9,15,1,'#d8dce4');g.rect(31,8,3,3,'#948c9c');g.outline()}],
+'p4-niche':[24,32,g=>{g.rect(3,5,18,25,ST[1]);g.rect(3,5,2,25,ST[0]);g.ell(12,12,6,6,'#141018');g.rect(6,12,13,14,'#141018');
+  g.ell(11,20,3,3,BONE);g.rect(9,22,5,2,BONE);g.px(10,20,K);g.px(12,20,K);g.px(11,23,K);g.rect(16,20,1,6,'#f0e8d8');g.px(16,19,'#ffd890');g.px(16,18,LA[1]);
+  g.rect(4,26,16,2,ST[2]);g.rect(3,4,18,1,ST[2]);g.outline()}],
+'p4-banniere':[20,40,g=>{g.rect(2,2,16,2,GO[0]);g.px(2,1,GO[1]);g.px(17,1,GO[1]);g.poly([[4,4],[16,4],[16,35],[10,29],[4,35]],CR[1]);g.rect(4,4,3,25,CR[0]);g.rect(4,5,13,1,GO[1]);
+  g.ell(10,15,3,3,GO[1]);g.px(10,15,GO[2]);[[10,10],[10,20],[5,15],[15,15],[6,11],[14,11],[6,19],[14,19]].forEach(([x,y])=>g.px(x,y,GO[0]));g.outline()}],
+'p4-candelabre':[24,40,g=>{g.rect(11,10,2,26,GO[0]);g.rect(7,36,10,2,GO[1]);g.rect(9,34,6,2,GO[0]);g.rect(4,10,16,2,GO[1]);g.rect(4,7,2,3,GO[1]);g.rect(18,7,2,3,GO[1]);
+  g.rect(4,3,2,4,'#f0e8d8');g.rect(18,3,2,4,'#f0e8d8');g.rect(11,5,2,5,'#f0e8d8');g.outline();
+  [[4,1],[18,1],[11,3]].forEach(([x,y])=>{g.px(x,y,'#ffd890');g.px(x+1,y,LA[2]);g.px(x,y-1,LA[1])})}],
+'p4-cloche':[32,40,g=>{g.rect(2,2,28,3,WOOD[1]);g.rect(2,2,28,1,WOOD[2]);g.rect(14,5,4,4,GO[0]);g.poly([[11,9],[21,9],[25,28],[7,28]],GO[1]);g.poly([[13,9],[16,9],[14,28],[10,28]],GO[2]);
+  g.rect(6,28,20,2,GO[0]);g.rect(9,18,14,1,GO[0]);g.rect(15,30,2,4,FE[0]);g.ell(16,35,2,2,FE[1]);g.outline()}],
+});
+
+/* ── tuiles 16 × 16 ── */
+function tile(cv,kind,P,seed){cv.width=cv.height=16;const c=cv.getContext('2d'),r=rng(seed);const R=(x,y,w,h,col)=>{c.fillStyle=col;c.fillRect(x|0,y|0,w,h)};
+  const sol=()=>{R(0,0,16,16,P.floor[1]);for(let i=0;i<14;i++)R(r()*16,r()*16,1+(r()*2|0),1,P.floor[r()<.55?0:2])};
+  const paroi=()=>{R(0,0,16,6,P.wall[0]);R(0,6,16,10,P.wall[1]);R(0,6,16,1,P.wall[2]);R(0,15,16,1,K);for(let i=0;i<5;i++)R(r()*15,8+r()*5,1,3,P.wall[0]);for(let i=0;i<3;i++)R(r()*14,r()*4,2,1,P.wall[1])};
+  const ore=n=>{for(let i=0;i<n;i++){const x=1+r()*12,y=7+r()*6;R(x,y,2,2,P.ore[0]);R(x,y,1,1,P.ore[1]);if(r()<.5)R(x+1,y+2,1,1,P.ore[2])}};
+  if(kind==='sol')sol();
+  else if(kind==='paroi')paroi();
+  else if(kind==='filon'){paroi();ore(4)}
+  else if(kind==='riche'){paroi();ore(11)}
+  else if(kind==='suivant'){paroi();const o=P.ore;P.ore=P.next;ore(3);P.ore=o}
+  else if(kind==='eau'){R(0,0,16,16,WA[1]);R(0,0,16,2,WA[0]);for(let i=0;i<5;i++)R(r()*12,3+r()*12,3+(r()*3|0),1,WA[2])}
+  else if(kind==='flaque'){sol();for(let j=0;j<8;j++){const k=Math.sin((j+.5)/8*Math.PI)*6;R(8-k,4+j,k*2,1,WA[1])}R(6,7,4,1,WA[2])}
+  else if(kind==='lave'){R(0,0,16,16,LA[0]);R(0,3,16,10,LA[1]);for(let x=0;x<16;x++)R(x,7+Math.sin(x/2.5)*2,1,3,LA[2]);for(let i=0;i<3;i++){const x=r()*12,y=r()*13;R(x,y,3,2,'#3a1410')}}
+  else if(kind==='croute'){sol();[[2,5,6,8],[6,8,9,6],[9,6,13,10],[6,8,7,13]].forEach(([a,b,d,e])=>{const n=Math.max(Math.abs(d-a),Math.abs(e-b));for(let i=0;i<=n;i++)R(a+(d-a)*i/n,b+(e-b)*i/n,1,1,i%3?LA[1]:LA[2])})}
+  else if(kind==='gue'){R(0,0,16,16,LA[1]);R(2,1,12,14,K);R(3,2,10,12,'#3a3440');R(3,2,10,2,'#57505a');R(5,7,4,1,'#221e27');R(8,11,3,1,'#221e27')}
+  else if(kind==='dalle'){R(0,0,16,16,P.floor[1]);R(0,0,16,1,P.floor[0]);R(0,0,1,16,P.floor[0]);R(9,8,7,1,P.floor[0]);R(9,8,1,8,P.floor[0]);R(3,4,3,1,P.floor[2]);R(11,12,3,1,P.floor[2])}
+  else if(kind==='filet'){R(0,0,16,16,P.floor[1]);R(0,0,16,1,P.floor[0]);for(let x=0;x<16;x+=2)R(x,8,1,1,x%4?GO[0]:GO[1]);R(6,6,5,5,GO[0]);R(7,7,3,3,GO[1]);R(8,8,1,1,GO[2])}
+  else if(kind==='consacre'){R(0,0,16,16,'#4a4450');R(0,0,16,1,P.floor[0]);R(0,0,1,16,P.floor[0]);for(let i=0;i<16;i+=2){R(i,2,1,1,GO[0]);R(i+1,13,1,1,GO[0])}R(5,5,6,6,GO[0]);R(6,6,4,4,'#4a4450');R(7,7,2,2,GO[2])}
+  else if(kind==='maconnerie'||kind==='orquartz'){R(0,0,16,6,P.wall[0]);R(0,6,16,10,P.wall[1]);R(0,6,16,1,P.wall[2]);R(0,11,16,1,P.wall[0]);R(4,7,1,4,P.wall[0]);R(12,7,1,4,P.wall[0]);R(8,12,1,4,P.wall[0]);R(0,15,16,1,K);
+    if(kind==='orquartz'){for(let i=0;i<5;i++){const x=1+r()*12,y=7+r()*6;R(x,y,3,2,'#d8d4e0');R(x+1,y,1,1,GO[1]);R(x,y+1,1,1,GO[2])}}}
+}
+
+/* ── animation ── */
+const SLOW=matchMedia('(prefers-reduced-motion: reduce)').matches, LIVE=[];
+function frame(o,t){const{g,ctx,an,m}=o;ctx.clearRect(0,0,g.w+2*m,g.h+2*m);const c=(g.w-1)/2,cut=Math.floor(g.h*.6);
+  const by=an==='bob'?Math.round(Math.sin(t*.5)*1.6):0,up=an==='breathe'&&Math.sin(t*.35)>.2;
+  for(let y=0;y<g.h;y++)for(let x=0;x<g.w;x++){const col=g.d[y*g.w+x];if(!col)continue;let dx=0,dy=by;
+    if(an==='sway')dx=Math.round(Math.sin(t*.45+y*.12)*2.2*(1-y/g.h));
+    else if(an==='pend')dx=Math.round(Math.sin(t*.4)*2.6*(y/g.h));
+    else if(an==='flap'){const d=Math.abs(x-c);if(d>4)dy=Math.round(Math.sin(t*.9)*3.2*d/c)}
+    else if(up&&y<cut){dy=-1;if(y===cut-1){ctx.fillStyle=col;ctx.fillRect(x+m,y+m,1,1)}}
+    ctx.fillStyle=col;ctx.fillRect(x+dx+m,y+dy+m,1,1)}}
+function art(key,an,scale){const g=sprite(key),m=4,cv=document.createElement('canvas');cv.width=g.w+2*m;cv.height=g.h+2*m;cv.style.width=(cv.width*scale)+'px';
+  const o={g,ctx:cv.getContext('2d'),an,m};frame(o,0);if(an&&!SLOW)LIVE.push(o);return cv}
+let T=0;if(!SLOW)setInterval(()=>{T++;LIVE.forEach(o=>frame(o,T))},110);
+
+/* ── schémas d'attaque (vue de dessus, dôme de 24 cases) ── */
+const EX='#5fd8e8',INK='#e4e2da',DIM='#4a4e66';
+function arena(x,acc){x.strokeStyle=DIM;x.lineWidth=2;x.setLineDash([]);x.beginPath();x.arc(120,100,84,0,7);x.stroke();return acc}
+const dot=(x,px,py,r,col)=>{x.fillStyle=col;x.beginPath();x.arc(px,py,r,0,7);x.fill();x.strokeStyle='#0b0a0f';x.lineWidth=2;x.setLineDash([]);x.stroke()};
+const arrow=(x,a,b,c,d,col,dash)=>{x.strokeStyle=col;x.fillStyle=col;x.lineWidth=2.5;x.setLineDash(dash||[]);x.beginPath();x.moveTo(a,b);x.lineTo(c,d);x.stroke();x.setLineDash([]);const an=Math.atan2(d-b,c-a);x.beginPath();x.moveTo(c,d);x.lineTo(c-9*Math.cos(an-.45),d-9*Math.sin(an-.45));x.lineTo(c-9*Math.cos(an+.45),d-9*Math.sin(an+.45));x.fill()};
+const zone=(x,px,py,r,col)=>{x.fillStyle=col+'44';x.strokeStyle=col;x.lineWidth=2;x.setLineDash([5,4]);x.beginPath();x.arc(px,py,r,0,7);x.fill();x.stroke();x.setLineDash([])};
+const D={
+ percee(x,a){arena(x);zone(x,150,128,20,a);x.strokeStyle=a;x.lineWidth=2.5;x.setLineDash([3,5]);x.beginPath();x.moveTo(84,64);x.quadraticCurveTo(70,150,140,134);x.stroke();dot(x,84,64,11,a);dot(x,150,128,5,EX)},
+ sillon(x,a){arena(x);x.fillStyle=a+'44';x.save();x.translate(120,100);x.rotate(-.5);x.fillRect(-96,-12,192,24);x.restore();arrow(x,60,133,186,64,a);x.fillStyle='#12131a';x.fillRect(184,44,26,26);x.strokeStyle=a;x.setLineDash([]);x.strokeRect(184,44,26,26);dot(x,96,113,11,a);dot(x,120,150,5,EX)},
+ pluie(x,a){arena(x);[[80,70],[150,60],[168,118],[96,140],[130,104],[62,112]].forEach(([p,q],i)=>zone(x,p,q,10+i%3*3,a));dot(x,120,36,11,a);dot(x,118,128,5,EX)},
+ chaines(x,a){arena(x);const p=[[60,50],[180,50],[180,150],[60,150]];x.strokeStyle='#8796a2';x.lineWidth=2.5;x.setLineDash([2,4]);p.forEach(([u,v])=>{x.beginPath();x.moveTo(120,100);x.lineTo(u,v);x.stroke()});x.setLineDash([]);p.forEach(([u,v])=>{x.fillStyle='#8796a2';x.fillRect(u-6,v-6,12,12);x.strokeStyle='#0b0a0f';x.strokeRect(u-6,v-6,12,12)});dot(x,120,100,12,a);dot(x,150,132,5,EX)},
+ onde(x,a){arena(x);[26,46,66].forEach((r,i)=>{x.strokeStyle=a;x.globalAlpha=1-i*.28;x.lineWidth=4-i;x.setLineDash([]);x.beginPath();x.arc(104,92,r,0,7);x.stroke()});x.globalAlpha=1;dot(x,104,92,12,a);dot(x,168,128,5,EX);arrow(x,160,124,140,112,EX,[3,3])},
+ rigoles(x,a){arena(x);x.strokeStyle='#f0602a';x.lineWidth=9;x.setLineDash([]);x.beginPath();x.moveTo(36,100);x.lineTo(204,100);x.moveTo(120,16);x.lineTo(120,184);x.stroke();x.strokeStyle='#ffc060';x.lineWidth=3;x.stroke();dot(x,120,100,14,'#c2202a');dot(x,120,100,5,'#0b0a0f');dot(x,160,140,5,EX)},
+ lien(x,a){arena(x);zone(x,120,74,24,a);const s=[[70,120],[110,150],[160,138],[178,96]];x.strokeStyle=a;x.lineWidth=1.5;x.setLineDash([2,3]);s.forEach(([u,v])=>{x.beginPath();x.moveTo(120,74);x.lineTo(u,v);x.stroke()});x.setLineDash([]);s.forEach(([u,v])=>dot(x,u,v,6,'#7c7484'));dot(x,120,74,7,INK);dot(x,128,118,5,EX)},
+ procession(x,a){arena(x);[[120,16,0,1],[204,100,-1,0],[120,184,0,-1],[36,100,1,0]].forEach(([u,v,p,q],i)=>{x.fillStyle=a;x.fillRect(u-9,v-5,18,10);arrow(x,u+p*12,v+q*12,u+p*46,v+q*46,a);x.fillStyle=INK;x.font='16px VT323, monospace';x.fillText(i+1,u+p*22-14*q-4,v+q*22+14*p+5)});dot(x,120,100,7,INK);dot(x,146,118,5,EX)},
+ ostensoir(x,a){arena(x);x.fillStyle=a+'55';x.beginPath();x.moveTo(120,100);x.arc(120,100,84,-.9,-.55);x.fill();x.strokeStyle=a;x.lineWidth=2;x.setLineDash([4,4]);x.beginPath();x.arc(120,100,52,-.5,.9);x.stroke();arrow(x,152,141,150,143,a);dot(x,120,100,7,INK);dot(x,92,150,5,EX)},
+};
+
+/* ── contenu ── */
+const B=[
+{id:'b2',n:'2 · Les Veines de vert-de-gris',sub:'cuivre · eau · roche 8 coups',acc:'#5fa890',
+ P:{floor:RK,wall:['#10181a','#22302f','#3a4f51'],ore:[CU[1],CU[2],VG[1]],next:[FE[1],FE[2],RU[1]]},
+ tiles:[['sol','Sol d’ardoise humide'],['flaque','Flaque (ralentit de 40 %)'],['eau','Eau profonde, canal'],['paroi','Paroi'],['filon','Filon de cuivre'],['riche','Filon riche, patiné'],['suivant','Trace de fer (nord)']],
+ props:[['p2-pompe','Colonne de pompage'],['p2-roue','Roue à aubes'],['p2-malachite','Malachite'],['p2-wagonnet','Wagonnet renversé'],['p2-quartz','Quartz laiteux (lumière)']],
+ fauna:[
+  ['b2-eel','sway','Anguille des puits',['60 PV','vit. 3,5','8 dégâts','recharge 3 s'],'Ne quitte jamais l’eau. Sa décharge touche tout ce qui a les pieds dans la même flaque, alliés et ennemis.','40 % : Organe voltaïque'],
+  ['b2-tick','breathe','Tique de filon',['40 PV','armure 4','vit. 1,6','5 dégâts'],'Neutre et immobile sur son filon. Mord le mineur qui l’attaque, puis retourne se coller.','100 % : 2 à 4 cuivre'],
+  ['b2-bat','flap','Chauve-souris patinée',['18 PV','vit. 7','3 dégâts','nuées de 5'],'Dort au plafond des grandes salles. Réveillée par la lumière, elle éteint les torches posées.','20 % : Guano']],
+ minis:[
+  ['b2-colosse','breathe','Mini-boss · sanctum','Colosse de vert-de-gris',['900 PV','armure 10','vit. 1,2','coup 30'],'Quatre plaques de 120 PV (épaules, torse, dos). Tant qu’il en reste une, le cœur ne prend aucun dégât. Chaque plaque arrachée l’accélère de 15 %. Dans l’eau, ses coups électrisent la flaque.','Plaques du Colosse + 15 lingots'],
+  ['b2-martyre','bob','Mini-boss · martyre','Martyre des Eaux',['PV × 1,5','3 phases','dôme 24 cases'],'Les quatre motifs de la Martyre de Byrsa. À 2/3 puis 1/3 des PV, l’eau monte d’un anneau : le bord du dôme devient une flaque où les tirs ricochent une fois.','Souffle long']],
+ boss:{k:'b2-boss',an:'sway',name:'Gorge-Cuivre, la Dévoreuse de filons',stats:['2 400 PV','armure 5 (anneaux)','gueule : dégâts × 2','3 phases'],
+  txt:'Un ver de la Bête engraissé au minerai. Le combat n’a pas de dôme : elle creuse vraiment le terrain, et chaque sillon est une galerie de plus à défendre ensuite.',
+  phases:['La faim : Percée et Pluie de minerai en alternance.','Le sillon : à 2/3 des PV elle traverse la salle et ouvre une galerie vers la base ; une escouade s’y engouffre.','La gueule ouverte : à 1/3 elle reste dressée, gueule exposée, et appelle des tiques à chaque Pluie.'],
+  loot:'Foreuse de Gorge-Cuivre + Clef des Eaux',
+  atk:[['percee','Percée','Plonge, puis ressurgit sous l’Exilé après 1,2 s. Cercle d’alerte au sol ; 40 dégâts et projection.'],['sillon','Sillon','Charge en ligne à travers la salle et perce la paroi d’en face : les blocs touchés sont détruits pour de bon.'],['pluie','Pluie de minerai','Recrache six blocs. Chaque impact fait 20 dégâts et laisse 1 cuivre à ramasser.']]}},
+{id:'b3',n:'3 · Les Forges mortes',sub:'fer · lave · roche 12 coups',acc:'#b8683a',
+ P:{floor:BA,wall:['#0f0d12','#221e27','#3a3440'],ore:[FE[1],FE[2],RU[1]],next:[GO[1],GO[2],'#d8d4e0']},
+ tiles:[['sol','Sol de basalte'],['croute','Croûte fissurée (bord de coulée)'],['lave','Lave : 20 dégâts/s'],['gue','Gué : bloc posé sur la lave'],['paroi','Paroi'],['filon','Filon de fer'],['riche','Filon riche, rouillé'],['suivant','Trace d’or (nord)']],
+ props:[['p3-orgues','Orgues de basalte'],['p3-engrenage','Engrenage enseveli'],['p3-four','Gueule de four (lumière)'],['p3-enclume','Enclume et lingotière'],['p3-scories','Tas de scories']],
+ fauna:[
+  ['b3-scorie','breathe','Scorie vive',['70 PV','vit. 2,4','explosion 15','flaque 3 s'],'Roule vers la source de chaleur la plus proche : lance-flammes, torches, four. Explose à sa mort.','100 % : 1 à 3 fer · 15 % : Braise vive'],
+  ['b3-vouivre','sway','Vouivre de rouille',['120 PV','armure 3','vit. 4,5','12 dégâts'],'Chasse le long des coulées. Chaque morsure retire 1 d’armure à sa cible jusqu’à la fin du combat.','30 % : Écaille de rouille'],
+  ['b3-limaille','bob','Essaim de limaille',['30 PV','vit. 5','2 dégâts/s','feu × 3'],'Dévie une flèche sur deux dans un rayon de 3 cases. Presque insensible aux lames, fond sous les flammes.','100 % : 1 fer']],
+ minis:[
+  ['b3-forgeron','breathe','Mini-boss · sanctum','Maître-Forgeron enchaîné',['1 500 PV','armure 8','4 chaînes × 150 PV'],'Rivé à son four par quatre chaînes qui bornent l’arène. Enchaîné, il frappe fort mais ne sort pas du carré. Chaque chaîne brisée lui retire 20 % de dégâts et lui rend sa liberté : à zéro chaîne il poursuit, mais son marteau est froid.','Marteau-pilon + 20 lingots de fer'],
+  ['b3-martyre','bob','Mini-boss · martyre','Martyre du Fer',['PV × 2','3 phases','dôme 24 cases'],'Aux motifs connus s’ajoutent des chaînes tendues d’un bord à l’autre du dôme, qui balaient l’arène : à franchir d’une ruée ou à trancher (40 PV).','Chaîne de pénitence']],
+ boss:{k:'b3-boss',an:'bob',name:'L’Œil de la Matrice',stats:['déjà en jeu','PV × 1,5','3 phases','8 attaques'],
+  txt:'Inchangé dans ses attaques et ses phases (Le regard, L’iris, Les deux axes). La seule nouveauté est l’arène des Forges : quatre rigoles de lave en croix, éteintes au début.',
+  phases:['Le regard : rigoles éteintes, combat actuel.','L’iris : la rigole est-ouest s’allume et coupe l’arène en deux.','Les deux axes : les deux rigoles brûlent ; les quartiers communiquent par quatre gués à poser soi-même.'],
+  loot:'Iris de la Matrice',
+  atk:[['rigoles','Rigoles de lave','L’arène se cloisonne au fil des phases. Arriver avec de la roche dans le sac devient une préparation de combat.'],['chaines','Forgeron : les chaînes','Rappel du mini-boss : quatre bornes à casser, dans l’ordre qu’on veut.'],['onde','Forgeron : marteau-pilon','Trois ondes concentriques, à franchir d’une ruée vers l’intérieur.']]}},
+{id:'b4',n:'4 · Les Cryptes de l’Aube',sub:'or · sol consacré · maçonnerie 16 coups',acc:'#ddb457',
+ P:{floor:['#26222c','#3a3540','#443e4a'],wall:['#1a171e','#4e4854','#6a6272'],ore:[GO[1],GO[2],'#d8d4e0'],next:[GO[1],GO[2],'#d8d4e0']},
+ tiles:[['dalle','Dallage'],['filet','Filet d’or (allée)'],['consacre','Dalle consacrée'],['maconnerie','Maçonnerie'],['orquartz','Or dans le quartz'],['paroi','Roche (hors salles)']],
+ props:[['p4-sarcophage','Sarcophage à gisant'],['p4-niche','Niche à crâne'],['p4-banniere','Bannière du Concile'],['p4-candelabre','Candélabre (lumière)'],['p4-cloche','Cloche d’alarme']],
+ fauna:[
+  ['b4-gisant','breathe','Gisant',['160 PV','armure 6','vit. 2,0','16 dégâts'],'Couché sur son sarcophage, indiscernable du décor. Se lève quand une unité passe à 2 cases, ou quand une relique brille.','100 % : 2 à 3 or · 10 % : Masque fêlé'],
+  ['b4-encensoir','pend','Encensoir veilleur',['40 PV','vit. 3','aucune attaque','alerte en 2 s'],'Patrouille les allées. S’il voit une unité pendant 2 s, il file sonner la cloche de la salle : une escouade descend de la surface.','30 % : Encens noirci'],
+  ['b4-rat','breathe','Rat des ossuaires',['15 PV','vit. 7,5','ne se bat pas'],'Ramasse les objets laissés au sol et court vers son nid. Le tuer en route rend l’objet ; au nid, on retrouve tout.','10 % : objet volé plus tôt']],
+ minis:[
+  ['b4-gardien','breathe','Mini-boss · sanctum','Gardien des Reliques',['2 200 PV','armure 8','relique 300 PV'],'Sa châsse lui sert de bouclier : de face, il ne prend rien. Tant que la relique brille, les gisants de la salle se relèvent 20 s après leur mort. Il faut le contourner, briser la relique, puis l’abattre.','Reliquaire vide + 20 lingots d’or'],
+  ['b4-martyre','bob','Mini-boss · martyre','Martyre couronnée',['PV × 3','5 phases','dôme 24 → 18 cases'],'Le duel complet. Son auréole brisée se détache en phase IV et tourne autour de l’arène en tirant ; en phase V le dôme rétrécit comme en phase III de Byrsa.','Auréole brisée']],
+ boss:{k:'b4-boss',an:'bob',name:'Le Hiérophante de Byrsa',stats:['150 PV','bouclier total','lot toutes les 6 s','6 invocations max'],
+  txt:'La fiche de la planche « invocateur », modèle 1, règle « Le lien ». Il ne se bat pas : c’est la garde qu’il appelle qui fait le combat, et chaque lot abattu ouvre une fenêtre pour le frapper.',
+  phases:['La garde : soldats et archers par lots de 3.','Les piliers : à 2/3 des PV, boucliers et une brute par lot ; les lots arrivent par les quatre portes, dans l’ordre.','L’ostensoir : à 1/3, le bouclier tombé laisse place à un rayon tournant le temps de la fenêtre.'],
+  loot:'Ostensoir éteint',
+  atk:[['lien','Le lien','Chaque invocation est reliée à lui par un fil d’or. Quand la dernière tombe, le bouclier s’éteint 5 s.'],['procession','Procession','Les lots entrent par quatre portes, dans le sens horaire. Savoir d’où vient le suivant permet de se placer.'],['ostensoir','Rayon de l’ostensoir','Fenêtre ouverte, un rayon balaie le dôme en 4 s : 30 dégâts. On frappe en tournant avec lui.']]}},
+];
+
+const h=(tag,cls,txt)=>{const e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e};
+const stats=a=>{const d=h('div','stats');a.forEach(s=>d.append(h('span','',s)));return d};
+const root=document.getElementById('strates');
+B.forEach((b,bi)=>{
+  const s=h('section','strate '+b.id);s.id=b.id;
+  const hd=h('div','head');hd.append(h('h2','',b.n),h('span','eyebrow',b.sub));s.append(hd);
+  s.append(h('h3','','Tuiles'));
+  const tr=h('div','row');b.tiles.forEach(([k,name],i)=>{const c=h('div','cell t'),bx=h('div','box'),cv=document.createElement('canvas');cv.setAttribute('aria-label',name);tile(cv,k,b.P,bi*20+i+3);bx.append(cv);c.append(bx,h('span','',name));tr.append(c)});s.append(tr);
+  s.append(h('h3','','Décors'));
+  const pr=h('div','row props');b.props.forEach(([k,name])=>{const c=h('div','cell'),bx=h('div','box');bx.append(art(k,null,3));c.append(bx,h('span','',name));pr.append(c)});s.append(pr);
+  s.append(h('h3','','Bestiaire'));
+  const fc=h('div','cards');b.fauna.forEach(([k,an,name,st,txt,loot])=>{const c=h('div','card'),a=h('div','art'),t=h('div','txt');a.append(art(k,an,4));t.append(h('span','role','Faune'),h('b','n',name),stats(st),h('p','',txt),h('div','loot','Butin : '+loot));c.append(a,t);fc.append(c)});s.append(fc);
+  s.append(h('h3','','Mini-boss'));
+  const mc=h('div','cards');b.minis.forEach(([k,an,role,name,st,txt,loot])=>{const c=h('div','card'),a=h('div','art'),t=h('div','txt');a.append(art(k,an,4));t.append(h('span','role',role),h('b','n',name),stats(st),h('p','',txt),h('div','loot','Butin : '+loot));c.append(a,t);mc.append(c)});s.append(mc);
+  s.append(h('h3','','Boss de fin'));
+  const o=b.boss,bx=h('div','boss'),a=h('div','art'),f=h('div','fiche');a.append(art(o.k,o.an,4));
+  const ol=h('ol');o.phases.forEach(p=>ol.append(h('li','',p)));
+  f.append(h('span','role','Boss de fin'),h('b','n',o.name),stats(o.stats),h('p','',o.txt),ol,h('div','loot','Butin : '+o.loot));
+  f.querySelector('b').style.cssText='font-family:var(--display);font-weight:400;font-size:28px;line-height:1.05';
+  bx.append(a,f);s.append(bx);
+  const at=h('div','atk');o.atk.forEach(([k,name,txt])=>{const fg=h('figure'),cv=document.createElement('canvas');cv.width=240;cv.height=200;cv.setAttribute('aria-label','Schéma : '+name);D[k](cv.getContext('2d'),b.acc);const cap=h('figcaption');cap.append(h('b','',name),h('span','',txt));fg.append(cv,cap);at.append(fg)});s.append(at);
+  s.append(h('p','note','Schémas vus de dessus : cercle gris = dôme ou salle, point cyan = l’Exilé, couleur de la strate = le danger.'));
+  root.append(s);
+});
+</script>

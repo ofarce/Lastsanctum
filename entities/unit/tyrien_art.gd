@@ -4,10 +4,20 @@ extends RefCounted
 ## et un calque par pièce d'équipement visible, pour chaque animation. Chaque calque ne contient que les pixels
 ## que la pièce change, corps en place : on empile la base puis les pièces portées dans l'ordre `order`.
 ## Planches générées par planches/tyrien-export.html (tools/tyrien/serve.py) depuis planches/assets/engineer-volume.js.
+## Corps actuel : le « Templier technomancien » à mains nues (BODY_DIR, planches/ingenieur-exil-propositions.html piste B,
+## exporté par tools/ingenieur/export.py) remplace la base tyrienne, au même gabarit. Sa tenue tient lieu d'armure : les
+## calques d'équipement restent chargés (icônes, emplacements) mais ne sont plus empilés (« overlays »: false).
+## Avant la combinaison (remise par la capsule, GameState.capsule_gift) : corps « exil » (EXIL_DIR, torse nu en chausses
+## déchirées, planches/ingenieur-pantalon-dechire-propositions.html piste A, tools/ingenieur/export.py exil), même
+## gabarit et mêmes animations ; les rangées Arbalestrie (c_*) et le casque restent ceux du Templier.
+## Dessin et animations des deux corps : planches/assets/engineer-maj.js (membres articulés, « hit » = touché).
 
 const DIR := "res://assets/imported/engineer/tyrien/"
-const PORTRAIT := DIR + "tyrien_portrait.png"
-const ANIMS := ["idle", "walk", "kneel", "pray", "settle", "lotus", "aim", "slash1", "slash2", "shoot"]
+const BODY_DIR := "res://assets/imported/engineer/templier/"
+const PORTRAIT := BODY_DIR + "templier_portrait.png"
+const EXIL_DIR := "res://assets/imported/engineer/exil/"
+const EXIL_PORTRAIT := EXIL_DIR + "exil_portrait.png"
+const ANIMS := ["idle", "walk", "kneel", "pray", "settle", "lotus", "aim", "slash1", "slash2", "shoot", "idle_d", "walk_d", "idle_u", "walk_u", "shoot_d", "shoot_u", "hit", "c_idle", "c_walk", "c_shoot", "helm"]
 
 static var meta: Dictionary
 ## frames[calque][animation] : Array[AtlasTexture] ; calque = "base" ou une pièce (helm, iron…).
@@ -22,14 +32,28 @@ static func load_all() -> void:
 	if not frames.is_empty():
 		return
 	meta = JSON.parse_string(FileAccess.get_file_as_string(DIR + "tyrien.json"))
+	# Gabarit, animations et visée du corps actuel ; pièces, emplacements et ordre restent ceux du Tyrien.
+	var body: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(BODY_DIR + "templier.json"))
+	for key: String in body:
+		meta[key] = body[key]
 	var layers: Array = ["base"]
 	layers.append_array((meta["pieces"] as Dictionary).keys())
 	for layer: String in layers:
-		var tex: Texture2D = load(DIR + "tyrien_%s.png" % layer)
+		var tex: Texture2D = load(BODY_DIR + "templier_base.png") if layer == "base" else load(DIR + "tyrien_%s.png" % layer)
 		var by_anim := {}
 		for anim: String in ANIMS:
 			by_anim[anim] = _sheet(tex, meta["anims"][anim])
 		frames[layer] = by_anim
+	if ResourceLoader.exists(EXIL_DIR + "exil_base.png"):
+		var tex_exil: Texture2D = load(EXIL_DIR + "exil_base.png")
+		var by_anim := {}
+		for anim: String in ANIMS:
+			by_anim[anim] = _sheet(tex_exil, meta["anims"][anim])
+		frames["exil"] = by_anim
+		for anim: String in ANIMS:
+			var list: Array = by_anim[anim]
+			for i in list.size():
+				_index[list[i]] = [anim, i]
 	for anim: String in ANIMS:
 		var list: Array = frames["base"][anim]
 		for i in list.size():
@@ -48,9 +72,31 @@ static func _sheet(tex: Texture2D, m: Dictionary) -> Array[AtlasTexture]:
 	return out
 
 
+## Ingénieur encore sans combinaison (avant la capsule) : corps « exil ».
+static func ragged() -> bool:
+	return not GameState.capsule_gift
+
+
+## Calque du corps pour l'animation `name` : « exil » avant la combinaison, sauf Arbalestrie et casque.
+static func _body_layer(name: String) -> String:
+	if ragged() and frames.has("exil") and not name.begins_with("c_") and name != "helm":
+		return "exil"
+	return "base"
+
+
+static func portrait() -> String:
+	return EXIL_PORTRAIT if ragged() and ResourceLoader.exists(EXIL_PORTRAIT) else PORTRAIT
+
+
 static func anim(name: String) -> Array[AtlasTexture]:
 	load_all()
-	return frames["base"][name]
+	return frames[_body_layer(name)][name]
+
+
+## Animation d'un corps donné (exil = avant la combinaison), sans regarder l'état de la partie.
+static func anim_of(name: String, exil: bool) -> Array[AtlasTexture]:
+	load_all()
+	return frames["exil" if exil and frames.has("exil") and not name.begins_with("c_") and name != "helm" else "base"][name]
 
 
 static func fps(name: String) -> float:
@@ -61,7 +107,7 @@ static func fps(name: String) -> float:
 ## Image de visée de la base : rangée (recul 0 / 1,5 / 3, suspension) et colonne d'angle.
 static func aim_frame(row: int, col: int) -> AtlasTexture:
 	load_all()
-	return frames["base"]["aim"][row * int(meta["anims"]["aim"]["cols"]) + col]
+	return frames[_body_layer("aim")]["aim"][row * int(meta["anims"]["aim"]["cols"]) + col]
 
 
 ## Pièce d'équipement → emplacement de l'inventaire (« Tête », « Torse »…).
@@ -74,7 +120,7 @@ static func slot_of(piece: String) -> String:
 ## dans l'ordre d'empilement. Vide si l'image n'est pas une image du Tyrien.
 static func overlays(base_frame: Texture2D, pieces: Dictionary) -> Array[AtlasTexture]:
 	var out: Array[AtlasTexture] = []
-	if pieces.is_empty() or not _index.has(base_frame):
+	if pieces.is_empty() or not _index.has(base_frame) or not bool(meta.get("overlays", true)):
 		return out
 	var at: Array = _index[base_frame]
 	for slot_key: String in meta["order"]:

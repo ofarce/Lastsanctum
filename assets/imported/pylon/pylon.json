@@ -1,0 +1,17 @@
+{
+ "source": "planches/pylone-merenor-v2-propositions.html",
+ "frame_w": 72,
+ "frame_h": 138,
+ "cols": 12,
+ "count": 48,
+ "fps": 12,
+ "ax": 36,
+ "ay": 102,
+ "sides": [
+  "aether",
+  "indra",
+  "medeina",
+  "sigil"
+ ],
+ "zone": "Nappe débordante, unités de monde : R(θ) = 11 + 7,25·L1 + 2,5·L1b + 3,25·loc ; 9 flaques ; retrait = couverture × 21,9 − (d + 2,25·loc)"
+}

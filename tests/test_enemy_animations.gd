@@ -2,8 +2,12 @@ extends "res://tests/fight_case.gd"
 
 
 func test_all_enemies_have_complete_atlases() -> void:
-	check_eq(EnemyArt.all().size(), Catalog.ENEMY.size())
+	# L'Œil de la Matrice et ses pupilles ont leurs propres calques (assets/imported/oeil/, OeilView, OeilFx), hors du
+	# manifeste des ennemis.
+	check_eq(EnemyArt.all().size(), Catalog.ENEMY.size() - 2)
 	for kind: String in Catalog.ENEMY:
+		if kind == OeilMatrice.KIND or kind == OeilMatrice.PUPIL_KIND:
+			continue
 		var meta: Dictionary = EnemyArt.all()[kind]
 		for action: String in ["idle", "walk", "attack", "death"]:
 			var a: Dictionary = meta[action]
@@ -78,9 +82,11 @@ func test_progressive_roster() -> void:
 			if w < 8:
 				check(spawn["kind"] != "strazhar", "champion à partir du huitième assaut")
 	for kind: String in Catalog.ENEMY:
-		if kind != "beast" and kind != Martyre.KIND and not Wildlife.KINDS.has(kind):
+		if kind != "beast" and kind != Martyre.KIND and kind != OeilMatrice.KIND and kind != OeilMatrice.PUPIL_KIND and not Wildlife.KINDS.has(kind):
 			check(seen.has(kind), "renfort présent : " + kind)
 	check(not seen.has(Martyre.KIND), "le boss ne vient jamais en vague")
+	check(not seen.has(OeilMatrice.KIND), "l'Œil ne vient jamais en vague")
+	check(not seen.has(OeilMatrice.PUPIL_KIND), "ses pupilles non plus")
 
 
 func test_menace_unlocks_strazhar_before_wave_eight() -> void:
@@ -96,15 +102,18 @@ func test_menace_unlocks_strazhar_before_wave_eight() -> void:
 		check_eq(champions.size(), 1 + extra if menace >= Catalog.STRAZHAR_MENACE else 0, "Menace %d" % menace)
 		check_eq(GameState.spawn_queue.size(), 7 + Catalog.MENACE_WAVE["count"] * tier, "effectif de la vague 1 au palier %d" % tier)
 		if menace >= Catalog.STRAZHAR_MENACE:
-			check_eq(GameState.spawn_queue[0]["kind"], "strazhar", "champion en tête d’assaut")
-			var e := sim.combat.spawn_enemy(GameState.spawn_queue[0])
+			var last := int(GameState.spawn_queue[0]["group"]["expected"]) - 1
+			check_eq(GameState.spawn_queue[last]["kind"], "strazhar", "champion en serre-file de la première escouade")
+			var e := sim.combat.spawn_enemy(GameState.spawn_queue[last])
 			check_eq(e.kind, "strazhar", "apparition effective")
 	# Une vague déjà préparée ne change pas quand la Menace monte.
 	GameState.wave = 0
 	GameState.menace = 0
 	sim.combat.start_wave()
+	var planned := GameState.spawn_queue.map(func(s: Dictionary) -> String: return s["kind"])
 	GameState.menace = 3500
-	check_eq(GameState.spawn_queue[0]["kind"], "creep", "instantané au lancement")
+	check_eq(GameState.spawn_queue.map(func(s: Dictionary) -> String: return s["kind"]), planned, "instantané au lancement")
+	check(not planned.has("strazhar"), "pas de champion sans Menace")
 
 
 func test_views_play_attacks_then_hold_final_corpse_frame() -> void:
@@ -112,6 +121,8 @@ func test_views_play_attacks_then_hold_final_corpse_frame() -> void:
 	var world: World = sim.get_node("../World")
 	world.fog.refresh(sim.state())
 	for kind: String in Catalog.ENEMY:
+		if kind == OeilMatrice.KIND or kind == OeilMatrice.PUPIL_KIND:
+			continue
 		var e := Enemy.make(kind, -3, -130, 0)
 		e.attack_started = GameState.sim_time - 0.2
 		var v := UnitView.new()

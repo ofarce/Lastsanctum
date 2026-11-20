@@ -32,6 +32,9 @@ func _draw_cell(target: Dictionary, line_color: Color, fill_color: Color, show_i
 	var font := ThemeDB.fallback_font
 	var title := "Miner : " + str(block.get("material_name", ""))
 	var detail := "Clic droit · Case 4 × 4"
+	var seal: String = world.terrain_state.seal_needed(target["i"], target["j"])
+	if seal != "":
+		detail = "Recherche « %s » requise" % Catalog.RESEARCH[seal]["name"]
 	if world.terrain_state.permanent_ores.has(Vector2i(cell["i"], cell["j"])):
 		detail = "Gisement inépuisable"
 	var wood_key := Vector2i(cell["i"], cell["j"])

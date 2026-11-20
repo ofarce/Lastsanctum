@@ -1,0 +1,357 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Boutons de recherche et d’unités</title>
+<style>
+@font-face{font-family:NotoHud;src:url(../assets/fonts/NotoSerif-Regular.ttf)}
+:root{--bg:#0b120e;--panel:#111b14;--line:#2a3a2c;--txt:#dcd8bc;--mut:#93a08a;--acc:#e8c870}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--txt);font:15px/1.45 system-ui,sans-serif}
+header,main{max-width:900px;margin:auto;padding:18px 16px}
+h1{margin:0;font-weight:600;letter-spacing:.08em;font-size:24px;color:var(--acc)}
+header p,section>p{color:var(--mut);margin:6px 0 0}
+section>p b{color:var(--txt);font-weight:600}
+section{margin:34px 0 56px}
+h2{color:var(--acc);font-weight:600;letter-spacing:.05em;margin:0;font-size:21px}
+h3{margin:26px 0 0;font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:var(--mut);font-weight:600}
+p.sub{margin:0 0 4px;color:var(--txt);font-style:italic}
+.wrap{position:relative}
+.wrap.panel{margin-top:96px}
+.wrap.strip{margin-top:14px}
+.wrap canvas{display:block;max-width:100%;image-rendering:pixelated;image-rendering:crisp-edges}
+.labels{display:grid;max-width:100%;text-align:center;color:var(--mut);font-size:12px;margin-top:4px;line-height:1.25}
+.why{border:1px solid var(--line);background:var(--panel);padding:12px 16px;color:var(--mut)}
+.why b{color:var(--txt)}
+.bubble{position:absolute;z-index:4;pointer-events:none;font-family:NotoHud,serif;font-size:15px;line-height:1.25;padding:6px 10px;max-width:420px;display:flex;flex-direction:column;gap:1px}
+.bubble[hidden]{display:none}
+.bubble b{font-weight:400;font-size:17px}
+.bubble i{font-style:normal}.bubble i.short{opacity:.55;text-decoration:underline wavy}
+.bubble small{font-size:13px;opacity:.8}
+.bubble em{font-style:normal;font-size:13px}
+.bb-brass .bubble{background:#10140d;border:2px solid #c29148;color:#eee3c9}.bb-brass .bubble b{color:#ffe5ac}.bb-brass .bubble em{color:#e8a090}.bb-brass .bubble em.ok{color:#a8d890}
+.bb-folio .bubble{background:#efe4c8;border:2px solid #5a3a22;color:#3a2214}.bb-folio .bubble em{color:#a02c24}.bb-folio .bubble em.ok{color:#8a6414}
+.bb-glass .bubble{background:#0e1014;border:2px solid #3a3e46;color:#d4dae4}.bb-glass .bubble b{color:#f8e0a0}.bb-glass .bubble em{color:#e8907e}.bb-glass .bubble em.ok{color:#f8e0a0}
+.bb-snes .bubble{background:linear-gradient(#5a6ad0,#141c6a);border:2px solid #e6e8f4;outline:2px solid #0a0c26;color:#fff;text-shadow:1px 1px 0 #10123a}.bb-snes .bubble em{color:#ffc8b8}.bb-snes .bubble em.ok{color:#a8f0a0}
+@media(max-width:560px){.bubble{font-size:13px;max-width:300px}.bubble b{font-size:15px}.wrap.panel{margin-top:120px}}
+</style></head><body>
+<header><h1>BOUTONS DE RECHERCHE ET D’UNITÉS · HABILLAGES</h1>
+<p>Même règle que pour la fabrication : le bouton ne montre que l’icône, la touche et l’état. Le nom, le coût (stock entre parenthèses), la durée et l’effet n’apparaissent qu’au survol. Les recherches et les unités sont rendues au pixel du jeu ; les unités reprennent les sprites 16 bits des portraits du HUD. Passe la souris sur les boutons des deux panneaux.</p></header>
+<main id="root"></main>
+<main><section><h2>À trancher</h2><p class="why"><b>Choisis un habillage</b> (1 à 4), ou un mélange, par exemple « 1, avec la verrière de 3 pour les recherches achevées ». Mon conseil : <b>1 · Laiton, trait d’or et cachet</b>. C’est le cadre déjà retenu pour la fabrication, donc le panneau d’ordres reste d’un seul tenant. Le trait d’or dit « pas encore su » sans texte, la montée de la couleur montre l’avancée, et le cachet vert remplace « Déjà achevée » qui rognait le bouton. Pour les unités, la file d’attente reprend la pastille grenat du coffre rouge.</p></section></main>
+<script>
+'use strict';
+/* Objets 32 × 32 extraits de rendus-objets-propositions.html (palettes M, raster R, DRAW). */
+const OUT = '#0b090b';
+const M = {
+  wood:['#3e2617','#6e4830','#9c7048','#c49a68'], bark:['#2e2016','#4e3826','#6e5238','#8e7050'],
+  iron:['#3c4550','#6a7784','#9aa8b4','#d0dae0'], copper:['#5e2e1c','#a45a34','#d4885e','#f2b890'],
+  gold:['#6a4614','#b8862a','#e8c060','#fff0a8'], rock:['#1e232b','#333a46','#4e5866','#6e7a88'],
+  fiber:['#6a5634','#a08a5c','#c8b080','#ecdcb0'], flame:['#a8401a','#e07a20','#f8c040','#fff4c8'],
+  cord:['#6a5a40','#a8946c','#d8c8a0','#f0e4c4'], blue:['#1c2c4c','#2e4c80','#4c76b0','#7ea4d8'],
+  red:['#4c1a18','#802c24','#b04a3a','#d87a64'], marble:['#4a4c50','#6e7074','#94969a','#bcbcb8'],
+  moss:['#22301e','#34482a','#4e6a3a','#6e8a4e'], cyan:['#1f6a74','#35a8b8','#5fe0f0','#c8f8ff'],
+};
+
+/* ---------- Petit raster ---------- */
+function R(w,h){ return {w,h,p:new Array(w*h).fill(null)}; }
+function px(r,x,y,c){ x=Math.round(x); y=Math.round(y); if(x>=0&&y>=0&&x<r.w&&y<r.h) r.p[y*r.w+x]=c; }
+function get(r,x,y){ return (x>=0&&y>=0&&x<r.w&&y<r.h)? r.p[y*r.w+x] : null; }
+function rect(r,x,y,w,h,c){ for(let j=0;j<h;j++) for(let i=0;i<w;i++) px(r,x+i,y+j,c); }
+function line(r,x0,y0,x1,y1,c){ const n=Math.max(Math.abs(x1-x0),Math.abs(y1-y0))||1; for(let i=0;i<=n;i++) px(r,x0+(x1-x0)*i/n,y0+(y1-y0)*i/n,c); }
+function disc(r,cx,cy,rad,c){ for(let y=Math.floor(cy-rad);y<=cy+rad;y++) for(let x=Math.floor(cx-rad);x<=cx+rad;x++) if((x-cx)**2+(y-cy)**2<=rad*rad+0.3) px(r,x,y,c); }
+function poly(r,pts,c){ let x0=1e9,x1=-1e9,y0=1e9,y1=-1e9; pts.forEach(([x,y])=>{x0=Math.min(x0,x);x1=Math.max(x1,x);y0=Math.min(y0,y);y1=Math.max(y1,y);});
+  for(let y=Math.floor(y0);y<=y1;y++) for(let x=Math.floor(x0);x<=x1;x++){ let ins=false; for(let i=0,j=pts.length-1;i<pts.length;j=i++){ const [xi,yi]=pts[i],[xj,yj]=pts[j]; if(((yi>y+.5)!=(yj>y+.5))&&(x+.5<(xj-xi)*(y+.5-yi)/(yj-yi)+xi)) ins=!ins; } if(ins) px(r,x,y,c);} }
+/* Bâton épais modelé : ombre dessous, lumière dessus. */
+function rod(r,x0,y0,x1,y1,rad,m){ const n=Math.ceil(Math.hypot(x1-x0,y1-y0)*2)||1;
+  for(let i=0;i<=n;i++){ const t=i/n; disc(r,x0+(x1-x0)*t,y0+(y1-y0)*t+0.6,rad,m[0]); }
+  for(let i=0;i<=n;i++){ const t=i/n; disc(r,x0+(x1-x0)*t,y0+(y1-y0)*t,rad,m[1]); }
+  if(rad>=1) for(let i=0;i<=n;i++){ const t=i/n; px(r,x0+(x1-x0)*t-0.4,y0+(y1-y0)*t-rad+0.4,m[2]); } }
+function outline(r,c=OUT){ const add=[]; for(let y=0;y<r.h;y++) for(let x=0;x<r.w;x++) if(!get(r,x,y)&&(get(r,x+1,y)||get(r,x-1,y)||get(r,x,y+1)||get(r,x,y-1))) add.push([x,y]); add.forEach(([x,y])=>px(r,x,y,c)); }
+
+/* ---------- Objets (32 × 32) ---------- */
+function ingot(r,m,glyph){
+  poly(r,[[5,20],[27,20],[29,25],[3,25]],m[0]);          // flanc avant
+  poly(r,[[3,25],[29,25],[28,27],[4,27]],m[0]);
+  poly(r,[[8,12],[24,12],[27,20],[5,20]],m[1]);          // face oblique avant
+  poly(r,[[10,9],[22,9],[24,12],[8,12]],m[2]);           // dessus
+  line(r,10,9,22,9,m[3]); line(r,8,12,24,12,m[3]); px(r,6,19,m[2]); line(r,9,13,7,18,m[2]);
+  if(glyph){ line(r,14,15,18,15,m[0]); line(r,16,14,16,18,m[0]); }
+}
+const DRAW = {
+  wood(r){ rod(r,6,22,24,10,4,M.bark); rod(r,9,25,27,17,3.5,M.bark);
+    [[24,10,4],[27,17,3.5]].forEach(([x,y,s])=>{ disc(r,x,y,s,M.wood[2]); disc(r,x,y,s-1.4,M.wood[3]); disc(r,x,y,s-2.6,M.wood[1]); px(r,x,y,M.wood[2]); }); },
+  rock(r){ poly(r,[[6,20],[9,11],[17,7],[25,10],[28,19],[22,26],[10,26]],M.rock[1]); poly(r,[[9,11],[17,7],[25,10],[20,15],[12,15]],M.rock[3]); poly(r,[[20,15],[25,10],[28,19],[22,26]],M.rock[2]); poly(r,[[6,20],[12,15],[20,15],[22,26],[10,26]],M.rock[1]); line(r,12,15,20,15,M.rock[0]); line(r,20,15,22,25,M.rock[0]); px(r,14,10,'#e8e4da'); px(r,15,10,'#bcb8ae'); },
+  torch(r){ rod(r,10,27,19,13,1.6,M.wood); rect(r,17,10,5,5,M.fiber[1]); line(r,17,11,21,11,M.fiber[3]); line(r,17,13,21,13,M.fiber[0]);
+    poly(r,[[16,10],[23,10],[22,5],[20,1],[18,4]],M.flame[1]); poly(r,[[17,10],[22,10],[21,6],[20,3],[19,6]],M.flame[2]); rect(r,19,7,2,3,M.flame[3]); },
+  pickaxe(r){ rod(r,8,27,21,9,1.6,M.wood);
+    const pts=[]; for(let a=-1.15;a<=1.15;a+=0.08) pts.push([18+Math.sin(a)*11-Math.cos(a)*1, 11-Math.cos(a)*4+Math.sin(a)*4]);
+    pts.forEach(([x,y],i)=>disc(r,x,y+0.7,1.7,M.iron[0])); pts.forEach(([x,y])=>disc(r,x,y,1.5,M.iron[2])); pts.forEach(([x,y])=>px(r,x,y-1,M.iron[3])); rect(r,19,9,3,4,M.iron[1]); },
+  arrows(r){ [[0,0],[3,3],[-3,3]].forEach(([dx,dy])=>{ line(r,6+dx,26+dy-3,22+dx,7+dy,M.wood[2]); line(r,7+dx,26+dy-3,23+dx,7+dy,M.wood[1]);
+      poly(r,[[21+dx,6+dy],[26+dx,3+dy],[24+dx,9+dy]],M.iron[2]); px(r,24+dx,5+dy,M.iron[3]);
+      poly(r,[[5+dx,22+dy],[3+dx,25+dy],[7+dx,26+dy],[9+dx,24+dy]],M.red[2]); px(r,5+dx,24+dy,M.red[3]); }); },
+  bow(r){ const pts=[]; for(let a=-1.2;a<=1.2;a+=0.05) pts.push([9+Math.cos(a)*11, 16+Math.sin(a)*12]);
+    line(r,pts[0][0],pts[0][1],pts[pts.length-1][0],pts[pts.length-1][1],M.cord[3]);
+    pts.forEach(([x,y])=>disc(r,x,y,1.3,M.wood[1])); pts.forEach(([x,y])=>px(r,x+0.5,y,M.wood[3])); rect(r,18,14,3,5,M.fiber[1]); line(r,18,15,20,15,M.fiber[3]); },
+  sword(r){ poly(r,[[25,3],[28,4],[14,19],[12,17]],M.iron[2]); line(r,26,4,13,18,M.iron[3]); line(r,27,5,14,19,M.iron[1]);
+    rod(r,9,15,17,23,1.2,M.gold); rod(r,11,21,6,26,1.3,M.wood); disc(r,5,27,1.8,M.gold[2]); },
+  shield(r){ disc(r,16,17,11.5,M.wood[0]); disc(r,16,16,11,M.iron[1]); disc(r,16,16,9.5,M.wood[1]); for(let x=8;x<=24;x+=4) line(r,x,8,x,25,M.wood[0]);
+    disc(r,16,16,3.3,M.iron[1]); disc(r,15.5,15.5,2.2,M.iron[2]); px(r,15,15,M.iron[3]); for(let a=0;a<6.28;a+=0.4) px(r,16+Math.cos(a)*10.3-0.4,16+Math.sin(a)*10.3-0.6,a>3.6&&a<5.8?M.iron[3]:M.iron[2]); },
+  chest(r){ rect(r,5,15,22,11,M.wood[1]); rect(r,5,24,22,2,M.wood[0]); poly(r,[[5,15],[27,15],[26,8],[6,8]],M.wood[2]); line(r,6,8,26,8,M.wood[3]);
+    for(let x=6;x<27;x+=5) line(r,x,16,x,23,M.wood[0]); [8,22].forEach(x=>{ rect(r,x,8,2,18,M.iron[1]); line(r,x,8,x,25,M.iron[2]); }); rect(r,14,14,4,5,M.iron[2]); px(r,15,16,OUT); px(r,16,16,OUT); },
+  wood_fiber(r){ for(let i=0;i<7;i++){ const y=9+i*2.2; const c=M.fiber[i%2?1:2]; line(r,5,y+3,27,y-1,c); line(r,5,y+4,27,y,M.fiber[0]); }
+    rect(r,11,7,3,16,M.cord[0]); line(r,11,7,11,22,M.cord[2]); rect(r,19,5,3,16,M.cord[0]); line(r,19,5,19,20,M.cord[2]); },
+  firing_post(r){ for(let i=0;i<5;i++){ const x=6+i*4; poly(r,[[x,10],[x+4,9],[x+4,26],[x,26]],M.wood[i%2?1:2]); line(r,x,10,x,26,M.wood[0]); poly(r,[[x,10],[x+2,6],[x+4,9]],M.wood[3]); }
+    rect(r,6,15,20,2,M.wood[0]); rect(r,6,21,20,2,M.wood[0]); rect(r,14,12,4,2,OUT); },
+  barricade(r){ rod(r,4,25,26,8,1.8,M.wood); rod(r,6,8,28,24,1.8,M.wood); rod(r,3,17,29,17,1.6,M.bark);
+    poly(r,[[9,27],[13,22],[20,22],[24,27]],M.rock[2]); line(r,13,22,20,22,M.rock[3]); line(r,9,27,24,27,M.rock[0]); },
+  fishing_rod(r){ line(r,4,28,27,4,M.wood[1]); line(r,5,28,27,5,M.wood[2]); rod(r,4,28,8,24,1.4,M.bark); disc(r,9,23,2.2,M.iron[1]); px(r,9,22,M.iron[3]);
+    for(let y=5;y<22;y++) px(r,27+Math.sin(y*0.4)*0.6,y,M.cord[3]); disc(r,27,23,1.5,M.red[2]); px(r,26,22,M.red[3]); line(r,27,25,27,27,M.iron[2]); px(r,26,28,M.iron[2]); px(r,25,27,M.iron[2]); },
+  caltrops(r){ [[10,20],[21,23],[18,12]].forEach(([x,y])=>{ line(r,x,y,x-4,y+3,M.iron[1]); line(r,x,y,x+4,y+3,M.iron[1]); line(r,x,y,x,y+4,M.iron[0]); line(r,x,y,x+1,y-5,M.iron[2]); px(r,x+1,y-5,M.iron[3]); disc(r,x,y,1,M.iron[2]); }); },
+  copper_ingot(r){ ingot(r,M.copper,true); }, iron_ingot(r){ ingot(r,M.iron,true); }, gold_ingot(r){ ingot(r,M.gold,true); },
+};
+function lum(h){ const n=parseInt(h.slice(1),16); return ((n>>16)*0.3+((n>>8)&255)*0.59+(n&255)*0.11)/255; }
+
+</script>
+<script>
+/* Sprites des portraits du HUD (assets/baked/hud/portraits), réduits à 34 px de haut. */
+const SPRITES = {"flammes":{"w":24,"h":34,"pal":["#141820","#d6dce8","#98a2b4","#646e80","#3a4250","#7a3008","#ffc070","#2a0e04","#5a2c1c","#a0583a","#f4c093","#d88e62","#f08a2a","#c23a08","#fff6c0","#c25a12","#8a5428","#5a1404"],"rows":[".........ÀÀÀÀÀÀ.........","........ÀÁÁÁÁÁÂÀ........",".......ÀÁÁÁÁÁÁÂÃÀ.......",".....ÀÀÁÁÁÁÁÁÂÂÃÄÀÀ.....",".....ÀÀÁÁÁÁÁÂÂÂÃÄÀÀ.....",".....ÀÀÁÁÁÁÁÂÂÂÂÂÀÀ.....",".....ÀÀÁÁÁÁÁÂÂÂÂÂÀÀ.....",".......ÀÅÅÆÅÆÅÆÅÆÇÇ.....",".......ÈÉÊÉÉÉÉÉÉÈ.......","....À..ÈËÊÊËËËËÉÈ..À....","..ÀÀÂÀÀÃÌÊËÉÉÉÉÉÄÀÀÂÀÀ..",".ÀÁÁÁÁÁÂÄËËËËÉÉÉÁÁÁÁÁÂÀ.","ÀÁÁÁÁÁÁÂÃÄÀÈÈÈÃÁÁÁÁÁÁÂÃÀ","ÀÁÁÁÅÂÂÂÃÆÆÆÌÌÌÁÁÁÁÅÂÂÃÀ","ÀÂÂÂÄÂÂÃÄÆÆÆÆÌÌÂÂÂÂÄÂÃÄÀ",".ÀÃÃÃÃÃÄÆÆÆÆÆÌÌÅÃÃÃÃÃÄÀ.",".ÀÃÃÂÃÃÄÆÆÆÆÌÌÌÄÃÄÄÄÀÀ..",".ÀÃÃÂÃÃÄÆÆÆÆÌÌÌÄÃÄÄÄÀÀ..",".ÀÃÃÃÃÃÄÆÆÆÍÎÍÌÃÃÄÄÀ....",".ÀÃÁÃÃÃÄÌÌÌÌÅÌÏÃÃÄÄÀ....",".ÀÁÁÃÁÁÄÌÌÌÌÏÏÏÃÁÄÄÀ....",".ÀÂÂÁÁÁÂÌÏÏÏÏÏÅÁÁÂÂÀ....","..ÀÄÂÂÂÃÂÂÂÂÂÃÃÃÃÃÃÌÇ...","...ÀÀÄÄÐÂÂÂÃÃÃÃÃÄÄÄÍÑ...",".....ÀÀÂÃÃÄÀÀÂÃÃÄÀÀÑ....",".....ÀÀÂÃÃÄÀÀÂÃÃÄÀÀ.....",".....ÀÀÃÃÄÄÀÀÃÃÄÄÀÀ.....",".....ÀÀÃÃÄÄÀÀÃÃÄÄÀÀ.....",".....ÀÀÃÃÄÄÀÀÃÃÄÄÀÀ.....",".....ÀÀÃÁÄÄÀÀÃÁÄÄÀÀ.....",".....ÀÀÂÃÃÄÀÀÂÃÃÄÀÀ.....",".....ÀÀÃÃÄÄÀÀÃÃÄÄÀÀ.....",".....ÀÀÃÃÄÄÀÀÃÃÄÄÀÀ.....",".......ÀÀÀÀ..ÀÀÀÀ......."]},"archer":{"w":24,"h":34,"pal":["#2a0e04","#ffc070","#f08a2a","#c25a12","#a0583a","#f4c093","#d88e62","#7a3008","#ffffff","#1c1008","#d4a462","#8a5428","#20120a","#2a2418","#fffbe8","#a8743a","#dca460","#b67a3c","#5a3418","#a8784e","#4a3020","#7a5236","#1e140e","#5a5f72","#3e4250","#272a33","#7a4c24","#4a2c14","#141519"],"rows":[".........ÀÀ.............",".......ÀÀÁÁÀÀÀ..........","......ÀÁÁÁÁÁÁÂÀ.........",".....ÀÁÁÁÁÁÁÁÂÂÀ........","....ÀÁÁÁÁÁÁÂÂÂÂÃÀ.......","....ÀÁÁÁÄÄÄÄÄÂÃÃÀ.......","....ÀÁÁÄÅÅÅÆÆÄÃÇÀ.......","....ÀÂÁÅÅÅÆÆÆÄÃÇÀ.......","....ÀÂÂÆÈÆÆÄÄÈÇÇÀ.É.....","....ÀÂÂÆÈÆÆÄÄÈÇÇÀ.É.....",".....ÀÃÄÄÄÄÄÄÄÇÀ.ÉÊÉ....","......ÀÃÄÄÄÄÄÇËËÌÍÎÊÉ...","....ÀÀÁÁÁÁÁÂÂÂÃËÌÍÎÏÉ...","...ÀÂÁÁÁÂÂÂÂÂÃÃÇÇÀÎÍÏÉ..","....ÀÀÃÃÃÃÃÇÇÇÇÀËÌÎÍÏÉ..",".ÌÌÀÃÐÐÐÐÐÐÑÑÑÑËÇÀÎÍÉÏÉ.","ÌÑËÒÐÐÐÐÐÐÐÑÑÑÑËÒÌÎÍÉÏÉ.","ÌËËÒÐÐÐÐÐÐÑÑÑÑÑËËÒÎÐÐÑÒÌ","ÌËËÒÐÐÐÐÐÑÑÑÑÑËËÒÒÎÑÑËÒÌ","ÌËÐÒÑÑÑÑÑÑÑÑÑËËËÒÌÎÍÌÏÉ.","ÌÐÐÑÑÑÑÑÑÑËËËËËÒÒÌÎÍÉÏÉ.","ÌÑÑËËËÑËËËËËËÒÒÒÒÌÎÍÉÏÉ.",".ÌÒÌÓÓÓÔÔÔÕÕÕÕÕÔÔÖÎÍÏÉ..","..ÌÖÓÕÕÕÕÕÕÔÔÔÔÔÔÖÎÍÏÉ..","...ÀÇ×ØÙÙÇÇ××ØØÙÇÀÎÏÉ...","...ÀÇ×ØÙÙÇÇ××ØØÙÇÀÎÏÉ...","...ÀÇ×ØØÙÇÇ××ØØÙÇÀÎÚÉ...","...ÀÇØØÙÙÇÇØØØÙÙÇÀÛÉ....","...ÀÇØØÙÙÇÇØØØÙÙÇÀÉ.....","....ÀØØÙÙÜÀØØØÙÙÜ.......","....ÌÑËËÒÌÌÑÑËËÒÌ.......","....ÌËËÒÒÌÌËËËÒÒÌ.......","....ÌËËÒÒÌÌËËËÒÒÌ.......",".....ÌÌÌÌ..ÌÌÌÌÌ........"]},"lame":{"w":27,"h":34,"pal":["#2a0e04","#ffc070","#f08a2a","#c25a12","#7a3008","#3a4250","#141820","#d6dce8","#98a2b4","#a0583a","#5a2c1c","#d88e62","#646e80","#b67a3c","#5a3418","#8a5428","#20120a","#5a5f72","#3e4250","#272a33","#141519"],"rows":["..........ÀÀÀÀÀÀ...........",".........ÀÁÁÁÁÁÂÀ..........","........ÀÁÁÁÁÁÁÂÃÀ.........","......ÀÀÁÁÁÁÁÁÂÂÃÄÀ........","......ÀÀÁÁÁÁÁÂÂÂÃÄÀ........","......ÀÀÁÁÁÁÁÂÂÂÂÂÀ........","......ÀÀÁÁÁÁÁÂÂÂÂÂÀ........","........ÀÅÅÅÅÅÅÅÅÅÆ........","........ÆÇÇÇÇÇÈÈÈÆ.........","........ÆÇÇÇÈÈÈÈÈÆ.........","....ÆÆÆÆ.ÆÉÉÉÉÉÉÉÊÆÆÆÆ.....","...ÆÇÇÇÇÆÊËËËËÉÉÉÊÇÇÇÇÆ....","..ÆÇÇÇÇÇÈÆÊÊÊÊÊÊÊÇÇÇÇÇÈÆ...",".ÆÇÇÇÇÈÈÌÅÇÇÇÈÈÈÇÇÇÇÇÈÌÅÆ..","ÆÈÈÈÈÌÌÌÌÌÇÄÄÄÄÄÈÈÈÈÈÌÅÆ...","ÆÈÄÄÄÄÄÄÄÌÇÂÂÃÃÃÈÌÌÌÌÅÅÆ...","ÆÈÂÂÃÃÃÃÃÌÇÂÂÃÃÃÈÌÅÌÌÌÅÆ...","ÆÈÂÂÃÃÃÃÃÌÇÂÂÃÃÃÈÌÅÌÌÌÅÆ...","ÆÈÂÃÃÇÃÃÃÌÇÂÂÇÃÃÌÌÅÌÌÌÅÆ...","ÆÈÂÃÈÇÈÈÄÌÈÂÂÌÃÄÌÌÅÌÌÇÅÆ...","ÆÈÂÃÄÈÄÄÄÌÈÂÃÄÃÄÌÅÅÇÇÇÈÆ...","ÆÈÃÃÃÄÃÃÄÌÌÂÃÃÃÄÅÅÅÈÈÈÌÆ...",".ÆÈÃÃÃÄÄÌÍÎÎÎÎÏÏÏÎÎÎÎÅÇÏÐ..",".ÆÈÃÃÃÄÄÌÏÏÏÏÏÎÎÎÎÎÐÐÆÈÆ...","..ÆÈÃÃÌÌÑÒÓÂÃÃÄÄÒÓÔ...ÆÈÆ..","...ÆÈÌÆÆÑÒÒÃÃÃÄÄÒÓÔ...ÆÈÆ..","....ÆÆÔÔÒÒÓÓÔÀÒÒÓÓÔ...ÆÈÆ..","......ÔÔÒÒÓÓÔÔÒÒÓÓÔ....ÆÈÆ.","......ÔÔÒÒÓÓÔÔÒÒÓÓÔ....ÆÈÆ.","......ÔÔÒÇÓÓÔÔÒÇÓÓÔ....ÆÈÆ.","......ÆÆÈÌÌÅÆÆÈÌÌÅÆ....ÆÈÈÆ","......ÆÆÌÌÅÅÆÆÌÌÅÅÆ.....ÆÆ.","......ÆÆÌÌÅÅÆÆÌÌÅÅÆ........","........ÆÆÆÆ..ÆÆÆÆ........."]},"medeina":{"w":23,"h":34,"pal":["#a7f295","#b1f79b","#94f08d","#73e47c","#78e87f","#70df78","#7be981","#7beb82","#78ea81","#71e27b","#b0f197","#8ee984","#7ded82","#8cff91","#71e378","#73e679","#77e77d","#77ea7e","#78e87d","#71e278","#63d96e","#71e179","#80ee85","#e9ffee","#ffffff","#92f696","#7ee885","#64de70","#6ee174","#5ed669","#66dc70","#7deb83","#bdffbf","#74e27b","#6ce276","#68de73","#74e67c","#78ea7e","#8ae790","#8ff293","#75e77d","#72e57a","#70e67b","#68dc73","#8ada8e","#8be48e","#59d468","#b6f297","#bcf59e","#3dbf51","#86d78c","#ecffed","#fafffa","#85d98e","#b5f399","#bef59e","#76d180","#94dd98","#95df98","#3dbe50","#80d588","#93de97","#ceffd0","#ceffd1","#93de96","#81d689","#4dc65c","#3bbe50","#64ce68","#3bbc4e","#70d17b","#7bd183","#7ad382","#70ce79","#49c25b","#9de88c","#a9ed92","#70d670","#3bbf50","#97e687","#a2ea8e","#3dbf50","#45c251"],"rows":[".......................",".......................",".......................",".......................","....ÀÁÂÃÄ...ÅÆÇÈÉ......",".....ÊËÌÍÎÏÐÑÒÓÔ.......","......ÕÖ×ØØØÙÚÛ...Ü....",".....ÝÞßØØØØØàáâãäå....",".......æØØØØØØçèéêë....",".......ìØØØØØØíî....ïð.","......ñòóØØØØôõ.....ö÷.",".......øùØØØØúø........","......û.üýþÿĀāĂ.ă......",".....Ą.ą.ĆćĈĉĊ.........","....ċČč.û.Ď.Ď.ă........","....ďĐ...ą.û.ă.........","........đ.û.ñ..........",".......................","..........Ē............",".......................",".......................",".......................",".......................",".......................",".......................",".......................",".......................",".......................",".......................",".......................",".......................",".......................",".......................","......................."]},"shooter":{"w":39,"h":34,"pal":["#0a0a0c","#575b64","#26262c","#46464e","#34343b","#1a1a1e","#c8ccd0","#9da2a9","#767b84","#3e414a","#cbc1a4","#a99e82","#847a62","#d8d8d0","#2a2c33","#ac3438","#8a222c","#ffe08a","#3e2a18","#2a1c10","#ffb03c"],"rows":[".............ÀÀ........................",".............ÀÀ........................","...........ÀÀÁÁÀÀÀ.....................","........ÀÀÀÀÀÁÁÀÀÂÀÀ...................","........ÀÀÀÀÀÁÁÀÀÂÀÀ...................","......ÀÀÃÃÄÃÃÄÄÄÄÂÀÀ...................","......ÀÀÃÃÄÃÃÄÄÄÄÂÀÀ...................","......ÀÀÄÄÃÄÄÄÄÂÂÂÂÂÀÀ.................","......ÀÀÄÄÃÄÄÄÄÂÂÂÂÂÀÀ.................","......ÀÀÃÃÄÄÄÄÄÄÄÂÂÂÂÂÀÀ...............","......ÀÀÄÄÃÄÄÄÄÂÂÀÀÀÀÀÀÀ...............","......ÀÀÄÄÃÄÄÄÄÂÂÀÀÀÀÀÀÀ...............","......ÀÀÃÃÄÄÄÄÄÄÄÂÂÂÂÂÀÀ...............","......ÀÀÃÃÄÄÄÄÄÄÄÂÂÂÂÂÀÀ...............","......ÀÀÄÄÄÂÂÄÄÂÂÂÅÅÀÀ.................","........ÀÀÀÀÀÀÀÀÀÀÀÀ...................","........ÀÀÀÀÀÀÀÀÀÀÀÀ...................",".....ÀÀÀÀÀÀÆÆÇÇÇÇÈÀÀÀÀ.................",".....ÀÀÀÀÀÀÆÆÇÇÇÇÈÀÀÀÀ.................","ÀÀÀÀÀÃÄÄÄÄÇÇÇÈÈÈÈÁÁÁÂÂÀÀÀÀÀÀÀ..........","ÀÀÀÀÀÃÄÄÄÄÇÇÇÈÈÈÈÁÁÁÂÂÀÀÀÀÀÀÀ..........","ÆÆÆÆÆÇÇÇÇÇÄÁÁÁÁÉÉÉÇÇÇÇÈÈÈÈÈÁÁÀ.........","ÆÆÆÇÇÇÈÈÈÈÁÊÊËËËËÇÈÈÈÈÈÈÈÁÁÉÉÉÀÀ.......","ÆÆÆÇÇÇÈÈÈÈÁÊÊËËËËÇÈÈÈÈÈÈÈÁÁÉÉÉÀÀ.......","ÇÇÇÈÈÈÈÈÁÁÁËËËËÌÌÈÈÈÈÈÁÁÁÍÍÇÇÎÀÀ.......","ÇÇÇÈÈÈÈÈÁÁÁËËËËÌÌÈÈÈÈÈÁÁÁÍÍÇÇÎÀÀ.......","ÇÈÈÁÁÁÁÁÉÉÂÏÏÐÐËËÄÄÄÂÂÉÉÍÎÎÄÄÅÅÅÀÀ.....","ÄÄÄÄÄÄÂÂÂÂËÐÐÐÐÌÌÄÂÂÂÂÑÑÂÅÅÅÅÃÀÀ.......","ÄÄÄÄÄÄÂÂÂÂËÐÐÐÐÌÌÄÂÂÂÂÑÑÂÅÅÅÅÃÀÀ.......","ÀÄÄÄÄÂÒÒÒÒÄÃÃÄÄÄÄÄÄÄÂÂÄÄÂÂÂÂÂÃÀÀÀÀÀÀÀ..","ÀÄÄÄÄÂÒÒÒÒÄÃÃÄÄÄÄÄÄÄÂÂÄÄÂÂÂÂÂÃÀÀÀÀÀÀÀ..",".ÀÀÀÀÀÒÒÓÓÄÄÄÄÄÂÂÄÂÂÇÇÇÇÇÇÇÇÇÇÇÇÇÇÇÇÔÀÀ",".ÀÀÀÀÀÒÒÓÓÄÄÄÄÄÂÂÄÂÂÇÇÇÇÇÇÇÇÇÇÇÇÇÇÇÇÔÀÀ",".....ÀÒÒÒÒÒÃÃÄÄÃÃÃÄÄÄÄÂÂÂÅÅÀÀÃÀÀÀÀÀÀÀ.."]}};
+'use strict';
+/* Boutons de recherche (Bibliothèque) et d'unités (Caserne, temple, Ancre) : 4 habillages,
+   icône seule + touche, nom / coût / effet au survol, comme les boutons de fabrication. */
+const W = 66, H = 46, GAP = 3, PAD = 3, SG = 14, SCALE = 2.5;
+const STOCK = {Forge: 240, Vie: 90, Discipline: 260, Savoir: 820};
+
+/* ---------- icônes ---------- */
+DRAW.seal = r => { // Sceau de Minage : disque d'ardoise gravé de runes cyan
+  disc(r, 16, 17, 12.5, M.rock[0]); disc(r, 16, 16, 12, M.rock[1]); disc(r, 15.5, 15.5, 10.5, M.rock[2]);
+  for (let a = 0; a < 6.283; a += .5) px(r, 16 + Math.cos(a) * 9, 16 + Math.sin(a) * 9, M.cyan[1]);
+  line(r, 11, 21, 16, 9, M.cyan[2]); line(r, 16, 9, 21, 21, M.cyan[2]); line(r, 12, 17, 20, 17, M.cyan[2]);
+  px(r, 16, 9, M.cyan[3]); disc(r, 16, 16, 1.2, M.cyan[3]); for (let a = 3.6; a < 5.6; a += .15) px(r, 16 + Math.cos(a) * 11.4, 16 + Math.sin(a) * 11.4, M.rock[3]); };
+DRAW.map = r => { // minicarte : parchemin déroulé, sentier pointillé, croix rouge
+  rect(r, 7, 8, 18, 17, M.fiber[2]); rect(r, 7, 8, 18, 2, M.fiber[3]); rect(r, 7, 22, 18, 3, M.fiber[1]);
+  rod(r, 6, 7, 6, 26, 2, M.fiber); rod(r, 26, 7, 26, 26, 2, M.fiber);
+  poly(r, [[10, 11], [15, 10], [14, 14], [10, 15]], M.moss[2]); poly(r, [[17, 18], [23, 17], [22, 22], [18, 22]], M.blue[2]);
+  [[10, 21], [12, 20], [14, 18], [16, 17], [17, 15], [19, 13]].forEach(([x, y]) => px(r, x, y, M.wood[0]));
+  line(r, 20, 10, 23, 13, M.red[2]); line(r, 23, 10, 20, 13, M.red[2]); };
+DRAW.barillet = r => { // barillet de l'Arbalestrie : cinq chambres aux couleurs des dieux
+  disc(r, 16, 17, 12.5, M.iron[0]); disc(r, 16, 16, 12, M.iron[1]); disc(r, 15.5, 15.5, 10.5, M.iron[2]);
+  for (let a = 3.6; a < 5.6; a += .12) px(r, 16 + Math.cos(a) * 11, 16 + Math.sin(a) * 11, M.iron[3]);
+  ['#eef2ff', '#ff8a2a', '#7ae070', '#dde2ee', '#7a80ff'].forEach((c, i) => { const a = -Math.PI / 2 + i * 1.2566, cx = 16 + Math.cos(a) * 6.5, cy = 16 + Math.sin(a) * 6.5;
+    disc(r, cx, cy, 2.6, M.iron[0]); disc(r, cx, cy, 1.8, c); px(r, cx - .6, cy - .6, '#ffffff'); });
+  disc(r, 16, 16, 1.6, M.iron[0]); px(r, 16, 16, M.iron[3]); };
+const ICON = {};
+['seal', 'map', 'firing_post', 'barillet'].forEach(k => { const r = R(32, 32); DRAW[k](r); outline(r); ICON[k] = r; });
+Object.entries(SPRITES).forEach(([k, s]) => { const r = R(s.w, s.h); s.rows.forEach((row, y) => [...row].forEach((ch, x) => { if (ch !== '.') px(r, x, y, s.pal[ch.charCodeAt(0) - 192]); })); ICON[k] = r; });
+
+/* ---------- données ---------- */
+const MINING = {Forge: 10, Vie: 10, Discipline: 10, Savoir: 10}, HERO = {Forge: 100, Vie: 100, Discipline: 100, Savoir: 100};
+const RESEARCH = [
+  {ic: 'seal', key: 'R', name: 'Concept - Sceau de Minage', cost: MINING, st: {done: true}},
+  {ic: 'map', key: 'R', name: 'Minicarte', cost: {Savoir: 500}, desc: 'La minicarte reste affichée pendant l’incarnation.', st: {done: true}},
+  {ic: 'firing_post', key: 'R', name: 'Poste de tir', cost: {Discipline: 500}, desc: 'Débloque la fabrication du poste de tir à l’Atelier.', st: {active: true}},
+  {ic: 'barillet', key: 'R', name: 'Arbalestrie modulaire', cost: {Forge: 200, Vie: 200, Discipline: 200, Savoir: 200},
+    desc: 'Cinq munitions pour l’Arbalestrie, au barillet près de la barre de vie.', st: {}}];
+const UNITS = [
+  {ic: 'flammes', key: 'L', name: 'Lance-flammes ×4', cost: {Discipline: 100}, desc: 'Flammes en continu ; explose à sa mort.', st: {active: true, count: 2}},
+  {ic: 'archer', key: 'U', name: 'Archer ×4', cost: {Discipline: 100}, items: '1 Arc (3)', desc: 'Arc, puis Charge du Lac au contact.', st: {}},
+  {ic: 'lame', key: 'E', name: 'Épée et bouclier ×4', cost: {Discipline: 100}, items: '4 Épée (1) · 4 Bouclier (0)', why: 'Il manque 3 épées et 4 boucliers au coffre rouge', st: {locked: true}},
+  {ic: 'medeina', key: 'I', name: 'Adepte de Medeina', cost: {Vie: 10}, desc: 'Prie au temple : +1 Vie / s.', st: {}},
+  {ic: 'shooter', key: 'T', name: 'Tireur', cost: HERO, desc: 'Héros invoqué à l’Ancre.', st: {poor: true}}];
+const RSTRIP = [['Disponible', {}], ['Survol', {hover: true}], ['En cours', {active: true}], ['Achevée', {done: true}], ['Prérequis manquants', {locked: true}], ['Mana insuffisant', {poor: true}]];
+const USTRIP = [['Disponible', {}], ['Survol', {hover: true}], ['En formation · 3 en file', {active: true, count: 3}], ['Objets manquants', {locked: true}], ['Mana insuffisant', {poor: true}]];
+
+/* ---------- outils ---------- */
+const BAY = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5].map(v => (v + .5) / 16);
+const bay = (x, y) => BAY[(y & 3) * 4 + (x & 3)];
+const ramp = (C, v, x, y) => { const n = C.length - 1, i = Math.floor(Math.max(0, Math.min(1, v)) * n + bay(x, y) - .5); return C[Math.max(0, Math.min(n, i))]; };
+function fill(r, x, y, w, h, C, f) { for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) px(r, x + i, y + j, ramp(C, f(i / (w - 1), j / (h - 1)), x + i, y + j)); }
+function frame(r, x, y, w, h, c) { line(r, x, y, x + w - 1, y, c); line(r, x, y + h - 1, x + w - 1, y + h - 1, c); line(r, x, y, x, y + h - 1, c); line(r, x + w - 1, y, x + w - 1, y + h - 1, c); }
+function oct(x, y, w, h, c) { return [[x + c, y], [x + w - c, y], [x + w, y + c], [x + w, y + h - c], [x + w - c, y + h], [x + c, y + h], [x, y + h - c], [x, y + c]]; }
+const hex = c => parseInt(c.slice(1), 16);
+const toHex = (r, g, b) => '#' + [r, g, b].map(v => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0')).join('');
+function grey(c, k = .55, tint = [1, 1, 1]) { const l = lum(c) * 255 * k; return toHex(l * tint[0], l * tint[1], l * tint[2]); }
+function shade(c, k) { const n = hex(c); return toHex((n >> 16) * k, ((n >> 8) & 255) * k, (n & 255) * k); }
+const SEPIA = ['#3a2214', '#6a4a2c', '#a08060', '#cdb894'];
+const sepia = c => SEPIA[Math.min(3, Math.floor(lum(c) * 4.2))];
+// Copie d'une icône ; map(c, x, y) peut renvoyer null pour ne rien poser.
+function blit(dst, src, dx, dy, map) { for (let y = 0; y < src.h; y++) for (let x = 0; x < src.w; x++) { const c = src.p[y * src.w + x]; if (!c) continue; const o = map ? map(c, x, y) : c; if (o) px(dst, dx + x, dy + y, o); } }
+// Trait seul : contour et ombres profondes à l'encre, le reste laissé au fond.
+const sketch = (ink, faint) => c => c === OUT ? ink : lum(c) < .3 ? faint : null;
+// L'objet se révèle de bas en haut à mesure que la recherche avance.
+const reveal = (src, p, before) => (c, x, y) => y >= src.h * (1 - p) ? c : before(c, x, y);
+function place(r, ic, x, y) { const s = ICON[ic]; return [s, x + Math.round((W - s.w) / 2), y + (s.h > 32 ? H - s.h - 3 : 7)]; }
+const F = {'0': '111101101101111', '1': '010110010010111', '2': '111001111100111', '3': '111001111001111', '4': '101101111001001',
+  '5': '111100111001111', '6': '111100111101111', '7': '111001001010010', '8': '111101111101111', '9': '111101111001111',
+  'L': '100100100100111', 'U': '101101101101111', 'E': '111100110100111', 'I': '111010010010111', 'T': '111010010010010', 'R': '110101110101101'};
+const tw = s => s.length * 4 - 1;
+function text(r, s, x, y, c, sh) {
+  const pass = (col, ox) => { let cx = x; for (const ch of s) { const g = F[ch]; if (g) for (let j = 0; j < 5; j++) for (let i = 0; i < 3; i++) if (g[j * 3 + i] === '1') px(r, cx + i + ox, y + j + ox, col); cx += 4; } };
+  if (sh) pass(sh, 1); pass(c, 0);
+}
+function padlock(r, x, y, c, d) { frame(r, x + 1, y, 3, 3, c); rect(r, x, y + 2, 5, 4, c); px(r, x + 2, y + 3, d); px(r, x + 2, y + 4, d); }
+function person(r, x, y, c) { rect(r, x + 1, y, 3, 2, c); rect(r, x, y + 3, 5, 2, c); }
+function check(r, x, y, c) { [[0, 2], [1, 3], [2, 4], [3, 3], [4, 2], [5, 1], [6, 0]].forEach(([i, j]) => { px(r, x + i, y + j, c); px(r, x + i, y + j + 1, c); }); }
+function hand(r, x, y) {
+  const G = ['..####....', '.#wwww#...', '#wwwwww####', '#wwwwwwwwww#', '#wwwwww####.', '#wwwww#w#..', '.#wwww#w#..', '..######...'];
+  G.forEach((row, j) => [...row].forEach((ch, i) => { if (ch === '#') px(r, x + i, y + j, '#10123a'); else if (ch === 'w') px(r, x + i, y + j, j < 3 ? '#ffffff' : '#c8cce8'); }));
+}
+
+/* ---------- 4 habillages ---------- */
+const T = [];
+
+T.push({id: 1, name: 'Laiton, trait d’or et cachet', cls: 'bb-brass',
+  sub: 'le cadre de laiton retenu pour la fabrication ; une recherche à faire est un plan au trait d’or',
+  intent: 'Même bouton que la fabrication, pour que le panneau d’ordres reste d’un seul tenant. Une recherche non faite montre son objet au <b>trait d’or</b>, comme un plan ; pendant la recherche, la couleur monte de bas en haut ; une fois achevée, l’objet est en couleur et un <b>cachet de cire vert</b> remplace la touche (il remplace aussi « Déjà achevée »). Les unités sont en couleur, la file d’attente est une pastille grenat, comme le compteur du coffre rouge.',
+  panel(r, w, h) { fill(r, 0, 0, w, h, ['#171c15', '#121612', '#0e120e'], (u, v) => v); frame(r, 0, 0, w, h, '#6e5a36'); },
+  button(r, x, y, ic, s, t, kind) {
+    const lit = s.active || s.hover;
+    if (s.done) fill(r, x, y, W, H, ['#1e2618', '#182014', '#121810'], (u, v) => u * .4 + v * .6);
+    else if (lit) fill(r, x, y, W, H, ['#7a561e', '#5a4018', '#382c14', '#201e12'], (u, v) => Math.hypot((u - .5) * 1.1, v - .3) * 1.5);
+    else fill(r, x, y, W, H, s.locked ? ['#24261f', '#1a1c17', '#101510'] : ['#2d2b21', '#22231b', '#181c15', '#121712'], (u, v) => u * .4 + v * .6);
+    frame(r, x, y, W, H, s.locked ? '#565443' : lit ? '#ffe0a0' : s.done ? '#7c8a58' : '#aa8851');
+    frame(r, x + 1, y + 1, W - 2, H - 2, lit ? '#c29148' : '#131710');
+    const [src, ix, iy] = place(r, ic, x, y), gold = sketch(s.hover ? '#fff0a8' : '#e8c060', s.hover ? '#b8862a' : '#7a5a24');
+    let map = null;
+    if (kind === 'r') map = s.done ? null : s.locked ? sketch('#6a6a58', '#34362c') : s.active ? reveal(src, t.p, gold) : gold;
+    else if (s.locked) map = c => grey(c, .45);
+    blit(r, src, ix, iy, map);
+    if (!s.done) { const kc = s.poor ? '#c0584c' : s.locked ? '#4d4f40' : '#8c744b';
+      rect(r, x + 3, y + 3, tw(s.key) + 4, 9, '#10140d'); frame(r, x + 3, y + 3, tw(s.key) + 4, 9, kc);
+      text(r, s.key, x + 5, y + 5, s.poor ? '#f0a090' : s.locked ? '#7c7c6c' : lit ? '#ffe5ac' : '#eee3c9'); }
+    if (s.active) { rect(r, x + 3, y + H - 4, W - 6, 1, '#2a2414'); rect(r, x + 3, y + H - 4, Math.round((W - 6) * t.p), 1, '#ffe0a0'); }
+    if (s.locked) padlock(r, x + 4, y + H - 10, '#8a8a7a', '#24261f');
+    if (s.done) { const cx = x + W - 10, cy = y + H - 10;
+      disc(r, cx + .5, cy + 1, 6.5, '#0e1a0c'); disc(r, cx, cy, 6.5, '#2e5a2a'); disc(r, cx - .5, cy - .5, 5, '#3e7a36');
+      for (let a = 0; a < 6.283; a += .6) px(r, cx + Math.cos(a) * 6.5, cy + Math.sin(a) * 6.5, '#244a20'); check(r, cx - 3, cy - 3, '#d4f4b0'); }
+    if (s.count > 0) { const n = String(s.count), w = tw(n) + 10;
+      rect(r, x + W - 3 - w, y + H - 12, w, 9, '#5a1e22'); frame(r, x + W - 3 - w, y + H - 12, w, 9, '#c0584c');
+      person(r, x + W - 1 - w, y + H - 10, '#e8a090'); text(r, n, x + W - 2 - w + 7, y + H - 10, '#ffe0d4'); }
+  }});
+
+T.push({id: 2, name: 'Folio enluminé', cls: 'bb-folio',
+  sub: 'chaque recherche est une page du registre de la Bibliothèque',
+  intent: 'Le savoir sur parchemin : une recherche à faire est une <b>esquisse à l’encre sépia</b>, la recherche en cours <b>lave la couleur</b> de bas en haut, la recherche achevée est <b>enluminée</b> : double filet d’or, fleurons aux coins, signet rouge. Les unités sont des vignettes en couleur sur la même page ; indisponibles, elles repassent à l’encre. Très lisible et très différent du reste du HUD : la Bibliothèque se reconnaît au premier coup d’œil, mais le panneau perd son unité.',
+  panel(r, w, h) { fill(r, 0, 0, w, h, ['#2a1a10', '#22150d', '#1a100a'], (u, v) => v); frame(r, 0, 0, w, h, OUT); },
+  button(r, x, y, ic, s, t, kind) {
+    const lit = s.active || s.hover, off = s.locked;
+    fill(r, x, y, W, H, off ? ['#a89c84', '#9a8e76', '#8a7e68'] : s.hover ? ['#f8f0d8', '#efe4c8', '#e0d0ac', '#ccb88e'] : ['#efe4c8', '#e8dcc0', '#d8c8a4', '#c4b086'], (u, v) => Math.hypot(u - .5, v - .5) * 1.5);
+    frame(r, x, y, W, H, OUT); frame(r, x + 1, y + 1, W - 2, H - 2, lit ? '#b8862a' : '#8a6a44');
+    if (s.done) { frame(r, x + 2, y + 2, W - 4, H - 4, '#e8c060'); frame(r, x + 3, y + 3, W - 6, H - 6, '#b8862a');
+      [[x + 2, y + 2], [x + W - 5, y + 2], [x + 2, y + H - 5], [x + W - 5, y + H - 5]].forEach(([a, b]) => { rect(r, a, b, 3, 3, '#e8c060'); px(r, a + 1, b + 1, '#b04a3a'); }); }
+    const [src, ix, iy] = place(r, ic, x, y), ink = sketch(s.hover ? '#2a1a10' : '#5a3a22', s.hover ? '#8a6a44' : '#a88a68');
+    let map = null;
+    if (kind === 'r') map = s.done ? null : off ? sketch('#7a6e58', null) : s.active ? reveal(src, t.p, ink) : ink;
+    else if (off) map = c => shade(sepia(c), .85);
+    blit(r, src, ix, iy, map);
+    if (s.done) { rect(r, x + W - 13, y, 4, 12, '#802c24'); line(r, x + W - 13, y, x + W - 13, y + 11, '#b04a3a'); px(r, x + W - 11, y + 11, '#4c1a18'); }
+    else text(r, s.key, x + 5, y + 5, s.poor ? '#a02c24' : off ? '#5a4e3a' : '#5a3a22');
+    if (s.active) for (let i = 0; i < W - 12; i += 2) if (i < (W - 12) * t.p) px(r, x + 6 + i, y + H - 5, '#5a3a22');
+    if (off) padlock(r, x + 5, y + H - 11, '#4a3a2a', '#a89c84');
+    if (s.poor) { line(r, x + 4, y + 11, x + 4 + tw(s.key) + 1, y + 11, '#a02c24'); }
+    if (s.count > 0) { const n = String(s.count); person(r, x + W - 12 - tw(n), y + H - 10, '#802c24'); text(r, n, x + W - 5 - tw(n), y + H - 10, '#802c24'); }
+  }});
+
+T.push({id: 3, name: 'Vitrail', cls: 'bb-glass',
+  sub: 'une verrière sertie de plomb, éteinte tant qu’on ne sait pas',
+  intent: 'Le bouton est un petit vitrail. Une recherche à faire est du <b>verre sombre</b> où l’objet se devine ; pendant la recherche, la <b>lumière monte</b> derrière le verre ; achevée, la verrière est <b>illuminée</b> et l’objet brille. Les unités sont des figures de vitrail : allumées quand on peut les former, éteintes sinon. L’état se lit de loin, à la seule quantité de lumière ; plus sombre que le laiton, il colle à la caverne.',
+  panel(r, w, h) { fill(r, 0, 0, w, h, ['#101216', '#0c0e12', '#08090c'], (u, v) => v); frame(r, 0, 0, w, h, '#2a2e36'); },
+  button(r, x, y, ic, s, t, kind) {
+    const gx = x + 3, gy = y + 3, gw = W - 6, gh = H - 6;
+    rect(r, x, y, W, H, '#0e1014'); frame(r, x, y, W, H, '#3a3e46'); frame(r, x + 1, y + 1, W - 2, H - 2, '#22262c');
+    [[x + 1, y + 1], [x + W - 2, y + 1], [x + 1, y + H - 2], [x + W - 2, y + H - 2]].forEach(([a, b]) => px(r, a, b, '#8a94a2'));
+    const warm = (s.hover ? ['#fff4c8', '#f8e0a0', '#c89a58', '#6a5440', '#2a2a34'] : ['#f8e0a0', '#c89a58', '#6a5440', '#2a2a34']);
+    const dark = s.locked ? ['#06070a', '#0a0c10', '#0e1016'] : s.hover ? ['#26344a', '#2e3e58', '#384a66'] : ['#1a2436', '#202c40', '#26344a'];
+    const glow = (u, v) => Math.hypot(u - .5, (v - .5) * .8) * 2;
+    const litAll = kind === 'r' ? s.done : !s.locked && !s.poor;
+    for (let j = 0; j < gh; j++) for (let i = 0; i < gw; i++) {
+      const u = i / (gw - 1), v = j / (gh - 1), on = litAll || (s.active && v >= 1 - t.p) || (kind === 'u' && s.hover && !s.locked);
+      px(r, gx + i, gy + j, on ? ramp(warm, glow(u, v), gx + i, gy + j) : ramp(dark, (u + v) / 2, gx + i, gy + j)); }
+    line(r, gx, gy + Math.round(gh * .64), gx + gw - 1, gy + Math.round(gh * .64), '#0e1014'); line(r, gx + 20, gy, gx + 20, gy + gh - 1, '#0e1014'); line(r, gx + gw - 21, gy, gx + gw - 21, gy + gh - 1, '#0e1014');
+    if (s.active) line(r, gx, gy + Math.round(gh * (1 - t.p)), gx + gw - 1, gy + Math.round(gh * (1 - t.p)), '#fff4c8');
+    const [src, ix, iy] = place(r, ic, x, y);
+    let map = null;
+    if (kind === 'r') { const dim = c => shade(c, s.locked ? .16 : s.hover ? .62 : .4); map = s.done ? null : s.active ? reveal(src, t.p, dim) : dim; }
+    else map = s.locked ? (c => shade(c, .2)) : s.poor ? (c => shade(c, .55)) : null;
+    blit(r, src, ix, iy, map);
+    if (!s.done) { rect(r, x + 2, y + 2, tw(s.key) + 4, 9, '#0e1014'); text(r, s.key, x + 4, y + 4, s.poor ? '#e8907e' : s.locked ? '#4e5866' : '#c8d0dc'); }
+    if (s.done) [[gx + 3, gy + 3], [gx + gw - 4, gy + 3]].forEach(([a, b]) => { px(r, a, b, '#ffffff'); px(r, a - 1, b, '#fff4c8'); px(r, a + 1, b, '#fff4c8'); px(r, a, b - 1, '#fff4c8'); px(r, a, b + 1, '#fff4c8'); });
+    if (s.locked) padlock(r, x + 4, y + H - 11, '#6e7a88', '#0e1014');
+    if (s.count > 0) { const n = String(s.count), w = tw(n) + 10; rect(r, x + W - 3 - w, y + H - 12, w, 9, '#0e1014');
+      person(r, x + W - 1 - w, y + H - 10, '#e8a090'); text(r, n, x + W - 2 - w + 7, y + H - 10, '#ffffff'); }
+  }});
+
+T.push({id: 4, name: 'Fenêtre 16 bits', cls: 'bb-snes',
+  sub: 'la fenêtre bleue de la bannière, l’état porté par une coche',
+  intent: 'La matière de la bannière des dialogues. Ici l’objet est toujours en couleur ; c’est l’habillage qui change : une recherche achevée <b>s’éteint en bleu ardoise</b> et reçoit une <b>coche verte</b>, une recherche en cours a sa jauge blanche. Au survol, le gant-curseur. Le plus simple à lire pour qui connaît les RPG 16 bits, mais l’objet ne raconte plus rien de la recherche.',
+  panel(r, w, h) { fill(r, 0, 0, w, h, ['#0e1240', '#0a0c2e', '#070920'], (u, v) => v); frame(r, 0, 0, w, h, '#0a0c26'); },
+  button(r, x, y, ic, s, t, kind) {
+    const m = R(W, H); poly(m, oct(0, 0, W - 1, H - 1, 3), 1); const tmp = R(W, H);
+    fill(tmp, 0, 0, W, H, s.locked ? ['#5a5c6a', '#44465a', '#30323e', '#22242c'] : s.done ? ['#4a5070', '#3a405a', '#2a3048', '#1e2438'] : s.active ? ['#8a98f0', '#6a7ae0', '#4a5ac0', '#2a3490', '#1a2278'] : ['#5a6ad0', '#3e4cb0', '#2a3490', '#1c2478', '#141c6a'], (u, v) => v);
+    m.p.forEach((c, i) => { if (c) px(r, x + i % W, y + (i / W | 0), tmp.p[i]); });
+    const rim = s.locked ? '#9a9caa' : s.done ? '#b8bcd8' : '#e6e8f4';
+    const E = oct(x, y, W - 1, H - 1, 3); for (let i = 0; i < 8; i++) line(r, ...E[i], ...E[(i + 1) % 8], rim);
+    const I = oct(x + 1, y + 1, W - 3, H - 3, 3); for (let i = 0; i < 8; i++) line(r, ...I[i], ...I[(i + 1) % 8], s.locked ? '#5a5c68' : '#8a90b8');
+    const [src, ix, iy] = place(r, ic, x, y);
+    blit(r, src, ix, iy, s.locked ? c => grey(c, .55, [.9, .92, 1.1]) : null);
+    if (!s.done) text(r, s.key, x + 4, y + 4, s.poor ? '#ffb0a0' : s.locked ? '#b0b2c0' : '#ffffff', '#10123a');
+    if (s.active) { rect(r, x + 4, y + H - 6, W - 8, 3, '#0a0c26'); rect(r, x + 5, y + H - 5, Math.round((W - 10) * t.p), 1, '#ffffff'); }
+    if (s.hover) hand(r, x + 2 + (t.tick % 6 < 3 ? 0 : 1), y + 19);
+    if (s.locked) padlock(r, x + 4, y + H - 10, '#e6e8f4', '#30323e');
+    if (s.done) { rect(r, x + W - 14, y + H - 13, 11, 10, '#2e7a3a'); frame(r, x + W - 14, y + H - 13, 11, 10, '#e6e8f4'); check(r, x + W - 12, y + H - 11, '#ffffff'); }
+    if (s.count > 0) { const n = String(s.count), w = tw(n); person(r, x + W - 10 - w, y + H - 10, '#ffffff'); text(r, n, x + W - 3 - w, y + H - 10, '#ffffff', '#10123a'); }
+  }});
+
+/* ---------- rendu ---------- */
+function toCanvasInto(c, r) { c.width = r.w; c.height = r.h; const g = c.getContext('2d'), im = g.createImageData(r.w, r.h);
+  r.p.forEach((col, i) => { if (!col || col[0] !== '#') return; const n = hex(col); im.data[i * 4] = n >> 16; im.data[i * 4 + 1] = n >> 8 & 255; im.data[i * 4 + 2] = n & 255; im.data[i * 4 + 3] = 255; });
+  g.putImageData(im, 0, 0); }
+const BASE = {count: 0, active: false, done: false, locked: false, poor: false, hover: false};
+const costHTML = cost => Object.entries(cost).map(([res, n]) => `<i class="${STOCK[res] >= n ? '' : 'short'}">${n} ${res} (${STOCK[res]})</i>`).join(' · ');
+function bubbleHTML(kind, d) {
+  if (kind === 'r') {
+    const st = d.st.done ? '<em class="ok">Déjà achevée</em>' : d.st.active ? '<em>En cours</em>' : '';
+    return `<b>${d.name}</b><span>${costHTML(d.cost)} · 10 s · +20 menace</span>${d.desc ? `<small>${d.desc}</small>` : ''}${st}`;
+  }
+  const st = d.why ? `<em>${d.why}</em>` : d.st.count ? `<em>${d.st.count} en file · 6 s chacune</em>` : '';
+  return `<b>${d.name}</b><span>${costHTML(d.cost)}${d.items ? ' · ' + d.items : ''}${d.name.includes('×4') ? ' · 6 s' : ''}</span>${d.desc ? `<small>${d.desc}</small>` : ''}${st}`;
+}
+const pw = n => n * W + (n - 1) * GAP + 2 * PAD, sw = n => n * W + (n - 1) * SG + 2 * PAD;
+const views = [], root = document.getElementById('root');
+T.forEach(tr => {
+  const sec = document.createElement('section'); sec.className = tr.cls;
+  const strip = (list) => `<div class="wrap strip"><canvas style="width:${sw(list.length) * 1.6}px"></canvas></div>
+    <div class="labels" style="width:${sw(list.length) * 1.6}px;grid-template-columns:repeat(${list.length},1fr)">${list.map(s => `<span>${s[0]}</span>`).join('')}</div>`;
+  sec.innerHTML = `<h2>${tr.id} · ${tr.name}</h2><p class="sub">${tr.sub}</p><p>${tr.intent}</p>
+  <h3>Bibliothèque</h3><div class="wrap panel"><canvas style="width:${pw(4) * SCALE}px"></canvas><div class="bubble" hidden></div></div>${strip(RSTRIP)}
+  <h3>Unités · Caserne, temple de Medeina, Ancre</h3><div class="wrap panel"><canvas style="width:${pw(5) * SCALE}px"></canvas><div class="bubble" hidden></div></div>${strip(USTRIP)}`;
+  root.appendChild(sec);
+  const cs = sec.querySelectorAll('canvas'), bs = sec.querySelectorAll('.bubble');
+  const mk = (canvas, bubble, kind, list) => { const v = {tr, canvas, bubble, kind, list, hover: -1, w: pw(list.length)};
+    canvas.addEventListener('mousemove', e => { const b = canvas.getBoundingClientRect(), s = b.width / v.w, mx = (e.clientX - b.left) / s, my = (e.clientY - b.top) / s;
+      let h = -1; list.forEach((_, i) => { const x = PAD + i * (W + GAP); if (mx >= x && mx < x + W && my >= PAD && my < PAD + H) h = i; });
+      if (h !== v.hover) { v.hover = h; placeBubble(v); } });
+    canvas.addEventListener('mouseleave', () => { v.hover = -1; placeBubble(v); });
+    return v; };
+  views.push({tr, panels: [mk(cs[0], bs[0], 'r', RESEARCH), mk(cs[2], bs[1], 'u', UNITS)], strips: [[cs[1], 'r', 'barillet', RSTRIP], [cs[3], 'u', 'archer', USTRIP]]});
+});
+function placeBubble(v) {
+  if (v.hover < 0) { v.bubble.hidden = true; return; }
+  const x = PAD + v.hover * (W + GAP), s = v.canvas.getBoundingClientRect().width / v.w;
+  v.bubble.innerHTML = bubbleHTML(v.kind, v.list[v.hover]); v.bubble.hidden = false;
+  v.bubble.style.left = Math.max(0, Math.min(v.canvas.clientWidth - v.bubble.offsetWidth, (x + W / 2) * s - v.bubble.offsetWidth / 2)) + 'px';
+  v.bubble.style.top = (PAD * s - v.bubble.offsetHeight - 6) + 'px';
+}
+let tick = 0;
+function frameAll() {
+  const t = {tick, p: (tick * .012) % 1};
+  views.forEach(({tr, panels, strips}) => {
+    panels.forEach(v => { const r = R(v.w, H + 2 * PAD); tr.panel(r, v.w, H + 2 * PAD);
+      v.list.forEach((d, i) => tr.button(r, PAD + i * (W + GAP), PAD, d.ic, Object.assign({}, BASE, d.st, {key: d.key, hover: i === v.hover || !!d.st.hover}), t, v.kind));
+      toCanvasInto(v.canvas, r); });
+    strips.forEach(([c, kind, ic, list]) => { const w = sw(list.length), q = R(w, H + 2 * PAD);
+      list.forEach(([, o], j) => tr.button(q, PAD + j * (W + SG), PAD, ic, Object.assign({}, BASE, {key: kind === 'r' ? 'R' : 'U'}, o), t, kind));
+      toCanvasInto(c, q); });
+  });
+  tick++;
+}
+frameAll(); setInterval(frameAll, 120);
+</script>
+</body></html>

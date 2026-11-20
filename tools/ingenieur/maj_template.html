@@ -1,0 +1,284 @@
+<meta charset="utf-8">
+<title>Ingénieur : sprites et animations</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@500;700&family=Alegreya+Sans:wght@400;500;700&display=swap">
+<style>
+/* Mise en page : ronde en situation (actuel au-dessus, proposé dessous), mesures, puis une carte par piste :
+   texte à gauche, les deux versions animées côte à côte à droite. Même habillage que la planche des unités. */
+:root{
+  --bg:#121614; --panel:#1b211e; --line:#2c3530; --ink:#ece4cc; --muted:#9ba597;
+  --gold:#e2b83a; --gold-dim:#8a6d1c; --new:#8fd3b0; --warn:#e58a5a; --stage:#0c0f0e;
+  --display:"Pixelify Sans","Courier New",monospace; --body:"Alegreya Sans","Segoe UI",system-ui,sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 var(--body)}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--panel)}
+.wrap{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));max-width:1180px;margin:0 auto}
+header.top{padding-block:28px 18px}
+h1{font:700 clamp(28px,4vw,40px)/1.1 var(--display);margin:0 0 8px;color:var(--gold);letter-spacing:.02em;text-wrap:balance}
+.lede{margin:0;color:var(--muted);max-width:70ch}
+.bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--panel);border-block:1px solid var(--line)}
+.bar .wrap{display:flex;flex-wrap:wrap;gap:8px 18px;align-items:center;padding-block:10px}
+.grp{display:flex;flex-wrap:wrap;gap:4px;align-items:center}
+.grp>span{font:500 12px var(--display);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-right:2px}
+.bar .sp{flex:1}
+button{font:500 14px var(--body);color:var(--ink);background:transparent;border:1px solid var(--line);border-radius:4px;padding:5px 10px;cursor:pointer}
+button:hover{border-color:var(--gold-dim)}
+button[aria-pressed="true"]{background:var(--gold);color:#1b1404;border-color:var(--gold)}
+button.main{background:var(--gold);color:#1b1404;border-color:var(--gold);font-weight:700}
+button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px solid var(--new);outline-offset:2px}
+main{display:flex;flex-direction:column;gap:44px;padding-block:28px 60px}
+section>h2{font:700 26px/1.15 var(--display);margin:0 0 4px;letter-spacing:.02em}
+section>p.sub{margin:0 0 16px;color:var(--muted);max-width:70ch}
+.stage{border:1px solid var(--line);border-radius:4px;background:var(--stage);overflow:hidden}
+.stage canvas{display:block;width:100%;height:auto;image-rendering:pixelated;image-rendering:crisp-edges}
+.cap{font-size:14px;color:var(--muted);margin:8px 0 0}
+.cap b{color:var(--ink)}
+.pistes{display:flex;flex-direction:column;gap:18px}
+.piste{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,6fr);gap:22px;border-top:1px solid var(--line);padding-top:16px}
+.piste>div{min-width:0}
+.piste h3{font:700 19px/1.2 var(--body);margin:0 0 6px;display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}
+.piste h3 .id{font:700 15px var(--display);color:var(--gold);letter-spacing:.06em}
+.piste p{margin:0 0 8px;max-width:60ch}
+.piste p.fait{color:var(--muted)}
+.piste p.fait b{color:var(--warn)}
+.meta{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;margin-top:10px}
+.cost{font:500 12px var(--display);letter-spacing:.07em;text-transform:uppercase;color:var(--muted);border:1px solid var(--line);border-radius:3px;padding:2px 7px}
+label.pick{display:flex;gap:7px;align-items:center;cursor:pointer;font-weight:500}
+label.pick input{accent-color:var(--gold);width:17px;height:17px}
+.scene{display:flex;flex-direction:column;gap:8px}
+.duo{display:grid;grid-template-columns:1fr 1fr;font:500 12px var(--display);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);text-align:center}
+.duo span:last-child{color:var(--new)}
+.tbl{overflow-x:auto}
+table{border-collapse:collapse;font-size:14.5px;font-variant-numeric:tabular-nums;min-width:560px;width:100%}
+th,td{padding:5px 10px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
+th{font:500 12px var(--display);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+th:first-child,td:first-child{text-align:left}
+td.low{color:var(--warn);font-weight:700}
+td.up{color:var(--new);font-weight:700}
+ul.suite{margin:0;padding-left:20px;max-width:70ch}
+ul.suite li{margin-bottom:6px}
+#out{width:100%;margin-top:10px;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:4px;padding:8px;font:15px var(--body);resize:vertical}
+code{font-size:.9em;color:var(--muted)}
+@media (max-width:820px){.piste{grid-template-columns:minmax(0,1fr)}}
+</style>
+
+<header class="top"><div class="wrap">
+  <h1>Ingénieur : sprites et animations</h1>
+  <p class="lede">Les deux tenues validées ne changent pas : Templier technomancien et Chausses de l’Exil, même visage, même taille, même cadre de 48 px. Ce qui change, c’est le corps dessous : des membres articulés au lieu de blocs qui glissent d’un pixel. Chaque carte joue la version du jeu à gauche et la proposition à droite. Cochez ce que vous retenez, puis copiez la sélection.</p>
+</div></header>
+
+<div class="bar"><div class="wrap">
+  <div class="grp" id="g-body"><span>Tenue</span><button data-v="templier" aria-pressed="true">Templier</button><button data-v="exil">Avant la combinaison</button></div>
+  <div class="grp" id="g-speed"><span>Vitesse</span><button data-v="1" aria-pressed="true">1×</button><button data-v="0.5">½</button><button data-v="0.25">¼</button></div>
+  <button id="pause" aria-pressed="false">Pause</button>
+  <span class="sp"></span>
+  <button id="all">Tout cocher</button>
+  <button id="copy" class="main">Copier ma sélection</button>
+</div></div>
+
+<main class="wrap">
+
+<section id="ronde">
+  <h2>En situation</h2>
+  <p class="sub">La même ronde jouée deux fois : marche, arrêt, direct, marteau des deux poings, décharge, demi-tour. En haut le jeu d’aujourd’hui, en bas la proposition.</p>
+  <div class="stage"><canvas id="c-ronde" width="880" height="448"></canvas></div>
+  <p class="cap">À regarder : <b>les pieds</b>. En haut ils glissent sur le sol, en bas chaque appui reste posé pendant que le corps avance.</p>
+</section>
+
+<section id="constat">
+  <h2>Constat</h2>
+  <p class="sub">Poses réellement différentes dans chaque animation, comptées image par image sur le Templier. L’Ingénieur est resté sur l’ancien gabarit pendant que la Caserne et les ennemis passaient à 12 poses de marche.</p>
+  <div class="tbl"><table id="mes"></table></div>
+</section>
+
+<section id="pistes">
+  <h2>Pistes</h2>
+  <p class="sub">Treize pistes indépendantes. Toutes s’appliquent aux deux tenues ; l’Arbalestrie et le casque restent ceux du Templier.</p>
+  <div class="pistes" id="list"></div>
+</section>
+
+<section id="suite">
+  <h2>Ce que l’intégration touchera</h2>
+  <ul class="suite">
+    <li><b>Atlas plus grands</b> : repos 24 → 72 images, lotus 24 → 48, repos à l’Arbalestrie 24 → 48, repos de face et de dos 12 → 24. Le cadre de 48 × 48 et l’ancrage des pieds ne bougent pas.</li>
+    <li><b>Cadences</b> : à genoux, prière, assise et lotus passent de 10 à 12 images par seconde, comme le reste des unités.</li>
+    <li><b>Foulée</b> : la marche avance de 14 px par cycle ; la valeur <code>stride</code> du manifeste sera recalée pour que les pieds ne glissent pas en jeu.</li>
+    <li><b>Visée inchangée</b> : épaule et bouche du gantelet gardent leurs coordonnées, le lance-pitons et les projectiles partent du même point.</li>
+    <li><b>Casque de combat</b> : son décalage vertical suivra la nouvelle respiration et la nouvelle marche.</li>
+    <li><b>Touché</b> (A12) : seule piste qui demande une nouvelle branche dans l’affichage de l’unité.</li>
+  </ul>
+  <textarea id="out" rows="2" readonly aria-label="Sélection à copier"></textarea>
+</section>
+
+</main>
+
+<script>
+/*JS*/
+</script>
+<script>
+'use strict';
+// ---------- Version du jeu : table de planches/ingenieur-export.html, telle qu'exportée aujourd'hui ----------
+const mix=(a,b,t)=>a+(b-a)*t;
+const OLD={
+ idle:{n:24,f:i=>({dir:'s',ub:(i%12)<6?0:1,blink:i===10||i===11})},
+ walk:{n:12,f:i=>({dir:'s',pose:'walk',f:Math.floor(i/3)%4})},
+ kneel:{n:36,fps:10,f:i=>i<24?{dir:'s',depth:4,hands:'knees',ub:(i%8)<4?0:1,blink:(i%12)>9}:{dir:'s',depth:Math.round(4*(1-(i-23)/12))}},
+ pray:{n:24,fps:10,f:i=>({dir:'s',depth:4,hands:'pray',ub:(i%12)<6?0:1,blink:true})},
+ settle:{n:10,fps:10,f:i=>i<5?{dir:'s',depth:i}:{dir:'s',depth:4+Math.min(2,i-5),lotus:i>=7,hands:i>=7?'knees':''}},
+ lotus:{n:24,fps:10,f:i=>({dir:'s',depth:6,lotus:true,hands:'knees',ub:(i%12)<6?0:1,blink:true})},
+ slash1:{n:14,fps:21,f:i=>({dir:'s',aim:{ang:0,rec:[3,4,4,2,0,-2,-2,-1,0,1,2,2,1,0][i],pulse:i>=4&&i<=6}})},
+ slash2:{n:16,fps:18,f:i=>({dir:'s',aim:{ang:(i<5?mix(-20,-140,i/4):mix(-140,70,ease(Math.min(1,(i-5)/7))))*DEG,pulse:i>=8&&i<=11}})},
+ shoot:{n:6,fps:12,f:i=>({dir:'s',aim:{ang:0,rec:[0,2,1.5,1,.5,0][i],flash:i<2}})},
+ aim:{n:76,f:i=>{const r=Math.floor(i/19),a=ANGLES[i%19];return{dir:'s',aim:{ang:a*DEG,rec:[0,1.5,3,0][r],pulse:r===3}}}},
+ shoot_d:{n:6,fps:12,f:i=>({dir:'d',aim:{ang:0,rec:[0,2,1.5,1,.5,0][i],flash:i<2}})},
+ shoot_u:{n:6,fps:12,f:i=>({dir:'u',aim:{ang:0,rec:[0,2,1.5,1,.5,0][i],flash:i<2}})},
+ idle_d:{n:12,f:i=>({dir:'d',ub:i<6?0:1,blink:i===10||i===11})},
+ walk_d:{n:12,f:i=>({dir:'d',pose:'walk',f:Math.floor(i/3)%4})},
+ idle_u:{n:12,f:i=>({dir:'u',ub:i<6?0:1})},
+ walk_u:{n:12,f:i=>({dir:'u',pose:'walk',f:Math.floor(i/3)%4})},
+ c_idle:{n:24,full:1,f:i=>cannonBody({ang:12,ub:(i%12)<6?0:1})},
+ c_walk:{n:12,full:1,f:i=>cannonBody({ang:12,pose:'walk',f:Math.floor(i/3)%4})},
+ c_shoot:{n:6,fps:12,full:1,f:i=>cannonBody({ang:0,rec:[0,2,1.5,1,.5,0][i],flash:i<2})},
+};
+OLD.hit={n:1,f:OLD.idle.f};
+const toRag=o=>{const{aim,...r}=o;if(aim&&r.dir==='s')r.punch={ang:aim.ang,rec:aim.rec,hit:!!(aim.flash||aim.pulse&&aim.rec<0)};return ragged({v:'A',...r})};
+const WALK_FPS=20;                 // 12 images par cycle, 14 px de sol par cycle à 23 px/s
+const fpsOf=(a,name)=>name.includes('walk')?WALK_FPS:(a.fps||10);
+const cache=new Map();
+function sprite(name,i,body,old){
+ const cannon=name.startsWith('c_'),bd=cannon?'templier':body,k=name+'|'+i+'|'+bd+'|'+old;let c=cache.get(k);if(c)return c;
+ if(old){const a=OLD[name];c=document.createElement('canvas');c.width=c.height=48;
+  const s=render(a.full?a.f(i):(bd==='exil'?toRag(a.f(i)):exile({v:'B',...a.f(i)})),1);c.getContext('2d').drawImage(s,a.full?0:8,a.full?0:15)}
+ else c=render(engFrame(name,i,bd),1);
+ cache.set(k,c);return c}
+const count=(name,old)=>(old?OLD:ENG_ANIMS)[name].n;
+
+// ---------- État ----------
+let body='templier',speed=1,paused=false,T=0,last=performance.now();
+const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+function group(id,fn){const g=document.getElementById(id);g.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;
+ for(const x of g.querySelectorAll('button'))x.setAttribute('aria-pressed',x===b);fn(b.dataset.v)})}
+group('g-body',v=>{body=v});group('g-speed',v=>{speed=+v});
+const pauseBtn=document.getElementById('pause');
+const setPause=p=>{paused=p;pauseBtn.setAttribute('aria-pressed',p);pauseBtn.textContent=p?'Lecture':'Pause'};
+pauseBtn.addEventListener('click',()=>setPause(!paused));
+
+// ---------- Sol d'ardoise ----------
+function ground(g,w,h,y0){g.fillStyle='#333a46';g.fillRect(0,0,w,h);g.fillStyle='#2b313c';
+ for(let x=0;x<w;x+=16)g.fillRect(x,0,1,h);for(let y=y0%16;y<h;y+=16)g.fillRect(0,y,w,1);
+ g.fillStyle='#3d4552';for(let x=5;x<w;x+=37)g.fillRect(x,(x*7)%h,2,1)}
+function shadow(g,x,y){g.fillStyle='rgba(8,10,14,.45)';g.fillRect(x-6,y,12,2);g.fillRect(x-4,y-1,8,1);g.fillRect(x-4,y+2,8,1)}
+
+// ---------- Pistes ----------
+const P=[
+ {id:'S1',t:'Silhouette et matières',anims:['idle','idle_d','idle_u'],lab:['Profil','Face','Dos'],still:true,cost:'dessin',
+  fait:'De profil, le Templier est <b>une colonne de 7 px</b> : la capuche rabattue ne se voit pas, les gantelets sont un point gris au bout de la manche. Torse nu, le bras a la couleur du torse et disparaît.',
+  prop:'Capuche de lin qui dépasse sur la nuque, manchette de fer sur tout l’avant-bras, pan arrière du manteau séparé des jambes. Avant la combinaison : une ombre détache le bras du torse, mollets et pieds nus plus fins que les chausses.'},
+ {id:'A1',t:'Repos',anims:['idle'],cost:'24 → 72 images',
+  fait:'Deux poses : le buste descend d’un pixel toutes les 0,6 s. <b>Rien d’autre ne bouge</b> en 2,4 s.',
+  prop:'Souffle en quatre temps (la tête mène, le buste suit), cercle runique qui bat avec la respiration, deux clignements. Toutes les 6 s un geste d’attente : le Templier lève son gantelet, qui s’allume ; l’Exilé s’essuie la bouche d’un revers de main.'},
+ {id:'A2',t:'Marche de profil',anims:['walk'],cost:'recalage de la foulée',
+  fait:'Quatre poses tenues trois images chacune. Les pieds se décalent d’<b>un seul pixel</b> : le personnage glisse.',
+  prop:'Douze poses distinctes. Foulée de 7 px, pied qui se lève de 2 px au passage, talon puis pointe, bras opposés aux jambes, buste penché d’un pixel, pan du manteau qui traîne derrière.'},
+ {id:'A3',t:'Repos et marche de face et de dos',anims:['walk_d','walk_u','idle_d','idle_u'],lab:['Marche face','Marche dos','Repos face','Repos dos'],cost:'idle 12 → 24 images',
+  fait:'Même raideur : une jambe raccourcit, tout le corps saute d’un pixel, <b>pieds compris</b>.',
+  prop:'Les pieds restent au sol, ce sont les hanches qui montent. Pied levé de 2 px avec le genou qui s’éclaire, bras en opposition sur trois hauteurs, pans du manteau qui balancent, tête qui encaisse l’appui.'},
+ {id:'A4',t:'Direct',anims:['slash1'],cost:'même durée (0,67 s)',
+  fait:'Seul le bras bouge : il recule de 4 px puis s’allonge. <b>Le corps reste planté.</b>',
+  prop:'Poing armé à la poitrine, épaules en arrière ; puis un pas en avant, le buste part avec le poing, la garde gauche se retire, les genoux plient à l’impact. Éclat au bout du gantelet (poussière claire à mains nues).'},
+ {id:'A5',t:'Marteau des deux poings',anims:['slash2'],cost:'même durée (0,89 s)',
+  fait:'Un bras raide qui tourne autour de l’épaule comme une aiguille. Un seul poing visible.',
+  prop:'Les deux bras montent derrière la tête, le corps se cambre ; il s’abat en fléchissant de 2 px, pieds écartés, tête rentrée. Onde au sol sur cinq images : cyan pour le Templier, poussière pour l’Exilé.'},
+ {id:'A6',t:'Décharge du gantelet',anims:['shoot','shoot_d','shoot_u'],lab:['Profil','Face','Dos'],cost:'même durée (0,5 s)',
+  fait:'Le bras recule de 2 px, cinq pixels cyan. Le tir <b>n’a pas de poids</b>.',
+  prop:'Main gauche en appui sous le poignet, buste et tête rejetés d’un pixel, pied arrière qui cale, manteau soufflé, cercle runique à pleine lumière pendant l’éclair. Éclair plus large de face et de dos.'},
+ {id:'A7',t:'Visée et creusement',anims:['aim'],sweep:true,cost:'géométrie inchangée',
+  fait:'Le bras pivote sur 19 angles, la tête et le corps regardent droit devant, même quand il vise le plafond.',
+  prop:'La tête se lève au-delà de 50° vers le haut et se baisse vers le bas, le bras gauche suit, le pied arrière recule sur l’image de fort recul. La bouche du gantelet reste aux mêmes coordonnées.'},
+ {id:'A8',t:'À genoux, puis se relève',anims:['kneel'],cost:'10 → 12 i/s',
+  fait:'Les jambes deviennent trois rectangles empilés ; pour se relever, le corps monte d’un bloc.',
+  prop:'Un genou à terre, l’autre jambe pliée devant, main sur le genou, pan du manteau étalé. Souffle court en trois hauteurs de tête, buée à l’expiration. Il se relève en dépliant les jambes.'},
+ {id:'A9',t:'Prière',anims:['pray'],cost:'10 → 12 i/s',
+  fait:'Même bloc agenouillé, un poing devant la poitrine, deux poses.',
+  prop:'Les deux mains jointes, tête baissée. Gantelets et cercle runique montent et descendent en lumière ensemble, deux étincelles s’élèvent au sommet de chaque battement (aucune lumière pour l’Exilé, qui n’a pas encore sa combinaison).'},
+ {id:'A10',t:'Assise et lotus',anims:['settle','lotus'],lab:['S’assoit','Médite'],cost:'lotus 24 → 48 images',
+  fait:'Les jambes croisées sont deux barres plates, et l’image <b>déborde sous le sol</b> de 3 px.',
+  prop:'Il fléchit, pose les mains, croise les jambes : genou proche en avant, pied rentré, manteau étalé derrière. Souffle lent sur 4 s, mains sur les genoux, tout tient dans le cadre.'},
+ {id:'A11',t:'Arbalestrie',anims:['c_idle','c_walk','c_shoot'],lab:['Repos','Marche','Tir'],cost:'casque à recaler',
+  fait:'Le tube est tenu d’une seule main à bout de bras ; au tir, seul le bras recule.',
+  prop:'Main gauche sous le tube. Au repos il respire avec le porteur, à la marche il balance de 3° avec la nouvelle foulée, au tir il se cabre de 4°, le pied arrière cale et le manteau est soufflé.'},
+ {id:'A12',t:'Touché',anims:['hit'],cost:'nouvelle animation · code',
+  fait:'L’Ingénieur n’a <b>aucune pose</b> quand il encaisse : seulement l’éclair blanc et le recul communs à toutes les unités.',
+  prop:'Six images à 12 i/s : buste rejeté de 2 px, tête qui part, yeux fermés, bras écartés, pied arrière qui rattrape. Jouée par-dessus l’éclair existant.'},
+];
+const list=document.getElementById('list');
+for(const p of P){const d=document.createElement('div');d.className='piste';p.cur=0;
+ d.innerHTML=`<div><h3><span class="id">${p.id}</span>${p.t}</h3><p class="fait">${p.fait}</p><p>${p.prop}</p>
+  <div class="meta"><label class="pick"><input type="checkbox" id="pk-${p.id}" data-id="${p.id}">Je retiens ${p.id}</label><span class="cost">${p.cost}</span></div></div>
+  <div class="scene">${p.lab?`<div class="grp">${p.lab.map((l,i)=>`<button data-i="${i}" aria-pressed="${!i}">${l}</button>`).join('')}</div>`:''}
+  <div class="stage"><canvas width="${p.anims[0].startsWith('c_')?512:448}" height="224"></canvas></div><div class="duo"><span>Dans le jeu</span><span>Proposé</span></div></div>`;
+ list.appendChild(d);p.cv=d.querySelector('canvas');p.g=p.cv.getContext('2d');p.g.imageSmoothingEnabled=false;
+ const g=d.querySelector('.grp');if(g)g.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;p.cur=+b.dataset.i;p.t0=T;
+  for(const x of g.querySelectorAll('button'))x.setAttribute('aria-pressed',x===b)})}
+// Image à l'instant t : boucle pour repos, marche, prière, lotus ; sinon lecture puis tenue de la dernière image.
+const LOOP=new Set(['idle','walk','pray','lotus','idle_d','idle_u','walk_d','walk_u','c_idle','c_walk']);
+function frameAt(name,old,t,period){const a=(old?OLD:ENG_ANIMS)[name],fps=fpsOf(a,name);
+ if(LOOP.has(name))return Math.floor(t*fps)%a.n;
+ if(name==='kneel'){const tt=t%period;if(tt<period-1.6)return Math.floor(tt*fps)%24;return Math.min(a.n-1,24+Math.floor((tt-(period-1.6))*fps))}
+ return Math.min(a.n-1,Math.floor((t%period)*fps))}
+const PERIOD={kneel:5.2,settle:2.2,slash1:1.5,slash2:1.7,shoot:1.3,shoot_d:1.3,shoot_u:1.3,c_shoot:1.3,hit:1.3};
+function drawPiste(p){const g=p.g,w=p.cv.width/4,name=p.anims[p.cur],t=T-(p.t0||0),half=w/2;
+ g.setTransform(4,0,0,4,0,0);ground(g,w,56,49);g.fillStyle='#1d222b';g.fillRect(half-.5,0,1,56);
+ for(const old of[true,false]){const x=(old?0:half)+(half-48)/2;let i;
+  if(p.still)i=0;
+  else if(p.sweep){const k=Math.floor(t*9)%44,c=k<19?k:k<22?18:k<41?40-k:0;i=(k>=19&&k<22?19*(k-19===1?2:1):0)+c}
+  else i=frameAt(name,old,t,PERIOD[name]||1);
+  shadow(g,x+24,45);g.drawImage(sprite(name,i,body,old),x,2)}}
+
+// ---------- Ronde ----------
+const RC=document.getElementById('c-ronde'),RG=RC.getContext('2d');RG.imageSmoothingEnabled=false;
+const V=23,X0=34,X1=150;
+// Segments : [durée, action] ; la marche couvre X0 → X1 à V px/s.
+const WALK_T=(X1-X0)/V,SEQ=[['walk',WALK_T,1],['idle',2.6,1],['slash1',.9,1],['idle',.5,1],['slash2',1.2,1],['idle',.6,1],['shoot',.8,1],['idle',1.2,1],['walk',WALK_T,-1],['idle',1.4,-1]];
+const TOTAL=SEQ.reduce((s,q)=>s+q[1],0);
+function drawRonde(){const g=RG;g.setTransform(4,0,0,4,0,0);const w=220,h=112;ground(g,w,h,0);g.fillStyle='#1d222b';g.fillRect(0,55.5,w,1);
+ let t=T%TOTAL,k=0;while(t>=SEQ[k][1]){t-=SEQ[k][1];k++}
+ const[name,dur,face]=SEQ[k];let x=face>0?X1:X0;if(name==='walk')x=face>0?X0+V*t:X1-V*t;
+ for(const old of[true,false]){const y=old?2:58,a=(old?OLD:ENG_ANIMS)[name],fps=fpsOf(a,name);
+  const i=name==='walk'?Math.floor((face>0?x-X0:X1-x)/14*12)%12:name==='idle'?Math.floor(t*fps)%a.n:Math.min(a.n-1,Math.floor(t*fps));
+  const s=sprite(name,i,body,old),px=Math.round(x);shadow(g,px,y+45);
+  if(face>0)g.drawImage(s,px-24,y);else{g.save();g.translate(px+24,y);g.scale(-1,1);g.drawImage(s,0,0);g.restore()}}}
+
+// ---------- Mesures ----------
+const NAMES={idle:'Repos',walk:'Marche',walk_d:'Marche de face',idle_d:'Repos de face',slash1:'Direct',slash2:'Marteau',shoot:'Décharge',kneel:'À genoux',pray:'Prière',lotus:'Lotus',c_idle:'Arbalestrie, repos',c_walk:'Arbalestrie, marche',hit:'Touché'};
+function distinct(name,old){const n=count(name,old),set=new Set();for(let i=0;i<n;i++){const d=sprite(name,i,'templier',old).getContext('2d').getImageData(0,0,48,48).data;
+  let h=0;for(let j=0;j<d.length;j+=4)if(d[j+3])h=(h*31+d[j]*7+d[j+1]*3+d[j+2]+j)|0;set.add(h)}return set.size}
+(function(){let html='<tr><th>Animation</th><th>Poses, jeu</th><th>Poses, proposé</th><th>Images</th><th>Cadence</th></tr>';
+ for(const k in NAMES){const o=k==='hit'?0:distinct(k,true),n=distinct(k,false),a=ENG_ANIMS[k],fo=k==='hit'?'':fpsOf(OLD[k],k),fn=fpsOf(a,k);
+  html+=`<tr><td>${NAMES[k]}</td><td class="${o<6?'low':''}">${o||'aucune'}</td><td class="up">${n}</td><td>${k==='hit'?'':OLD[k].n+' → '}${a.n}</td><td>${k.includes('walk')?'selon la distance':(fo&&fo!==fn?fo+' → ':'')+fn+' i/s'}</td></tr>`}
+ document.getElementById('mes').innerHTML=html})();
+
+// ---------- Sélection ----------
+const out=document.getElementById('out'),picks=()=>[...document.querySelectorAll('input[data-id]')];
+function sync(){const ids=picks().filter(c=>c.checked).map(c=>c.dataset.id);
+ out.value=ids.length?'Ingénieur, je retiens : '+ids.join(', ')+(ids.length===P.length?' (tout)':''):'Aucune piste cochée pour l’instant.'}
+document.addEventListener('change',e=>{if(e.target.matches('input[data-id]'))sync()});
+document.getElementById('all').addEventListener('click',()=>{const on=picks().some(c=>!c.checked);for(const c of picks())c.checked=on;sync()});
+document.getElementById('copy').addEventListener('click',async e=>{sync();const b=e.currentTarget;
+ try{await navigator.clipboard.writeText(out.value);b.textContent='Copié'}catch(_){out.focus();out.select();b.textContent='Sélectionné : Ctrl+C'}
+ setTimeout(()=>{b.textContent='Copier ma sélection'},1800)});
+sync();
+
+// ---------- Boucle : seules les cartes visibles sont redessinées ----------
+const seen=new Set();const io=new IntersectionObserver(es=>{for(const e of es){if(e.isIntersecting)seen.add(e.target);else seen.delete(e.target)}},{rootMargin:'200px'});
+for(const p of P)io.observe(p.cv);io.observe(RC);
+function tick(now){const dt=Math.min(.1,(now-last)/1000);last=now;if(!paused)T+=dt*speed;
+ if(seen.has(RC))drawRonde();for(const p of P)if(seen.has(p.cv))drawPiste(p);requestAnimationFrame(tick)}
+T=new URLSearchParams(location.search).get('t')*1||0;
+drawRonde();for(const p of P)drawPiste(p);
+if(reduce)setPause(true);
+requestAnimationFrame(tick);
+</script>

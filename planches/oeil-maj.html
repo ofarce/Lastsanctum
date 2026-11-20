@@ -1,0 +1,607 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Œil de la Matrice · mise à jour</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0c0d10;--panel:#14161b;--line:#2c3038;--txt:#e2dccb;--mut:#9a9ca2;--acc:#d84a3a;--gold:#d0a038}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--txt);font:15px/1.45 'Pixelify Sans',system-ui,sans-serif}
+header,main{max-width:1320px;margin:auto;padding:18px 16px}h1{margin:0;font-weight:600;letter-spacing:.08em;font-size:26px;color:var(--acc)}
+h2{font-weight:600;font-size:22px;color:var(--gold);margin:38px 0 4px;letter-spacing:.05em}h2+p{color:var(--mut);margin:0 0 14px;max-width:1040px}
+p.lead{color:var(--mut);margin:6px 0 0;max-width:1040px}p.lead b,h2+p b{color:var(--txt);font-weight:600}
+button{font:inherit;color:var(--txt);background:#1c1f26;border:1px solid var(--line);padding:6px 12px;cursor:pointer}button:hover,button[aria-pressed=true]{border-color:var(--acc);background:#2a1a1a}
+.bar{display:flex;gap:8px;align-items:center;margin-top:12px;flex-wrap:wrap}.bar span{color:var(--mut);font-size:13px;margin:0 4px}
+figure{margin:0 0 22px;background:var(--panel);border:1px solid var(--line);min-width:0}
+canvas{image-rendering:pixelated;display:block;width:100%;height:auto}
+.row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+.row.atk{grid-template-columns:minmax(0,1.25fr) minmax(0,.75fr)}
+.vis{background:#07080a;border-right:1px solid var(--line);min-width:0}
+.strip{display:flex;border-top:1px solid var(--line)}.strip div{flex:1 1 0;min-width:0;border-right:1px solid var(--line)}.strip div:last-child{border-right:0}
+
+.arena canvas{cursor:pointer}.arena canvas.on{outline:2px solid var(--acc);outline-offset:-2px}
+small.l{display:block;color:var(--mut);font-size:12px;padding:4px 6px}
+.hud{display:flex;justify-content:space-between;gap:10px;color:var(--mut);font-size:12px;padding:4px 8px;border-top:1px solid var(--line)}.hud em{font-style:normal;color:var(--txt)}
+.cap{padding:12px 16px 16px}.cap b.t{color:var(--acc);font-weight:600;font-size:20px}.cap i{display:block;font-style:normal;color:var(--gold);font-size:13px;letter-spacing:.06em;margin-top:2px}
+.cap p{margin:6px 0 0;color:var(--mut);font-size:14px}.cap h3{margin:12px 0 0;font-size:14px;font-weight:600;color:var(--gold);letter-spacing:.05em}
+.cap ul{margin:4px 0 0;padding-left:18px;font-size:14px}.cap li{margin:2px 0}.cap li span,.cap p span{color:var(--acc)}
+.tag{display:inline-block;font-size:12px;border:1px solid var(--line);padding:0 6px;margin:6px 6px 0 0;color:var(--mut)}.tag.ph{border-color:#6a2a2a;color:#e08c74}
+.bul{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;align-items:center}.bul canvas{width:44px;height:44px;background:#1b2028;border:1px solid var(--line)}.bul em{font-style:normal;font-size:12px;color:var(--mut)}
+.rec{border-color:var(--gold)}.rec b.t::after{content:' · recommandée';color:var(--gold);font-size:13px;letter-spacing:.06em}
+.ref b.t::after{content:' · en jeu aujourd’hui';color:var(--mut);font-size:13px;letter-spacing:.06em}
+table{border-collapse:collapse;width:100%;margin-top:10px;font-size:14px}td,th{border-bottom:1px solid var(--line);padding:7px 10px;text-align:left;vertical-align:top}
+th{color:var(--gold);font-weight:600;width:190px}td{color:var(--mut)}td b{color:var(--txt);font-weight:600}
+@media (max-width:900px){.row,.row.atk{grid-template-columns:1fr}.vis{border-right:0;border-bottom:1px solid var(--line)}}
+</style></head><body>
+<header><h1>L’ŒIL DE LA MATRICE · MISE À JOUR</h1>
+<p class="lead">Le boss en jeu n’a qu’un dessin et une attaque (le <b>Regard</b>). Cette planche propose <b>quatre pistes graphiques</b>, comparées au dessin actuel, avec la <b>dégradation par phase</b> (iris fendu en II, œil injecté et paupière déchirée en III). Elle propose aussi <b>sept nouvelles attaques</b>, jouables dans l’arène à l’échelle du jeu, et un <b>programme de duel</b> qui les enchaîne par phase.</p>
+<p class="lead">Cliquer une arène pour piloter l’Ingénieur (ZQSD, WASD ou flèches ; Échap rend la main au bot). Le point blanc à ses pieds est la zone touchée.</p>
+<div class="bar"><button id="ph0" aria-pressed="true">Phase I</button><button id="ph1">Phase II</button><button id="ph2">Phase III</button><button id="pause">Pause</button>
+<span>Corps dans les arènes :</span><span id="bodies"></span></div></header>
+<main>
+<h2>1 · Mise à jour graphique</h2>
+<p>À gauche, le détail animé et agrandi : repos mi-clos, ouverture, visée, tir, puis fermeture. Dessous, le même dessin <b>×1, à l’échelle du jeu</b>, en phases I, II et III à côté de l’Ingénieur. Le bouton de phase en haut change aussi l’état du grand dessin.</p>
+<div id="looks"></div>
+<h2>2 · Nouvelles attaques</h2>
+<p>Chaque attaque garde les règles du Regard : balles à <b>4 dégâts</b> (grosses : 8), <b>0,6 s d’invulnérabilité</b> après un coup, extinction au changement de phase. Le corps choisi en haut réagit dans l’arène : l’œil se ferme, pleure, perd ses pupilles ou ouvre ses satellites.</p>
+<div id="atks"></div>
+<h2>3 · Programme du duel</h2>
+<p>Une proposition d’enchaînement. Le Regard reste l’attaque de base ; chaque phase ajoute des attaques, et le passage en III déclenche une fois <b>Les mille yeux</b>. L’arène ci-dessous joue la rotation de la phase choisie, en boucle.</p>
+<div id="duel"></div>
+<table>
+<tr><th>Phase I · Le regard</th><td><b>Regard → Larmes → Cils</b>. Trois attaques lisibles, un seul axe de danger à la fois. Organe faible : l’œil ouvert (×2), comme aujourd’hui.</td></tr>
+<tr><th>Phase II · L’iris</th><td><b>Regard → Strabisme → Pupilles errantes → Larmes → Cils</b>. L’iris se fend. Les pupilles errantes sont des cibles (×3) : en crever une écourte l’attaque.</td></tr>
+<tr><th>Phase III · Les deux axes</th><td>À l’entrée : <b>Les mille yeux</b>, une fois. Puis <b>Regard (deux axes) → Fixation → Clignement → Pupilles errantes → Cils</b>. L’œil est injecté, la paupière déchirée, il pleure du sang.</td></tr>
+<tr><th>Chiffres repris du jeu</th><td>1 400 PV, phases à 66 % et 33 %, allure ×1 / ×1,12 / ×1,25 (OeilMatrice.PHASE_SPEED), souffle entre deux attaques 1,6 / 1,4 / 1,2 s, racines au contact (10 dégâts).</td></tr>
+<tr><th>Couleurs</th><td>Carmin, chair pâle, os, ichor, et le blanc laiteux de l’œil (membranes, larmes). Pas d’or, pas de pourpre, pas de cyan.</td></tr>
+</table>
+</main>
+<script>
+'use strict';
+/* ======================= tampon pixel (même outillage que boss-bete-propositions) ======================= */
+const W=200,H=150,CX=100,FY=140,OUT='#0b090b',TAU=Math.PI*2;
+const B4=[[0,8,2,10],[12,4,14,6],[3,11,1,9],[15,7,13,5]].map(r=>r.map(v=>(v+.5)/16));
+const bay=(x,y)=>B4[y&3][x&3];
+const cl=(v,a=0,b=1)=>v<a?a:v>b?b:v;
+const ease=x=>{x=cl(x);return x*x*(3-2*x)};
+const lerp=(a,b,t)=>a+(b-a)*t;
+function rng(s){return()=>{s|=0;s=s+0x6D2B79F5|0;let t=Math.imul(s^s>>>15,1|s);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+const PAL={
+ pale:['#2c2024','#4c3a3c','#76605e','#a08a82','#c8b4a8','#ecdcd0'],
+ flesh:['#2a0a0c','#4e1416','#7a2422','#a03a32','#c4604e','#e08c74'],
+ blood:['#200406','#4a0a0e','#7e1216','#b41c20','#e2382e','#ff8a6a'],
+ bone:['#1e1a16','#3a3228','#625644','#8e8068','#b8ac90','#e0d8c4'],
+ night:['#0a0a0e','#141218','#201c24','#2e2830','#40383e','#544a50'],
+ ichor:['#060606','#121014','#1e1a1e','#2c2628'],
+ slate:['#1b2028','#232933','#2b323d','#333a46','#404955'],
+ memb:['#3a1416','#6a2a2a','#9a4a44','#c47a6a','#e0a894','#f2cdb8'],
+ sclera:['#6a5a52','#a8988e','#d6c8bc','#efe4da','#fff6ee'],
+};
+const HEX={};const rgb=h=>HEX[h]||(HEX[h]=[1,3,5].map(i=>parseInt(h.slice(i,i+2),16)));
+class Px{constructor(){this.c=new Array(W*H).fill(null);this.fx=new Array(W*H).fill(null)}
+ has(x,y){x=Math.round(x);y=Math.round(y);return x>=0&&y>=0&&x<W&&y<H&&!!this.c[y*W+x]}
+ get(x,y){x=Math.round(x);y=Math.round(y);return x>=0&&y>=0&&x<W&&y<H?this.c[y*W+x]:null}
+ set(x,y,c){x=Math.round(x);y=Math.round(y);if(x<0||y<0||x>=W||y>=H||!c)return;this.c[y*W+x]=c}
+ paint(x,y,c){if(this.has(x,y))this.set(x,y,c)}
+ fxs(x,y,c,a=1){x=Math.round(x);y=Math.round(y);if(x<0||y<0||x>=W||y>=H||!c)return;if(a<1&&a<=bay(x,y))return;this.fx[y*W+x]=c}}
+const sh=(r,v,x,y)=>{v=cl(v);const f=v*(r.length-1),i=Math.floor(f);return r[Math.min(r.length-1,f-i>bay(x,y)?i+1:i)]};
+function ell(P,cx,cy,rx,ry,r,o={}){const v0=o.v??.6,l=o.l??.32,edge=o.edge??.22;
+ for(let y=Math.floor(cy-ry-1);y<=cy+ry+1;y++)for(let x=Math.floor(cx-rx-1);x<=cx+rx+1;x++){
+  const dx=(x+.5-cx)/rx,dy=(y+.5-cy)/ry,d=dx*dx+dy*dy;if(d>1)continue;
+  let v=v0+l*(-dx*.55-dy*.6)-(o.rim??.1)*d;
+  const dx2=(x+1.5-cx)/rx,dy2=(y+1.5-cy)/ry;if(edge&&(dx2*dx2+dy*dy>1||dx*dx+dy2*dy2>1))v-=edge;
+  (o.on?P.paint:P.set).call(P,x,y,sh(r,v,x,y))}}
+function inPoly(pts,x,y){let c=false;for(let i=0,j=pts.length-1;i<pts.length;j=i++){const[a,b]=pts[i],[e,f]=pts[j];if((b>y)!==(f>y)&&x<(e-a)*(y-b)/(f-b)+a)c=!c}return c}
+function poly(P,pts,r,o={}){let x0=1e9,x1=-1e9,y0=1e9,y1=-1e9;for(const[x,y]of pts){x0=Math.min(x0,x);x1=Math.max(x1,x);y0=Math.min(y0,y);y1=Math.max(y1,y)}
+ const cx=(x0+x1)/2,cy=(y0+y1)/2,hw=Math.max(1,(x1-x0)/2),hh=Math.max(1,(y1-y0)/2),v0=o.v??.55,l=o.l??.3,edge=o.edge??.2;
+ for(let y=Math.floor(y0);y<=y1;y++)for(let x=Math.floor(x0);x<=x1;x++){if(!inPoly(pts,x+.5,y+.5))continue;
+  const nx=(x+.5-cx)/hw,ny=(y+.5-cy)/hh;let v=v0+l*(-nx*.5-ny*.35);
+  if(edge&&(!inPoly(pts,x+1.5,y+.5)||!inPoly(pts,x-.5,y+.5)||!inPoly(pts,x+.5,y+1.5)))v-=edge;
+  P.set(x,y,sh(r,v,x,y))}}
+function bez(p,t){const u=1-t;return[0,1].map(k=>u*u*u*p[0][k]+3*u*u*t*p[1][k]+3*u*t*t*p[2][k]+t*t*t*p[3][k])}
+function tube(P,pts,r0,r1,ramp,o={}){const n=o.n??44;for(let i=0;i<=n;i++){const t=i/n,[x,y]=bez(pts,t),r=r0+(r1-r0)*t;
+ ell(P,x,y,Math.max(.7,r),Math.max(.7,r),ramp,{v:(o.v??.5)+t*(o.dv??.1)+(o.ring?((i%o.ring)<1?-.16:0):0),l:.42,edge:0,rim:.28})}}
+function line(P,x0,y0,x1,y1,c,mode,a){const n=Math.max(1,Math.ceil(Math.max(Math.abs(x1-x0),Math.abs(y1-y0))));
+ for(let i=0;i<=n;i++){const x=x0+(x1-x0)*i/n,y=y0+(y1-y0)*i/n;mode==='fx'?P.fxs(x,y,c,a):mode==='on'?P.paint(x,y,c):P.set(x,y,c)}}
+function glow(P,cx,cy,r,c,a=1){if(a<=.02)return;for(let y=Math.floor(cy-r);y<=cy+r;y++)for(let x=Math.floor(cx-r);x<=cx+r;x++){const d=Math.hypot(x+.5-cx,y+.5-cy)/r;if(d<1)P.fxs(x,y,c,a*(1-d)*(1-d))}}
+function veins(P,R,x,y,n,len,dir,pulse,col=PAL.blood){for(let k=0;k<n;k++){let px=x+(R()-.5)*6,py=y,a=dir+(R()-.5)*1.4;const L=len*(.6+R()*.6);
+ for(let i=0;i<L;i++){a+=(R()-.5)*.6;px+=Math.cos(a);py+=Math.sin(a);if(!P.has(px,py))break;P.paint(px,py,col[2]);
+  const lit=pulse*(1-i/L);if(lit>.05)P.fxs(px,py,lit>.55?col[5]:col[4],lit);if(R()<.06){const b=a+(R()<.5?1:-1)*.9;let qx=px,qy=py;for(let j=0;j<L*.3;j++){qx+=Math.cos(b);qy+=Math.sin(b);P.paint(qx,qy,col[1])}}}}}
+function maw(P,cx,cy,w,h,open,o={}){const oh=Math.max(.6,h*open),lip=o.lip??PAL.flesh;
+ ell(P,cx,cy,w/2+2.2,oh/2+2.4,lip,{v:.48,l:.3,edge:.25,on:o.on});
+ if(open<.08){line(P,cx-w/2,cy,cx+w/2,cy,PAL.ichor[0]);for(let x=Math.ceil(cx-w/2+1);x<cx+w/2-1;x+=(o.step??3))P.set(x,cy+1,PAL.bone[4]);return}
+ for(let y=Math.floor(cy-oh/2);y<=cy+oh/2;y++)for(let x=Math.floor(cx-w/2);x<=cx+w/2;x++){const dx=(x+.5-cx)/(w/2),dy=(y+.5-cy)/(oh/2);if(dx*dx+dy*dy>1)continue;
+  P.set(x,y,dy>.35?PAL.flesh[1]:PAL.ichor[1]);const d=dx*dx+dy*dy;if(d<.35)P.fxs(x,y,d<.12?PAL.blood[4]:PAL.blood[3],(1-d/.35)*open)}
+ const step=o.step??3;for(let x=Math.ceil(cx-w/2+1);x<cx+w/2-1;x+=step){const dx=(x-cx)/(w/2),e=Math.sqrt(Math.max(0,1-dx*dx))*oh/2,tl=Math.min(o.teeth??3,e+.6);
+  for(let j=0;j<tl;j++){P.set(x,cy-e+j,j<1?PAL.bone[5]:PAL.bone[4]);P.set(x,cy+e-j,j<1?PAL.bone[4]:PAL.bone[3])}}
+ if(open>.5&&o.drool!==false){const k=(open-.5)*2;for(let i=0;i<2;i++){const x=cx-w/4+i*w/2;for(let j=0;j<oh*.7*k;j++)P.fxs(x+Math.sin(j*.5)*.4,cy-oh/2+2+j,PAL.memb[4],.7)}}}
+function eye(P,x,y,r,lit=1,blink=0){if(blink>.5){line(P,x-r,y,x+r,y,PAL.ichor[0]);return}
+ ell(P,x,y,r+.8,r*.8+.6,PAL.ichor,{v:.1,l:0,edge:0});ell(P,x,y,r,r*.75,PAL.blood,{v:.75,l:.25,edge:.1});P.set(x-.3,y-.3,PAL.blood[5]);glow(P,x,y,r*3,PAL.blood[4],.55*lit)}
+function spike(P,base,tip,w,r){const[bx,by]=base,[tx,ty]=tip,L=Math.hypot(tx-bx,ty-by)||1,nx=-(ty-by)/L,ny=(tx-bx)/L;poly(P,[[bx+nx*w/2,by+ny*w/2],[tx,ty],[bx-nx*w/2,by-ny*w/2]],r,{v:.6,l:.35})}
+function drip(P,x,y0,len,t,sp=1,col=PAL.ichor){const k=((t*sp)%1),y=y0+k*len;line(P,x,y0,x,y0+Math.min(len,k*len*.6),col[2],'fx',1);P.fxs(x,y,col[3],1-k);P.fxs(x,y+1,col[1],1-k)}
+// reflets humides : points clairs sur le quart haut-gauche
+function wet(P,R,cx,cy,rx,ry,n){for(let i=0;i<n;i++){const an=Math.PI*(1.05+R()*.6),r=.3+R()*.55,x=cx+Math.cos(an)*rx*r,y=cy+Math.sin(an)*ry*r;if(P.has(x,y)){P.set(x,y,PAL.pale[5]);if(R()<.5)P.paint(x+1,y,PAL.pale[4])}}}
+
+/* ======================= corps commun de la Matrice ======================= */
+function mound(P,t,st,o={}){const R=rng(o.seed||11),br=Math.sin(t*1.7)*1.4,a=st.a||0,skin=o.skin||PAL.pale;
+ // flaque de mousse veinée sous la masse
+ for(let y=FY-6;y<=FY+6;y++)for(let x=CX-97;x<=CX+97;x++){const dx=(x-CX)/(94+Math.sin(y*1.3+x*.08)*4),dy=(y-FY)/5.5;if(dx*dx+dy*dy>1)continue;
+  const n=Math.sin(x*.9+y*1.7)*Math.cos(x*.31-y*.6);P.set(x,y,n>.62?PAL.pale[1]:n>.34?PAL.night[3]:sh(PAL.ichor,.5-dy*.3,x,y));
+  if(Math.abs(Math.sin(x*.21+y*.9)+Math.cos(x*.13))<.05)P.set(x,y,PAL.blood[2])}
+ // racines-tentacules
+ if(o.tent!==false)for(let i=0;i<6;i++){const s=i%2?1:-1,bx=CX+s*(40+(i>>1)*14),sw=Math.sin(t*1.3+i*1.7)*5+a*Math.sin(t*7+i)*2,ex=bx+s*(22+(i>>1)*6);
+  tube(P,[[bx,FY-14],[bx+s*10,FY-28+sw*.4],[ex-s*6,FY-3+sw*.5],[ex+s*6+sw,FY-8-sw*.5]],5.2-(i>>1)*.6,1,skin,{v:.42,dv:.15,ring:4})}
+ if(o.spikes!==false)for(let i=0;i<7;i++){const x=CX-40+i*13+(R()-.5)*4,y=FY-80-Math.sqrt(Math.max(0,1-((x-CX)/70)**2))*16-br;spike(P,[x,y+8],[x+(x-CX)*.18+(R()-.5)*6,y-10-R()*10],6,PAL.bone)}
+ ell(P,CX,FY-46-br*.5,72,48+br,skin,{v:.56,l:.38,rim:.18});
+ ell(P,CX-46,FY-16,32,18,skin,{v:.5,l:.34});ell(P,CX+50,FY-14,30,17,skin,{v:.46,l:.34});
+ for(let k=0;k<6;k++){const y0=FY-82+k*12+br*.3;for(let x=CX-70;x<=CX+70;x++){const y=y0+Math.sin(x*.07+k*1.3)*3+((x-CX)/70)**2*10;P.paint(x,y,skin[1]);P.paint(x,y+1,skin[4])}}
+ // plis de la base
+ for(let x=CX-74;x<=CX+78;x+=7){const y=FY-8+Math.sin(x)*1.5;line(P,x,y,x+2,y-6,skin[1],'on')}
+ veins(P,R,CX,FY-6,o.nv??5,58,-Math.PI/2,(o.vein??((Math.sin(t*3.2)*.5+.5)*.4))+a*.3);
+ veins(P,R,CX-40,FY-28,3,32,-Math.PI*.75,(Math.sin(t*3.2-1)*.5+.5)*.3);veins(P,R,CX+44,FY-28,3,32,-Math.PI*.25,(Math.sin(t*3.2-2)*.5+.5)*.3);
+ wet(P,R,CX,FY-46,72,48,o.wet??46);wet(P,R,CX-46,FY-16,32,18,8);
+ return br}
+function cluster(P,t,pts,br,lit=.7){const bl=(Math.sin(t*.9)>.95)?1:0;pts.forEach(([x,y,r],i)=>eye(P,x,y-br,r,lit,i%2?bl:0))}
+/* ======================= globe générique ======================= */
+// o : ex,ey,rx,ry, open, look, a (tir), ph, ir (rayon iris), lr (course), stri, lash, lashStep, lidFolds, caruncle,
+//     noLid, roll (révulsé), sphere, irisOut (orbite vide), film (voile 0..1), torn, blood, seed
+function globe(P,t,o){
+ const ex=o.ex,ey=o.ey,rx=o.rx,ry=o.ry,a=o.a||0,ph=o.ph||0,IR=o.ir??9,LR=o.lr??7,R=rng(o.seed||91),open=cl(o.open);
+ let lx=Math.cos(o.look)*LR,ly=Math.sin(o.look)*LR*.64;
+ if(o.roll){ly=lerp(ly,-ry*.92,o.roll);lx*=1-o.roll}
+ const blood=o.blood??[.12,.45,.9][ph],pw=lerp(.14,.44,a),skin=o.lidSkin||PAL.pale;
+ const L=dx=>(o.noLid?1:open)*Math.sqrt(Math.max(0,1-dx*dx));
+ const inA=(x,y)=>{const dx=(x+.5-ex)/rx,dy=(y+.5-ey)/ry;return dx*dx+dy*dy<=1&&Math.abs(dy)<=L(dx)};
+ const inI=(x,y)=>Math.hypot((x+.5-ex-lx)/IR,(y+.5-ey-ly)/IR);
+ for(let y=Math.floor(ey-ry);y<=ey+ry;y++)for(let x=Math.floor(ex-rx);x<=ex+rx;x++){
+  const dx=(x+.5-ex)/rx,dy=(y+.5-ey)/ry,d=dx*dx+dy*dy;if(d>1)continue;const l=L(dx);
+  if(Math.abs(dy)>l){const e=Math.abs(dy)-l;let v=.62-dy*.3-(e<.09?.34:e<.18?.1:0);
+   if(o.lidFolds&&e>.2&&Math.abs(((e*ry)%3.4)-1.7)<.45)v-=.16;
+   P.set(x,y,sh(skin,v,x,y));continue}
+  const ix=(x+.5-ex-lx)/IR,iy=(y+.5-ey-ly)/IR,id=Math.hypot(ix,iy);let c;
+  if(o.irisOut&&id<1.1)c=id<.72?PAL.ichor[0]:id<.94?PAL.flesh[1]:PAL.flesh[3];
+  else if(id<.86&&Math.abs(ix)<pw)c=PAL.ichor[0];
+  else if(id<1){const an=Math.atan2(iy,ix);let v=.48+(1-id)*.3-iy*.22;
+   if(o.stri)v+=Math.sin(an*13+Math.sin(an*4)*1.6)*.14*(id>.42?1:.4);
+   if(id>.5&&id<.6)v+=.2;if(id>.9)v-=.2;c=sh(PAL.blood,v,x,y)}
+  else if(id<1.13)c=PAL.blood[1];
+  else{let v=.78-dy*.25-d*.45;if(o.sphere)v-=Math.max(0,dx*.45+dy*.55)*.6;c=sh(PAL.sclera,v,x,y);
+   if(d>.45&&bay(x,y)<(blood-.45)*1.05*(d-.3))c=PAL.memb[2]}
+  P.set(x,y,c)}
+ // veines du blanc : plus nombreuses et plus longues à chaque phase
+ const nv=6+Math.round(blood*12);
+ for(let k=0;k<nv;k++){let an=R()*TAU,r=.98;const Ln=5+R()*6+blood*9;
+  for(let j=0;j<Ln;j++){an+=(R()-.5)*.22;const x=ex+Math.cos(an)*rx*r,y=ey+Math.sin(an)*ry*r;
+   if(inA(x,y)&&inI(x,y)>1.15)P.set(x,y,j<Ln*.45?PAL.blood[3]:PAL.blood[2]);r-=.035+R()*.02;
+   if(R()<.1){let b=an+(R()<.5?.5:-.5),q=r;for(let i=0;i<4;i++){const X=ex+Math.cos(b)*rx*q,Y=ey+Math.sin(b)*ry*q;if(inA(X,Y)&&inI(X,Y)>1.15)P.set(X,Y,PAL.blood[2]);q-=.04}}}}
+ // fêlures de l'iris (II) qui gagnent le blanc (III)
+ if(ph>=1&&!o.irisOut){const nc=ph===1?3:5;for(let k=0;k<nc;k++){let an=k*2.1+.6+Math.sin(k*7)*.3,x=ex+lx,y=ey+ly;const Ln=IR*(ph===1?1.05:1.9);
+  for(let j=0;j<Ln;j++){an+=(R()-.5)*.45;x+=Math.cos(an);y+=Math.sin(an)*.8;if(!inA(x,y))break;const ins=inI(x,y);
+   if(ins>.6)P.set(x,y,ins<1?PAL.blood[5]:PAL.blood[1])}}}
+ if(!o.irisOut){const hx=ex+lx-IR*.38,hy=ey+ly-IR*.4;if(inA(hx,hy))P.set(hx,hy,'#fffbe8');if(inA(hx+1,hy))P.set(hx+1,hy,PAL.sclera[4]);if(inA(hx,hy+1))P.set(hx,hy+1,PAL.sclera[3]);
+  if(IR>6&&inA(hx+IR*.9,hy+IR*.95))P.set(hx+IR*.9,hy+IR*.95,PAL.sclera[3])}
+ if(rx>12)for(let s=0;s<9;s++){const an=Math.PI*1.1+s*.075,x=ex+Math.cos(an)*rx*.8,y=ey+Math.sin(an)*ry*.72;if(inA(x,y)&&inI(x,y)>1.15)P.set(x,y,PAL.sclera[4])}
+ // voile : membrane laiteuse qui glisse depuis le coin intérieur
+ if(o.film>.01){const fx0=ex-rx-1,fx1=fx0+(2*rx+2)*cl(o.film);
+  for(let y=Math.floor(ey-ry);y<=ey+ry;y++)for(let x=Math.floor(fx0);x<=fx1;x++){if(!inA(x,y))continue;
+   if(o.torn&&x>fx0+rx*.5&&Math.floor((y+Math.sin(x*.35)*1.6)/3)%2===0)continue;
+   if(fx1-x<1.5){P.set(x,y,(y&1)?PAL.memb[5]:PAL.memb[4]);continue}
+   const cur=P.get(x,y),dark=cur===PAL.ichor[0]||PAL.blood.includes(cur);
+   if(bay(x,y)<.68)P.set(x,y,sh(PAL.memb,(dark?.5:.8)-((y-ey)/ry)*.15,x,y))}
+  for(let k=0;k<4;k++){let x=fx0+2,y=ey+(k-1.5)*ry*.4;for(let j=0;j<rx*2;j++){x+=1;y+=Math.sin(j*.3+k)*.5;if(x>fx1-2)break;if(inA(x,y))P.set(x,y,PAL.memb[2])}}}
+ // cils-dents
+ if(o.lash){const st=o.lashStep||3.6;for(let x=-rx+3;x<=rx-3;x+=st){const f=Math.sqrt(1-(x/rx)**2),lid=(o.noLid?1:open)*f*ry,Ln=o.lash*(.55+.45*f)*(.85+R()*.3),s=x>0?1:-1;
+  lashT(P,ex+x,ey-lid-.5,ex+x*1.08+s*Ln*.3,ey-lid-1-Ln,o.lash>3?2:1);lashT(P,ex+x,ey+lid+.5,ex+x*1.08+s*Ln*.15,ey+lid+1+Ln*.75,o.lash>3?2:1)}}
+ if(o.caruncle)for(const s of[-1,1]){const x=ex+s*(rx-2.5),y=ey+.5;ell(P,x,y,2.2,1.7*Math.max(.4,open),PAL.memb,{v:.55,l:.3,edge:0})}
+ if(a>.2&&!o.irisOut){const r=IR*2.1,cx=ex+lx,cy=ey+ly;for(let y=Math.floor(cy-r);y<=cy+r;y++)for(let x=Math.floor(cx-r);x<=cx+r;x++){const dd=Math.hypot(x+.5-cx,y+.5-cy)/r;
+  if(dd<1&&inI(x,y)>1.12&&inA(x,y))P.fxs(x,y,dd<.6?PAL.blood[3]:PAL.blood[4],a*.55*(1-dd))}}
+ return{lx,ly,inA,lidY:dx=>L(dx)*ry}}
+
+function lashT(P,bx,by,tx,ty,w){const n=Math.ceil(Math.hypot(tx-bx,ty-by));for(let i=0;i<=n;i++){const u=i/n,x=lerp(bx,tx,u),y=lerp(by,ty,u);
+ P.set(x,y,u>.6?PAL.bone[5]:u>.25?PAL.bone[4]:PAL.bone[2]);if(w>1&&u<.55)P.set(x+1,y,PAL.bone[1])}}
+// petits yeux du corps (hors de la zone de l'œil)
+function smallEyes(P,t,st,n,seed,br,hole){const R=rng(seed);for(let i=0;i<n;i++){const x=CX+(R()-.5)*132,y=FY-42+(R()-.5)*76,ph=R()*20,r=1.1+R()*1.4;
+ if(!P.has(x,y)||Math.hypot((x-hole[0])/hole[2],(y-hole[1])/hole[3])<1)continue;eye(P,x,y-br*.5,r,.35+st.a*.65,Math.sin(t*.9+ph)>.93||st.close>.5?1:0)}}
+const tears=(P,t,x0,y0,n,len,st)=>{const col=st.ph>=2?PAL.blood:st.ph===1?PAL.memb:PAL.ichor;const m=n+(st.weep?3:0);
+ for(let i=0;i<m;i++)drip(P,x0-(m-1)*3.5+i*7,y0,len+(st.weep?8:0),t+i*.31,st.weep?1.1:.55,col)};
+
+/* ---------- Référence : dessin en jeu ---------- */
+function oeil(P,t,st){const br=mound(P,t,st,{seed:53}),R=rng(53);
+ for(let i=0;i<24;i++){const x=CX+(R()-.5)*130,y=FY-44+(R()-.5)*74,ph=R()*20,r=1+R()*1.2;if(!P.has(x,y)||Math.hypot((x-CX)/36,(y-FY+58)/28)<1)continue;eye(P,x,y-br*.5,r,.4+st.a*.6,Math.sin(t*.9+ph)>.93?1:0)}
+ const ex=CX,ey=FY-58-br*.5,rx=25,ry=18,open=cl(.28+st.open*.72),lx=Math.cos(st.look)*7,ly=Math.sin(st.look)*4.5;
+ ell(P,ex,ey,rx+6,ry+6,PAL.flesh,{v:.46,l:.35});
+ const inA=(x,y)=>{const dx=(x+.5-ex)/rx,dy=(y+.5-ey)/ry;return dx*dx+dy*dy<=1&&Math.abs(dy)<=open*Math.sqrt(Math.max(0,1-dx*dx))};
+ for(let y=Math.floor(ey-ry);y<=ey+ry;y++)for(let x=Math.floor(ex-rx);x<=ex+rx;x++){const dx=(x+.5-ex)/rx,dy=(y+.5-ey)/ry;if(dx*dx+dy*dy>1)continue;const lid=open*Math.sqrt(1-dx*dx);
+  if(Math.abs(dy)>lid){const e=Math.abs(dy)-lid;P.set(x,y,sh(PAL.pale,.62-dy*.3-(e<.1?.3:0),x,y));continue}
+  const ix=(x+.5-ex-lx)/9,iy=(y+.5-ey-ly)/9,id=Math.hypot(ix,iy);let c;
+  if(id<1&&Math.abs(ix)<.16+.3*(1-st.a)&&id<.85)c=PAL.ichor[0];
+  else if(id<1)c=sh(PAL.blood,.5+(1-id)*.35-iy*.2,x,y);
+  else if(id<1.12)c=PAL.blood[1];
+  else c=sh(PAL.sclera,.75-dy*.25-(dx*dx+dy*dy)*.45,x,y);
+  P.set(x,y,c)}
+ for(let k=0;k<7;k++){const an=k/7*TAU+.4;let r=.98;for(let j=0;j<9;j++){const x=ex+Math.cos(an+Math.sin(j)*.08)*rx*r,y=ey+Math.sin(an)*ry*r;if(inA(x,y)&&Math.hypot(x-ex-lx,y-ey-ly)>10)P.set(x,y,PAL.blood[2]);r-=.045}}
+ if(inA(ex+lx-3,ey+ly-3))P.set(ex+lx-3,ey+ly-3,'#fffbe8');if(inA(ex+lx-2,ey+ly-3))P.set(ex+lx-2,ey+ly-3,PAL.sclera[3]);
+ for(let x=-rx+3;x<=rx-3;x+=4){const lid=open*Math.sqrt(1-(x/rx)**2)*ry;spike(P,[ex+x,ey-lid-1],[ex+x*1.08,ey-lid-4.5],2.4,PAL.bone);spike(P,[ex+x,ey+lid+1],[ex+x*1.08,ey+lid+4],2.2,PAL.bone)}
+ if(st.a>.2)glow(P,ex+lx,ey+ly,18,PAL.blood[4],st.a*.8);
+ maw(P,CX,FY-20,26,12,.1+st.a*.35,{step:2.8,teeth:3});
+ for(let i=0;i<3;i++)drip(P,ex-8+i*8,ey+ry+5,10,t+i*.33,.6);
+}
+
+/* ---------- 1 · L'Orbite ---------- */
+function orbite(P,t,st){const br=mound(P,t,st,{seed:53,nv:4}),R=rng(61),ph=st.ph;
+ const ex=CX,ey=FY-60-br*.5,rx=27,ry=19;
+ smallEyes(P,t,st,16,53,br,[ex,ey,44,34]);
+ // pattes d'oie : plis qui rayonnent des coins
+ for(const s of[-1,1])for(let k=0;k<4;k++){const an=(s<0?Math.PI:0)+s*(k-1.5)*.28;let x=ex+s*(rx+9),y=ey+1;for(let j=0;j<12+k*2;j++){x+=Math.cos(an);y+=Math.sin(an)*.8+Math.sin(j*.6)*.2;P.paint(x,y,PAL.pale[1]);P.paint(x,y-1,PAL.pale[4])}}
+ ell(P,ex,ey+1,rx+12,ry+11,PAL.pale,{v:.5,l:.42,edge:.18});       // bourrelet
+ ell(P,ex,ey-ry*.5,rx+6,ry*.8,PAL.pale,{v:.62,l:.45,edge:.12});    // paupière haute gonflée
+ ell(P,ex,ey+.5,rx+2.6,ry+2.4,PAL.flesh,{v:.12,l:.2,edge:0});          // creux de l'orbite
+ const open=cl(.22+st.open*.78)*(1-(st.close||0));
+ const g=globe(P,t,{ex,ey,rx,ry,open,look:st.look,a:st.a,ph,stri:1,lash:4.8,lashStep:3.3,caruncle:1,lidFolds:1,seed:5,irisOut:st.irisOut});
+ if(ph>=2){const y0=ey-g.lidY(-.33)-1;for(let j=0;j<11;j++){const y=y0-j,w=Math.max(0,3.2-j*.25);for(let x=-w;x<=w;x++)P.set(ex-9+x+j*.35,y,Math.abs(x)>w-1?PAL.blood[3]:PAL.flesh[1])}
+  drip(P,ex-9,y0+1,14,t,.7,PAL.blood)}
+ tears(P,t,ex,ey+g.lidY(0)+6,2+ph,12+ph*4,st);
+ wet(P,R,ex,ey-ry*.6,rx,ry*.6,10);
+ maw(P,CX,FY-18,30,12,.1+st.a*.4,{step:2.6,teeth:3});
+}
+
+/* ---------- 2 · Le Globe arraché ---------- */
+function arrache(P,t,st){const br=mound(P,t,st,{seed:71,nv:6}),R=rng(71),ph=st.ph,a=st.a;
+ const push=a*1.5,ex=CX,ey=FY-62-br*.5+Math.sin(t*1.3)*.8,rx=29+push,ry=24+push;
+ smallEyes(P,t,st,12,71,br,[ex,ey+4,46,40]);
+ // orbite déchirée : bord en lambeaux, cavité sanglante
+ const pts=[];for(let k=0;k<30;k++){const an=k/30*TAU,r=1+(k%2?.13:-.03)+R()*.1;pts.push([ex+Math.cos(an)*(rx+9)*r,ey+4+Math.sin(an)*(ry+8)*r])}
+ poly(P,pts,PAL.flesh,{v:.5,l:.35,edge:.25});ell(P,ex,ey+3,rx+4,ry+4,PAL.blood,{v:.14,l:.1,edge:0});
+ for(let k=0;k<30;k+=2){const[x,y]=pts[k];P.paint(x,y,PAL.flesh[5])}
+ // nerf optique qui plonge dans la masse
+ tube(P,[[ex,ey+ry-2],[ex+3,ey+ry+8],[ex-3,FY-22],[ex+1,FY-12]],5,4,PAL.memb,{v:.4,dv:.12,ring:3});
+ for(const s of[-1,1])tube(P,[[ex+1,FY-13],[ex+s*6,FY-10],[ex+s*12,FY-6],[ex+s*20,FY-3]],3.6,1.4,PAL.memb,{v:.38,dv:.1,ring:3});
+ // muscles de l'œil : quatre sangles qui se tendent pour viser
+ for(const[an,s]of[[-2.35,1],[-.8,-1],[2.55,-1],[.55,1]]){const x0=ex+Math.cos(an)*rx*.9,y0=ey+Math.sin(an)*ry*.9,x1=ex+Math.cos(an)*(rx+20),y1=ey+4+Math.sin(an)*(ry+16);
+  const sw=Math.sin(t*2+an)*1.5*(1-a);tube(P,[[x0,y0],[lerp(x0,x1,.35)+s*3,lerp(y0,y1,.35)-2+sw],[lerp(x0,x1,.7)-s*2,lerp(y0,y1,.7)+sw],[x1,y1]],3+a*1.2,2.4,PAL.flesh,{v:.6+a*.2,dv:-.15,ring:2})}
+ const roll=cl(st.close||0);
+ globe(P,t,{ex,ey,rx,ry,open:1,noLid:1,roll,sphere:1,look:st.look,a,ph,stri:1,ir:11,lr:10,seed:9,irisOut:st.irisOut,blood:[.2,.55,.95][ph]});
+ // restes de paupières : croissants de peau et dents
+ for(const s of[-1,1])for(let x=-rx*.75;x<=rx*.75;x++){const f=Math.sqrt(1-(x/rx)**2),y=ey+s*(ry*f+1);P.set(ex+x,y,PAL.pale[2]);P.set(ex+x,y+s,PAL.pale[1]);
+  if(Math.round(x)%4===0)spike(P,[ex+x,y+s],[ex+x*1.06,y+s*4.5],2.2,PAL.bone)}
+ if(ph>=2)for(let i=0;i<3;i++)drip(P,ex-12+i*12,ey+ry*.6,16,t+i*.4,.6,PAL.ichor);
+ tears(P,t,ex,ey+ry+3,1+ph,10,st);
+}
+
+/* ---------- 3 · La Couronne d'yeux ---------- */
+const SAT=[[-60,-82,-74,-104],[-34,-94,-44,-122],[0,-96,0,-130],[34,-94,46,-121],[60,-82,74,-102]];
+const SAT_OPEN=[[2],[0,2,4],[0,1,2,3,4]];
+function couronneYeux(P,t,st){const ph=st.ph,a=st.a,R=rng(83);
+ // tiges derrière la masse
+ SAT.forEach(([bx,by,tx,ty],i)=>{const s=Math.sin(t*1.2+i*1.7)*2.5*(1+a),X0=CX+bx,Y0=FY+by,X1=CX+tx+s,Y1=FY+ty;
+  tube(P,[[X0,Y0+14],[lerp(X0,X1,.3)+s*.3,lerp(Y0,Y1,.4)],[X1-s*.4,Y1+12],[X1,Y1+3]],5,3,PAL.pale,{v:.56,dv:.12,ring:5})});
+ const br=mound(P,t,st,{seed:83,spikes:false,nv:5});
+ SAT.forEach(([bx,by,tx,ty],i)=>{const s=Math.sin(t*1.2+i*1.7)*2.5*(1+a),X=CX+tx+s,Y=FY+ty;const on=SAT_OPEN[ph].includes(i);
+  ell(P,X,Y,9.5,7.5,PAL.flesh,{v:.46,l:.35});
+  const op=on?cl(.3+st.open*.7)*(1-(st.close||0)):.05+.08*(Math.sin(t*2+i)>.8?1:0);
+  globe(P,t,{ex:X,ey:Y,rx:7.5,ry:5.6,open:op,look:st.look+(i-2)*.25,a:on?a:0,ph,ir:3.2,lr:2.4,lash:2.2,lashStep:2.6,seed:20+i,irisOut:st.irisOut,blood:[.1,.3,.6][ph]});
+  if(on&&a>.3)glow(P,X,Y,9,PAL.blood[4],a*.5)});
+ const ex=CX,ey=FY-58-br*.5;
+ smallEyes(P,t,st,10,83,br,[ex,ey,40,30]);
+ ell(P,ex,ey,rx3+6,ry3+6,PAL.flesh,{v:.46,l:.35});
+ const g=globe(P,t,{ex,ey,rx:rx3,ry:ry3,open:cl(.28+st.open*.72)*(1-(st.close||0)),look:st.look,a,ph,stri:1,lash:4,lashStep:3.6,seed:3,irisOut:st.irisOut,caruncle:1});
+ tears(P,t,ex,ey+g.lidY(0)+5,2+ph,10+ph*3,st);
+ maw(P,CX,FY-20,26,11,.1+a*.35,{step:2.8,teeth:3});
+}
+const rx3=24,ry3=17;
+
+/* ---------- 4 · Le Voile ---------- */
+function voile(P,t,st){const br=mound(P,t,st,{seed:97,spikes:false,nv:3,wet:30}),R=rng(97),ph=st.ph,a=st.a;
+ // pans de membrane qui tombent du sommet, translucides
+ for(const[x0,w,len,ph0]of[[-64,30,74,0],[-36,22,54,1.7],[34,24,60,3.1],[62,30,76,4.4]]){const X=CX+x0,Y0=FY-94+Math.abs(x0)*.35;
+  for(let y=Y0;y<Y0+len;y++){const k=(y-Y0)/len,sw=Math.sin(t*1.1+ph0+k*2)*2.2*k,hw=w/2*Math.pow(1-k,.6)*(1+.12*Math.sin(y*.35+ph0));
+   for(let x=Math.floor(X-hw);x<=X+hw;x++){const xx=Math.round(x+sw),u=(x-X)/Math.max(1,hw);if(!P.has(xx,y))continue;
+    const edge=Math.abs(u)>.82,fold=Math.abs(Math.sin(u*4.7+ph0))<.12;
+    if(edge)P.set(xx,y,PAL.memb[4]);else if(fold)P.set(xx,y,PAL.memb[1]);else if(bay(xx,y)<.42)P.set(xx,y,sh(PAL.memb,.68-k*.25-Math.abs(u)*.15,xx,y))}}
+  drip(P,X+Math.sin(t*1.1+ph0+2)*2.2,Y0+len-1,10,t+ph0,.35,PAL.memb)}
+ const ex=CX,ey=FY-58-br*.5,rx=26,ry=18;
+ smallEyes(P,t,st,10,97,br,[ex,ey,42,32]);
+ ell(P,ex,ey+1,rx+8,ry+8,PAL.memb,{v:.42,l:.35,edge:.2});
+ const film=cl(1.15-st.open*1.3)*(1-(st.irisOut?1:0));
+ const g=globe(P,t,{ex,ey,rx,ry,open:cl(.42+st.open*.58)*(1-(st.close||0)),look:st.look,a,ph,stri:1,lash:3.2,lashStep:3.2,seed:7,film,torn:ph>=2,irisOut:st.irisOut,lidSkin:PAL.memb});
+ if(ph>=2)for(let i=0;i<4;i++){const x=ex-rx*.3+i*5;line(P,x,ey+g.lidY(0),x+Math.sin(t*2+i)*1.5,ey+g.lidY(0)+6+i%2*3,PAL.memb[3],'on')}
+ tears(P,t,ex,ey+g.lidY(0)+6,2+ph,11+ph*3,st);
+ maw(P,CX,FY-20,24,10,.08+a*.3,{step:3,teeth:2,lip:PAL.memb});
+}
+
+const LOOKS=[
+ {key:'ref',draw:oeil,name:'Actuel · L’Œil de la Matrice',title:'LE DESSIN EN JEU',cls:'ref',
+  lore:'Le dessin exporté en jeu (planches/oeil-matrice-export.html) : la masse pâle, l’œil au centre entre des paupières à dents, vingt-quatre petits yeux. Il ne change pas avec les phases.',
+  pts:['Iris uni, pupille fendue, sept veines fixes dans le blanc.','Aucun signe de dégât : la barre de vie seule dit la phase.','Trois calques en jeu : corps, iris, paupières (OeilView).'],
+  game:'Rien à refaire.'},
+ {key:'orbite',draw:orbite,name:'1 · L’Orbite',title:'LE MÊME ŒIL, PLUS PROFOND',cls:'rec',
+  lore:'On garde la silhouette, mais l’œil est enfoncé dans une orbite : un bourrelet de chair, une paupière haute qui gonfle, un creux d’ombre autour. L’œil pèse plus lourd sans changer la lecture.',
+  pts:['<span>Iris strié</span> et collerette claire, reflet double, caroncules roses aux coins.','<span>Cils-dents</span> plus longs et irréguliers, plis de paupière, pattes d’oie.','Seize petits yeux plus gros, qui s’allument quand il tire.','<span>Phases</span> : II iris fendu, larmes laiteuses ; III blanc injecté, fêlures jusqu’au bord, paupière fendue, larmes de sang.'],
+  game:'Mêmes trois calques. Il faut ajouter trois variantes de l’iris et du corps (une par phase), soit environ 2× les images actuelles.'},
+ {key:'arrache',draw:arrache,name:'2 · Le Globe arraché',title:'L’ŒIL QUI SORT DE LA MASSE',
+  lore:'Plus de paupières : un globe nu, plus gros, sort d’une orbite déchirée. Il est tenu par quatre muscles rouges et un nerf optique épais qui plonge dans la masse. Quand il vise, les muscles se tendent et le globe avance.',
+  pts:['<span>Globe</span> ombré en sphère, iris plus grand qui balaie plus loin.','<span>Muscles</span> striés qui se tendent au tir ; nerf optique jusqu’au sol.','Pour « fermer », il <span>se révulse</span> : l’iris roule vers le haut et disparaît.','<span>Phases</span> : le blanc rougit plus vite ; en III le globe fêlé suinte d’ichor.'],
+  game:'Le calque des paupières disparaît ; l’iris devient plus grand et la révulsion demande 6 images de plus. Corps à refaire.'},
+ {key:'couronne',draw:couronneYeux,name:'3 · La Couronne d’yeux',title:'CINQ YEUX SUR TIGES',
+  lore:'Au-dessus de la masse se dressent cinq tiges de chair, chacune portant un œil fermé. À chaque phase, d’autres s’ouvrent : un en I, trois en II, cinq en III. Le boss montre sa progression sans barre de vie.',
+  pts:['<span>Grand œil</span> central comme aujourd’hui, avec caroncules.','<span>Cinq satellites</span> qui ondulent et suivent l’Ingénieur ; fermés, ils clignent parfois.','Les satellites ouverts sont les canons de Strabisme et de Pupilles errantes.','<span>Phases</span> : 1 / 3 / 5 satellites ouverts, iris fendus, blanc injecté.'],
+  game:'Ajoute un calque « satellite » (5 instances, 12 images d’ouverture). Le cadre doit monter de 40 px.'},
+ {key:'voile',draw:voile,name:'4 · Le Voile',title:'L’ŒIL SOUS LA MEMBRANE',
+  lore:'Des pans de membrane translucide tombent du sommet. L’œil est couvert d’une troisième paupière laiteuse : au repos il a l’air aveugle. Le voile glisse sur le côté quand il vise, et révèle un iris vif.',
+  pts:['<span>Voile</span> qui glisse depuis le coin, bord nacré, veines fines.','Pans de membrane qui ondulent et gouttent.','Lecture claire : voile tiré = il va tirer, et l’œil est vulnérable.','<span>Phases</span> : III, le voile est déchiré en lanières, l’iris reste visible.'],
+  game:'Ajoute un calque « voile » (12 images de glissement, 2 états : entier et déchiré). Corps à refaire.'},
+];
+
+/* ======================= balles ======================= */
+function mk(n,f){const c=document.createElement('canvas');c.width=c.height=n;const g=c.getContext('2d'),h=(n-1)/2,m=[];
+ for(let y=0;y<n;y++)for(let x=0;x<n;x++)m[y*n+x]=f(x-h,y-h,x,y);
+ for(let y=0;y<n;y++)for(let x=0;x<n;x++){const col=m[y*n+x];if(col){g.fillStyle=col;g.fillRect(x,y,1,1);continue}
+  for(const[dx,dy]of[[1,0],[-1,0],[0,1],[0,-1]]){const X=x+dx,Y=y+dy;if(X>=0&&Y>=0&&X<n&&Y<n&&m[Y*n+X]){g.fillStyle=OUT;g.fillRect(x,y,1,1);break}}}return c}
+const BSTY={
+ oeil:{rot:16,br:b=>b?4.5:2.6,n:b=>b?11:7,f:(b,a)=>{const s=b?1.6:1,ca=Math.cos(a),sa=Math.sin(a);return(dx,dy)=>{const d=Math.hypot(dx,dy)/s;if(d>2.9)return null;const u=(dx*ca+dy*sa)/s-.9,v=(-dx*sa+dy*ca)/s,di=Math.hypot(u,v);
+  if(di<.6)return PAL.ichor[0];if(di<1.4)return PAL.blood[4];return dy>.9*s?PAL.sclera[2]:PAL.sclera[3]}}},
+ larme:{rot:16,br:()=>2.4,n:()=>9,f:(b,a)=>{const ca=Math.cos(a),sa=Math.sin(a);return(dx,dy)=>{const u=dx*ca+dy*sa,v=-dx*sa+dy*ca,q=(u<0?(u/3.8)**2:(u/2.2)**2)+(v/(1.9*(u<0?1+u/9:1)))**2;if(q>1)return null;
+  if(q<.2&&u>.2)return PAL.sclera[4];if(q<.55)return PAL.memb[4];return u<-1.5?PAL.blood[3]:PAL.memb[3]}}},
+ cil:{rot:16,br:()=>1.8,n:()=>11,f:(b,a)=>{const ca=Math.cos(a),sa=Math.sin(a);return(dx,dy)=>{const u=dx*ca+dy*sa,v=-dx*sa+dy*ca,w=u>2?(4.6-u)*.32:u<-3.6?.35:.62;if(u<-4.6||u>4.6||Math.abs(v)>w)return null;
+  if(u<-2.8)return PAL.blood[3];if(u>2.6)return PAL.bone[5];return v>0?PAL.bone[2]:PAL.bone[4]}}},
+};
+const BSPR={};for(const k in BSTY){const S=BSTY[k];BSPR[k]=[0,1].map(b=>Array.from({length:S.rot},(_,r)=>mk(S.n(b),S.f(b,r*TAU/S.rot))))}
+const BR=b=>BSTY[b.style].br(b.big);
+function bSprite(b){const S=BSTY[b.style],a=Math.atan2(b.vy,b.vx),r=((Math.round(a/TAU*S.rot)%S.rot)+S.rot)%S.rot;return BSPR[b.style][b.big?1:0][r]}
+// pupille errante : globe de 15 px, iris tourné vers l'Ingénieur
+const ORB=Array.from({length:16},(_,r)=>{const a=r*TAU/16,ca=Math.cos(a),sa=Math.sin(a);return mk(17,(dx,dy)=>{const d=Math.hypot(dx,dy);if(d>7.2)return null;const u=dx-ca*2.6,v=dy-sa*2.2,di=Math.hypot(u,v);
+ if(di<1.5)return PAL.ichor[0];if(di<3.6)return di<2.3?PAL.blood[5]:PAL.blood[4];if(dx+dy<-6.5)return '#fffbe8';return sh(PAL.sclera,.8-(dx+dy)*.05-d*.04,dx+8,dy+8)})});
+
+/* ======================= arène ======================= */
+const AW=560,AH=360,HB=3,LIFT=7,ENG_V=15.2*8;
+const F={x:280,y:200,rx:76,ry:24};
+const SPX=F.x-CX,SPY=F.y+12-FY,EYE_Y=FY-60+SPY;
+const ang=(a,b)=>Math.atan2(b.y-a.y,b.x-a.x),rnd=(a,b)=>a+Math.random()*(b-a),adiff=(a,b)=>Math.abs(((a-b+Math.PI)%TAU+TAU)%TAU-Math.PI);
+const emit=a=>({x:F.x+Math.cos(a)*(F.rx+3),y:F.y+Math.sin(a)*(F.ry+3)});
+const inF=(x,y,g=0)=>((x-F.x)/(F.rx+g))**2+((y-F.y)/(F.ry+g))**2<1;
+function newSim(pats){return{pats,idx:0,t:0,bul:[],dec:[],fx:[],tm:[],orbs:[],eng:{x:F.x-160,y:F.y+60,hits:0,inv:0,face:1,mv:0},k:1,ph:0,wait:1,gen:null,cur:'',intro:null,
+ vis:{a:0,cast:0,look:Math.PI*.8,open:0,lock:null,close:0,cls:0,dark:0,irisOut:0,weep:0,flash:0,ph:0}}}
+function shoot(S,x,y,a,v,o={}){const b={x,y,vx:Math.cos(a)*v,vy:Math.sin(a)*v,acc:o.acc||0,min:o.min??0,max:o.max??1e9,style:o.style||'oeil',big:o.big||0,
+ home:o.home||0,homeT:o.homeT||0,t0:S.t,wall:o.wall||0,h:0};S.bul.push(b);return b}
+function lob(S,x,y,h0,tx,ty,T,H,o={}){const b=shoot(S,x,y,ang({x,y},{x:tx,y:ty}),0,o);b.arc={x0:x,y0:y,tx,ty,T,H,h0};b.on=o.on;b.vx=tx-x;b.vy=ty-y;return b}
+function ring(S,x,y,n,v,off,o){for(let i=0;i<n;i++)shoot(S,x,y,off+i*TAU/n,v,o)}
+const deco=(S,type,o)=>{const d=Object.assign({type,t0:S.t},o);S.dec.push(d);return d},fx=(S,type,o)=>S.fx.push(Object.assign({type,t0:S.t},o));
+const later=(S,dt,f)=>S.tm.push({at:S.t+dt,f});
+const castStart=S=>{S.vis.cast=1},castEnd=S=>{S.vis.cast=0;S.vis.lock=null};
+function hurt(S){const E=S.eng;if(E.inv>0)return;E.hits++;E.inv=.6;fx(S,'hit',{x:E.x,y:E.y})}
+const outF=(x,y)=>{if(!inF(x,y,16))return[x,y];const a=Math.atan2((y-F.y)/(F.ry+16),(x-F.x)/(F.rx+16));return[F.x+Math.cos(a)*(F.rx+18),F.y+Math.sin(a)*(F.ry+18)]};
+function orbPos(o){const e=ease(o.out),rx=150,ry=98;return{x:lerp(F.x,F.x+Math.cos(o.a)*rx,e),y:lerp(F.y+F.ry-6,F.y+Math.sin(o.a)*ry,e),h:lerp((F.y+F.ry-6)-EYE_Y-LIFT,16,e)}}
+
+const PAT={
+ regard:{name:'Regard',ph:'I',*gen(S){const k=S.k,E=S.eng;castStart(S);yield .5;const two=S.ph>=2;
+  for(let r=0;r<3+S.ph;r++){const a=ang(F,E),axes=two?[a,a+Math.PI*(Math.random()<.5?.5:-.5)]:[a];S.vis.lock=a;for(const x of axes)deco(S,'lane',{a:x,warn:.7,dur:1.7});yield .7;
+   for(let i=0;i<18;i++){for(const x of axes){const p=emit(x);shoot(S,p.x,p.y,x+rnd(-.035,.035),(170+S.ph*15)*k,{big:i%6===0?1:0})}
+    if(i%4===0){const b=rnd(0,TAU),q=emit(b);shoot(S,q.x,q.y,ang(q,E),58*k,{home:1.2,homeT:1.3})}yield .05}
+   S.vis.lock=null;yield .5}
+  castEnd(S)}},
+ larmes:{name:'Larmes',ph:'I',*gen(S){const k=S.k,E=S.eng;castStart(S);S.vis.weep=1;yield .45;const n=8+3*S.ph;
+  for(let i=0;i<n;i++){let[tx,ty]=outF(cl(E.x+rnd(-80,80),16,AW-16),cl(E.y+rnd(-50,50),46,AH-10));if(i%3===0){tx=E.x;ty=E.y}[tx,ty]=outF(tx,ty);
+   const sx=F.x+rnd(-8,8),sy=F.y+F.ry-6;
+   lob(S,sx,sy,sy-EYE_Y-LIFT+8,tx,ty,1.05/k,40,{style:'larme',on:b=>{fx(S,'splash',{x:b.x,y:b.y});const p=deco(S,'flaque',{x:b.x,y:b.y,dur:1.5});
+    ring(S,b.x,b.y,5,34*k,rnd(0,TAU),{style:'larme',acc:30,max:70*k});
+    later(S,1.4,()=>{fx(S,'splash',{x:p.x,y:p.y});ring(S,p.x,p.y,8+S.ph*2,46*k,rnd(0,TAU),{style:'larme',acc:24,max:92*k})})}});
+   yield .2}
+  yield 1.2;S.vis.weep=0;castEnd(S)}},
+ cils:{name:'Cils',ph:'I',*gen(S){const k=S.k;castStart(S);yield .45;const arms=4+S.ph,N=44+8*S.ph;let off=ang(F,S.eng)+Math.PI/arms,w=(Math.random()<.5?1:-1)*.13;
+  for(let s=0;s<N;s++){for(let j=0;j<arms;j++){const a=off+j*TAU/arms,p=emit(a);shoot(S,p.x,p.y,a,58*k,{style:'cil',acc:34,max:110*k})}off+=w;if(s===N>>1)w=-w;yield .075}
+  yield .4;castEnd(S)}},
+ strabisme:{name:'Strabisme',ph:'II',*gen(S){const k=S.k,E=S.eng;castStart(S);const g=ang(F,E),sp=1.25;const L1=deco(S,'lane',{a:g-sp,warn:.8,dur:99}),L2=deco(S,'lane',{a:g+sp,warn:.8,dur:99});S.vis.lock=g;yield .8;
+  const T=sp*2/(.62*k)+.6,dt=.045;let tt=0,i=0;
+  while(tt<T){L1.a+=.62*k*dt;L2.a-=.62*k*dt;S.vis.lock=(L1.a+L2.a)/2;if(i%7<4)for(const Ln of[L1,L2]){const p=emit(Ln.a);shoot(S,p.x,p.y,Ln.a,150*k,{big:i%14===0?1:0})}
+   i++;tt+=dt;yield dt}
+  L1.dur=L2.dur=0;castEnd(S)}},
+ pupilles:{name:'Pupilles errantes',ph:'II',*gen(S){const k=S.k,E=S.eng;castStart(S);S.vis.irisOut=1;const n=3,base=rnd(0,TAU);
+  S.orbs=Array.from({length:n},(_,i)=>({a:base+i*TAU/n,out:0}));for(let s=0;s<=20;s++){for(const o of S.orbs)o.out=s/20;yield .03}
+  let T=0,shot=.3,rg=1;const dur=5.2;
+  while(T<dur){T+=.05;for(const o of S.orbs)o.a+=.5*k*.05;
+   if(T>=shot){for(const o of S.orbs){const p=orbPos(o);shoot(S,p.x,p.y,ang(p,E),82*k,{})}shot+=.75}
+   if(T>=rg){for(const o of S.orbs){const p=orbPos(o);ring(S,p.x,p.y,9,46*k,rnd(0,TAU),{style:'larme'})}rg+=1.9}
+   yield .05}
+  for(let s=20;s>=0;s--){for(const o of S.orbs)o.out=s/20;yield .03}S.orbs=[];S.vis.irisOut=0;castEnd(S)}},
+ fixation:{name:'Fixation',ph:'III',*gen(S){const k=S.k,E=S.eng;castStart(S);yield .3;
+  for(let r=0;r<2+S.ph;r++){const d=deco(S,'ret',{x:E.x,y:E.y,r0:50,r1:15,dur:1.9,follow:62+14*S.ph});S.vis.lock=null;
+   for(let s=0;s<8;s++){if(s%2===0){const b=rnd(0,TAU),q=emit(b);shoot(S,q.x,q.y,ang(q,E),56*k,{home:1.1,homeT:1.2})}yield 1.9/8}
+   const dx=(E.x-d.x)/(d.r1+HB),dy=(E.y-d.y)/((d.r1+HB)*.62);if(dx*dx+dy*dy<1)hurt(S);
+   fx(S,'boom',{x:d.x,y:d.y});ring(S,d.x,d.y,14+2*S.ph,58*k,rnd(0,TAU),{big:0});ring(S,d.x,d.y,6,34*k,rnd(0,TAU),{big:1});yield .35}
+  castEnd(S)}},
+ clignement:{name:'Clignement',ph:'III',*gen(S){const k=S.k;S.vis.close=1;S.vis.dark=1;yield 1;
+  for(let r=0;r<3+S.ph;r++){if(r){S.vis.close=1;yield .32}S.vis.close=0;S.vis.cast=1;S.vis.flash=1;fx(S,'flash',{});
+   const off=rnd(0,TAU),g=ang(F,S.eng)+rnd(-.6,.6),n=42;
+   for(let i=0;i<n;i++){const a=off+i*TAU/n;if(adiff(a,g)<.24||adiff(a,g+Math.PI)<.24)continue;const p=emit(a);shoot(S,p.x,p.y,a,(62+r*7)*k,{big:i%7===0?1:0})}
+   yield .28}
+  S.vis.dark=0;yield .3;castEnd(S)}},
+ milleyeux:{name:'Les mille yeux',ph:'III',*gen(S){const k=S.k;S.vis.close=1;const W_=deco(S,'walleyes',{dur:99});yield .5;S.vis.close=0;castStart(S);yield .6;
+  const waves=5;for(let w=0;w<waves;w++){const both=w>=2&&w%2===0,side=w%2;
+   const go=s=>{if(s===0){const gap=rnd(70,AH-70);for(let y=44;y<AH;y+=12){if(Math.abs(y-gap)<26)continue;shoot(S,-6,y,0,60*k,{wall:1})}}
+    else{const gap=rnd(60,AW-60);for(let x=6;x<AW;x+=13){if(Math.abs(x-gap)<28)continue;shoot(S,x,34,Math.PI/2,46*k,{wall:1})}}};
+   if(both){go(0);go(1)}else go(side);yield 1.7/k}
+  yield 1.2;W_.dur=0;castEnd(S)}},
+};
+const ALL=['larmes','cils','strabisme','pupilles','fixation','clignement','milleyeux'];
+const ROT=[['regard','larmes','cils'],['regard','strabisme','pupilles','larmes','cils'],['regard','fixation','clignement','pupilles','cils']];
+function nextPat(S){if(S.intro){const p=S.intro;S.intro=null;return p}if(S.pats==='duel'){const r=ROT[S.ph],p=r[S.idx%r.length];S.idx++;return p}return S.pats}
+function cancel(S){for(const b of S.bul)fx(S,'mote',{x:b.x,y:b.y});S.bul.length=0;S.dec.length=0;S.tm.length=0;S.orbs=[];S.gen=null;S.wait=1.2;castEnd(S);
+ Object.assign(S.vis,{close:0,dark:0,irisOut:0,weep:0})}
+function step(S,dt,keys){S.t+=dt;const E=S.eng,V=S.vis;V.ph=S.ph;
+ if(!S.gen){S.wait-=dt;if(S.wait<=0){S.cur=nextPat(S);S.gen={it:PAT[S.cur].gen(S),w:0}}}
+ if(S.gen){const g=S.gen;g.w-=dt;while(g.w<=0){const r=g.it.next();if(r.done){S.gen=null;S.wait=[1.6,1.4,1.2][S.ph];break}g.w+=r.value||0}}
+ for(let i=S.tm.length-1;i>=0;i--)if(S.t>=S.tm[i].at){const f=S.tm[i].f;S.tm.splice(i,1);f()}
+ V.a+=(V.cast-V.a)*Math.min(1,dt*6);V.open+=((V.cast?1:0)-V.open)*Math.min(1,dt*(V.cast?5:2));V.cls+=(V.close-V.cls)*Math.min(1,dt*14);
+ V.flash*=Math.exp(-dt*5);V.dk=(V.dk||0)+(V.dark-(V.dk||0))*Math.min(1,dt*4);
+ const tl=V.lock??ang(F,E);V.look+=Math.atan2(Math.sin(tl-V.look),Math.cos(tl-V.look))*Math.min(1,dt*(V.lock!=null?12:3));
+ const keep=[];
+ for(const b of S.bul){const age=S.t-b.t0;
+  if(b.arc){const A=b.arc,u=age/A.T;if(u>=1){b.x=A.tx;b.y=A.ty;b.on&&b.on(b);continue}b.x=lerp(A.x0,A.tx,u);b.y=lerp(A.y0,A.ty,u);b.h=lerp(A.h0,0,u)+4*A.H*u*(1-u);keep.push(b);continue}
+  if(b.acc){const s=Math.hypot(b.vx,b.vy)||1e-3,ns=cl(s+b.acc*dt,b.min,b.max);b.vx*=ns/s;b.vy*=ns/s}
+  if(b.home&&age<b.homeT){const a=Math.atan2(b.vy,b.vx),s=Math.hypot(b.vx,b.vy),ta=ang(b,E),d=Math.atan2(Math.sin(ta-a),Math.cos(ta-a)),na=a+cl(d,-b.home*dt,b.home*dt);b.vx=Math.cos(na)*s;b.vy=Math.sin(na)*s}
+  b.x+=b.vx*dt;b.y+=b.vy*dt;
+  if(b.x<-30||b.y<-30||b.x>AW+30||b.y>AH+30)continue;
+  if(b.wall&&inF(b.x,b.y,-4)){fx(S,'mote',{x:b.x,y:b.y});continue}
+  if(Math.hypot(E.x-b.x,E.y-b.y)<HB+BR(b)){hurt(S);continue}
+  keep.push(b)}
+ S.bul=keep;E.inv=Math.max(0,E.inv-dt);
+ for(const d of S.dec)if(d.type==='ret'){const u=cl((S.t-d.t0)/d.dur),r=lerp(d.r0,d.r1,u),dx=E.x-d.x,dy=E.y-d.y,m=Math.hypot(dx,dy);d.r=r;if(m>.5){const s=Math.min(m,d.follow*dt);d.x+=dx/m*s;d.y+=dy/m*s}}
+ S.dec=S.dec.filter(d=>S.t<d.t0+d.dur);S.fx=S.fx.filter(f=>S.t<f.t0+(f.type==='boom'?.7:.6));
+ let mx=0,my=0;if(keys){if(keys.l)mx-=1;if(keys.r)mx+=1;if(keys.u)my-=1;if(keys.d)my+=1}
+ if(mx||my){const m=Math.hypot(mx,my);E.x+=mx/m*ENG_V*dt;E.y+=my/m*ENG_V*dt;E.mv=1;if(mx)E.face=mx>0?1:-1}else bot(S,dt);
+ E.x=cl(E.x,10,AW-10);E.y=cl(E.y,40,AH-6);
+ const qx=(E.x-F.x)/(F.rx+12),qy=(E.y-F.y)/(F.ry+12),q=qx*qx+qy*qy;if(q<1){const s=1/Math.sqrt(q||1e-3);E.x=F.x+(E.x-F.x)*s;E.y=F.y+(E.y-F.y)*s}}
+function bot(S,dt){const E=S.eng,th=S.t*.2;const hx=F.x+Math.cos(th)*170,hy=F.y+Math.sin(th)*118;let fx_=(hx-E.x)*1.2,fy_=(hy-E.y)*1.2;
+ for(const b of S.bul){if(b.arc){const rx=E.x-b.arc.tx,ry=E.y-b.arc.ty,d=Math.hypot(rx,ry)||.01;if(d<26){fx_+=rx/d*500;fy_+=ry/d*500}continue}
+  const rx=E.x-b.x,ry=E.y-b.y;if(rx*rx+ry*ry>120*120)continue;const v2=b.vx*b.vx+b.vy*b.vy||1;let tc=(rx*b.vx+ry*b.vy)/v2;
+  if(tc<-.05)continue;tc=cl(tc,0,.75);const px=rx-b.vx*tc,py=ry-b.vy*tc,d=Math.hypot(px,py)||.01,lim=HB+BR(b)+11;
+  if(d<lim){const w=(lim-d)/lim*760/(tc*3+.35);fx_+=px/d*w;fy_+=py/d*w}}
+ for(const d of S.dec){if(d.type==='lane'){const p=emit(d.a),ux=Math.cos(d.a),uy=Math.sin(d.a),rx=E.x-p.x,ry=E.y-p.y,al=rx*ux+ry*uy,pe=-rx*uy+ry*ux;
+   if(al>-10&&Math.abs(pe)<22){const s=pe>=0?1:-1;fx_+=-uy*s*900*(22-Math.abs(pe))/22;fy_+=ux*s*900*(22-Math.abs(pe))/22}}
+  if(d.type==='ret'){const rx=E.x-d.x,ry=(E.y-d.y)/.62,m=Math.hypot(rx,ry)||.01;if(m<(d.r||d.r0)+22){fx_+=rx/m*700;fy_+=ry/m*700}}
+  if(d.type==='flaque'){const rx=E.x-d.x,ry=E.y-d.y,m=Math.hypot(rx,ry)||.01;if(m<40){fx_+=rx/m*400;fy_+=ry/m*400}}}
+ const m=Math.hypot(fx_,fy_);if(m<2){E.mv=0;return}const s=Math.min(ENG_V,m);E.x+=fx_/m*s*dt;E.y+=fy_/m*s*dt;E.mv=s;if(Math.abs(fx_)>4)E.face=fx_>0?1:-1}
+
+/* ======================= rendu ======================= */
+function toImage(P,d){const D=d.data;D.fill(0);
+ for(let y=0;y<H;y++)for(let x=0;x<W;x++){const i=y*W+x;let c=P.c[i];
+  if(!c&&((x>0&&P.c[i-1])||(x<W-1&&P.c[i+1])||(y>0&&P.c[i-W])||(y<H-1&&P.c[i+W])))c=OUT;
+  if(P.fx[i])c=P.fx[i];if(!c)continue;const[r,g,b]=rgb(c);D[i*4]=r;D[i*4+1]=g;D[i*4+2]=b;D[i*4+3]=255}return d}
+function ground(w,h,seed){const c=document.createElement('canvas');c.width=w;c.height=h;const g=c.getContext('2d'),d=g.createImageData(w,h),R=rng(seed),S=PAL.slate;
+ const off=[];for(let r=0;r<h/10+2;r++)off.push(Math.floor(R()*16));
+ for(let y=0;y<h;y++)for(let x=0;x<w;x++){const row=Math.floor(y/10),xx=x+off[row],cx=xx%18,cy=y%10;let v=.45+Math.sin(x*.37+y*.91)*.08+((Math.floor(xx/18)*7+row*3)%5)*.04;
+  if(cx===0||cy===0)v=.05;else if(cx===1||cy===1)v+=.15;const col=rgb(sh(S,v,x,y)),i=(y*w+x)*4;d.data[i]=col[0];d.data[i+1]=col[1];d.data[i+2]=col[2];d.data[i+3]=255}
+ g.putImageData(d,0,0);return c}
+const ENG=new Image();ENG.src='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAA4AAAAmCAYAAAD0t6qKAAADPklEQVR4nI2VX2gUVxTGfxu2are6QRPiUjQOu9OYh/YlhhBwDWnVGAKKQhCpUsQHwcaWgKDFGMyDDUYQfAgVfBAR9cEnsVTskjT+Y1nCEqwPbQizm3EbZIgxYSfrWP/Q+LB7786dWakHljtz9n73O+e755wJ4LFQaOWS1+c4hYDXF/SC4o013j08mmTJC65yg7rjOgCR2tXKGm+s8UWinOIGA1hzC8V1/hXGrKOEXMUHzJpbkIyD37b7/g96Hcf3dcpn08hy6Jc7aHrUB/QxJkaSmEYWAE2Pcvn7LiUV8ezLEeBmbxdTpgVAgxZh8MY9VmgxPl18ztjfFo5TCATcoLu/XpGHXPx5EAA7b2P9t4Id29uYTqdY9e5frqVzao5rnqYBmN/QzJG+kxhGlrqnaZLvatFjGn+OJlj12bKyOKHQyqXx4aPKAeNv1wAwu6EZHTAypiqOAEUaGhU13eYFgUtVa2pSgq6nDGWTHtPITpt+oGAwjSxTpoWdt9E9d9exrR2AxnW1ZaC4YLGeOHcWw8gqYCNjEq4Oy3df5QASZJQiETk+zNg8D+llRrcwkzNzEiQY9ZgGwLLly1m082VGtzBSEA9jauwub16XKzQIcPqPhdLrah7PfsLED710xjcCkHs2LzdviYXZ31rN3nQp1JmcyUzOJL11D7V1ER8AoPXrTkXAIMC6+mIOVmnT+i++pL3rGwCim5Dh5v6xSIwkgVJ3iOoR9/jwZYidJaBb1XsPkjx+YuA4hYDSj5oepUGLKCEaGVOqWr/+c+lXgIIxn88XVS2BKtWqLIAfr95nbdVrAAb6TwLl+6sElowD/cfY31qsCm/FCObbvz2Qky4IxUndufNgsSdThrz86XSK6XQKO29z69qLyqEK6zvQwYnjPwEQrg7Td6CDxEiSU6VZ80FxAIZ6ujmyo0n6vEorQMcpBPZeuKMcYOdtH6AiozBRVqL/Lo2OfxzQNLJcGh3nScasOMX/l9Edttd8k/y7do1nLwoc3trCxd8n2PxVhF1tcQBajg5LZSsyXj4/gKZHGerp5vrYX9J/ZneT/Ez4GHOJYWUiCKWFVWR0nEKgvqPYXqLghV/8KuboZvYyeO09T9GJyj8e0NYAAAAASUVORK5CYII=';
+function drawEng(g,E,t,alpha){if(!ENG.complete||!ENG.width)return;if(E.inv>0&&Math.floor(t*20)%2)return;g.save();g.globalAlpha=alpha;g.translate(Math.round(E.x),0);g.scale(E.face<0?-1:1,1);
+ const bob=E.mv>0?Math.round(Math.abs(Math.sin(t*12))):0;g.drawImage(ENG,-7,Math.round(E.y)-37-bob);g.restore()}
+function shadow(g,x,y,rx,ry,al=.5){g.fillStyle=`rgba(0,0,0,${al})`;for(let j=-ry;j<=ry;j++){const w=Math.round(rx*Math.sqrt(1-(j/ry)**2));if(w>0)g.fillRect(Math.round(x-w),Math.round(y+j),w*2,1)}}
+const bodyState=V=>({a:V.a,open:V.open,look:V.look,ph:V.ph,close:V.cls,irisOut:V.irisOut,weep:V.weep});
+function drawArena(c){const g=c.g2,S=c.S,E=S.eng,t=S.t;g.imageSmoothingEnabled=false;g.drawImage(c.gr,0,0);
+ for(const d of S.dec){const age=t-d.t0;
+  if(d.type==='lane'){const p=emit(d.a),ux=Math.cos(d.a),uy=Math.sin(d.a),warn=age<d.warn;g.fillStyle=warn?`rgba(226,56,46,${.18+.18*Math.sin(age*30)})`:'rgba(255,138,106,.2)';
+   for(let s=0;s<520;s+=2){const x=p.x+ux*s,y=p.y+uy*s;for(let o=-6;o<=6;o+=2){const X=Math.round(x-uy*o),Y=Math.round(y+ux*o);if(((X+Y)>>1)%2===0)g.fillRect(X,Y,2,1)}}}
+  if(d.type==='flaque'){const k=cl(age/d.dur),pu=k>.75?.5+.5*Math.sin(age*40):0,rx=9+k*2,ry=3.4+k;
+   for(let j=-Math.ceil(ry);j<=ry;j++){const w=Math.round(rx*Math.sqrt(Math.max(0,1-(j/ry)**2)));for(let i=-w;i<w;i++){const X=Math.round(d.x+i),Y=Math.round(d.y+j),e=Math.abs(i)>=w-1||Math.abs(j)>=ry-.5;
+    g.fillStyle=e?(pu>.5?PAL.blood[4]:PAL.memb[2]):((X+Y)&1?PAL.memb[1]:PAL.memb[3]);g.fillRect(X,Y,1,1)}}}
+  if(d.type==='ret'){const r=d.r||d.r0,u=cl(age/d.dur),col=u>.8&&Math.floor(age*24)%2?PAL.blood[5]:PAL.blood[4];g.fillStyle=col;
+   for(let i=0;i<96;i++){const a=i/96*TAU;if(i%6>3)continue;const x=d.x+Math.cos(a)*r,y=d.y+Math.sin(a)*r*.62*Math.abs(Math.cos(a))**.0;g.fillRect(Math.round(x),Math.round(d.y+Math.sin(a)*r*.62*(.55+.45*Math.abs(Math.cos(a)))),1,1)}
+   g.fillStyle=PAL.blood[3];for(let i=-3;i<=3;i++){g.fillRect(Math.round(d.x+i),Math.round(d.y),1,1)}g.fillStyle=PAL.ichor[0];g.fillRect(Math.round(d.x)-1,Math.round(d.y)-1,3,3);
+   g.fillStyle=`rgba(226,56,46,${.08+.14*u})`;for(let j=-Math.ceil(r*.62);j<=r*.62;j+=2){const w=r*Math.sqrt(Math.max(0,1-(j/(r*.62))**2));for(let i=-w;i<w;i+=2)if(((i+j)>>1)%2===0)g.fillRect(Math.round(d.x+i),Math.round(d.y+j),2,1)}}
+  if(d.type==='walleyes'){const op=cl(age/.5);for(let x=14;x<AW;x+=28)wallEye(g,x,30,op,Math.PI/2,t+x);for(let y=58;y<AH;y+=30){wallEye(g,4,y,op,0,t+y)}}}
+ g.fillStyle='rgba(0,0,0,.45)';for(const b of S.bul){const r=Math.round(BR(b)*.8);g.fillRect(Math.round(b.x-r),Math.round(b.y),r*2,1)}
+ for(const o of S.orbs){const p=orbPos(o);shadow(g,p.x,p.y+1,6,1.6,.4)}
+ shadow(g,E.x,E.y+1,6,1.8);
+ const behind=E.y<F.y+6;if(behind)drawEng(g,E,t,1);
+ g.drawImage(c.spr,SPX,SPY);
+ if(behind)drawEng(g,E,t,.42);else drawEng(g,E,t,1);
+ g.fillStyle='#ffffff';g.fillRect(Math.round(E.x)-1,Math.round(E.y)-1,2,2);
+ if(S.vis.dk>.02){g.fillStyle=`rgba(3,1,2,${.5*S.vis.dk})`;g.fillRect(0,0,AW,AH)}
+ for(const b of S.bul){const s=bSprite(b);g.drawImage(s,Math.round(b.x-s.width/2),Math.round(b.y-LIFT-b.h-s.height/2))}
+ for(const o of S.orbs){const p=orbPos(o),a=ang(p,E),r=((Math.round(a/TAU*16)%16)+16)%16,y=p.y-LIFT-p.h;
+  g.fillStyle=`rgba(226,56,46,${.18+.1*Math.sin(t*9)})`;for(let j=-11;j<=11;j+=2)for(let i=-11;i<=11;i+=2)if(i*i+j*j<121&&((i+j)>>1)%2===0)g.fillRect(Math.round(p.x+i),Math.round(y+j),1,1);
+  g.drawImage(ORB[r],Math.round(p.x-8),Math.round(y-8));if(o.out<.98){g.fillStyle=PAL.blood[3];for(let i=0;i<4;i++)g.fillRect(Math.round(lerp(p.x,F.x,i/4)),Math.round(lerp(y,EYE_Y,i/4)),1,1)}}
+ for(const f of S.fx){const k=(t-f.t0)/.6;
+  if(f.type==='hit'){g.strokeStyle=`rgba(255,240,230,${1-k})`;g.beginPath();g.arc(f.x,f.y-14,6+k*10,0,TAU);g.stroke()}
+  else if(f.type==='flash'){g.fillStyle=`rgba(255,230,220,${.28*(1-k)})`;g.fillRect(0,0,AW,AH)}
+  else if(f.type==='boom'){const kk=(t-f.t0)/.7;g.fillStyle=`rgba(255,138,106,${1-kk})`;for(let i=0;i<28;i++){const a=i/28*TAU,r=6+kk*26;g.fillRect(Math.round(f.x+Math.cos(a)*r),Math.round(f.y+Math.sin(a)*r*.62),2,1)}}
+  else if(f.type==='splash'){g.fillStyle=`rgba(224,168,148,${1-k})`;for(let i=0;i<7;i++){const a=i/7*TAU,r=3+k*9;g.fillRect(Math.round(f.x+Math.cos(a)*r),Math.round(f.y-4-Math.abs(Math.sin(a))*r*.8+k*k*6),1,1)}}
+  else{g.fillStyle=`rgba(200,180,168,${.8-k})`;for(let i=0;i<8;i++){const a=i/8*TAU;g.fillRect(Math.round(f.x+Math.cos(a)*2),Math.round(f.y-LIFT+Math.sin(a)*2),1,1)}}}}
+function wallEye(g,x,y,op,a,ph){const s=BSPR.oeil[1][((Math.round(a/TAU*16)%16)+16)%16];const h=Math.round(5*op*(.7+.3*Math.sin(ph*2)));
+ g.fillStyle=PAL.pale[2];g.fillRect(x-6,y-5,13,11);g.fillStyle=PAL.pale[0];g.fillRect(x-6,y-5,13,1);g.fillRect(x-6,y+5,13,1);
+ if(h>0)g.drawImage(s,0,5-h,11,h*2+1,x-5,y-h,11,h*2+1);else{g.fillStyle=OUT;g.fillRect(x-5,y,11,1)}}
+
+/* ======================= cartes ======================= */
+let BODY='orbite',active=null,paused=false,PH=0;const keys={l:0,r:0,u:0,d:0};
+const drawOf=k=>LOOKS.find(l=>l.key===k).draw;
+function demo(t,ph){const T=t%6.4;let open=0,a=0,close=0;
+ if(T<2.2){open=0;if(T>1.2&&T<1.38)close=1}else if(T<2.7)open=(T-2.2)/.5;else if(T<4.9){open=1;a=cl((T-2.7)/.3)}else if(T<5.6){open=a=1-(T-4.9)/.7}
+ const look=T<2.7?Math.PI/2+Math.sin(t*.7)*1.4:.5+(T-2.7)*.9;return{a:ease(a),open:ease(open),look,ph,close,irisOut:0,weep:0}}
+const looksEl=document.getElementById('looks'),atksEl=document.getElementById('atks'),duelEl=document.getElementById('duel'),lcards=[],acards=[];
+function canvasCtx(cv){const g=cv.getContext('2d');g.imageSmoothingEnabled=false;return g}
+LOOKS.forEach((v,i)=>{const f=document.createElement('figure');if(v.cls)f.className=v.cls;
+ f.innerHTML=`<div class="row"><div class="vis"><small class="l">Détail animé, agrandi</small><canvas width="${W}" height="${H}"></canvas>
+ <div class="strip">${[0,1,2].map(p=>`<div><small class="l">×1 · phase ${['I','II','III'][p]}</small><canvas width="232" height="${H}"></canvas></div>`).join('')}</div></div>
+ <div class="cap"><b class="t">${v.name}</b><i>${v.title}</i><p>${v.lore}</p><h3>DÉTAILS</h3><ul>${v.pts.map(x=>`<li>${x}</li>`).join('')}</ul><h3>EN JEU</h3><p>${v.game}</p></div></div>`;
+ looksEl.appendChild(f);const cvs=[...f.querySelectorAll('canvas')];
+ const spr=document.createElement('canvas');spr.width=W;spr.height=H;const sg=spr.getContext('2d');
+ lcards.push({v,f,big:canvasCtx(cvs[0]),small:cvs.slice(1).map(canvasCtx),spr,sg,img:sg.createImageData(W,H),gr:ground(W,H,i*7+1),grs:ground(232,H,i*7+2),vis:true,t:i*1.3})});
+const BODIES={ref:'Actuel',orbite:'1 Orbite',arrache:'2 Globe',couronne:'3 Couronne',voile:'4 Voile'};
+const bodiesEl=document.getElementById('bodies');for(const k in BODIES){const b=document.createElement('button');b.textContent=BODIES[k];b.dataset.k=k;b.setAttribute('aria-pressed',k===BODY);b.onclick=()=>{BODY=k;for(const x of bodiesEl.children)x.setAttribute('aria-pressed',x.dataset.k===k)};bodiesEl.appendChild(b)}
+const ATK={
+ larmes:{title:'L’ŒIL PLEURE',bul:['larme'],
+  lore:'L’œil se plisse et pleure. Les larmes partent en cloche et tombent autour de l’Ingénieur (une sur trois pile sur lui). Chacune éclabousse en 5 gouttes et laisse une flaque laiteuse qui palpite puis éclate en couronne.',
+  how:['L’ombre au sol montre où la larme tombe : on la lit pendant 1 s.','La flaque reste 1,5 s : elle bat juste avant d’éclater.','<span>Ouverture</span> : l’œil reste mi-clos, donc pas de ×2 pendant les Larmes.'],
+  ph:['<span>I</span> : 8 larmes, couronnes de 8.','<span>II</span> : 11 larmes, couronnes de 10.','<span>III</span> : 14 larmes, couronnes de 12, larmes de sang.']},
+ cils:{title:'LA SPIRALE DE DENTS',bul:['cil'],
+  lore:'Les dents des paupières se détachent et partent en spirale depuis toute la base. Quatre bras tournent, puis la rotation s’inverse à mi-salve : il faut changer de sens au bon moment.',
+  how:['Les cils partent lents puis accélèrent : on lit la spirale près du boss.','L’inversion est annoncée par l’œil qui roule de l’autre côté.','<span>Ouverture</span> : œil grand ouvert, bonne fenêtre pour frapper au corps à corps entre deux bras.'],
+  ph:['<span>I</span> : 4 bras, 44 tirs.','<span>II</span> : 5 bras, 52 tirs.','<span>III</span> : 6 bras, 60 tirs.']},
+ strabisme:{title:'DEUX RAYONS QUI SE CROISENT',bul:['oeil'],
+  lore:'L’œil louche : deux couloirs s’allument de part et d’autre de l’Ingénieur, puis deux torrents d’yeux balaient l’un vers l’autre, se croisent sur lui et continuent. Les torrents ont des trous réguliers.',
+  how:['Annonce de 0,8 s : les deux couloirs au sol.','On ne peut pas les distancer : il faut <span>passer par un trou</span> d’un torrent.','Avec la Couronne d’yeux, ce sont deux satellites qui tirent, un de chaque côté.'],
+  ph:['<span>II</span> : apparaît, balayage à 0,62 rad/s.','<span>III</span> : balayage à 0,78 rad/s.']},
+ pupilles:{title:'LES IRIS SE DÉTACHENT',bul:['oeil','larme'],orb:1,
+  lore:'L’iris sort de l’œil et se divise en trois pupilles volantes qui tournent autour de la salle. Chacune vise l’Ingénieur et lâche des couronnes de larmes. L’orbite vide saigne pendant ce temps.',
+  how:['Les pupilles sont des <span>cibles</span> (×3 dégâts) ; en crever une l’éteint pour le reste de l’attaque.','L’œil vide ne voit plus : pas de Regard pendant 6 s.','Les pupilles reviennent dans l’orbite à la fin, avec un trait de sang.'],
+  ph:['<span>II</span> : apparaît, 3 pupilles.','<span>III</span> : 3 pupilles plus rapides ; piste : 4.']},
+ fixation:{title:'LE REGARD QUI SE POSE',bul:['oeil'],
+  lore:'L’œil fixe un point : une marque carmin en amande se pose sous l’Ingénieur, le suit plus lentement que lui et se resserre. Au bout de 1,9 s, elle éclate en couronne d’yeux.',
+  how:['La marque suit à 62–90 px/s : l’Ingénieur va plus vite, il faut <span>sortir et ne pas s’arrêter</span>.','Des yeux chercheurs partent pendant ce temps pour gêner la fuite.','Être dans la marque quand elle éclate : 8 dégâts.'],
+  ph:['<span>III</span> : 4 marques de suite.']},
+ clignement:{title:'L’OBSCURITÉ, PUIS L’ÉCLAIR',bul:['oeil'],
+  lore:'L’œil se ferme : la salle s’assombrit pendant une seconde. Il se rouvre d’un coup, dans un éclair, et lâche une couronne d’yeux percée de deux brèches. Il cligne encore, et encore.',
+  how:['Chaque couronne a <span>deux brèches</span> opposées, dont une vers l’Ingénieur (à ±0,6 rad près).','Le noir ne cache pas les balles : il cache l’œil, donc la fenêtre ×2.','Lien avec le Voile : le voile tombe à chaque clignement.'],
+  ph:['<span>III</span> : 5 couronnes de 42 yeux.']},
+ milleyeux:{title:'LA SALLE ENTIÈRE REGARDE',bul:['oeil'],
+  lore:'À l’entrée en phase III, les parois de la salle s’ouvrent : des dizaines d’yeux. Ils lâchent des murs d’yeux qui traversent la salle, de gauche à droite et du fond vers l’avant, avec une seule brèche.',
+  how:['Murs lents (46–60 px/s) : on cherche la brèche.','<span>La masse fait écran</span> : les yeux qui touchent la Matrice s’y perdent, se cacher derrière elle est une solution.','Une seule fois par duel, à la transition.'],
+  ph:['<span>III</span> : 5 murs, deux croisés en même temps à partir du troisième.']},
+};
+function mkArena(parent,pats,name,info,rec){const f=document.createElement('figure');if(rec)f.className='rec';
+ f.innerHTML=`<div class="row atk"><div class="vis arena"><small class="l">Arène à l’échelle du jeu · <span class="cur">${name}</span></small><canvas width="${AW}" height="${AH}" tabindex="0" aria-label="Arène : ${name}"></canvas>
+ <div class="hud"><span>Bot <em class="who">actif</em></span><span>Touches subies <em class="hits">0</em></span><span>Balles <em class="nb">0</em></span></div></div><div class="cap">${info}</div></div>`;
+ parent.appendChild(f);const cv=f.querySelector('canvas'),spr=document.createElement('canvas');spr.width=W;spr.height=H;const sg=spr.getContext('2d');
+ const c={f,c2:cv,g2:canvasCtx(cv),spr,sg,img:sg.createImageData(W,H),gr:ground(AW,AH,acards.length*5+3),S:newSim(pats),acc:0,vis:true,
+  hud:{who:f.querySelector('.who'),hits:f.querySelector('.hits'),nb:f.querySelector('.nb'),cur:f.querySelector('.cur')}};
+ cv.addEventListener('click',()=>{active=active===c?null:c;for(const k of acards)k.c2.classList.toggle('on',k===active);cv.focus()});
+ acards.push(c);return c}
+ALL.forEach((k,i)=>{const A=ATK[k],P_=PAT[k];
+ const info=`<b class="t">${String.fromCharCode(65+i)} · ${P_.name}</b><i>${A.title}</i><span class="tag ph">dès la phase ${P_.ph}</span><p>${A.lore}</p><h3>LECTURE</h3><ul>${A.how.map(x=>`<li>${x}</li>`).join('')}</ul><h3>PAR PHASE</h3><ul>${A.ph.map(x=>`<li>${x}</li>`).join('')}</ul><div class="bul"></div>`;
+ const c=mkArena(atksEl,k,P_.name,info,false);const bd=c.f.querySelector('.bul');
+ for(const st of A.bul)for(const big of(BSTY[st].n(1)!==BSTY[st].n(0)?[0,1]:[0])){const cv=document.createElement('canvas'),s=BSPR[st][big][2];cv.width=cv.height=15;cv.getContext('2d').drawImage(s,Math.floor((15-s.width)/2),Math.floor((15-s.height)/2));bd.appendChild(cv)}
+ if(A.orb){const cv=document.createElement('canvas');cv.width=cv.height=19;cv.getContext('2d').drawImage(ORB[4],1,1);bd.appendChild(cv)}
+ bd.insertAdjacentHTML('beforeend',`<em>${A.bul.map(s=>({oeil:'yeux',larme:'larmes',cil:'cils-dents'})[s]).join(', ')}${A.orb?', pupille errante':''} (agrandis)</em>`)});
+const duel=mkArena(duelEl,'duel','Duel complet',`<b class="t">Duel complet</b><i>ROTATION DE LA PHASE CHOISIE</i><p>Les attaques de la phase s’enchaînent avec le souffle du jeu entre deux (1,6 / 1,4 / 1,2 s). Passer en phase III joue d’abord <b>Les mille yeux</b>.</p><h3>EN COURS</h3><p class="now">—</p><h3>ROTATION</h3><p class="rot"></p>`,true);
+duel.hud.now=duel.f.querySelector('.now');duel.hud.rot=duel.f.querySelector('.rot');
+addEventListener('keydown',e=>{if(e.code==='Escape'){active=null;for(const k of acards)k.c2.classList.remove('on');return}if(active&&KM[e.code]){keys[KM[e.code]]=1;e.preventDefault()}});
+const KM={ArrowLeft:'l',KeyA:'l',KeyQ:'l',ArrowRight:'r',KeyD:'r',ArrowUp:'u',KeyW:'u',KeyZ:'u',ArrowDown:'d',KeyS:'d'};
+addEventListener('keyup',e=>{if(KM[e.code])keys[KM[e.code]]=0});
+function setPhase(p){const prev=PH;PH=p;for(let i=0;i<3;i++)document.getElementById('ph'+i).setAttribute('aria-pressed',i===p);
+ for(const c of acards){c.S.ph=p;c.S.k=[1,1.12,1.25][p];cancel(c.S)}duel.S.idx=0;duel.S.intro=p===2&&prev!==2?'milleyeux':null;
+ duel.hud.rot.textContent=(p===2?'Les mille yeux (entrée) · ':'')+ROT[p].map(k=>PAT[k].name).join(' → ')}
+for(let i=0;i<3;i++)document.getElementById('ph'+i).onclick=()=>setPhase(i);
+document.getElementById('pause').onclick=e=>{paused=!paused;e.target.textContent=paused?'Lecture':'Pause'};
+const io=new IntersectionObserver(es=>{for(const e of es){const c=[...lcards,...acards].find(k=>k.f===e.target);if(c)c.vis=e.isIntersecting}},{rootMargin:'100px'});for(const c of[...lcards,...acards])io.observe(c.f);
+function render(draw,st,c,t){const P=new Px();draw(P,t,st);c.sg.putImageData(toImage(P,c.img),0,0)}
+function paintLook(c,full){const t=c.t;render(c.v.draw,demo(t,PH),c,t);c.big.drawImage(c.gr,0,0);c.big.drawImage(c.spr,0,0);
+ if(full)c.small.forEach((g,p)=>{render(c.v.draw,demo(t+p*.9,p),c,t+p*.9);g.drawImage(c.grs,0,0);shadow(g,15,FY+1,6,1.8);drawEng(g,{x:15,y:FY,inv:0,face:1,mv:0},0,1);g.drawImage(c.spr,32,0)})}
+function paintArena(c){render(drawOf(BODY),bodyState(c.S.vis),c,c.S.t);drawArena(c)}
+const q=new URLSearchParams(location.search);
+setPhase(q.has('ph')?+q.get('ph'):0);if(q.has('body'))BODY=q.get('body');
+if(q.has('still'))paused=true;
+if(q.has('lt'))for(const c of lcards)c.t=+q.get('lt');
+if(q.has('t')){const T=+q.get('t');for(const c of acards)for(let s=0;s<T*60;s++)step(c.S,1/60,null);for(const c of lcards)c.t+=T}
+let last=performance.now(),hudT=0,fr=0;
+function frame(now){const dt=Math.min(.05,(now-last)/1000);last=now;hudT+=dt;fr++;
+ for(const c of lcards){if(!c.vis)continue;if(!paused)c.t+=dt;paintLook(c,fr%3===0)}
+ for(const c of acards){if(!c.vis)continue;if(!paused){c.acc+=dt;while(c.acc>=1/60){step(c.S,1/60,active===c?keys:null);c.acc-=1/60}}paintArena(c);
+  if(hudT>.25){c.hud.who.textContent=active===c?'vous pilotez':'actif';c.hud.hits.textContent=c.S.eng.hits;c.hud.nb.textContent=c.S.bul.length;if(c.hud.now)c.hud.now.textContent=c.S.gen?PAT[c.S.cur].name:'souffle'}}
+ if(hudT>.25)hudT=0;requestAnimationFrame(frame)}
+for(const c of lcards)paintLook(c,true);for(const c of acards)paintArena(c);
+requestAnimationFrame(frame);
+// capture hors ligne (tools : firefox --screenshot) : ?snap=looks&lt=3.6&ph=0 ou ?snap=atk&t=4&ph=1&body=orbite
+if(q.has('snap'))ENG.decode().then(()=>{paused=true;const mode=q.get('snap'),s=+(q.get('s')||(mode==='looks'?3:1)),cols=+(q.get('cols')||2);
+ const cvs=mode==='looks'?lcards.map(c=>{c.t=+(q.get('lt')||3.6);paintLook(c,false);return c.big.canvas}):acards.map(c=>{paintArena(c);return c.c2});
+ const o=document.createElement('canvas'),w=cvs[0].width,h=cvs[0].height;o.width=w*s*cols;o.height=h*s*Math.ceil(cvs.length/cols);const g=o.getContext('2d');g.imageSmoothingEnabled=false;
+ cvs.forEach((c,i)=>g.drawImage(c,(i%cols)*w*s,Math.floor(i/cols)*h*s,w*s,h*s));o.style.cssText='position:absolute;left:0;top:0;z-index:99;width:auto';document.body.appendChild(o);document.body.style.background='#000'})
+
+</script>
+</body></html>

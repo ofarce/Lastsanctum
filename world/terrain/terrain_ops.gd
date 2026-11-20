@@ -41,10 +41,40 @@ func dig_cell(i: int, j: int) -> void:
 	if vault:
 		open_vault()
 	# Une galerie touche la case : elle est découverte.
-	if not reveal_galleries_near(x - 1.5, z - 1.5, x + 5.5, z + 5.5) and not vault:
-		Events.notice.emit("Roche creusée : la grotte s’agrandit.", 1.5)
+	reveal_galleries_near(x - 1.5, z - 1.5, x + 5.5, z + 5.5)
 	if painter:
 		painter.terrain.flush()
+
+
+## Salle de départ (zone de CaveShape.in_cave) : le sol et les faces de falaise du baker suivent le contour
+## du prototype. Sol repeint d'après la forme réelle, faces du baker et décor devenu faux retirés, une face
+## vue de face au nord de chaque ouverture (comme pour une galerie).
+const CAVE_RECT := Rect2(-92.0, -204.0, 184.0, 116.0)
+
+
+func reshape_cave() -> void:
+	var r := CAVE_RECT
+	registry.remove_in_rect(r.position.x, r.position.y, r.end.x, r.end.y, func(e: Dictionary) -> bool:
+		if DecorRegistry.is_fixed(e) or e.get("runtime", false):
+			return false
+		var x: float = e["x"]
+		var z: float = e["z"]
+		if String(e.get("s", "")).begins_with("face"):
+			return true
+		return CaveShape.in_cave(x, z) != CaveShape.in_prototype_outline(x, z))
+	if painter:
+		painter.repaint_cave(r.position.x, r.position.y, r.end.x, r.end.y)
+	var z := r.position.y
+	while z < r.end.y:
+		var x := r.position.x
+		while x < r.end.x:
+			var cx := x + 2.0
+			if not state.ground(cx, z + 2.0) and CaveShape.in_cave(cx, z + 6.0):
+				var v := ((floori(x / 4.0) * 7 + floori(z / 4.0) * 3) & 7) % 6
+				registry.add({"s": "face5_%d" % v, "runtime": true, "x": x, "z": z + 4.0, "d": z + 4.0, "bx": x, "bz": z + 4.0})
+			x += 4.0
+		z += 4.0
+	state.version += 1
 
 
 ## Réserve du coffre antique : devient creuse, sol repeint, décor de roche retiré, parois au nord.
@@ -73,6 +103,23 @@ func open_vault() -> void:
 	state.version += 1
 	Combat.zone(CaveShape.CHEST.x, CaveShape.CHEST.y, 6.0, Color("#5ce8ff"))
 	Events.notice.emit("Une réserve tyrienne scellée ! Un coffre antique y repose.", 4.0)
+
+
+## Mur sud soufflé par l'explosion du bouclier : la brèche devient creuse, sol repeint, roche retirée.
+func open_breach() -> void:
+	if state.breach_open:
+		return
+	state.breach_open = true
+	var X := CaveShape.BREACH_W + 4.0
+	registry.remove_in_rect(-X, CaveShape.CAVE_Z1 - 4.0, X, -70.0, func(e: Dictionary) -> bool:
+		for k in 7:
+			if CaveShape.in_breach(e["x"], e["z"] - k * 1.5):
+				return true
+		return false)
+	if painter:
+		painter.paint_region(-X - 4.0, CaveShape.CAVE_Z1 - 8.0, X + 4.0, -68.0)
+		painter.terrain.flush()
+	state.version += 1
 
 
 func reveal_galleries_near(x0: float, z0: float, x1: float, z1: float) -> bool:
@@ -173,11 +220,11 @@ func reveal_gallery(sx: float, sz: float) -> void:
 	for p in woke:
 		p["active"] = true
 		p["next"] = GameState.sim_time + 5.0
-		registry.add({"evil": p, "x": p["x"], "z": p["z"], "d": p["z"] + 0.5})
-		Combat.zone(p["x"], p["z"] + 1.0, 4.0, Color("#ff5030"))
+		registry.add({"evil": p, "x": p["x"], "z": p["z"], "d": p["z"] + 3.8})
+		Combat.zone(p["x"], p["z"], 6.0, Color("#e0583a"))
 	state.version += 1
 	Combat.zone((X0 + X1) / 2.0, (Z0 + Z1) / 2.0, 6.0, Color("#8fd6f0"))
 	var msg := "Galerie découverte ! (%d / %d)" % [state.found, state.count]
 	if not woke.is_empty():
-		msg += " · un portail maléfique s’y éveille : les rejetons de la Bête en sortent sans fin."
+		msg += " · un Pylône de Merenor s’y dresse : sa corruption ronge l’Ingénieur et ses gardiens renaissent tant qu’il n’est pas canalisé."
 	Events.notice.emit(msg, 5.0 if not woke.is_empty() else 3.0)

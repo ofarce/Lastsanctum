@@ -20,11 +20,22 @@ const PARAPET := 0.8
 const DECK_OVERHANG := 1.6
 ## Berge sableuse dessinée autour de l'eau (unités), sans effet sur la praticabilité.
 const BANK := 1.6
+## Mares (2026-11-20) : la rivière s'élargit par endroits, loin des ponts ; les plus larges portent un
+## banc de sable au milieu (îlot bas, hors d'eau, inaccessible à pied). Élargissement maximal d'une mare.
+const POOL_MAX := 5.0
+const POOL_COUNT := 5
+const POOL_CLEAR := 34.0
 
 var seed := 0
 var _p: Array[float] = []
 ## Ponts : {x (centre, multiple de 4), z0, z1 (étendue du tablier)}.
 var bridges: Array[Dictionary] = []
+## Mares : {x, r (demi-longueur), add (élargissement au centre)}.
+var pools: Array[Dictionary] = []
+## Bancs de sable : {x, z, a (demi-longueur), b (demi-largeur)}.
+var bars: Array[Dictionary] = []
+## Phases des petites ondulations des berges.
+var _w: Array[float] = []
 ## Crue en cours (unités au-delà des berges), 0 au repos.
 var flood := 0.0
 
@@ -39,6 +50,29 @@ func _init(map_seed: int) -> void:
 	for side: float in [-1.0, 1.0]:
 		xs.append(side * (100.0 + r.next() * 60.0))
 		xs.append(side * (270.0 + r.next() * 110.0))
+	# Variété (autre générateur : les ponts restent où ils étaient) : ondulations des berges, mares, bancs.
+	var v := Rng.new(map_seed ^ 0x9a7e)
+	for k in 3:
+		_w.append(v.next() * TAU)
+	for k in POOL_COUNT * 6:
+		if pools.size() >= POOL_COUNT:
+			break
+		var px := lerpf(CaveShape.WORLD_X0 + 40.0, CaveShape.WORLD_X1 - 40.0, v.next())
+		var pr := 13.0 + v.next() * 10.0
+		var add := 2.5 + v.next() * (POOL_MAX - 2.5)
+		var ok := true
+		for bx0 in xs:
+			if absf(px - bx0) < POOL_CLEAR + pr:
+				ok = false
+		for p in pools:
+			if absf(px - float(p["x"])) < pr + float(p["r"]) + 20.0:
+				ok = false
+		if ok:
+			pools.append({"x": px, "r": pr, "add": add})
+	for p in pools:
+		if float(p["add"]) >= 3.6:
+			var bx: float = p["x"]
+			bars.append({"x": bx, "z": center(bx) + (v.next() - 0.5) * 2.0, "a": 3.0 + v.next() * 2.0, "b": 1.1 + v.next() * 0.5})
 	for bx0 in xs:
 		var bx := roundf(bx0 / 4.0) * 4.0
 		var z0 := INF
@@ -54,22 +88,44 @@ func _init(map_seed: int) -> void:
 
 ## Ligne médiane de la rivière en x.
 func center(x: float) -> float:
-	return MID_Z + MEANDER * (0.6 * sin(x * 0.011 + _p[0]) + 0.3 * sin(x * 0.029 + _p[1]) + 0.1 * sin(x * 0.083 + _p[2]))
+	var c := MID_Z + MEANDER * (0.6 * sin(x * 0.011 + _p[0]) + 0.3 * sin(x * 0.029 + _p[1]) + 0.1 * sin(x * 0.083 + _p[2]))
+	# Petites ondulations : les berges ne filent plus au cordeau.
+	if not _w.is_empty():
+		c += 0.5 * sin(x * 0.21 + _w[0]) + 0.25 * sin(x * 0.47 + _w[1])
+	return c
 
 
-## Demi-largeur de l'eau en x (≈ 2,6 à 5,8 u).
+## Demi-largeur de l'eau en x (≈ 2,3 à 5,9 u, jusqu'à POOL_MAX de plus au cœur d'une mare).
 func half_width(x: float) -> float:
-	return HALF_W + 1.1 * sin(x * 0.017 + _p[3]) + 0.5 * sin(x * 0.061 + _p[4])
+	var hw := HALF_W + 1.1 * sin(x * 0.017 + _p[3]) + 0.5 * sin(x * 0.061 + _p[4])
+	if not _w.is_empty():
+		hw += 0.3 * sin(x * 0.33 + _w[2])
+	for p in pools:
+		var t := absf(x - float(p["x"])) / float(p["r"])
+		if t < 1.0:
+			hw += float(p["add"]) * (1.0 - t * t) * (1.0 - t * t)
+	return hw
 
 
-## Distance signée à la berge (négative dans l'eau).
+## Distance signée à la berge (négative dans l'eau). Un banc de sable est une berge au milieu de l'eau.
 func bank_distance(x: float, z: float) -> float:
-	return absf(z - center(x)) - half_width(x)
+	var d := absf(z - center(x)) - half_width(x)
+	if d < 0.0:
+		for b in bars:
+			var dx := (x - float(b["x"])) / float(b["a"])
+			if dx > -3.0 and dx < 3.0:
+				var dz := (z - float(b["z"])) / float(b["b"])
+				# Haut-fond autour du banc, en ellipse (pas de bord droit dans les paliers de profondeur).
+				var q := sqrt(dx * dx + dz * dz)
+				if q < 3.0:
+					d = maxf(d, (1.0 - q) * float(b["b"]))
+	return d
 
 
 ## Bornes en z de tout ce qui est dessiné (eau, berges, ponts).
 func z_range() -> Vector2:
-	return Vector2(MID_Z - MEANDER - HALF_W - 1.6 - BANK - DECK_OVERHANG - 1.0, MID_Z + MEANDER + HALF_W + 1.6 + BANK + DECK_OVERHANG + 1.0)
+	var reach := MEANDER + 0.75 + HALF_W + 1.9 + POOL_MAX + BANK + DECK_OVERHANG + 1.0
+	return Vector2(MID_Z - reach, MID_Z + reach)
 
 
 func water_at(x: float, z: float) -> bool:

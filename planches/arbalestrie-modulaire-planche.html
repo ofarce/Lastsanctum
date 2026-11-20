@@ -1,0 +1,420 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Arbalestrie modulaire · planche</title>
+<style>
+/* Planche de validation : recherche de la Bibliothèque, cinq munitions (vol, impact), sélecteur du HUD. */
+:root{--bg:#14161b;--panel:#1d2028;--line:#2c313c;--ink:#e6e8ee;--mute:#9aa1b0;--acc:#7ab0ff;
+  --ok:#5fbf7a;--redo:#e0b04a;--no:#e0583a;color-scheme:dark}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,sans-serif}
+main{max-width:1400px;margin:0 auto;padding:24px 16px 60px}
+h1{font-size:26px;margin:0 0 4px}
+h2{font-size:19px;margin:34px 0 10px;display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+h2 small{color:var(--mute);font-weight:400;font-size:13px}
+.sub{color:var(--mute);margin:0 0 14px;max-width:980px}
+.note{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px 14px;color:#c9cdd6;font-size:14px;max-width:980px}
+.note b{color:var(--ink)}
+.bar{position:sticky;top:0;background:var(--bg);padding:8px 0;z-index:5;display:flex;gap:6px;flex-wrap:wrap;align-items:center;border-bottom:1px solid var(--line);margin:14px 0 6px}
+.bar .lab{color:var(--mute);font-size:13px}
+button{background:#2a2f3a;color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:5px 10px;cursor:pointer;font:inherit;font-size:13px}
+button:hover{border-color:#4a5262}
+button.on{background:#26364f;border-color:#3e5d8a}
+button:focus-visible,textarea:focus-visible{outline:2px solid var(--acc);outline-offset:1px}
+#tally{margin-left:auto;font-size:13px;color:var(--mute)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,640px),1fr));gap:14px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px 14px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.card[data-v="garder"]{border-color:#2f6a40}.card[data-v="revoir"]{border-color:#7a6226}.card[data-v="rejeter"]{border-color:#7a3a2a;opacity:.75}
+.card h3{margin:0;font-size:16px}
+.card p{margin:0;color:#c9cdd6;font-size:14px}
+.card ul{margin:0;padding-left:18px;color:#c9cdd6;font-size:14px}
+.spec{font:12px/1.45 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--mute)}
+canvas.px{image-rendering:pixelated;width:100%;height:auto;display:block;border-radius:4px;background:#000}
+.zoom{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end}
+.zoom figure{margin:0;text-align:center;font-size:11px;color:var(--mute)}
+.zoom canvas{image-rendering:pixelated;width:96px;height:96px;background:#3a3c46;border-radius:4px;display:block}
+.verdict{display:flex;gap:6px;flex-wrap:wrap}
+.verdict button{flex:1 1 0;min-width:0}
+.verdict button.sel[data-v="garder"]{background:#1f3a28;border-color:var(--ok)}
+.verdict button.sel[data-v="revoir"]{background:#3a321b;border-color:var(--redo)}
+.verdict button.sel[data-v="rejeter"]{background:#3a2019;border-color:var(--no)}
+textarea{background:#171a21;color:var(--ink);border:1px solid var(--line);border-radius:6px;font:inherit;font-size:13px;padding:6px 8px;resize:vertical;min-height:32px;width:100%;box-sizing:border-box}
+#out{display:none;margin-top:10px;min-height:160px;font-family:ui-monospace,monospace}
+/* ---- Maquettes HUD (échelle écran 1:1, comme le jeu en 960 × 600) ---- */
+.hudwrap{position:relative;width:100%;max-width:600px;aspect-ratio:600/220;background:#222 url(assets/munitions/fond-hud.png) center/cover;border-radius:4px;overflow:hidden;font-family:Georgia,"Noto Serif",serif}
+.hudscale{position:absolute;left:0;top:0;width:600px;height:220px;transform-origin:0 0}
+.snes{position:absolute;box-sizing:border-box;background:linear-gradient(#5a6ad0,#141c6a);border:2px solid #e6e8f4;outline:1px solid #0a0c26;box-shadow:3px 4px 0 rgba(0,0,0,.35),inset 0 0 0 1px #8a90b8;border-radius:3px;color:#fff;text-shadow:2px 2px 0 #10123a}
+.pv{left:170px;width:260px;height:34px;top:168px}
+.pv i{position:absolute;left:12px;top:7px;font-style:normal;font-size:14px}
+.pv .tr{position:absolute;left:44px;top:10px;width:200px;height:10px;background:#0a0c26}
+.pv .tr b{position:absolute;left:0;top:0;height:10px;background:#5fd36b;box-shadow:inset 0 2px rgba(255,255,255,.3)}
+.pv .tr span{position:absolute;inset:-3px 0 0;text-align:center;font-size:11px;font-weight:400}
+.slot{width:34px;height:34px;display:grid;place-items:center;cursor:pointer;padding:0}
+.slot canvas{width:30px;height:30px;image-rendering:pixelated}
+.slot .k{position:absolute;left:2px;top:1px;font:10px/1 ui-monospace,monospace;text-shadow:1px 1px 0 #10123a}
+.slot.sel{border-color:#fff;box-shadow:3px 4px 0 rgba(0,0,0,.35),inset 0 0 0 2px #5ce8ff,inset 0 0 10px #5ce8ff}
+.slot.off{filter:grayscale(.85) brightness(.6)}
+.cursor{position:absolute;width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;border-top:8px solid #fff;filter:drop-shadow(1px 1px 0 #10123a)}
+.tip{position:absolute;padding:5px 10px;font-size:12px;line-height:1.35;white-space:nowrap}
+.tip em{font-style:normal;color:#c8fbff}
+.tip .red{color:#ff9a8a}
+.cost{position:absolute;left:0;right:0;bottom:-15px;text-align:center;font:10px/1 ui-monospace,monospace;color:#fff;text-shadow:1px 1px 0 #000}
+.cost.red{color:#ff8a7a}
+/* Bandeau de commandement (style ActionButton du jeu) */
+.band{background:#0d110d;border:1px solid #3a3a2a;border-radius:4px;padding:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:flex-start;font-family:Georgia,"Noto Serif",serif}
+.ab{position:relative;width:62px;height:62px;box-sizing:border-box;border:1px solid #aa8851;box-shadow:inset 0 0 0 3px #131710;background:linear-gradient(145deg,#2d2b21,#121712 65%);display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding-top:9px;color:#f0e6cc}
+.ab svg{width:22px;height:22px}
+.ab .kc{margin-top:6px;font:10px/1 ui-monospace,monospace;border:1px solid #8c744b;background:#10140d;padding:2px 4px;color:#d8c8a0}
+.ab.dis{border-color:#565443;background:linear-gradient(145deg,#24261f,#101510 65%);color:#7a7a6a}.ab.dis .kc{border-color:#4d4f40;color:#6a6a5a}
+.ab.lit{border-color:#ffe0a0;box-shadow:inset 0 0 0 2px #c29148;background:radial-gradient(ellipse at 50% 30%,#775219,#201e12 85%)}
+.ab .st{position:absolute;left:0;right:0;bottom:-17px;font-size:10px;color:#9aa1b0;text-align:center;white-space:nowrap}
+.ab .pg{position:absolute;left:4px;right:4px;bottom:4px;height:3px;background:#222}.ab .pg b{display:block;height:3px;background:#5ce8ff}
+.bubble{background:#1c180c;border:1px solid #c29148;color:#f0e6cc;border-radius:3px;padding:6px 10px;font-size:13px;line-height:1.45;max-width:440px}
+.bubble .n{color:#fff4d6}.bubble .g{color:#e9c784}.bubble .r{color:#ff8a7a}.bubble .d{color:#c9cdd6;font-style:italic}
+.cap{font-size:12px;color:var(--mute);margin-top:2px}
+.row{display:flex;gap:14px;flex-wrap:wrap;align-items:flex-start}
+</style>
+</head>
+<body>
+<main>
+<h1>Arbalestrie modulaire · planche</h1>
+<p class="sub">Nouvelle recherche de la Bibliothèque (200 de chaque mana) qui débloque cinq munitions pour l'Arbalestrie, choisies à la souris au-dessus de la barre de vie en mode incarné. Les scènes sont dessinées en pixels natifs du jeu (8 px par unité, une case = 4 unités = 32 px) puis agrandies ; la balle file à la vitesse réelle (40 unités/s). L'Ingénieur est le Templier à l'Arbalestrie de <code>assets/engineer-cannon.js</code>, l'ennemi l'éclaireur du jeu.</p>
+<div class="note"><b>Mode d'emploi.</b> Marquez chaque carte <b>Garder</b>, <b>À revoir</b> (avec une note) ou <b>Rejeter</b>. Pour le HUD, gardez une seule des trois propositions. « Copier le bilan » produit le texte à me coller pour que j'implémente. Les choix restent dans ce navigateur.</div>
+
+<div class="bar">
+  <span class="lab">Vitesse</span>
+  <button data-speed="1" class="on">× 1</button><button data-speed="0.35">× 0,35</button><button data-speed="0.1">× 0,1</button>
+  <button id="pause">Pause</button>
+  <span class="lab" style="margin-left:10px">Chiffres de dégâts</span><button id="nums" class="on">Affichés</button>
+  <button id="copy">Copier le bilan</button>
+  <span id="tally"></span>
+</div>
+<textarea id="out" readonly></textarea>
+
+<h2>1 · La recherche dans la Bibliothèque <small>bandeau de commandement, Bibliothèque ouverte (clic droit dessus en mode incarné)</small></h2>
+<div class="grid" id="lib"></div>
+
+<h2>2 · Les cinq munitions : vol et effet <small>Arbalestrie de base : 12 dégâts, cadence 0,25 s ; chaque scène boucle sur un tir</small></h2>
+<div class="grid" id="balls"></div>
+
+<h2>3 · Sélection dans le HUD <small>au-dessus de la barre PV, cadre 16 bits (SnesBanner) ; cliquez les cases</small></h2>
+<div class="grid" id="hud"></div>
+
+</main>
+<script src="assets/engineer-colosse.js"></script>
+<script src="assets/engineer-exile.js"></script>
+<script src="assets/engineer-cannon.js"></script>
+<script>
+'use strict';
+// ====================== Données ======================
+const MANA={forge:'Forge',vie:'Vie',discipline:'Discipline',savoir:'Savoir'};
+// Palettes sombre → clair (6 tons) : cyan = Exilés ; dieux d'après la charte (Indra orange, Medeina vert,
+// Sigil marbre gris veiné, Aether bleu-violet — le pourpre reste réservé à l'Ancre).
+const PAL={
+ spirit:['#0a2a33','#12596b','#1f9fb8','#5ce8ff','#c8fbff','#ffffff'],
+ indra:['#2a1204','#7a3208','#d0680e','#ff9a2a','#ffd08a','#fff4e0'],
+ medeina:['#0c2410','#1f5a26','#3c9a3e','#6fd36b','#c4f5b0','#f4fff0'],
+ sigil:['#1e1f24','#4a4c54','#8a8c94','#c4c3bf','#e8e4da','#ffffff'],
+ aether:['#0e1030','#2a2e7a','#4f55c8','#8a8cf0','#c8c8ff','#ffffff'],
+};
+const AMMO=[
+ {id:'spirit',name:'Balles spirituelles',key:'1',cost:'1 de chaque mana',costShort:'1×4',res:null,n:1,
+  eff:'Mode normal : 12 dégâts.',dmg:[12],
+  vol:'Inchangée : bille sombre 3 × 3 cernée d’encre, trois micro-éclairs cyan renouvelés à chaque image.',
+  hit:'Inchangé : éclat blanc en croix, étincelles cyan, puis petite poussière.'},
+ {id:'indra',name:'Balles d’Indra',key:'2',cost:'2 Discipline (Indra)',costShort:'2',res:'discipline',n:1,
+  eff:'+50 % de dégâts : 18.',dmg:[18],
+  vol:'Braise : cœur blanc-orangé 3 × 3, traînée de flamme de 5 px qui s’effile derrière, une escarbille de temps en temps.',
+  hit:'Éclat plus gros (étoile de 7 px), anneau de chaleur, trois braises qui retombent en rebondissant. L’ennemi flashe orange.'},
+ {id:'medeina',name:'Balles de Medeina',key:'3',cost:'2 Vie (Medeina)',costShort:'2',res:'vie',n:1,
+  eff:'−50 % de dégâts : 6 ; l’Ingénieur regagne 6 PV (autant que les dégâts faits).',dmg:[6],heal:true,
+  vol:'Graine : cœur vert 3 × 3, deux feuilles de 1 px qui tournent autour, poussière verte qui retombe derrière.',
+  hit:'Petit éclat vert sur l’ennemi, puis des lucioles vertes remontent en arc jusqu’à la poitrine de l’Ingénieur ; « +6 » vert monte au-dessus de lui et la barre PV pulse en vert.'},
+ {id:'sigil',name:'Balles de Sigil',key:'4',cost:'2 Savoir (Sigil)',costShort:'2',res:'savoir',n:2,
+  eff:'Deux balles par tir, −30 % chacune : 2 × 8,4 = 16,8.',dmg:[8.4,8.4],
+  vol:'Deux billes de marbre gris veiné, écartées de ±4,5° ; un éclat blanc parcourt la veine, deux tirets de glyphe derrière chacune.',
+  hit:'Deux impacts gris-blanc, de part et d’autre de la cible, chacun avec un éclat de glyphe en croix qui s’efface.'},
+ {id:'aether',name:'Balles d’Aether',key:'5',cost:'2 Forge (Aether)',costShort:'2',res:'forge',n:1,
+  eff:'12 dégâts à la cible ; 3 (un quart) à tout autre ennemi à moins d’un bloc (4 unités) autour d’elle.',dmg:[12],splash:true,
+  vol:'Astre : cœur bleu-violet, un anneau d’orbite incliné (ellipse 7 × 3) et une étoile de 1 px qui le parcourt.',
+  hit:'Onde : cercle au sol d’un bloc de rayon (32 px) qui s’ouvre en 0,3 s, étoiles qui jaillissent sur le bord ; tous les ennemis dedans flashent bleu.'},
+];
+
+// ====================== Verdicts ======================
+const KEY='arbalestrie-modulaire-v1';
+let store={};try{store=JSON.parse(localStorage.getItem(KEY)||'{}')}catch(e){}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(store))}catch(e){}tally()}
+function tally(){const v=Object.values(store).map(s=>s.v);document.getElementById('tally').innerHTML=
+ `<b style="color:var(--ok)">${v.filter(x=>x==='garder').length}</b> gardés · <b style="color:var(--redo)">${v.filter(x=>x==='revoir').length}</b> à revoir · <b style="color:var(--no)">${v.filter(x=>x==='rejeter').length}</b> rejetés`}
+function verdict(card,id,title){
+ card.dataset.id=id;card.dataset.title=title;const s=store[id]||{};
+ const box=document.createElement('div');box.className='verdict';
+ for(const [v,l] of [['garder','Garder'],['revoir','À revoir'],['rejeter','Rejeter']]){
+  const b=document.createElement('button');b.dataset.v=v;b.textContent=l;if(s.v===v)b.classList.add('sel');
+  b.onclick=()=>{const cur=store[id]||{};cur.v=cur.v===v?undefined:v;store[id]=cur;card.dataset.v=cur.v||'';
+   box.querySelectorAll('button').forEach(x=>x.classList.toggle('sel',x.dataset.v===cur.v));save()};box.append(b)}
+ const t=document.createElement('textarea');t.placeholder='Note (facultative)';t.value=s.note||'';t.rows=1;
+ t.oninput=()=>{const cur=store[id]||{};cur.note=t.value;store[id]=cur;save()};
+ if(s.v)card.dataset.v=s.v;card.append(box,t)}
+document.getElementById('copy').onclick=()=>{
+ const lines=['Bilan · planches/arbalestrie-modulaire-planche.html'];
+ document.querySelectorAll('.card').forEach(c=>{const s=store[c.dataset.id]||{};
+  lines.push(`- ${c.dataset.title} : ${s.v?({garder:'GARDER',revoir:'À REVOIR',rejeter:'REJETER'})[s.v]:'—'}${s.note?' · '+s.note:''}`)});
+ const o=document.getElementById('out');o.style.display='block';o.value=lines.join('\n');o.select();
+ try{navigator.clipboard.writeText(o.value)}catch(e){}};
+
+// ====================== 1 · Bibliothèque ======================
+const ICON={
+ move:'<path d="M12 2v20M2 12h20M8 6l4-4 4 4M8 18l4 4 4-4M6 8l-4 4 4 4m12-8 4 4-4 4"/>',
+ flag:'<path d="M5 23V2m0 1c5-4 9 4 16 0v11c-7 4-11-4-16 0"/>',
+ A:'<circle cx="12" cy="12" r="9.5"/><circle cx="12" cy="6.5" r="2"/><circle cx="17.2" cy="10.3" r="2"/><circle cx="15.2" cy="16.4" r="2"/><circle cx="8.8" cy="16.4" r="2"/><circle cx="6.8" cy="10.3" r="2"/><circle cx="12" cy="12" r=".6"/>',
+ B:'<path d="M4 20V10a2 2 0 0 1 4 0v10zm6 0V7a2 2 0 0 1 4 0v13zm6 0V10a2 2 0 0 1 4 0v10zM2 22h20"/>',
+ C:'<path d="M2 13h3v-3h12l3-2v10l-3-2H5v-3M8 10v6m4-6v6m4-6v6M4 16l-1 5h3l1-5"/>',
+};
+const svg=(b,c='currentColor')=>`<svg viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${b}</svg>`;
+const ICON_NAME={A:'Barillet à cinq chambres',B:'Trois cartouches',C:'Canon à modules'};
+function ab(icon,key,cls='',status='',prog=null){return `<div class="ab ${cls}">${svg(ICON[icon])}<span class="kc">${key}</span>${prog!==null?`<span class="pg"><b style="width:${prog}%"></b></span>`:''}${status?`<span class="st">${status}</span>`:''}</div>`}
+const TIP=`<span class="n">Arbalestrie modulaire</span> · 10 s · <span class="g">200 Forge · 200 Vie · 200 Discipline · 200 Savoir</span> · +20 menace à l’achèvement<br><span class="d">Débloque cinq munitions pour l’Arbalestrie, à choisir au-dessus de la barre de vie : spirituelles, d’Indra, de Medeina, de Sigil, d’Aether.</span>`;
+{
+ const lib=document.getElementById('lib');
+ for(const v of ['A','B','C']){
+  const c=document.createElement('div');c.className='card';
+  c.innerHTML=`<h3>Icône ${v} · ${ICON_NAME[v]}</h3>
+   <div class="band">${ab('move','R','','Achevée')}${ab('flag','R')}${ab(v,'R','lit')}</div>
+   <div class="cap">Bibliothèque ouverte : Minicarte, Poste de tir, puis la nouvelle recherche (survolée).</div>
+   <div class="bubble">${TIP}</div>
+   <div class="row" style="margin-top:6px;padding-bottom:16px;gap:44px">${ab(v,'R')}${ab(v,'R','dis','Mana insuffisante')}${ab(v,'R','','En cours · 40 %',40)}${ab(v,'R','dis','Déjà achevée')}</div>`;
+  verdict(c,'lib-'+v,'Bibliothèque · icône '+v+' ('+ICON_NAME[v]+')');lib.append(c)}
+ const c=document.createElement('div');c.className='card';
+ c.innerHTML=`<h3>Fin de la recherche</h3><p>À l’achèvement, la bannière bleue habituelle (SnesBanner) annonce le déblocage ; le sélecteur apparaît alors au-dessus de la barre PV, sur « Balles spirituelles ».</p>
+  <div style="position:relative;height:74px"><div class="snes" style="left:0;top:4px;padding:10px 16px;font-family:Georgia,serif;font-size:15px;line-height:22px;max-width:560px">Recherche achevée : Arbalestrie modulaire !<br>Choisissez vos munitions au-dessus de votre barre de vie.</div></div>
+  <ul><li>Coût : 200 de chaque mana (prélevés au lancement, comme les autres recherches).</li><li>Durée et menace : celles de toutes les recherches (10 s, +20 menace).</li><li>Sans la recherche : l’Arbalestrie tire les balles spirituelles, aucun sélecteur.</li></ul>`;
+ verdict(c,'lib-fin','Bibliothèque · bannière de fin');lib.append(c)
+}
+
+// ====================== Pixels ======================
+// Canvas natif + helpers ; les scènes sont agrandies en CSS (pixelated).
+function nctx(w,h){const c=document.createElement('canvas');c.width=w;c.height=h;c.className='px';return c}
+let G=null;
+function P(x,y,col,a=1){if(a<=0)return;G.globalAlpha=Math.min(1,a);G.fillStyle=col;G.fillRect(Math.round(x),Math.round(y),1,1);G.globalAlpha=1}
+function rng(seed){let s=seed|0||1;return()=>{s^=s<<13;s^=s>>>17;s^=s<<5;return((s>>>0)%10000)/10000}}
+const INK='#0a0a0c';
+// Sol d'ardoise : dalles 16 × 8 en quinconce, tons gris-bleu, quelques taches de terre.
+function floor(w,h){const c=document.createElement('canvas');c.width=w;c.height=h;const g=c.getContext('2d');const r=rng(7);
+ const T=['#3c3f4a','#454855','#4d505e','#565a68'];
+ for(let y=0;y<h;y+=8){const off=(y/8)%2?8:0;for(let x=-16;x<w;x+=16){g.fillStyle=T[(r()*4)|0];g.fillRect(x+off,y,15,7);
+  g.fillStyle='rgba(255,255,255,.06)';g.fillRect(x+off,y,15,1);g.fillStyle='#24262e';g.fillRect(x+off,y+7,16,1);g.fillRect(x+off+15,y,1,8)}}
+ for(let i=0;i<w*h/60;i++){g.fillStyle=r()<.5?'rgba(255,255,255,.05)':'rgba(0,0,0,.12)';g.fillRect((r()*w)|0,(r()*h)|0,1,1)}
+ for(let i=0;i<6;i++){g.fillStyle='rgba(110,82,50,.35)';const x=r()*w,y=r()*h;for(let k=0;k<14;k++)g.fillRect((x+r()*8)|0,(y+r()*4)|0,1,1)}
+ return c}
+// Ingénieur à l'Arbalestrie (cannonBody) : trois poses pré-rendues (repos, recul + éclair, recul).
+const ENG={};
+function engFrames(){if(ENG.idle)return;
+ ENG.idle=render(cannonBody({ang:0}),1);ENG.flash=render(cannonBody({ang:0,rec:2,flash:true}),1);ENG.rec=render(cannonBody({ang:0,rec:1}),1)}
+// Bouche du canon dans le cadre 48 × 48 (cannonBody : épaule (25, 30), main à 6 px, bouche à +11,5) ; pieds ≈ (24, 46).
+const MUZ={x:42,y:30},FEET={x:24,y:46};
+const scout=new Image();scout.src='../assets/imported/enemies/scout_idle.png';
+function enemy(x,y,flash,t){ // pieds en (x, y) ; cadre 40 × 42, ancre (15, 40)
+ const f=Math.floor(t*10)%24,sx=(f%12)*40,sy=Math.floor(f/12)*42;
+ G.globalAlpha=.35;G.fillStyle='#000';G.beginPath();G.ellipse(x,y,7,2.5,0,0,7);G.fill();G.globalAlpha=1;
+ if(!(scout.complete&&scout.naturalWidth))return;
+ // Sprite tourné vers la gauche (vers l'Ingénieur), teinté sur sa seule silhouette quand il est touché.
+ const o=TINT.getContext('2d');o.clearRect(0,0,40,42);o.save();o.translate(40,0);o.scale(-1,1);o.drawImage(scout,sx,sy,40,42,0,0,40,42);o.restore();
+ if(flash){o.globalCompositeOperation='source-atop';o.globalAlpha=flash.a;o.fillStyle=flash.c;o.fillRect(0,0,40,42);o.globalAlpha=1;o.globalCompositeOperation='source-over'}
+ G.drawImage(TINT,Math.round(x-25),Math.round(y-40))}
+const TINT=document.createElement('canvas');TINT.width=40;TINT.height=42;
+function engineer(x,y,t){ // pieds en (x, y)
+ engFrames();const img=t<0.05?ENG.flash:t<0.12?ENG.rec:ENG.idle;
+ G.globalAlpha=.35;G.fillStyle='#000';G.beginPath();G.ellipse(x,y,8,2.5,0,0,7);G.fill();G.globalAlpha=1;
+ G.drawImage(img,Math.round(x-FEET.x),Math.round(y-FEET.y))}
+
+// ---- Balles en vol (centre x, y ; age en s ; dx = direction 1) ----
+function ballSpirit(x,y,age,seed){
+ for(const[a,b]of[[-1,-1],[0,-1],[1,-1],[-1,0],[1,0],[-1,1],[0,1],[1,1]])P(x+a,y+b,INK);P(x,y,'#5b6068');
+ const r=rng(seed+Math.floor(age*30)*7);
+ for(let k=0;k<3;k++){if(r()<.25)continue;let a=r()*6.283,sx=x+Math.round(Math.cos(a)*2),sy=y+Math.round(Math.sin(a)*2);
+  for(let s=0;s<2;s++){P(sx,sy,s?PAL.spirit[3]:'#e9fbff');const b=a+(s&1?.9:-.9);sx+=Math.round(Math.cos(b));sy+=Math.round(Math.sin(b))}}}
+function ballIndra(x,y,age,seed){const C=PAL.indra,r=rng(seed+Math.floor(age*30)*7);
+ // Braise grossie (bilan 2026-11-19) : cœur 3 × 3 blanc-orangé dans un cerne d'encre 5 × 5 aux coins rognés.
+ for(let i=1;i<=6;i++){const a=1-i/7;P(x-2-i,y,i<3?C[3]:C[2],a);P(x-2-i,y+(i%2?-1:1),C[2],a*.6)}
+ for(let b=-2;b<=2;b++)for(let a=-2;a<=2;a++){if(Math.abs(a)===2&&Math.abs(b)===2)continue;P(x+a,y+b,Math.abs(a)<2&&Math.abs(b)<2?C[3]:INK)}
+ P(x,y,C[5]);P(x+1,y,C[4]);P(x-1,y-1,C[4]);P(x,y-1,C[5],.8);P(x+1,y+1,C[2]);P(x-1,y+1,C[2]);
+ if(r()<.4)P(x-4-((r()*3)|0),y-3-((r()*2)|0),C[4])}
+function ballMedeina(x,y,age,seed){const C=PAL.medeina;
+ for(const[a,b]of[[-1,-1],[0,-1],[1,-1],[-1,0],[1,0],[-1,1],[0,1],[1,1]])P(x+a,y+b,INK);P(x,y,C[3]);P(x-1,y-1,C[4],.8);
+ for(let k=0;k<2;k++){const a=age*18+k*Math.PI;P(x+Math.round(Math.cos(a)*3),y+Math.round(Math.sin(a)*2),k?C[4]:C[3])}
+ for(let i=1;i<4;i++)P(x-2-i*2,y+Math.round(i*.6+Math.sin(age*20+i)),C[2],.6-i*.15)}
+function ballSigil(x,y,age,seed){const C=PAL.sigil;
+ // Marbre clair : le haut-gauche de la bille prend la lumière, l'encre ne cerne que le bas et la droite.
+ for(const[a,b]of[[-1,-1],[0,-1],[-1,0]])P(x+a,y+b,C[3]);for(const[a,b]of[[1,-1],[1,0],[-1,1],[0,1],[1,1]])P(x+a,y+b,INK);P(x,y,C[4]);
+ const ph=Math.floor(age*24)%3;P(x-1+ph,y-1+Math.min(ph,1),C[5]);
+ P(x-4,y,C[4],.8);P(x-5,y,C[4],.5);P(x-8,y,C[3],.5)}
+function ballAether(x,y,age,seed){const C=PAL.aether;
+ for(let a=0;a<12;a++){const t=a/12*6.283;const ox=Math.round(Math.cos(t)*3.5),oy=Math.round(Math.sin(t)*1.5);if(Math.abs(ox)>1||Math.abs(oy)>1)P(x+ox,y+oy,C[2],.55)}
+ for(const[a,b]of[[-1,-1],[0,-1],[1,-1],[-1,0],[1,0],[-1,1],[0,1],[1,1]])P(x+a,y+b,INK);P(x,y,C[4]);
+ const t=age*14;P(x+Math.round(Math.cos(t)*3.5),y+Math.round(Math.sin(t)*1.5),C[5]);
+ P(x-4,y,C[2],.4)}
+const BALL={spirit:ballSpirit,indra:ballIndra,medeina:ballMedeina,sigil:ballSigil,aether:ballAether};
+
+// ---- Impacts (age depuis l'impact) ----
+function hitSpirit(x,y,age){const p=age/.25;if(p>1)return;
+ if(p<.4){for(const[a,b]of[[0,0],[-1,0],[1,0],[0,-1],[0,1]])P(x+a,y+b,PAL.spirit[5]);for(const[a,b]of[[-3,-2],[2,-3],[3,2],[-2,3],[0,-4]])P(x+a,y+b,PAL.spirit[3])}
+ else for(const[a,b]of[[-2,-2],[-1,-2],[1,-1],[2,-1],[0,-3]])P(x+a,y+b-Math.round(p*3),'rgb(199,199,189)',.6*(1-p))}
+function hitIndra(x,y,age){const C=PAL.indra,p=age/.45;if(p>1)return;
+ if(p<.3){for(let i=-3;i<=3;i++){P(x+i,y,C[Math.abs(i)<2?5:3]);P(x,y+i,C[Math.abs(i)<2?5:3])}
+  for(const[a,b]of[[-2,-2],[2,-2],[2,2],[-2,2]])P(x+a,y+b,C[4])}
+ const R=Math.round(3+p*5);for(let k=0;k<16;k++){const a=k/16*6.283;P(x+Math.round(Math.cos(a)*R),y+Math.round(Math.sin(a)*R*.6),C[2],.7*(1-p))}
+ for(const[vx,vy,s]of[[-9,-22,1],[7,-26,2],[12,-16,3]]){const tt=age;let yy=y+vy*tt+60*tt*tt;const xx=x+vx*tt*1.6;if(yy>y+8)yy=y+8-Math.abs(Math.sin(tt*12))*2;P(xx,yy,C[s%2?4:3],1-p)}}
+function hitMedeina(x,y,age){const C=PAL.medeina,p=age/.3;if(p>1)return;
+ if(p<.5){for(const[a,b]of[[0,0],[-1,0],[1,0],[0,-1],[0,1]])P(x+a,y+b,C[5]);for(const[a,b]of[[-2,-2],[2,-2],[2,2],[-2,2]])P(x+a,y+b,C[3])}
+ else for(const[a,b]of[[-1,-2],[1,-3],[0,-4]])P(x+a,y+b-Math.round(p*3),C[3],1-p)}
+function hitSigil(x,y,age){const C=PAL.sigil,p=age/.3;if(p>1)return;
+ if(p<.4){for(const[a,b]of[[0,0],[-1,0],[1,0],[0,-1],[0,1]])P(x+a,y+b,C[5])}
+ const d=Math.round(2+p*3);for(const[a,b]of[[-d,0],[d,0],[0,-d],[0,d]])P(x+a,y+b,C[4],1-p)}
+function hitAether(x,y,gy,age){const C=PAL.aether,p=Math.min(1,age/.3);if(age>.55)return;const f=age<.3?1:1-(age-.3)/.25;
+ if(age<.12){for(const[a,b]of[[0,0],[-1,0],[1,0],[0,-1],[0,1]])P(x+a,y+b,C[5])}
+ const R=2+p*30;const n=Math.round(R*5);for(let k=0;k<n;k++){const a=k/n*6.283;P(x+Math.cos(a)*R,gy+Math.sin(a)*R,k%3?C[3]:C[4],.85*f)}
+ if(p>.2){const R2=R*.8;for(let k=0;k<n;k+=2){const a=k/n*6.283;P(x+Math.cos(a)*R2,gy+Math.sin(a)*R2,C[2],.4*f)}}
+ for(let k=0;k<8;k++){const a=k/8*6.283+.3;P(x+Math.cos(a)*R,gy+Math.sin(a)*R-Math.round(p*4),C[5],f)}}
+
+// Petits chiffres 3 × 5 (police pixel) pour les dégâts / soins.
+const DIG={'0':'111101101101111','1':'010110010010111','2':'111001111100111','3':'111001111001111','4':'101101111001001','5':'111100111001111','6':'111100111101111','7':'111001010010010','8':'111101111101111','9':'111101111001111','+':'000010111010000',',':'000000000010100'};
+function num(txt,x,y,col,a=1){let cx=Math.round(x-txt.length*2);for(const ch of txt){const m=DIG[ch];if(m){for(let i=0;i<15;i++)if(m[i]==='1'){P(cx+i%3+1,y+((i/3)|0)+1,'#000',a*.8);P(cx+i%3,y+((i/3)|0),col,a)}}cx+=ch===','?3:4}}
+let showNums=true;
+
+// ====================== 2 · Scènes de tir ======================
+const W=220,H=92,FL=floor(W,H);
+const SPEED=320;
+const SIGIL_SPREAD=4.5; // demi-écart des deux balles de Sigil, en degrés (bilan : plus large ; 4,5° = les deux touchent jusqu’à 12 unités)
+const LOOP=1.9;
+const scenes=[];
+function scene(am){
+ const c=nctx(W,H),g=c.getContext('2d');g.imageSmoothingEnabled=false;
+ const E={x:46,y:70},T={x:168,y:70};
+ const others=am.splash?[{x:186,y:56},{x:150,y:86},{x:206,y:84,out:true}]:[];
+ const start={x:E.x-FEET.x+MUZ.x,y:E.y-FEET.y+MUZ.y};
+ const dur=(T.x-6-start.x)/SPEED;
+ const sd=(Math.random()*1e5)|0;
+ return {c,draw(t){G=g;g.drawImage(FL,0,0);
+  const after=t-dur;
+  // ennemis (tri par profondeur)
+  const list=[{...T,main:true},...others].sort((a,b)=>a.y-b.y);
+  const drawE=e=>{let fl=null;
+   // Aether : un voisin est touché quand l'onde (32 px en 0,3 s) atteint ses pieds.
+   const dist=Math.hypot(e.x-T.x,e.y-T.y);
+   const hitT=e.main?after:(!e.out&&dist<=32&&after>=0?after-dist/32*.3:-1);
+   if(hitT>=0&&hitT<.12){const col={spirit:'#ffffff',indra:'#ff9a2a',medeina:'#c4f5b0',sigil:'#ffffff',aether:'#8a8cf0'}[am.id];fl={c:col,a:.55}}
+   enemy(e.x,e.y,fl,t);
+   if(showNums&&hitT>=0&&hitT<.8&&(e.main||(!e.out&&Math.hypot(e.x-T.x,e.y-T.y)<=32))){const a=hitT<.6?1:1-(hitT-.6)/.2;
+    if(am.n===2){num('8,4',e.x-6,e.y-40-hitT*10,'#fff4d6',a);num('8,4',e.x+7,e.y-36-hitT*10,'#fff4d6',a)}
+    else num(String(am.splash&&!e.main?3:am.dmg[0]),e.x,e.y-40-hitT*10,am.id==='indra'?PAL.indra[4]:'#fff4d6',a)}};
+  // anneau d'Aether au sol, sous les sprites
+  if(am.splash&&after>=0)hitAether(T.x,T.y-14,T.y,after);
+  const engDrawn=()=>engineer(E.x,E.y,t);
+  // ordre : ingénieur (y = 70) avec les ennemis
+  let engDone=false;for(const e of list){if(!engDone&&E.y<=e.y){engDrawn();engDone=true}drawE(e)}if(!engDone)engDrawn();
+  // balle(s)
+  if(t<dur){const d=t*SPEED;
+   if(am.n===2){for(const s of[-1,1]){const x=start.x+d,y=start.y+s*d*Math.tan(SIGIL_SPREAD*Math.PI/180);BALL.sigil(Math.round(x),Math.round(y),t,sd+s)}}
+   else BALL[am.id](Math.round(start.x+d),Math.round(start.y),t,sd)}
+  // impact(s)
+  const hy=start.y;
+  if(after>=0){const hx=T.x-6;
+   if(am.id==='spirit')hitSpirit(hx,hy,after);
+   if(am.id==='indra')hitIndra(hx,hy,after);
+   if(am.id==='medeina')hitMedeina(hx,hy,after);
+   if(am.id==='sigil'){const off=Math.round((T.x-6-start.x)*Math.tan(SIGIL_SPREAD*Math.PI/180));hitSigil(hx,hy-off,after);hitSigil(hx,hy+off,after)}}
+  // Medeina : lucioles qui remontent vers la poitrine de l'Ingénieur, puis « +6 ».
+  if(am.heal&&after>=.08){const q=(after-.08)/.5,to={x:E.x+2,y:E.y-18};
+   for(let k=0;k<6;k++){const qq=q-k*.05;if(qq<0||qq>1)continue;const e=qq*qq*(3-2*qq);
+    const x=(T.x-6)+(to.x-(T.x-6))*e,y=hy+(to.y-hy)*e-Math.sin(e*Math.PI)*(14+k*2);
+    const M=PAL.medeina;for(const[a,b]of[[-1,0],[1,0],[0,-1],[0,1]])P(x+a,y+b,M[2],.75);P(x,y,M[k%2?5:4]);
+    P(x-2*Math.sign(to.x-x),y+1,M[3],.45)}
+   if(q>=.95&&q<1.3)for(const[a,b]of[[-4,-2],[4,-4],[0,-8],[-3,4],[5,2]])P(to.x+a,to.y+b,PAL.medeina[5],1-(q-.95)/.35);
+   if(q>=.95){const a2=after-.08-.475;if(a2<.8)num('+6',E.x,E.y-44-a2*10,PAL.medeina[3],a2<.6?1:1-(a2-.6)/.2)}}
+ }};
+}
+// Gros plans : la balle seule sur dalle, trois images.
+function closeups(am){const box=document.createElement('div');box.className='zoom';
+ for(const [i,age] of [[0,0],[1,.05],[2,.1]]){const f=document.createElement('figure');const c=document.createElement('canvas');c.width=24;c.height=24;
+  G=c.getContext('2d');G.fillStyle='#454855';G.fillRect(0,0,24,24);
+  if(am.n===2){BALL.sigil(12,9,age,3);BALL.sigil(12,15,age,4)}else BALL[am.id](13,12,age,11);
+  f.append(c);f.append('image '+(i+1));box.append(f)}
+ return box}
+{
+ const host=document.getElementById('balls');
+ AMMO.forEach((am,i)=>{const c=document.createElement('div');c.className='card';
+  const s=scene(am);scenes.push(s);
+  c.innerHTML=`<h3>${am.key} · ${am.name} <span class="spec">— ${am.cost} par tir</span></h3><p><b>Effet.</b> ${am.eff}</p>`;
+  c.append(s.c);
+  const z=closeups(am);c.append(z);
+  const d=document.createElement('div');d.innerHTML=`<p><b>En vol.</b> ${am.vol}</p><p style="margin-top:4px"><b>À l’impact.</b> ${am.hit}</p>`;c.append(d);
+  verdict(c,'ball-'+am.id,'Munition '+am.key+' · '+am.name);host.append(c)});
+}
+
+// ====================== 3 · HUD ======================
+// Icône de munition : la balle en vol, dessinée en 12 × 12 et affichée en 24 × 24.
+function ammoIcon(am){const c=document.createElement('canvas');c.width=10;c.height=10;G=c.getContext('2d');
+ if(am.n===2){BALL.sigil(5,3,0,3);BALL.sigil(5,7,0,4)}else BALL[am.id](am.id==='indra'?6:5,5,.04,11);return c}
+const RES0={forge:640,vie:640,discipline:640,savoir:1};  // Savoir à 1 : Sigil grisé (exemple)
+function affordable(am){return am.res?RES0[am.res]>=2:Object.values(RES0).every(v=>v>=1)}
+function hudFrame(){const w=document.createElement('div');w.className='hudwrap';const s=document.createElement('div');s.className='hudscale';w.append(s);
+ const fit=()=>{s.style.transform=`scale(${w.clientWidth/600})`};new ResizeObserver(fit).observe(w);
+ s.insertAdjacentHTML('beforeend',`<div class="snes pv"><i>PV</i><span class="tr"><b style="width:72%"></b><span>101 / 140</span></span></div>`);return {w,s}}
+function tipHtml(am){const ok=affordable(am);return `${am.name} · <em>${am.eff.replace(/ :.*$/,'').replace(/\.$/,'')}</em><br>${ok?'':'<span class="red">'}${am.cost} par tir${ok?'':' · mana insuffisante</span>'}`}
+const HUDV=[
+ {id:'A',name:'A · Rangée de cinq cases',desc:'Cinq cases 34 × 34 au cadre 16 bits, centrées au-dessus de la barre PV. Case active : liseré blanc épaissi, lueur cyan intérieure et curseur triangulaire au-dessus. Coût sous chaque case ; mana insuffisante → case grisée, coût en rouge (le tir ne part pas). Survol : bulle 16 bits nom · effet · coût. Clic gauche pour choisir.',
+  build(s,state){const x0=300-(5*34+4*6)/2;
+   AMMO.forEach((am,i)=>{const b=document.createElement('button');b.className='snes slot'+(state.sel===i?' sel':'')+(affordable(am)?'':' off');
+    b.style.left=(x0+i*40)+'px';b.style.top='112px';b.append(ammoIcon(am));b.insertAdjacentHTML('beforeend',`<span class="k">${am.key}</span><span class="cost${affordable(am)?'':' red'}">${am.costShort}</span>`);
+    b.onclick=()=>{state.sel=i;state.redraw()};b.onmouseenter=()=>{state.hov=i;state.redraw()};b.onmouseleave=()=>{state.hov=-1;state.redraw()};s.append(b)});
+   s.insertAdjacentHTML('beforeend',`<div class="cursor" style="left:${x0+state.sel*40+11}px;top:100px"></div>`);
+   if(state.hov>=0)s.insertAdjacentHTML('beforeend',`<div class="snes tip" style="left:${Math.min(430,x0+state.hov*40-60)}px;top:52px">${tipHtml(AMMO[state.hov])}</div>`)}},
+ {id:'B',name:'B · Onglets soudés au cadre PV',desc:'La barre PV gagne un rebord de cinq onglets (52 × 22) collés à son bord supérieur : l’onglet actif est haussé de 4 px et porte le nom de la munition dans un cartouche à gauche. Plus compact, lié visuellement à la vie. Survol et grisé comme A.',
+  build(s,state){const x0=170;
+   AMMO.forEach((am,i)=>{const b=document.createElement('button');const on=state.sel===i;b.className='snes slot'+(on?' sel':'')+(affordable(am)?'':' off');
+    Object.assign(b.style,{left:(x0+i*52)+'px',top:(on?142:146)+'px',width:'52px',height:'24px',borderBottom:'none',borderRadius:'3px 3px 0 0'});
+    const ic=ammoIcon(am);ic.style.width='20px';ic.style.height='20px';b.append(ic);b.insertAdjacentHTML('beforeend',`<span class="k" style="left:auto;top:auto;right:3px;bottom:2px">${am.costShort}</span>`);
+    b.onclick=()=>{state.sel=i;state.redraw()};b.onmouseenter=()=>{state.hov=i;state.redraw()};b.onmouseleave=()=>{state.hov=-1;state.redraw()};s.append(b)});
+   s.insertAdjacentHTML('beforeend',`<div class="snes" style="left:${x0-150}px;top:170px;padding:4px 10px;font-size:13px;white-space:nowrap">${AMMO[state.sel].name}</div>`);
+   if(state.hov>=0)s.insertAdjacentHTML('beforeend',`<div class="snes tip" style="left:${Math.min(400,x0+state.hov*52-40)}px;top:92px">${tipHtml(AMMO[state.hov])}</div>`)}},
+ {id:'C',name:'C · Barillet repliable',desc:'Une seule case ronde à gauche de la barre PV montre la munition active. Un clic l’ouvre en éventail de cinq cases au-dessus (comme ci-dessous) ; un clic sur une case choisit et referme. Le moins encombrant, mais deux clics pour changer.',
+  build(s,state){const cx=148,cy=185;
+   const main=document.createElement('button');main.className='snes slot sel';Object.assign(main.style,{left:(cx-19)+'px',top:(cy-19)+'px',width:'38px',height:'38px',borderRadius:'50%'});
+   main.append(ammoIcon(AMMO[state.sel]));main.onclick=()=>{state.open=!state.open;state.redraw()};s.append(main);
+   if(state.open)AMMO.forEach((am,i)=>{const a=(-175+i*30)*Math.PI/180,r=60;const b=document.createElement('button');
+    b.className='snes slot'+(state.sel===i?' sel':'')+(affordable(am)?'':' off');Object.assign(b.style,{left:(cx+Math.cos(a)*r-17)+'px',top:(cy+Math.sin(a)*r-17)+'px',borderRadius:'50%'});
+    b.append(ammoIcon(am));b.onclick=()=>{state.sel=i;state.open=false;state.redraw()};b.onmouseenter=()=>{state.hov=i;state.redraw()};b.onmouseleave=()=>{state.hov=-1;state.redraw()};s.append(b)});
+   if(state.open&&state.hov>=0)s.insertAdjacentHTML('beforeend',`<div class="snes tip" style="left:230px;top:96px">${tipHtml(AMMO[state.hov])}</div>`)}},
+];
+{
+ const host=document.getElementById('hud');
+ for(const v of HUDV){const c=document.createElement('div');c.className='card';c.innerHTML=`<h3>${v.name}</h3>`;
+  const {w,s}=hudFrame();const state={sel:1,hov:v.id==='A'?2:(v.id==='B'?3:2),open:true};
+  state.redraw=()=>{s.querySelectorAll('.slot,.cursor,.tip,.snes:not(.pv)').forEach(n=>n.remove());v.build(s,state)};state.redraw();
+  c.append(w);c.insertAdjacentHTML('beforeend',`<p>${v.desc}</p><p class="spec">Exemple : Savoir à 1, les balles de Sigil sont grisées. Survol figé au chargement pour la capture.</p>`);
+  verdict(c,'hud-'+v.id,'HUD · '+v.name);host.append(c)}
+ const c=document.createElement('div');c.className='card';
+ c.innerHTML=`<h3>Règles communes au sélecteur</h3><ul>
+  <li>Visible seulement incarné en Ingénieur, Arbalestrie en main droite et recherche achevée ; masqué quand un panneau (bâtiment, allié) recouvre la barre PV, comme elle.</li>
+  <li>Le clic sur une case est pris par le HUD : il ne sélectionne rien en jeu et ne tire pas.</li>
+  <li>Munition gardée en sortant de l’incarnation et à la prochaine ; « spirituelles » par défaut.</li>
+  <li>Mana insuffisante pour la munition choisie : pas de tir (comme aujourd’hui), case grisée ; pas de retour automatique aux spirituelles.</li>
+  <li>Medeina : le soin ne dépasse pas les PV maximum ; la barre PV pulse en vert à chaque soin.</li>
+  <li>Aether : l’onde ne touche que les ennemis visibles (hors brouillard), cible comprise une seule fois.</li></ul>
+  <p class="spec">Question ouverte : ajouter aussi la molette ou les touches 1 à 5 pour changer de munition ?</p>`;
+ verdict(c,'hud-regles','HUD · règles communes');host.append(c);
+}
+
+// ====================== Boucle ======================
+let speed=1,paused=false,clock=0,last=performance.now();
+document.querySelectorAll('[data-speed]').forEach(b=>b.onclick=()=>{speed=+b.dataset.speed;document.querySelectorAll('[data-speed]').forEach(x=>x.classList.toggle('on',x===b))});
+document.getElementById('pause').onclick=e=>{paused=!paused;e.target.classList.toggle('on',paused);e.target.textContent=paused?'Reprendre':'Pause'};
+document.getElementById('nums').onclick=e=>{showNums=!showNums;e.target.classList.toggle('on',showNums);e.target.textContent=showNums?'Affichés':'Masqués'};
+function frame(now){const dt=Math.min(.05,(now-last)/1000);last=now;if(!paused)clock+=dt*speed;
+ const t=clock%LOOP;for(const s of scenes)s.draw(t);requestAnimationFrame(frame)}
+requestAnimationFrame(frame);tally();
+</script>
+</body>
+</html>

@@ -71,7 +71,8 @@ func _ready() -> void:
 	eng.tx = eng.x
 	eng.tz = eng.z
 	GameState.martyre_busy_until = -INF
-	GameState.martyre_ready = {"fissure": GameState.sim_time, "seals": INF}
+	GameState.martyre_next = ["fissure"]
+	GameState.martyre_next_at = GameState.sim_time
 	world.camera.set_view(Vector2(boss.x + 6.0, boss.z - 3.0), 3)
 	_run(sim, 0.4 + 6.0 / Martyre.FISSURE["speed"])
 	await _shot("6_fissure")
@@ -81,7 +82,8 @@ func _ready() -> void:
 	eng.x = boss.x + 16.0
 	eng.tx = eng.x
 	GameState.martyre_busy_until = -INF
-	GameState.martyre_ready = {"fissure": INF, "seals": GameState.sim_time}
+	GameState.martyre_next = ["rosace"]
+	GameState.martyre_next_at = GameState.sim_time
 	world.camera.set_view(Vector2(boss.x + 9.0, boss.z - 3.0), 3)
 	_run(sim, Martyre.SEALS["place"] + Martyre.SEALS["charge"] * 0.6)
 	await _shot("8_sceaux_charge")

@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="fr"><head><meta charset="utf-8"><title>Export des esprits</title>
 <style>body{margin:0;padding:12px;background:#14161b;color:#e6e8ee;font:14px system-ui}</style></head>
-<body><p>Export des esprits retenus (planches/esprits-v6-propositions.html) : Faon de cairn, Roue-mandala, Orrery, Livre ailé. 6 modes × 24 images à 12 i/s. <code>?save=http://127.0.0.1:8172</code> envoie vers tools/esprits/serve.py.</p>
+<body><p>Export des esprits retenus (planches/esprits-v6-propositions.html) : Feu follet (Flamme sylvestre), Roue-mandala, Orrery, Livre ailé. 6 modes × 24 images à 12 i/s. <code>?save=http://127.0.0.1:8172</code> envoie vers tools/esprits/serve.py.</p>
 <script>
 /* moteur commun, copie de assets/esprits-planches.js */
 const CW=56,CH=56,GY=47,PI2=Math.PI*2,OUT='#0b090b';
@@ -518,8 +518,15 @@ function mk(draw,o={}){return function(S,F,pose,t,G){
   const an=o.anchor?o.anchor.map(([a,b])=>[x+a,gy+b]):[[x-4,gy-(o.h||30)],[x+4,gy-(o.h||30)]];
   for(const[ax,ay]of an){F0.line(cx+(ax<x?1:8),cy+7,ax,ay,mix(G.col,'#ffffff',.2));}}
  const k=st.k,fall=fl?(o.hover||4):0;
- for(let y=0;y<CH;y++)for(let xx=0;xx<CW;xx++){const v=S0.g(xx,y);if(!v)continue;if(k>0&&hash(xx,y,13)<k*1.15-.35)continue;S.p(xx,y+R(k*fall),v)}
- for(let y=0;y<CH;y++)for(let xx=0;xx<CW;xx++){const f=F0.g(xx,y);if(!f)continue;if(k>.5&&hash(xx,y,17)<k)continue;F.p(xx,y+R(k*fall),f)}
+ // Marche d'un esprit qui flotte (planches/unites-maj-propositions.html, A2) : le corps s'incline vers l'avant
+ // (jusqu'à 2 px en haut), tangue, et laisse deux échos tramés à la couleur du culte derrière lui (calque F :
+ // sans contour, jamais par-dessus le corps).
+ const glide=fl&&pose==='marche',sway=glide?R(sn(t,2)*1):0;
+ const lean=y=>glide?R(Math.max(0,Math.min(1,(gy-y)/(o.h||22)))*3)-1:0;
+ if(glide)for(const[dx,col,lim]of[[-8,c[1],.3],[-4,c[2],.55]])
+  for(let y=0;y<CH;y++)for(let xx=0;xx<CW;xx++){if(!S0.g(xx,y)||S0.g(xx+dx,y)||((xx+y)&1)||hash(xx,y,R(t*12)+dx)>lim)continue;F.p(xx+dx+lean(y),y+sway,col)}
+ for(let y=0;y<CH;y++)for(let xx=0;xx<CW;xx++){const v=S0.g(xx,y);if(!v)continue;if(k>0&&hash(xx,y,13)<k*1.15-.35)continue;S.p(xx+lean(y),y+R(k*fall)+sway,v)}
+ for(let y=0;y<CH;y++)for(let xx=0;xx<CW;xx++){const f=F0.g(xx,y);if(!f)continue;if(k>.5&&hash(xx,y,17)<k)continue;F.p(xx+lean(y),y+R(k*fall)+sway,f)}
  if(fl&&k===0)for(let i=0;i<3;i++){const u=(t+i/3)%1;F.p(x-3+i*3+sn(u)*1,gy+1+u*(GY-gy),mix(G.col,'#000000',.35+u*.4))}
  if(pose==='prier')for(let i=0;i<3;i++){const u=(t+i/3)%1;F.p(x-5+i*5,gy-(o.h||30)-2-u*9,u<.6?c[4]:c[3])}
  if(pose==='combat'&&t>.36&&t<.52){const[fx,fy]=o.front||[11,-16];star(F,R(x+fx),R(gy+fy),c[4],3)}
@@ -695,28 +702,63 @@ const ARR_ROWS=[
 // Pas d'établi dans les atlas : le poste est dessiné par le jeu.
 rock=function(){};shelf=function(){};
 const BAYER=[0,8,2,10,12,4,14,6,3,11,1,9,15,7,13,5],bay=(x,y)=>BAYER[(y&3)*4+(x&3)]/16;
+
+/* ============ MEDEINA · feu follet « Flamme sylvestre » (planches/feu-follet-medeina-propositions.html, piste B) ============ */
+// Rendu RGBA (lueur translucide) ; alpha ramené à 4 paliers tramés pour rester pixel. Fréquences multiples de 0,5 Hz : boucle de 2 s.
+function wispFrame(pose,t){
+ const cv=document.createElement('canvas');cv.width=CW;cv.height=CH;const g=cv.getContext('2d');g.globalCompositeOperation='lighter';
+ const glow=(x,y,r,col,a)=>{if(r<=0)return;const gr=g.createRadialGradient(x,y,0,x,y,r);gr.addColorStop(0,`rgba(${col},${a})`);gr.addColorStop(1,`rgba(${col},0)`);g.fillStyle=gr;g.beginPath();g.arc(x,y,r,0,PI2);g.fill()};
+ const P=k=>Math.sin(t*PI2*k);let x=27,y=29+P(.5)*1.6,k=1,dir=0,act=-1;
+ if(pose==='marche'||pose==='porter'){dir=1;y=29+P(1.5)*1}
+ if(pose==='porter')y=25+P(.5)*.6;
+ if(pose==='prier'){y=31+P(.5)*.8;k=.9+.1*P(1)}
+ if(pose==='travail'){act=(t*1.5)%1}
+ if(pose==='combat'){act=(t*1)%1;k=act<.4?1-act*.6:act<.5?1.45:1}
+ glow(x,GY-1,10*k,'110,220,100',.28);
+ glow(x,y+2,13*k,'60,190,80',.5);
+ const burst=pose==='combat'&&act>.4&&act<.55?1.5:1,n=6;
+ for(let i=0;i<n;i++){const base=-Math.PI/2+(i-(n-1)/2)*.42-dir*.5,L=(8+4*Math.sin(t*PI2*1.5+i*1.9))*k*burst;
+  for(let j=0;j<=8;j++){const q=j/8,w=Math.sin(t*PI2*2+i+q*4)*1.8*q,a=base+w*.12;glow(x+Math.cos(a)*L*q+w,y+Math.sin(a)*L*q,(3-q*2)*k,'150,255,150',.5*(1-q*.6))}}
+ for(let i=0;i<3;i++){const a=t*PI2*.5+i*2.1,d=10+Math.sin(t*PI2+i)*1.5;glow(x+Math.cos(a)*d,y+Math.sin(a)*d*.5,1.6,'210,255,170',.95)}
+ if(pose==='prier')for(let i=0;i<3;i++){const u=(t*.5+i/3)%1;glow(x-6+i*6,y+12-u*20,1.4,'210,255,170',1-u)}
+ if(pose==='travail'&&act<.5)for(let j=0;j<7;j++){const q=j/7;glow(lerp(x,x+15,q)+Math.sin(t*40+j)*1.2,lerp(y,GY-4,q),1.5,'190,255,160',.8)}
+ if(pose==='combat'&&act>.4&&act<.7){const q=(act-.4)/.3;glow(lerp(x,x+20,q),lerp(y,y+4,q),4,'170,255,140',1)}
+ glow(x,y,4.5*k,'255,255,240',1);
+ const im=g.getImageData(0,0,CW,CH),d=im.data;
+ for(let yy=0;yy<CH;yy++)for(let xx=0;xx<CW;xx++){const j=(yy*CW+xx)*4,a=d[j+3]/255;if(!a)continue;
+  const lv=Math.min(4,Math.floor(a*4+bay(xx,yy)));d[j+3]=[0,90,160,215,255][lv];}
+ // noyau franc
+ for(const[dx,dy]of[[0,0],[-1,0],[0,-1],[-1,-1],[1,0]]){const j=((R(y)+dy)*CW+R(x)+dx)*4;d[j]=d[j+1]=d[j+2]=d[j+3]=255}
+ if(pose==='porter'){const S=new L();crate(S,x-5,y+7);for(let q=0;q<CW*CH;q++){const c=S.a[q]||((S.g(q%CW-1,(q/CW)|0)||S.g(q%CW+1,(q/CW)|0)||S.g(q%CW,((q/CW)|0)-1)||S.g(q%CW,((q/CW)|0)+1))?OUT:null);if(!c)continue;const v=rgb(c);d[q*4]=v[0];d[q*4+1]=v[1];d[q*4+2]=v[2];d[q*4+3]=255}}
+ return d}
+const RGBA_ROLES={medeina:wispFrame};
 const ROLES={medeina:faonCairn,indra:r5Mandala,aether:orrery,sigil:sLivre};
 // mode du jeu → pose de la planche ; 24 images à 12 i/s (t de 0 à 2, deux boucles de pose)
 const MODES={idle:'idle',walk:'marche',carry:'porter',pray:'prier',work:'travail',fight:'combat'};
-const N=24,FPS=12;
-function frame(fn,G,pose,t){const S=new L(),F=new L();fn(S,F,pose,t%1===0&&pose==='idle'?t:t,G);const px=new Array(CW*CH).fill(null);
+const N=24,FPS=12,GAME_FPS=24; // cadence réelle en jeu (grille 12 / 24 i/s), écrite dans le manifeste
+function frame(fn,G,pose,t,role){if(RGBA_ROLES[role])return RGBA_ROLES[role](pose,t);const S=new L(),F=new L();fn(S,F,pose,t%1===0&&pose==='idle'?t:t,G);const px=new Array(CW*CH).fill(null);
  for(let y=0;y<CH;y++)for(let x=0;x<CW;x++){const v=S.g(x,y);if(v)px[y*CW+x]=v;else if(S.g(x-1,y)||S.g(x+1,y)||S.g(x,y-1)||S.g(x,y+1))px[y*CW+x]=OUT;const f=F.g(x,y);if(f)px[y*CW+x]=f}
- return px}
+ const d=new Uint8ClampedArray(CW*CH*4);px.forEach((c,k)=>{if(!c)return;const v=rgb(c);d[k*4]=v[0];d[k*4+1]=v[1];d[k*4+2]=v[2];d[k*4+3]=255});return d}
 const OUTS={},root=document.body;
 for(const role in ROLES){const G=GODS[role],fn=ROLES[role],frames={};let x0=CW,y0=CH,x1=0,y1=0;
- for(const m in MODES){frames[m]=[];for(let i=0;i<N;i++){const px=frame(fn,G,MODES[m],i/FPS);frames[m].push(px);px.forEach((c,k)=>{if(!c)return;const x=k%CW,y=(k/CW)|0;x0=Math.min(x0,x);y0=Math.min(y0,y);x1=Math.max(x1,x);y1=Math.max(y1,y)})}}
+ for(const m in MODES){frames[m]=[];for(let i=0;i<N;i++){const px=frame(fn,G,MODES[m],i/FPS,role);frames[m].push(px);for(let k=0;k<CW*CH;k++){if(!px[k*4+3])continue;const x=k%CW,y=(k/CW)|0;x0=Math.min(x0,x);y0=Math.min(y0,y);x1=Math.max(x1,x);y1=Math.max(y1,y)}}}
  const fw=x1-x0+1,fh=y1-y0+1,R={fw,fh,ax:27-x0,ay:47-y0,strips:{},crate:null};
  for(const m in MODES){const cv=document.createElement('canvas');cv.width=fw*N;cv.height=fh;const cx=cv.getContext('2d'),im=cx.createImageData(fw*N,fh);
-  frames[m].forEach((px,i)=>{for(let y=0;y<fh;y++)for(let x=0;x<fw;x++){const c=px[(y+y0)*CW+x+x0];if(!c)continue;const v=rgb(c),j=(y*fw*N+i*fw+x)*4;im.data[j]=v[0];im.data[j+1]=v[1];im.data[j+2]=v[2];im.data[j+3]=255}});
+  frames[m].forEach((px,i)=>{for(let y=0;y<fh;y++)for(let x=0;x<fw;x++){const q=((y+y0)*CW+x+x0)*4;if(!px[q+3])continue;const j=(y*fw*N+i*fw+x)*4;for(let c=0;c<4;c++)im.data[j+c]=px[q+c]}});
   cx.putImageData(im,0,0);R.strips[m]=cv.toDataURL('image/png');cv.style.cssText='display:block;height:'+fh*3+'px;image-rendering:pixelated;margin:4px 0;background:#4a515e';root.appendChild(cv);
-  if(m==='carry'){const px=frames[m][0];for(let k=0;k<px.length&&!R.crate;k++)if(px[k]==='#7d6346')R.crate=[(k%CW)-x0,((k/CW)|0)-y0]}}
+  if(m==='carry'){const px=frames[m][0];const cr=rgb('#7d6346');for(let k=0;k<CW*CH&&!R.crate;k++)if(px[k*4+3]===255&&px[k*4]===cr[0]&&px[k*4+1]===cr[1]&&px[k*4+2]===cr[2])R.crate=[(k%CW)-x0,((k/CW)|0)-y0]}}
  const p=document.createElement('canvas');p.width=p.height=128;const pc=p.getContext('2d'),pi=pc.createImageData(128,128),px=frames.idle[0],k=3;
- for(let y=0;y<CH;y++)for(let x=0;x<CW;x++){const c=px[y*CW+x];if(!c)continue;const v=rgb(c);for(let a=0;a<k;a++)for(let b=0;b<k;b++){const X=64+(x-27)*k+a,Y=112+(y-47)*k+b+(fh>34?0:-10);if(X<0||Y<0||X>127||Y>127)continue;const j=(Y*128+X)*4;pi.data[j]=v[0];pi.data[j+1]=v[1];pi.data[j+2]=v[2];pi.data[j+3]=255}}
+ for(let y=0;y<CH;y++)for(let x=0;x<CW;x++){const q=(y*CW+x)*4;if(!px[q+3])continue;const v=[px[q],px[q+1],px[q+2],px[q+3]];for(let a=0;a<k;a++)for(let b=0;b<k;b++){const X=64+(x-27)*k+a,Y=112+(y-47)*k+b+(fh>34?0:-10);if(X<0||Y<0||X>127||Y>127)continue;const j=(Y*128+X)*4;pi.data[j]=v[0];pi.data[j+1]=v[1];pi.data[j+2]=v[2];pi.data[j+3]=v[3]}}
  pc.putImageData(pi,0,0);R.portrait=p.toDataURL('image/png');OUTS[role]=R}
 window.OUT=OUTS;
 const SAVE=new URLSearchParams(location.search).get('save');
-if(SAVE!=null)(async()=>{const base=SAVE.startsWith('http')?SAVE:'',post=(n,b)=>fetch(base+'/out/'+n,{method:'POST',body:b}).then(r=>{if(!r.ok)throw new Error(n+' '+r.status)});
+if(SAVE==='sync'){ // XHR synchrones : tout est écrit avant l'événement load (capture Firefox headless)
+ const post=(n,b)=>{const x=new XMLHttpRequest();x.open('POST','/out/'+n,false);x.send(b);if(x.status>=300)throw new Error(n+' '+x.status)};
+ for(const role in OUTS){const R=OUTS[role];for(const m in R.strips)post(`${role}_${m}.png`,R.strips[m]);post(`portrait-${role}.png`,R.portrait);
+  const modes={};for(const m in MODES)modes[m]={frame_w:R.fw,frame_h:R.fh,cols:N,rows:1,count:N,fps:GAME_FPS};post(`meta-${role}.json`,JSON.stringify({ax:R.ax,ay:R.ay,spirit:true,crate:R.crate,modes}))}
+ document.title='EXPORT OK';window.SAVED=true}
+else if(SAVE!=null)(async()=>{const base=SAVE.startsWith('http')?SAVE:'',post=(n,b)=>fetch(base+'/out/'+n,{method:'POST',body:b}).then(r=>{if(!r.ok)throw new Error(n+' '+r.status)});
  for(const role in OUTS){const R=OUTS[role];for(const m in R.strips)await post(`${role}_${m}.png`,R.strips[m]);await post(`portrait-${role}.png`,R.portrait);
-  const modes={};for(const m in MODES)modes[m]={frame_w:R.fw,frame_h:R.fh,cols:N,rows:1,count:N,fps:FPS};await post(`meta-${role}.json`,JSON.stringify({ax:R.ax,ay:R.ay,spirit:true,crate:R.crate,modes}))}
+  const modes={};for(const m in MODES)modes[m]={frame_w:R.fw,frame_h:R.fh,cols:N,rows:1,count:N,fps:GAME_FPS};await post(`meta-${role}.json`,JSON.stringify({ax:R.ax,ay:R.ay,spirit:true,crate:R.crate,modes}))}
  document.title='EXPORT OK';window.SAVED=true})().catch(e=>{document.title='EXPORT ÉCHEC';console.error(e)});
 </script></body></html>

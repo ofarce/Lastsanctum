@@ -30,7 +30,8 @@ func test_wave_plan_preserves_schedule_and_uses_small_groups() -> void:
 	for i in GameState.spawn_queue.size():
 		var entry: Dictionary = GameState.spawn_queue[i]
 		check_eq(entry["kind"], Combat.wave_kind(8, i, 28), "type inchangé")
-		check_near(entry["at"], GameState.sim_time + 2.0 + i * 0.38, 1e-6, "cadence inchangée")
+		check_near(entry["at"], GameState.sim_time + 2.0, 1e-6, "escouades prêtes dès le lancement")
+		check(entry.has("offset"), "place de départ dans la formation")
 		check(int(entry["group"]["expected"]) <= 7, "petit groupe")
 		check_eq(entry["group"]["id"], (i / 7) * 7, "groupe séquentiel")
 	check_eq(sim.combat.tactics.role_for("strazhar"), "reserve", "champion en réserve")
@@ -81,7 +82,9 @@ func test_reserve_waits_then_attacks_and_releases_if_front_dies() -> void:
 	sim.combat.update_enemies(DT, [u] as Array[Unit])
 	check(champion.tactical_goal != null, "réserve en retrait")
 	step_enemies(sim, 4.2, [u] as Array[Unit])
-	check(champion.tactical_goal == null, "réserve libérée après quatre secondes")
+	check(champion.tactical_goal != null, "réserve toujours en retrait à quatre secondes")
+	step_enemies(sim, 4.0, [u] as Array[Unit])
+	check(champion.tactical_goal == null, "réserve libérée après huit secondes")
 	members[0].hp = 0
 	members[1].hp = 0
 	sim.combat.update_enemies(DT, [u] as Array[Unit])

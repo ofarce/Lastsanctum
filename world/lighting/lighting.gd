@@ -19,9 +19,8 @@ const EVIL := Color8(255, 70, 40)
 const ANCRE := Color8(154, 58, 184)
 const CULT := {"medeina": Color8(122, 224, 112), "indra": Color8(255, 138, 42), "sigil": Color8(228, 234, 246), "aether": Color8(122, 128, 255)}
 const CULT_OF := {"sigil": "sigil", "warehouse": "sigil", "library": "sigil", "aether": "aether", "forge": "aether", "workshop": "aether", "creuset": "aether",
-	"medeina": "medeina", "bedroom": "medeina", "soulwell": "medeina", "indra": "indra", "caserne": "indra"}
+	"medeina": "medeina", "bedroom": "medeina", "soulwell": "medeina", "eglise": "medeina", "ecole": "medeina", "indra": "indra", "caserne": "indra"}
 const PORTAL := Vector2(0.0, -167.7)
-const DEITY_X := {"indra": -41.0, "sigil": -24.0, "medeina": 24.0, "aether": 41.0}
 const ORB_TIME := 8.0
 const FIREFLY := Color8(196, 255, 120)
 const MAX_FIREFLIES := 24
@@ -89,15 +88,28 @@ func collect() -> Array[Dictionary]:
 		L.append({"x": core.x, "z": core.y, "r": 10.0 * flick(t, 1.0, 0.04), "rgb": ANCRE, "glow": 0.22})
 	else:
 		L.append({"x": core.x, "z": core.y, "r": 4.0 + GameState.orb_progress / ORB_TIME * 5.0, "rgb": ANCRE, "glow": 0.08})
-	L.append({"x": PORTAL.x, "z": PORTAL.y, "r": 9.0, "rgb": FROST, "glow": 0.18})
+	# Capsule (à la place du portail) : lumière froide une fois alimentée par l'Ancre.
+	if Capsule.powered():
+		L.append({"x": PORTAL.x, "z": PORTAL.y, "r": 9.0, "rgb": FROST, "glow": 0.18})
+	# Pylônes de Merenor : lueur rouge de la nappe et de la pointe, blanche une fois canalisés.
 	for p in world.terrain_state.portals:
 		if p["active"]:
-			L.append({"x": p["x"], "z": p["z"] + 1.0, "r": 8.0 * flick(t, p["id"] + 3, 0.08), "rgb": EVIL, "glow": 0.22})
-	for id: String in DEITY_X:
-		if not GameState.deity_active.get(id, false):
-			continue
-		var x: float = DEITY_X[id]
-		L.append({"x": x, "z": PORTAL.y + 1.0, "r": 5.5 * flick(t, x), "rgb": CULT[id], "glow": 0.16})
+			var cover := float(p.get("cover", 1.0))
+			var rgb := EVIL.lerp(Color8(235, 232, 222), 1.0 - cover)
+			L.append({"x": p["x"], "z": p["z"] - 1.0, "r": 9.0 * flick(t, p["id"] + 3, 0.08), "rgb": rgb, "glow": 0.1})
+			if cover > 0.0:
+				L.append({"x": p["x"], "z": p["z"] + 2.0, "r": 13.0 * cover, "rgb": EVIL, "glow": 0.06 * cover})
+	# Œil de la Matrice : lueur carmin de l'œil, plus vive quand il s'ouvre, et la salle qui en rougeoie.
+	if OeilMatrice.active():
+		var eye := TerrainState.eye_room_center()
+		var open: float = OeilMatrice.run().get("open", 0.0)
+		L.append({"x": eye.x, "z": eye.y - 6.0, "r": (14.0 + 8.0 * open) * flick(t, 77.0, 0.06), "rgb": EVIL, "glow": 0.1 + 0.12 * open})
+		for dx: float in [-34.0, 34.0]:
+			L.append({"x": eye.x + dx, "z": eye.y, "r": 12.0, "rgb": EVIL, "glow": 0.05})
+	# Porte de chair de la frontière, tant qu'elle est fermée.
+	var ts := world.terrain_state
+	if ts.frontier and ts.eye_gate_closed and ts.is_gallery_open(0.0, TerrainState.eye_room_center().y):
+		L.append({"x": 0.0, "z": TerrainState.frontier_z() + 3.0, "r": 9.0 * flick(t, 91.0, 0.08), "rgb": EVIL, "glow": 0.08})
 	# Grappes de quartz du décor (style ardoise) : liste recalculée seulement quand le décor change.
 	if _decor_version != world.decor.version:
 		_decor_version = world.decor.version
@@ -107,7 +119,23 @@ func collect() -> Array[Dictionary]:
 				_decor_lights.append({"x": e["x"], "z": e["z"], "r": 4.5, "rgb": ArtStyle.QUARTZ_LIGHT, "glow": 0.14})
 	L.append_array(_decor_lights)
 	L.append_array(fireflies(t))
+	L.append_array(moonlit(t))
 	return L
+
+
+## La nuit, dehors : chaque ennemi vivant se détache un peu de l'ombre (sans lueur), pour rester lisible
+## hors des halos. Ajoutés en dernier : ce sont les premiers écartés si les sources débordent.
+const MOONLIT_R := 3.4
+const MOONLIT_DIG := 0.42
+func moonlit(t: float) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	var n := DayNight.night(t)
+	if n < 0.2:
+		return out
+	for e: Enemy in GameState.enemies:
+		if e.hp > 0.0 and CaveShape.outdoors(e.x, e.z):
+			out.append({"x": e.x, "z": e.z - 0.6, "r": MOONLIT_R, "rgb": Color.BLACK, "glow": 0.0, "dig": MOONLIT_DIG * n})
+	return out
 
 
 ## Lucioles de la jungle, la nuit : petites lueurs vertes qui dérivent près de la caméra.
@@ -163,15 +191,23 @@ func _process(_delta: float) -> void:
 			continue
 		if dark.size() >= MAX_LIGHTS:
 			break
-		dark.append(Vector4(p.x / 4.0, p.y / 4.0, pr / 4.0, 0.0))
+		dark.append(Vector4(p.x / 4.0, p.y / 4.0, pr / 4.0, float(l.get("dig", 1.0))))
 		var c: Color = l["rgb"]
 		var w: float = l["glow"]
-		_glows.append([p, pr * 0.8, Color(c.r * w, c.g * w, c.b * w, 1.0)])
+		if w > 0.0:
+			_glows.append([p, pr * 0.8, Color(c.r * w, c.g * w, c.b * w, 1.0)])
 	_dark_mat.set_shader_parameter("qsize", qsize)
 	var sky := DayNight.sky(GameState.sim_time)
 	var gloom := Weather.gloom()
-	sky = Color(lerpf(sky.r, Weather.GREY.r, gloom * 3.0), lerpf(sky.g, Weather.GREY.g, gloom * 3.0), lerpf(sky.b, Weather.GREY.b, gloom * 3.0), minf(0.9, sky.a + gloom))
+	sky = Color(lerpf(sky.r, Weather.GREY.r, gloom * 3.0), lerpf(sky.g, Weather.GREY.g, gloom * 3.0), lerpf(sky.b, Weather.GREY.b, gloom * 3.0), minf(0.8, sky.a + gloom))
 	_dark_mat.set_shader_parameter("sky", sky)
+	_dark_mat.set_shader_parameter("edge_base", CaveShape.EDGE_BASE)
+	_dark_mat.set_shader_parameter("edge_waves", CaveShape.EDGE_WAVES)
+	_dark_mat.set_shader_parameter("edge_phase", CaveShape.EDGE_PHASE)
+	# Ombres de nuages : légères par beau temps, marquées sous un ciel couvert ; aucune la nuit ni sous la pluie.
+	var day := 1.0 - DayNight.night(GameState.sim_time)
+	_dark_mat.set_shader_parameter("clouds", day * (1.0 - Weather.rain()) * clampf(0.3 + gloom * 5.0, 0.0, 1.0))
+	_dark_mat.set_shader_parameter("cloud_time", GameState.sim_time)
 	_dark_mat.set_shader_parameter("cam", world.camera.cam)
 	_dark_mat.set_shader_parameter("px", float(px))
 	_dark_mat.set_shader_parameter("screen", screen)
@@ -179,6 +215,10 @@ func _process(_delta: float) -> void:
 	_dark_mat.set_shader_parameter("light_count", dark.size())
 	_up_mat.set_shader_parameter("screen_size", screen)
 	_up_mat.set_shader_parameter("qsize", qsize)
+	# Trame des paliers : ancrée au monde, point de trame = un pixel natif.
+	for m: ShaderMaterial in [_up_mat, _glow_mat]:
+		m.set_shader_parameter("px", float(px))
+		m.set_shader_parameter("origin", world.position)
 	queue_redraw()
 
 

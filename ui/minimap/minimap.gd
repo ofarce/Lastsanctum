@@ -22,6 +22,10 @@ var command_bar_height := 120.0
 var _bg := Image.create(W, H, false, Image.FORMAT_RGBA8)
 var _frame := Image.create(W, H, false, Image.FORMAT_RGBA8)
 var _fog_mask: Image
+## Fond déjà fondu avec le brouillard (cache), fond + points avant brouillard, rectangles des points de l'image.
+var _bg_fog: Image
+var _pre: Image
+var _dots: Array[Rect2i] = []
 var _fog_revision := -1
 var _tex: ImageTexture
 var _bg_version := -1
@@ -178,7 +182,7 @@ func build_background(st: TerrainState) -> void:
 		_cell(g, k.x * 4.0, k.y * 4.0, 4.0, hollow)
 	x = -68.0
 	while x < 68.0:
-		var z := -170.0
+		var z := -192.0
 		while z < -86.0:
 			if CaveShape.in_cave(x, z):
 				_cell(g, x, z, 1.5, hollow)
@@ -203,12 +207,6 @@ func build_background(st: TerrainState) -> void:
 	for t: Array in _meta["trees"]:
 		var p := map_pt(t[0], t[1])
 		fill_rect(g, p.x - 1.0, p.y - 1.0, 2.0, 2.0, Color("#162d1c") if t[2] else Color("#2f4c29"))
-	var pz: float = Simulation.PORTAL.y
-	for d: Dictionary in _meta["deity_portals"]:
-		var p := map_pt(d["x"], pz)
-		fill_rect(g, p.x - 1.0, p.y, 2.0, 2.0, Color(d["color"]))
-	var pp := map_pt(Simulation.PORTAL.x, pz)
-	fill_rect(g, pp.x - 2.0, pp.y, 4.0, 2.0, Color("#ffc04a"))
 	_bg_version = st.version
 	_bg_seed = st.seed
 
@@ -233,9 +231,30 @@ func refresh() -> void:
 	# Fenêtre figée pendant un clic-glisser sur la minicarte (elle ne bouge pas sous le curseur).
 	if not _dragging:
 		win = window_for(world.camera.cam)
+	# Fond et brouillard ne changent qu'avec le terrain, la fenêtre ou la vue des unités : leur fondu (toute la
+	# carte) est gardé en cache. À chaque rafraîchissement, seuls les rectangles des points sont refondus, à
+	# partir de l'image « fond + points » : pixel pour pixel le même résultat qu'un fondu de toute la carte.
+	var stale := _bg_fog == null
 	if st.version != _bg_version or st.seed != _bg_seed or win != _bg_win:
 		build_background(st)
-	_frame.blit_rect(_bg, Rect2i(0, 0, W, H), Vector2i.ZERO)
+		stale = true
+	if _fog_revision != world.fog.revision or _fog_win != win:
+		# Brouillard (toute la carte) recadré sur la fenêtre affichée.
+		var o := Vector2i(int(win.position.x - CaveShape.WORLD_X0), int(win.position.y - CaveShape.WORLD_Z0))
+		_fog_mask = world.fog.image.get_region(Rect2i(o, Vector2i(win.size)))
+		_fog_mask.resize(W, H, Image.INTERPOLATE_BILINEAR)
+		_fog_revision = world.fog.revision
+		_fog_win = win
+		stale = true
+	if stale:
+		if _bg_fog == null:
+			_bg_fog = Image.create(W, H, false, Image.FORMAT_RGBA8)
+			_pre = Image.create(W, H, false, Image.FORMAT_RGBA8)
+		_bg_fog.blit_rect(_bg, Rect2i(0, 0, W, H), Vector2i.ZERO)
+		_bg_fog.blend_rect(_fog_mask, Rect2i(0, 0, W, H), Vector2i.ZERO)
+	_pre.blit_rect(_bg, Rect2i(0, 0, W, H), Vector2i.ZERO)
+	_frame.blit_rect(_bg_fog, Rect2i(0, 0, W, H), Vector2i.ZERO)
+	_dots.clear()
 	for b in GameState.buildings:
 		_dot(b.x, b.z, Color("#e3c685") if not b.complete else (Color("#8de8ed") if b.is_temple() else Color("#d0b376")), 4.0)
 	for p: Dictionary in st.portals:
@@ -251,14 +270,16 @@ func refresh() -> void:
 	for e: Variant in GameState.enemies:
 		if not e.hidden:
 			_dot(e.x, e.z, Color("#ee7055"), 3.0)
-	if _fog_revision != world.fog.revision or _fog_win != win:
-		# Brouillard (toute la carte) recadré sur la fenêtre affichée.
-		var o := Vector2i(int(win.position.x - CaveShape.WORLD_X0), int(win.position.y - CaveShape.WORLD_Z0))
-		_fog_mask = world.fog.image.get_region(Rect2i(o, Vector2i(win.size)))
-		_fog_mask.resize(W, H, Image.INTERPOLATE_BILINEAR)
-		_fog_revision = world.fog.revision
-		_fog_win = win
-	_frame.blend_rect(_fog_mask, Rect2i(0, 0, W, H), Vector2i.ZERO)
+	for r: Rect2i in _dots:
+		_frame.blit_rect(_pre, r, r.position)
+		_frame.blend_rect(_fog_mask, r, r.position)
+	# Iris de la Matrice (module d'exo) : les ennemis hors de vue se voient à travers la roche, en cyan.
+	if Loot.iris_worn():
+		for e: Variant in GameState.enemies:
+			if not e.hidden and e.hp > 0.0 and not world.fog.visible_at(Vector2(e.x, e.z)):
+				var q := map_pt(e.x, e.z)
+				if q.x >= 1.0 and q.y >= 1.0 and q.x < W - 2.0 and q.y < H - 2.0:
+					fill_rect(_frame, q.x - 1.0, q.y - 1.0, 2.0, 2.0, Color("#5fd8e8"))
 	_tex.update(_frame)
 	# Trapèze : coins de l'écran au-dessus du bandeau, projetés au sol.
 	var cam := world.camera
@@ -275,7 +296,14 @@ func _dot(x: float, z: float, c: Color, s: float) -> void:
 	if not world.fog.visible_at(Vector2(x, z)):
 		return
 	var p := map_pt(x, z)
-	fill_rect(_frame, p.x - s / 2.0, p.y - s / 2.0, s, s, c)
+	fill_rect(_pre, p.x - s / 2.0, p.y - s / 2.0, s, s, c)
+	# Pixels touchés par fill_rect (mêmes bornes), à refondre avec le brouillard.
+	var x0 := maxi(0, floori(p.x - s / 2.0))
+	var y0 := maxi(0, floori(p.y - s / 2.0))
+	var x1 := mini(W, ceili(p.x - s / 2.0 + s))
+	var y1 := mini(H, ceili(p.y - s / 2.0 + s))
+	if x1 > x0 and y1 > y0:
+		_dots.append(Rect2i(x0, y0, x1 - x0, y1 - y0))
 
 
 func frame_image() -> Image:

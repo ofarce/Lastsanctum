@@ -1,0 +1,51 @@
+{
+ "frame_w": 104,
+ "frame_h": 88,
+ "ay": 80,
+ "cols": 12,
+ "anims": {
+  "idle": {
+   "count": 50,
+   "fps": 12,
+   "ax": 44,
+   "loop": true
+  },
+  "rear": {
+   "count": 17,
+   "fps": 24,
+   "ax": 44,
+   "loop": false
+  },
+  "slam": {
+   "count": 48,
+   "fps": 24,
+   "ax": 44,
+   "loop": false
+  },
+  "sink": {
+   "count": 17,
+   "fps": 24,
+   "ax": 57,
+   "loop": false
+  },
+  "mound": {
+   "count": 6,
+   "fps": 12,
+   "ax": 44,
+   "loop": true
+  },
+  "emerge": {
+   "count": 17,
+   "fps": 24,
+   "ax": 31,
+   "loop": false
+  },
+  "death": {
+   "count": 41,
+   "fps": 12,
+   "ax": 44,
+   "loop": false
+  }
+ },
+ "source": "planches/biomes-monstres-finaux.html, modèle 3 (tools/biomes-persos/export_gorge.py)"
+}

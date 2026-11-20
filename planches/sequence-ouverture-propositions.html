@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8">
+<title>Séquence d'ouverture</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Cormorant+SC:wght@500;700&display=swap">
+<style>
+/* Planche : une rangée par élément, 3 vignettes animées (canvas 240×150 en pixels, ×2) */
+:root{--bg:#14161c;--panel:#1d2129;--line:#2f3540;--fg:#d9dde4;--mute:#8b93a1;--cyan:#5fe3e8;--rose:#f3c6d6;
+ --disp:"Cormorant SC",Georgia,serif;--mono:"Share Tech Mono",ui-monospace,monospace;color-scheme:dark}
+body{background:var(--bg);color:var(--fg);font:14px/1.5 system-ui,sans-serif;margin:0;
+ padding:24px max(16px,env(safe-area-inset-right,0px)) 60px max(16px,env(safe-area-inset-left,0px))}
+h1{font-family:var(--disp);font-size:2.2rem;margin:0;letter-spacing:.04em}
+.lead{color:var(--mute);max-width:70ch;margin:.3rem 0 1.2rem}
+.seq{font-family:var(--mono);font-size:12px;color:var(--mute);display:flex;flex-wrap:wrap;gap:6px 14px;margin-bottom:28px}
+.seq b{color:var(--cyan);font-weight:400}
+section{margin:0 0 34px}
+h2{font-family:var(--disp);font-size:1.45rem;margin:0 0 2px;letter-spacing:.03em}
+h2 small{font-family:var(--mono);font-size:11px;color:var(--mute);margin-left:8px;letter-spacing:0}
+.ctx{color:var(--mute);margin:0 0 10px;max-width:80ch}
+.row{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px}
+figure{margin:0;background:var(--panel);border:1px solid var(--line);padding:8px;min-width:0}
+canvas{width:100%;aspect-ratio:240/150;image-rendering:pixelated;display:block;background:#000}
+figcaption{padding:8px 2px 2px}
+figcaption b{font-family:var(--mono);color:var(--cyan);font-weight:400;margin-right:6px}
+figcaption p{margin:4px 0 0;color:var(--mute);font-size:13px}
+.tools{position:sticky;top:env(safe-area-inset-top,0px);background:var(--bg);padding:8px 0;z-index:2;display:flex;gap:10px;align-items:center;font-family:var(--mono);font-size:12px}
+button{font:inherit;background:var(--panel);color:var(--fg);border:1px solid var(--line);padding:4px 10px;cursor:pointer}
+button:focus-visible{outline:2px solid var(--cyan)}
+</style></head><body>
+<h1>Séquence d'ouverture</h1>
+<p class="lead">Trois propositions par élément, rendues en vue 3/4 dans la charte (ardoise tyrienne, contour noir, cyan = Exilés, pourpre = Ancre, or = forces de Laetan pour les canons de Byrsa). Les vignettes « cinématique » portent les barres noires haut et bas, sans HUD.</p>
+<div class="seq"><span><b>J1</b> portail → l'Ingénieur à genoux → se relève</span><span><b>J1</b> prière à l'Ancre (porte sud fermée)</span><span><b>J1</b> rai + formation du bouclier</span><span><b>J2</b> canons en position, pilonnage</span><span><b>J2</b> jeu sous bouclier, sortie bloquée</span><span><b>fin J2</b> explosion, canons soufflés, mur sud ouvert</span><span><b>J3+</b> vagues</span></div>
+<div class="tools"><button id="pause" type="button">Pause</button><button id="restart" type="button">Recommencer tout</button><span style="color:var(--mute)">Cliquer une vignette la relance au début.</span></div>
+<div id="board"></div>
+<script>
+const W=240,H=150,K='#0b090b',S1='#272d37',S2='#333a46',S3='#404955',S4='#56607080';
+const CY='#5fe3e8',PU='#a24bd6',GOLD='#d9a63a',BR='#7a5a2c';
+const R=(c,x,y,w,h,col)=>{c.fillStyle=col;c.fillRect(x|0,y|0,Math.max(1,w|0),Math.max(1,h|0))};
+const E=(c,x,y,rx,ry,col,st)=>{c.beginPath();c.ellipse(x,y,Math.max(.1,rx),Math.max(.1,ry),0,0,7);if(st){c.strokeStyle=col;c.lineWidth=st;c.stroke()}else{c.fillStyle=col;c.fill()}};
+const cl=(v,a=0,b=1)=>Math.max(a,Math.min(b,v)), ph=(t,a,b)=>cl((t-a)/(b-a)), ease=x=>x*x*(3-2*x);
+const hsl=(h,s,l,a=1)=>`hsla(${h},${s}%,${l}%,${a})`;
+function rnd(s){return()=>{s=(s*16807)%2147483647;return s/2147483647}}
+// ---------- décors ----------
+function floor(c,seed=3){R(c,0,0,W,H,S1);const r=rnd(seed);for(let y=0;y<H;y+=10)for(let x=(y/10%2)*8;x<W;x+=16){R(c,x,y,15,9,r()<.5?S2:'#2d333e');R(c,x,y,15,1,S3)}}
+function wallTop(c,h=26){R(c,0,0,W,h,'#1a1e26');R(c,0,h-8,W,8,S2);R(c,0,h-8,W,1,S3);R(c,0,h,W,1,K)}
+function anchor(c,x,y,t,glow=0){E(c,x,y+10,14,4,'#0008');E(c,x,y,10,10,K);E(c,x,y,9,9,'#120c18');E(c,x-3,y-3,3,2,hsl(280,60,40+glow*30));
+ for(let i=0;i<3;i++){const a=t*2+i*2.1;c.strokeStyle=hsl(280,70,45+glow*30,.8);c.lineWidth=1;c.beginPath();c.moveTo(x+Math.cos(a)*9,y+Math.sin(a)*9);c.lineTo(x+Math.cos(a+.4)*14,y+Math.sin(a+.4)*12);c.stroke()}}
+// L'Ingénieur (Tyrien, sans armure) : pose 'stand' | 'kneel' | 'pray' ; souffle = 0..1
+function eng(c,x,y,pose='stand',breath=0,dir=1){x|=0;y|=0;E(c,x,y,6,2,'#0007');
+ const skin='#c99a74',tun='#8a6b4a',band='#3a4a52',hair='#2a1d16';
+ if(pose==='kneel'){const b=Math.round(Math.sin(breath*Math.PI*2)*1);
+  R(c,x-5,y-6,10,5,K);R(c,x-4,y-5,8,4,tun);R(c,x-4,y-13+b,8,8,K);R(c,x-3,y-12+b,6,7,tun);R(c,x-3,y-9+b,6,1,band);
+  R(c,x-3,y-18+b*2,6,6,K);R(c,x-2,y-17+b*2,4,4,skin);R(c,x-2,y-17+b*2,4,1,hair);R(c,x-6,y-9+b,2,4,skin);R(c,x+4,y-9+b,2,4,skin);return}
+ if(pose==='pray'){const f=Math.round(Math.sin(breath*6)*1)-3;y+=f;E(c,x,y+3-f,6,2,'#0005');
+  R(c,x-7,y-5,14,5,K);R(c,x-6,y-4,12,3,tun);R(c,x-4,y-14,8,10,K);R(c,x-3,y-13,6,9,tun);R(c,x-3,y-10,6,1,band);
+  R(c,x-3,y-19,6,6,K);R(c,x-2,y-18,4,4,skin);R(c,x-2,y-18,4,1,hair);R(c,x-1,y-12,2,3,skin);return}
+ R(c,x-3,y-6,2,6,K);R(c,x+1,y-6,2,6,K);R(c,x-4,y-16,8,11,K);R(c,x-3,y-15,6,9,tun);R(c,x-3,y-11,6,1,band);
+ R(c,x-6,y-14,2,7,skin);R(c,x+4,y-14,2,7,skin);R(c,x-3,y-22,6,7,K);R(c,x-2,y-21,4,5,skin);R(c,x-2,y-21,4,1,hair);R(c,x+(dir>0?0:-1),y-19,1,1,K)}
+function soldier(c,x,y,col='#e0782a'){E(c,x,y,4,1.5,'#0007');R(c,x-3,y-11,6,11,K);R(c,x-2,y-10,4,6,'#3c3530');R(c,x-2,y-14,4,4,K);R(c,x-1,y-13,2,2,col);R(c,x-3,y-16,6,2,col)}
+// Extérieur : jungle au sud, montagne + bouche de la grotte
+function exterior(c,t,{wall='door',scorch=0,seed=7}={}){R(c,0,0,W,H,'#243320');const r=rnd(seed);
+ for(let i=0;i<90;i++){const x=r()*W,y=r()*H;R(c,x,y,2,2,r()<.5?'#2f4426':'#1c2a19')}
+ R(c,0,96,W,10,'#3a3326');R(c,104,96,32,54,'#3a3326');// route vers le sud
+ c.fillStyle=K;c.beginPath();c.moveTo(10,92);c.lineTo(30,16);c.lineTo(90,6);c.lineTo(160,8);c.lineTo(215,20);c.lineTo(232,92);c.closePath();c.fill();
+ c.fillStyle=S2;c.beginPath();c.moveTo(13,90);c.lineTo(32,18);c.lineTo(90,8);c.lineTo(160,10);c.lineTo(213,22);c.lineTo(229,90);c.closePath();c.fill();
+ c.fillStyle=S3;c.beginPath();c.moveTo(32,18);c.lineTo(90,8);c.lineTo(160,10);c.lineTo(213,22);c.lineTo(200,34);c.lineTo(45,32);c.closePath();c.fill();
+ for(let i=0;i<14;i++){const x=24+r()*190,y=38+r()*48;R(c,x,y,6+r()*10,1,S1)}
+ if(wall==='door'){R(c,104,70,32,22,K);R(c,106,72,13,20,'#3b2f24');R(c,121,72,13,20,'#3b2f24');R(c,106,77,28,2,'#555b63');R(c,106,86,28,2,'#555b63');R(c,119,72,2,20,K)}
+ if(wall==='open'){c.fillStyle=K;c.beginPath();c.moveTo(80,92);c.lineTo(92,58);c.lineTo(148,58);c.lineTo(160,92);c.fill();R(c,94,62,52,30,'#141820');
+  for(const [x,y,w] of [[78,84,18],[146,84,18],[84,74,12],[144,74,12]]){R(c,x,y,w,5,K);R(c,x+1,y,w-2,3,S3)}}
+ if(scorch){c.globalAlpha=scorch;E(c,120,118,70,26,'#120d0a');c.globalAlpha=1}}
+// Canon de Byrsa (bronze, frettes d'or) orienté vers le nord
+function cannon(c,x,y,recoil=0,tilt=0){E(c,x,y+4,9,3,'#0008');R(c,x-8,y-2,16,6,K);R(c,x-7,y-1,14,4,'#4a3a26');E(c,x-6,y+3,3,3,K);E(c,x+6,y+3,3,3,K);E(c,x-6,y+3,2,2,BR);E(c,x+6,y+3,2,2,BR);
+ const by=y-12+recoil;R(c,x-3+tilt,by,6,13,K);R(c,x-2+tilt,by+1,4,11,BR);R(c,x-2+tilt,by+3,4,1,GOLD);R(c,x-2+tilt,by+8,4,1,GOLD);R(c,x-3+tilt,by-1,6,2,GOLD)}
+function crew(c,x,y){R(c,x-2,y-8,4,8,K);R(c,x-1,y-7,2,5,'#5a4630');R(c,x-2,y-11,4,3,GOLD)}
+// ---------- bouclier : rendu par pixel ----------
+const SH={cx:120,cy:58,rx:96,ry:56};
+function shieldPx(v,nx,ny,d,t,hit){// d = distance normalisée au centre (0..1)
+ const rim=Math.pow(d,6);let h,a,l;
+ if(v==='A'){h=330+40*Math.sin(nx*3+t*.6)+30*Math.cos(ny*4-t*.4);l=88;a=.10+.55*rim}
+ else if(v==='B'){const q=nx*9,r2=ny*9+(Math.floor(q)%2)*.5,fx=q-Math.floor(q),fy=r2-Math.floor(r2);const edge=Math.min(fx,1-fx,fy,1-fy)<.08;
+  h=320+60*Math.sin(Math.floor(q)*.7+Math.floor(r2)*.5+t);l=edge?92:84;a=(edge?.45:.08)+.45*rim}
+ else{const f=Math.sin(nx*5+Math.sin(ny*3+t*.7)*2+t*.5)+Math.sin(ny*6-t*.3);h=300+f*45;l=86;a=.06+.12*(f*.5+.5)+.55*rim}
+ if(hit)a+=hit;return [h,l,a]}
+function hslToRgb(h,s,l){h=((h%360)+360)%360/360;s/=100;l/=100;const q=l<.5?l*(1+s):l+s-l*s,p=2*l-q,f=t=>{t=(t+1)%1;return t<1/6?p+(q-p)*6*t:t<.5?q:t<2/3?p+(q-p)*(2/3-t)*6:p};return[f(h+1/3)*255,f(h)*255,f(h-1/3)*255]}
+// grow 0..1 (formation), mode : 'full' | 'rise' (monte du sol) | 'unfold' (descend du rai) | 'knit' (tuiles)
+function shield(c,v,t,{grow=1,mode='full',hits=[],crack=0,alpha=1,sh=SH}={}){
+ const img=c.getImageData(0,0,W,H),D=img.data,{cx,cy,rx,ry}=sh;
+ for(let y=Math.max(0,cy-ry|0);y<Math.min(H,cy+ry+1);y++)for(let x=Math.max(0,cx-rx|0);x<Math.min(W,cx+rx+1);x++){
+  const nx=(x-cx)/rx,ny=(y-cy)/ry,d=Math.hypot(nx,ny);if(d>1)continue;
+  if(mode==='rise'&&ny<1-grow*2.2+.2*Math.sin(nx*8+t*3))continue;
+  if(mode==='unfold'&&ny>-1+grow*2.2)continue;
+  if(mode==='knit'){const cell=((Math.floor(x/8)*7+Math.floor(y/7)*13)%23)/23;if(cell>grow)continue}
+  let hit=0;for(const k of hits){const dd=Math.hypot(x-k.x,(y-k.y)*1.4),rr=k.age*40;hit+=cl(1-Math.abs(dd-rr)/3)*(1-k.age)*.7+cl(1-dd/6)*cl(1-k.age*4)}
+  let [hh,l,a]=shieldPx(v,nx,ny,d,t,hit);
+  if(crack){const n=Math.abs(Math.sin(nx*17+ny*9)+Math.sin(nx*5-ny*21));if(n<.12*crack)l=100,a+=.6*crack;hh+=crack*20}
+  a=cl(a*alpha);const [r,g,b]=hslToRgb(hh,70,l),i=(y*W+x)*4;D[i]+= (r-D[i])*a;D[i+1]+=(g-D[i+1])*a;D[i+2]+=(b-D[i+2])*a}
+ c.putImageData(img,0,0)}
+// ---------- cadrage ----------
+function bars(c,k=1,txt=''){const h=Math.round(16*k);R(c,0,0,W,h,'#000');R(c,0,H-h,W,h,'#000');if(txt&&k>.95){c.fillStyle='#c9ccd2';c.font='8px "Share Tech Mono",monospace';c.textAlign='center';c.fillText(txt,W/2,H-5)}}
+function flash(c,a,col='#fff'){if(a<=0)return;c.globalAlpha=cl(a);R(c,0,0,W,H,col);c.globalAlpha=1}
+function shake(c,amp){c.translate(Math.round((Math.random()-.5)*amp*2),Math.round((Math.random()-.5)*amp*2))}
+function bolt(c,x1,y1,x2,y2,col,seg=6){c.strokeStyle=col;c.lineWidth=1;c.beginPath();c.moveTo(x1,y1);for(let i=1;i<seg;i++){const f=i/seg;c.lineTo(x1+(x2-x1)*f+(Math.random()-.5)*8,y1+(y2-y1)*f+(Math.random()-.5)*8)}c.lineTo(x2,y2);c.stroke()}
+// Pilonnage commun : obus qui partent des canons et frappent le dôme
+function shells(c,t,guns,period=1.6,arc=30){const hits=[];guns.forEach((g,i)=>{const off=i*period/guns.length,lt=((t+off)%period)/period;
+ const tx=g.tx,ty=g.ty;if(lt<.55){const f=lt/.55,x=g.x+(tx-g.x)*f,y=g.y-12+(ty-g.y+12)*f-Math.sin(f*Math.PI)*arc;R(c,x-1,y-1,3,3,K);R(c,x,y,1,1,GOLD);
+  c.globalAlpha=.4;R(c,x-(tx-g.x)*.03,y+3,2,2,'#bbb');c.globalAlpha=1}
+ else hits.push({x:tx,y:ty,age:(lt-.55)/.45});g.rec=lt<.08?3*(1-lt/.08):0;g.fire=lt<.06});return hits}
+function muzzle(c,g){if(!g.fire)return;E(c,g.x,g.y-15,4,3,'#fff4c0');E(c,g.x,g.y-17,6,4,'#ffb34080');c.globalAlpha=.5;E(c,g.x+3,g.y-22,5,4,'#999');c.globalAlpha=1}
+
+// ================= VIGNETTES =================
+const ROWS=[
+{t:'Portail d\'arrivée',k:'cinématique · J1',ctx:'Sphère blanche/argentée cerclée d\'éclairs, l\'Ingénieur tombe à genoux, le portail se referme, il halète puis se relève.',p:9,items:[
+ ['A','Sphère d\'argent fulgurante','Une sphère pleine, dure, qui gonfle d\'un point. Anneau d\'éclairs blancs en orbite. Il en est expulsé, glisse et retombe à genoux. Fermeture en implosion vers un point + flash.',(c,t)=>portal(c,t,'A')],
+ ['B','Déchirure en orbe','La lumière se déchire d\'abord en fente verticale, puis s\'arrondit en sphère creuse aux bords crépitants. Il tombe de haut (ombre qui grandit). Fermeture : la sphère se replie en fente.',(c,t)=>portal(c,t,'B')],
+ ['C','Bulle de mercure','Une bulle argentée liquide, reflets mobiles, éclairs qui courent à sa surface. Il la traverse comme une membrane ; elle ondule, éclate en gouttelettes qui s\'évaporent.',(c,t)=>portal(c,t,'C')]]},
+{t:'Porte sud fermée',k:'jeu · J1–J2',ctx:'Lourde porte à double battant fermant la grotte au sud. Vue en jeu, depuis l\'intérieur de la salle.',p:6,items:[
+ ['A','Vantaux d\'ardoise cerclés de fer','Deux dalles d\'ardoise taillées, bandes de fer rivetées, barre transversale. Masse, poussière qui tombe du linteau.',(c,t)=>door(c,t,'A')],
+ ['B','Porte tyrienne scellée','Battants de pierre gravés de glyphes tyriens éteints, joint central en dents. Une fente cyan pulse très faiblement au joint.',(c,t)=>door(c,t,'B')],
+ ['C','Battants de bronze et rondins','Bois de jungle épais doublé de plaques de bronze vert-de-gris, gonds massifs, poutre de blocage posée sur crochets.',(c,t)=>door(c,t,'C')]]},
+{t:'Revitalisation et formation du bouclier',k:'cinématique · fin J1',ctx:'L\'Ingénieur médite à l\'Ancre ; on garde le rai de lumière, puis le bouclier se forme autour de la grotte (plan extérieur).',p:10,items:[
+ ['A','Montée du sol','Le rai jaillit, la caméra passe dehors : le bouclier monte du pied de la montagne comme une marée, jusqu\'à se fermer au sommet.',(c,t)=>form(c,t,'rise')],
+ ['B','Ombrelle du rai','Le rai perce la voûte et s\'étale au sommet en ombrelle qui descend jusqu\'au sol et se scelle dans un anneau de poussière.',(c,t)=>form(c,t,'unfold')],
+ ['C','Tissage de tuiles','Des tuiles hexagonales s\'allument en désordre, se rejoignent, puis une vague de lumière parcourt la coque achevée.',(c,t)=>form(c,t,'knit')]]},
+{t:'Le bouclier',k:'jeu · J2',ctx:'Rose pâle à reflets irisés, autour de la grotte. Rendu en continu pendant le jour 2.',p:8,items:[
+ ['A','Nacre','Coque presque transparente, irisation lente nacrée rose → lilas → pêche, bord plus dense façon perle.',(c,t)=>{exterior(c,t);shield(c,'A',t)}],
+ ['B','Écailles hexagonales','Maillage d\'hexagones fins, chaque cellule légèrement d\'une autre teinte qui dérive ; lecture « tech », plus nette sous le pilonnage.',(c,t)=>{exterior(c,t);shield(c,'B',t)}],
+ ['C','Film de savon','Bandes d\'irisation qui tournoient comme une bulle de savon, rose pâle dominant. Le plus organique et le plus vivant.',(c,t)=>{exterior(c,t);shield(c,'C',t)}]]},
+{t:'Sortie bloquée',k:'jeu · J2',ctx:'Retour quand une unité touche le bouclier de l\'intérieur. Les obus continuent en fond.',p:5,items:[
+ ['A','Onde et recul','La paroi ondule en cercle autour du point de contact ; l\'unité est repoussée d\'une case.',(c,t)=>block(c,t,'A')],
+ ['B','Mur révélé','Le bouclier, quasi invisible à l\'intérieur, se dessine en hexagones autour de l\'unité puis s\'efface.',(c,t)=>block(c,t,'B')],
+ ['C','Réplique de l\'Ingénieur','Petite étincelle rose + réplique tapée « Le bouclier nous enferme autant qu\'il nous protège. »',(c,t)=>block(c,t,'C')]]},
+{t:'Les canons pilonnent le bouclier',k:'cinématique · début J2',ctx:'Des canons venant de Byrsa se mettent en position et tirent. Les obus s\'écrasent sur le bouclier qui tient.',p:10,items:[
+ ['A','Batterie qui s\'aligne','Plan large : trois canons tirés par leurs servants arrivent par la route sud, se calent, et tirent en salve décalée.',(c,t)=>bomb(c,t,'A')],
+ ['B','Travelling sur la ligne','La caméra glisse le long de cinq canons en ligne qui tirent tour à tour, puis remonte sur le dôme constellé d\'impacts.',(c,t)=>bomb(c,t,'B')],
+ ['C','Plan serré sur l\'impact','Gros plan d\'un canon (recul, fumée), suivi de l\'obus en vol, puis cadrage serré sur la paroi qui encaisse et se rétablit.',(c,t)=>bomb(c,t,'C')]]},
+{t:'Le bouclier explose',k:'cinématique · fin J2',ctx:'Les canons tirent encore ; le bouclier cède, explose, souffle les canons et le mur sud. Les remparts ne sont pas montrés.',p:11,items:[
+ ['A','Surcharge et onde rose','Le bouclier se strie de fissures blanches, se contracte d\'un coup, puis une onde rose plate balaie le sol et renverse les canons.',(c,t)=>boom(c,t,'A')],
+ ['B','Éclats de verre','La coque se fragmente en tessons irisés qui partent vers l\'extérieur comme de la mitraille et fauchent la batterie.',(c,t)=>boom(c,t,'B')],
+ ['C','Implosion puis souffle','Le dôme s\'aspire vers l\'Ancre en point lumineux, silence de 0,5 s, puis souffle blanc ; écran blanc, retour sur les débris et le mur sud ouvert dans la fumée.',(c,t)=>boom(c,t,'C')]]},
+{t:'Remparts naturels',k:'jeu · J3+',ctx:'Le mur sud soufflé révèle des remparts naturels aménagés où les unités prennent place. Vue en jeu, cadrage sur la sortie sud.',p:6,items:[
+ ['A','Terrasses d\'ardoise','Deux gradins de roche en arc de part et d\'autre de la brèche, dessus aplanis, marches taillées. Lisible : un emplacement par dalle.',(c,t)=>ramp(c,t,'A')],
+ ['B','Éperons et créneaux tyriens','Deux éperons de roche avancés, couronnés de vieux merlons tyriens à demi enfouis, glyphes éteints. Goulot central.',(c,t)=>ramp(c,t,'B')],
+ ['C','Éboulis aménagé','Un talus de blocs effondrés, aplani par endroits, renforcé de rondins et sacs de terre. Plus brut, plus « jungle ».',(c,t)=>ramp(c,t,'C')]]},
+{t:'Cadrage cinéma et transition',k:'commun',ctx:'Entrée et sortie des barres noires, masquage du HUD, carton de jour.',p:6,items:[
+ ['A','Barres franches','Les barres entrent en 0,4 s, le HUD s\'efface en fondu. Carton centré « Jour 2 » en capitales.',(c,t)=>frame(c,t,'A')],
+ ['B','Relevé de l\'exosquelette','Barres + ligne mono cyan dans la barre basse : « J2 · 06:00 · bouclier 100 % ». Cohérent avec le panneau d\'objectif.',(c,t)=>frame(c,t,'B')],
+ ['C','Iris et réplique','Les barres se ferment depuis un léger vignettage ; la réplique de l\'Ingénieur s\'écrit lettre à lettre dans la barre basse.',(c,t)=>frame(c,t,'C')]]}
+];
+
+// ----- 1 portail -----
+function portal(c,t,v){const r=rnd(5);floor(c);wallTop(c);anchor(c,190,62,t);
+ const px=110,py=78,open=ease(ph(t,.3,1.4))*(1-ease(ph(t,3.4,4)));let R0=open*30;
+ // l'Ingénieur
+ let ex=px,ey=py+14,pose='kneel',br=0,fall=0;
+ if(t<2.2){pose=null}
+ if(v==='A'&&t>=2&&t<2.6){ex=px+(t-2)*30;ey=py+14;pose='kneel'}else if(v==='A'&&t>=2.6)ex=px+18;
+ if(v==='B'&&t>=2&&t<2.5){fall=(2.5-t)*60}
+ if(t>=2.2){br=t*.9;if(t>7.2)pose=t<7.8?'kneel':'stand'}
+ if(v!=='A')ex=px;
+ if(pose&&fall<=0&&!(v==='A'&&t<2.6&&t<2))eng(c,ex,ey,pose,br);
+ if(v==='B'&&fall>0){E(c,ex,ey,6-fall/20,2,'#0007');eng(c,ex,ey-fall,'kneel')}
+ if(R0>1){if(v==='A'){E(c,px,py,R0+6,R0+6,'#ffffff22');E(c,px,py,R0,R0,'#e8ecf4');E(c,px-R0*.3,py-R0*.3,R0*.4,R0*.35,'#ffffff');E(c,px+R0*.2,py+R0*.3,R0*.6,R0*.3,'#b9c2d0');
+   for(let i=0;i<5;i++){const a=t*4+i*1.25;bolt(c,px+Math.cos(a)*R0,py+Math.sin(a)*R0,px+Math.cos(a+.8)*(R0+8),py+Math.sin(a+.8)*(R0+8),i%2?'#fff':'#cfe4ff',3)}}
+  else if(v==='B'){const op=ease(ph(t,.3,.9)),rnd2=ease(ph(t,.9,1.4)),cls=ph(t,3.4,4);const w=Math.max(2,30*rnd2*(1-cls)),h=30*op*(1-cls*0)+(cls?0:0);
+   E(c,px,py,w+4,Math.max(h,4)+4,'#ffffff30');E(c,px,py,w,Math.max(h,4),'#f4f6fa');E(c,px,py,w*.7,Math.max(h,4)*.7,'#c6cdd8');E(c,px,py,w*.4,Math.max(h,4)*.4,'#0d0f14');
+   for(let i=0;i<8;i++){const a=i/8*6.28+t;bolt(c,px+Math.cos(a)*w,py+Math.sin(a)*h,px+Math.cos(a)*(w+7),py+Math.sin(a)*(h+7),'#fff',2)}}
+  else{const wob=k=>R0*(1+.06*Math.sin(k*5+t*6));c.fillStyle='#d6dbe3';c.beginPath();for(let k=0;k<6.3;k+=.2){const rr=wob(k);c.lineTo(px+Math.cos(k)*rr,py+Math.sin(k)*rr*.95)}c.fill();
+   E(c,px-R0*.35+Math.sin(t*2)*4,py-R0*.4,R0*.35,R0*.2,'#ffffff');E(c,px+R0*.2,py+R0*.35,R0*.55,R0*.22,'#8c95a3');
+   for(let i=0;i<3;i++){const a=t*3+i*2;bolt(c,px+Math.cos(a)*R0*.5,py+Math.sin(a)*R0*.5,px+Math.cos(a+1)*R0,py+Math.sin(a+1)*R0,'#eaf4ff',3)}}}
+ if(v==='C'&&t>3.4&&t<4.6){for(let i=0;i<24;i++){const a=i*.26,d=(t-3.4)*45;c.globalAlpha=1-(t-3.4)/1.2;R(c,px+Math.cos(a)*d,py+Math.sin(a)*d*.8,2,2,'#e3e8ef');c.globalAlpha=1}}
+ if(v==='A')flash(c,1-Math.abs(t-3.95)*6);if(v!=='A')flash(c,(1-Math.abs(t-2.05)*8)*.6);
+ if(t>4&&t<7.2){c.fillStyle='#c9ccd2';c.font='7px "Share Tech Mono",monospace';c.textAlign='left';if(Math.sin(t*6)>0)c.fillText('…haa…',ex+8,ey-16)}
+ bars(c,1,'')}
+// ----- 2 porte -----
+function door(c,t,v){floor(c,9);R(c,0,H-34,W,34,'#1a1e26');R(c,0,H-34,W,8,S2);R(c,0,H-34,W,1,S3);R(c,0,H-26,W,1,K);
+ const dx=84,dy=H-62,dw=72,dh=44;R(c,dx-8,dy-6,dw+16,dh+8,K);R(c,dx-6,dy-4,dw+12,4,S3);
+ const L=v==='A'?'#3f4752':v==='B'?'#4a4f57':'#4a3626';
+ for(const s of[0,1]){const x=dx+s*(dw/2);R(c,x,dy,dw/2-1,dh,K);R(c,x+1,dy+1,dw/2-3,dh-2,L);
+  if(v==='A'){for(const yy of[8,24,38])R(c,x+1,dy+yy,dw/2-3,3,'#5c636c'),[4,14,26].forEach(xx=>R(c,x+xx,dy+yy+1,1,1,K));R(c,x+3,dy+2,dw/2-7,1,S3)}
+  if(v==='B'){for(let i=0;i<4;i++)for(let j=0;j<3;j++){const gx=x+5+j*10,gy=dy+6+i*10;R(c,gx,gy,5,1,'#30353d');R(c,gx+2,gy,1,5,'#30353d');R(c,gx,gy+4,5,1,'#30353d')}}
+  if(v==='C'){for(let i=1;i<6;i++)R(c,x+i*6,dy+1,1,dh-2,'#2f2218');R(c,x+1,dy+6,dw/2-3,6,'#5f7a6a');R(c,x+1,dy+30,dw/2-3,6,'#5f7a6a');R(c,x+(s?dw/2-6:2),dy+8,3,3,K);R(c,x+(s?dw/2-6:2),dy+32,3,3,K)}}
+ if(v==='A'){R(c,dx-4,dy+20,dw+8,5,K);R(c,dx-3,dy+21,dw+6,3,'#6a6f76')}
+ if(v==='B'){const g=.5+.5*Math.sin(t*1.5);for(let y=0;y<dh;y+=3)R(c,dx+dw/2-1+((y/3)%2),dy+y,1,2,`rgba(95,227,232,${.25+.35*g})`)}
+ if(v==='C'){R(c,dx-6,dy+18,dw+12,6,K);R(c,dx-5,dy+19,dw+10,4,'#6b4b2e');R(c,dx-8,dy+16,4,10,'#5f7a6a');R(c,dx+dw+4,dy+16,4,10,'#5f7a6a')}
+ if(v==='A'){const lt=(t%3)/3;if(lt<.5)R(c,dx+20+lt*30,dy-2+lt*60,1,1,'#8b93a1')}
+ eng(c,120,H-72-((t*8)%2|0),'stand',0);}
+// ----- 3 formation -----
+function form(c,t,mode){if(t<3.5){floor(c);wallTop(c);anchor(c,120,58,t,ease(ph(t,.5,2.5)));eng(c,120,92,'pray',t);
+  const ray=ease(ph(t,1.6,2.4));if(ray>0){c.globalAlpha=ray*.8;const g=c.createLinearGradient(0,0,0,58);g.addColorStop(0,'#f7e8ff00');g.addColorStop(1,'#f7e8ffcc');c.fillStyle=g;R(c,0,0,0,0,'#0000');c.fillRect(116-ray*4,0,8+ray*8,58);c.globalAlpha=1}
+  flash(c,(t-3.2)*3,'#fff')}
+ else{exterior(c,t);const lt=t-3.5;c.globalAlpha=.7;c.fillStyle='#f7e8ff';c.fillRect(117,0,6,60);c.globalAlpha=1;
+  const g=ease(ph(lt,.3,4.5));shield(c,'A',t,{grow:g,mode});
+  if(mode==='unfold'&&g>.95){c.globalAlpha=1-ph(lt,4.5,5.5);E(c,SH.cx,SH.cy+SH.ry-4,SH.rx*(1+ph(lt,4.5,5.5)*.2),10,'#cbb7a0');c.globalAlpha=1}
+  if(mode==='knit'&&lt>4.6){const s=ph(lt,4.6,5.8);c.globalAlpha=.5*(1-s);R(c,SH.cx-SH.rx+s*SH.rx*2-4,SH.cy-SH.ry,8,SH.ry*2,'#fff');c.globalAlpha=1}}
+ bars(c)}
+// ----- 5 bloqué -----
+function block(c,t,v){floor(c,4);R(c,0,H-30,W,30,'#1b1f27');// sortie
+ const lt=t%5,ex=120,ey=H-40+Math.max(0,(lt-1.2)*-1)*0;let y=96+Math.min(1.2,lt)*12;if(v==='A'&&lt>1.2&&lt<1.6)y-=(lt-1.2)*25;if(v==='A'&&lt>=1.6)y=100;
+ if(v!=='A'&&lt>1.2)y=110;eng(c,ex,y,'stand');const hx=ex,hy=118;
+ const shY=118;if(v==='A'){c.globalAlpha=.25;R(c,0,shY,W,2,'#f3c6d6');c.globalAlpha=1;if(lt>1.2&&lt<2.6){const k=(lt-1.2)/1.4;E(c,hx,shY,k*40,k*8,hsl(330,80,85,1-k),1);E(c,hx,shY,k*22,k*5,hsl(290,80,85,1-k),1)}}
+ if(v==='B'&&lt>1.2&&lt<3.5){const k=1-ph(lt,1.2,3.5);for(let x=-30;x<=30;x+=6){const a=k*(1-Math.abs(x)/32);c.strokeStyle=hsl(320+x,70,85,a);c.strokeRect(hx+x-3,shY-3,6,5)}}
+ if(v==='C'){if(lt>1.2&&lt<1.6){for(let i=0;i<6;i++)R(c,hx+(Math.random()-.5)*10,shY+(Math.random()-.5)*4,1,1,'#f3c6d6')}
+  if(lt>1.4){const s='Le bouclier nous enferme autant qu\'il nous protège.',n=Math.min(s.length,(lt-1.4)*24|0);R(c,8,8,W-16,16,'#0b0d12cc');R(c,8,8,2,16,CY);c.fillStyle='#d9dde4';c.font='7px "Share Tech Mono",monospace';c.textAlign='left';c.fillText(s.slice(0,n),14,19)}}
+ // grondement des obus au loin
+ if((t%1.3)<.1){c.globalAlpha=.15;R(c,0,H-30,W,30,'#f3c6d6');c.globalAlpha=1}}
+// ----- 6 pilonnage -----
+function bomb(c,t,v){c.save();
+ if(v==='A'){const guns=[{x:70,y:128},{x:120,y:132},{x:170,y:128}];guns.forEach((g,i)=>{const arr=ease(ph(t,.3+i*.4,3+i*.4));g.y=128+(1-arr)*40+(i==1?4:0);g.tx=80+i*40;g.ty=78+(i==1?36:0)-(i!=1?10:0)});
+  exterior(c,t);const fire=t>4.2;const hits=fire?shells(c,t,guns,1.8):[];if(fire&&hits.some(h=>h.age<.15))shake(c,1);shield(c,'B',t,{hits});
+  guns.forEach(g=>{cannon(c,g.x,g.y,g.rec||0);crew(c,g.x+12,g.y+4);if(fire)muzzle(c,g)})}
+ if(v==='B'){const pan=t<6?ease(ph(t,0,6)):1-ease(ph(t,6,9))*0,camY=-40*(1-ease(ph(t,5.5,8)));c.translate(-(pan*40-20),camY);
+  const guns=[0,1,2,3,4].map(i=>({x:40+i*40,y:134,tx:60+i*30,ty:84+((i%2)*10)}));exterior(c,t);const hits=shells(c,t,guns,2.2,22);shield(c,'B',t,{hits});guns.forEach(g=>{cannon(c,g.x,g.y,g.rec||0);muzzle(c,g)})}
+ if(v==='C'){const lt=t%10;if(lt<3){c.scale(2,2);c.translate(-60,-75);exterior(c,t);const g={x:120,y:130};const rec=lt>1&&lt<1.3?3:0;cannon(c,120,130,rec);if(lt>1&&lt<1.15)muzzle(c,{x:120,y:130,fire:1});
+   if(lt>1.3){c.globalAlpha=cl(1-(lt-1.3));E(c,120,110-(lt-1.3)*10,6+(lt-1.3)*6,5,'#888');c.globalAlpha=1}}
+  else if(lt<5){const f=(lt-3)/2;exterior(c,t);shield(c,'C',t);R(c,118,130-f*60-Math.sin(f*3.14)*20,4,4,K);R(c,119,131-f*60-Math.sin(f*3.14)*20,2,2,GOLD)}
+  else{c.scale(2.4,2.4);c.translate(-70,-55);exterior(c,t);const age=ph(lt,5,8);shield(c,'C',t,{hits:[{x:120,y:84,age}]});if(age<.2){shake(c,2);E(c,120,84,8,5,'#fff4d0')}
+   if(age>.1)for(let i=0;i<10;i++){const a=i*.63,d=age*25;R(c,120+Math.cos(a)*d,84+Math.sin(a)*d*.5+age*age*20,1,1,'#ffb340')}}}
+ c.restore();bars(c)}
+// ----- 7 explosion -----
+function boom(c,t,v){c.save();const guns=[{x:70,y:128,tx:80,ty:68},{x:120,y:132,tx:120,ty:112},{x:170,y:128,tx:160,ty:68}];
+ const T1=3.5,T2=4.6,blown=t>T2;
+ if(blown&&t<T2+.6)shake(c,3);exterior(c,t,{wall:t>T2+.1?'open':'door',scorch:blown?.8:0});
+ if(!blown){const hits=shells(c,t,guns,1.2);const cr=ph(t,1.5,T1);
+  if(v==='A'){const shrink=ease(ph(t,T1,T2));shield(c,'A',t,{hits,crack:cr,sh:{cx:120,cy:58,rx:96*(1-shrink*.25),ry:56*(1-shrink*.25)}})}
+  if(v==='B')shield(c,'B',t,{hits,crack:cr,alpha:t>T1?1-ph(t,T1,T2)*.3:1});
+  if(v==='C'){const s=ease(ph(t,T1,T2-.5));if(s<1)shield(c,'C',t,{hits,crack:cr,sh:{cx:120,cy:58+s*10,rx:96*(1-s)+1,ry:56*(1-s)+1}});E(c,120,68,2+s*4,2+s*4,'#fff')}
+  guns.forEach(g=>{cannon(c,g.x,g.y,g.rec||0);crew(c,g.x+12,g.y+4);muzzle(c,g)})}
+ else{const k=ph(t,T2,T2+2.5);
+  if(v==='A'){E(c,120,96,k*220,k*70,hsl(330,90,85,1-k),3);E(c,120,96,k*180,k*58,hsl(290,80,85,(1-k)*.6),2)}
+  if(v==='B'){const r=rnd(11);for(let i=0;i<46;i++){const a=r()*6.28,d=k*(120+r()*80);const x=120+Math.cos(a)*(40+d),y=58+Math.sin(a)*(24+d*.55);c.fillStyle=hsl(300+r()*80,70,85,1-k*.8);c.beginPath();c.moveTo(x,y);c.lineTo(x+3+r()*3,y+1);c.lineTo(x+1,y+4);c.fill()}}
+  if(v==='C'){flash(c,1-ph(t,T2,T2+1.2));}
+  guns.forEach((g,i)=>{const f=ease(ph(t,T2,T2+1.2)),dx=(g.x-120)*.5*f,dy=40*f;c.save();c.translate(g.x+dx,g.y+dy);c.rotate(f*(i-1+.3)*2.4);cannon(c,0,0,0);c.restore()});
+  for(let i=0;i<12;i++){const a=i*.52,d=k*60;c.globalAlpha=(1-k)*.6;E(c,120+Math.cos(a)*d,92+Math.sin(a)*d*.4,6+k*8,4+k*5,'#8d8780');c.globalAlpha=1}
+  if(t>T2+.1)for(let i=0;i<10;i++){const f=ph(t,T2,T2+1.4),a=-1.57+(i-5)*.25;R(c,120+Math.cos(a)*f*70+Math.cos(a)*10,80+Math.sin(a)*-f*-40+f*f*50,3,3,S3)}}
+ if(v==='A')flash(c,(1-Math.abs(t-T2)*5)*.9,'#fbe3ee');if(v==='B')flash(c,(1-Math.abs(t-T2)*5)*.7,'#fff');
+ c.restore();bars(c)}
+// ----- 8 remparts -----
+function ramp(c,t,v){floor(c,12);R(c,0,0,W,20,'#1a1e26');R(c,0,12,W,8,S2);
+ R(c,0,108,W,42,'#243320');const r=rnd(2);for(let i=0;i<40;i++)R(c,r()*W,108+r()*42,2,2,'#2f4426');R(c,100,108,40,42,'#3a3326');
+ const spots=[];
+ if(v==='A'){for(const s of[-1,1]){for(let k=0;k<2;k++){const x=s<0?8+k*14:W-8-k*14-80+k*28,w=80-k*28,y=82+k*10;R(c,s<0?8+k*12:W-88+k*16,y,w,16-k*2,K);R(c,(s<0?9+k*12:W-87+k*16),y,w-2,4,S3);R(c,(s<0?9+k*12:W-87+k*16),y+4,w-2,10-k*2,S2)}
+   for(let i=0;i<3;i++)spots.push([s<0?22+i*24:W-22-i*24,90])}
+  for(let i=0;i<4;i++)R(c,(i<2?86:144)+i%2*4,96+(i%2)*5,6,3,S3)}
+ if(v==='B'){for(const s of[-1,1]){c.fillStyle=K;c.beginPath();const bx=s<0?0:W;c.moveTo(bx,70);c.lineTo(bx+s*-96,80);c.lineTo(bx+s*-82,112);c.lineTo(bx,112);c.fill();
+   c.fillStyle=S2;c.beginPath();c.moveTo(bx,72);c.lineTo(bx+s*-93,81);c.lineTo(bx+s*-80,110);c.lineTo(bx,110);c.fill();
+   for(let i=0;i<4;i++){const mx=s<0?8+i*20:W-16-i*20;R(c,mx,72+i*2,9,8,K);R(c,mx+1,72+i*2,7,3,'#59616c');R(c,mx+3,76+i*2,3,1,'#30353d');spots.push([mx+4+(s<0?10:-6),88+i*2])}}}
+ if(v==='C'){for(let i=0;i<34;i++){const x=r()<.5?r()*90:W-r()*90,y=82+r()*28;const s=5+r()*9;R(c,x,y,s,s*.7,K);R(c,x+1,y,s-2,s*.3,S3)}
+  for(const s of[-1,1]){const x0=s<0?14:W-84;R(c,x0,86,70,8,K);R(c,x0+1,87,68,6,'#6b4b2e');for(let i=0;i<7;i++)R(c,x0+3+i*10,85,6,4,'#8a7a55');for(let i=0;i<3;i++)spots.push([x0+12+i*22,94])}}
+ const show=(t%6)>1.5;spots.forEach(([x,y],i)=>{const a=.4+.3*Math.sin(t*3+i);c.strokeStyle=`rgba(95,227,232,${a})`;c.strokeRect(x-5,y-3,10,6);if(show&&i%2==0)soldier(c,x,y)});
+ eng(c,120,72,'stand')}
+// ----- 9 cadrage -----
+function frame(c,t,v){exterior(c,t);shield(c,'A',t);const k=ease(ph(t,.6,1))*(1-ease(ph(t,5,5.4)));
+ const hud=1-k;if(hud>0){c.globalAlpha=hud;R(c,4,4,70,20,'#151a22e0');R(c,4,4,2,20,CY);R(c,0,H-18,W,18,'#151a22e0');for(let i=0;i<6;i++)R(c,60+i*20,H-15,16,12,'#2a313c');c.globalAlpha=1}
+ if(v==='C'&&k>0){const g=c.createRadialGradient(120,75,40,120,75,150);g.addColorStop(0,'#0000');g.addColorStop(1,`rgba(0,0,0,${.6*k})`);c.fillStyle=g;c.fillRect(0,0,W,H)}
+ bars(c,k);
+ if(k>.95){c.textAlign='center';if(v==='A'&&t>1.2&&t<4.6){c.globalAlpha=Math.min(1,(t-1.2)*2,(4.6-t)*2);c.fillStyle='#e8e2d0';c.font='600 16px "Cormorant SC",serif';c.fillText('JOUR 2',120,80);c.globalAlpha=1}
+  if(v==='B'){c.fillStyle=CY;c.font='7px "Share Tech Mono",monospace';const s='J2 · 06:00 · BOUCLIER 100 %';c.fillText(s.slice(0,Math.min(s.length,(t-1)*20|0)),120,H-5)}
+  if(v==='C'){c.fillStyle='#d9dde4';c.font='7px "Share Tech Mono",monospace';const s='Ils sont venus de Byrsa. Ça ne tiendra pas.';c.fillText(s.slice(0,Math.min(s.length,(t-1.2)*18|0)),120,H-5)}}}
+
+// ---------- montage ----------
+const board=document.getElementById('board'),cards=[];let paused=false,t0=performance.now();
+ROWS.forEach((row,ri)=>{const s=document.createElement('section');s.innerHTML=`<h2>${row.t}<small>${row.k}</small></h2><p class="ctx">${row.ctx}</p><div class="row"></div>`;
+ row.items.forEach(([id,name,desc,fn])=>{const f=document.createElement('figure');const cv=document.createElement('canvas');cv.width=W;cv.height=H;
+  f.append(cv);f.insertAdjacentHTML('beforeend',`<figcaption><b>${ri+1}${id}</b>${name}<p>${desc}</p></figcaption>`);s.querySelector('.row').append(f);
+  const card={cv,c:cv.getContext('2d',{willReadFrequently:true}),fn,p:row.p,start:performance.now(),vis:false};cv.onclick=()=>card.start=performance.now();cards.push(card)});board.append(s)});
+const io=new IntersectionObserver(es=>es.forEach(e=>{const k=cards.find(k=>k.cv===e.target);if(k)k.vis=e.isIntersecting}));cards.forEach(k=>io.observe(k.cv));
+const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+function draw(k,now){const t=((now-k.start)/1000)%k.p;k.c.save();k.c.imageSmoothingEnabled=false;k.c.clearRect(0,0,W,H);try{k.fn(k.c,t)}catch(e){console.error(e)}k.c.restore()}
+let last=0;function loop(now){requestAnimationFrame(loop);if(paused||now-last<40)return;last=now;cards.forEach(k=>k.vis&&draw(k,now))}
+cards.forEach(k=>draw(k,performance.now()+ (reduce?4000:0)));if(!reduce)requestAnimationFrame(loop);
+document.getElementById('pause').onclick=e=>{paused=!paused;e.target.textContent=paused?'Lecture':'Pause'};
+document.getElementById('restart').onclick=()=>{const n=performance.now();cards.forEach(k=>k.start=n)};
+</script></body></html>

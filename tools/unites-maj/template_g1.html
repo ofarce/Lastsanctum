@@ -1,0 +1,182 @@
+<meta charset="utf-8">
+<title>Brute et Strazhar</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@500;700&family=Alegreya+Sans:wght@400;500;700&display=swap">
+<style>
+/* Mise en page : barre de réglages collante, puis une rangée par unité (actuel + trois modèles), puis l'échelle du jeu. */
+:root{
+  --bg:#121614; --panel:#1b211e; --line:#2c3530; --ink:#ece4cc; --muted:#9ba597;
+  --gold:#e2b83a; --gold-dim:#8a6d1c; --new:#8fd3b0; --warn:#e58a5a;
+  --display:"Pixelify Sans","Courier New",monospace; --body:"Alegreya Sans","Segoe UI",system-ui,sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 var(--body)}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--panel)}
+.wrap{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));max-width:1240px;margin:0 auto}
+header.top{padding-block:28px 18px}
+h1{font:700 clamp(28px,4vw,40px)/1.1 var(--display);margin:0 0 8px;color:var(--gold);letter-spacing:.02em;text-wrap:balance}
+.lede{margin:0;color:var(--muted);max-width:70ch}
+.bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--panel);border-block:1px solid var(--line)}
+.bar .wrap{display:flex;flex-wrap:wrap;gap:8px 18px;align-items:center;padding-block:10px}
+.grp{display:flex;flex-wrap:wrap;gap:4px;align-items:center}
+.grp>span{font:500 12px var(--display);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-right:2px}
+.spacer{flex:1}
+button{font:500 14px var(--body);color:var(--ink);background:transparent;border:1px solid var(--line);border-radius:4px;padding:5px 10px;cursor:pointer}
+button:hover{border-color:var(--gold-dim)}
+button[aria-pressed="true"]{background:var(--gold);color:#1b1404;border-color:var(--gold)}
+button.main{background:var(--gold);color:#1b1404;border-color:var(--gold);font-weight:700}
+button:focus-visible,input:focus-visible{outline:2px solid var(--new);outline-offset:2px}
+main{display:flex;flex-direction:column;gap:44px;padding-block:28px 60px}
+section>h2{font:700 26px/1.15 var(--display);margin:0 0 4px;letter-spacing:.02em}
+section>p.sub{margin:0 0 16px;color:var(--muted);max-width:72ch}
+.row{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:18px}
+.card{display:flex;flex-direction:column;gap:8px;min-width:0}
+.card canvas{display:block;width:100%;height:auto;image-rendering:pixelated;image-rendering:crisp-edges;border:1px solid var(--line);border-radius:4px}
+.card h3{font:700 18px/1.2 var(--body);margin:0}
+.card.old h3{color:var(--muted)}
+.card p{margin:0;color:var(--muted);font-size:15px}
+label.pick{display:flex;gap:7px;align-items:center;cursor:pointer;font-weight:500;margin-top:auto;padding-top:4px}
+label.pick input{accent-color:var(--gold);width:17px;height:17px}
+.note{border-left:2px solid var(--warn);padding-left:12px;margin:16px 0 0;max-width:72ch}
+.note b{color:var(--ink)}
+.scale{overflow-x:auto;border:1px solid var(--line);border-radius:4px;background:#0c0f0e;scrollbar-color:var(--line) transparent}
+.scale canvas{display:block;margin:0 auto;image-rendering:pixelated;image-rendering:crisp-edges}
+.cap{font-size:14px;color:var(--muted);margin:8px 0 0}
+#out{width:100%;margin-top:10px;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:4px;padding:8px;font:15px var(--body);resize:vertical}
+</style>
+
+<header class="top"><div class="wrap">
+  <h1>Brute et Strazhar</h1>
+  <p class="lede">Les deux derniers ennemis dessinés avant la refonte 16 bits, repris avec le même moteur que les soldats du Credo : aplats francs, contour teinté, lumière en haut à gauche. Trois modèles chacun, à côté de l’atlas actuel. Les attaques portent l’armement tenu des coups annoncés. Rien n’est changé en jeu.</p>
+</div></header>
+
+<div class="bar"><div class="wrap">
+  <div class="grp" id="anim"><span>Animation</span><button data-v="idle" aria-pressed="true">Repos</button><button data-v="walk">Marche</button><button data-v="attack">Attaque</button></div>
+  <div class="grp" id="sol"><span>Sol</span><button data-v="ardoise" aria-pressed="true">Ardoise</button><button data-v="jungle">Jungle</button><button data-v="nuit">Nuit</button></div>
+  <span class="spacer"></span>
+  <button id="pause" aria-pressed="false">Pause</button>
+  <button id="copy" class="main">Copier mon choix</button>
+</div></div>
+
+<main class="wrap">
+<section>
+  <h2>Automate doré de Byrsa</h2>
+  <p class="sub">La Brute : lente, 110 PV, un coup lourd toutes les 1,7 s. L’attaque lève les deux poings en 0,12 s, les tient sept images avec un éclat sur le noyau, puis s’abat à 0,40 s : c’est le délai déjà réglé dans le jeu.</p>
+  <div class="row" id="row-brute"></div>
+</section>
+
+<section>
+  <h2>Strazhar, champion de Byrsa</h2>
+  <p class="sub">À quatre pattes partout, comme sa ruée actuelle : poings posés ensemble, puis les pieds. Au repos il reste ramassé et balaie du regard. Pour frapper il se cabre en 0,09 s, tient jusqu’à 0,25 s les yeux embrasés, puis s’abat des deux poings.</p>
+  <div class="row" id="row-straz"></div>
+  <p class="note"><b>Ce que ça change en jeu.</b> Aujourd’hui seule la marche est à quatre pattes : le repos, l’attaque et la mort se rejouent debout, d’où un saut de silhouette à chaque arrêt. Avec ces modèles tout tient dans le cadre de la ruée (68 × 48). La mort reste à dessiner sur le modèle retenu.</p>
+</section>
+
+<section>
+  <h2>À l’échelle du jeu</h2>
+  <p class="sub">Les six modèles au repos, à côté d’un soldat et d’un porte-bouclier du Credo, deux fois la taille réelle.</p>
+  <div class="scale"><canvas id="scale"></canvas></div>
+  <p class="cap">De gauche à droite : soldat, porte-bouclier, Brute A, B, C, Strazhar A, B, C.</p>
+  <textarea id="out" rows="2" readonly hidden aria-label="Choix à copier"></textarea>
+</section>
+</main>
+
+<script>
+/*DRAW*/
+</script>
+<script>
+'use strict';
+const OLD = /*OLD*/null;
+const GROUND = {ardoise:["#333a46", "#3b434f", "#2b313c"], jungle:["#44683a", "#4f7742", "#39582f"], nuit:["#333a46", "#3b434f", "#2b313c"]};
+const CW = 72, CH = 54, FX = 36, FY = 49;   // cadre des cartes, pieds en (FX, FY)
+function ground(g, w, h, kind){
+  const [a, b, c] = GROUND[kind]; g.fillStyle = a; g.fillRect(0, 0, w, h);
+  let r = 7; const rnd = () => (r = (r * 16807) % 2147483647) / 2147483647;
+  for (let i = 0; i < w * h / 26; i++){ g.fillStyle = rnd() < .5 ? b : c; g.fillRect(Math.floor(rnd() * w), Math.floor(rnd() * h), rnd() < .3 ? 2 : 1, 1); }
+}
+function night(g, w, h){ g.globalCompositeOperation = "multiply"; g.fillStyle = "#5a6aa8"; g.fillRect(0, 0, w, h); g.globalCompositeOperation = "source-over"; }
+function shadow(g, x, y, rx){ g.save(); g.translate(x, y); g.scale(1, .42); g.beginPath(); g.arc(0, 0, rx, 0, 7); g.fillStyle = "rgba(8,14,14,.55)"; g.fill(); g.restore(); }
+function seg(id){
+  const el = document.getElementById(id); let v = el.querySelector('[aria-pressed="true"]').dataset.v;
+  el.addEventListener("click", e => { const b = e.target.closest("button"); if (!b) return;
+    el.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", x === b)); v = b.dataset.v; });
+  return () => v;
+}
+const anim = seg("anim"), sol = seg("sol");
+// Atlas actuel : même durée d'animation que le modèle proposé (repos 2 s, marche à sa cadence, attaque à 24 i/s).
+const OLD_LEN = {brute:{idle:2, walk:.9, attack:41 / 24}, strazhar:{idle:2, walk:.56, attack:21 / 24}};
+function drawOld(g, kind, a, t){
+  const A = OLD[kind][a], len = OLD_LEN[kind][a], loop = a !== "attack";
+  const i = loop ? Math.floor((t % len) / len * A.n) % A.n : Math.min(A.n - 1, Math.floor(t * 24));
+  const cols = Math.round(A.img.width / A.fw);
+  g.drawImage(A.img, (i % cols) * A.fw, Math.floor(i / cols) * A.fh, A.fw, A.fh, FX - A.ax, FY - A.ay, A.fw, A.fh);
+}
+const UNITS = [
+  {key:"brute", old:"brute", list:G1.BRUTES, row:"row-brute", oldDesc:"Atlas en jeu : contour noir, tramé, 11 couleurs."},
+  {key:"straz", old:"strazhar", list:G1.STRAZ, row:"row-straz", oldDesc:"Atlas en jeu : debout au repos et à l’attaque, à quatre pattes à la marche seulement. 26 % de pixels isolés."},
+];
+const cards = [];
+for (const U of UNITS){
+  const row = document.getElementById(U.row);
+  const add = (title, desc, vi) => {
+    const card = document.createElement("div"); card.className = "card" + (vi < 0 ? " old" : "");
+    const c = document.createElement("canvas"); c.width = CW; c.height = CH;
+    const h = document.createElement("h3"); h.textContent = title;
+    const p = document.createElement("p"); p.textContent = desc;
+    const l = document.createElement("label"); l.className = "pick";
+    const id = "pk-" + U.key + "-" + (vi < 0 ? "actuel" : U.list[vi].id);
+    l.innerHTML = `<input type="radio" name="${U.key}" id="${id}" value="${vi < 0 ? "actuel" : U.list[vi].id}">${vi < 0 ? "Garder l’actuel" : "Je retiens " + U.list[vi].id}`;
+    card.append(c, h, p, l); row.append(card);
+    const g = c.getContext("2d"); g.imageSmoothingEnabled = false; cards.push({U, vi, g});
+  };
+  add("Actuel", U.oldDesc, -1);
+  U.list.forEach((V, i) => add(V.name, V.desc, i));
+}
+function paint(t){
+  const a = anim(), k = sol();
+  for (const {U, vi, g} of cards){
+    ground(g, CW, CH, k);
+    const A = G1.ANIMS[U.key][a], len = vi < 0 ? OLD_LEN[U.old][a] : A.len, tt = a === "attack" ? t % (Math.max(len, A.len) + .7) : t;
+    shadow(g, FX, FY, U.key === "brute" ? 14 : 18);
+    if (vi < 0) drawOld(g, U.old, a, tt);
+    else { const s = G1.SIZE[U.key]; g.drawImage(G1.frame(U.key, vi, a, tt), FX - s.ax, FY - s.ay); }
+    if (k === "nuit") night(g, CW, CH);
+  }
+  // Échelle du jeu
+  const sc = document.getElementById("scale"), W = 384, H = 58, g = sc.getContext("2d");
+  if (sc.width !== W){ sc.width = W; sc.height = H; sc.style.width = W * 2 + "px"; sc.style.height = H * 2 + "px"; }
+  g.imageSmoothingEnabled = false; ground(g, W, H, k);
+  let x = 14;
+  for (const kk of ["soldier", "shield"]){ shadow(g, x, 52, 7); g.drawImage(render(fig({k:kk, dir:"s"}), 1), x - 20, 52 - 33); x += 24; }
+  x += 12;
+  G1.BRUTES.forEach((V, i) => { const s = G1.SIZE.brute; shadow(g, x, 52, 13); g.drawImage(G1.frame("brute", i, "idle", t), x - s.ax, 52 - s.ay); x += 40; });
+  x += 14;
+  G1.STRAZ.forEach((V, i) => { const s = G1.SIZE.straz; shadow(g, x, 52, 17); g.drawImage(G1.frame("straz", i, "idle", t), x - s.ax, 52 - s.ay); x += 52; });
+  if (k === "nuit") night(g, W, H);
+}
+let paused = matchMedia("(prefers-reduced-motion: reduce)").matches, clock = 0, last = 0;
+const pb = document.getElementById("pause");
+const setPause = p => { paused = p; pb.setAttribute("aria-pressed", p); pb.textContent = p ? "Lecture" : "Pause"; };
+pb.addEventListener("click", () => setPause(!paused));
+function loop(now){ const dt = Math.min(.1, (now - last) / 1000); last = now; if (!paused) clock += dt; paint(clock); requestAnimationFrame(loop); }
+const imgs = []; for (const k in OLD) for (const a in OLD[k]) imgs.push(OLD[k][a]);
+Promise.all(imgs.map(A => new Promise(ok => { A.img = new Image(); A.img.onload = ok; A.img.onerror = ok; A.img.src = A.src; })))
+  .then(() => { setPause(paused); paint(0); requestAnimationFrame(n => { last = n; loop(n); }); });
+
+const radios = [...document.querySelectorAll('input[type="radio"]')];
+try { const s = JSON.parse(localStorage.getItem("brute-strazhar") || "{}"); radios.forEach(r => { if (s[r.name] === r.value) r.checked = true; }); } catch (e) {}
+const picked = () => { const o = {}; radios.forEach(r => { if (r.checked) o[r.name] = r.value; }); return o; };
+radios.forEach(r => r.addEventListener("change", () => { try { localStorage.setItem("brute-strazhar", JSON.stringify(picked())); } catch (e) {} }));
+document.getElementById("copy").addEventListener("click", e => {
+  const o = picked(), parts = [];
+  if (o.brute) parts.push("Brute " + o.brute); if (o.straz) parts.push("Strazhar " + o.straz);
+  const text = parts.length ? "Choix G1 : " + parts.join(", ") + "." : "Aucun modèle choisi pour l’instant.";
+  const out = document.getElementById("out"); out.value = text;
+  const done = () => { e.target.textContent = "Copié"; setTimeout(() => e.target.textContent = "Copier mon choix", 1600); };
+  const fallback = () => { out.hidden = false; out.scrollIntoView({block: "center"}); out.select(); };
+  if (!parts.length) return fallback();
+  try { navigator.clipboard.writeText(text).then(done, fallback); } catch (err) { fallback(); }
+});
+</script>

@@ -7,12 +7,14 @@ extends Node2D
 ## Origine du nœud : point au sol continu ; le sprite est aligné sur la grille native par le shader.
 
 const SPR_FRAMES := 24
-const SPR_LOOP := 2.4
+## Repos : 12 i/s (grille commune 12 / 24 i/s), soit 2 s pour 24 images.
+const IDLE_FPS := 12.0
 ## Z()/PX = 8/0,86 : unité de monde en pixels natifs pour les ellipses (circle3).
 const ZN := 8.0 / 0.86
 const SHADOW := Color("#0b1615a0")
-const SEL_FILL := Color("#ead08c55")
-const SEL_LINE := Color("#f8df93")
+## Sélection alliée en cyan (couleur des Exilés) : l'or est réservé aux forces de Laetan.
+const SEL_FILL := Color("#5ce8ff40")
+const SEL_LINE := Color("#8ff2ff")
 const FOE_FILL := Color("#db505055")
 const FOE_LINE := Color("#ff7a6a")
 const HP_BG := Color("#191b1d")
@@ -39,8 +41,17 @@ var _kneel_fps := 12.0
 ## Ingénieur sans armure (surcharge de l'Ancre), tenue « Le Tyrien » (TyrienArt) : repos, marche, agenouillement à
 ## bout de souffle, incantation, méditation ; "meta" = cadences des animations.
 static var _bare: Dictionary
+## Corps de l'Ingénieur par tenue : false = Templier (combinaison), true = avant la combinaison (TyrienArt.ragged).
+static var _bare_sets: Dictionary
 ## Calques des pièces d'équipement portées, enfants de _body (même image, même orientation).
 var _gear: Array[Sprite2D] = []
+## Casque de combat de l'Ingénieur à l'Arbalestrie (planches/ingenieur-canon-planche.html) : se ferme au premier
+## tir (HELM_RATE par seconde, 4 étapes), se relève HELM_HOLD s après le dernier tir.
+const HELM_HOLD := 1.0
+const HELM_RATE := 3.0
+var _helm: Sprite2D
+var _helm_p := 0.0
+var _helm_t := -INF
 var enemy := false
 ## Animations d'attaque (ATK.sword[0..4], ATK.xbow) : 12 images, ancre propre.
 static var _atk: Dictionary
@@ -60,11 +71,55 @@ var _revive: ReviveFx
 # État d'animation (u._lx, u._lz, u._wp, u._still, u._face).
 var _lx := NAN
 var _lz := NAN
-var _wp := 0.0
-var _still := 0
+## Phase de marche, demi-tour (UnitFeel) ; _dt = durée de la dernière image.
+var _feel := UnitFeel.new()
+var _dt := 0.0
+## Ingénieur sans armure : vue de face (« d ») ou de dos (« u ») quand il marche surtout vers le bas ou le
+## haut de l'écran, gardée au repos ; vide = profil.
+var _vdir := ""
 var _face := 1
 var _under_key: Variant = null
 var _over_key := Vector4(-1, -1, -1, -1)
+
+## Nervosité des ennemis (couche procédurale, en pixels natifs entiers, par-dessus les planches) :
+## éclair blanc et recul quand ils encaissent, fente vers la cible à l'attaque, tremblement étourdi,
+## projection en arrière à la mort ; l'attaque rend la main au repos dès la fin de son geste.
+## Éclair : durée (s), intervalle minimal entre deux éclairs (dégâts continus), intensité de modulation.
+const HURT_FLASH := 0.11
+const HURT_GAP := 0.16
+const HURT_GLOW := 2.4
+## Recul : durée (s), amplitude (px) d'un gros coup ; seuil (part des PV) en dessous duquel rien ne recule.
+## Les alliés reculent moins (HURT_RECOIL_ALLY) : leur ligne ne doit pas paraître céder à chaque coup.
+const HURT_RECOIL_T := 0.16
+const HURT_RECOIL := 3.0
+const HURT_RECOIL_ALLY := 2.0
+const HURT_RECOIL_MIN := 0.03
+## Fente d'attaque : montée, retour (s, à la cadence de la vague) et amplitude (px) par type.
+const LUNGE_IN := 0.06
+const LUNGE_OUT := 0.26
+## Les chiens de la Bête (beast) n'en ont pas : leur planche porte déjà le bond de 12 px.
+## La Brute et le Strazhar non plus : leurs planches (tools/unites-maj/export_g1.py) portent l'élan du coup.
+const LUNGE := {"creep": 3, "scout": 3, "shield": 2, "soldier": 2,
+		"croc": 5, "feline": 6, "archer": -1, "spitter": -1}
+## Mort : projection en arrière (px) sur DEATH_KICK_T s.
+const DEATH_KICK := 4.0
+const DEATH_KICK_T := 0.22
+## Attaque : au moins ATTACK_MIN_S s, puis retour au repos une fois la dernière image distincte passée.
+const ATTACK_MIN_S := 0.25
+## Coups annoncés (Enemy.windup) : instant du choc dans l'atlas d'attaque (s). L'animation démarre assez loin
+## dans l'armement pour que ce choc tombe à la fin du délai ; l'arme luit pendant l'armement (TELL_GLOW).
+const ATTACK_IMPACT := {"brute": 0.4, "strazhar": 0.25}
+const TELL_GLOW := 0.3
+static var _attack_active: Dictionary = {}
+var _last_hp := NAN
+var _hurt_t := -INF
+var _hurt_k := 0.0
+var _recoil_k := 0.0
+var _recoil_dir := -1
+## Réaction dessinée au coup (atlas "hit") : début, et durée minimale entre deux réactions (s). La Martyre garde
+## sa propre cadence (Enemy.hurt_at, sim/martyre.gd).
+const HIT_GAP := 0.6
+var _hit_t := -INF
 
 
 func setup(u: Unit, meta: Dictionary, sim: Simulation, w: World = null) -> void:
@@ -84,9 +139,13 @@ func setup(u: Unit, meta: Dictionary, sim: Simulation, w: World = null) -> void:
 			_xbow = _frames("res://assets/baked/attacks/xbow.png", _atk["xbow"]["sheet"])
 	if not enemy and u.role == "engineer" and _bare.is_empty():
 		TyrienArt.load_all()
-		_bare = {"meta": TyrienArt.meta["anims"]}
-		for anim: String in ["idle", "walk", "kneel", "pray", "settle", "lotus"]:
-			_bare[anim] = TyrienArt.anim(anim)
+		for exil: bool in [false, true]:
+			var pack := {"meta": TyrienArt.meta["anims"]}
+			for anim: String in ["idle", "walk", "kneel", "pray", "settle", "lotus", "idle_d", "walk_d", "idle_u", "walk_u", "hit", "c_idle", "c_walk", "helm"]:
+				if TyrienArt.meta["anims"].has(anim):
+					pack[anim] = TyrienArt.anim_of(anim, exil)
+			_bare_sets[exil] = pack
+		_bare = _bare_sets[TyrienArt.ragged()]
 	if enemy:
 		if not _enemy_sheets.has(u.role):
 			var sheets := {}
@@ -100,6 +159,8 @@ func setup(u: Unit, meta: Dictionary, sim: Simulation, w: World = null) -> void:
 		_enemy_death = _enemy_sheets[u.role]["death"]
 		_enemy_cast = _enemy_sheets[u.role].get("cast", [] as Array[AtlasTexture])
 		_enemy_hit = _enemy_sheets[u.role].get("hit", [] as Array[AtlasTexture])
+		if not _attack_active.has(u.role):
+			_attack_active[u.role] = _active_length(_enemy_attack, float(meta["attack"]["fps"]))
 	else:
 		_idle = _frames(base + "idle.png", meta["idle"])
 		_walk = _frames(base + "walk.png", meta["walk"])
@@ -150,7 +211,80 @@ static func _frames(path: String, m: Dictionary) -> Array[AtlasTexture]:
 	return out
 
 
-func _process(_delta: float) -> void:
+## Durée utile d'une attaque (s) : jusqu'à la dernière image qui diffère de l'image finale, plus une image
+## de pose ; les planches tiennent ensuite la garde immobile jusqu'à 1 s, que le repos remplace.
+static func _active_length(frames: Array[AtlasTexture], fps: float) -> float:
+	var n := frames.size()
+	if n < 2:
+		return n / fps
+	var img := frames[0].atlas.get_image()
+	if img == null:
+		return n / fps
+	if img.is_compressed():
+		img.decompress()
+	# L'import bave les couleurs dans les pixels transparents (fix_alpha_border), différemment selon la
+	# rangée de l'atlas : prémultiplié, seul ce qui se voit est comparé.
+	img.convert(Image.FORMAT_RGBA8)
+	img.premultiply_alpha()
+	var last := img.get_region(Rect2i(frames[n - 1].region)).get_data()
+	var used := 1
+	for i in range(n - 2, -1, -1):
+		if img.get_region(Rect2i(frames[i].region)).get_data() != last:
+			used = i + 2
+			break
+	return maxf(ATTACK_MIN_S, mini(n, used) / fps)
+
+
+## Coups encaissés, déduits de la baisse des PV (toutes sources) : intensité selon la part des PV perdus.
+func _track_hurt(u: Unit, t: float) -> void:
+	if is_nan(_last_hp):
+		_last_hp = u.hp
+	var drop := _last_hp - u.hp
+	_last_hp = u.hp
+	if drop <= 0.0:
+		return
+	var share := drop / maxf(1.0, u.max_hp)
+	var k := clampf(0.45 + share * 6.0, 0.45, 1.0)
+	if t - _hurt_t < HURT_GAP and k <= _hurt_flash(t):
+		return
+	_hurt_t = t
+	_hurt_k = k
+	var big := share >= HURT_RECOIL_MIN or u.hp <= 0.0
+	_recoil_k = clampf(share * 10.0, 0.5, 1.0) if big and u.role != Martyre.KIND else 0.0
+	_recoil_dir = -(u.face if u.face != 0 else 1)
+	if big and t - _hit_t >= HIT_GAP:
+		_hit_t = t
+
+
+func _hurt_flash(t: float) -> float:
+	var a := t - _hurt_t
+	return _hurt_k * (1.0 - a / HURT_FLASH) if a >= 0.0 and a < HURT_FLASH else 0.0
+
+
+func _recoil_px(t: float) -> float:
+	var a := (t - _hurt_t) / HURT_RECOIL_T
+	if a < 0.0 or a >= 1.0 or _recoil_k <= 0.0:
+		return 0.0
+	# Choc immédiat puis retour amorti.
+	return _recoil_dir * roundf((HURT_RECOIL if enemy else HURT_RECOIL_ALLY) * _recoil_k * pow(1.0 - a, 2.0))
+
+
+## Fente : élan rapide vers la cible, puis retour en douceur (age à la cadence de la vague).
+static func _lunge_px(role: String, age: float) -> float:
+	var amp := float(LUNGE.get(role, 0))
+	if amp == 0.0 or age < 0.0 or age >= LUNGE_IN + LUNGE_OUT:
+		return 0.0
+	var p := 1.0 - pow(1.0 - age / LUNGE_IN, 2.0) if age < LUNGE_IN else 1.0 - pow((age - LUNGE_IN) / LUNGE_OUT, 2.0)
+	return roundf(amp * p)
+
+
+func _flash_color(base: Color, f: float) -> Color:
+	var g := 1.0 + HURT_GLOW * f
+	return Color(base.r * g, base.g * g, base.b * g, base.a)
+
+
+func _process(delta: float) -> void:
+	_dt = delta
 	_update()
 
 
@@ -159,33 +293,50 @@ func _update() -> void:
 	visible = not u.hidden and (u.alive() or (enemy and u.dead)) and not Overload.hidden_in_blast(u)
 	if enemy and world and not world.fog.visible_at(u.pos()):
 		visible = false
+	# Invulnérable après un coup de la Martyre : l'Ingénieur clignote.
+	if not enemy and (Martyre.blinking(u) or OeilMatrice.blinking(u)):
+		visible = false
 	position = Proj.nat(u.x, 0.0, u.z)
+	# Gardiens des Pylônes de Merenor : l'alpha est deux fois plus grand ; une bête qui renaît sort du slime
+	# en silhouette noire puis reprend ses couleurs.
+	if enemy and not u.dead:
+		var ge := u as Enemy
+		scale = Vector2.ONE * (Pylons.ALPHA if ge.alpha else 1.0)
+		var rk := clampf((GameState.sim_time - ge.risen_at) / 1.4, 0.0, 1.0)
+		modulate = Color(lerpf(0.06, 1.0, rk), lerpf(0.05, 1.0, rk), lerpf(0.08, 1.0, rk), 1.0)
+		# Squelette du flot nocturne : pas encore de planche, fanatique blafard en attendant.
+		if ge.kind == "skeleton":
+			modulate *= Color(0.72, 0.86, 1.0, 1.0)
+	_track_hurt(u, GameState.sim_time)
 	if enemy and u.dead:
 		var age := maxf(0.0, GameState.sim_time - (u as Enemy).died_at)
-		_body.texture = _enemy_death[mini(_enemy_death.size() - 1, floori(age * float(_meta["death"]["fps"])))]
+		_body.texture = _enemy_death[mini(_enemy_death.size() - 1, floori(age * (u as Enemy).pace * float(_meta["death"]["fps"])))]
 		_body.offset = Vector2(-float(_meta["ax"]), -float(_meta["ay"]))
-		_body.position = Vector2.ZERO
+		# Projection en arrière au coup fatal (sens opposé au regard), amortie, puis le corps reste là.
+		var kick := -float(u.face if u.face != 0 else 1) * roundf(DEATH_KICK * (1.0 - pow(1.0 - clampf(age / DEATH_KICK_T, 0.0, 1.0), 3.0)))
+		_body.position = Vector2(kick, 0.0)
 		_body.scale = Vector2(-1 if u.face < 0 else 1, 1)
 		var progress := clampf(age / EnemyArt.DEATH_DURATION, 0.0, 1.0)
-		_under.position = Vector2(8.0 * progress, -3.0 * progress)
+		_under.position = Vector2(8.0 * progress + kick, -3.0 * progress)
 		_under.scale = Vector2(1.0 + progress, 1.0)
 		if not _corpse_shadow_ready:
 			_corpse_shadow_ready = true
 			_under.queue_redraw()
 		_over.visible = false
-		modulate.a = clampf(EnemyArt.CORPSE_LIFETIME - age, 0.0, 1.0)
+		modulate = Color(1, 1, 1, clampf(Loot.corpse_life(u as Enemy) - age, 0.0, 1.0))
+		_body.modulate = _flash_color(Color.WHITE, _hurt_flash(GameState.sim_time))
 		return
 	if is_nan(_lx):
 		_lx = u.x
 		_lz = u.z
 	var dist := Vector2(u.x - _lx, u.z - _lz).length()
 	var moved := dist > 0.001
-	if moved:
-		_wp = fmod(_wp + dist / float(_meta["stride"]), 1.0)
-		_still = 0
-	else:
-		_still += 1
-	var walking := _still < 4
+	# Départ sur un appui, pas terminé à l'arrêt (UnitFeel.step).
+	# Ingénieur : foulée de son propre atlas (5 unités par cycle, soit 3 cycles par seconde à sa vitesse de 15,2).
+	var stride := float(TyrienArt.meta["stride"]) if u.unarmored and not _bare_sets.is_empty() else float(_meta["stride"])
+	_feel.step(dist, stride, _dt)
+	var _wp := _feel.wp
+	var walking := _feel.walking
 	# Orientation : alliés vers l'ennemi le plus proche (20 pour le Tireur, 10 sinon), sinon sens de la marche.
 	var foe: Variant = null if enemy else Combat.target_closest(u, GameState.enemies, 20.0 if u.role == "shooter" else 10.0, world)
 	var dxs: float = foe.x - u.x if foe else u.x - _lx
@@ -194,10 +345,30 @@ func _update() -> void:
 	if absf(dxs) > 0.001:
 		u.face = -1 if dxs < 0.0 else 1
 	_face = u.face if u.face != 0 else 1
+	if not _bare_sets.is_empty():
+		_bare = _bare_sets[TyrienArt.ragged()]
+	var bare := u.unarmored and not _bare.is_empty()
+	if bare and _bare.has("walk_d"):
+		var ddx := u.x - _lx
+		var ddz := u.z - _lz
+		if foe:
+			_vdir = ""
+		elif moved:
+			if absf(ddz) > absf(ddx) * 1.2:
+				_vdir = "d" if ddz > 0.0 else "u"
+			elif absf(ddx) > absf(ddz):
+				_vdir = ""
+	else:
+		_vdir = ""
 	_lx = u.x
 	_lz = u.z
-	var bare := u.unarmored and not _bare.is_empty()
-	var walk_frames: Array[AtlasTexture] = _bare["walk"] if bare else _walk
+	# Ennemi masqué (brouillard, caché) : seul l'état d'animation suit son cours (marche, regard, demi-tour,
+	# coups encaissés, ci-dessus) ; l'image du sprite est choisie à la première image où il redevient visible.
+	if enemy and not visible:
+		_feel.turn(_face, Time.get_ticks_msec() / 1000.0)
+		return
+	var cannon := bare and String(Gear.weapon(u).get("piece", "")) == "cannon" and _bare.has("c_walk")
+	var walk_frames: Array[AtlasTexture] = (_bare["walk_" + _vdir] if _vdir != "" else (_bare["c_walk"] if cannon else _bare["walk"])) if bare else _walk
 	var wn := walk_frames.size()
 	var wi := floori(_wp * wn) % wn
 	var bob_i := floori(_wp * 6.0) if enemy else wi
@@ -210,9 +381,11 @@ func _update() -> void:
 		frame = walk_frames[wi]
 	elif enemy and _meta["idle"].get("loop", false):
 		# Boucle de repos à sa propre cadence (Martyre de Byrsa : 74 images à 24 i/s).
-		frame = _idle[floori(t * float(_meta["idle"]["fps"])) % _idle.size()]
+		frame = _idle[floori(t * (u as Enemy).pace * float(_meta["idle"]["fps"])) % _idle.size()]
 	else:
-		frame = (_bare["idle"] if bare else _idle)[(floori(t * SPR_FRAMES / SPR_LOOP) + (key & 7) * 3) % SPR_FRAMES]
+		var idle_frames: Array = (_bare["idle_" + _vdir] if _vdir != "" else (_bare["c_idle"] if cannon else _bare["idle"])) if bare else _idle
+		var it := t * ((u as Enemy).pace if enemy else 1.0)
+		frame = idle_frames[(floori(it * IDLE_FPS) + (key & 7) * 3) % idle_frames.size()]
 	var ax := float(_meta["ax"])
 	var ay := float(_meta["ay"])
 	# Marche ennemie dans un cadre propre (Strazhar à quatre pattes) : ancre de la marche.
@@ -236,23 +409,32 @@ func _update() -> void:
 		ax = atk_meta["ax"]
 		ay = atk_meta["ay"]
 		kick = 0
+	var lunge := 0.0
+	var tell := 0.0
 	if enemy:
-		var age := t - (u as Enemy).attack_started
+		var age := (t - (u as Enemy).attack_started) * (u as Enemy).pace
+		# Coup annoncé : l'atlas est avancé pour que son choc coïncide avec la fin de l'armement.
+		var windup := (u as Enemy).windup
+		var lead := maxf(0.0, float(ATTACK_IMPACT.get(u.role, 0.0)) - windup) if windup > 0.0 else 0.0
 		# Durée propre de l'animation si elle est plus courte que la recharge (Martyre de Byrsa).
-		var playing := age >= 0.0 and age < float(_meta["attack"].get("duration", Catalog.ENEMY[u.role]["cd"]))
+		var span := float(_meta["attack"].get("duration", minf(Catalog.ENEMY[u.role]["cd"], _attack_active.get(u.role, INF))))
+		var playing := age >= 0.0 and age + lead < span
+		lunge = _lunge_px(u.role, age - windup)
+		if windup > 0.0 and age >= 0.0 and age < windup:
+			tell = TELL_GLOW * sin(PI * age / windup)
 		if playing:
-			frame = _enemy_attack[mini(_enemy_attack.size() - 1, floori(age * float(_meta["attack"]["fps"])))]
+			frame = _enemy_attack[mini(_enemy_attack.size() - 1, floori((age + lead) * float(_meta["attack"]["fps"])))]
 			ax = float(_meta["ax"])
 			ay = float(_meta["ay"])
 			bob = 0
 		# Incantation (la plus récente des deux l'emporte), puis réaction aux coups si rien d'autre ne joue.
 		if not _enemy_cast.is_empty():
-			var ca := t - (u as Enemy).cast_started
+			var ca := (t - (u as Enemy).cast_started) * (u as Enemy).pace
 			if ca >= 0.0 and ca < float(_meta["cast"]["duration"]) and (u as Enemy).cast_started >= (u as Enemy).attack_started:
 				frame = _enemy_cast[mini(_enemy_cast.size() - 1, floori(ca * float(_meta["cast"]["fps"])))]
 				playing = true
 		if not _enemy_hit.is_empty() and not playing:
-			var ha := t - (u as Enemy).hurt_at
+			var ha := (t - ((u as Enemy).hurt_at if u.role == Martyre.KIND else _hit_t)) * (u as Enemy).pace
 			if ha >= 0.0 and ha < float(_meta["hit"]["duration"]):
 				frame = _enemy_hit[mini(_enemy_hit.size() - 1, floori(ha * float(_meta["hit"]["fps"])))]
 	if not _kneel.is_empty() and simulation and simulation.kneeling(u):
@@ -267,11 +449,33 @@ func _update() -> void:
 	if winded:
 		var age := t - u.winded_at
 		var kn: Array = _bare["kneel"]
-		frame = kn[floori(age * float(_bare["meta"]["kneel"]["fps"])) % kn.size()]
+		# Souffle court en boucle : les 24 premières images (les 12 suivantes le relèvent).
+		frame = kn[floori(age * float(_bare["meta"]["kneel"]["fps"])) % mini(24, kn.size())]
 		drop = -10.0 * (1.0 - pow(clampf(age / Overload.FALL, 0.0, 1.0), 3.0))
 		kick = 0
 		bob = 0
 		_face = 1 if CaveShape.CORE.x >= u.x else -1
+	# Arrivée par le portail (sim/opening.gd) : à genoux, souffle court, puis se relève.
+	if bare and u.role == "engineer" and GameState.opening_stage == "arrival":
+		var at := Opening.elapsed() - Opening.ARR_EJECT
+		if at >= 0.0 and Opening.elapsed() < Opening.ARR_STAND:
+			var kn: Array = _bare["kneel"]
+			var fps := float(_bare["meta"]["kneel"]["fps"])
+			if Opening.elapsed() < Opening.ARR_RISE:
+				frame = kn[floori(at * fps) % 24]
+			else:
+				frame = kn[mini(kn.size() - 1, 24 + floori((Opening.elapsed() - Opening.ARR_RISE) * 12.0))]
+			drop = -10.0 * (1.0 - pow(clampf(at / 0.25, 0.0, 1.0), 3.0))
+			kick = 0
+			bob = 0
+			winded = true
+	# Coup encaissé (assez fort pour un recul) : buste rejeté en arrière, six images ; cède à tout ce qui suit.
+	if bare and not walking and not winded and _bare.has("hit"):
+		var ha := (t - _hit_t) * float(_bare["meta"]["hit"]["fps"])
+		var hf: Array = _bare["hit"]
+		if ha >= 0.0 and ha < hf.size():
+			frame = hf[floori(ha)]
+			kick = 0
 	# Creusement : l'Ingénieur vise et tire ses pitons d'ancrage (EngineerAim).
 	if u.role == "engineer" and not walking and world and not winded:
 		var aim: Variant = EngineerAim.pose(u, world.terrain_state)
@@ -309,10 +513,18 @@ func _update() -> void:
 	# planches/armes-attaques.html ; démarre à sw_t0 (épées) ou sh_t0 (canon).
 	if bare and not winded and med.is_empty():
 		var anim := String(Gear.weapon(u).get("anim", ""))
+		# Tir surtout vers le sud ou le nord : pose de face ou de dos (sinon profil).
+		# Arbalestrie : toujours de profil, canon en main.
+		if anim == "shoot" and cannon and TyrienArt.meta["anims"].has("c_shoot"):
+			anim = "c_shoot"
+		elif anim == "shoot" and absf(u.aim_dir.y) > absf(u.aim_dir.x) * 1.2:
+			var vert := "shoot_d" if u.aim_dir.y > 0.0 else "shoot_u"
+			if TyrienArt.meta["anims"].has(vert):
+				anim = vert
 		if anim != "" and TyrienArt.meta["anims"].has(anim):
 			var fps := TyrienArt.fps(anim)
 			var frames := TyrienArt.anim(anim)
-			var age := t - (u.sh_t0 if anim == "shoot" else u.sw_t0)
+			var age := t - (u.sh_t0 if anim.begins_with("shoot") else u.sw_t0)
 			if age >= 0.0 and age < frames.size() / fps:
 				frame = frames[mini(frames.size() - 1, floori(age * fps))]
 				kick = 0
@@ -326,8 +538,22 @@ func _update() -> void:
 	_body.texture = frame
 	_body.offset = Vector2(-ax - kick, -ay)
 	_sync_gear(frame if tyrien else null)
-	_body.position = Vector2(0, -bob + roundf(drop))
-	_body.scale = Vector2(-1 if _face < 0 else 1, 1)
+	_sync_helm(frame, cannon, t)
+	var jolt := 0.0
+	if enemy:
+		# Fente vers la cible, recoil d'un coup reçu, tremblement d'étourdissement (1 px, 15 Hz).
+		jolt = lunge * _face + _recoil_px(t)
+		if (u as Enemy).stun > 0.0:
+			jolt += 1.0 if floori(t * 30.0) % 2 == 0 else -1.0
+	else:
+		jolt = _recoil_px(t)
+	# Éclair du coup encaissé, sur le sprite seul : la barre de vie ne clignote pas.
+	_body.modulate = _flash_color(Color.WHITE, maxf(_hurt_flash(t), tell))
+	# Demi-tour en trois images (largeurs intermédiaires, un pixel d'affaissement), horloge réelle.
+	var now := Time.get_ticks_msec() / 1000.0
+	var kx := _feel.turn(_face, now)
+	_body.position = Vector2(jolt, -bob + roundf(drop) + (1.0 if _feel.turning(now) else 0.0))
+	_body.scale = Vector2(kx, 1)
 	if _mining_seal:
 		_mining_seal.tick(_face, _body.position, ReviveFx.body_shown(u))
 	if _revive:
@@ -347,6 +573,48 @@ func _update() -> void:
 	if over_key != _over_key:
 		_over_key = over_key
 		_over.queue_redraw()
+
+
+## Casque de combat : progression vers fermé tant que le dernier tir date de moins de HELM_HOLD s, puis relevé ;
+## affiché sur les images de profil à l'Arbalestrie, décalé avec la tête (buste au repos, pas de marche).
+func _sync_helm(frame: Texture2D, cannon: bool, t: float) -> void:
+	# Sans canon et casque déjà relevé (tous les ennemis, la plupart des alliés) : rien à chercher dans les planches.
+	if not cannon and _helm_p <= 0.0:
+		_helm_t = t
+		if _helm:
+			_helm.visible = false
+		return
+	var dt := clampf(t - _helm_t, 0.0, 0.25)
+	_helm_t = t
+	var target := 1.0 if cannon and t - unit.sh_t0 < HELM_HOLD else 0.0
+	_helm_p = move_toward(_helm_p, target, HELM_RATE * dt)
+	var step := ceili(_helm_p * 4.0 - 0.001)
+	var dy := 0
+	var show := false
+	for anim: String in ["c_idle", "c_walk", "c_shoot"]:
+		var i := TyrienArt.anim(anim).find(frame)
+		if i >= 0:
+			show = true
+			# Hauteur de la tête dans chaque image (planches/assets/engineer-maj.js : breath, walkPose, c_shoot).
+			if anim == "c_idle":
+				dy = 1 if (i % 24) >= 9 and (i % 24) <= 20 else 0
+			elif anim == "c_walk":
+				dy = 1 if i in [0, 1, 5, 6, 7, 11] else 0
+			else:
+				dy = 1 if i == 1 or i == 2 else 0
+	if step <= 0 or not show:
+		if _helm:
+			_helm.visible = false
+		return
+	if _helm == null:
+		_helm = Sprite2D.new()
+		_helm.centered = false
+		_helm.use_parent_material = true
+		_body.add_child(_helm)
+	_helm.visible = true
+	_helm.texture = TyrienArt.anim("helm")[step - 1]
+	_helm.offset = _body.offset + Vector2(0, dy)
+	_helm.z_index = 1
 
 
 ## Empile sur _body les calques des pièces portées par l'Ingénieur (aucun hors tenue tyrienne).
@@ -433,12 +701,12 @@ class _UnitBar extends Node2D:
 		if lvl >= 2:
 			var text := "★%d" % lvl
 			_text(text, Vector2(1, 1), Color("#0b0a09cc"))
-			_text(text, Vector2.ZERO, Color("#ffe08a"))
+			_text(text, Vector2.ZERO, Color("#f4ecd6"))
 		# Bonus de poste de tir : pastille du créneau de rondins au-dessus de l'unité.
 		if preload("res://sim/placeables.gd").posted(u):
 			var at := Vector2(0, (-10.0 if lvl >= 2 or u.squad else -2.0) - 9.0)
 			draw_circle(at, 9.0, Color("#0b0a09b0"))
-			draw_arc(at, 9.0, 0.0, TAU, 20, Color("#ffe08a"), 1.0, true)
+			draw_arc(at, 9.0, 0.0, TAU, 20, Color("#f4ecd6"), 1.0, true)
 			preload("res://ui/inventory/item_icon.gd").draw_item(self, "firing_post", at, 0.5)
 		draw_set_transform(Vector2.ZERO)
 

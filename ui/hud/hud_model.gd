@@ -37,15 +37,34 @@ static func selected_building() -> Building:
 	return b if b and GameState.buildings.has(b) else null
 
 
+## Incarné : un bâtiment ou une autre unité est ouvert dans le bandeau (clic gauche ou droit).
+static func incarnated_panel() -> bool:
+	var inc := GameState.incarnated
+	return inc != null and (selected_building() != null or GameState.selected.any(func(u: Unit) -> bool: return u != inc))
+
+
 ## unlocked (buildings.js) : sans prérequis, ou un bâtiment requis achevé.
 static func unlocked(type: String) -> bool:
 	var r: String = Catalog.BUILDINGS[type]["requires"]
 	if r.is_empty():
 		return true
+	var research := String(Catalog.BUILDINGS[type].get("research", ""))
+	if research != "" and not GameState.research_done.has(research):
+		return false
 	for b in GameState.buildings:
 		if b.type == r and b.complete:
 			return true
 	return false
+
+
+## Ce qui manque pour construire `type` : « construisez d'abord un … » ou la recherche exigée.
+static func lock_reason(type: String) -> String:
+	var D: Dictionary = Catalog.BUILDINGS[type]
+	for b in GameState.buildings:
+		if b.type == D["requires"] and b.complete:
+			var research := String(D.get("research", ""))
+			return "recherche « %s » requise (%s)" % [Catalog.RESEARCH[research]["name"], Catalog.BUILDINGS[Catalog.RESEARCH[research]["building"]]["name"]]
+	return "construisez d’abord un %s" % Catalog.BUILDINGS[D["requires"]]["name"]
 
 
 ## ownTemples (adepts.js) : temples achevés du dieu de l'adepte.
@@ -75,17 +94,18 @@ static func summon_cost(b: Building) -> Dictionary:
 
 
 static func can_summon_at(b: Building) -> bool:
-	return not GameState.ended and b and b.complete and b.is_temple() and Catalog.can_pay(summon_cost(b))
+	return not GameState.ended and b and b.complete and b.is_temple() and b.queue.size() < Catalog.TEMPLE_QUEUE \
+		and Catalog.can_pay(summon_cost(b)) and Simulation.pop_room(b.def()["deity"])
 
 
-static func can_train(b: Building) -> bool:
-	return not GameState.ended and b and b.complete and b.type == "caserne" and b.queue.size() < Catalog.CASERNE_QUEUE \
-		and Catalog.can_pay(Catalog.CASERNE_COST)
+static func can_train(b: Building, id := "lame") -> bool:
+	return not GameState.ended and b and b.complete and Catalog.TRAINERS.has(b.type) and b.queue.size() < Catalog.CASERNE_QUEUE \
+		and Catalog.can_pay(Catalog.train_cost(id)) and Simulation.pop_room(id)
 
 
 ## Les objets de l'escouade sont apportés ensuite au coffre bleu par les adeptes d'Indra.
 static func can_train_unit(b: Building, id: String) -> bool:
-	if not can_train(b):
+	if not can_train(b, id):
 		return false
 	var cost := Simulation.Recipes.caserne_cost(id, 4)
 	for queued: String in b.queue:
@@ -103,12 +123,54 @@ static func can_train_unit(b: Building, id: String) -> bool:
 
 static func can_revive(b: Building, u: Unit) -> bool:
 	return not GameState.ended and b and b.complete and b.type == "soulwell" and not GameState.fallen.is_empty() \
-		and Simulation.revivable(u) and Catalog.can_pay(Catalog.revive_cost(u))
+		and Simulation.revivable(u) and Catalog.can_pay(Catalog.revive_cost(u)) and Simulation.pop_room(u.role)
 
 
 # ---------------------------------------------------------------- panelActions
 
+## Boutons de commande « Émail par famille » (planches/boutons-commande-propositions.html, piste 4) : pictogramme
+## ivoire sur plaque d'émail ; c = construction (ambre), a = Ancre et culte (cyan), f = combat (rouge), n = navigation.
+const COMMAND_GLYPH := {"menu-build": ["build", "c"], "menu-place": ["place", "c"], "repair": ["repair", "c"],
+	"orb": ["orb", "a"], "offering": ["offering", "a"], "pray": ["pray", "a"], "ability": ["ability", "f"],
+	"hold": ["hold", "f"], "move": ["move", "f"], "warehouse-page": ["page", "n"], "back": ["back", "n"]}
+## Recharge des compétences par rôle (Simulation.run_ability), pour le voile de recharge.
+const ABILITY_TIME := {"paladin": 16.0, "healer": 12.0, "engineer": 18.0, "shooter": 10.0}
+
+
 static func panel_actions(sim: Simulation) -> Array[Dictionary]:
+	var A := _panel_actions(sim)
+	var u: Unit = alive_selected()[0] if not alive_selected().is_empty() else null
+	for a: Dictionary in A:
+		if COMMAND_GLYPH.has(a["id"]):
+			_command_glyph(a, u)
+	return A
+
+
+static func _command_glyph(a: Dictionary, u: Unit) -> void:
+	var g: Array = COMMAND_GLYPH[a["id"]]
+	a["command_icon"] = g[0]
+	a["family"] = g[1]
+	var label: String = a["label"]
+	var name := label.get_slice(" · ", 0).trim_suffix(" ›")
+	var why := ""
+	if a["id"] in ["repair", "ability"] and u and u.ability > 0.0:
+		a["cd_frac"] = clampf(u.ability / float(ABILITY_TIME.get(u.role, 18.0)), 0.0, 1.0)
+		a["cd_text"] = str(ceili(u.ability))
+		why = "Recharge · %s s" % a["cd_text"]
+	elif a["id"] == "offering" and a["disabled"]:
+		a["poor"] = true
+		why = "Mana insuffisant"
+	elif a["id"] == "menu-place":
+		a["craft_count"] = int(label.get_slice(" · ", 1)) if label.contains(" · ") else 0
+	elif a["disabled"]:
+		a["locked"] = true
+		why = "Indisponible"
+	if a["id"] == "warehouse-page":
+		name = "Catégorie « %s »" % name
+	a["bubble"] = [name, "", true, why, a["title"]]
+
+
+static func _panel_actions(sim: Simulation) -> Array[Dictionary]:
 	var A: Array[Dictionary] = []
 	if GameState.ended:
 		return A
@@ -122,6 +184,11 @@ static func panel_actions(sim: Simulation) -> Array[Dictionary]:
 				func() -> void: sim.order_orb(), not has_engineer, GameState.orb_owner != null))
 		A.append(_act("hero", "sword", "Tireur · " + Catalog.short_cost(Catalog.HERO_COST), "t",
 			"Invoquer le héros Tireur · " + Catalog.cost_text(Catalog.HERO_COST), sim.summon_hero, not can_summon_hero()))
+		A[-1]["unit_sprite"] = "shooter"
+		A[-1]["poor"] = GameState.orb_active and not Catalog.can_pay(Catalog.HERO_COST)
+		A[-1]["locked"] = not GameState.orb_active
+		A[-1]["bubble"] = ["Tireur", _mana_text(Catalog.HERO_COST), Catalog.can_pay(Catalog.HERO_COST),
+			"" if GameState.orb_active else "Ancre éteinte", "Héros invoqué à l’Ancre."]
 		A.append(_act("offering", "menace", "Offrande · +50 menace", "o",
 			"Offrande tyrienne · " + Catalog.cost_text(Catalog.ANCHOR_MENACE_COST) + " · +50 menace · Réutilisable",
 			sim.offer_menace, not Simulation.can_offer_menace()))
@@ -135,16 +202,19 @@ static func panel_actions(sim: Simulation) -> Array[Dictionary]:
 				continue
 			var done := GameState.research_done.has(id)
 			var pending := GameState.research_jobs.has(id)
-			var title: String = research["name"] + " · 10 s · " + Catalog.cost_text(Catalog.MINING_COST) + " · +20 menace à l’achèvement"
+			var title: String = research["name"] + " · 10 s · " + Catalog.research_cost_text(id) + " · +20 menace à l’achèvement"
+			if research.has("desc"):
+				title += " · " + research["desc"]
 			if not research["requires"].is_empty():
 				var names: PackedStringArray = []
 				for required: String in research["requires"]:
 					names.append(Catalog.RESEARCH[required]["name"])
 				title += " · Prérequis : " + ", ".join(names)
-			var action := _act("research-" + id, "mining_seal", research["name"], "r", title,
+			var action := _act("research-" + id, String(research.get("icon", "mining_seal")), research["name"], "r", title,
 				func() -> void: sim.start_research(B, id), not Simulation.can_research(B, id))
 			action["status"] = "Déjà achevée" if done else ("En cours · %d %%" % int(GameState.research_jobs[id]["progress"] / Catalog.RESEARCH_TIME * 100.0) if pending else "")
 			action["completed"] = done
+			_research_glyph(action, id, done, pending)
 			A.append(action)
 		var D := B.def()
 		var deity: String = D["deity"]
@@ -153,15 +223,18 @@ static func panel_actions(sim: Simulation) -> Array[Dictionary]:
 			A.append(_act("summon", D["icon"], "Adepte · %d" % Catalog.SUMMON_COST, "i",
 				"Invoquer un %s · %d %s · prie au temple : +1 %s / s" % [String(Catalog.ADEPT[deity]["name"]).to_lower(), Catalog.SUMMON_COST, r, r],
 				func() -> void: sim.summon_adept(B), not can_summon_at(B)))
-		if B.type == "caserne":
-			for t: Dictionary in Catalog.CASERNE_UNITS:
+			_summon_glyph(A[-1], B, deity, r)
+		if Catalog.TRAINERS.has(B.type):
+			var times := " ×4" if B.type == "caserne" else ""
+			for t: Dictionary in Catalog.TRAINERS[B.type]:
 				var id: String = t["id"]
-				var title := "Former un %s · %s · %s s" % [String(Catalog.ADEPT[id]["name"]).to_lower(), Catalog.cost_text(Catalog.CASERNE_COST), num(Catalog.CASERNE_TIME)]
+				var title := "Former : %s · %s · %s s" % [String(Catalog.ADEPT[id]["name"]).to_lower(), Catalog.cost_text(Catalog.train_cost(id)), num(Catalog.CASERNE_TIME)]
 				var items := Simulation.Recipes.caserne_cost(id, 4)
 				if not items.is_empty():
 					title += " · " + _stock_text(items)
-				A.append(_act("train-" + id, t["icon"], "%s ×4 · %s" % [t["label"], Catalog.short_cost(Catalog.CASERNE_COST)], t["key"],
+				A.append(_act("train-" + id, t["icon"], "%s%s · %s" % [t["label"], times, Catalog.short_cost(Catalog.train_cost(id))], t["key"],
 					title, func() -> void: sim.train_unit(B, id), not can_train_unit(B, id)))
+				_train_glyph(A[-1], B, id, t["label"] + times)
 		if B.type == "warehouse":
 			_warehouse_actions(A, B)
 		if Simulation.Recipes.has_station(B.type):
@@ -177,23 +250,21 @@ static func panel_actions(sim: Simulation) -> Array[Dictionary]:
 				A.append(_act("revive-%d" % f.id, "heart", "%s ★%d" % [_adept_prefix.sub(f.name, ""), Catalog.lvl(f)], str(i + 1),
 					"Ressusciter %s (niveau %d) · %s" % [f.name, Catalog.lvl(f), Catalog.cost_text(Catalog.revive_cost(f))],
 					func() -> void: sim.revive_unit(B, f), not can_revive(B, f)))
+				var rc := Catalog.revive_cost(f)
+				A[-1]["unit_sprite"] = _sprite_key(f)
+				A[-1]["poor"] = not Catalog.can_pay(rc)
+				A[-1]["locked"] = A[-1]["disabled"] and not A[-1]["poor"]
+				A[-1]["bubble"] = ["%s · niveau %d" % [f.name, Catalog.lvl(f)], _mana_text(rc), not A[-1]["poor"], "Résurrection",
+					String(Catalog.ADEPT.get(f.role, {}).get("lore", ""))]
+		return A
+	# Désincarné, Ingénieur dans la capsule : les constructions restent accessibles, sans sélection.
+	if GameState.in_capsule and (u == null or u.hidden):
+		_build_actions(A, sim)
 		return A
 	if u == null or u.hidden:
 		return A
 	if u.role == "engineer" and GameState.hud_menu == "build":
-		for type: String in Catalog.BUILDINGS:
-			var D: Dictionary = Catalog.BUILDINGS[type]
-			var ok := unlocked(type)
-			var title: String = D["name"] + " · " + Catalog.cost_text(D["cost"])
-			if not ok:
-				title += " · nécessite un " + Catalog.BUILDINGS[D["requires"]]["name"]
-			if D["size"] == 2:
-				title += " · 2 × 2"
-			A.append(_act("b-" + type, D["icon"], _temple_prefix.sub(D["name"], "T. ") + " · " + Catalog.short_cost(D["cost"]), D["key"], title,
-				func() -> void: sim.arm_build(type), not ok or not Catalog.can_pay(D["cost"]),
-				GameState.hud_mode == "build" and GameState.hud_build_type == type))
-			A[-1]["build_type"] = type
-			A[-1]["locked"] = not ok
+		_build_actions(A, sim)
 		A.append(_act("back", "restart", "Retour", "b", "Revenir aux ordres de l’Ingénieur (B ou Échap)", func() -> void:
 			GameState.hud_menu = ""
 			GameState.hud_mode = ""))
@@ -202,11 +273,14 @@ static func panel_actions(sim: Simulation) -> Array[Dictionary]:
 		var keys := "123"
 		for i in Simulation.Placeables.ITEMS.size():
 			var item: String = Simulation.Placeables.ITEMS[i]
-			var n := Simulation.ItemStorage.count(item)
+			var n := Simulation.ItemStorage.count_ammo(item)
 			var R := Simulation.Recipes
 			A.append(_act("place-" + item, CRAFT_ICON.get(item, "hammer"), "%s · %d" % [R.name_of(item), n], keys[i],
 				"%s · %d en stock · %s" % [R.name_of(item), n, R.desc_of(item)], func() -> void: sim.arm_place(item), n <= 0,
 				GameState.hud_mode == "place" and GameState.hud_place_item == item))
+			A[-1]["craft_item"] = item
+			A[-1]["craft_count"] = n
+			A[-1]["bubble"] = [R.name_of(item), "%d en stock" % n, n > 0, "" if n > 0 else "À fabriquer à l’Atelier", R.desc_of(item)]
 		A.append(_act("back", "restart", "Retour", "p", "Revenir aux ordres de l’Ingénieur (P ou Échap)", func() -> void:
 			GameState.hud_menu = ""
 			GameState.hud_mode = ""))
@@ -214,7 +288,7 @@ static func panel_actions(sim: Simulation) -> Array[Dictionary]:
 	if u.role == "engineer":
 		A.append(_act("menu-build", "hammer", "Construire", "b", "Construire un temple ou un bâtiment", func() -> void:
 			GameState.hud_menu = "build"))
-		var stock: int = Simulation.Placeables.ITEMS.reduce(func(acc: int, it: String) -> int: return acc + Simulation.ItemStorage.count(it), 0)
+		var stock: int = Simulation.Placeables.ITEMS.reduce(func(acc: int, it: String) -> int: return acc + Simulation.ItemStorage.count_ammo(it), 0)
 		A.append(_act("menu-place", "flag", "Poser · %d" % stock, "p", "Poser une défense de l’Atelier : poste de tir, barricade, chausse-trappe",
 			func() -> void: GameState.hud_menu = "place"))
 		if GameState.orb_active:
@@ -237,6 +311,13 @@ static func panel_actions(sim: Simulation) -> Array[Dictionary]:
 				"Ressusciter %d membre(s) au Puits des Âmes et rallier l’escouade · %s" % [losses.size(), Catalog.cost_text(cost)],
 				func() -> void: sim.revive_squad(u), Simulation.life_well() == null or not Catalog.can_pay(cost)))
 			A[-1]["cost_text"] = Catalog.cost_text(cost)
+			A[-1]["unit_sprite"] = _sprite_key(u)
+			A[-1]["craft_count"] = losses.size()
+			A[-1]["poor"] = not Catalog.can_pay(cost)
+			A[-1]["locked"] = Simulation.life_well() == null
+			A[-1]["bubble"] = ["Renforts", _mana_text(cost), Catalog.can_pay(cost),
+				"Puits des Âmes requis" if A[-1]["locked"] else "%d membre(s) à ressusciter" % losses.size(),
+				"Ressuscités au Puits des Âmes, ils rallient l’escouade."]
 	A.append(_act("hold", "flag", "Position", "h", "Tenir position", sim.hold, false, u.stance == "hold"))
 	A.append(_act("move", "move", "Déplacer", "m", "Déplacer : choisir une destination", sim.arm_move, false, GameState.hud_mode == "move"))
 	return A
@@ -268,6 +349,9 @@ static func _warehouse_actions(actions: Array[Dictionary], b: Building) -> void:
 					b.requested_items.erase(item)
 				else:
 					b.requested_items.append(item), false, selected))
+		actions[-1]["craft_item"] = item
+		actions[-1]["bubble"] = [label, "Maintenir %d exemplaires" % Production.WAREHOUSE_TARGET, true,
+			"Demandé" if selected else "Cliquer pour demander", ""]
 
 
 ## Boutons de fabrication : une recette par bouton (touches 1 à 0), puis « Annuler » si la file n'est pas vide.
@@ -281,14 +365,103 @@ static func _craft_actions(A: Array[Dictionary], sim: Simulation, B: Building) -
 		var desc := R.desc_of(item)
 		if desc != "":
 			title += " · " + desc
+		if not Simulation.recipe_unlocked(item):
+			title += " · Recherche « %s » requise (%s)." % [Catalog.RESEARCH[Catalog.RECIPE_RESEARCH[item]]["name"], Catalog.BUILDINGS[Catalog.RESEARCH[Catalog.RECIPE_RESEARCH[item]]["building"]]["name"]]
 		if R.ITEMS.get(item, {}).get("pending", false):
 			title += " · Effet pas encore en jeu : l’objet est stocké."
 		title += " · Fabriqué en boucle par les adeptes au poste ; cliquer de nouveau pour arrêter."
 		var action := _act("craft-" + item, CRAFT_ICON.get(item, "hammer"), R.name_of(item), CRAFT_KEYS[i] if i < CRAFT_KEYS.length() else "", title,
 			func() -> void: sim.craft(B, item), not Simulation.can_craft(B, item), B.recipe == item)
-		action["status"] = "%d au coffre rouge" % Production.count_in(B.output_box, item)
+		# Bouton « Laiton et objet franc » (planches/boutons-fabrication-propositions.html, piste 1) :
+		# l'objet seul, la touche et le compteur ; nom et coût dans la bulle au survol.
+		action["craft_item"] = item
+		action["craft_count"] = Production.count_in(B.output_box, item)
+		action["craft_progress"] = B.craft / R.craft_time(B.type) if B.recipe == item else 0.0
+		action["locked"] = not Simulation.recipe_unlocked(item)
+		var why := ""
+		if action["locked"]:
+			why = "Recherche « %s » requise" % Catalog.RESEARCH[Catalog.RECIPE_RESEARCH[item]]["name"]
+		action["bubble"] = [R.name_of(item), "%s · %s s" % [_stock_text(cost), num(R.craft_time(B.type))], _stock_ok(cost), why]
 		A.append(action)
 		i += 1
+
+
+## Bouton de recherche « Laiton, trait d'or et cachet » (planches/boutons-recherche-unites-propositions.html, piste 1) :
+## l'objet au trait d'or tant que la recherche n'est pas faite, la couleur qui monte pendant la recherche, le cachet
+## vert une fois achevée ; nom, coût, effet et état dans la bulle au survol.
+static func _research_glyph(action: Dictionary, id: String, done: bool, pending: bool) -> void:
+	var research: Dictionary = Catalog.RESEARCH[id]
+	var cost := Catalog.research_cost(id)
+	action["research_icon"] = id
+	action["research_done"] = done
+	action["active"] = pending
+	action["craft_progress"] = GameState.research_jobs[id]["progress"] / Catalog.RESEARCH_TIME if pending else 0.0
+	action["locked"] = not done and not pending and not Simulation.research_requirements_met(id)
+	action["poor"] = not done and not pending and not action["locked"] and not Catalog.can_pay_research(id)
+	var why := ""
+	if done:
+		why = "Déjà achevée"
+	elif pending:
+		why = "En cours · %d %%" % int(action["craft_progress"] * 100.0)
+	elif action["locked"]:
+		var names: PackedStringArray = []
+		for required: String in research["requires"]:
+			if not GameState.research_done.has(required):
+				names.append(Catalog.RESEARCH[required]["name"])
+		why = "Prérequis : " + ", ".join(names)
+	var items := Catalog.research_items(id)
+	var price := _mana_text(cost) + (" · " + _stock_text(items) if not items.is_empty() else "")
+	action["bubble"] = [research["name"], ("%s · %s s · +%d menace" % [price, num(Catalog.RESEARCH_TIME), Catalog.RESEARCH_MENACE]) if Catalog.RESEARCH_MENACE > 0 else "%s · %s s" % [price, num(Catalog.RESEARCH_TIME)],
+		done or pending or Catalog.can_pay_research(id), why, research.get("desc", "")]
+
+
+## Bouton d'escouade de la Caserne : sprite de l'unité, file d'attente en pastille grenat, jauge de l'escouade en cours.
+static func _train_glyph(action: Dictionary, B: Building, id: String, label: String) -> void:
+	var items := Simulation.Recipes.caserne_cost(id, 4)
+	var front := not B.queue.is_empty() and B.queue[0] == id
+	action["unit_sprite"] = id
+	action["craft_count"] = B.queue.count(id)
+	action["active"] = front
+	action["craft_progress"] = B.train / Catalog.CASERNE_TIME if front else 0.0
+	action["poor"] = not Catalog.can_pay(Catalog.train_cost(id))
+	action["locked"] = action["disabled"] and not action["poor"]
+	var why := ""
+	if B.queue.size() >= Catalog.CASERNE_QUEUE:
+		why = "File pleine"
+	elif action["locked"]:
+		why = "Objets manquants au coffre bleu"
+	elif action["craft_count"] > 0:
+		why = "%d en file" % action["craft_count"]
+	var cost := _mana_text(Catalog.train_cost(id)) + (" · " + _stock_text(items) if not items.is_empty() else "")
+	action["bubble"] = [label, "%s · %s s" % [cost, num(Catalog.CASERNE_TIME)], not action["poor"], why, Catalog.ADEPT[id]["lore"]]
+
+
+## Bouton d'invocation d'un temple : l'esprit du dieu, file d'attente, jauge de l'arrivée en cours.
+static func _summon_glyph(action: Dictionary, B: Building, deity: String, res_name: String) -> void:
+	var cost := summon_cost(B)
+	var arriving := Simulation.temple_arrival(B)
+	action["unit_sprite"] = deity
+	action["craft_count"] = B.queue.size() + (1 if arriving else 0)
+	action["active"] = arriving != null
+	action["craft_progress"] = clampf(1.0 - (arriving.arrival_end - GameState.sim_time) / Simulation.ARRIVAL, 0.0, 1.0) if arriving else 0.0
+	action["poor"] = not Catalog.can_pay(cost)
+	action["locked"] = action["disabled"] and not action["poor"]
+	var why := "File pleine" if B.queue.size() >= Catalog.TEMPLE_QUEUE else ("%d en file" % action["craft_count"] if action["craft_count"] > 0 else "")
+	action["bubble"] = [Catalog.ADEPT[deity]["name"], _mana_text(cost), not action["poor"], why,
+		"Prie au temple : +1 %s / s." % res_name]
+
+
+## Portrait du HUD d'une unité (assets/baked/hud/portraits) : son rôle, l'Ingénieur sinon.
+static func _sprite_key(u: Unit) -> String:
+	return u.role if ResourceLoader.exists("res://assets/baked/hud/portraits/%s.png" % u.role) else "engineer"
+
+
+## « 100 Discipline (260) » : coût en mana et réserve actuelle.
+static func _mana_text(cost: Dictionary) -> String:
+	var parts: PackedStringArray = []
+	for k: String in cost:
+		parts.append("%d %s (%d)" % [cost[k], Catalog.RES_INFO[k]["name"], floori(GameState.res[k])])
+	return " + ".join(parts)
 
 
 ## Vider le coffre rouge d'un bâtiment producteur (l'Ingénieur rapporte les objets au stock).
@@ -300,6 +473,10 @@ static func _collect_action(A: Array[Dictionary], sim: Simulation, B: Building) 
 	A.append(_act("collect", "move", "Vider le coffre · %d" % n, "x",
 		"L’Ingénieur rapporte le contenu du coffre rouge au stock (coffre antique, sinon son sac)",
 		func() -> void: sim.collect_output(B), n == 0 or sim.builder() == null))
+	A[-1]["craft_item"] = "collect"
+	A[-1]["craft_count"] = n
+	A[-1]["bubble"] = ["Vider le coffre rouge", "%d objet(s) rapportés au stock par l’Ingénieur" % n, true,
+		"Ingénieur absent" if sim.builder() == null else ""]
 
 
 ## « 3/5 Cuivre + 5/5 Fer » : ingrédients d'une recette présents dans le coffre bleu.
@@ -308,6 +485,14 @@ static func _box_text(items: Array, cost: Dictionary) -> String:
 	for k: String in cost:
 		parts.append("%d/%d %s" % [mini(Production.count_in(items, k), int(cost[k])), cost[k], Simulation.Recipes.name_of(k)])
 	return " + ".join(parts)
+
+
+## Le stock couvre-t-il le coût d'une recette ?
+static func _stock_ok(cost: Dictionary) -> bool:
+	for k: String in cost:
+		if Simulation.ItemStorage.count(k) < int(cost[k]):
+			return false
+	return true
 
 
 ## « 5 Cuivre (3/5) + 5 Fer (5/5) » : coût et quantités disponibles dans le stock.
@@ -343,12 +528,16 @@ static func format_assault() -> String:
 	return "%02d:%02d" % [t / 60, t % 60]
 
 
-## Jour et heure du bandeau : {"day", "time", "time_icon"}.
+## Jour, heure et météo du bandeau : {"day", "time", "time_icon", "weather", "next"} ; "next" annonce le
+## prochain changement de temps (« Pluie 11:30 »), ou "" si rien ne change dans la journée qui vient.
 static func sky_status() -> Dictionary:
 	var t := GameState.sim_time
 	var lbl := DayNight.label(t)
 	var icon := "moon" if lbl == "nuit" else "dawn" if lbl == "aube" or lbl == "crépuscule" else "sun"
-	return {"day": "Jour %d" % DayNight.day(t), "time": DayNight.clock(t), "time_icon": icon}
+	var f := Weather.forecast()
+	var next := "" if f.is_empty() else "%s %s" % [Weather.NAMES[f["kind"]], DayNight.clock(float(f["at"]) + 0.01)]
+	return {"day": "Jour %d" % DayNight.day(t), "time": DayNight.clock(t), "time_icon": icon,
+		"weather": Weather.NAMES[Weather.kind()], "next": next}
 
 
 static func dig_hits(sim: Simulation, cell: Dictionary) -> int:
@@ -360,13 +549,25 @@ static func dig_status(sim: Simulation, cell: Dictionary) -> String:
 	if block.is_empty():
 		return "Bloc non minable"
 	var label: String = block.get("mining_label", "Creuse : " + block["material_name"])
+	var seal := sim.state().seal_needed(cell["i"], cell["j"])
+	if seal != "":
+		return "%s · recherche « %s » requise" % [block["material_name"], Catalog.RESEARCH[seal]["name"]]
 	return "%s · %d / %d" % [label, dig_hits(sim, cell), block["resistance"]]
 
 
 static func adept_status(sim: Simulation, u: Unit) -> String:
 	var j: Variant = u.job
+	if u.role == Oublieux.ROLE:
+		return "Ramasse ce qui est tombé · %d / %d sur lui · n’obéit à aucun ordre" % [Oublieux.load_of(u), Oublieux.CAPACITY]
+	if Catalog.is_mage(u.role):
+		return Catalog.MAGE[u.role]["status"]
 	if j == null:
 		return Catalog.FIGHT[u.role]["status"] if Catalog.FIGHT.has(u.role) else "En attente d’ordres"
+	if j["type"] == "pray_pylon":
+		if not u.working:
+			return "Se rend au Pylône de Merenor"
+		var n: int = (j["pylon"].get("praying", []) as Array).size()
+		return "Canalise le Pylône de Merenor · %d / 4 dieux" % n
 	if j["type"] == "pray":
 		var t: Building = j["temple"]
 		if u.working:
@@ -408,10 +609,13 @@ static func unit_status(sim: Simulation, u: Unit) -> String:
 	if u.role == "engineer":
 		if GameState.hud_mode == "build" and not GameState.hud_build_type.is_empty():
 			var D: Dictionary = Catalog.BUILDINGS[GameState.hud_build_type]
-			return "Placez : %s · %s" % [D["name"], Catalog.cost_text(D["cost"])]
+			return "Placez : %s · %s" % [D["name"], Catalog.cost_text(Catalog.building_cost(GameState.hud_build_type))]
 		if u.build_job != null:
 			var b: Building = u.build_job
 			return "Construction · %s · %d %%" % [b.def()["name"], floori(b.progress / b.def()["time"] * 100.0)]
+		if u.job != null and u.job["type"] == "bless_pylon":
+			var bl := float(u.job["pylon"].get("blessing", 0.0))
+			return "Bénit le Pylône de Merenor · répit %d s" % floori(bl) if u.working else "Se rend au Pylône de Merenor"
 		if u.job != null and u.job["type"] == "anchor_pray":
 			return "Prie à l’Ancre · +3 de chaque mana / s" if u.working else "Se rend à l’Ancre pour prier"
 		if u.orb_job:
@@ -441,7 +645,7 @@ static func unit_status(sim: Simulation, u: Unit) -> String:
 static func building_status(b: Building) -> String:
 	var D := b.def()
 	if not b.complete:
-		return "Construction · %d %% · l’Ingénieur doit rester sur le chantier" % floori(b.progress / D["time"] * 100.0)
+		return "Construction · %d %%" % floori(b.progress / D["time"] * 100.0)
 	var deity: String = D["deity"]
 	if not deity.is_empty():
 		var r: String = Catalog.RES_INFO[Catalog.DEITY_RES[deity]]["name"]
@@ -455,7 +659,7 @@ static func building_status(b: Building) -> String:
 	if Production.staffed(b):
 		var role := Production.staff_role(b)
 		var posts := "Postes %d / %d" % [Production.members(b, "worker").size(), Catalog.STAFF_MAX]
-		if Production.has_chests(b) and b.type != "warehouse":
+		if Production.has_chests(b) and b.type not in ["warehouse", "eglise"]:
 			posts += " · mineurs %d / %d" % [Production.members(b, "miner").size(), Catalog.MINERS_MAX]
 		if b.type == "warehouse":
 			return ("Sélectionnez les objets à maintenir en stock · " + posts) if Production.source_open(b) else "Affectez un adepte de Sigil par clic droit pour ouvrir le dépôt."
@@ -464,6 +668,8 @@ static func building_status(b: Building) -> String:
 		var speed := "×%d" % Production.at_post(b)
 		if b.type == "caserne":
 			return "Entraînement %s · %s · file %d / %d · %s" % [speed, Catalog.cost_text(Catalog.CASERNE_COST), b.queue.size(), Catalog.CASERNE_QUEUE, posts]
+		if b.type == "ecole":
+			return "Formation des mages %s · %s et un bâton à focale chacun · file %d / %d · %s" % [speed, Catalog.cost_text(Catalog.ECOLE_COST), b.queue.size(), Catalog.CASERNE_QUEUE, posts]
 		if Simulation.Recipes.has_station(b.type):
 			if b.recipe == "":
 				return "Choisissez une recette · %s" % posts
@@ -471,6 +677,8 @@ static func building_status(b: Building) -> String:
 			var state := "%d %%" % floori(b.craft / Simulation.Recipes.craft_time(b.type) * 100.0) \
 				if Production.has_items(b.input_box, cost) else "attend : " + _box_text(b.input_box, cost)
 			return "Fabrique %s %s · %s · %s" % [Simulation.Recipes.name_of(b.recipe), speed, state, posts]
+		if b.type == "eglise":
+			return "%s · %s" % [Oublieux.status(b), posts]
 		if b.type != "soulwell":
 			return "En activité %s · %s" % [speed, posts]
 	if b.type == "soulwell":
@@ -493,6 +701,9 @@ static func view(sim: Simulation) -> Dictionary:
 	var B: Building = selected_building() if not anchor and u == null else null
 	var v := {}
 	v["wave"] = str(GameState.wave) if GameState.wave > 0 else "—"
+	# Escouades de l'assaut en cours (sorties / total), tant qu'il en reste sur le terrain ou en file.
+	if GameState.wave_squads > 1 and (not GameState.spawn_queue.is_empty() or GameState.enemies.any(func(e: Variant) -> bool: return not e.beast and e.hp > 0.0)):
+		v["wave"] += " · escouade %d/%d" % [GameState.squads_out, GameState.wave_squads]
 	v["sky"] = sky_status()
 	var res := {}
 	for k in Catalog.RES_ORDER:
@@ -503,12 +714,12 @@ static func view(sim: Simulation) -> Dictionary:
 	var tier := Catalog.menace_tier(GameState.menace)
 	var wave_stats := Catalog.menace_stats(tier)
 	var portal_stats := Catalog.menace_stats(tier, true)
-	v["menace_tooltip"] = ("Menace %d · palier %d\nVagues : +%d ennemis · composition +%d vagues\nPV ×%.2f · dégâts ×%.2f · armure +%d\nStrazhar : dès la vague effective 8 ou %d menace ; +1 tous les %d paliers après %d\nPortails : toutes les %.2f s · %d créatures vivantes maximum\nPV ×%.2f · dégâts ×%.2f\nVagues : menace figée au lancement. Portails : menace relue à chaque apparition." % [
+	v["menace_tooltip"] = ("Menace %d · palier %d\nVagues : +%d ennemis · composition +%d vagues\nPV ×%.2f · dégâts ×%.2f · armure +%d\nStrazhar : dès la vague effective 8 ou %d menace ; +1 tous les %d paliers après %d\nPylônes de Merenor : meute de %d à %d bêtes dont un alpha ×%d, renaissance en %d s\nPV ×%.2f · dégâts ×%.2f\nLa nuit : squelettes levés dehors, et %d chiens lâchés par chaque pylône éveillé non canalisé (et par le plus proche)\nLa menace monte à chaque ennemi d'assaut abattu, selon son type (fanatique 1, bouclier 5, Strazhar 12).\nVagues : menace figée au lancement. Pylônes : menace relue à chaque renaissance." % [
 		GameState.menace, tier, Catalog.MENACE_WAVE["count"] * tier,
 		floori(float(tier) / Catalog.MENACE_WAVE["composition_step"]), wave_stats["hp"], wave_stats["damage"], wave_stats["armor"],
 		Catalog.STRAZHAR_MENACE, Catalog.MENACE_WAVE["champion_step"], Catalog.MENACE_WAVE["champion_start"],
-		Catalog.menace_portal_interval(tier), Catalog.menace_portal_cap(tier), portal_stats["hp"], portal_stats["damage"]])
-	v["population"] = str(GameState.units.filter(func(o: Unit) -> bool: return o.alive() and not o.hidden).size())
+		Pylons.PACK_MIN, Pylons.PACK_MAX, int(Pylons.ALPHA), int(Pylons.RESPAWN), portal_stats["hp"], portal_stats["damage"], Night.raid_size(tier)])
+	v["population"] = "%d/%d" % [Simulation.pop_used(), Simulation.pop_cap()]
 	if anchor:
 		v["chosen"] = "Ancre tyrienne"
 	elif u and u.squad_capacity > 0 and alive.all(func(member: Unit) -> bool: return member.squad == u.squad):
@@ -527,7 +738,7 @@ static func view(sim: Simulation) -> Dictionary:
 	elif B:
 		v["kind"] = "BÂTIMENT" + (" · TEMPLE" if B.is_temple() else "")
 	elif Catalog.is_adept(u):
-		v["kind"] = ("COMBATTANT" if Catalog.FIGHT.has(u.role) and Catalog.ADEPT[u.role]["task"] == "fight" else "ADEPTE · " + u.role.to_upper()) + lv
+		v["kind"] = "ÉGLISE · OUBLIEUX" if u.role == Oublieux.ROLE else "MAGE CRISTALLISÉ" + lv if Catalog.is_mage(u.role) else ("COMBATTANT" if Catalog.FIGHT.has(u.role) and Catalog.ADEPT[u.role]["task"] == "fight" else "ADEPTE · " + u.role.to_upper()) + lv
 	elif u and u.hidden:
 		v["kind"] = "PORTAIL · ÉMERGENCE"
 	elif u and u.role == "engineer":
@@ -603,9 +814,12 @@ static func selected_enemy() -> Enemy:
 	return GameState.hud_enemy
 
 
-## Clé du portrait d'une unité : son rôle, ou « engineer-bare » pour l'Ingénieur qui a perdu son armure.
+## Clé du portrait d'une unité : son rôle, « engineer-bare » pour l'Ingénieur qui a perdu son armure,
+## « engineer-exil » tant que la capsule ne lui a pas remis la combinaison.
 static func portrait_key(u: Unit) -> String:
-	return "engineer-bare" if u.role == "engineer" and u.unarmored else u.role
+	if u.role == "engineer" and u.unarmored:
+		return "engineer-exil" if TyrienArt.ragged() else "engineer-bare"
+	return u.role
 
 
 ## Fiche d'un ennemi sélectionné : identité, points de vie, statistiques, légende, portrait.
@@ -629,3 +843,21 @@ static func _enemy_view(v: Dictionary, e: Enemy) -> void:
 	v["lore"] = I["lore"]
 	v["portrait_enabled"] = true
 	v["portrait_key"] = "enemy-" + e.kind
+
+
+## Boutons de construction (une entrée par bâtiment du catalogue).
+static func _build_actions(A: Array[Dictionary], sim: Simulation) -> void:
+	for type: String in Catalog.BUILDINGS:
+		var D: Dictionary = Catalog.BUILDINGS[type]
+		var ok := unlocked(type)
+		var cost := Catalog.building_cost(type)
+		var title: String = D["name"] + " · " + Catalog.cost_text(cost)
+		if not ok:
+			title += " · " + lock_reason(type)
+		if D["size"] == 2:
+			title += " · 2 × 2"
+		A.append(_act("b-" + type, D["icon"], _temple_prefix.sub(D["name"], "T. ") + " · " + Catalog.short_cost(cost), D["key"], title,
+			func() -> void: sim.arm_build(type), not ok or not Catalog.can_pay(cost),
+			GameState.hud_mode == "build" and GameState.hud_build_type == type))
+		A[-1]["build_type"] = type
+		A[-1]["locked"] = not ok

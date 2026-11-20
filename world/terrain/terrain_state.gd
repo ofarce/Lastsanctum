@@ -35,13 +35,44 @@ var permanent_ores := {}
 var wood_left := {}
 ## Chacune des 4 cases d'un bosquet → sa case d'origine.
 var grove_cells := {}
+## Salle de la Gorge-Cuivre (sim/gorge.gd) : centre d'un disque de GORGE_ROOM unités élargi sur une galerie de la
+## moitié nord du biome 2 ; null si aucun emplacement (ou en parité JS).
+var gorge_room: Variant = null
+const GORGE_ROOM := 24.0
+## Bosquets abattus : case d'origine → numéro de la vague où ils sont tombés (Sylviculture : ils repoussent).
+var felled_groves := {}
 ## Filons illimités posés au sol (2 × 2 cases infranchissables, calqués sur les bosquets) : case d'origine
 ## (haut gauche) → minerai. Ils ne s'épuisent jamais.
 var lodes := {}
 ## Chacune des 4 cases d'un filon → sa case d'origine.
 var lode_cells := {}
+## Socles des Pylônes de Merenor (sim/pylons.gd) : 2 × 2 cases infranchissables → id du pylône.
+var pylon_cells := {}
+## Salle creusée autour de chaque pylône (rayon, unités) pour la meute et la nappe.
+const PYLON_CHAMBER := 15.0
+## Frontière entre le Temple et le biome 2 (sim/oeil.gd) : bande de roche impossible à creuser, de
+## 2 × FRONTIER_HALF unités, le long de la limite nord du Temple. Seule la salle de l'Œil de la Matrice la perce :
+## au nord de la salle, un couloir traverse la bande, fermé par une porte de chair (eye_gate) jusqu'à la mort
+## du boss. Hors parité JS (groves).
+const FRONTIER_HALF := 6.0
+## Salle de l'Œil : ellipse à bord irrégulier (demi-axes, unités), adossée à la bande, au nord de la zone d'origine.
+const EYE_ROOM_RX := 58.0
+const EYE_ROOM_RZ := 26.0
+## Demi-largeur du couloir nord (3 cases) et longueur au-delà de la bande sans galerie du biome 2 à rejoindre.
+const EYE_GATE_HALF := 6.0
+const EYE_CORRIDOR := 16.0
+var frontier := false
+## Cases de la porte de chair → vrai (infranchissables tant que eye_gate_closed).
+var eye_gate := {}
+var eye_gate_closed := false
+## Couloir nord : de la salle (z le plus au sud) jusqu'à eye_corridor_north, |x| ≤ EYE_GATE_HALF (puis coude).
+var eye_corridor_north := 0.0
 ## Cases fermées par une barricade (sim/placeables.gd) → vrai : infranchissables, ne masquent pas la vue.
 var walls := {}
+## Emprises infranchissables précises (unités de monde), en plus des cases : socles de l'Ancre et de la capsule.
+var solids: Array[Rect2] = []
+## Mur sud soufflé (CaveShape.in_breach devient creux).
+var breach_open := false
 ## Bosquet de la salle de départ (bas à droite) et clairières semées dans les galeries.
 const START_GROVE_AT := Vector2(46.0, -104.0)
 const GALLERY_GROVES := 6
@@ -53,6 +84,10 @@ const ORE_BANDS := [Vector2(55, 85), Vector2(90, 125), Vector2(135, 175), Vector
 const VEIN_COUNTS := [16, 10, 6, 3]
 ## Filons illimités au sol par palier (cuivre, fer, quartz, or) ; le quartz garde ses gisements en paroi.
 const LODE_COUNTS := [3, 2, 0, 1]
+## Minerais que porte le Temple (décision du 2026-11-20) : les veines et filons des autres paliers de la zone
+## d'origine ne sont plus posés (leurs tirages et leurs clairières restent, pour ne rien déplacer d'autre).
+## La parité JS (groves = false) garde les quatre.
+const TEMPLE_ORES: Array[String] = ["copper"]
 var dig_hits := {}
 ## Instant (sim_time) du dernier piton tiré sur chaque case en cours : rendu des pitons plantés.
 var dig_hit_at := {}
@@ -102,13 +137,148 @@ func is_dug(x: float, z: float) -> bool:
 	return not dug.is_empty() and dug.has(Vector2i(floori(x / 4.0), floori(z / 4.0)))
 
 
+## Appelée des milliers de fois par tick (lignes de vue du Pathfinder) : mêmes tests, dans le même ordre, que
+## ground, grove_at, lode_at, water_at, River.blocks, walls, _in_solid, pylon_at et la porte de l'Œil, mais la
+## case n'est calculée qu'une fois et les tests de cases sont écrits sur place.
 func walkable(x: float, z: float) -> bool:
-	return ground(x, z) and not grove_at(x, z) and not lode_at(x, z) and not water_at(x, z) and (river == null or not river.blocks(x, z)) and (walls.is_empty() or not walls.has(Vector2i(floori(x / 4.0), floori(z / 4.0))))
+	if not ground(x, z):
+		return false
+	var c := Vector2i(floori(x / 4.0), floori(z / 4.0))
+	if not grove_cells.is_empty() and grove_cells.has(c):
+		return false
+	if not lode_cells.is_empty() and lode_cells.has(c):
+		return false
+	if not water_cells.is_empty() and water_cells.has(c):
+		return false
+	# River.blocks ne répond vrai que dans la bande de la rivière (MID_Z ± 20).
+	if river != null and z >= River.MID_Z - 20.0 and z <= River.MID_Z + 20.0 and river.blocks(x, z):
+		return false
+	if not walls.is_empty() and walls.has(c):
+		return false
+	if not solids.is_empty() and _in_solid(x, z):
+		return false
+	if not pylon_cells.is_empty() and pylon_cells.has(c):
+		return false
+	return not (eye_gate_closed and eye_gate.has(c))
+
+
+# ---------------------------------------------------------------- Frontière et salle de l'Œil
+
+## Limite nord du Temple (premier biome).
+static func frontier_z() -> float:
+	return Biomes.north_z(0)
+
+
+## Centre de la salle de l'Œil : son bord nord entame la bande, son bord sud reste au nord de la zone d'origine.
+static func eye_room_center() -> Vector2:
+	return Vector2(0.0, frontier_z() + FRONTIER_HALF + EYE_ROOM_RZ - 4.0)
+
+
+## Bord irrégulier de la salle : facteur d'échelle de l'ellipse selon l'angle.
+static func eye_room_scale(a: float) -> float:
+	return 1.0 + 0.05 * sin(3.0 * a + 0.7) + 0.035 * sin(7.0 * a + 2.0)
+
+
+## (x, z) est dans la salle de l'Œil (grow : marge en unités, négative pour rester loin des parois).
+static func in_eye_room(x: float, z: float, grow := 0.0) -> bool:
+	var c := eye_room_center()
+	var dx := x - c.x
+	var dz := z - c.y
+	var k := eye_room_scale(atan2(dz / EYE_ROOM_RZ, dx / EYE_ROOM_RX))
+	var rx := EYE_ROOM_RX * k + grow
+	var rz := EYE_ROOM_RZ * k + grow
+	return rx > 0.0 and rz > 0.0 and (dx * dx) / (rx * rx) + (dz * dz) / (rz * rz) <= 1.0
+
+
+func _in_eye_corridor(x: float, z: float) -> bool:
+	return absf(x) <= EYE_GATE_HALF and z >= eye_corridor_north and z <= eye_room_center().y
+
+
+## La case (i, j) est de la roche de frontière : impossible à creuser.
+func frontier_cell(i: int, j: int) -> bool:
+	if not frontier:
+		return false
+	var fz := frontier_z()
+	var z0 := j * 4.0
+	if z0 + 4.0 <= fz - FRONTIER_HALF or z0 >= fz + FRONTIER_HALF:
+		return false
+	return not in_eye_room(i * 4.0 + 2.0, z0 + 2.0, 2.0) and not _in_eye_corridor(i * 4.0 + 2.0, z0 + 2.0)
+
+
+## Bande vidée de ses galeries, salle creusée, couloir nord vers la galerie du biome 2 la plus proche (arrêté à
+## PASSAGE_GAP unités d'elle, comme les passages), porte de chair au milieu de la bande ; clairières, filons et
+## bassins tombés dans la salle ou la bande retirés.
+func _carve_frontier() -> void:
+	frontier = true
+	eye_gate.clear()
+	var fz := frontier_z()
+	var c := eye_room_center()
+	for j in range(floori(fz - FRONTIER_HALF - CaveShape.WORLD_Z0), ceili(fz + FRONTIER_HALF - CaveShape.WORLD_Z0)):
+		for i in GAL_W:
+			mask[j * GAL_W + i] = 0
+	for z in range(floori(c.y - EYE_ROOM_RZ * 1.1), ceili(c.y + EYE_ROOM_RZ * 1.1) + 1):
+		for x in range(floori(c.x - EYE_ROOM_RX * 1.1), ceili(c.x + EYE_ROOM_RX * 1.1) + 1):
+			if in_eye_room(x + 0.5, z + 0.5):
+				mask[gal_idx(x, z)] = 1
+	# Galerie du biome 2 la plus proche au nord de la bande.
+	var top := fz - FRONTIER_HALF
+	var target: Variant = null
+	var d := 4.0
+	while d < 90.0 and target == null:
+		for o in range(0, 64, 4):
+			for s: float in ([1.0] if o == 0 else [1.0, -1.0]):
+				var q := Vector2(c.x + o * s, top - d)
+				if is_gallery(q.x, q.y):
+					target = q
+					break
+			if target != null:
+				break
+		d += 2.0
+	# Le couloir s'arrête à PASSAGE_GAP unités de cette galerie : la salle et le biome 2 restent deux réseaux
+	# (découvrir la salle n'éveille pas les pylônes du nord) ; il reste une ou deux cases à creuser.
+	var side := Vector2.ZERO
+	if target == null:
+		eye_corridor_north = top - EYE_CORRIDOR
+	elif absf(target.x) <= EYE_GATE_HALF + 4.0:
+		eye_corridor_north = minf(top - 4.0, target.y + PASSAGE_GAP + MIN_HALF_WIDTH)
+	else:
+		eye_corridor_north = minf(top - 4.0, target.y)
+		side = Vector2(target.x - signf(target.x) * (PASSAGE_GAP + MIN_HALF_WIDTH), eye_corridor_north + MIN_HALF_WIDTH)
+	for z in range(floori(eye_corridor_north), ceili(c.y)):
+		for x in range(floori(-EYE_GATE_HALF), ceili(EYE_GATE_HALF)):
+			mask[gal_idx(x, z)] = 1
+	if side != Vector2.ZERO and absf(side.x) > EYE_GATE_HALF:
+		_carve_axis_segment(Vector2(signf(side.x) * EYE_GATE_HALF, side.y), side)
+	# Porte : une rangée de cases au milieu de la bande, sur toute la largeur du couloir.
+	var gj := floori(fz / 4.0)
+	for gi in range(floori(-EYE_GATE_HALF / 4.0), ceili(EYE_GATE_HALF / 4.0)):
+		eye_gate[Vector2i(gi, gj)] = true
+	eye_gate_closed = true
+	var out := func(p: Vector2, r: float) -> bool:
+		return in_eye_room(p.x, p.y, r) or absf(p.y - fz) < FRONTIER_HALF + r
+	_clearings.assign(_clearings.filter(func(p: Vector2) -> bool: return not out.call(p, CLEARING_RADIUS)))
+	_lode_spots = _lode_spots.filter(func(s: Array) -> bool: return not out.call(Vector2((s[0] as Vector2i) * 4) + Vector2(4, 4), 6.0))
+	for k: Vector2i in water_cells.keys():
+		if out.call(Vector2(k * 4) + Vector2(2, 2), 4.0):
+			water_cells.erase(k)
+	pools.assign(pools.filter(func(p: Dictionary) -> bool: return not out.call(p["center"], POOL_RADIUS)))
+
+
+func _in_solid(x: float, z: float) -> bool:
+	for r in solids:
+		if r.has_point(Vector2(x, z)):
+			return true
+	return false
 
 
 ## Un bosquet pétrifié occupe ce point.
 func grove_at(x: float, z: float) -> bool:
 	return not grove_cells.is_empty() and grove_cells.has(Vector2i(floori(x / 4.0), floori(z / 4.0)))
+
+
+## Socle d'un Pylône de Merenor.
+func pylon_at(x: float, z: float) -> bool:
+	return not pylon_cells.is_empty() and pylon_cells.has(Vector2i(floori(x / 4.0), floori(z / 4.0)))
 
 
 ## Fosse d'un bassin souterrain (le haut-fond reste praticable).
@@ -124,13 +294,14 @@ func lode_at(x: float, z: float) -> bool:
 ## Sol découvert (salle, galerie, case creusée…), bosquets compris : ce que peignent le sol et le brouillard.
 func ground(x: float, z: float) -> bool:
 	return CaveShape.outdoors(x, z) or CaveShape.in_cave(x, z) or CaveShape.in_tunnel(x, z) \
-		or is_dug(x, z) or is_gallery_open(x, z) or (vault_open and CaveShape.in_vault(x, z))
+		or is_dug(x, z) or is_gallery_open(x, z) or (vault_open and CaveShape.in_vault(x, z)) \
+		or (breach_open and CaveShape.in_breach(x, z))
 
 
 ## Creux de la montagne (hol, galleries.js : paintRegion) : galerie ouverte, case creusée, salle, couloir.
 func hollow(x: float, z: float) -> bool:
 	return is_gallery_open(x, z) or is_dug(x, z) or CaveShape.in_cave(x, z) or CaveShape.in_tunnel(x, z) \
-		or (vault_open and CaveShape.in_vault(x, z))
+		or (vault_open and CaveShape.in_vault(x, z)) or (breach_open and CaveShape.in_breach(x, z))
 
 
 ## intoCave (Index.html) : rapproche un point de la salle, pas à pas.
@@ -179,10 +350,13 @@ func push_out_of_rock(p: Vector2) -> Vector2:
 ## resetBlocks (adepts.js) : aucune case creusée, aucun coup en cours.
 func reset_digging() -> void:
 	dug.clear()
+	breach_open = false
+	walls.clear()
 	block_types.clear()
 	permanent_ores.clear()
 	wood_left.clear()
 	grove_cells.clear()
+	felled_groves.clear()
 	lodes.clear()
 	lode_cells.clear()
 	dig_hits.clear()
@@ -204,6 +378,9 @@ const START_WORM := {"room": 0.05, "branch": 0.025}
 ## Passages vers la zone d'origine : la galerie s'arrête à PASSAGE_GAP unités d'une galerie d'origine.
 const PASSAGE_GAP := 6.0
 const PASSAGE_SEARCH := 140.0
+## Demi-largeur minimale d'une galerie ou d'un passage (hors parité JS) : au moins 2 blocs (8 u) de large.
+## Le ver ne s'avance que si son disque tient entier dans la zone permise (pas de galerie rognée en lame).
+const MIN_HALF_WIDTH := 4.3
 
 ## Vers en cours : extension (vrai) ou zone d'origine.
 var _ext := false
@@ -214,7 +391,7 @@ static func gallery_allowed(x: float, z: float) -> bool:
 	if x < CaveShape.START_X0 + 10.0 or x > CaveShape.START_X1 - 10.0 or z < CaveShape.START_Z0 + 10.0 \
 			or z > CaveShape.mountain_edge(x) - 12.0:
 		return false
-	if x > -76.0 and x < 76.0 and z > CaveShape.CAVE_Z0 - 16.0:
+	if x > -76.0 and x < 76.0 and z > CaveShape.CAVE_Z0 - 28.0:
 		return false
 	return true
 
@@ -234,6 +411,9 @@ func _allowed(x: float, z: float) -> bool:
 func generate_galleries(new_seed: int) -> void:
 	seed = new_seed
 	var r := Rng.new(new_seed)
+	frontier = false
+	eye_gate.clear()
+	eye_gate_closed = false
 	mask.fill(0)
 	open.fill(0)
 	found = 0
@@ -247,10 +427,10 @@ func generate_galleries(new_seed: int) -> void:
 			z = CaveShape.START_Z0 + 14.0 + r.next() * (START_H - 28)
 			if gallery_allowed(x, z):
 				break
-		var a := r.next() * PI * 2.0
+		var direction := floori(r.next() * 4.0)
 		var steps := 34 + floori(r.next() * 46.0)
 		var radius := 2.1 + r.next() * 1.4
-		_worm(r, x, z, a, steps, radius, START_WORM)
+		_worm(r, x, z, direction, steps, radius, START_WORM)
 	# Extension (hors parité JS) : mêmes vers, tirés avec une graine dérivée sur le reste de la carte.
 	if groves:
 		_generate_extension(Rng.new(new_seed ^ 0xe7e7))
@@ -263,11 +443,19 @@ func generate_galleries(new_seed: int) -> void:
 		_carve_lode_clearings(Rng.new(new_seed ^ 0x10de))
 		_carve_pools(Rng.new(new_seed ^ 0x9001))
 		_carve_extension_features(new_seed)
-		_carve_passages(Rng.new(new_seed ^ 0x9a55))
+		_carve_gorge_room(Rng.new(new_seed ^ 0x60c6))
+		_carve_passages()
+		_carve_frontier()
 	else:
 		pools.clear()
 		water_cells.clear()
+		gorge_room = null
 	_label_networks()
+	pylon_cells.clear()
+	theme_rooms.clear()
+	if groves:
+		_place_pylons()
+		_carve_theme_rooms(Rng.new(new_seed ^ 0x5a2c))
 	_generate_ores()
 
 
@@ -286,10 +474,10 @@ func _generate_extension(r: Rng) -> void:
 			var p: Variant = _ext_spot(rb, k, 14.0)
 			if p == null:
 				continue
-			var a := rb.next() * PI * 2.0
+			var direction := floori(rb.next() * 4.0)
 			var st := int(steps[0]) + floori(rb.next() * float(int(steps[1]) - int(steps[0])))
 			var rad := float(radius[0]) + rb.next() * (float(radius[1]) - float(radius[0]))
-			_worm(rb, p.x, p.y, a, st, rad, {})
+			_worm(rb, p.x, p.y, direction, st, rad, {})
 	_ext = false
 
 
@@ -382,7 +570,7 @@ func _carve_extension_features(map_seed: int) -> void:
 
 ## Passages : depuis l'ouest, l'est et le nord, une galerie de l'extension est prolongée vers la galerie
 ## d'origine la plus proche du bord, et s'arrête à PASSAGE_GAP unités : une ou deux cases à creuser.
-func _carve_passages(r: Rng) -> void:
+func _carve_passages() -> void:
 	for side: Vector2 in [Vector2.LEFT, Vector2.RIGHT, Vector2.UP]:
 		var target: Variant = _edge_gallery(side)
 		if target == null:
@@ -394,7 +582,7 @@ func _carve_passages(r: Rng) -> void:
 		var d := EXT_MARGIN
 		while d < PASSAGE_SEARCH:
 			var q := edge + side * d
-			for o in [0.0, 4.0, -4.0, 8.0, -8.0]:
+			for o in [0.0, 4.0, -4.0, 8.0, -8.0, 12.0, -12.0, 16.0, -16.0, 20.0, -20.0, 24.0, -24.0, 28.0, -28.0, 32.0, -32.0]:
 				var c: Vector2 = q + Vector2(-side.y, side.x) * o
 				if ext_allowed(c.x, c.y) and is_gallery(c.x, c.y):
 					from = c
@@ -404,20 +592,21 @@ func _carve_passages(r: Rng) -> void:
 			d += 2.0
 		if from == null:
 			continue
-		# Le bord du passage (rayon 2,2) s'arrête à PASSAGE_GAP unités de la galerie d'origine.
-		var stop: Vector2 = t + (from - t).normalized() * (PASSAGE_GAP + 2.2)
-		var a: Vector2 = from
-		var length := a.distance_to(stop)
-		var phase := r.next() * TAU
-		var s := 0.0
-		while s <= length:
-			var f := s / maxf(length, 0.001)
-			var q := a.lerp(stop, f)
-			var n := (stop - a).normalized()
-			# Ondulation nulle aux deux bouts : l'arrêt reste à la distance voulue.
-			q += Vector2(-n.y, n.x) * sin(s * 0.08 + phase) * 3.0 * sin(PI * f)
-			_stamp_free(q.x, q.y, 2.2)
-			s += 1.5
+		# Le bord du passage (rayon MIN_HALF_WIDTH) s'arrête à PASSAGE_GAP unités de la galerie d'origine.
+		var stop := t + side * (PASSAGE_GAP + MIN_HALF_WIDTH)
+		var start: Vector2 = from
+		var bend := Vector2(start.x, stop.y) if side.x != 0.0 else Vector2(stop.x, start.y)
+		_carve_axis_segment(start, bend)
+		_carve_axis_segment(bend, stop)
+
+
+## Segment horizontal ou vertical, échantillonné jusqu'à son extrémité.
+func _carve_axis_segment(start: Vector2, stop: Vector2) -> void:
+	var length := start.distance_to(stop)
+	var steps := maxi(1, ceili(length / 1.5))
+	for i in steps + 1:
+		var point := start.lerp(stop, float(i) / steps)
+		_stamp_free(point.x, point.y, MIN_HALF_WIDTH)
 
 
 
@@ -448,7 +637,7 @@ func _stamp_free(cx: float, cz: float, r: float) -> void:
 			if dx * dx + dz * dz > r * r:
 				continue
 			if x < CaveShape.WORLD_X0 + 10.0 or x > CaveShape.WORLD_X1 - 10.0 or z < CaveShape.WORLD_Z0 + 10.0 \
-					or z + 0.5 > CaveShape.mountain_edge(x + 0.5) - 12.0 or (x > -76.0 and x < 76.0 and z > CaveShape.CAVE_Z0 - 16.0):
+					or z + 0.5 > CaveShape.mountain_edge(x + 0.5) - 12.0 or (x > -76.0 and x < 76.0 and z > CaveShape.CAVE_Z0 - 28.0):
 				continue
 			var k := gal_idx(x, z)
 			if k >= 0:
@@ -460,6 +649,7 @@ func _generate_ores() -> void:
 	permanent_ores.clear()
 	wood_left.clear()
 	grove_cells.clear()
+	felled_groves.clear()
 	lodes.clear()
 	lode_cells.clear()
 	var rng := RandomNumberGenerator.new()
@@ -490,6 +680,8 @@ func _generate_ores() -> void:
 			var key: Vector2i = pool[index]
 			pool[index] = pool[n]
 			var item: String = Blocks.ORES[tier]
+			if groves and not TEMPLE_ORES.has(item):
+				continue
 			block_types[key] = item
 			block_types[key + Vector2i.RIGHT] = item
 			if n % 3 == 0 and LODE_COUNTS[tier] == 0:
@@ -498,8 +690,6 @@ func _generate_ores() -> void:
 		_generate_extension_veins(rng)
 	# Le premier filon affleure juste après la paroi ouest, en terrain sans galerie.
 	block_types[Vector2i(-17, -39)] = "copper"
-	block_types[VAULT_COPPER] = "copper"
-	permanent_ores[VAULT_COPPER] = true
 	if groves:
 		_generate_lodes()
 		_generate_groves()
@@ -520,7 +710,7 @@ func _generate_extension_veins(rng: RandomNumberGenerator) -> void:
 				continue
 			var key := Vector2i(floori(p.x / 4.0), floori(p.y / 4.0))
 			if block_types.has(key) or block_types.has(key + Vector2i.RIGHT) or not _solid_pair(key) \
-					or not ext_allowed(key.x * 4.0 + 8.0, key.y * 4.0 + 2.0):
+					or not ext_allowed(key.x * 4.0 + 8.0, key.y * 4.0 + 2.0) or frontier_cell(key.x, key.y) or frontier_cell(key.x + 1, key.y):
 				continue
 			var items := Biomes.ores_at(k, Biomes.depth(k, p.y))
 			if items.is_empty():
@@ -538,7 +728,7 @@ func _grove_fits(origin: Vector2i) -> bool:
 	for dj in range(-1, 3):
 		for di in range(-1, 3):
 			var key := origin + Vector2i(di, dj)
-			if block_types.has(key) or grove_cells.has(key) or lode_cells.has(key):
+			if block_types.has(key) or grove_cells.has(key) or lode_cells.has(key) or pylon_cells.has(key):
 				return false
 			var x := key.x * 4.0
 			var z := key.y * 4.0
@@ -559,6 +749,48 @@ func _plant_grove(origin: Vector2i) -> void:
 		permanent_ores[origin + o] = true
 
 
+## Salle de la Gorge-Cuivre : un point de galerie de la moitié nord du dernier biome, loin des bassins, élargi en disque.
+func _carve_gorge_room(r: Rng) -> void:
+	gorge_room = null
+	var k := Biomes.LIST.size() - 1
+	if k < 1:
+		return
+	for t in 400:
+		var p: Variant = _ext_spot(r, k, GORGE_ROOM + 16.0)
+		if p == null or Biomes.depth(k, p.y) < 0.45 or not is_gallery(p.x, p.y):
+			continue
+		if pools.any(func(o: Dictionary) -> bool: return (o["center"] as Vector2).distance_to(p) < GORGE_ROOM + POOL_RADIUS + 12.0):
+			continue
+		var was := _ext
+		_ext = true
+		_stamp(p.x, p.y, GORGE_ROOM)
+		_ext = was
+		gorge_room = p
+		return
+
+
+## Sylviculture : replante les bosquets abattus depuis `waves` vagues dont les quatre cases sont libres
+## (`blocked` : test d'occupation d'une case par une unité, un bâtiment ou une défense). Renvoie les origines replantées.
+func regrow_groves(wave: int, waves: int, blocked: Callable) -> Array[Vector2i]:
+	var out: Array[Vector2i] = []
+	for origin: Vector2i in felled_groves.keys():
+		if wave - int(felled_groves[origin]) < waves:
+			continue
+		var free := true
+		for o: Vector2i in [Vector2i(0, 0), Vector2i(1, 0), Vector2i(0, 1), Vector2i(1, 1)]:
+			var key := origin + o
+			if block_types.has(key) or grove_cells.has(key) or lode_cells.has(key) or walls.has(key) or blocked.call(key):
+				free = false
+		if not free:
+			continue
+		_plant_grove(origin)
+		felled_groves.erase(origin)
+		out.append(origin)
+	if not out.is_empty():
+		version += 1
+	return out
+
+
 func _plant_lode(origin: Vector2i, item: String) -> void:
 	lodes[origin] = item
 	for o: Vector2i in [Vector2i(0, 0), Vector2i(1, 0), Vector2i(0, 1), Vector2i(1, 1)]:
@@ -570,7 +802,12 @@ func _plant_lode(origin: Vector2i, item: String) -> void:
 ## Un filon au cœur de chaque clairière de filon (emplacement déjà validé au creusement).
 func _generate_lodes() -> void:
 	for spot: Array in _lode_spots:
-		_plant_lode(spot[0], Blocks.ORES[spot[1]])
+		var o: Vector2i = spot[0]
+		if [Vector2i(0, 0), Vector2i(1, 0), Vector2i(0, 1), Vector2i(1, 1)].any(func(d: Vector2i) -> bool: return pylon_cells.has(o + d)):
+			continue
+		if groves and not TEMPLE_ORES.has(Blocks.ORES[spot[1]]):
+			continue
+		_plant_lode(o, Blocks.ORES[spot[1]])
 
 
 ## Clairières des filons : dans les galeries, à la distance du cœur propre à chaque palier de minerai.
@@ -761,23 +998,41 @@ func _stamp(cx: float, cz: float, r: float) -> void:
 
 
 ## `p` : réglages {room, branch} ; vide = ceux du biome sous le ver, à chaque pas.
-func _worm(r: Rng, x: float, z: float, a: float, steps: int, radius: float, p: Dictionary) -> void:
+const TUNNEL_DIRECTIONS := [Vector2.RIGHT, Vector2.DOWN, Vector2.LEFT, Vector2.UP]
+
+
+## Le disque de demi-largeur minimale centré en (x, z) tient dans la zone permise (8 points du pourtour).
+func _fits_wide(x: float, z: float) -> bool:
+	var d := MIN_HALF_WIDTH - 0.5
+	var e := d * 0.7071
+	return _allowed(x + d, z) and _allowed(x - d, z) and _allowed(x, z + d) and _allowed(x, z - d) \
+		and _allowed(x + e, z + e) and _allowed(x - e, z + e) and _allowed(x + e, z - e) and _allowed(x - e, z - e)
+
+
+func _worm(r: Rng, x: float, z: float, direction: int, steps: int, radius: float, p: Dictionary) -> void:
 	for s in steps:
 		var cfg: Dictionary = p if not p.is_empty() else Biomes.at(z)
-		_stamp(x, z, radius * (0.8 + r.next() * 0.45))
+		var rr := radius * (0.8 + r.next() * 0.45)
+		_stamp(x, z, maxf(rr, MIN_HALF_WIDTH) if groves else rr)
 		if r.next() < float(cfg["room"]):  # salle plus large
 			var sx := x + (r.next() - 0.5) * 3.0
 			var sz := z + (r.next() - 0.5) * 3.0
-			_stamp(sx, sz, radius * (1.9 + r.next() * 0.9))
+			var rs := radius * (1.9 + r.next() * 0.9)
+			_stamp(sx, sz, maxf(rs, MIN_HALF_WIDTH * 1.8) if groves else rs)
 		if r.next() < float(cfg["branch"]) and steps > 20:  # embranchement
-			var sign := 1.0 if r.next() < 0.5 else -1.0
-			var branch := a + sign * (1.0 + r.next() * 0.8)
+			var turn := 1 if r.next() < 0.5 else -1
+			var branch := posmod(direction + turn, 4)
 			_worm(r, x, z, branch, floori(steps * 0.45), radius * 0.85, p)
-		a += (r.next() - 0.5) * 0.75
-		var nx := x + cos(a) * 1.7
-		var nz := z + sin(a) * 1.7
-		if not _allowed(nx, nz):
-			a += PI * (0.5 + r.next() * 0.5)
+		# Des tronçons droits séparés par des virages à angle droit.
+		if r.next() < 0.08:
+			direction = posmod(direction + (1 if r.next() < 0.5 else -1), 4)
+		var delta: Vector2 = TUNNEL_DIRECTIONS[direction] * 1.7
+		var nx := x + delta.x
+		var nz := z + delta.y
+		# Hors parité JS, le disque minimal doit tenir dans la zone (sauf pour sortir d'un départ trop au bord).
+		var fits := _allowed(nx, nz) and (not groves or _fits_wide(nx, nz) or not _fits_wide(x, z))
+		if not fits:
+			direction = posmod(direction + (1 if r.next() < 0.5 else -1), 4)
 			continue
 		x = nx
 		z = nz
@@ -814,6 +1069,10 @@ func _label_networks() -> void:
 			continue
 		var i := k % GAL_W
 		var j := (k - i) / GAL_W
+		# Pas de pylône dans la salle de l'Œil ni dans son couloir.
+		if frontier and (in_eye_room(i + CaveShape.WORLD_X0 + 0.5, j + CaveShape.WORLD_Z0 + 0.5, PYLON_CHAMBER + 4.0) \
+				or _in_eye_corridor(i + CaveShape.WORLD_X0 + 0.5, j + CaveShape.WORLD_Z0 + 0.5)):
+			continue
 		var sc := 0
 		for b in 6:
 			var jb := j + b
@@ -835,6 +1094,108 @@ func _label_networks() -> void:
 	for n in ids.size():
 		var pz: float = best[ids[n]]["z"]
 		portals.append({"id": n, "x": best[ids[n]]["x"], "z": pz, "active": false, "next": 0.0, "threat": int(Biomes.at(pz)["threat"])})
+
+
+## Pylônes de Merenor à la place des portails maléfiques : centre sur un coin de case, un peu au sud de la
+## paroi choisie par _label_networks, salle creusée autour, socle de 2 × 2 cases. Hors parité JS (groves).
+func _place_pylons() -> void:
+	var was := _ext
+	for p: Dictionary in portals:
+		_ext = not CaveShape.in_start(float(p["x"]), float(p["z"]))
+		var base := Vector2(roundf(float(p["x"]) / 4.0) * 4.0, roundf((float(p["z"]) + 7.0) / 4.0) * 4.0)
+		var c := base
+		# Au plus près du portail d'origine, une place où la salle entière est permise (loin de la salle de
+		# départ, des bords de la carte et du flanc de la montagne).
+		var found := false
+		for r in range(0, 40, 4):
+			for k in (1 if r == 0 else 8):
+				var q := base + (Vector2.from_angle(k * TAU / 8.0) * r).snapped(Vector2(4, 4))
+				if _chamber_fits(q):
+					c = q
+					found = true
+					break
+			if found:
+				break
+		# Jamais à cheval sur la frontière : la salle du pylône y ouvrirait un passage.
+		if frontier and absf(c.y - frontier_z()) < FRONTIER_HALF + PYLON_CHAMBER:
+			var s := 1.0 if c.y >= frontier_z() else -1.0
+			c.y = snappedf(frontier_z() + s * (FRONTIER_HALF + PYLON_CHAMBER + 4.0), 4.0)
+		_stamp(c.x, c.y, PYLON_CHAMBER)
+		p["x"] = c.x
+		p["z"] = c.y
+		p["threat"] = int(Biomes.at(c.y)["threat"])
+		var ci := floori(c.x / 4.0)
+		var cj := floori(c.y / 4.0)
+		for o: Vector2i in [Vector2i(-1, -1), Vector2i(0, -1), Vector2i(-1, 0), Vector2i(0, 0)]:
+			pylon_cells[Vector2i(ci, cj) + o] = int(p["id"])
+	_ext = was
+
+
+func _chamber_fits(c: Vector2) -> bool:
+	if not _allowed(c.x, c.y):
+		return false
+	if frontier and (in_eye_room(c.x, c.y, PYLON_CHAMBER + 4.0) or absf(c.y - frontier_z()) < FRONTIER_HALF + PYLON_CHAMBER):
+		return false
+	for k in 16:
+		var q := c + Vector2.from_angle(k * TAU / 16.0) * PYLON_CHAMBER
+		if not _allowed(q.x, q.y):
+			return false
+	return true
+
+
+# ---------------------------------------------------------------- Salles à thème
+## Salles à thème du Temple (planche sanctum-decor-propositions.html, sim/sanctum.gd) : pièces rectangulaires
+## taillées sur la grille de minage, à cheval sur une galerie existante, loin des pylônes, clairières, filons et
+## bassins. 5 × 3 cases (20 × 12 u) ; la citerne en fait 7 × 5, avec un bassin infranchissable autour d'un îlot.
+## Hors parité JS (groves). [{kind, x, z (centre), half: Vector2i (demi-emprise en cases)}]
+const THEME_KINDS := ["crypt", "library", "armory", "oratory", "cistern"]
+const THEME_ROOMS := 15
+const THEME_GAP := 64.0
+var theme_rooms: Array[Dictionary] = []
+
+
+func _carve_theme_rooms(r: Rng) -> void:
+	var was := _ext
+	var vault := Vector2((CaveShape.VAULT_X0 + CaveShape.VAULT_X1) / 2.0, (CaveShape.VAULT_Z0 + CaveShape.VAULT_Z1) / 2.0)
+	var z_north := maxf(CaveShape.WORLD_Z0 + 24.0, frontier_z() + FRONTIER_HALF + 20.0)
+	var tries := 0
+	while theme_rooms.size() < THEME_ROOMS and tries < 12000:
+		tries += 1
+		var kind: String = THEME_KINDS[theme_rooms.size() % THEME_KINDS.size()]
+		var half := Vector2i(3, 2) if kind == "cistern" else Vector2i(2, 1)
+		var ci := floori((CaveShape.WORLD_X0 + 28.0 + r.next() * (GAL_W - 56)) / 4.0)
+		var cj := floori((z_north + r.next() * (-112.0 - z_north)) / 4.0)
+		var c := Vector2(ci * 4.0 + 2.0, cj * 4.0 + 2.0)
+		if not is_gallery(c.x, c.y) or c.y > CaveShape.mountain_edge(c.x) - 30.0:
+			continue
+		_ext = not CaveShape.in_start(c.x, c.y)
+		var ext := Vector2(half.x * 4.0 + 6.0, half.y * 4.0 + 6.0)
+		var fits := true
+		for o: Vector2 in [Vector2(-1, -1), Vector2(1, -1), Vector2(-1, 1), Vector2(1, 1), Vector2(0, -1), Vector2(0, 1)]:
+			if not _allowed(c.x + o.x * ext.x, c.y + o.y * ext.y):
+				fits = false
+		if not fits or in_eye_room(c.x, c.y, 26.0) or c.distance_to(vault) < 44.0 or c.distance_to(CaveShape.CORE) < 80.0:
+			continue
+		if theme_rooms.any(func(o: Dictionary) -> bool: return Vector2(o["x"], o["z"]).distance_to(c) < THEME_GAP) \
+				or portals.any(func(p: Dictionary) -> bool: return Vector2(p["x"], p["z"]).distance_to(c) < PYLON_CHAMBER + 22.0) \
+				or _clearings.any(func(p: Vector2) -> bool: return p.distance_to(c) < 34.0) \
+				or _lode_spots.any(func(s: Array) -> bool: return Vector2((s[0] as Vector2i) * 4).distance_to(c) < 34.0) \
+				or pools.any(func(p: Dictionary) -> bool: return (p["center"] as Vector2).distance_to(c) < 36.0):
+			continue
+		for dj in range(-half.y, half.y + 1):
+			for di in range(-half.x, half.x + 1):
+				for uz in 4:
+					for ux in 4:
+						var k := gal_idx((ci + di) * 4.0 + ux, (cj + dj) * 4.0 + uz)
+						if k >= 0:
+							mask[k] = 1
+		if kind == "cistern":
+			for dj in range(-1, 2):
+				for di in range(-2, 3):
+					if di != 0 or dj < 0:
+						water_cells[Vector2i(ci + di, cj + dj)] = true
+		theme_rooms.append({"kind": kind, "x": c.x, "z": c.y, "half": half})
+	_ext = was
 
 
 func _m(i: int, j: int) -> bool:
@@ -871,21 +1232,30 @@ static func _sha1(bytes: PackedByteArray) -> String:
 ## digCellAt : case de roche visée, accessible depuis un sol praticable voisin ; null sinon.
 ## Renvoie {i, j, at: Vector2} où `at` est la position de travail de l'Ingénieur.
 func block_definition(i: int, j: int) -> Dictionary:
-	return Blocks.TYPES.get(block_types.get(Vector2i(i, j), "rock"), {})
+	var key := Vector2i(i, j)
+	if block_types.has(key):
+		return Blocks.TYPES.get(block_types[key], {})
+	# Roche nue : celle du biome de la case (plus dure au nord du Temple). La parité JS reste en roche simple.
+	return Blocks.TYPES.get(String(Biomes.at(j * 4.0 + 2.0).get("rock", "rock")) if groves else "rock", {})
+
+
+## Recherche qui manque pour entamer cette case ("" si elle se creuse) : le sceau de sa roche.
+func seal_needed(i: int, j: int) -> String:
+	var seal := String(block_definition(i, j).get("seal", ""))
+	return "" if seal == "" or GameState.research_done.has(seal) else seal
 
 
 func dig_cell_at(i: int, j: int, p: Vector2) -> Variant:
-	if block_definition(i, j).is_empty():
+	if block_definition(i, j).is_empty() or frontier_cell(i, j):
 		return null
 	var x := i * 4.0
 	var z := j * 4.0
 	var key := Vector2i(i, j)
 	if key == VAULT_COPPER and permanent_ores.has(key) and not vault_open:
 		return null
-	if dug.has(key) or (not permanent_ores.has(key) and walkable(x + 2.0, z + 2.0) and walkable(x + 0.5, z + 0.5) and walkable(x + 3.5, z + 3.5)):
+	if dug.has(key) or (not permanent_ores.has(key) and cell_clear(i, j)):
 		return null
-	if x < CaveShape.WORLD_X0 + 8.0 or x + 4.0 > CaveShape.WORLD_X1 - 8.0 or z < CaveShape.WORLD_Z0 + 8.0 \
-			or (absf(x + 2.0) < 52.0 and z < CaveShape.CAVE_Z0 + 1.0):
+	if x < CaveShape.WORLD_X0 + 8.0 or x + 4.0 > CaveShape.WORLD_X1 - 8.0 or z < CaveShape.WORLD_Z0 + 8.0:
 		return null
 	var at: Variant = null
 	var best := 1e9
@@ -898,6 +1268,25 @@ func dig_cell_at(i: int, j: int, p: Vector2) -> Variant:
 				best = d
 				at = q
 	return {"i": i, "j": j, "at": at} if at != null else null
+
+
+## Case (i, j) entièrement dégagée : centre, coins et les 16 sous-cases praticables (plus rien à miner).
+func cell_clear(i: int, j: int) -> bool:
+	var x := i * 4.0
+	var z := j * 4.0
+	return walkable(x + 2.0, z + 2.0) and walkable(x + 0.5, z + 0.5) and walkable(x + 3.5, z + 3.5) \
+		and not _has_rock_sliver(x, z)
+
+
+## Reste de roche dans la case 4 × 4 d'origine (x, z) : une des 16 sous-cases d'une unité (résolution du
+## masque des galeries) n'est pas du sol. Les 3 points de dig_cell_at laissent sinon passer un pilier fin,
+## infranchissable mais impossible à miner.
+func _has_rock_sliver(x: float, z: float) -> bool:
+	for a in 4:
+		for b in 4:
+			if not ground(x + a + 0.5, z + b + 0.5):
+				return true
+	return false
 
 
 ## diggableCell : case la plus pertinente autour d'un point de roche cliqué.

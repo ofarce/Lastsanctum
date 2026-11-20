@@ -1,0 +1,106 @@
+<title>Teintes des panneaux du HUD</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Planche de choix : la bande comparative d'abord, puis une fiche par teinte avec sa capture entière. */
+:root{
+  --bg:#e9ebee; --surface:#f6f7f8; --ink:#1c2129; --muted:#5a6370; --rule:#c9ced6; --accent:#0f7f93; --slate:#0b0d10;
+  --display:"Bricolage Grotesque","Trebuchet MS",sans-serif;
+  --body:"IBM Plex Sans","Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#14171c; --surface:#1c2027; --ink:#e6e8ec; --muted:#9aa3b0; --rule:#333a46; --accent:#5ce8ff; color-scheme:dark } }
+:root[data-theme="dark"]{
+  --bg:#14171c; --surface:#1c2027; --ink:#e6e8ec; --muted:#9aa3b0; --rule:#333a46; --accent:#5ce8ff; color-scheme:dark }
+body{background:var(--bg);color:var(--ink);font:400 16px/1.55 var(--body)}
+.wrap{max-width:1180px;margin:0 auto;padding-block:40px 72px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
+  display:flex;flex-direction:column;gap:48px}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0;line-height:1.12}
+h1{font-size:clamp(1.9rem,5vw,2.9rem);font-weight:700;letter-spacing:-.02em}
+h2{font-size:1.5rem;font-weight:700;padding-bottom:10px;border-bottom:2px solid var(--ink)}
+h3{font-size:1.25rem;font-weight:700}
+p{margin:0;max-width:65ch}
+.eyebrow{font:500 .74rem/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--accent)}
+header,section{display:flex;flex-direction:column;gap:16px}
+header p{color:var(--muted);font-size:1.05rem}
+figure{margin:0;background:var(--slate);padding:8px;display:flex;flex-direction:column;gap:6px}
+figure img{display:block;width:100%;height:auto;image-rendering:pixelated}
+figcaption{font:400 .74rem/1.35 var(--mono);color:#aab3c0}
+.fiches{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:32px 24px}
+.fiche{display:flex;flex-direction:column;gap:10px;min-width:0}
+.tete{display:flex;flex-wrap:wrap;align-items:baseline;gap:10px}
+.num{font:500 .85rem/1 var(--mono);color:var(--muted)}
+.reco{font:500 .72rem/1 var(--mono);padding:4px 7px;border:1px solid var(--accent);color:var(--accent);border-radius:3px}
+.sw{display:flex;gap:0}
+.sw i{width:34px;height:14px;display:block;border:1px solid var(--rule);border-left-width:0}
+.sw i:first-child{border-left-width:1px}
+.pm{display:grid;grid-template-columns:auto 1fr;gap:4px 10px;font-size:.93rem}
+.pm b{font:500 .72rem/1.6 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.note{background:var(--surface);padding:18px 20px;display:flex;flex-direction:column;gap:8px;color:var(--muted);font-size:.93rem}
+.note strong{color:var(--ink)}
+@media (max-width:820px){ .fiches{grid-template-columns:1fr} }
+</style>
+
+<div class="wrap">
+<header>
+  <span class="eyebrow">Propositions · 19 novembre 2026 · captures du jeu</span>
+  <h1>Teintes des panneaux du HUD</h1>
+  <p>Six teintes pour les panneaux d’information, toutes sur le même cadre que la bannière de dialogue. Ce sont de vraies captures du jeu à 1440 × 900, menu de construction ouvert et une réplique affichée, pour juger chaque teinte à côté du bleu des dialogues et des boutons en laiton.</p>
+</header>
+
+<section>
+  <h2>Côte à côte</h2>
+  <figure><img src="assets/hud-teintes/comparatif-bas.png" alt="Le panneau du bas dans les six teintes, empilées"><figcaption>Panneau du bas, de haut en bas : 1 Ardoise, 2 Nuit, 3 Sarcelle, 4 Mousse, 5 Grès, 6 Fer bruni.</figcaption></figure>
+</section>
+
+<section>
+  <h2>Les six teintes</h2>
+  <div class="fiches">
+
+    <article class="fiche">
+      <div class="tete"><span class="num">1</span><h3>Ardoise</h3><div class="sw"><i style="background:#39414f"></i><i style="background:#171b23"></i><i style="background:#e6e8f4"></i></div></div>
+      <figure><img src="assets/hud-teintes/1_ardoise.png" alt="HUD en teinte ardoise"><figcaption>En place aujourd’hui.</figcaption></figure>
+      <div class="pm"><b>Pour</b><span>Reprend la roche de la caverne. Neutre : les couleurs de culte et les barres de vie portent seules l’information.</span><b>Contre</b><span>Sobre jusqu’à l’effacement, peu de caractère.</span></div>
+    </article>
+
+    <article class="fiche">
+      <div class="tete"><span class="num">2</span><h3>Nuit</h3><div class="sw"><i style="background:#2c3a78"></i><i style="background:#0e1338"></i><i style="background:#e6e8f4"></i></div></div>
+      <figure><img src="assets/hud-teintes/2_nuit.png" alt="HUD en teinte bleu nuit"><figcaption>Le bleu des dialogues, plus sombre.</figcaption></figure>
+      <div class="pm"><b>Pour</b><span>L’unité la plus forte avec la bannière : tout l’écran parle la même langue 16 bits.</span><b>Contre</b><span>Une réplique ne se détache plus du reste. L’icône violette de la Forge se perd sur le fond.</span></div>
+    </article>
+
+    <article class="fiche">
+      <div class="tete"><span class="num">3</span><h3>Sarcelle</h3><span class="reco">recommandée</span><div class="sw"><i style="background:#1f4f5c"></i><i style="background:#0a1d24"></i><i style="background:#d6f6fb"></i></div></div>
+      <figure><img src="assets/hud-teintes/3_sarcelle.png" alt="HUD en teinte sarcelle"><figcaption>Le cyan des Exilés, assombri ; liseré cyan pâle.</figcaption></figure>
+      <div class="pm"><b>Pour</b><span>Le HUD devient l’instrument des Exilés, dans leur couleur. Se distingue net du bleu des dialogues. Le laiton des boutons ressort bien dessus.</span><b>Contre</b><span>La barre de vie turquoise et l’icône des Exilés contrastent moins avec le fond.</span></div>
+    </article>
+
+    <article class="fiche">
+      <div class="tete"><span class="num">4</span><h3>Mousse</h3><div class="sw"><i style="background:#34503a"></i><i style="background:#101f17"></i><i style="background:#e4ecd6"></i></div></div>
+      <figure><img src="assets/hud-teintes/4_mousse.png" alt="HUD en teinte mousse"><figcaption>Le vert des ruines dans la jungle.</figcaption></figure>
+      <div class="pm"><b>Pour</b><span>Accord avec le décor extérieur, ambiance de ruine envahie.</span><b>Contre</b><span>Le vert est la couleur de Medeina : l’icône de Vie et les lueurs du culte s’y confondent, et le HUD semble appartenir à un seul culte.</span></div>
+    </article>
+
+    <article class="fiche">
+      <div class="tete"><span class="num">5</span><h3>Grès</h3><div class="sw"><i style="background:#6b4c3c"></i><i style="background:#27191a"></i><i style="background:#f0e2cc"></i></div></div>
+      <figure><img src="assets/hud-teintes/5_gres.png" alt="HUD en teinte grès"><figcaption>Terre cuite sombre, liseré sable.</figcaption></figure>
+      <div class="pm"><b>Pour</b><span>La seule teinte chaude : elle tranche avec la caverne froide et se lit d’un coup d’œil.</span><b>Contre</b><span>Proche de l’orange d’Indra et du rouge de la Bête. Les boutons en laiton s’y fondent.</span></div>
+    </article>
+
+    <article class="fiche">
+      <div class="tete"><span class="num">6</span><h3>Fer bruni</h3><div class="sw"><i style="background:#4b4844"></i><i style="background:#1b1a19"></i><i style="background:#ece6d8"></i></div></div>
+      <figure><img src="assets/hud-teintes/6_fer.png" alt="HUD en teinte fer bruni"><figcaption>Gris chaud, liseré os.</figcaption></figure>
+      <div class="pm"><b>Pour</b><span>Neutre comme l’ardoise, mais chaud : s’accorde au texte ivoire et au laiton.</span><b>Contre</b><span>Le plus proche de l’ancien panneau noir, que vous aviez écarté.</span></div>
+    </article>
+
+  </div>
+</section>
+
+<div class="note">
+  <p><strong>Ce qui ne change pas d’une teinte à l’autre.</strong> Le cadre (coins cassés, double liseré, dégradé en bandes), la disposition, les polices, les boutons en laiton et la bannière bleue des dialogues.</p>
+  <p><strong>Hors de cette planche.</strong> Le bouton d’aide et les boutons de triche à gauche gardent leur ancien habillage doré. Le portrait de l’Ingénieur en armure reste à redessiner.</p>
+  <p>Captures refaites par <code>tests/visual/hud_tones_capture.tscn</code>. Appliquer un choix revient à changer une constante, <code>SnesBanner.INFO</code>.</p>
+</div>
+</div>

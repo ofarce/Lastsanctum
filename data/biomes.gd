@@ -22,13 +22,17 @@ const LIST: Array[Dictionary] = [
 	{"id": "temple", "name": "Temple", "height": 330.0, "tier": 0, "threat": 1,
 		"worms": 7.5, "steps": [34, 80], "radius": [2.1, 3.5], "room": 0.05, "branch": 0.025,
 		"clearings": 2.5, "pools": 1.2, "lodes": 2.0, "veins": 12.0,
-		"ores": {"copper": [0.0, 0.4], "iron": [0.25, 0.7], "quartz": [0.5, 0.9], "gold": [0.75, 1.0]},
+		# 2026-11-20 : le Temple ne porte plus que du cuivre (et son bois) ; fer, quartz et or viennent des biomes suivants.
+		"ores": {"copper": [0.0, 0.4]},
 		"decor": {"mountain_rock": 1.37}},
-	# Provisoire : le Temple en plus dur, en attendant le vrai contenu (planche à valider).
-	{"id": "biome2", "name": "Biome 2", "height": 0.0, "tier": 1, "threat": 2,
+	# Veines de vert-de-gris (strate validée le 2026-11-20) : le cuivre partout et en majorité, le quartz en
+	# second, des traces de fer dans le cinquième nord, pas d'or. Plus de bassins (les anguilles y vivront).
+	# « rock » : type de la roche nue de la bande (data/mineable_blocks.gd). Un troisième nombre dans une plage
+	# de minerai est son poids au tirage (1 par défaut).
+	{"id": "biome2", "name": "Veines de vert-de-gris", "height": 0.0, "tier": 1, "threat": 2, "rock": "rock2",
 		"worms": 9.0, "steps": [40, 90], "radius": [1.6, 2.6], "room": 0.03, "branch": 0.035,
-		"clearings": 1.5, "pools": 0.8, "lodes": 2.5, "veins": 14.0,
-		"ores": {"iron": [0.0, 0.3], "quartz": [0.0, 1.0], "gold": [0.0, 1.0]},
+		"clearings": 1.5, "pools": 1.6, "lodes": 2.5, "veins": 14.0,
+		"ores": {"copper": [0.0, 1.0, 3], "quartz": [0.0, 1.0], "iron": [0.8, 1.0]},
 		"decor": {"mountain_rock": 1.0}},
 ]
 
@@ -82,7 +86,8 @@ static func ores_at(k: int, f: float) -> Array[String]:
 	for item: String in table:
 		var r: Array = table[item]
 		if f >= r[0] and f <= r[1]:
-			out.append(item)
+			for n in (int(r[2]) if r.size() > 2 else 1):
+				out.append(item)
 	return out
 
 

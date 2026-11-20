@@ -15,6 +15,8 @@ const CAM_MAX := Vector2(CaveShape.WORLD_X1 - 30.0, CaveShape.WORLD_Z1 - 28.0)
 ## Position de départ (init(), Index.html).
 const START := Vector2(0.0, -148.0)
 const KEY_SPEED := 10.0
+## ZQSD une fois désincarné : deux fois plus vite que les flèches (2026-11-19).
+const ZQSD_SPEED := 20.0
 ## Pas de simulation maximal du prototype (Index.html:359).
 const MAX_DT := 0.045
 const DRAG_THRESHOLD := 5.0
@@ -90,8 +92,17 @@ func _process(delta: float) -> void:
 		return
 	var dx := Input.get_action_strength("cam_right") - Input.get_action_strength("cam_left")
 	var dz := Input.get_action_strength("cam_down") - Input.get_action_strength("cam_up")
+	# ZQSD (lettres imprimées) : caméra en mode désincarné, plus rapide que les flèches (ZQSD_SPEED).
+	var speed := KEY_SPEED
+	if not (get_viewport().gui_get_focus_owner() is LineEdit):
+		var kx := float(_label(KEY_D)) - float(_label(KEY_Q))
+		var kz := float(_label(KEY_S)) - float(_label(KEY_Z))
+		if kx != 0.0 or kz != 0.0:
+			speed = ZQSD_SPEED
+		dx += kx
+		dz += kz
 	if dx != 0.0 or dz != 0.0:
-		var step := KEY_SPEED * minf(delta, MAX_DT)
+		var step := speed * minf(delta, MAX_DT)
 		cam = clamp_cam(cam + Vector2(signf(dx), signf(dz)) * step)
 		view_changed.emit()
 
@@ -127,3 +138,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		cam = clamp_cam(cam + a - b)
 		_pan_last = event.position
 		view_changed.emit()
+
+
+static func _label(k: Key) -> bool:
+	return Input.is_key_label_pressed(k) or Input.is_key_pressed(k)

@@ -26,18 +26,24 @@ func _bubble() -> DialogueBubble:
 	return (_game().get_node("Hud") as Hud).dialogue
 
 
-func _emerge(sim: Simulation) -> Unit:
+## Sortie du portail. La réplique d'accueil n'est plus affichée en jeu (retirée à la demande) : les tests
+## de la bulle l'ouvrent eux-mêmes avec greet_engineer, sauf `greet := false`.
+func _emerge(sim: Simulation, greet := true) -> Unit:
 	for i in roundi(3.1 / DT):
 		sim.tick(DT)
-	return GameState.units[0]
+	var u: Unit = GameState.units[0]
+	if greet:
+		(_main.get_node("Hud") as Hud).dialogue.greet_engineer(u)
+	return u
 
 
 func test_greeting_text_matches_js() -> void:
 	var b := _bubble()
 	var sim: Simulation = _main.get_node("Simulation")
 	check(not b.active(), "aucune bulle au départ")
-	var u := _emerge(sim)
-	check(b.active(), "bulle d'accueil à la sortie du portail")
+	var u := _emerge(sim, false)
+	check(not b.active(), "plus de bulle d'accueil à la sortie du portail")
+	b.greet_engineer(u)
 	var g: Dictionary = _js()["greeting"]
 	check_eq(b.dialogue["lines"], g["lines"], "texte d'accueil")
 	check_eq(b.dialogue["name"], g["name"], "nom")
@@ -51,9 +57,9 @@ func test_typewriter_and_auto_close() -> void:
 	_emerge(sim)
 	var line: String = b.line()
 	b.tick(0.24)
-	check_eq(b._text.text, line.left(10), "10 signes après 0,24 s (24 ms par signe)")
+	check_eq(b._text.text, b._prefix() + line.left(10), "10 signes après 0,24 s (24 ms par signe)")
 	b.tick(line.length() * DialogueBubble.CHAR_TIME)
-	check_eq(b._text.text, line, "ligne complète")
+	check_eq(b._text.text, b._prefix() + line, "ligne complète")
 	b.tick(3.5 - 0.24 - 0.01)
 	check(b.active(), "encore ouverte juste avant longueur × 0,024 + 3,5 s")
 	b.tick(0.05)
@@ -78,7 +84,7 @@ func test_enter_completes_line_of_full_dialogue() -> void:
 	b.show_dialogue({"speaker": u, "name": "Test", "compact": false, "lines": ["Première ligne.", "Seconde."]})
 	b.tick(0.1)
 	b.advance()
-	check_eq(b._text.text, "Première ligne.", "Entrée affiche toute la ligne")
+	check_eq(b._text.text, "Test : Première ligne.", "Entrée affiche toute la ligne")
 	b.advance()
 	check_eq(b.index, 1, "Entrée suivante : ligne suivante")
 	b.elapsed = 10.0
@@ -114,10 +120,13 @@ func test_equipment_dialogue_after_turrets() -> void:
 	sim.update_orb(0.0)
 	check_eq(hud.world.camera.cam, Vector2.ZERO, "aucun saut au déclenchement du retour")
 	check(not b.active(), "réplique attend l'arrivée de la caméra")
-	spark._return_tick(AnchorSpark.RETURN_DURATION * 0.5)
-	check_eq(hud.world.camera.cam, bend, "retour par le coude du trajet aller")
+	# Étincelle masquée (AnchorSpark.SHOW) : retour direct en 1 s, sans repasser par son trajet.
+	var half := AnchorSpark.RETURN_DURATION * 0.5 if AnchorSpark.SHOW else 0.5
+	spark._return_tick(half)
+	if AnchorSpark.SHOW:
+		check_eq(hud.world.camera.cam, bend, "retour par le coude du trajet aller")
 	check(not b.active(), "pas de dialogue à mi-chemin")
-	spark._return_tick(AnchorSpark.RETURN_DURATION * 0.5)
+	spark._return_tick(half)
 	check_eq(hud.world.camera.cam, u.pos(), "caméra recentrée sur l'Ingénieur")
 	# Surcharge de l'Ancre (sim/overload.gd) avant le dialogue.
 	check(Overload.active() and GameState.overload_unit == u, "surcharge lancée au retour de la caméra")
@@ -131,7 +140,7 @@ func test_equipment_dialogue_after_turrets() -> void:
 	while GameState.sim_time < GameState.overload_hit + Overload.DIALOGUE - 0.05:
 		sim.tick(0.04)
 	check(u.unarmored and u.hp == 1.0, "sans armure, à 1 PV")
-	check_eq(HudModel.portrait_key(u), "engineer-bare", "portrait sans armure")
+	check_eq(HudModel.portrait_key(u), "engineer-exil" if TyrienArt.ragged() else "engineer-bare", "portrait sans armure")
 	EngineerAim.load_frames()
 	check_eq(EngineerAim.frames_bare.size(), EngineerAim.frames.size(), "poses de tir sans armure")
 	check(Overload.winded(u), "à genoux")

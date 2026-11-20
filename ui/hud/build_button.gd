@@ -3,7 +3,7 @@ extends BaseButton
 ## Grand carré du menu « Construire » (proposition B de planches/construire_5_propositions.html) :
 ## image du bâtiment, touche en bas à droite, liseré jaune au survol ou quand il est armé.
 
-const SIZE := 88.0
+const SIZE := 44.0
 static var _arts := {}
 
 var action: Dictionary = {}
@@ -40,7 +40,7 @@ func set_action(a: Dictionary) -> void:
 	_tex = art(Catalog.BUILDINGS[a["build_type"]]["art"])
 	_kbd.text = String(a["key"]).to_upper()
 	var w := maxf(15.0, HudStyle.text_width(_kbd.text, 10) + 6.0)
-	_kbd.position = Vector2(SIZE - w - 3.0, SIZE - 16.0)
+	_kbd.position = Vector2(SIZE - w - 2.0, SIZE - 15.0)
 	_kbd.size = Vector2(w, 13.0)
 	queue_redraw()
 
@@ -53,7 +53,7 @@ func _draw() -> void:
 	var r := Rect2(Vector2.ZERO, size)
 	draw_rect(r, Color("#14170fe8"))
 	if _tex:
-		var inner := r.grow(-7.0)
+		var inner := r.grow(-3.0)
 		var ts := _tex.get_size()
 		var k := minf(inner.size.x / ts.x, inner.size.y / ts.y)
 		var d := ts * k
@@ -75,4 +75,5 @@ func _draw() -> void:
 
 func _pressed() -> void:
 	if not disabled and action.has("run"):
+		Sfx.play("ui_clic")
 		(action["run"] as Callable).call()

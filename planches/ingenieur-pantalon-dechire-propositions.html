@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Ingénieur en pantalon déchiré</title>
+<style>
+:root{--bg:#16181d;--panel:#20242b;--ink:#efe6cf;--mute:#a3a8b0;--line:#363c47;--acc:#5ce8ff}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 Georgia,serif;padding:24px 16px}
+h1{font-size:26px;margin:0 0 4px}
+h2{font-size:20px;margin:0;color:var(--acc);font-weight:normal}
+h3{font-size:12px;margin:12px 0 4px;color:var(--mute);font-weight:normal;letter-spacing:1px;text-transform:uppercase}
+.sub{color:var(--mute);margin:0 0 20px;max-width:860px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(420px,100%),1fr));gap:16px;max-width:1340px}
+.card{background:var(--panel);border:2px solid var(--line);border-radius:10px;padding:14px;min-width:0}
+.card p{margin:2px 0 6px;color:var(--mute);font-size:13px}
+.row{display:flex;flex-wrap:wrap;gap:4px;align-items:flex-end}
+canvas{image-rendering:pixelated;display:block;background:#3a3530;border-radius:4px;max-width:100%}
+.scene{max-width:1340px;margin-bottom:16px}
+.scene canvas{width:100%;max-width:1000px;height:auto}
+.por canvas{background:#2e4a5a;border:4px solid #7a7e8c}
+.ba{display:flex;gap:18px;flex-wrap:wrap;align-items:flex-end}
+.ba figure{margin:0;text-align:center;color:var(--mute);font-size:12px}
+.arrow{color:var(--acc);font-size:28px;align-self:center}
+</style></head><body>
+<h1>L’Ingénieur exilé, avant la combinaison</h1>
+<p class="sub">Le début de partie : l’Ingénieur n’a encore ni combinaison ni gantelets. Torse nu, pantalon déchiré, pieds nus ou enveloppés. Même visage (raie sur le côté, tempes et nuque couvertes, cicatrice à l’arcade), barbe de quelques jours, même gabarit 32 × 34 et même moteur 16 bits que le Templier technomancien, donc les animations s’exportent de la même façon. Il se bat aux poings nus.</p>
+<div class="card scene"><h3>En marche dans la caverne · les trois pistes, puis le Templier</h3><canvas id="scene" width="240" height="72"></canvas></div>
+<div class="grid" id="grid"></div>
+<script src="assets/engineer-colosse.js"></script>
+<script src="assets/engineer-exile.js"></script>
+<script src="assets/engineer-ragged.js"></script>
+<script>
+'use strict';
+const S=3,grid=document.getElementById('grid');
+const cv=b=>render(b,S);
+for(const v of Object.keys(RAGGED)){
+ const c=document.createElement('div');c.className='card';
+ c.innerHTML=`<h2>${v} · ${RAGGED[v].name}</h2><p>${RAGGED[v].sub}</p>`;
+ const sec=(t,list)=>{const h=document.createElement('h3');h.textContent=t;c.append(h);const r=document.createElement('div');r.className='row';for(const b of list)r.append(cv(b));c.append(r)};
+ sec('Repos · face, profil, dos',[ragged({v,dir:'d'}),ragged({v,dir:'s'}),mirror(ragged({v,dir:'s'})),ragged({v,dir:'u'})]);
+ sec('Marche · profil',[0,1,2,3].map(f=>ragged({v,dir:'s',pose:'walk',f})));
+ sec('Marche · face et dos',[0,2].map(f=>ragged({v,dir:'d',pose:'walk',f:f+1})).concat([1,3].map(f=>ragged({v,dir:'u',pose:'walk',f}))));
+ sec('Coup de poing · armé, frappe, retour',[ragged({v,dir:'s',punch:{ang:0,rec:4}}),ragged({v,dir:'s',punch:{ang:0,rec:-2,hit:true}}),ragged({v,dir:'s',punch:{ang:0,rec:1}})]);
+ sec('Touché · à genoux · prière · tailleur · victoire',[ragged({v,pose:'hurt'}),ragged({v,dir:'s',depth:4,hands:'knees'}),ragged({v,dir:'s',depth:4,hands:'pray',blink:true}),ragged({v,dir:'s',depth:6,lotus:true,hands:'knees',blink:true}),ragged({v,pose:'win'})]);
+ const h=document.createElement('h3');h.textContent='Portrait · puis avec la combinaison';c.append(h);
+ const ba=document.createElement('div');ba.className='ba';
+ const fig=(cnv,t,cls)=>{const f=document.createElement('figure');if(cls)f.className=cls;f.append(cnv);const fc=document.createElement('figcaption');fc.textContent=t;f.append(fc);return f};
+ ba.append(fig(render(raggedPortrait(v),3),'avant','por'),fig(render(ragged({v,dir:'d'}),4),'en jeu'));
+ const ar=document.createElement('span');ar.className='arrow';ar.textContent='→';ba.append(ar);
+ ba.append(fig(render(exile({v:'B',dir:'d'}),4),'Templier'));
+ c.append(ba);grid.append(c)}
+// Scène : sol de caverne, les trois pistes puis le Templier marchent en boucle.
+const sc=document.getElementById('scene'),g=sc.getContext('2d');
+const floor=document.createElement('canvas');floor.width=240;floor.height=72;{const q=floor.getContext('2d');q.fillStyle='#3a3530';q.fillRect(0,0,240,72);
+ let s=7;const rnd=()=>(s=(s*16807)%2147483647)/2147483647;for(let i=0;i<260;i++){q.fillStyle=['#2c2824','#4a443c','#55504a'][i%3];q.fillRect(rnd()*240|0,rnd()*72|0,1+(i%2),1)}}
+const cache={};const spr=(v,f,m)=>{const k=v+f+m;if(cache[k])return cache[k];const o={v,dir:'s',pose:'walk',f};const b=v==='T'?exile({...o,v:'B'}):ragged(o);return cache[k]=render(m?mirror(b):b,1)};
+let t=0;(function frame(){t++;g.drawImage(floor,0,0);const V=['A','B','C','T'];
+ V.forEach((v,i)=>{const p=(t*.4+i*36)%360,back=p>180,x=back?20+(360-p)/180*180:20+p/180*180;
+  g.fillStyle='#0004';g.beginPath();g.ellipse(x+16,30+i*12+1,6,2,0,0,Math.PI*2);g.fill();
+  g.drawImage(spr(v,(t>>3)%4,back),x|0,i*12-2)});requestAnimationFrame(frame)})();
+</script></body></html>

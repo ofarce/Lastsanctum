@@ -1,0 +1,6 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://tests/visual/help_capture.gd" id="1_helpcap"]
+
+[node name="help_capture" type="Node"]
+script = ExtResource("1_helpcap")

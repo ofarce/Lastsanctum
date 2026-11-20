@@ -298,9 +298,6 @@ func _draw() -> void:
 	var soon: bool = _cur.get("soon", false)
 	var accent := GREY if soon else CYAN
 	var r := Rect2(Vector2.ZERO, size)
-	# Ombre portée légère, comme les autres panneaux métal du HUD.
-	for i in 4:
-		draw_rect(Rect2(r.position + Vector2(-i, 3 - i), r.size + Vector2(2 * i, 2 * i)), Color(0, 0, 0, 0.07))
 	HudStyle.metal_panel(self, size)
 	# Médaillon du portrait : fond, anneau sombre, liseré laiton (cyan pendant l'éclat d'objectif atteint).
 	var pf := Rect2(11, 11, 58, 58)
@@ -309,7 +306,7 @@ func _draw() -> void:
 			draw_rect(pf.grow(2.0 + i * 2.0), Color(CYAN, 0.08 * _flash))
 	draw_rect(pf, Color("#152019"))
 	HudStyle.ring(self, pf.grow(-1.0), 2.0, Color("#0c100f"))
-	HudStyle.ring(self, pf, 1.0, HudStyle.GOLD.lerp(CYAN, _flash))
+	HudStyle.ring(self, pf, 1.0, SnesBanner.RIM_LO.lerp(CYAN, _flash))
 	# Voyant « en ligne » de l'Ingénieur (éteint pour une quête à venir).
 	var led := Rect2(pf.end.x - 5.0, pf.end.y - 5.0, 8, 8)
 	if not soon:

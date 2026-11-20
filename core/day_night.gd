@@ -15,17 +15,41 @@ const DUSK_END := 0.68
 ## crépuscule, nuit.
 const DAY := Color(12.0 / 255.0, 7.0 / 255.0, 4.0 / 255.0, 0.28)
 const DUSK := Color(96.0 / 255.0, 34.0 / 255.0, 30.0 / 255.0, 0.5)
-const NIGHT := Color(5.0 / 255.0, 9.0 / 255.0, 32.0 / 255.0, 0.8)
+## Nuit au clair de lune (2026-11-20) : bleue et assez claire pour lire les silhouettes hors des halos.
+const NIGHT := Color(12.0 / 255.0, 20.0 / 255.0, 54.0 / 255.0, 0.66)
 
 
-## Assauts : seulement le jour, un tous les WAVE_DAYS jours (tirage 2 ou 3), au MORNING de la journée.
-const WAVE_DAYS := [2, 3]
+## Assauts : un chaque matin, à FIRST_WAVE_HOUR (voir next_assault). MORNING : début de matinée,
+## pour les reports d'un assaut tombé de nuit.
 const MORNING := 0.12
+## Répit minimal entre la fin d'un assaut et le suivant (s) : un assaut fini juste avant 9 h
+## reporte le suivant au lendemain.
+const WAVE_REST := 30.0
 
 
 ## Numéro du jour (1 = premier jour de la partie) à l'instant t.
 static func day(t: float) -> int:
 	return floori(t / LENGTH + START) + 1
+
+
+## Premier assaut de la partie : jour FIRST_WAVE_DAY à FIRST_WAVE_HOUR (2026-11-19).
+const FIRST_WAVE_DAY := 2
+const FIRST_WAVE_HOUR := 9.0
+
+
+## Instant où l'horloge affiche `hour` (heures, 24 h) le jour n.
+static func at_hour(n: int, hour: float) -> float:
+	var f := fposmod(hour - DAWN_HOUR, 24.0) / 24.0
+	# Une fraction de seconde en plus : l'horloge (arrondie à la minute inférieure) affiche bien l'heure pile.
+	return (float(n - 1) + f - START) * LENGTH + 0.01
+
+
+## Premier assaut : 9 h du jour 2, ou 9 h du lendemain si cette heure est déjà passée à l'instant t.
+static func first_wave(t: float) -> float:
+	var at := at_hour(FIRST_WAVE_DAY, FIRST_WAVE_HOUR)
+	while at <= t:
+		at += LENGTH
+	return at
 
 
 ## Instant du matin (MORNING) du jour n.
@@ -63,10 +87,13 @@ static func label(t: float) -> String:
 	return "nuit"
 
 
-## Prochain assaut après une zone sécurisée à l'instant t : matin d'un jour 2 ou 3 jours plus tard.
-static func next_assault(t: float, wave: int, map_seed: int) -> float:
-	var gap: int = WAVE_DAYS[0] if Rng.hash3(wave, 7, map_seed) < 0.5 else WAVE_DAYS[1]
-	return morning(day(t) + gap)
+## Prochain assaut après une zone sécurisée à l'instant t : le matin suivant, à FIRST_WAVE_HOUR
+## (un assaut par jour), en laissant au moins WAVE_REST de répit.
+static func next_assault(t: float, _wave: int = 0, _map_seed: int = 0) -> float:
+	var at := at_hour(day(t), FIRST_WAVE_HOUR)
+	while at < t + WAVE_REST:
+		at += LENGTH
+	return at
 
 
 ## Premier instant de jour à partir de t (t lui-même s'il fait jour).

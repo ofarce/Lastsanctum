@@ -17,9 +17,9 @@ const ARROW_FL := Color("#ac3438")
 const ARROW_SPARK: Array[Color] = [Color("#18448e"), Color("#2e6cc8"), Color("#64a2f4"), Color("#bcdcff")]
 const FIRE: Array[Color] = [Color("#5a1408"), Color("#a82a10"), Color("#e85a18"), Color("#ff9a30"), Color("#ffd060"), Color("#fff4c0")]
 const INK := Color("#0a0a0c")
-## Buse du lance-flammes (soldat 4.1, planches/soldats-export.html) : pointe de la buse en position de tir,
-## en pixels du sprite depuis son point au sol, regard à droite ; ×AdeptView.SCALE en pixels natifs.
-const FLAME_NOZZLE := Vector2(15.0, -20.5) * AdeptView.SCALE
+## Buse du lance-flammes (refonte 16 bits, planches/refonte-16bits-export.html) : pointe de la buse en position
+## de tir, en pixels natifs depuis le point au sol, regard à droite (la Caserne est dessinée à l'échelle 1).
+const FLAME_NOZZLE := Vector2(13.0, -12.5)
 ## Pitons d'ancrage de l'Ingénieur (planche « Pitons d'ancrage — Suspension ») : cyan des Exilés et laiton.
 const CY: Array[Color] = [Color("#0a2a33"), Color("#12596b"), Color("#1f9fb8"), Color("#5ce8ff"), Color("#c8fbff"), Color("#ffffff")]
 const BRASS: Array[Color] = [Color("#3a2808"), Color("#6a4a14"), Color("#a07424"), Color("#d0a03c"), Color("#f0cc6a"), Color("#fff0b0")]
@@ -51,6 +51,57 @@ func npx(x: float, y: float, c: Color) -> void:
 	ci.draw_rect(Rect2(jr(x) * px, jr(y) * px, px, px), c)
 
 
+## Mages cristallisés (sim/mages.gd) : cercle pointillé orange du rayon de l'aura autour de chaque Chantre, filet
+## vert de la Guérisseuse vers celui qu'elle soigne, bouclier fendu violet au-dessus des ennemis envoûtés.
+const HEX_GLYPH: Array[Vector2i] = [Vector2i(-3, -3), Vector2i(-2, -3), Vector2i(-1, -3), Vector2i(1, -3), Vector2i(2, -3), Vector2i(3, -3), Vector2i(-3, -2), Vector2i(3, -2),
+	Vector2i(-3, -1), Vector2i(3, -1), Vector2i(-3, 0), Vector2i(3, 0), Vector2i(-2, 1), Vector2i(2, 1), Vector2i(-1, 2), Vector2i(1, 2), Vector2i(0, 3)]
+const HEX_CRACK: Array[Vector2i] = [Vector2i(0, -2), Vector2i(-1, -1), Vector2i(0, 0), Vector2i(1, 1)]
+
+
+func _mage_marks(now: float) -> void:
+	for u: Unit in GameState.units:
+		if not u.alive() or u.hidden or not Catalog.is_mage(u.role) or not world.fog.visible_at(u.pos()):
+			continue
+		if u.role == "chantre":
+			var r: float = Catalog.MAGE["chantre"]["radius"]
+			var lit := u.working
+			for k in 240:
+				if (k + (floori(now * 8.0) if lit else 0)) % 4 >= 2:
+					continue
+				var a := TAU * k / 240.0
+				var p := nat_p(u.x + cos(a) * r, u.z + sin(a) * r)
+				ci.draw_rect(Rect2(roundf(p.x) * px, roundf(p.y) * px, px, px), Color("#ff9a3a", 0.85 if lit else 0.35))
+		elif u.role == "guerisseuse" and u.working and u.memo.has("heal_target"):
+			var a := nat_p(u.x, u.z) - Vector2(0, 16)
+			var b := nat_p((u.memo["heal_target"] as Vector2).x, (u.memo["heal_target"] as Vector2).y) - Vector2(0, 12)
+			var n := maxi(2, int(a.distance_to(b) / 3.0))
+			for k in n:
+				var t := (float(k) + fmod(now * 3.0, 1.0)) / n
+				var p := a.lerp(b, t) + Vector2(0, -sin(t * PI) * 5.0)
+				ci.draw_rect(Rect2(roundf(p.x) * px, roundf(p.y) * px, px, px), Color("#5ce8a8", 0.9))
+	for e: Enemy in GameState.enemies:
+		if e.hp <= 0.0 or not Mages.hexed(e) or not world.fog.visible_at(e.pos()):
+			continue
+		var top := nat_p(e.x, e.z) - Vector2(0, float(e.body()["top"]) * 8.0 + 14.0)
+		var o := Vector2(roundf(top.x), roundf(top.y + sin(now * 4.0)))
+		for q: Vector2i in HEX_GLYPH:
+			ci.draw_rect(Rect2((o + Vector2(q)) * px, Vector2(px, px)), Color("#d6c8ff"))
+		for q: Vector2i in HEX_CRACK:
+			ci.draw_rect(Rect2((o + Vector2(q)) * px, Vector2(px, px)), Color("#9a7aff"))
+
+
+## Trait de lumière en quatre paliers au-dessus d'un butin, base en `at` (pixels d'écran).
+func _loot_beam(at: Vector2, c: Color, now: float) -> void:
+	var x := roundf(at.x / px) * px
+	var y := roundf(at.y / px) * px
+	var step := 6.0 + roundf(sin(now * 2.5 + at.x * 0.05))
+	for i in 4:
+		ci.draw_rect(Rect2(x - px, y - (i + 1) * step * px, 2 * px, step * px), Color(c, [0.95, 0.7, 0.45, 0.2][i]))
+		if i < 2:
+			ci.draw_rect(Rect2(x - 2 * px, y - (i + 1) * step * px, 4 * px, step * px), Color(c, 0.18))
+	ci.draw_rect(Rect2(x - 3 * px, y - px, 6 * px, px), Color(c, 0.9))
+
+
 func draw_all(now: float) -> void:
 	px = float(world.camera.px)
 	if warmup_frames > 0:
@@ -63,6 +114,19 @@ func draw_all(now: float) -> void:
 		var screen := nat_p(position.x, position.y) * px
 		ci.draw_circle(screen + Vector2(0, 3 * px), 7 * px, Color("#00000066"))
 		ItemIcon.draw_item(ci, drop["item"], screen, px)
+		if Loot.rarity_of(drop["item"]) != "normal":
+			_loot_beam(screen - Vector2(0, 8 * px), Loot.rarity_color(drop["item"]), now)
+	# Corps à fouiller (sim/loot.gd) : trait de lumière de la couleur de la meilleure rareté, une fois le corps tombé.
+	for corpse: Enemy in GameState.enemy_corpses:
+		if corpse.loot.is_empty() or GameState.sim_time - corpse.died_at < 1.0 or not world.fog.visible_at(corpse.pos()):
+			continue
+		_loot_beam(nat_p(corpse.x, corpse.z) * px - Vector2(0, 5 * px), Loot.RARITY[Loot.best_rarity(corpse.loot)]["color"], now)
+	# Caches de la jungle encore pleines : même trait de lumière.
+	for cache: Dictionary in GameState.caches:
+		if (cache["loot"] as Array).is_empty() or not world.fog.visible_at(Vector2(cache["x"], cache["z"])):
+			continue
+		_loot_beam(nat_p(cache["x"], cache["z"]) * px - Vector2(0, 9 * px), Loot.RARITY[Loot.best_rarity(cache["loot"])]["color"], now)
+	_mage_marks(now)
 	_fire_walls(now)
 	for e in GameState.effects:
 		if e.has("x") and e.has("z") and not world.fog.visible_at(Vector2(e["x"], e["z"])):
@@ -74,6 +138,9 @@ func draw_all(now: float) -> void:
 			"rivethit": _rivet_hit(e)
 			"arrow": _arrow(e)
 			"arrowhit": _arrow_hit(e)
+			"pilum": _pilum(e)
+			"orb": _orb(e)
+			"orbhit": _orb_hit(e)
 			"xbolt": _xbolt(e)
 			"xboom": _xboom(e)
 			"piton": _piton_flight(e)
@@ -81,8 +148,11 @@ func draw_all(now: float) -> void:
 			"slash": _slash(e)
 			"cball": _cball(e)
 			"cballhit": _cball_hit(e)
+			"aether_wave": _aether_wave(e)
+			"heal_motes": _heal_motes(e)
 			_: _simple(e)
 	_planted_pitons(now)
+	_enemy_shots(now)
 	for e in GameState.damage_numbers:
 		if world.fog.visible_at(Vector2(e["x"], e["z"])):
 			_damage_number(e)
@@ -108,7 +178,12 @@ func _outlined_c(text: String, at: Vector2, size: int, color: Color, alpha: floa
 	ci.draw_string(font, baseline, text, HORIZONTAL_ALIGNMENT_LEFT, -1, size, Color(color, alpha))
 
 
-## Chiffre de dégâts : blanc, monte au-dessus de la cible et s'efface dans le dernier tiers.
+## Chiffre de dégâts en police bitmap : entier, monte au-dessus de la cible et s'efface dans le dernier tiers.
+## Ivoire sur un ennemi, saumon sur un allié, vert pour un soin ; un coup arrondi à zéro ne s'affiche pas, et
+## les chiffres simultanés d'une même cible s'écartent en éventail au lieu de s'empiler.
+const DAMAGE_FAN: Array[float] = [0.0, 11.0, -11.0, 20.0, -20.0]
+
+
 func _damage_number(effect: Dictionary) -> void:
 	var t: Unit = effect["target"]
 	var view := world.unit_view(t)
@@ -116,11 +191,24 @@ func _damage_number(effect: Dictionary) -> void:
 	if at == null:
 		return
 	var head: Vector2 = at
+	if effect["age"] < 0.0:
+		return
+	var value := roundi(effect["amount"])
+	if value <= 0:
+		return
 	var p: float = effect["age"] / effect["duration"]
-	var amount: float = effect["amount"]
-	var text := str(roundi(amount)) if amount >= 1.0 else ("%.1f" % amount)
 	var alpha := clampf((1.0 - p) * 3.0, 0.0, 1.0)
-	_outlined_c(text, head - Vector2(0, 8 + 30 * p), 16, Color.WHITE, alpha)
+	var rank := 0
+	for other in GameState.damage_numbers:
+		if is_same(other, effect):
+			break
+		if other["target"] == t and other["age"] >= 0.0:
+			rank += 1
+	var heal: bool = effect.get("heal", false)
+	var foe: bool = is_instance_valid(view) and view is UnitView and (view as UnitView).enemy
+	var color := Color("#6fd36b") if heal else (Color("#f4ecd6") if foe else Color("#f08f86"))
+	var fan := DAMAGE_FAN[rank % DAMAGE_FAN.size()]
+	PixelText.draw(ci, head - Vector2(-fan * (0.4 + 0.6 * p), 6 + 30 * p), ("+%d" % value) if heal else str(value), color, 2, alpha)
 
 
 ## « Nouvelle ressource : … ! » en jaune au-dessus du récolteur, au-dessus du « +1 ».
@@ -132,7 +220,7 @@ func _new_resource(effect: Dictionary) -> void:
 	var p: float = effect["age"] / effect["duration"]
 	var label := "Nouvelle ressource : %s !" % ItemIcon.Blocks.ITEMS[effect["item"]]["name"]
 	var alpha := clampf((1.0 - p) * 4.0, 0.0, 1.0)
-	_outlined_c(label, head - Vector2(0, 58 + 14 * p), 17, Color("#ffd84a"), alpha)
+	PixelText.draw(ci, head - Vector2(0, 58 + 14 * p), label, Color("#f4ecd6"), 2, alpha)
 
 
 func _mining_gain(effect: Dictionary) -> void:
@@ -216,8 +304,8 @@ func _rivet_hit(e: Dictionary) -> void:
 func _arrow_path(e: Dictionary, p: float) -> Vector2:
 	var s := nat_p(e["x"], e["z"])
 	var t := nat_p(e["tx"], e["tz"])
-	var x0: float = s.x + e["face"] * 12.0
-	var y0 := s.y - 24.0
+	var x0: float = s.x + e["face"] * float(e.get("ox", 12.0))
+	var y0: float = s.y - float(e.get("oy", 24.0))
 	var x1 := t.x
 	var y1 := t.y - 14.0
 	var h := 1.0 + Vector2(x1 - x0, y1 - y0).length() * 0.025
@@ -257,32 +345,151 @@ func _slash(e: Dictionary) -> void:
 			npx(n.x, n.y - w - 1, Color(0.8, 0.94, 1.0, 0.7 * fade))
 
 
-## Balle du canon à projection : petite balle noire cernée de micro-éclairs cyan, renouvelés à chaque image.
+## Munitions de l'Arbalestrie modulaire (planches/arbalestrie-modulaire-planche.html, data/ammo.gd) :
+## Indra orange, Medeina vert, Sigil marbre gris veiné, Aether bleu-violet (le pourpre reste à l'Ancre).
+const AMMO_PAL := {
+	"indra": [Color("#2a1204"), Color("#7a3208"), Color("#d0680e"), Color("#ff9a2a"), Color("#ffd08a"), Color("#fff4e0")],
+	"medeina": [Color("#0c2410"), Color("#1f5a26"), Color("#3c9a3e"), Color("#6fd36b"), Color("#c4f5b0"), Color("#f4fff0")],
+	"sigil": [Color("#1e1f24"), Color("#4a4c54"), Color("#8a8c94"), Color("#c4c3bf"), Color("#e8e4da"), Color("#ffffff")],
+	"aether": [Color("#0e1030"), Color("#2a2e7a"), Color("#4f55c8"), Color("#8a8cf0"), Color("#c8c8ff"), Color("#ffffff")],
+}
+const RING8: Array[Vector2] = [Vector2(-1, -1), Vector2(0, -1), Vector2(1, -1), Vector2(-1, 0), Vector2(1, 0), Vector2(-1, 1), Vector2(0, 1), Vector2(1, 1)]
+const CROSS5: Array[Vector2] = [Vector2(0, 0), Vector2(-1, 0), Vector2(1, 0), Vector2(0, -1), Vector2(0, 1)]
+
+
+## Balle de l'Arbalestrie en vol, selon sa munition (balles spirituelles : bille noire et micro-éclairs cyan).
 func _cball(e: Dictionary) -> void:
 	var p := clampf(float(e["age"]) / float(e["duration"]), 0.0, 1.0)
 	var n := Proj.nat(lerpf(e["x"], e["tx"], p), 1.3, lerpf(e["z"], e["tz"], p)) + world.native_offset
 	var x := jr(n.x)
 	var y := jr(n.y)
-	for q: Vector2 in [Vector2(-1, -2), Vector2(0, -2), Vector2(1, -2), Vector2(-2, -1), Vector2(2, -1), Vector2(-2, 0), Vector2(2, 0), Vector2(-2, 1), Vector2(2, 1), Vector2(-1, 2), Vector2(0, 2), Vector2(1, 2)]:
+	var age := float(e["age"])
+	var sd := int(e["seed"])
+	# Sens du vol à l'écran (traînées vers l'arrière).
+	var d := Proj.nat(e["tx"], 0.0, e["tz"]) - Proj.nat(e["x"], 0.0, e["z"])
+	d = d.normalized() if d.length() > 0.01 else Vector2.RIGHT
+	# Duel contre la Martyre : traînée cyan et halo clair, pour lire ses propres tirs parmi les éclats d'or.
+	if Martyre.active():
+		_duel_trail(x, y, d, age)
+	match String(e.get("ammo", "spirit")):
+		"indra": _ball_indra(x, y, d, age, sd)
+		"medeina": _ball_medeina(x, y, d, age)
+		"sigil": _ball_sigil(x, y, d, age)
+		"aether": _ball_aether(x, y, d, age)
+		_: _ball_spirit(x, y, age, sd)
+
+
+## Traînée d'une balle de l'Ingénieur pendant le duel : 10 pixels cyan qui s'effacent vers l'arrière (raccourcie
+## au départ), doublée d'un liseré, et halo blanc-cyan autour de la balle.
+func _duel_trail(x: float, y: float, d: Vector2, age: float) -> void:
+	var side := Vector2(-d.y, d.x)
+	var n := mini(10, 2 + int(age * 60.0))
+	for i in range(1, n + 1):
+		var a := 1.0 - float(i) / (n + 1)
+		var t := Vector2(x, y) - d * (1.5 + i)
+		npx(t.x, t.y, Color(CY[4] if i < 3 else CY[3], a))
+		if i < 6:
+			npx(t.x + side.x, t.y + side.y, Color(CY[2], a * 0.7))
+			npx(t.x - side.x, t.y - side.y, Color(CY[2], a * 0.7))
+	for q: Vector2 in [Vector2(-2, 0), Vector2(2, 0), Vector2(0, -2), Vector2(0, 2)]:
+		npx(x + q.x, y + q.y, Color(CY[4], 0.85))
+	for q: Vector2 in [Vector2(-1, -2), Vector2(1, -2), Vector2(-2, -1), Vector2(2, -1), Vector2(-2, 1), Vector2(2, 1), Vector2(-1, 2), Vector2(1, 2)]:
+		npx(x + q.x, y + q.y, Color(CY[3], 0.5))
+
+
+func _ball_spirit(x: float, y: float, age: float, sd: int) -> void:
+	# Balle réduite (2026-11-19) : 3 × 3 pixels, cœur sombre cerné d'encre.
+	for q: Vector2 in RING8:
 		npx(x + q.x, y + q.y, INK)
-	for q: Vector2 in [Vector2(-1, -1), Vector2(0, -1), Vector2(1, -1), Vector2(-1, 0), Vector2(0, 0), Vector2(1, 0), Vector2(-1, 1), Vector2(0, 1), Vector2(1, 1)]:
-		npx(x + q.x, y + q.y, Color("#24262b"))
-	npx(x - 1, y - 1, Color("#5b6068"))
-	var R := Rng.new(int(e["seed"]) + int(float(e["age"]) * 30.0) * 7)
+	npx(x, y, Color("#5b6068"))
+	var R := Rng.new(sd + int(age * 30.0) * 7)
 	for k in 3:
 		if R.next() < 0.25:
 			continue
 		var a := R.next() * TAU
-		var sx := x + roundf(cos(a) * 3.0)
-		var sy := y + roundf(sin(a) * 3.0)
-		for s in 3:
+		var sx := x + roundf(cos(a) * 2.0)
+		var sy := y + roundf(sin(a) * 2.0)
+		for s in 2:
 			npx(sx, sy, Color("#e9fbff") if s == 0 else CY[3])
 			var b := a + (0.9 if s & 1 else -0.9)
 			sx += roundf(cos(b))
 			sy += roundf(sin(b))
 
 
-## Impact de la balle (ennemi ou roche) : éclat blanc, étincelles cyan, puis poussière.
+## Indra : braise grossie (cœur 3 × 3 dans un cerne 5 × 5 aux coins rognés), traînée de flamme, escarbilles.
+func _ball_indra(x: float, y: float, d: Vector2, age: float, sd: int) -> void:
+	var C: Array = AMMO_PAL["indra"]
+	var R := Rng.new(sd + int(age * 30.0) * 7)
+	var side := Vector2(-d.y, d.x)
+	for i in range(1, 7):
+		var a := 1.0 - i / 7.0
+		var t := Vector2(x, y) - d * (2 + i)
+		npx(t.x, t.y, Color(C[3] if i < 3 else C[2], a))
+		var t2 := t + side * (1.0 if i % 2 else -1.0)
+		npx(t2.x, t2.y, Color(C[2], a * 0.6))
+	for b in range(-2, 3):
+		for a in range(-2, 3):
+			if absi(a) == 2 and absi(b) == 2:
+				continue
+			npx(x + a, y + b, C[3] if absi(a) < 2 and absi(b) < 2 else INK)
+	npx(x, y, C[5])
+	npx(x + 1, y, C[4])
+	npx(x - 1, y - 1, C[4])
+	npx(x, y - 1, Color(C[5], 0.8))
+	npx(x + 1, y + 1, C[2])
+	npx(x - 1, y + 1, C[2])
+	if R.next() < 0.4:
+		var sp := Vector2(x, y) - d * (4 + floorf(R.next() * 3.0)) + Vector2(0, -2 - floorf(R.next() * 2.0))
+		npx(sp.x, sp.y, C[4])
+
+
+## Medeina : graine verte, deux feuilles qui tournent autour, poussière verte derrière.
+func _ball_medeina(x: float, y: float, d: Vector2, age: float) -> void:
+	var C: Array = AMMO_PAL["medeina"]
+	for q: Vector2 in RING8:
+		npx(x + q.x, y + q.y, INK)
+	npx(x, y, C[3])
+	npx(x - 1, y - 1, Color(C[4], 0.8))
+	for k in 2:
+		var a := age * 18.0 + k * PI
+		npx(x + roundf(cos(a) * 3.0), y + roundf(sin(a) * 2.0), C[4] if k else C[3])
+	for i in range(1, 4):
+		var t := Vector2(x, y) - d * (2 + i * 2) + Vector2(0, roundf(i * 0.6 + sin(age * 20.0 + i)))
+		npx(t.x, t.y, Color(C[2], 0.6 - i * 0.15))
+
+
+## Sigil : bille de marbre clair (encre en bas à droite), éclat qui parcourt la veine, tirets de glyphe.
+func _ball_sigil(x: float, y: float, d: Vector2, age: float) -> void:
+	var C: Array = AMMO_PAL["sigil"]
+	for q: Vector2 in [Vector2(-1, -1), Vector2(0, -1), Vector2(-1, 0)]:
+		npx(x + q.x, y + q.y, C[3])
+	for q: Vector2 in [Vector2(1, -1), Vector2(1, 0), Vector2(-1, 1), Vector2(0, 1), Vector2(1, 1)]:
+		npx(x + q.x, y + q.y, INK)
+	npx(x, y, C[4])
+	var ph := int(age * 24.0) % 3
+	npx(x - 1 + ph, y - 1 + mini(ph, 1), C[5])
+	for k: Array in [[4, 0.8], [5, 0.5], [8, 0.5]]:
+		var t := Vector2(x, y) - d * float(k[0])
+		npx(t.x, t.y, Color(C[4] if k[0] < 8 else C[3], k[1]))
+
+
+## Aether : astre bleu-violet, anneau d'orbite incliné et étoile qui le parcourt.
+func _ball_aether(x: float, y: float, d: Vector2, age: float) -> void:
+	var C: Array = AMMO_PAL["aether"]
+	for a in 12:
+		var t := a / 12.0 * TAU
+		var o := Vector2(roundf(cos(t) * 3.5), roundf(sin(t) * 1.5))
+		if absf(o.x) > 1 or absf(o.y) > 1:
+			npx(x + o.x, y + o.y, Color(C[2], 0.55))
+	for q: Vector2 in RING8:
+		npx(x + q.x, y + q.y, INK)
+	npx(x, y, C[4])
+	npx(x + roundf(cos(age * 14.0) * 3.5), y + roundf(sin(age * 14.0) * 1.5), C[5])
+	var tr := Vector2(x, y) - d * 4.0
+	npx(tr.x, tr.y, Color(C[2], 0.4))
+
+
+## Impact de la balle (ennemi ou roche), selon la munition.
 func _cball_hit(e: Dictionary) -> void:
 	var age: float = e["age"]
 	if age < 0.0:
@@ -291,8 +498,19 @@ func _cball_hit(e: Dictionary) -> void:
 	var n := Proj.nat(e["x"], 1.3, e["z"]) + world.native_offset
 	var x := jr(n.x)
 	var y := jr(n.y)
+	match String(e.get("ammo", "spirit")):
+		"indra": _hit_indra(x, y, age, p)
+		"medeina": _hit_medeina(x, y, p)
+		"sigil": _hit_sigil(x, y, p)
+		"aether": _hit_small(x, y, p, AMMO_PAL["aether"])
+		"aether_spark": _hit_small(x, y, p, AMMO_PAL["aether"])
+		_: _hit_spirit(x, y, p)
+
+
+## Balles spirituelles : éclat blanc, étincelles cyan, puis poussière.
+func _hit_spirit(x: float, y: float, p: float) -> void:
 	if p < 0.4:
-		for q: Vector2 in [Vector2(0, 0), Vector2(-1, 0), Vector2(1, 0), Vector2(0, -1), Vector2(0, 1)]:
+		for q: Vector2 in CROSS5:
 			npx(x + q.x, y + q.y, CY[5])
 		for q: Vector2 in [Vector2(-3, -2), Vector2(2, -3), Vector2(3, 2), Vector2(-2, 3), Vector2(0, -4)]:
 			npx(x + q.x, y + q.y, CY[3])
@@ -300,6 +518,108 @@ func _cball_hit(e: Dictionary) -> void:
 		var c := Color(0.78, 0.78, 0.74, 0.6 * (1.0 - p))
 		for q: Vector2 in [Vector2(-2, -2), Vector2(-1, -2), Vector2(1, -1), Vector2(2, -1), Vector2(0, -3)]:
 			npx(x + q.x, y + q.y - roundf(p * 3.0), c)
+
+
+## Indra : étoile de 7 px, anneau de chaleur, trois braises qui retombent en rebondissant.
+func _hit_indra(x: float, y: float, age: float, p: float) -> void:
+	var C: Array = AMMO_PAL["indra"]
+	if p < 0.3:
+		for i in range(-3, 4):
+			var c: Color = C[5] if absi(i) < 2 else C[3]
+			npx(x + i, y, c)
+			npx(x, y + i, c)
+		for q: Vector2 in [Vector2(-2, -2), Vector2(2, -2), Vector2(2, 2), Vector2(-2, 2)]:
+			npx(x + q.x, y + q.y, C[4])
+	var r := roundf(3.0 + p * 5.0)
+	for k in 16:
+		var a := k / 16.0 * TAU
+		npx(x + roundf(cos(a) * r), y + roundf(sin(a) * r * 0.6), Color(C[2], 0.7 * (1.0 - p)))
+	for v: Vector3 in [Vector3(-9, -22, 1), Vector3(7, -26, 2), Vector3(12, -16, 3)]:
+		var yy := y + v.y * age + 60.0 * age * age
+		if yy > y + 8.0:
+			yy = y + 8.0 - absf(sin(age * 12.0)) * 2.0
+		npx(x + v.x * age * 1.6, yy, Color(C[4] if int(v.z) % 2 else C[3], 1.0 - p))
+
+
+func _hit_medeina(x: float, y: float, p: float) -> void:
+	var C: Array = AMMO_PAL["medeina"]
+	if p < 0.5:
+		for q: Vector2 in CROSS5:
+			npx(x + q.x, y + q.y, C[5])
+		for q: Vector2 in [Vector2(-2, -2), Vector2(2, -2), Vector2(2, 2), Vector2(-2, 2)]:
+			npx(x + q.x, y + q.y, C[3])
+	else:
+		for q: Vector2 in [Vector2(-1, -2), Vector2(1, -3), Vector2(0, -4)]:
+			npx(x + q.x, y + q.y - roundf(p * 3.0), Color(C[3], 1.0 - p))
+
+
+## Sigil : éclat gris-blanc et glyphe en croix qui s'écarte en s'effaçant.
+func _hit_sigil(x: float, y: float, p: float) -> void:
+	var C: Array = AMMO_PAL["sigil"]
+	if p < 0.4:
+		for q: Vector2 in CROSS5:
+			npx(x + q.x, y + q.y, C[5])
+	var dd := roundf(2.0 + p * 3.0)
+	for q: Vector2 in [Vector2(-dd, 0), Vector2(dd, 0), Vector2(0, -dd), Vector2(0, dd)]:
+		npx(x + q.x, y + q.y, Color(C[4], 1.0 - p))
+
+
+## Petit éclat d'Aether : cible au centre de l'onde, ou voisin que l'onde atteint.
+func _hit_small(x: float, y: float, p: float, C: Array) -> void:
+	if p < 0.5:
+		for q: Vector2 in CROSS5:
+			npx(x + q.x, y + q.y, C[5] if q == Vector2.ZERO else C[4])
+	for q: Vector2 in [Vector2(-2, -2), Vector2(2, -2), Vector2(2, 2), Vector2(-2, 2)]:
+		npx(x + q.x, y + q.y - roundf(p * 2.0), Color(C[3], 1.0 - p))
+
+
+## Onde d'Aether : cercle au sol d'un bloc de rayon qui s'ouvre en 0,3 s, étoiles sur son bord, puis s'efface.
+func _aether_wave(e: Dictionary) -> void:
+	var age: float = e["age"]
+	if age < 0.0:
+		return
+	var C: Array = AMMO_PAL["aether"]
+	var c := Proj.nat(e["x"], 0.0, e["z"]) + world.native_offset
+	var full := float(e["r"]) * Proj.K
+	var p := clampf(age / 0.3, 0.0, 1.0)
+	var f := 1.0 if age < 0.3 else maxf(0.0, 1.0 - (age - 0.3) / 0.25)
+	var r := 2.0 + p * (full - 2.0)
+	var n := maxi(12, roundi(r * 5.0))
+	for k in n:
+		var a := k / float(n) * TAU
+		npx(c.x + cos(a) * r, c.y + sin(a) * r, Color(C[4] if k % 3 == 0 else C[3], 0.85 * f))
+	if p > 0.2:
+		for k in range(0, n, 2):
+			var a := k / float(n) * TAU
+			npx(c.x + cos(a) * r * 0.8, c.y + sin(a) * r * 0.8, Color(C[2], 0.4 * f))
+	for k in 8:
+		var a := k / 8.0 * TAU + 0.3
+		npx(c.x + cos(a) * r, c.y + sin(a) * r - roundf(p * 4.0), Color(C[5], f))
+
+
+## Medeina : lucioles vertes qui remontent en arc de l'impact jusqu'à la poitrine de l'Ingénieur, puis un éclat.
+func _heal_motes(e: Dictionary) -> void:
+	var age: float = e["age"]
+	if age < 0.0:
+		return
+	var u: Unit = e["unit"]
+	var C: Array = AMMO_PAL["medeina"]
+	var from := Proj.nat(e["x"], 1.3, e["z"]) + world.native_offset
+	var to := Proj.nat(u.x, 1.8, u.z) + world.native_offset
+	var q := age / 0.5
+	for k in 6:
+		var qq := q - k * 0.05
+		if qq < 0.0 or qq > 1.0:
+			continue
+		var s := qq * qq * (3.0 - 2.0 * qq)
+		var p := from.lerp(to, s) - Vector2(0, sin(s * PI) * (14.0 + k * 2.0))
+		for o: Vector2 in [Vector2(-1, 0), Vector2(1, 0), Vector2(0, -1), Vector2(0, 1)]:
+			npx(p.x + o.x, p.y + o.y, Color(C[2], 0.75))
+		npx(p.x, p.y, C[5] if k % 2 else C[4])
+	if q >= 0.95:
+		var a := 1.0 - clampf((q - 0.95) / 0.25, 0.0, 1.0)
+		for o: Vector2 in [Vector2(-4, -2), Vector2(4, -4), Vector2(0, -8), Vector2(-3, 4), Vector2(5, 2)]:
+			npx(to.x + o.x, to.y + o.y, Color(C[5], a))
 
 
 func _arrow(e: Dictionary) -> void:
@@ -322,6 +642,11 @@ func _arrow(e: Dictionary) -> void:
 				var ox := (R.next() - 0.5) * 3.0
 				var oy := (R.next() - 0.5) * 3.0
 				npx(s.x + ox, s.y + oy, ARROW_SPARK[maxi(0, 3 - (i >> 1) - (k >> 1))])
+	_arrow_at(q, ux, uy)
+
+
+## Flèche dessinée pointe en q, dirigée selon (ux, uy).
+func _arrow_at(q: Vector2, ux: float, uy: float) -> void:
 	for i in range(-1, 12):
 		npx(q.x - ux * i + uy, q.y - uy * i - ux, INK)
 		npx(q.x - ux * i - uy * 2.0, q.y - uy * i + ux * 2.0, INK)
@@ -356,6 +681,185 @@ func _arrow_hit(e: Dictionary) -> void:
 		npx(at.x - 1.0, cy, ARROW_SPARK[3])
 		npx(at.x, cy - 1.0, ARROW_SPARK[3])
 		npx(at.x, cy + 1.0, ARROW_SPARK[3])
+
+
+# ---------------------------------------------------------------- Pilum et sort des ennemis (refonte 16 bits)
+
+const PILUM_WOOD: Array[Color] = [Color("#4a2c14"), Color("#a8743a")]
+const PILUM_IRON: Array[Color] = [Color("#3a4250"), Color("#d6dce8")]
+## Or de Laetan et carmin souillé (charte : or réservé aux forces de Laetan).
+const ORB: Array[Color] = [Color("#58101e"), Color("#c2384a"), Color("#e2b83a"), Color("#fff0a0")]
+
+
+## Pilum : hampe de bois de 9 px et pointe de fer de 3 px, en cloche plus haute que la flèche, sans traînée.
+func _pilum(e: Dictionary) -> void:
+	if e["age"] < 0.0:
+		return
+	var p := minf(1.0, e["age"] / e["duration"])
+	var p0 := maxf(0.0, p - 0.05)
+	# Cloche supplémentaire de 6 px au sommet : le pilum monte plus haut qu'une flèche.
+	var q := _arrow_path(e, p) - Vector2(0, 24.0 * p * (1.0 - p))
+	var q0 := _arrow_path(e, p0) - Vector2(0, 24.0 * p0 * (1.0 - p0))
+	var d: Vector2 = (q - q0).normalized() if q.distance_to(q0) > 0.01 else Vector2(float(e["face"]), 0.0)
+	_pilum_at(q, d)
+
+
+## Pilum dessiné pointe en q, dirigé selon d.
+func _pilum_at(q: Vector2, d: Vector2) -> void:
+	var n := Vector2(-d.y, d.x)
+	for i in range(-1, 13):
+		npx(q.x - d.x * i + n.x, q.y - d.y * i + n.y, INK)
+		npx(q.x - d.x * i - n.x, q.y - d.y * i - n.y, INK)
+	for i in 12:
+		var c: Color = (PILUM_IRON[1] if i == 0 else PILUM_IRON[0]) if i < 3 else (PILUM_WOOD[1] if i % 3 != 0 else PILUM_WOOD[0])
+		npx(q.x - d.x * i, q.y - d.y * i, c)
+	npx(q.x + d.x, q.y + d.y, Color.WHITE)
+
+
+## Orbe : noyau or pâle, halo carmin, quatre points de traînée qui s'éteignent.
+func _orb(e: Dictionary) -> void:
+	if e["age"] < 0.0:
+		return
+	var p := minf(1.0, e["age"] / e["duration"])
+	var R := Rng.new(e["seed"])
+	for i in range(4, 0, -1):
+		var s := _orb_path(e, maxf(0.0, p - i * 0.06))
+		npx(s.x + (R.next() - 0.5) * 2.0, s.y + (R.next() - 0.5) * 2.0, ORB[1 if i > 2 else 2])
+	_orb_at(_orb_path(e, p))
+
+
+func _orb_at(q: Vector2) -> void:
+	for o: Vector2 in [Vector2(-2, 0), Vector2(2, 0), Vector2(0, -2), Vector2(0, 2), Vector2(-1, -1), Vector2(1, -1), Vector2(-1, 1), Vector2(1, 1)]:
+		npx(q.x + o.x, q.y + o.y, ORB[0] if absf(o.x) + absf(o.y) > 1.5 else ORB[1])
+	for o: Vector2 in [Vector2(-1, 0), Vector2(1, 0), Vector2(0, -1), Vector2(0, 1)]:
+		npx(q.x + o.x, q.y + o.y, ORB[2])
+	npx(q.x, q.y, ORB[3])
+
+
+## Trajet presque droit (légère cloche) du haut du bâton vers la poitrine de la cible.
+func _orb_path(e: Dictionary, p: float) -> Vector2:
+	var s := nat_p(e["x"], e["z"])
+	var t := nat_p(e["tx"], e["tz"])
+	var a := Vector2(s.x + float(e["face"]) * float(e["ox"]), s.y - float(e["oy"]))
+	var b := Vector2(t.x, t.y - 14.0)
+	return a.lerp(b, p) - Vector2(0, 3.0 * 4.0 * p * (1.0 - p))
+
+
+## Éclatement : anneau de 8 éclats or et carmin qui s'élargit, éclair blanc au début.
+func _orb_hit(e: Dictionary) -> void:
+	if e["age"] < 0.0:
+		return
+	var p: float = e["age"] / e["duration"]
+	var at := nat_p(e["x"], e["z"])
+	var cy := at.y - 14.0
+	var r := 1.0 + p * 7.0
+	for k in 8:
+		var a := k / 8.0 * TAU + p
+		if p < 0.85 or k % 2 == 0:
+			npx(at.x + cos(a) * r, cy + sin(a) * r * 0.7, ORB[2 if p < 0.5 else 1])
+			npx(at.x + cos(a) * (r - 1.5), cy + sin(a) * (r - 1.5) * 0.7, ORB[1 if p < 0.5 else 0])
+	if p < 0.3:
+		npx(at.x, cy, Color.WHITE)
+		for o: Vector2 in [Vector2(-1, 0), Vector2(1, 0), Vector2(0, -1), Vector2(0, 1)]:
+			npx(at.x + o.x, cy + o.y, ORB[3])
+
+
+# ---------------------------------------------------------------- Tirs esquivables (sim/enemy_shots.gd)
+
+## Hauteur de vol des balles (pixels natifs) : la poitrine, comme les tirs à coup sûr.
+const SHOT_LIFT := 14.0
+const SHOT_SHADOW := Color(0.0, 0.0, 0.0, 0.4)
+const SHOT_WARN := Color("#f0cc66")
+## Boule de feu des chiens de la Bête : braise, orange, jaune, cœur pâle.
+const FIREBALL: Array[Color] = [Color("#8a1c0c"), Color("#e8641c"), Color("#ffc23a"), Color("#fff3c0")]
+
+
+## Annonces (ligne de visée de l'archer, point de chute du pilum), balles en vol avec leur ombre au sol, et
+## zone touchée de l'Exilé incarné (point blanc) quand une balle approche.
+func _enemy_shots(now: float) -> void:
+	for en: Enemy in GameState.enemies:
+		if en.shot_aim == null or en.strike_at == INF or en.kind != "archer" or not world.fog.visible_at(en.pos()):
+			continue
+		var aim: Vector2 = en.shot_aim
+		var dir := (aim - en.pos()).normalized()
+		var a := nat_p(en.x, en.z)
+		var b := nat_p(en.x + dir.x * EnemyShots.ARROW["range"], en.z + dir.y * EnemyShots.ARROW["range"])
+		var left: float = clampf((en.strike_at - now) / maxf(en.windup, 0.01), 0.0, 1.0)
+		nline(a, b, SHOT_WARN, 0.2 + 0.35 * (1.0 - left))
+	if GameState.enemy_shots.is_empty():
+		return
+	var u := GameState.incarnated
+	var near := false
+	for s: Dictionary in GameState.enemy_shots:
+		var kind: String = s["kind"]
+		if kind == "pilum":
+			_shot_pilum(s, now)
+			continue
+		if not world.fog.visible_at(Vector2(s["x"], s["z"])):
+			continue
+		if u != null and absf(s["x"] - u.x) < 3.0 and absf(s["z"] - u.z) < 3.0:
+			near = true
+		var g := nat_p(s["x"], s["z"])
+		var q := g - Vector2(0.0, SHOT_LIFT)
+		var d := (nat_p(s["x"] + s["vx"], s["z"] + s["vz"]) - g).normalized()
+		for i in range(-1, 2):
+			npx(g.x + i, g.y, SHOT_SHADOW)
+		match kind:
+			"arrow":
+				for i in range(3, 9):
+					npx(g.x - d.x * i, g.y - d.y * i, SHOT_SHADOW)
+				_arrow_at(q, d.x, d.y)
+			"orb":
+				var R := Rng.new(s["seed"])
+				for i in range(3, 0, -1):
+					npx(q.x - d.x * i * 2.5 + (R.next() - 0.5) * 2.0, q.y - d.y * i * 2.5 + sin(now * 14.0 + i) * 1.2, ORB[1 if i > 1 else 2])
+				_orb_at(q)
+			"fire":
+				# Petite boule de feu : traînée de braises, halo orange, cœur jaune pâle qui vacille.
+				var F := Rng.new(s["seed"])
+				for i in range(4, 0, -1):
+					dpx(q.x - d.x * i * 1.6 + (F.next() - 0.5) * 2.0, q.y - d.y * i * 1.6 + sin(now * 22.0 + i * 1.7) * 1.0,
+						FIREBALL[0 if i > 2 else 1], 1.0 - i * 0.18)
+				for o: Vector2 in [Vector2(-1, 0), Vector2(1, 0), Vector2(0, -1), Vector2(0, 1)]:
+					npx(q.x + o.x, q.y + o.y, FIREBALL[1])
+				npx(q.x - d.x * 2.0, q.y - d.y * 2.0, FIREBALL[1])
+				npx(q.x, q.y, FIREBALL[3] if fmod(now * 16.0 + F.next(), 2.0) < 1.0 else FIREBALL[2])
+				npx(q.x + d.x, q.y + d.y, FIREBALL[2])
+			_:
+				# Éclat du pilum : losange de fer, pointe blanche.
+				for o: Vector2 in [Vector2(-1, 0), Vector2(1, 0), Vector2(0, -1), Vector2(0, 1)]:
+					npx(q.x + o.x, q.y + o.y, PILUM_IRON[0])
+				npx(q.x - d.x * 2.0, q.y - d.y * 2.0, PILUM_IRON[0])
+				npx(q.x, q.y, PILUM_IRON[1])
+				npx(q.x + d.x, q.y + d.y, Color.WHITE)
+	if near and u != null and u.alive() and not u.hidden and Martyre.duelist() == null:
+		var c := nat_p(u.x, u.z) - Vector2(0.0, SHOT_LIFT)
+		for y in range(-2, 3):
+			for x in range(-2, 3):
+				npx(c.x + x, c.y + y, Color.WHITE if absi(x) < 2 and absi(y) < 2 else Color("#10123a"))
+
+
+## Pilum en cloche vers son point de chute, marqué au sol par un cercle qui se remplit.
+func _shot_pilum(s: Dictionary, now: float) -> void:
+	var to := Vector2(s["tx"], s["tz"])
+	if not world.fog.visible_at(to):
+		return
+	var p: float = clampf((now - s["born"]) / maxf(s["until"] - s["born"], 0.01), 0.0, 1.0)
+	var t := nat_p(to.x, to.y)
+	var r: float = EnemyShots.PILUM["radius"] * Proj.K
+	for k in 40:
+		dpx(t.x + cos(TAU * k / 40.0) * r, t.y + sin(TAU * k / 40.0) * r, SHOT_WARN, 0.45 + 0.4 * p)
+	ndisc(t.x, t.y, r * p * 0.75, SHOT_WARN, 0.12 + 0.2 * p)
+	var from := nat_p(s["x"], s["z"]) + Vector2(float(s["face"]) * ENEMY_PILUM_FROM.x, -ENEMY_PILUM_FROM.y)
+	var p0 := maxf(0.0, p - 0.05)
+	var q := from.lerp(t, p) - Vector2(0.0, 120.0 * p * (1.0 - p))
+	var q0 := from.lerp(t, p0) - Vector2(0.0, 120.0 * p0 * (1.0 - p0))
+	var d: Vector2 = (q - q0).normalized() if q.distance_to(q0) > 0.01 else Vector2(float(s["face"]), -1.0).normalized()
+	_pilum_at(q, d)
+
+
+## Départ du pilum (devant, hauteur) en pixels natifs : Combat.ENEMY_PILUM.
+const ENEMY_PILUM_FROM := Vector2(3.0, 21.0)
 
 
 # ---------------------------------------------------------------- Carreaux et explosions du Tireur
@@ -422,6 +926,15 @@ func _simple(e: Dictionary) -> void:
 	var cam := world.camera
 	var col: Color = e["color"]
 	match e["type"]:
+		"bolt":
+			# Foudre : ligne brisée qui tombe du ciel sur le point d'impact, épaisse puis fine.
+			var pts := PackedVector2Array()
+			var x: float = e["x"]
+			for k in 9:
+				pts.append(cam.project(x, k * 5.0, e["z"]))
+				x += (Rng.hash3(int(e["seed"]), k, 0xb017) - 0.5) * 3.0
+			ci.draw_polyline(pts, Color(col, a * 0.5), 6.0)
+			ci.draw_polyline(pts, Color(1, 1, 1, a), 2.0)
 		"laser":
 			var from := cam.project(e["x"], 1.35, e["z"])
 			if e.has("nozzle"):
@@ -502,12 +1015,18 @@ func _warmup() -> void:
 		{"type": "arrow", "x": x, "z": z, "tx": x + 8.0, "tz": z, "face": 1, "age": 0.08, "duration": 0.16, "seed": 1},
 		{"type": "arrowhit", "x": x, "z": z, "age": 0.08, "duration": 0.24, "seed": 1},
 		{"type": "xbolt", "x": x, "z": z, "tx": x + 8.0, "tz": z, "face": 1, "age": 0.05, "duration": 0.11, "seed": 1},
-		{"type": "xboom", "x": x, "z": z, "age": 0.15, "duration": 0.45, "seed": 1}]:
+		{"type": "xboom", "x": x, "z": z, "age": 0.15, "duration": 0.45, "seed": 1},
+		{"type": "pilum", "x": x, "z": z, "tx": x + 5.0, "tz": z, "face": 1, "ox": 3.0, "oy": 21.0, "age": 0.1, "duration": 0.25, "seed": 1},
+		{"type": "orb", "x": x, "z": z, "tx": x + 8.0, "tz": z, "face": 1, "ox": 2.0, "oy": 31.0, "age": 0.1, "duration": 0.28, "seed": 1},
+		{"type": "orbhit", "x": x, "z": z, "age": 0.1, "duration": 0.32, "seed": 1}]:
 		match e["type"]:
 			"rivet": _rivet(e)
 			"rivethit": _rivet_hit(e)
 			"arrow": _arrow(e)
 			"arrowhit": _arrow_hit(e)
+			"pilum": _pilum(e)
+			"orb": _orb(e)
+			"orbhit": _orb_hit(e)
 			"xbolt": _xbolt(e)
 			"xboom": _xboom(e)
 			_: _simple(e)

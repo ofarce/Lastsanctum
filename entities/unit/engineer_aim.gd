@@ -19,6 +19,8 @@ const SUSPEND_END := 0.85
 static var meta: Dictionary
 static var frames: Array = []
 static var frames_bare: Array = []
+## Même chose pour le corps d'avant la combinaison (TyrienArt « exil »).
+static var frames_exil: Array = []
 
 
 static func load_frames() -> void:
@@ -30,8 +32,12 @@ static func load_frames() -> void:
 	for r in 4:
 		var row: Array[AtlasTexture] = []
 		for c in int(meta["cols"]):
-			row.append(TyrienArt.aim_frame(r, c))
+			row.append(TyrienArt.anim_of("aim", false)[r * int(TyrienArt.meta["anims"]["aim"]["cols"]) + c])
 		frames_bare.append(row)
+		var row_exil: Array[AtlasTexture] = []
+		for c in int(meta["cols"]):
+			row_exil.append(TyrienArt.anim_of("aim", true)[r * int(TyrienArt.meta["anims"]["aim"]["cols"]) + c])
+		frames_exil.append(row_exil)
 
 
 static func _sheet(tex: Texture2D) -> Array:
@@ -133,4 +139,4 @@ static func pose(u: Unit, st: TerrainState) -> Variant:
 				angle = lerpf(prev, angle, 0.5 - 0.5 * cos(PI * e))
 	u.face = face
 	var g := _meta(u.unarmored)
-	return {"frame": (frames_bare if u.unarmored else frames)[row][bin(angle)], "face": face, "ax": float(g["ax"]), "ay": float(g["ay"])}
+	return {"frame": ((frames_exil if TyrienArt.ragged() else frames_bare) if u.unarmored else frames)[row][bin(angle)], "face": face, "ax": float(g["ax"]), "ay": float(g["ay"])}

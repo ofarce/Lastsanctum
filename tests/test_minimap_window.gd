@@ -41,18 +41,17 @@ func test_portal_threat_raises_spawn_tier() -> void:
 		if p["threat"] == 2:
 			deep = p
 			break
-	check(not deep.is_empty(), "un portail du biome 2")
+	check(not deep.is_empty(), "un pylône du biome 2")
 	deep["active"] = true
-	deep["next"] = 0.0
 	GameState.menace = 0
 	sim.combat.update_evil_portals()
 	var spawned: Enemy = null
 	for e: Enemy in GameState.enemies:
-		if e.portal == deep:
+		if e.pylon == deep and not e.alpha:
 			spawned = e
-	check(spawned != null, "rejeton apparu")
+	check(spawned != null, "gardien apparu")
 	if spawned:
 		var base := Catalog.menace_stats(0, true)
 		var hard := Catalog.menace_stats(Biomes.THREAT_STEP, true)
 		check(hard["hp"] > base["hp"], "statistiques de palier plus élevées")
-		check_eq(spawned.max_hp, Enemy.make("beast", 0, 0, 0.0, hard).max_hp, "rejeton au palier du biome 2")
+		check_eq(spawned.max_hp, Enemy.make("beast", 0, 0, 0.0, hard).max_hp, "gardien au palier du biome 2")

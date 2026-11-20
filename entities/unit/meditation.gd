@@ -9,16 +9,23 @@ extends RefCounted
 const SETTLE := Simulation.MEDITATE_SETTLE
 ## Lueur détachée de l'orbite : part 0,3 s avant le gain, arrive au temple à l'instant du gain.
 const FLIGHT := 0.3
+## Rampe cyan des Exilés pour la bénédiction des pylônes.
+const BLESS_RAMP := [Color("#06262e"), Color("#0e4a58"), Color("#1f9fb8"), Color("#5ce8ff"), Color("#b8f6ff"), Color("#f0feff")]
 const BAYER := [[0, 8, 2, 10], [12, 4, 14, 6], [3, 11, 1, 9], [15, 7, 13, 5]]
 
 
 ## État de la méditation, ou {} si l'unité ne médite pas : age (depuis l'arrivée), b0 (fin de l'assise),
 ## temple, ramp (couleurs du culte).
 static func state(u: Unit) -> Dictionary:
-	if u.role != "engineer" or not u.working or u.job == null or u.job.get("type") not in ["pray", "anchor_pray"] or not u.job.has("since"):
+	if u.role != "engineer" or not u.working or u.job == null or u.job.get("type") not in ["pray", "anchor_pray", "bless_pylon"] or not u.job.has("since"):
 		return {}
-	var t: Building = u.job.get("temple")
 	var since: float = u.job["since"]
+	# Bénédiction d'un Pylône de Merenor : lueurs cyan des Exilés, qui filent vers la pointe de l'obélisque.
+	if u.job["type"] == "bless_pylon":
+		var p: Dictionary = u.job["pylon"]
+		return {"age": GameState.sim_time - since, "b0": since + SETTLE, "temple": null, "ramp": BLESS_RAMP,
+			"heart": Proj.nat(float(p["x"]), 9.0, float(p["z"]))}
+	var t: Building = u.job.get("temple")
 	return {"age": GameState.sim_time - since, "b0": since + SETTLE, "temple": t, "ramp": Catalog.DEITY_RAMP[t.def()["deity"] if t else "sigil"]}
 
 
@@ -155,7 +162,7 @@ static func draw_front(ci: CanvasItem, u: Unit, face: int, origin: Vector2) -> v
 		var o := orb(j, time, lifted, face)
 		if o["front"]:
 			mote(ci, o["p"], L, orb_alpha(j, time, b0), 1.2)
-	var H := heart(S["temple"]) - origin
+	var H: Vector2 = S.get("heart", heart(S["temple"])) - origin
 	var k := floori(time - b0) + 1
 	var t0 := b0 + k - FLIGHT
 	if k >= 1 and time >= t0:

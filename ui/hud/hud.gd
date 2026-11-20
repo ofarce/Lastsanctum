@@ -12,12 +12,14 @@ const TOP_INSET := Vector2(16, 14)
 const BAR_MARGIN := 12.0
 const GRID_FR := [16.0, 29.0, 31.0, 30.0]
 const GRID_MIN := [145.0, 270.0, 290.0, 310.0]
-const RES_ICON_COLORS := {"forge": Color("#d5c7a9"), "vie": Color("#ad855d"), "discipline": Color("#85d7f0"), "savoir": Color("#d5c7a9"), "menace": Color("#df936f")}
+## Icônes de ressource à la couleur du culte qui la produit (Aether, Medeina, Indra, Sigil) ; Exilés en cyan, Menace en rouge.
+const RES_ICON_COLORS := {"forge": Color("#8f8cf0"), "vie": Color("#6fcf78"), "discipline": Color("#f29a45"), "savoir": Color("#c3c6cf"), "menace": Color("#e2604e"), "population": Color("#5ce8ff")}
+const RES_MIN_GAP := 22.0
 const RES_ICONS := {"forge": "iron", "vie": "heart", "discipline": "shield", "savoir": "book", "menace": "menace"}
 const RES_NAMES := {"forge": "Forge", "vie": "Vie", "discipline": "Discipline", "savoir": "Savoir", "menace": "Menace"}
 const PORTRAITS := "res://assets/baked/hud/portraits/%s.png"
 ## Portraits hors baker : Ingénieur sans armure (planches/ingenieur-sans-armure-export.html).
-const PORTRAITS_EXTRA := {"engineer-bare": TyrienArt.PORTRAIT}
+const PORTRAITS_EXTRA := {"engineer-bare": TyrienArt.PORTRAIT, "engineer-exil": TyrienArt.EXIL_PORTRAIT}
 
 var sim: Simulation
 var world: World
@@ -32,18 +34,30 @@ var _sky_card := _Panel.new()
 var _sky_icon := TextureRect.new()
 var _sky_label := HudStyle.label(18, HudStyle.IVORY)
 var _sky_key := ""
+## Vrai quand la carte du jour est posée en bas à droite (au-dessus du menu de l'Ingénieur incarné).
+var _sky_low := false
 var _res_panel := _Panel.new()
+var _res_shown := false
 ## Panneau d'objectif sous la carte de vague (Rapport de l'Ingénieur).
 var objective := ObjectivePanel.new()
 ## Quêtes de l'Ingénieur, affichées par le panneau d'objectif.
 var quests := Quests.new()
 var _res_items := {}
+var _res_level := 0
+var _res_raw := {}
 var _resource_boost := Button.new()
+var _crafted_item_boost := Button.new()
 var _fast_construction := Button.new()
+var _martyre_spawn := Button.new()
+var _oeil_go := Button.new()
+var _minimap_unlock := Button.new()
 # Notice, Rejouer, bannière, dialogue.
 var _notice := _Panel.new()
-var _notice_label := HudStyle.label(14, Color("#e8d2a7"))
+var _notice_label := SnesBanner.label()
 var _notice_end := 0.0
+## Alerte de vague : texte rouge en bas à gauche, juste au-dessus de la minicarte (Events.wave_alert).
+var _wave_alert := HudStyle.label(20, Color("#ff4a3d"))
+var _wave_alert_end := 0.0
 var _restart := _RestartButton.new()
 ## Munitions de la réserve globale (haut à droite) : flèches × quantité, carburant × ∞ (pas encore géré).
 var _ammo_panel := _Panel.new()
@@ -55,12 +69,15 @@ var _banner := _Panel.new()
 var _banner_title := HudStyle.label(25, HudStyle.IVORY)
 var _banner_small := HudStyle.label(15, Color("#b8c9bb"))
 var dialogue := DialogueBubble.new()
+var item_banner := ItemBanner.new()
 # Bandeau de commandement.
 var _bar := _Panel.new()
 var _modules: Array[_Panel] = []
 var _diamonds := _Diamonds.new()
 var minimap := Minimap.new()
 var _north := HudStyle.label(13, Color("#f5d99b"))
+## Zoom de la caméra : « + » et « − » au-dessus de la minicarte, calés sur son bord droit.
+var _zoom: Control = preload("res://ui/hud/zoom_buttons.gd").new()
 var _portrait := _PortraitButton.new()
 var _kind := HudStyle.label(9, HudStyle.MUTED, HudStyle.spaced(2))
 var _chosen := HudStyle.label(22, HudStyle.IVORY)
@@ -84,6 +101,11 @@ var _build_row := Control.new()
 var _build_buttons: Array[BuildButton] = []
 var _build_bubble := _Bubble.new()
 var _buttons: Array[ActionButton] = []
+## Incarné (Ingénieur) : menu « Construire » / « Poser » en bas à droite, hors bandeau de commandement.
+var _inc_actions := Control.new()
+var _inc_buttons: Array[ActionButton] = []
+var _inc_sig := ""
+const INC_BTN := Vector2(86.0, 46.0)
 var _sig := ""
 var _portrait_key := ""
 var _last_map := -INF
@@ -94,6 +116,15 @@ var _ctx := ""
 var _view := {}
 ## Galerie des Exilés (au-dessus de la minicarte) et boutons Incarner / Désincarner.
 var exile_gallery := ExileGallery.new()
+## Vie du boss en haut de l'écran (Martyre de Byrsa).
+var boss_bar := BossBar.new()
+## Minicarte plein écran (TAB ou M, après la recherche « Minicarte »).
+var minimap_overlay := MinimapOverlay.new()
+## Codex d'aide (F1 ou bouton « ? » à droite de la carte de vague) : met le jeu en pause.
+var help_panel := HelpPanel.new()
+var _help_button := HelpButton.new()
+var sfx_player: Node = preload("res://ui/audio/sfx_player.gd").new()
+var music_player: Node = preload("res://ui/audio/music_player.gd").new()
 
 
 func _ready() -> void:
@@ -103,24 +134,40 @@ func _ready() -> void:
 	add_child(_root)
 	_build_top()
 	_build_bar()
+	minimap_overlay.minimap = minimap
+	_root.add_child(minimap_overlay)
 	_build_overlays()
+	_root.add_child(boss_bar)
 	_root.add_child(exile_gallery)
+	_root.add_child(_zoom)
 	var inventory := preload("res://ui/inventory/engineer_inventory.gd").new()
 	_root.add_child(inventory)
+	_root.add_child(help_panel)
+	_help_button.pressed.connect(help_panel.toggle)
+	_root.add_child(_help_button)
+	add_child(sfx_player)
+	add_child(music_player)
 	get_viewport().size_changed.connect(_layout)
 	Events.notice.connect(say)
+	Events.wave_alert.connect(show_wave_alert)
 	Events.game_reset.connect(_on_reset)
 	Events.game_over.connect(show_banner)
+	Events.items_received.connect(item_banner.show_items)
 	_layout()
 
 
 func setup(s: Simulation, w: World) -> void:
 	sim = s
 	world = w
+	sfx_player.camera = w.camera
 	minimap.world = w
+	_zoom.world = w
+	minimap_overlay.world = w
+	help_panel.sim = s
+	help_panel.world = w
 	exile_gallery.world = w
 	dialogue.camera = w.camera
-	s.engineer_greeted.connect(dialogue.greet_engineer)
+	# Plus de réplique d'accueil (« Ah. elle est là. Au travail. » retirée à la demande).
 	s.engineer_spoke.connect(func(u: Unit, text: String) -> void:
 		dialogue.show_dialogue({"speaker": u, "name": "Ingénieur Exilé", "role": "engineer", "compact": true, "lines": [text]}))
 	s.turrets_activated.connect(_on_turrets_activated)
@@ -142,7 +189,14 @@ func _on_engineer_reached(u: Unit) -> void:
 		_show_equipment_dialogue(u)
 
 
+var _pending_equipment: Unit = null
+
+
 func _show_equipment_dialogue(u: Unit) -> void:
+	# Pendant la cinématique du bouclier (HUD masqué) : le dialogue attend la fin des barres.
+	if Opening.cinematic():
+		_pending_equipment = u
+		return
 	dialogue.show_dialogue({"speaker": u, "any_button": true, "lines": [
 		"Je suis en vie... Mais mon équipement n'a pas résisté. Et sans lui, impossible de combattre le Credo.",
 		"Peut-être que la Salamandre peut m'aider. Je devrais pouvoir ériger des temples grâce à mon Enonciation."
@@ -176,7 +230,7 @@ func _build_top() -> void:
 	for k in _res_keys():
 		var icon := TextureRect.new()
 		icon.texture = HudStyle.icon("people" if k == "population" else RES_ICONS[k], 26)
-		icon.modulate = Color("#d5c7a9") if k == "population" else RES_ICON_COLORS[k]
+		icon.modulate = RES_ICON_COLORS[k]
 		icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		var name_l := HudStyle.label(16, HudStyle.IVORY)
 		name_l.text = "Exilés" if k == "population" else RES_NAMES[k]
@@ -215,6 +269,57 @@ func _build_top() -> void:
 		GameState.fast_construction = active
 		_fast_construction.text = "Construction rapide : ON" if active else "Construction rapide : OFF")
 	_root.add_child(_fast_construction)
+	_crafted_item_boost.name = "CraftedItemBoost"
+	_crafted_item_boost.text = "+100 objets craftables"
+	_crafted_item_boost.tooltip_text = "Ajouter 100 de chaque objet de l’Atelier, de la Forge et du Creuset au stock de base, et rendre ce stock accessible"
+	_crafted_item_boost.focus_mode = Control.FOCUS_NONE
+	_crafted_item_boost.mouse_filter = Control.MOUSE_FILTER_STOP
+	_crafted_item_boost.add_theme_font_override("font", HudStyle.font())
+	_crafted_item_boost.add_theme_font_size_override("font_size", 14)
+	_crafted_item_boost.add_theme_color_override("font_color", HudStyle.IVORY)
+	for state: String in ["normal", "hover", "pressed"]:
+		_crafted_item_boost.add_theme_stylebox_override(state, _resource_boost.get_theme_stylebox(state))
+	_crafted_item_boost.pressed.connect(_add_crafted_items)
+	_root.add_child(_crafted_item_boost)
+	_martyre_spawn.name = "MartyreSpawn"
+	_martyre_spawn.text = "Faire venir la Martyre"
+	_martyre_spawn.tooltip_text = "Fait apparaître tout de suite la Martyre de Byrsa et son bouclier sur la route du sud"
+	_martyre_spawn.focus_mode = Control.FOCUS_NONE
+	_martyre_spawn.mouse_filter = Control.MOUSE_FILTER_STOP
+	_martyre_spawn.add_theme_font_override("font", HudStyle.font())
+	_martyre_spawn.add_theme_font_size_override("font_size", 14)
+	_martyre_spawn.add_theme_color_override("font_color", HudStyle.IVORY)
+	for state: String in ["normal", "hover", "pressed"]:
+		_martyre_spawn.add_theme_stylebox_override(state, _resource_boost.get_theme_stylebox(state))
+	_martyre_spawn.pressed.connect(_spawn_martyre)
+	_root.add_child(_martyre_spawn)
+	_oeil_go.name = "OeilGo"
+	_oeil_go.text = "Aller à l’Œil de la Matrice"
+	_oeil_go.tooltip_text = "Découvre la salle de la frontière, tout en haut du Temple, et y conduit l’Ingénieur"
+	_oeil_go.focus_mode = Control.FOCUS_NONE
+	_oeil_go.mouse_filter = Control.MOUSE_FILTER_STOP
+	_oeil_go.add_theme_font_override("font", HudStyle.font())
+	_oeil_go.add_theme_font_size_override("font_size", 14)
+	_oeil_go.add_theme_color_override("font_color", HudStyle.IVORY)
+	for state: String in ["normal", "hover", "pressed"]:
+		_oeil_go.add_theme_stylebox_override(state, _resource_boost.get_theme_stylebox(state))
+	_oeil_go.pressed.connect(_go_oeil)
+	_root.add_child(_oeil_go)
+	_minimap_unlock.name = "MinimapUnlock"
+	_minimap_unlock.text = "Recherche Minicarte"
+	_minimap_unlock.tooltip_text = "Achève la recherche « Minicarte » : TAB ou M affiche la minicarte en plein écran"
+	_minimap_unlock.focus_mode = Control.FOCUS_NONE
+	_minimap_unlock.mouse_filter = Control.MOUSE_FILTER_STOP
+	_minimap_unlock.add_theme_font_override("font", HudStyle.font())
+	_minimap_unlock.add_theme_font_size_override("font_size", 14)
+	_minimap_unlock.add_theme_color_override("font_color", HudStyle.IVORY)
+	for state: String in ["normal", "hover", "pressed"]:
+		_minimap_unlock.add_theme_stylebox_override(state, _resource_boost.get_theme_stylebox(state))
+	_minimap_unlock.pressed.connect(func() -> void:
+		GameState.research_done["minimap"] = true
+		say("Minicarte : TAB ou M pour l’afficher en plein écran.")
+		refresh(true))
+	_root.add_child(_minimap_unlock)
 	_ammo_panel.name = "AmmoPanel"
 	_ammo_panel.kind = "metal"
 	_ammo_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -235,6 +340,64 @@ func _add_resources() -> void:
 	for resource: String in Catalog.RES_ORDER:
 		GameState.res[resource] += 1000.0
 	refresh()
+
+
+## Debug : la Martyre de Byrsa apparaît tout de suite (sinon à Martyre.MENACE de menace), même après sa chute.
+func _spawn_martyre() -> void:
+	if Martyre.active():
+		sim.say("La Martyre de Byrsa est déjà sur le terrain.", 2.0)
+		return
+	Martyre.spawn(sim)
+	refresh()
+
+
+## Debug : la salle de l'Œil est découverte et l'Ingénieur posé à son bord sud, caméra sur la salle.
+func _go_oeil() -> void:
+	var st := world.terrain_state
+	if not st.frontier:
+		sim.say("Pas de frontière sur cette carte.", 2.0)
+		return
+	var c := TerrainState.eye_room_center()
+	world.terrain_ops.reveal_gallery(c.x, c.y)
+	if world.terrain_ops.painter:
+		world.terrain_ops.painter.terrain.flush()
+	var at := c + Vector2(0.0, TerrainState.EYE_ROOM_RZ - 4.0)
+	for u: Unit in GameState.units:
+		if u.role == "engineer" and u.alive():
+			u.x = at.x
+			u.z = at.y
+			u.tx = at.x
+			u.tz = at.y
+			u.force_move = false
+	world.camera.set_view(c + Vector2(0.0, 4.0), 3)
+	refresh()
+
+
+func _add_crafted_items() -> void:
+	var stock := GameState.base_inventory.duplicate(true)
+	var items := {}
+	for station: String in ["workshop", "forge", "creuset"]:
+		for item: String in Simulation.Recipes.RECIPES[station]:
+			items[item] = true
+	for item: String in items:
+		for i in 100:
+			if not Simulation.ItemStorage.store(stock, Simulation.ItemStorage.BASE_CAPACITY, item):
+				sim.say("Stock de base plein : libérez des emplacements pour ajouter les objets.", 3.0)
+				return
+	GameState.base_inventory.assign(stock)
+	GameState.base_inventory_unlocked = true
+	sim.say("100 de chaque objet craftable ajoutés au stock de base.", 3.0)
+	refresh()
+
+
+## Valeur affichée d'une ressource au palier de place courant (`_res_level`) : le débit nul saute dès le palier 1.
+func _res_text(k: String) -> String:
+	if not _res_raw.has(k):
+		return _res_items[k]["value"].text
+	var raw: Array = _res_raw[k]
+	if _res_level >= 1 and raw[1] == "0":
+		return raw[0]
+	return raw[0] + " (+ %s/s)" % raw[1]
 
 
 static func _res_keys() -> Array[String]:
@@ -282,7 +445,7 @@ func _build_bar() -> void:
 	_modules[2].add_child(_unit_details)
 	_unit_details.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_unit_details.add_child(_stat_row)
-	for s: Array in [["sword", "Dégâts"], ["range", "Portée"], ["shield", "Armure"], ["boot", "Déplacement"]]:
+	for s: Array in [["sword", "Dégâts"], ["range", "Portée"], ["shield", "Armure"], ["boot", "Vitesse"]]:
 		var icon := TextureRect.new()
 		icon.texture = HudStyle.icon(s[0], 24)
 		icon.modulate = Color("#dfc390")
@@ -319,6 +482,9 @@ func _build_bar() -> void:
 	_modules[3].add_child(_actions_box)
 	_build_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_root.add_child(_build_row)
+	_inc_actions.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_inc_actions.visible = false
+	_root.add_child(_inc_actions)
 	_build_bubble.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_build_bubble.visible = false
 	_root.add_child(_build_bubble)
@@ -328,12 +494,20 @@ func _build_overlays() -> void:
 	_notice.kind = "notice"
 	_notice.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_notice.modulate.a = 0.0
-	_notice_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_notice_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_notice_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	_notice.add_child(_notice_label)
 	_root.add_child(_notice)
+	_wave_alert.modulate.a = 0.0
+	_wave_alert.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
+	_wave_alert.add_theme_color_override("font_outline_color", Color("#1a0503"))
+	_wave_alert.add_theme_constant_override("outline_size", 6)
+	_wave_alert.add_theme_color_override("font_shadow_color", Color("#000000"))
+	_wave_alert.add_theme_constant_override("shadow_offset_y", 2)
+	_root.add_child(_wave_alert)
 	_restart.pressed.connect(func() -> void: if sim: sim.new_game())
 	_restart.tooltip_text = "Rejouer la partie"
+	# Bouton « Rejouer » retiré (2026-11-19) : Maj+R relance toujours la partie.
+	_restart.visible = false
 	_root.add_child(_restart)
 	_banner.kind = "banner"
 	_banner.visible = false
@@ -344,6 +518,7 @@ func _build_overlays() -> void:
 	_banner.add_child(_banner_small)
 	_root.add_child(_banner)
 	_root.add_child(dialogue)
+	_root.add_child(item_banner)
 
 
 # ---------------------------------------------------------------- Mise en page
@@ -380,6 +555,14 @@ static func grid_columns(inner: float) -> Array[float]:
 					changed = true
 		if not changed:
 			break
+	# Écran plus étroit que la somme des minimums : toutes les colonnes rétrécissent du même facteur,
+	# au lieu de pousser le dernier module hors de l'écran.
+	var sum := 0.0
+	for c in cols:
+		sum += c
+	if sum > inner:
+		for i in 4:
+			cols[i] *= inner / sum
 	return cols
 
 
@@ -401,6 +584,7 @@ func _layout() -> void:
 	_diamonds.size = _bar.size
 	_diamonds.queue_redraw()
 	exile_gallery.hud_bottom = _bar.position.y
+	_zoom.position = Vector2(_bar.position.x + 4.0 + cols[0] - _zoom.size.x, _bar.position.y - 6.0 - _zoom.size.y)
 	_layout_map(_modules[0].size)
 	_layout_selection(_modules[1].size)
 	_layout_details(_modules[2].size)
@@ -412,6 +596,7 @@ func _layout() -> void:
 	_layout_ammo(s)
 	_restart.position = Vector2(s.x - 16.0 - _restart.size.x, _ammo_panel.position.y + _ammo_panel.size.y + 10.0)
 	_layout_notice()
+	_layout_wave_alert()
 	_layout_banner()
 
 
@@ -421,6 +606,14 @@ func _layout_debug() -> void:
 	_resource_boost.position = Vector2(16, dbg_y)
 	_resource_boost.size = Vector2(100, 38)
 	_fast_construction.position = Vector2(16, dbg_y + 44.0)
+	_crafted_item_boost.position = Vector2(16, dbg_y + 88.0)
+	_crafted_item_boost.size = Vector2(230, 38)
+	_martyre_spawn.position = Vector2(16, dbg_y + 132.0)
+	_martyre_spawn.size = Vector2(230, 38)
+	_oeil_go.position = Vector2(16, dbg_y + 176.0)
+	_oeil_go.size = Vector2(230, 38)
+	_minimap_unlock.position = Vector2(16, dbg_y + 220.0)
+	_minimap_unlock.size = Vector2(230, 38)
 
 
 func _layout_top(s: Vector2) -> void:
@@ -431,40 +624,53 @@ func _layout_top(s: Vector2) -> void:
 	_wave_icon.size = Vector2(26, 26)
 	_wave_label.position = Vector2(23.0 + 26.0 + 12.0, 13.0)
 	_wave_label.size = Vector2(tw + 4.0, 30.0)
-	# #resources : centré dans l'espace laissé à droite de la carte de vague (margin: 0 auto).
 	var keys := _res_keys()
-	var widths: Array[float] = []
-	var total := 2.0 * 23.0
-	for i in keys.size():
-		var it: Dictionary = _res_items[keys[i]]
-		var w := 26.0 + 10.0 + HudStyle.text_width(it["name"].text + " ", 16) + 8.0 + HudStyle.text_width(it["value"].text, 20)
-		widths.append(w)
-		total += w + (25.0 + 24.0 if i < keys.size() - 1 else 0.0)
 	var sw := HudStyle.text_width(_sky_label.text, 18)
 	_sky_card.size = Vector2(18.0 + 20.0 + 8.0 + sw + 18.0, 40.0)
 	_sky_icon.position = Vector2(18.0, 10.0)
 	_sky_icon.size = Vector2(20, 20)
 	_sky_label.position = Vector2(46.0, 7.0)
 	_sky_label.size = Vector2(sw + 4.0, 26.0)
-	var left := TOP_INSET.x + _wave_card.size.x + 26.0
+	# Bouton d'aide : collé à la carte de vague ; les ressources se centrent dans la place qui reste.
+	_help_button.position = TOP_INSET + Vector2(_wave_card.size.x + 8.0 if _wave_card.visible else 0.0, 0.0)
+	var left := _help_button.position.x + HelpButton.SIZE.x + 18.0
 	var right := s.x - TOP_INSET.x
-	# Réduit les espaces entre ressources si le bandeau dépasse la place disponible.
-	var gap := clampf(49.0 + (right - left - total) / (keys.size() - 1), 0.0, 49.0)
-	total += (gap - 49.0) * (keys.size() - 1)
+	# Paliers de place : 0 complet, 1 sans les débits nuls, 2 sans les noms. On garde le premier qui tient avec
+	# un écart d'au moins RES_MIN_GAP ; au-delà, le bandeau entier est réduit (fit).
+	var widths: Array[float] = []
+	var total := 0.0
+	var gap := 49.0
+	for level in 3:
+		_res_level = level
+		widths.clear()
+		total = 2.0 * 23.0
+		for k in keys:
+			var it: Dictionary = _res_items[k]
+			it["value"].text = _res_text(k)
+			it["name"].visible = level < 2
+			var nw := HudStyle.text_width(it["name"].text + " ", 16) + 8.0 if level < 2 else 0.0
+			widths.append(26.0 + 10.0 + nw + HudStyle.text_width(it["value"].text, 20))
+			total += widths[-1]
+		gap = minf(49.0, (right - left - total) / (keys.size() - 1))
+		if gap >= RES_MIN_GAP:
+			break
+	gap = maxf(gap, RES_MIN_GAP)
+	total += gap * (keys.size() - 1)
 	_res_panel.size = Vector2(total, 52.0)
 	_res_panel.position = Vector2(left + maxf(0.0, (right - left - total) / 2.0), TOP_INSET.y)
 	# Heure et météo : sous le bandeau des ressources, centrées.
 	_sky_card.position = Vector2(roundf(_res_panel.position.x + (_res_panel.size.x - _sky_card.size.x) / 2.0), TOP_INSET.y + _res_panel.size.y + 8.0)
+	_place_sky_card()
 	var x := 23.0
 	var seps: Array[float] = []
 	for i in keys.size():
 		var it: Dictionary = _res_items[keys[i]]
 		it["icon"].position = Vector2(x, 13.0)
 		it["icon"].size = Vector2(26, 26)
-		var nw := HudStyle.text_width(it["name"].text + " ", 16)
+		var nw := HudStyle.text_width(it["name"].text + " ", 16) + 8.0 if _res_level < 2 else 0.0
 		it["name"].position = Vector2(x + 36.0, 14.0)
 		it["name"].size = Vector2(nw, 26.0)
-		it["value"].position = Vector2(x + 36.0 + nw + 8.0, 12.0)
+		it["value"].position = Vector2(x + 36.0 + nw, 12.0)
 		it["value"].size = Vector2(HudStyle.text_width(it["value"].text, 20) + 2.0, 28.0)
 		x += widths[i]
 		if i < keys.size() - 1:
@@ -477,20 +683,25 @@ func _layout_top(s: Vector2) -> void:
 
 
 ## Bandeau des munitions : aligné à droite, sous le bandeau des ressources.
+## Carburant sur la première ligne, flèches en dessous.
 func _layout_ammo(s: Vector2) -> void:
 	var aw := HudStyle.text_width(_ammo_arrow_l.text, 20) + 4.0
 	var fw := HudStyle.text_width(_ammo_fuel_l.text, 20) + 4.0
 	var x := 18.0
-	_ammo_arrow.position = Vector2(x, 9.0)
-	_ammo_arrow.size = Vector2(30, 30)
-	_ammo_arrow_l.position = Vector2(x + 36.0, 9.0)
-	_ammo_arrow_l.size = Vector2(aw, 28.0)
-	x += 36.0 + aw + 24.0
-	_ammo_fuel.position = Vector2(x, 11.0)
+	_ammo_fuel.position = Vector2(x + 2.0, 11.0)
 	_ammo_fuel.size = Vector2(26, 26)
-	_ammo_fuel_l.position = Vector2(x + 34.0, 9.0)
+	_ammo_fuel_l.position = Vector2(x + 36.0, 9.0)
 	_ammo_fuel_l.size = Vector2(fw, 28.0)
-	_ammo_panel.size = Vector2(x + 34.0 + fw + 18.0, 48.0)
+	var w := 36.0 + fw
+	var h := 48.0
+	if _ammo_arrow.visible:
+		_ammo_arrow.position = Vector2(x, 9.0 + 38.0)
+		_ammo_arrow.size = Vector2(30, 30)
+		_ammo_arrow_l.position = Vector2(x + 36.0, 9.0 + 38.0)
+		_ammo_arrow_l.size = Vector2(aw, 28.0)
+		w = maxf(w, 36.0 + aw)
+		h += 38.0
+	_ammo_panel.size = Vector2(x + w + 18.0, h)
 	var bottom := TOP_INSET.y + 52.0 * _res_panel.scale.y + 8.0
 	_ammo_panel.position = Vector2(s.x - TOP_INSET.x - _ammo_panel.size.x, bottom)
 
@@ -509,9 +720,20 @@ func _layout_selection(m: Vector2) -> void:
 	var x0 := 9.0 + p + 10.0
 	var w := m.x - x0 - 9.0
 	_chosen.add_theme_font_size_override("font_size", roundi(clampf(_screen().x * 0.015, 16.0, 22.0)))
-	var status_h := 11.0 * clampi(_lines(_status.text, 10, w), 1, 2)
+	# Panneau bas (petit écran) : la consigne passe à une ligne, puis le surtitre saute, plutôt que de sortir du cadre.
+	var avail := m.y - 18.0
+	var status_lines := clampi(_lines(_status.text, 10, w), 1, 2)
+	if 10.8 + 4.0 + 23.8 + 8.0 + 21.0 + 5.0 + 11.0 * status_lines > avail:
+		status_lines = 1
+	var status_h := 11.0 * status_lines
+	_status.max_lines_visible = status_lines
+	_status.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	var total := 10.8 + 4.0 + 23.8 + 8.0 + 21.0 + 5.0 + status_h
+	_kind.visible = total <= avail
 	var y := 9.0 + (m.y - 18.0 - total) / 2.0
+	if not _kind.visible:
+		total -= 14.8
+		y = 9.0 + (m.y - 18.0 - total) / 2.0 - 14.8
 	_kind.position = Vector2(x0, y - 1.0)
 	_kind.size = Vector2(w, 12.8)
 	_chosen.position = Vector2(x0, y + 14.8 - 2.0)
@@ -528,8 +750,15 @@ func _layout_selection(m: Vector2) -> void:
 func _layout_details(m: Vector2) -> void:
 	var w := m.x - 30.0
 	# Détails de l'unité : rangée de statistiques (50 px), légende sur 2 lignes au plus.
-	var lore_h := 16.8 * clampi(_lines(_lore.text, 12, w, HudStyle.italic()), 1, 2)
-	var total := 50.0 + 8.0 + lore_h
+	# La légende se réduit à une ligne, puis disparaît, quand le module est trop bas pour elle.
+	var lore_lines := clampi(_lines(_lore.text, 12, w, HudStyle.italic()), 1, 2)
+	while lore_lines > 0 and 50.0 + 8.0 + 16.8 * lore_lines > m.y - 22.0:
+		lore_lines -= 1
+	_lore.visible = lore_lines > 0
+	_lore.max_lines_visible = maxi(lore_lines, 1)
+	_lore.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	var lore_h := 16.8 * lore_lines
+	var total := 50.0 + (8.0 + lore_h if lore_lines > 0 else 0.0)
 	_unit_details.position = Vector2(15.0, 11.0 + (m.y - 22.0 - total) / 2.0)
 	_unit_details.size = Vector2(w, total)
 	_stat_row.position = Vector2.ZERO
@@ -543,18 +772,34 @@ func _layout_details(m: Vector2) -> void:
 		var iw := 24.0 + 8.0 + tw + (13.0 if i < n - 1 else 0.0)
 		widths.append(iw)
 		sum += iw
+	# Module trop étroit : les noms sautent (icône et valeur seules) pour que la dernière statistique tienne.
+	var compact := sum > w
+	var value_px := 20
+	if compact:
+		# Corps de la valeur réduit tant que les quatre blocs ne tiennent pas (jusqu'à 14 px).
+		while true:
+			sum = 0.0
+			for i in n:
+				widths[i] = 24.0 + 4.0 + HudStyle.text_width(_stats[i]["value"].text, value_px) + (6.0 if i < n - 1 else 0.0)
+				sum += widths[i]
+			if sum <= w or value_px <= 14:
+				break
+			value_px -= 1
+	for st: Dictionary in _stats:
+		st["value"].add_theme_font_size_override("font_size", value_px)
 	var gap := maxf(0.0, (w - sum) / float(n - 1))
 	var x := 0.0
 	var seps: Array[float] = []
 	for i in n:
 		var st: Dictionary = _stats[i]
-		st["icon"].position = Vector2(x, 0.0)
+		st["icon"].position = Vector2(x, 8.0 if compact else 0.0)
 		st["icon"].size = Vector2(24, 24)
+		st["name"].visible = not compact
 		st["name"].position = Vector2(x + 32.0, -2.0)
 		st["name"].size = Vector2(widths[i], 18.0)
-		st["value"].position = Vector2(x + 32.0, 14.0)
+		st["value"].position = Vector2(x + (28.0 if compact else 32.0), 6.0 if compact else 14.0)
 		st["value"].size = Vector2(widths[i], 28.0)
-		if i < n - 1:
+		if i < n - 1 and not compact:
 			seps.append(x + widths[i] - 1.0)
 		x += widths[i] + gap
 	_stat_row.separators = seps
@@ -592,6 +837,66 @@ func _layout_actions(m: Vector2) -> void:
 		b.size = Vector2(cw, rh)
 
 
+## Incarné en Ingénieur, sans bâtiment ni allié ouvert : menu de construction et de pose en bas à droite.
+func _incarnated_menu() -> bool:
+	var inc := GameState.incarnated
+	return inc != null and inc.role == "engineer" and not HudModel.incarnated_panel() and not GameState.ended
+
+
+func _refresh_incarnated_menu(actions: Array[Dictionary]) -> void:
+	var inc_actions: Array[Dictionary] = []
+	if _incarnated_menu():
+		inc_actions = actions.filter(func(a: Dictionary) -> bool:
+			var id: String = a["id"]
+			return id in ["menu-build", "menu-place", "back"] or id.begins_with("place-"))
+	var sig := "|".join(inc_actions.map(func(a: Dictionary) -> String: return a["id"]))
+	if sig != _inc_sig:
+		_inc_sig = sig
+		for b in _inc_buttons:
+			b.queue_free()
+		_inc_buttons.clear()
+		for a in inc_actions:
+			var b := ActionButton.new()
+			_inc_actions.add_child(b)
+			_inc_buttons.append(b)
+	for i in inc_actions.size():
+		_inc_buttons[i].set_action(inc_actions[i])
+
+
+## Bas à droite, calé sur le bord de l'écran ; les carrés de construction au-dessus, alignés à droite.
+func _layout_incarnated_menu() -> void:
+	if not _incarnated_menu():
+		# Désincarné : la carte du jour remonte sous le bandeau des ressources.
+		if _sky_low:
+			_sky_low = false
+			_layout_top(_screen())
+		return
+	var gap := 6.0
+	var right := _screen().x - Hud.BAR_MARGIN
+	var n := _inc_buttons.size()
+	_inc_actions.size = Vector2(maxf(0.0, n * (INC_BTN.x + gap) - gap), INC_BTN.y)
+	_inc_actions.position = Vector2(right - _inc_actions.size.x, _screen().y - Hud.BAR_MARGIN - INC_BTN.y)
+	for i in n:
+		_inc_buttons[i].position = Vector2(i * (INC_BTN.x + gap), 0.0)
+		_inc_buttons[i].size = INC_BTN
+	var m := _build_buttons.size()
+	_build_row.size = Vector2(maxf(0.0, m * (BuildButton.SIZE + gap) - gap), BuildButton.SIZE)
+	_build_row.position = Vector2(right - _build_row.size.x, _inc_actions.position.y - gap - BuildButton.SIZE)
+	for i in m:
+		_build_buttons[i].position = Vector2(i * (BuildButton.SIZE + gap), 0.0)
+	_place_sky_card()
+
+
+## Incarné en Ingénieur (menu en bas à droite) : jour et heure au-dessus des carrés de construction,
+## alignés à droite ; sinon, sous le bandeau des ressources (position posée par _layout_top).
+func _place_sky_card() -> void:
+	if not _incarnated_menu():
+		return
+	_sky_low = true
+	var top := _build_row.position.y if _build_buttons.size() > 0 else _inc_actions.position.y
+	_sky_card.position = Vector2(_screen().x - Hud.BAR_MARGIN - _sky_card.size.x, top - 6.0 - _sky_card.size.y)
+
+
 func _layout_build_row() -> void:
 	var gap := 8.0
 	var n := _build_buttons.size()
@@ -616,13 +921,25 @@ func _update_bubble() -> void:
 		b.queue_redraw()
 	if target == null:
 		_build_bubble.visible = false
+		# Boutons de fabrication : nom · coût (stock) · prérequis, au survol seulement.
+		for ab in _buttons:
+			if ab.visible and ab.is_hovered() and ab.action.has("bubble"):
+				var info: Array = ab.action["bubble"]
+				_build_bubble.set_text(info[0], info[1], info[2], info[3], info[4] if info.size() > 4 else "")
+				# Au-dessus du bandeau (pas sur la rangée du haut), pointe à l'aplomb du bouton.
+				_show_bubble(Vector2(ab.global_position.x + ab.size.x / 2.0, _bar.global_position.y))
 		return
 	var D: Dictionary = Catalog.BUILDINGS[target.action["build_type"]]
 	var why := ""
 	if target.action.get("locked", false):
-		why = "nécessite un " + Catalog.BUILDINGS[D["requires"]]["name"]
-	_build_bubble.set_text(D["name"], Catalog.cost_text(D["cost"]), Catalog.can_pay(D["cost"]), why)
-	var c := target.global_position + Vector2(BuildButton.SIZE / 2.0, 0.0)
+		why = HudModel.lock_reason(target.action["build_type"])
+	var build_cost := Catalog.building_cost(target.action["build_type"])
+	_build_bubble.set_text(D["name"], Catalog.cost_text(build_cost), Catalog.can_pay(build_cost), why)
+	_show_bubble(target.global_position + Vector2(BuildButton.SIZE / 2.0, 0.0))
+
+
+## Bulle dont la pointe touche `c` (milieu du bord haut du bouton), gardée dans l'écran.
+func _show_bubble(c: Vector2) -> void:
 	var x := clampf(c.x - _build_bubble.size.x / 2.0, 8.0, _screen().x - 8.0 - _build_bubble.size.x)
 	_build_bubble.position = Vector2(x, c.y - 10.0 - _build_bubble.size.y)
 	_build_bubble.tip_x = c.x - x
@@ -632,13 +949,18 @@ func _update_bubble() -> void:
 
 func _layout_notice() -> void:
 	var s := _screen()
-	var maxw := s.x - 32.0
-	var tw := minf(HudStyle.text_width(_notice_label.text, 14), maxw - 42.0)
-	var lines := _lines(_notice_label.text, 14, tw + 1.0)
-	_notice.size = Vector2(tw + 42.0, 21.0 * lines + 22.0)
-	_notice.position = Vector2((s.x - _notice.size.x) / 2.0, 85.0)
-	_notice_label.position = Vector2(21.0, 11.0)
-	_notice_label.size = Vector2(tw + 1.0, 21.0 * lines)
+	# Bannière 16 bits en haut de l'écran (SnesBanner), sous le dialogue s'il y en a un.
+	var w := SnesBanner.width(s)
+	_notice.size = Vector2(w, SnesBanner.height(_notice_label.text, w))
+	_notice.position = Vector2(roundf((s.x - w) / 2.0), _notice_top())
+	_notice_label.position = SnesBanner.PAD
+	_notice_label.size = _notice.size - 2.0 * SnesBanner.PAD
+
+
+func _notice_top() -> float:
+	if dialogue and dialogue.active() and dialogue.visible:
+		return dialogue.position.y + dialogue.size.y + 6.0
+	return BossBar.top()
 
 
 func _layout_banner() -> void:
@@ -664,17 +986,42 @@ static func _lines(text: String, size: int, width: float, f: Font = null) -> int
 # ---------------------------------------------------------------- Mise à jour (updateHUD)
 
 func _process(delta: float) -> void:
+	if _pending_equipment != null and not Opening.cinematic():
+		var pu := _pending_equipment
+		_pending_equipment = null
+		_show_equipment_dialogue(pu)
 	if sim == null:
 		return
 	dialogue.tick(minf(delta, Simulation.MAX_DT))
+	_help_button.visible = HelpPanel.open or not Opening.cinematic()
+	_notice.position.y = _notice_top()
 	# Incarnation : mode action pur, sans bandeau de commandement.
 	var free := GameState.incarnated == null
-	_bar.visible = free
-	_build_row.visible = free
+	# Incarné : le bandeau ne revient que pour les options d'un bâtiment ouvert au clic droit.
+	var full_bar := free or HudModel.incarnated_panel()
+	# Recherche « Minicarte » : incarné, seule la minicarte reste affichée (le reste du bandeau est masqué).
+	var map_only := not full_bar and GameState.research_done.has("minimap")
+	_bar.visible = full_bar or map_only
+	_bar.self_modulate.a = 0.0 if map_only else 1.0
+	_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE if map_only else Control.MOUSE_FILTER_STOP
+	_diamonds.visible = not map_only
+	_zoom.visible = _bar.visible
+	for i in range(1, _modules.size()):
+		_modules[i].visible = not map_only
+	_build_row.visible = free or _incarnated_menu()
+	_inc_actions.visible = _incarnated_menu()
+	# Compteurs de ressources : cachés jusqu'au premier gain de mana (séquence d'ouverture), puis gardés.
+	if not _res_shown and (GameState.opening_stage == "" or GameState.res.values().any(func(v: float) -> bool: return v > 0.0)):
+		_res_shown = true
+	_res_panel.visible = _res_shown
 	if _notice_end < GameState.sim_time:
 		_notice.modulate.a = maxf(0.0, _notice.modulate.a - delta / 0.2)
 	else:
 		_notice.modulate.a = minf(1.0, _notice.modulate.a + delta / 0.2)
+	if _wave_alert_end < GameState.sim_time:
+		_wave_alert.modulate.a = maxf(0.0, _wave_alert.modulate.a - delta / 0.6)
+	else:
+		_wave_alert.modulate.a = minf(1.0, _wave_alert.modulate.a + delta / 0.2)
 	var ctx := "%s|%s|%s|%s|%s|%s|%s|%s" % [GameState.selected.map(func(u: Unit) -> int: return u.id), GameState.hud_menu,
 		GameState.hud_mode, GameState.hud_build_type, GameState.hud_building.id if GameState.hud_building else -1,
 		GameState.anchor_selected, GameState.ended, GameState.hud_enemy.get_instance_id() if GameState.hud_enemy else 0]
@@ -689,6 +1036,8 @@ func _process(delta: float) -> void:
 func refresh(force_map := false) -> void:
 	quests.update()
 	objective.push(quests.objective())
+	# Encarts d'objectif masqués (2026-11-19).
+	objective.visible = false
 	var v := HudModel.view(sim)
 	var relayout := false
 	if v != _view:
@@ -725,8 +1074,10 @@ func refresh(force_map := false) -> void:
 		relayout = true
 	for i in actions.size():
 		_buttons[i].set_action(actions[i])
+	_refresh_incarnated_menu(actions)
 	if relayout:
 		_layout()
+	_layout_incarnated_menu()
 	var t := GameState.sim_time
 	if force_map or t < _last_map or t - _last_map >= 0.1:
 		_last_map = t
@@ -734,9 +1085,20 @@ func refresh(force_map := false) -> void:
 
 
 func _apply_view(v: Dictionary) -> void:
-	_wave_label.text = "Vague " + v["wave"]
+	var wave_text: String = "Vague " + v["wave"]
+	var relayout_wave := _wave_label.text.length() != wave_text.length()
+	_wave_label.text = wave_text
+	# Pas de compteur de vague tant qu'aucune vague n'a été lancée.
+	var show_wave := GameState.wave > 0
+	if relayout_wave and show_wave:
+		_layout_top(_screen())
+	if _wave_card.visible != show_wave:
+		_wave_card.visible = show_wave
+		_layout_top(_screen())
 	var sky: Dictionary = v["sky"]
-	var text: String = sky["day"] + " · " + sky["time"]
+	var text: String = sky["day"] + " · " + sky["time"] + " · " + sky["weather"]
+	if sky["next"] != "":
+		text += " › " + sky["next"]
 	if _sky_label.text != text or _sky_key != sky["time_icon"]:
 		var relayout_sky := _sky_label.text.length() != text.length()
 		_sky_label.text = text
@@ -745,14 +1107,28 @@ func _apply_view(v: Dictionary) -> void:
 			_sky_icon.texture = HudStyle.icon(sky["time_icon"], 22)
 		if relayout_sky:
 			_layout_top(_screen())
+	var res_len := 0
+	var res_before := 0
 	for k in Catalog.RES_ORDER:
-		_res_items[k]["value"].text = v["res"][k] + " (+ %s/s)" % HudModel.num_fr(v["resource_rates"][k])
+		res_before += _res_items[k]["value"].text.length()
+		_res_raw[k] = [v["res"][k], HudModel.num_fr(v["resource_rates"][k])]
+		_res_items[k]["value"].text = _res_text(k)
+		res_len += _res_items[k]["value"].text.length()
+	res_before += _res_items["population"]["value"].text.length() + _res_items["menace"]["value"].text.length()
+	res_len += String(v["population"]).length() + String(v["menace"]).length()
 	_res_items["population"]["value"].text = v["population"]
-	var arrows := "× %d" % Catalog.ItemStorage.count_ammo("arrows")
-	if _ammo_arrow_l.text != arrows:
+	var n_arrows := Catalog.ItemStorage.count_ammo("arrows")
+	var arrows := "× %d" % n_arrows
+	# Pas de compteur de flèches tant que la réserve n'en a aucune.
+	if _ammo_arrow.visible != (n_arrows > 0) or _ammo_arrow_l.text != arrows:
+		_ammo_arrow.visible = n_arrows > 0
+		_ammo_arrow_l.visible = n_arrows > 0
 		_ammo_arrow_l.text = arrows
 		_layout_ammo(_screen())
 	_res_items["menace"]["value"].text = v["menace"]
+	# Une valeur a changé de longueur : le bandeau se remet en page (sinon les blocs se chevauchent).
+	if res_len != res_before:
+		_layout_top(_screen())
 	for part: String in ["icon", "name", "value"]:
 		var control: Control = _res_items["menace"][part]
 		control.mouse_filter = Control.MOUSE_FILTER_PASS
@@ -799,10 +1175,29 @@ func _enemy_portrait(kind: String) -> Texture2D:
 
 ## say() : message bref sous le bandeau du haut.
 func say(text: String, seconds := 2.0) -> void:
+	# Carillon seulement quand la bannière s'ouvre (pas à chaque remplacement de texte).
+	if _notice.modulate.a < 0.05 and not text.is_empty():
+		Sfx.play("ui_banniere")
 	_notice_label.text = text
 	_notice_end = GameState.sim_time + seconds
 	_notice.modulate.a = maxf(_notice.modulate.a, 0.01)
 	_layout_notice()
+
+
+## Alerte de vague, en rouge au-dessus de la minicarte ; s'efface seule au bout de `seconds`.
+func show_wave_alert(text: String, seconds := 5.0) -> void:
+	_wave_alert.text = text
+	_wave_alert_end = GameState.sim_time + seconds
+	_wave_alert.modulate.a = maxf(_wave_alert.modulate.a, 0.01)
+	_layout_wave_alert()
+
+
+## Alerte de vague calée sur le bord gauche de la minicarte, juste au-dessus du bandeau de commandement.
+func _layout_wave_alert() -> void:
+	var x := _bar.position.x + _modules[0].position.x
+	var w := maxf(_modules[0].size.x, HudStyle.text_width(_wave_alert.text, 20) + 8.0)
+	_wave_alert.position = Vector2(x, _bar.position.y - 8.0 - 30.0)
+	_wave_alert.size = Vector2(w, 30.0)
 
 
 ## Masque la notice immédiatement (captures de revue).
@@ -817,17 +1212,20 @@ func show_banner(won: bool) -> void:
 		_banner_title.text = "SANCTUM PRÉSERVÉ"
 		_banner_small.text = "Les Exilés et les disciples d’Indra ont repoussé l’assaut."
 	else:
-		var engineer_down := GameState.units.any(func(u: Unit) -> bool: return u.role == "engineer" and not u.alive())
-		_banner_title.text = "L’INGÉNIEUR EST TOMBÉ" if engineer_down and GameState.core_hp > 0.0 else "L’ANCRE EST PERDUE"
+		_banner_title.text = "L’ANCRE EST PERDUE"
 		_banner_small.text = "Maj + R pour recommencer."
 	_banner.visible = true
 	_layout_banner()
 
 
 func _on_reset() -> void:
+	_res_shown = false
+	_wave_alert_end = -1.0
+	_wave_alert.modulate.a = 0.0
 	_fast_construction.set_pressed_no_signal(GameState.fast_construction)
 	_fast_construction.text = "Construction rapide : ON" if GameState.fast_construction else "Construction rapide : OFF"
 	dialogue.close()
+	item_banner.close()
 	quests.reset()
 	objective.reset()
 	_banner.visible = false
@@ -855,6 +1253,13 @@ func _center_on_selection() -> void:
 
 
 func _input(event: InputEvent) -> void:
+	# Bannières « Reçu : … » : n'importe quelle action passe à la suivante (posée par-dessus), puis referme.
+	if item_banner.active() and event.is_pressed():
+		if event is InputEventKey or event is InputEventMouseButton or event is InputEventJoypadButton:
+			if not event.is_echo():
+				item_banner.advance()
+			get_viewport().set_input_as_handled()
+			return
 	if dialogue.active() and dialogue.dialogue.get("any_button", false) and event.is_pressed():
 		if event is InputEventKey or event is InputEventMouseButton or event is InputEventJoypadButton:
 			if not event.is_echo():
@@ -870,6 +1275,19 @@ func _input(event: InputEvent) -> void:
 			if not event.echo:
 				dialogue.advance()
 			get_viewport().set_input_as_handled()
+		return
+	# Codex d'aide : F1 l'ouvre ; ouvert, il garde le clavier (Échap, flèches) et le jeu ne reçoit rien.
+	if help_panel.handle_input(event):
+		get_viewport().set_input_as_handled()
+		return
+	# Minicarte plein écran : TAB ou M (recherche « Minicarte » achevée). TAB ne change plus le focus.
+	var map_key: Key = (event.key_label if event.key_label != KEY_NONE else event.keycode) if event is InputEventKey else KEY_NONE
+	if event is InputEventKey and event.pressed and not event.echo and map_key in [KEY_TAB, KEY_M] \
+			and not event.ctrl_pressed and not event.alt_pressed and not event.meta_pressed:
+		if not (get_viewport().gui_get_focus_owner() is LineEdit) and MinimapOverlay.available():
+			minimap_overlay.toggle()
+			refresh(true)
+			get_viewport().set_input_as_handled()
 
 
 # ---------------------------------------------------------------- Éléments dessinés
@@ -884,20 +1302,15 @@ class _Panel extends Control:
 		var r := Rect2(Vector2.ZERO, size)
 		match kind:
 			"metal", "module":
-				# Ombre portée légère (0 3px 12px #0007), puis le panneau.
-				for i in 4:
-					draw_rect(Rect2(r.position + Vector2(-i, 3 - i), r.size + Vector2(2 * i, 2 * i)), Color(0, 0, 0, 0.07))
 				HudStyle.metal_panel(self, size)
 				if kind == "metal":
 					for x in separators:
-						draw_rect(Rect2(x, 13.0, 1.0, 26.0), Color("#8a6c3b66"))
+						draw_rect(Rect2(x, 13.0, 1.0, 26.0), Color(SnesBanner.INFO[3], 0.45))
 			"bar":
-				draw_rect(r.grow(3.0), Color("#0a0e0bc9"))
-				draw_rect(r, Color("#0a0e0b"))
-				HudStyle.ring(self, r, 1.0, HudStyle.GOLD)
+				draw_rect(r.grow(3.0), Color(SnesBanner.INFO[4], 0.6))
+				draw_rect(r, SnesBanner.INFO[1].darkened(0.35))
 			"notice":
-				draw_rect(r, Color("#10170fea"))
-				HudStyle.ring(self, r, 1.0, Color("#94733e"))
+				SnesBanner.paint(self, r)
 			"banner":
 				for i in 8:
 					draw_rect(r.grow(2.0 + i * 4.0), Color(0, 0, 0, 0.05))
@@ -951,10 +1364,11 @@ class _HealthTrack extends Control:
 		draw_rect(Rect2(1, 1, size.x - 2, 4), Color(0, 0, 0, 0.35))
 		var fill := Rect2(1, 1, (size.x - 2) * clampf(pct, 0.0, 100.0) / 100.0, size.y - 2)
 		if fill.size.x > 0.0:
-			var top := Color("#d0584a") if enemy else Color("#6eab3d")
-			var bottom := Color("#7a2620") if enemy else Color("#376d25")
+			# Même rampe que les barres au-dessus des unités : turquoise allié, saumon ennemi.
+			var top := UnitView.HP_ENEMY if enemy else UnitView.HP_ALLY
+			var bottom := UnitView.HP_ENEMY.darkened(0.45) if enemy else UnitView.HP_ALLY.darkened(0.45)
 			HudStyle.linear_gradient(self, fill, 180.0, [[0.0, top], [1.0, bottom]])
-		HudStyle.ring(self, r, 1.0, Color("#a8443a") if enemy else Color("#6e8d35"))
+		HudStyle.ring(self, r, 1.0, UnitView.HP_ENEMY.darkened(0.25) if enemy else UnitView.HP_ALLY.darkened(0.25))
 		var f := HudStyle.font()
 		var w := f.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, 15).x
 		var base := Vector2((size.x - w) / 2.0, (size.y + f.get_ascent(15) - f.get_descent(15)) / 2.0)
@@ -971,8 +1385,8 @@ class _StatRow extends Control:
 
 	func _draw() -> void:
 		for x in separators:
-			draw_rect(Rect2(x, 0.0, 1.0, 41.0), Color("#755c354d"))
-		draw_rect(Rect2(0.0, size.y - 1.0, size.x, 1.0), Color("#886a3777"))
+			draw_rect(Rect2(x, 0.0, 1.0, 41.0), Color(SnesBanner.INFO[3], 0.35))
+		draw_rect(Rect2(0.0, size.y - 1.0, size.x, 1.0), Color(SnesBanner.INFO[3], 0.45))
 
 	func _notification(what: int) -> void:
 		if what == NOTIFICATION_RESIZED:
@@ -1017,11 +1431,12 @@ class _PortraitButton extends BaseButton:
 		HudStyle.ring(self, r.grow(-1.0), 3.0, Color("#12140e"))
 		if texture:
 			draw_texture_rect(texture, r.grow(-1.0), false)
-		HudStyle.ring(self, r, 1.0, HudStyle.GOLD)
-		# Rune : #f6c76d avec une lueur orangée.
-		for o: Vector2 in [Vector2(-1, 0), Vector2(1, 0), Vector2(0, -1), Vector2(0, 1)]:
-			draw_texture_rect(_rune, Rect2(Vector2(6, 6) + o, Vector2(20, 20)), false, Color(Color("#e5972d"), 0.35))
-		draw_texture_rect(_rune, Rect2(Vector2(6, 6), Vector2(20, 20)), false, Color("#f6c76d"))
+		HudStyle.ring(self, r, 1.0, SnesBanner.RIM_LO)
+		# Rune « centrer » : pastille sur l'angle du cadre, hors du visage.
+		var badge := Rect2(Vector2(-3, -3), Vector2(16, 16))
+		draw_rect(badge, SnesBanner.EDGE)
+		HudStyle.ring(self, badge, 1.0, SnesBanner.RIM_LO)
+		draw_texture_rect(_rune, badge.grow(-2.0), false, SnesBanner.RIM)
 
 
 ## Bouton Rejouer (.restart-button) : panneau métallique, icône, libellé, touche ⇧ R ; opacité 0,7
@@ -1059,15 +1474,22 @@ class _RestartButton extends BaseButton:
 class _Bubble extends Control:
 	var tip_x := 0.0
 	var _parts: Array = []
+	## Seconde ligne facultative (effet d'une recherche, d'une unité), plus petite.
+	var _desc := ""
 
-	func set_text(name: String, cost: String, ok: bool, why: String) -> void:
-		_parts = [[name, HudStyle.IVORY], ["  ·  ", HudStyle.MUTED], [cost, Color("#e8c35a") if ok else Color("#d36a52")]]
+	func set_text(name: String, cost: String, ok: bool, why: String, desc := "") -> void:
+		_parts = [[name, HudStyle.IVORY]]
+		if cost:
+			_parts += [["  ·  ", HudStyle.MUTED], [cost, Color("#e8c35a") if ok else Color("#d36a52")]]
 		if why:
-			_parts += [["  ·  ", HudStyle.MUTED], [why, HudStyle.MUTED]]
+			_parts += [["  ·  ", HudStyle.MUTED], [why, Color("#a8d890") if why == "Déjà achevée" else HudStyle.MUTED]]
+		_desc = desc
 		var w := 0.0
 		for p in _parts:
 			w += HudStyle.text_width(p[0], 15)
-		size = Vector2(w + 28.0, 32.0)
+		if desc:
+			w = maxf(w, HudStyle.text_width(desc, 13))
+		size = Vector2(w + 28.0, 50.0 if desc else 32.0)
 
 	func _draw() -> void:
 		var r := Rect2(Vector2.ZERO, size)
@@ -1081,6 +1503,8 @@ class _Bubble extends Control:
 		for p in _parts:
 			draw_string(f, Vector2(x, 21.0), p[0], HORIZONTAL_ALIGNMENT_LEFT, -1, 15, p[1])
 			x += HudStyle.text_width(p[0], 15)
+		if _desc:
+			draw_string(f, Vector2(14.0, 39.0), _desc, HORIZONTAL_ALIGNMENT_LEFT, -1, 13, HudStyle.MUTED)
 
 
 ## Icône d'objet de l'inventaire (bande items.png), dessinée au centre du contrôle.

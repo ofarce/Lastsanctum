@@ -26,9 +26,17 @@ static func to_int32(v: int) -> int:
 ## hash(x, y, s) du JS. Le produit par 1274126177 dépasse 2^53 : il est calculé en double,
 ## comme en JS, avant la conversion 32 bits.
 static func hash3(x: int, y: int, s: int) -> float:
-	var h := to_int32(int(float(x) * 374761393.0 + float(y) * 668265263.0 + float(s) * 1442695041.0))
-	h = h ^ ((h & 0xFFFFFFFF) >> 13)
-	h = to_int32(int(float(to_int32(h)) * 1274126177.0))
+	# to_int32 développé sur place (appelé des milliers de fois par image par vnoise) : même arithmétique,
+	# résultats identiques au bit près (tests/test_rng_hash.gd).
+	var h := int(float(x) * 374761393.0 + float(y) * 668265263.0 + float(s) * 1442695041.0) & 0xFFFFFFFF
+	if h >= 0x80000000:
+		h -= 0x100000000
+	h = (h ^ ((h & 0xFFFFFFFF) >> 13)) & 0xFFFFFFFF
+	if h >= 0x80000000:
+		h -= 0x100000000
+	h = int(float(h) * 1274126177.0) & 0xFFFFFFFF
+	if h >= 0x80000000:
+		h -= 0x100000000
 	return float((h ^ ((h & 0xFFFFFFFF) >> 16)) & 0xFFFFFFFF) / TWO_32
 
 

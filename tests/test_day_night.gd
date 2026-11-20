@@ -31,7 +31,11 @@ func test_assaults_only_by_day() -> void:
 		var t := 37.0 + w * 211.0
 		var at := DayNight.next_assault(t, w, 1234)
 		var gap := DayNight.day(at) - DayNight.day(t)
-		check(gap == 2 or gap == 3, "écart de 2 ou 3 jours (%d)" % gap)
+		# Un assaut par jour, à 9 h : le jour même s'il reste le répit, sinon le lendemain.
+		check(gap == 0 or gap == 1, "assaut le jour même ou le lendemain (%d)" % gap)
+		check(at >= t + DayNight.WAVE_REST, "au moins le répit avant l'assaut")
+		check(at - t < DayNight.LENGTH + DayNight.WAVE_REST, "pas plus d'un jour d'attente")
+		check_eq(DayNight.clock(at), "09:00", "assaut à 9 h")
 		check(DayNight.is_day(at), "assaut de jour")
 	var night := (0.85 - DayNight.START) * DayNight.LENGTH
 	check(DayNight.is_day(DayNight.next_daylight(night)), "la nuit, le premier assaut attend le matin")

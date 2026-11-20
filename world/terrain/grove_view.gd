@@ -15,12 +15,18 @@ const BEAM_TOP := Vector2(32, -136)
 const BEAM_TOP_HW := 9.0
 const POOL := Vector2(0, -30)
 const POOL_R := Vector2(46, 24)
+## Emprise dessinée (sprite, flaque, rai, poussières) avec marge, en pixels relatifs au nœud.
+const BOUNDS := Rect2(-64, -150, 128, 160)
+## Contour d'ellipse unité (24 points), mis à l'échelle à chaque dessin : mêmes points qu'un calcul direct.
+static var _unit_ellipse := PackedVector2Array()
 
 var state: TerrainState
 var origin: Vector2i
 var _pool := Node2D.new()
 var _beam := Node2D.new()
 var _stage := -1
+## sim_time du dernier dessin de la flaque et du rai (NAN : à redessiner).
+var _drawn_at := NAN
 
 
 func setup(terrain_state: TerrainState, key: Vector2i) -> void:
@@ -53,8 +59,24 @@ func _process(_delta: float) -> void:
 	if s != _stage:
 		_stage = s
 		queue_redraw()
+	_redraw_light()
+
+
+## Flaque et rai animés par sim_time : redessinés seulement à l'écran, et quand le temps a avancé (hors écran,
+## le prochain passage à l'écran redessine d'office ; l'image affichée est la même qu'avec un redessin permanent).
+func _redraw_light() -> void:
+	if not on_screen():
+		_drawn_at = NAN
+		return
+	if _drawn_at == GameState.sim_time:
+		return
+	_drawn_at = GameState.sim_time
 	_pool.queue_redraw()
 	_beam.queue_redraw()
+
+
+func on_screen() -> bool:
+	return (get_global_transform_with_canvas() * BOUNDS).intersects(get_viewport_rect())
 
 
 func _draw() -> void:
@@ -98,8 +120,12 @@ func _draw_beam() -> void:
 
 
 static func _ellipse(canvas: CanvasItem, c: Vector2, r: Vector2, color: Color) -> void:
+	if _unit_ellipse.is_empty():
+		for i in 24:
+			var a := TAU * i / 24.0
+			_unit_ellipse.append(Vector2(cos(a), sin(a)))
 	var pts := PackedVector2Array()
+	pts.resize(24)
 	for i in 24:
-		var a := TAU * i / 24.0
-		pts.append(c + Vector2(cos(a) * r.x, sin(a) * r.y))
+		pts[i] = c + _unit_ellipse[i] * r
 	canvas.draw_colored_polygon(pts, color)

@@ -1,0 +1,933 @@
+<meta charset="utf-8">
+<title>Ingénieur : sprites et animations</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@500;700&family=Alegreya+Sans:wght@400;500;700&display=swap">
+<style>
+/* Mise en page : ronde en situation (actuel au-dessus, proposé dessous), mesures, puis une carte par piste :
+   texte à gauche, les deux versions animées côte à côte à droite. Même habillage que la planche des unités. */
+:root{
+  --bg:#121614; --panel:#1b211e; --line:#2c3530; --ink:#ece4cc; --muted:#9ba597;
+  --gold:#e2b83a; --gold-dim:#8a6d1c; --new:#8fd3b0; --warn:#e58a5a; --stage:#0c0f0e;
+  --display:"Pixelify Sans","Courier New",monospace; --body:"Alegreya Sans","Segoe UI",system-ui,sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 var(--body)}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--panel)}
+.wrap{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));max-width:1180px;margin:0 auto}
+header.top{padding-block:28px 18px}
+h1{font:700 clamp(28px,4vw,40px)/1.1 var(--display);margin:0 0 8px;color:var(--gold);letter-spacing:.02em;text-wrap:balance}
+.lede{margin:0;color:var(--muted);max-width:70ch}
+.bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--panel);border-block:1px solid var(--line)}
+.bar .wrap{display:flex;flex-wrap:wrap;gap:8px 18px;align-items:center;padding-block:10px}
+.grp{display:flex;flex-wrap:wrap;gap:4px;align-items:center}
+.grp>span{font:500 12px var(--display);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-right:2px}
+.bar .sp{flex:1}
+button{font:500 14px var(--body);color:var(--ink);background:transparent;border:1px solid var(--line);border-radius:4px;padding:5px 10px;cursor:pointer}
+button:hover{border-color:var(--gold-dim)}
+button[aria-pressed="true"]{background:var(--gold);color:#1b1404;border-color:var(--gold)}
+button.main{background:var(--gold);color:#1b1404;border-color:var(--gold);font-weight:700}
+button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px solid var(--new);outline-offset:2px}
+main{display:flex;flex-direction:column;gap:44px;padding-block:28px 60px}
+section>h2{font:700 26px/1.15 var(--display);margin:0 0 4px;letter-spacing:.02em}
+section>p.sub{margin:0 0 16px;color:var(--muted);max-width:70ch}
+.stage{border:1px solid var(--line);border-radius:4px;background:var(--stage);overflow:hidden}
+.stage canvas{display:block;width:100%;height:auto;image-rendering:pixelated;image-rendering:crisp-edges}
+.cap{font-size:14px;color:var(--muted);margin:8px 0 0}
+.cap b{color:var(--ink)}
+.pistes{display:flex;flex-direction:column;gap:18px}
+.piste{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,6fr);gap:22px;border-top:1px solid var(--line);padding-top:16px}
+.piste>div{min-width:0}
+.piste h3{font:700 19px/1.2 var(--body);margin:0 0 6px;display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}
+.piste h3 .id{font:700 15px var(--display);color:var(--gold);letter-spacing:.06em}
+.piste p{margin:0 0 8px;max-width:60ch}
+.piste p.fait{color:var(--muted)}
+.piste p.fait b{color:var(--warn)}
+.meta{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;margin-top:10px}
+.cost{font:500 12px var(--display);letter-spacing:.07em;text-transform:uppercase;color:var(--muted);border:1px solid var(--line);border-radius:3px;padding:2px 7px}
+label.pick{display:flex;gap:7px;align-items:center;cursor:pointer;font-weight:500}
+label.pick input{accent-color:var(--gold);width:17px;height:17px}
+.scene{display:flex;flex-direction:column;gap:8px}
+.duo{display:grid;grid-template-columns:1fr 1fr;font:500 12px var(--display);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);text-align:center}
+.duo span:last-child{color:var(--new)}
+.tbl{overflow-x:auto}
+table{border-collapse:collapse;font-size:14.5px;font-variant-numeric:tabular-nums;min-width:560px;width:100%}
+th,td{padding:5px 10px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
+th{font:500 12px var(--display);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+th:first-child,td:first-child{text-align:left}
+td.low{color:var(--warn);font-weight:700}
+td.up{color:var(--new);font-weight:700}
+ul.suite{margin:0;padding-left:20px;max-width:70ch}
+ul.suite li{margin-bottom:6px}
+#out{width:100%;margin-top:10px;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:4px;padding:8px;font:15px var(--body);resize:vertical}
+code{font-size:.9em;color:var(--muted)}
+@media (max-width:820px){.piste{grid-template-columns:minmax(0,1fr)}}
+</style>
+
+<header class="top"><div class="wrap">
+  <h1>Ingénieur : sprites et animations</h1>
+  <p class="lede">Les deux tenues validées ne changent pas : Templier technomancien et Chausses de l’Exil, même visage, même taille, même cadre de 48 px. Ce qui change, c’est le corps dessous : des membres articulés au lieu de blocs qui glissent d’un pixel. Chaque carte joue la version du jeu à gauche et la proposition à droite. Cochez ce que vous retenez, puis copiez la sélection.</p>
+</div></header>
+
+<div class="bar"><div class="wrap">
+  <div class="grp" id="g-body"><span>Tenue</span><button data-v="templier" aria-pressed="true">Templier</button><button data-v="exil">Avant la combinaison</button></div>
+  <div class="grp" id="g-speed"><span>Vitesse</span><button data-v="1" aria-pressed="true">1×</button><button data-v="0.5">½</button><button data-v="0.25">¼</button></div>
+  <button id="pause" aria-pressed="false">Pause</button>
+  <span class="sp"></span>
+  <button id="all">Tout cocher</button>
+  <button id="copy" class="main">Copier ma sélection</button>
+</div></div>
+
+<main class="wrap">
+
+<section id="ronde">
+  <h2>En situation</h2>
+  <p class="sub">La même ronde jouée deux fois : marche, arrêt, direct, marteau des deux poings, décharge, demi-tour. En haut le jeu d’aujourd’hui, en bas la proposition.</p>
+  <div class="stage"><canvas id="c-ronde" width="880" height="448"></canvas></div>
+  <p class="cap">À regarder : <b>les pieds</b>. En haut ils glissent sur le sol, en bas chaque appui reste posé pendant que le corps avance.</p>
+</section>
+
+<section id="constat">
+  <h2>Constat</h2>
+  <p class="sub">Poses réellement différentes dans chaque animation, comptées image par image sur le Templier. L’Ingénieur est resté sur l’ancien gabarit pendant que la Caserne et les ennemis passaient à 12 poses de marche.</p>
+  <div class="tbl"><table id="mes"></table></div>
+</section>
+
+<section id="pistes">
+  <h2>Pistes</h2>
+  <p class="sub">Treize pistes indépendantes. Toutes s’appliquent aux deux tenues ; l’Arbalestrie et le casque restent ceux du Templier.</p>
+  <div class="pistes" id="list"></div>
+</section>
+
+<section id="suite">
+  <h2>Ce que l’intégration touchera</h2>
+  <ul class="suite">
+    <li><b>Atlas plus grands</b> : repos 24 → 72 images, lotus 24 → 48, repos à l’Arbalestrie 24 → 48, repos de face et de dos 12 → 24. Le cadre de 48 × 48 et l’ancrage des pieds ne bougent pas.</li>
+    <li><b>Cadences</b> : à genoux, prière, assise et lotus passent de 10 à 12 images par seconde, comme le reste des unités.</li>
+    <li><b>Foulée</b> : la marche avance de 14 px par cycle ; la valeur <code>stride</code> du manifeste sera recalée pour que les pieds ne glissent pas en jeu.</li>
+    <li><b>Visée inchangée</b> : épaule et bouche du gantelet gardent leurs coordonnées, le lance-pitons et les projectiles partent du même point.</li>
+    <li><b>Casque de combat</b> : son décalage vertical suivra la nouvelle respiration et la nouvelle marche.</li>
+    <li><b>Touché</b> (A12) : seule piste qui demande une nouvelle branche dans l’affichage de l’unité.</li>
+  </ul>
+  <textarea id="out" rows="2" readonly aria-label="Sélection à copier"></textarea>
+</section>
+
+</main>
+
+<script>
+// Ingénieur « colosse en combinaison », dessin 16 bits partagé par planches/ingenieur-mana-planche.html
+// et planches/ingenieur-colosse-export.html (sprites du jeu). Expose R, MAT, buf, render, hero, mirror, portrait.
+
+// ---------- Palettes (rampes sombre → clair) ----------
+const R={
+ skin:['#5a2c1c','#a0583a','#d88e62','#f4c093','#ffe2bf'],
+ hair:['#0e0a08','#1e1610','#2e2218','#423226','#5e4a3a'],
+ linen:['#3a2a20','#8a6a48','#c8a676','#ecd6a4','#fff4d6'],
+ sash:['#2a0e14','#6a1e2a','#a8323a','#d85a4a','#f6906a'],
+ stone:['#1c1e26','#4a4c5a','#7a7e8c','#a8acb8','#dcdee6'],
+ leath:['#20120a','#5a3418','#8a5428','#b67a3c','#dca460'],
+ cy:['#0a3a48','#1f9fb8','#5ce8ff','#c8fbff','#ffffff'],
+ eye:['#10101e','#1e2850','#3a5aa8','#7aa8f0','#ffffff'],
+ suit:['#0e1a20','#1e3a44','#2f5a66','#4a8290','#8cc4cc'],
+ scar:['#5a2c1c','#8a4030','#b05a44','#c87458','#e09070'],
+ iron:['#141820','#3a4250','#646e80','#98a2b4','#d6dce8'],
+};
+const MAT=Object.keys(R);
+// ---------- Tampon de pixels ----------
+function buf(w,h){return{w,h,m:new Int8Array(w*h).fill(-1),s:new Float32Array(w*h)}}
+function put(b,x,y,mat,s){x|=0;y|=0;if(x<0||y<0||x>=b.w||y>=b.h)return;b.m[y*b.w+x]=MAT.indexOf(mat);b.s[y*b.w+x]=s}
+// ellipse ombrée : lumière en haut à gauche
+function blob(b,cx,cy,rx,ry,mat,bias=0,cut){
+ for(let y=Math.floor(cy-ry);y<=Math.ceil(cy+ry);y++)for(let x=Math.floor(cx-rx);x<=Math.ceil(cx+rx);x++){
+  const dx=(x+.5-cx)/rx,dy=(y+.5-cy)/ry,d=dx*dx+dy*dy;if(d>1)continue;if(cut&&!cut(x,y))continue;
+  const nz=Math.sqrt(1-Math.min(d,1));const l=(-dx*.55-dy*.65+nz*.75)*.62+.28+bias;put(b,x,y,mat,l)}}
+function rect(b,x0,y0,w,h,mat,bias=0){for(let y=y0;y<y0+h;y++)for(let x=x0;x<x0+w;x++){const u=(x-x0+.5)/w,v=(y-y0+.5)/h;put(b,x,y,mat,.75-u*.45-v*.2+bias)}}
+function px(b,x,y,mat,s){put(b,x,y,mat,s)}
+// ---------- Rendu ----------
+function render(b,scale){
+ const c=document.createElement('canvas');c.width=b.w*scale;c.height=b.h*scale;c.style.background='transparent';
+ const g=c.getContext('2d');const BY=[[0,8,2,10],[12,4,14,6],[3,11,1,9],[15,7,13,5]];
+ const col=(i,x,y)=>{const r=R[MAT[b.m[i]]];let v=Math.max(0,Math.min(.999,b.s[i]))*(r.length-1.0001);let k=Math.floor(v);
+  if(v-k>(BY[y&3][x&3]+.5)/16*0+.5)k++; /* pas de trame : paliers francs, à la manière 16 bits */
+  return r[Math.min(Math.max(k,1),r.length-1)]};
+ // remplissage
+ for(let y=0;y<b.h;y++)for(let x=0;x<b.w;x++){const i=y*b.w+x;if(b.m[i]<0)continue;g.fillStyle=col(i,x,y);g.fillRect(x*scale,y*scale,scale,scale)}
+ // contour sélectif : pixel vide touchant une matière → ton sombre de cette matière
+ for(let y=0;y<b.h;y++)for(let x=0;x<b.w;x++){if(b.m[y*b.w+x]>=0)continue;let best=-1;
+  for(const[dx,dy]of[[0,1],[1,0],[-1,0],[0,-1]]){const X=x+dx,Y=y+dy;if(X<0||Y<0||X>=b.w||Y>=b.h)continue;const j=Y*b.w+X;if(b.m[j]>=0){best=b.m[j];if(dy===-1||dx===-1)break}}
+  if(best>=0){g.fillStyle=R[MAT[best]][0];g.fillRect(x*scale,y*scale,scale,scale)}}
+ // liseré intérieur entre matières (bas/droite)
+ for(let y=0;y<b.h-1;y++)for(let x=0;x<b.w-1;x++){const i=y*b.w+x,a=b.m[i];if(a<0)continue;
+  const d=b.m[i+b.w],r=b.m[i+1];if((d>=0&&d!==a&&b.s[i+b.w]<b.s[i])){g.fillStyle=R[MAT[d]][1];g.fillRect(x*scale,(y+1)*scale,scale,scale)}}
+ return c}
+// ---------- Personnage (gabarit 32×34, pieds y≈31) ----------
+// Colosse au visage nu (crâne rasé, mâchoire carrée, cicatrice) dans une combinaison blindée lisse :
+// épaulières rondes surdimensionnées, plastron bombé, bras droit = canon lance-pitons, glyphes cyan.
+// Options du jeu (vue de profil) : gun {ang (rad), rec, flash, pulse} = bolter orienté ; slung = bolter dans le dos ;
+// hands 'pray' | 'knees' ; depth 0..4 = agenouillement ; lotus = assis en tailleur ; blink = yeux clos ; ub = buste décalé.
+function hero(o){
+ const{dir='d',f=0,pose='idle',gun=null,slung=false,hands='',lotus=false,blink=false,ub=0}=o;const b=buf(32,34);
+ const step=pose==='walk'?[0,1,0,-1][f]:0, bob=pose==='walk'?(f%2?-1:0):0;
+ const hurt=pose==='hurt', win=pose==='win', atk=pose==='atk';
+ const depth=o.depth??(pose==='kneel'?4:0), kneel=depth>=2&&!lotus;
+ const Yl=bob+depth+(hurt?1:0), Y=Yl+ub, X=16+(hurt?-1:0);
+ // jambes blindées : cuisse, genouillère, botte massive
+ const leg=(lx,ly,len,back)=>{const s=back?-.25:0;rect(b,lx,ly,4,len,'suit',s);px(b,lx+1,ly+2,'iron',.8+s);rect(b,lx-(dir==='s'?0:0),ly+len,dir==='s'?5:4,3,'iron',s);px(b,lx+1,ly+len+2,'cy',.5+s)};
+ if(lotus){rect(b,X-6,26+Yl-2,12,2,'suit',-.05);rect(b,X-6,28+Yl-2,5,2,'iron',-.1);rect(b,X+1,28+Yl-2,5,2,'iron');px(b,X+4,28+Yl-2,'cy',.6)}
+ else if(!kneel){
+  if(dir==='s'){leg(X-2-step,22+Yl,5,true);leg(X-2+step,22+Yl,5,false)}
+  else{leg(X-5,22+Yl+(step>0?-1:0),5-(step>0?1:0),false);leg(X+1,22+Yl+(step<0?-1:0),5-(step<0?1:0),false)}
+ }else{const k=Yl-2;rect(b,X-5,23+k,10,3,'suit',-.1);rect(b,X-6,25+k,5,3,'iron');rect(b,X+2,25+k,4,3,'iron')}
+ // bassin
+ rect(b,X-5,20+Y,10,3,'iron',-.05);if(dir!=='u')px(b,X,21+Y,'cy',.8);
+ // bras gauche (gant) et bras droit (canon)
+ const fist=(ax,ay,front)=>{rect(b,ax-1,ay,3,4,'suit',front?0:-.3);blob(b,ax+.5,ay+5,1.9,1.7,'iron',front?0:-.25)};
+ // bolter : boîtier massif, chargeur, bouche large ; tenu à deux mains
+ const bolter=(x,y,ang,L,sh=0)=>{const c=Math.cos(ang),sn=Math.sin(ang);
+  const P=(u,v,m,l)=>px(b,Math.round(x+u*c-v*sn),Math.round(y+u*sn+v*c),m,l);
+  for(let u=0;u<=L;u++)for(let v=-1.5;v<=1.5;v+=.5){const top=v<-.9;P(u,v,u<3?'leath':(u>L-2?'iron':(top?'suit':'iron')),(top?.8:.55-v*.12)+sh)}
+  for(let u=L*.35;u<=L*.55;u+=.5)for(let v=1.5;v<=3.5;v+=.5)P(u,v,'iron',.35+sh);   // chargeur
+  for(let v=-1;v<=1;v+=.5)P(L+1,v,'iron',.15+sh);P(L+1,0,'cy',.9);P(L*.7,-1.5,'cy',.7)}; // bouche, voyant
+ const grip=(x,y)=>blob(b,x,y,1.8,1.6,'iron',.15);
+ if(dir==='s'&&slung)bolter(X-6,21+Y,-1.15,12,-.3);
+ if(dir==='s')rect(b,X-3,14+Y,3,4,'suit',-.3);
+ // plastron bombé
+ const tw=dir==='s'?5:6.5;
+ blob(b,X,17+Y,tw,5,'suit',.05);
+ if(dir!=='u'){blob(b,X+(dir==='s'?1:0),16+Y,tw-2.5,3,'suit',.25);px(b,X+(dir==='s'?2:0),17+Y,'cy',.9);px(b,X+(dir==='s'?2:0)-1,17+Y,'cy',.5);px(b,X+(dir==='s'?2:0)+1,17+Y,'cy',.5)}
+ else{rect(b,X-3,13+Y,6,6,'iron',.05);px(b,X-1,15+Y,'cy',.8);px(b,X+1,15+Y,'cy',.8);px(b,X,17+Y,'cy',.6)} // module dorsal
+ // bras de face/dos
+ if(dir==='d'){
+  if(win){rect(b,X-9,14+Y,3,4,'suit');rect(b,X+6,12+Y,3,4,'suit');bolter(X+7,13+Y,-Math.PI/2,11);grip(X+7.5,12+Y);grip(X+7.5,17+Y)}
+  else if(atk){rect(b,X-8,14+Y,3,4,'suit');rect(b,X+5,14+Y,3,4,'suit');bolter(X-4,19+Y,-.25,13);grip(X-3,19+Y);grip(X+6,17+Y)}
+  else{const sw=pose==='walk'?step*.5:0;rect(b,X-9,14+Y,3,4,'suit');rect(b,X+6,14+Y,3,4,'suit');bolter(X-7,21+Y+sw,-.55,13);grip(X-6.5,19.5+Y+sw);grip(X+3,15.5+Y+sw)}
+ }else if(dir==='u'){
+  rect(b,X-9,14+Y,3,4,'suit',-.1);rect(b,X+6,14+Y,3,4,'suit',-.1);
+  if(atk)bolter(X-10,15+Y,Math.PI+.1,4,-.2);else bolter(X+9,13+Y,-.6,3,-.2);
+ }
+ // épaulières rondes surdimensionnées
+ const pauld=(cx,cy,s)=>{blob(b,cx,cy,3.6,3,'suit',.12+s);px(b,cx-1,cy-2,'suit',1);px(b,cx,cy+1,'cy',.55+s)};
+ if(dir==='s'){pauld(X+1,12.5+Y,0)}else{pauld(X-6.5,12.5+Y,0);pauld(X+6.5,12.5+Y,0)}
+ // col
+ rect(b,X-3,10+Y,6,2,'iron',.1);
+ // tête nue : crâne rasé, mâchoire carrée
+ const hx=X+(dir==='s'?1:0),hy=6+Y+(hurt?1:0);
+ // coupe classique : raie sur le côté, tempes et nuque couvertes
+ if(dir==='u'){blob(b,hx,hy,4.4,4.4,'skin',-.05);blob(b,hx,hy,4.8,4.6,'hair',.1,(x,y)=>y<=hy+3);px(b,hx-2,hy-4,'hair',1);px(b,hx-1,hy-4,'hair',.9);px(b,hx+2,hy+1,'scar',.6)}
+ else{
+  blob(b,hx,hy,4.4,4.3,'skin',.08);rect(b,hx-(dir==='s'?2:3),hy+2,dir==='s'?6:7,3,'skin',.05); // mâchoire
+  if(dir==='s'){blob(b,hx-.6,hy-1.2,4.8,3.8,'hair',.1,(x,y)=>y<=hy-1||x<=hx-1);rect(b,hx-4,hy+1,3,2,'hair',.05);px(b,hx-4,hy+1,'hair',.3);px(b,hx+1,hy-4,'hair',1);px(b,hx+2,hy-4,'hair',.9)}
+  else{blob(b,hx,hy-1.2,4.9,3.8,'hair',.1,(x,y)=>y<=hy-2||(x<=hx-4||x>=hx+4)&&y<=hy+2);
+   px(b,hx-2,hy-4,'hair',.05);px(b,hx-2,hy-3,'hair',.05);px(b,hx-1,hy-4,'hair',1);px(b,hx,hy-4,'hair',1);px(b,hx+1,hy-3,'hair',.85)} // raie + mèche
+  const eye=ex=>{if(blink){px(b,ex,hy,'skin',.12);px(b,ex+1,hy,'skin',.12)}else{px(b,ex,hy,'eye',.1);px(b,ex+1,hy,'eye',.98)}px(b,ex,hy-1,'hair',.05);px(b,ex+1,hy-1,'hair',.05)};
+  if(hurt){for(const ex of dir==='s'?[hx+2]:[hx-3,hx+1]){px(b,ex,hy,'eye',.1);px(b,ex+1,hy,'eye',.1)}}
+  else if(dir==='s')eye(hx+2);else{eye(hx-3);eye(hx+1)}
+  // cicatrice sur l'arcade gauche et bouche serrée
+  if(dir!=='s'){px(b,hx-3,hy-2,'scar',.6);px(b,hx-2,hy+1,'scar',.6);px(b,hx-2,hy+2,'scar',.5)}else px(b,hx,hy+1,'scar',.6);
+  for(let x=-1;x<=1;x++)if(dir!=='s'||x>=0)px(b,hx+x+(dir==='s'?2:0),hy+3,'skin',.12);
+  if(win&&dir!=='s'){px(b,hx-2,hy+3,'skin',.12);px(b,hx+2,hy+3,'skin',.12)}
+  // micro-oreillette cyan
+  px(b,dir==='s'?hx-2:hx+4,hy,'cy',.7);
+ }
+ if(dir==='s'&&slung){if(hands==='pray'){grip(X+4,15.5+Y);px(b,X+4,13+Y,'cy',.7)}else if(hands==='knees'){grip(X-4,24+Yl-2);grip(X+5,24+Yl-2)}else grip(X+1,19+Y)}
+ else if(dir==='s'&&gun){const c=Math.cos(gun.ang),sn=Math.sin(gun.ang),sx=X+1,sy=15+Y,r=gun.rec||0;
+  bolter(sx-(3+r)*c,sy-(3+r)*sn,gun.ang,12);grip(sx+(1-r)*c,sy+1+(1-r)*sn);grip(sx+(6-r)*c,sy+1+(6-r)*sn);
+  const mx=sx+(10-r)*c,my=sy+(10-r)*sn;if(gun.pulse)px(b,mx,my,'cy',1);
+  if(gun.flash){for(const[dx,dy,l]of[[1,0,1],[2,0,.9],[1,-1,.8],[1,1,.8],[3,0,.6]])px(b,mx+dx*c-dy*sn,my+dx*sn+dy*c,'cy',l)}}
+ else if(dir==='s'){if(atk){bolter(X-1,14+Y,0,13);grip(X+1,15.5+Y);grip(X+6,16+Y);px(b,X+15,13+Y,'cy',1);px(b,X+16,14+Y,'cy',.8);px(b,X+15,15+Y,'cy',1)}
+  else{bolter(X-3,19+Y+step*.3,-.3,13);grip(X-1,18.5+Y+step*.3);grip(X+5,16.5+Y+step*.3)}}
+ if(dir==='d'&&atk){px(b,X+9,14+Y,'cy',1);px(b,X+10,13+Y,'cy',.8);px(b,X+10,15+Y,'cy',.8)}
+ if(hurt){px(b,X+8,1,'cy',1);px(b,X+9,0,'cy',.7);px(b,X+7,0,'cy',.7)}
+ return b}
+function mirror(b){const o=buf(b.w,b.h);for(let y=0;y<b.h;y++)for(let x=0;x<b.w;x++){const i=y*b.w+x,j=y*b.w+(b.w-1-x);o.m[j]=b.m[i];o.s[j]=b.m[i]>=0?b.s[i]*.9+.05:0}return o}
+// ---------- Portrait 48×48 ----------
+function portrait(){const b=buf(48,48),cx=24;
+ blob(b,8,44,9,7,'suit',.15);blob(b,40,44,9,7,'suit',.05);rect(b,14,40,20,8,'suit',.1);px(b,24,44,'cy',.9);px(b,23,44,'cy',.5);px(b,25,44,'cy',.5);
+ rect(b,17,35,14,5,'iron',.1);
+ blob(b,cx,20,11,12,'skin',.08);rect(b,cx-10,22,20,10,'skin',.05);blob(b,cx,32,8,3,'skin',-.05);
+ blob(b,cx,14,12,7,'hair',.1,(x,y)=>y<=15||((x<cx-9||x>cx+9)&&y<=27));
+ for(let y=8;y<=13;y++)px(b,cx-4,y,'hair',.05);
+ for(let x=-3;x<=6;x++)px(b,cx+x,8+(x>2?1:0),'hair',1);px(b,cx+5,12,'hair',.8);px(b,cx+6,13,'hair',.7);px(b,cx-8,11,'hair',.85);
+ const eye=ex=>{for(let x=-1;x<4;x++){px(b,ex+x,19,'hair',.05);px(b,ex+x,20,'hair',.08)}for(let x=0;x<3;x++){px(b,ex+x,22,'eye',.15);px(b,ex+x,23,'eye',.35)}px(b,ex+1,22,'eye',.99);px(b,ex+2,23,'eye',.8)};
+ eye(cx-8);eye(cx+5);
+ for(let i=0;i<7;i++)px(b,cx-9+(i>>1),17+i,'scar',.6);
+ px(b,cx,26,'skin',.15);px(b,cx+1,27,'skin',.12);for(let x=-3;x<=3;x++)px(b,cx+x,30,'skin',.08);
+ for(let x=-8;x<=8;x+=3)px(b,cx+x,33,'skin',.25);
+ px(b,cx+11,22,'cy',.8);px(b,cx+11,23,'cy',.5);
+ return b}
+
+// Ingénieur à mains nues, tenues mêlant médiéval fantastique et technologie (planches/ingenieur-exil-propositions.html).
+// Réutilise le moteur 16 bits de engineer-colosse.js (buf, blob, rect, px, render, mirror) ; expose EXILE, exile(), exilePortrait().
+
+R.wool=['#141519','#272a33','#3e4250','#5a5f72','#848a9e'];   // drap de laine gris ardoise
+R.brz=['#1e140e','#4a3020','#7a5236','#a8784e','#d4a878'];    // cuir bouilli / cuivre patiné (pas d'or)
+MAT.push('wool','brz');
+
+// Tenues : chaque piste combine une pièce « d'avant » (tabard, manteau, jaque) et une pièce tyrienne lumineuse.
+const EXILE={
+ A:{name:'Chevalier de l’Exil',sub:'tabard de laine à glyphe, épaulières de plates à rivets cyan, grèves d’acier',
+    leg:'wool',boot:'iron',torso:'wool',sleeve:'suit',glove:'iron'},
+ B:{name:'Templier technomancien',sub:'capuche de lin rabattue, plastron runique, manteau fendu, gantelets à circuits',
+    leg:'wool',boot:'iron',torso:'suit',sleeve:'wool',glove:'iron'},
+ C:{name:'Arpenteur des ruines',sub:'jaque de cuir sanglé, une grande épaulière tyrienne, écharpe, ceinture à outils',
+    leg:'leath',boot:'leath',torso:'leath',sleeve:'linen',glove:'skin'},
+};
+
+// Options du jeu (vue de profil) : aim {ang (rad), rec, flash, pulse} = bras tendu, gantelet vers l'angle ;
+// hands 'pray' | 'knees' ; depth 0..6 = agenouillement ; lotus = assis en tailleur ; blink = yeux clos ; ub = buste décalé.
+function exile(o){
+ const{dir='d',f=0,pose='idle',v='A',aim=null,hands='',lotus=false,blink=false,ub=0}=o;const T=EXILE[v];const b=buf(32,34);
+ const step=pose==='walk'?[0,1,0,-1][f]:0, bob=pose==='walk'?(f%2?-1:0):0;
+ const hurt=pose==='hurt', win=pose==='win';
+ const depth=o.depth??(pose==='kneel'?4:0), kneel=depth>=2&&!lotus;
+ const Yl=bob+depth+(hurt?1:0), Y=Yl+ub, X=16+(hurt?-1:0), S=dir==='s', U=dir==='u', D=dir==='d';
+ // ---- jambes : chausses + bottes (grèves d'acier ou cuir à coque de fer)
+ const leg=(lx,ly,len,back)=>{const s=back?-.25:0;rect(b,lx,ly,4,len,T.leg,s);rect(b,lx,ly+len,S?5:4,3,T.boot,s);
+  if(T.boot==='iron'){px(b,lx+1,ly+len-1,'iron',.9+s);px(b,lx+1,ly+len+1,'cy',.55+s)}else{px(b,lx+(S?4:3),ly+len+2,'iron',.7+s);px(b,lx+1,ly+len,'brz',.8+s)}};
+ if(lotus){const k=Yl-2;rect(b,X-6,26+k,12,2,T.leg,-.05);rect(b,X-6,28+k,5,2,T.boot,-.1);rect(b,X+1,28+k,5,2,T.boot);px(b,X+3,28+k,'cy',.55)}
+ else if(!kneel){
+  if(S){leg(X-2-step,22+Yl,5,true);leg(X-2+step,22+Yl,5,false)}
+  else{leg(X-5,22+Yl+(step>0?-1:0),5-(step>0?1:0),false);leg(X+1,22+Yl+(step<0?-1:0),5-(step<0?1:0),false)}
+ }else{const k=Yl-2;rect(b,X-5,23+k,10,3,T.leg,-.1);rect(b,X-6,25+k,5,3,T.boot);rect(b,X+2,25+k,4,3,T.boot)}
+ // ---- bras arrière (profil)
+ const arm=(ax,ay,dy,front)=>{const s=front?0:-.3;rect(b,ax-1,ay,3,4,T.sleeve,s);
+  if(T.glove==='skin')blob(b,ax+.5,ay+5+dy,1.7,1.6,'skin',s);else{blob(b,ax+.5,ay+5+dy,1.9,1.7,T.glove,.1+s);if(v==='B')px(b,ax+.5,ay+5+dy,'cy',.7+s)}};
+ if(S&&!hands)arm(X-2-step*.8,14+Y,0,false);
+ // ---- B : manteau fendu sous la taille (dessiné derrière les jambes avant)
+ if(v==='B'&&!kneel&&!lotus){if(S)rect(b,X-5,21+Y,3,5,'wool',-.1);else for(const sx of[-1,1])blob(b,X+sx*3.2,23.5+Y,3,3.5,'wool',-.05,(x,y)=>y>=21+Y)}
+ // ---- torse
+ const tw=S?5:6.5;
+ blob(b,X,17+Y,tw,5,T.torso,.05);
+ if(v==='A'){ // tabard : bande de lin centrale, glyphe cyan, ceinture de cuir, pans jusqu'aux genoux
+  if(!S){rect(b,X-1,13+Y,3,8,'linen',.15);px(b,X,15+Y,'cy',.95);px(b,X-1,16+Y,'cy',.5);px(b,X+1,16+Y,'cy',.5);px(b,X,17+Y,'cy',.7)}
+  rect(b,X-tw+1|0,20+Y,(tw*2-1)|0,2,'leath',.05);px(b,X+(S?2:0),20+Y,'iron',.9);
+  if(!kneel){rect(b,X-(S?1:3),22+Y,S?4:6,4,'wool',.05);if(!S)rect(b,X-1,22+Y,3,4,'linen',.1)}
+ }else if(v==='B'){ // plastron tyrien : cercle runique
+  if(!U){const cx=X+(S?2:0);for(const[dx,dy]of[[0,-1],[1,0],[0,1],[-1,0]])px(b,cx+dx,16+Y+dy,'cy',.7);px(b,cx,16+Y,'cy',1)}
+  else{rect(b,X-2,14+Y,4,5,'iron',.05);px(b,X,16+Y,'cy',.8)}
+  rect(b,X-tw+1|0,20+Y,(tw*2-1)|0,2,'iron',-.05);
+ }else{ // jaque de cuir : baudrier en diagonale, boucle de fer, ceinture à outils
+  for(let i=0;i<8;i++){const sx=U?X+3-i:X-3+i;if(!S||i>2)px(b,sx,13+Y+i*.8,'brz',.55)}
+  if(!U)px(b,X+(S?2:1),16+Y,'iron',.95);
+  rect(b,X-tw+1|0,20+Y,(tw*2-1)|0,2,'brz',.1);
+  if(!U){blob(b,X-(S?0:4),22+Y,1.5,1.4,'leath',.1);if(!S)blob(b,X+4,22+Y,1.5,1.4,'leath',.1);px(b,X+(S?1:-2),21+Y,'cy',.6)}
+ }
+ // ---- bras avant
+ if(!S){
+  const sw=pose==='walk'?step:0, L=X-8, Rr=X+7;
+  arm(L,14+Y,sw,true);
+  const r=aim?(aim.rec||0):0;
+  if(win||(U&&aim)){ // bras levé ; tir vers le nord (de dos) : décharge au-dessus du gantelet
+   rect(b,Rr-1,9+Y+r,3,5,T.sleeve);blob(b,Rr+.5,8+Y+r,1.9,1.7,T.glove==='skin'?'skin':T.glove,.15);if(v==='C'||aim)px(b,Rr,8+Y+r,'cy',.9);
+   if(aim&&aim.flash)for(const[dx,dy,l]of[[0,-2,1],[1,-2,.9],[0,-3,.8],[-1,-3,.7],[1,-3,.7],[0,-4,.6]])px(b,Rr+dx,8+Y+r+dy,'cy',l)}
+  else if(D&&aim){ // tir vers le sud (de face) : poing tendu vers le spectateur, décharge dessous
+   rect(b,X+3,15+Y,3,3,T.sleeve);blob(b,X+4.5,19+Y-r*.5,2.2,2,T.glove==='skin'?'skin':T.glove,.2);px(b,X+4,19+Y-r*.5,'cy',aim.pulse?1:.8);
+   if(aim.flash)for(const[dx,dy,l]of[[0,3,1],[1,3,.9],[0,4,.8],[-1,4,.7],[2,4,.7],[0,5,.6]])px(b,X+4+dx,19+Y-r*.5+dy,'cy',l)}
+  else arm(Rr,14+Y,-sw,true);
+  if(v==='C'&&!win)px(b,Rr,19+Y-sw,'cy',.8); // gantelet tyrien
+ }
+ // ---- épaules
+ if(v==='A'){ // plates superposées, rivet cyan
+  const pl=(cx,cy)=>{blob(b,cx,cy,3.4,2.6,'iron',.15);blob(b,cx,cy+2,3,1.4,'iron',-.05,(x,y)=>y>=cy+2);px(b,cx,cy,'cy',.75)};
+  if(S)pl(X+1,12.5+Y);else{pl(X-6.5,12.5+Y);pl(X+6.5,12.5+Y)}
+ }else if(v==='B'){ // mantelet de lin et capuche rabattue
+  blob(b,X+(S?0:0),12.5+Y,S?5:8.5,2.8,'linen',.1);
+  if(!U)for(let x=-2;x<=2;x++)px(b,X+x+(S?1:0),11+Y,'linen',.55);
+  else blob(b,X,11+Y,3.4,2.4,'linen',.2);
+ }else{ // une grande épaulière tyrienne côté gauche, cuir à droite ; écharpe de laine
+  const big=D?X+6.5:X-6.5, small=D?X-6.5:X+6.5;
+  if(S){blob(b,X+1,12.5+Y,2.8,2.2,'leath',.1)}
+  else{blob(b,big,12+Y,4,3.2,'suit',.15);px(b,big-1,10+Y,'suit',1);px(b,big,13+Y,'cy',.8);px(b,big+(D?1:-1),12+Y,'cy',.5);blob(b,small,12.8+Y,2.6,2,'leath',.1)}
+  blob(b,X+(S?1:0),11+Y,S?3.2:4.2,1.8,'wool',.2);if(!U&&!S)rect(b,X+1,12+Y,2,4,'wool',.1);
+ }
+ // ---- col
+ if(v!=='B')rect(b,X-3,10+Y,6,1,v==='A'?'iron':'wool',.1);
+ // ---- tête : coupe classique, raie sur le côté, tempes et nuque couvertes
+ const hx=X+(S?1:0),hy=6+Y+(hurt?1:0);
+ if(U){blob(b,hx,hy,4.4,4.4,'skin',-.05);blob(b,hx,hy,4.8,4.6,'hair',.1,(x,y)=>y<=hy+3);px(b,hx-2,hy-4,'hair',1);px(b,hx-1,hy-4,'hair',.9)}
+ else{
+  blob(b,hx,hy,4.4,4.3,'skin',.08);rect(b,hx-(S?2:3),hy+2,S?6:7,3,'skin',.05);
+  if(S){blob(b,hx-.6,hy-1.2,4.8,3.8,'hair',.1,(x,y)=>y<=hy-1||x<=hx-1);rect(b,hx-4,hy+1,3,2,'hair',.05);px(b,hx+1,hy-4,'hair',1);px(b,hx+2,hy-4,'hair',.9)}
+  else{blob(b,hx,hy-1.2,4.9,3.8,'hair',.1,(x,y)=>y<=hy-2||(x<=hx-4||x>=hx+4)&&y<=hy+2);
+   px(b,hx-2,hy-4,'hair',.05);px(b,hx-2,hy-3,'hair',.05);px(b,hx-1,hy-4,'hair',1);px(b,hx,hy-4,'hair',1);px(b,hx+1,hy-3,'hair',.85)}
+  const eye=ex=>{if(blink){px(b,ex,hy,'skin',.12);px(b,ex+1,hy,'skin',.12)}else if(hurt){px(b,ex,hy,'eye',.1);px(b,ex+1,hy,'eye',.1)}else{px(b,ex,hy,'eye',.1);px(b,ex+1,hy,'eye',.98)}px(b,ex,hy-1,'hair',.05);px(b,ex+1,hy-1,'hair',.05)};
+  if(S)eye(hx+2);else{eye(hx-3);eye(hx+1)}
+  if(!S){px(b,hx-3,hy-2,'scar',.6);px(b,hx-2,hy+1,'scar',.6);px(b,hx-2,hy+2,'scar',.5)}else px(b,hx,hy+1,'scar',.6);
+  for(let x=-1;x<=1;x++)if(!S||x>=0)px(b,hx+x+(S?2:0),hy+3,'skin',.12);
+  if(win&&!S){px(b,hx-2,hy+3,'skin',.12);px(b,hx+2,hy+3,'skin',.12)}
+  if(v==='A')px(b,S?hx-2:hx+4,hy,'cy',.7);           // oreillette
+  if(v==='C'){px(b,S?hx+3:hx+1,hy-1,'cy',.85);px(b,S?hx+4:hx+2,hy-1,'cy',.6)} // monocle-capteur
+ }
+ // ---- bras avant (profil), mains nues
+ const glove=(x,y,l)=>{if(T.glove==='skin')blob(b,x,y,1.7,1.6,'skin');else{blob(b,x,y,1.9,1.7,T.glove,.12);px(b,x,y,'cy',l)}};
+ if(S&&hands==='pray'){rect(b,X+1,14+Y,3,3,T.sleeve);glove(X+4,15.5+Y,.9)}
+ else if(S&&hands==='knees'){rect(b,X+1,14+Y,3,4,T.sleeve);glove(X+4.5,22+Yl-1,.6);glove(X-4.5,22+Yl-1,.5)}
+ else if(S&&aim){const c=Math.cos(aim.ang),sn=Math.sin(aim.ang),sx=X+1,sy=15+Y,r=aim.rec||0,L=6-r;
+  for(let u=0;u<=L-1.5;u+=.5)for(let w=-1;w<=1;w+=.5)px(b,Math.round(sx+u*c-w*sn),Math.round(sy+u*sn+w*c),T.sleeve,.6-w*.15);
+  const hx2=sx+L*c,hy2=sy+L*sn;glove(hx2,hy2,aim.pulse?1:.75);
+  const mx=sx+(L+1.5)*c,my=sy+(L+1.5)*sn;if(aim.pulse)px(b,mx,my,'cy',1);
+  if(aim.flash)for(const[dx,dy,l]of[[0,0,1],[1,0,.9],[0,-1,.8],[0,1,.8],[2,0,.6]])px(b,mx+dx*c-dy*sn,my+dx*sn+dy*c,'cy',l)}
+ else if(S){arm(X+.5+step*.8,14+Y,0,true);if(v==='C')px(b,X+1+step*.8,19+Y,'cy',.8)}
+ if(hurt){px(b,X+8,1,'cy',1);px(b,X+9,0,'cy',.7);px(b,X+7,0,'cy',.7)}
+ return b}
+
+// Portrait 48 × 48 : même visage, épaules selon la tenue.
+function exilePortrait(v){const b=buf(48,48),cx=24;
+ if(v==='A'){blob(b,8,43,9,6,'iron',.2);blob(b,40,43,9,6,'iron',.05);px(b,8,41,'cy',.9);px(b,40,41,'cy',.8);rect(b,14,39,20,9,'wool',.05);rect(b,21,39,6,9,'linen',.15);px(b,24,43,'cy',1);px(b,23,44,'cy',.6);px(b,25,44,'cy',.6);rect(b,17,35,14,4,'iron',.1)}
+ else if(v==='B'){blob(b,24,44,22,7,'linen',.1);blob(b,24,38,11,4,'linen',.25);rect(b,18,42,12,6,'suit',.15);for(const[dx,dy]of[[0,-2],[2,0],[0,2],[-2,0]])px(b,24+dx,45+dy,'cy',.8);px(b,24,45,'cy',1)}
+ else{blob(b,40,42,9,7,'suit',.15);px(b,39,39,'cy',.9);px(b,41,42,'cy',.6);blob(b,8,44,7,5,'leath',.1);rect(b,13,40,22,8,'leath',.05);for(let i=0;i<10;i++)px(b,16+i,47-i*.8,'brz',.6);blob(b,24,37,10,3.5,'wool',.2)}
+ blob(b,cx,20,11,12,'skin',.08);rect(b,cx-10,22,20,10,'skin',.05);blob(b,cx,32,8,3,'skin',-.05);
+ blob(b,cx,14,12,7,'hair',.1,(x,y)=>y<=15||((x<cx-9||x>cx+9)&&y<=27));
+ for(let y=8;y<=13;y++)px(b,cx-4,y,'hair',.05);
+ for(let x=-3;x<=6;x++)px(b,cx+x,8+(x>2?1:0),'hair',1);px(b,cx+5,12,'hair',.8);px(b,cx+6,13,'hair',.7);px(b,cx-8,11,'hair',.85);
+ const eye=ex=>{for(let x=-1;x<4;x++){px(b,ex+x,19,'hair',.05);px(b,ex+x,20,'hair',.08)}for(let x=0;x<3;x++){px(b,ex+x,22,'eye',.15);px(b,ex+x,23,'eye',.35)}px(b,ex+1,22,'eye',.99);px(b,ex+2,23,'eye',.8)};
+ eye(cx-8);eye(cx+5);
+ for(let i=0;i<7;i++)px(b,cx-9+(i>>1),17+i,'scar',.6);
+ px(b,cx,26,'skin',.15);px(b,cx+1,27,'skin',.12);for(let x=-3;x<=3;x++)px(b,cx+x,30,'skin',.08);
+ for(let x=-8;x<=8;x+=3)px(b,cx+x,33,'skin',.25);
+ if(v==='A'){px(b,cx+11,22,'cy',.8);px(b,cx+11,23,'cy',.5)}
+ if(v==='C'){for(const[dx,dy]of[[0,-1],[1,0],[0,1],[-1,0],[1,-1],[-1,1],[1,1],[-1,-1]])px(b,cx+6+dx,22+dy,'cy',.6);px(b,cx+6,22,'cy',1)}
+ return b}
+
+// Arbalestrie (piste A · tube runique) et casque de combat de l'Ingénieur, planches/ingenieur-canon-planche.html.
+// Dépend de engineer-colosse.js et engineer-exile.js. Expose cannonBody(), helmetLayer().
+
+if(!R.wood){R.wood=['#1a0e08','#4a2a16','#7a4a26','#a8703a','#d09a5a'];MAT.push('wood')}
+// u = long du tir depuis la main (px), v = travers (négatif = dessus).
+function cannonA(u,v){if(u>=-4&&u<-1&&v>=0&&v<=2)return['wood',.5-u*.04];if(u>=-1&&u<=11&&Math.abs(v+.5)<=2){
+ if(u>=10.4)return['iron',.25];if(Math.abs(u-1)<.6||Math.abs(u-7)<.7)return['brz',v<0?.85:.5];if(u>8.5&&u<10.4&&v<-.5)return['cy',.8];return['iron',v<-1.5?.85:v>.8?.3:.6]}return null}
+// Templier de profil (vers la droite), canon en main, dans un cadre w × h où le gabarit 32 × 34 est posé en (ox, oy).
+function cannonBody({ang=0,rec=0,flash=false,pose='idle',f=0,ub=0}={},w=48,h=48,ox=8,oy=15){
+ const D=Math.PI/180,b0=exile({v:'B',dir:'s',pose,f,ub,aim:{ang:ang*D,rec,pulse:flash}}),b=buf(w,h);
+ for(let y=0;y<b0.h;y++)for(let x=0;x<b0.w;x++){const X=x+ox,Y=y+oy;if(X<w&&Y<h){b.m[Y*w+X]=b0.m[y*b0.w+x];b.s[Y*w+X]=b0.s[y*b0.w+x]}}
+ const bob=pose==='walk'?(f%2?-1:0):0,c=Math.cos(ang*D),s=Math.sin(ang*D),sx=17+ox,sy=15+oy+bob+ub,L=6-rec,hx=sx+L*c,hy=sy+L*s;
+ for(let y=0;y<h;y++)for(let x=0;x<w;x++){const dx=x+.5-hx,dy=y+.5-hy,r=cannonA(dx*c+dy*s,-dx*s+dy*c);if(r)px(b,x,y,r[0],r[1])}
+ blob(b,hx,hy,1.6,1.5,'iron',.15);px(b,hx,hy,'cy',flash?1:.7);
+ if(flash){const mx=hx+11.5*c,my=hy+11.5*s;
+  for(const[a,bb,l]of[[0,0,1],[1,0,1],[2,0,.85],[1,-1,.8],[1,1,.8],[3,0,.6],[2,-2,.5],[2,2,.5]])px(b,mx+a*c-bb*s,my+a*s+bb*c,'cy',l)}
+ return b}
+// Casque seul (calque), p = 0 relevé → 1 fermé : les plaques montent du col ; dy = décalage vertical de la tête.
+function helmetLayer(p,dy=0,w=48,h=48,ox=8,oy=15){const b=buf(w,h);if(p<=0)return b;const hx=17+ox,hy=6+oy+dy,top=hy+6-p*11.5;
+ blob(b,hx,hy-.3,5.3,5.3,'iron',.12,(x,y)=>y>=top);
+ rect(b,hx-5,hy+2,9,3,'iron',-.05);
+ for(const y of[hy-3,hy+1])if(y>=top)for(let x=hx-4;x<=hx+3;x++)px(b,x,y,'iron',.35);
+ if(p>=.75)for(let x=hx;x<=hx+5;x++)px(b,x,hy,'cy',p>=1?(x===hx+4?1:.75):.45);
+ if(top<=hy-5)px(b,hx-1,hy-5,'cy',.8);
+ for(let x=hx-4;x<=hx+3;x++)if(hy+5>=top)px(b,x,hy+5,'brz',.6);
+ return b}
+
+// Ingénieur exilé, torse nu en pantalon déchiré, avant de recevoir sa combinaison
+// (planches/ingenieur-pantalon-dechire-propositions.html). Même moteur 16 bits et même gabarit 32 × 34
+// que engineer-colosse.js / engineer-exile.js (à charger avant). Expose RAGGED, ragged(), raggedPortrait().
+
+R.rag=['#1a1712','#3a342a','#62594a','#8e836c','#bcb096'];   // toile écrue délavée
+for(const m of['wool','brz','rag'])if(!MAT.includes(m))MAT.push(m);
+
+// P = matière du pantalon ; foot = 'skin' (pieds nus) ou 'linen' (chiffons) ; trous = genou(x) percé(s).
+const RAGGED={
+ A:{name:'Chausses de l’Exil',sub:'torse nu, chausses de laine ardoise (celles du Templier) déchirées au genou et à mi-mollet, corde à la taille, pieds nus',
+    P:'wool',foot:'skin',belt:'rope'},
+ B:{name:'Le rescapé bandé',sub:'pantalon de toile écrue en lambeaux, bandage de lin en travers des côtes et à l’avant-bras, pieds enveloppés de chiffons',
+    P:'rag',foot:'linen',belt:'rope',wrap:true},
+ C:{name:'Le marqué',sub:'reste de la combinaison sarcelle arraché aux cuisses, cercle runique éteint tatoué sur la poitrine (là où viendra le plastron), pieds nus',
+    P:'suit',foot:'skin',belt:'iron',mark:true},
+};
+
+// Options : dir 'd' | 's' | 'u', pose 'idle' | 'walk' | 'hurt' | 'kneel' | 'win',
+// punch {ang, rec} = bras tendu poing nu ; hands 'pray' | 'knees' ; depth ; lotus ; blink ; ub.
+function ragged(o){
+ const{dir='d',f=0,pose='idle',v='A',punch=null,hands='',lotus=false,blink=false,ub=0}=o;const T=RAGGED[v],P=T.P;const b=buf(32,34);
+ const step=pose==='walk'?[0,1,0,-1][f]:0, bob=pose==='walk'?(f%2?-1:0):0;
+ const hurt=pose==='hurt', win=pose==='win';
+ const depth=o.depth??(pose==='kneel'?4:0), kneel=depth>=2&&!lotus;
+ const Yl=bob+depth+(hurt?1:0), Y=Yl+ub, X=16+(hurt?-1:0), S=dir==='s', U=dir==='u', D=dir==='d';
+ // ---- jambes : pantalon déchiré, ourlet effiloché, tibia et pied nus
+ const leg=(lx,ly,len,back,hole)=>{const s=back?-.25:0;
+  rect(b,lx,ly,4,len,P,s);
+  for(let x=0;x<4;x++)if((x+lx)%2===0)px(b,lx+x,ly+len,P,.35+s);            // franges de l'ourlet
+  if(hole){px(b,lx+1,ly+2,'skin',.55+s);px(b,lx+2,ly+2,'skin',.4+s);px(b,lx+1,ly+1,P,.15+s)}  // genou percé
+  for(let x=1;x<3;x++)if((x+lx)%2)px(b,lx+x,ly+len,'skin',.5+s);
+  px(b,lx+1,ly+len+1,'skin',.6+s);px(b,lx+2,ly+len+1,'skin',.45+s);         // tibia
+  rect(b,lx+(S?0:0),ly+len+2,S?5:4,1,T.foot,.1+s);if(S)px(b,lx+4,ly+len+2,T.foot,.7+s)}; // pied
+ if(lotus){const k=Yl-2;rect(b,X-6,26+k,12,2,P,-.05);px(b,X-5,26+k,'skin',.5);rect(b,X-6,28+k,4,1,T.foot,-.1);rect(b,X+2,28+k,4,1,T.foot)}
+ else if(!kneel){
+  if(S){leg(X-2-step,22+Yl,5,true,false);leg(X-2+step,22+Yl,5,false,true)}
+  else{leg(X-5,22+Yl+(step>0?-1:0),5-(step>0?1:0),false,!U);leg(X+1,22+Yl+(step<0?-1:0),5-(step<0?1:0),false,false)}
+ }else{const k=Yl-2;rect(b,X-5,23+k,10,3,P,-.1);px(b,X+2,24+k,'skin',.5);rect(b,X-6,26+k,4,1,T.foot);rect(b,X+3,26+k,3,1,T.foot)}
+ // ---- bras (peau), poing nu
+ const arm=(ax,ay,dy,front)=>{const s=front?0:-.3;rect(b,ax-1,ay,3,4,'skin',s-.05);blob(b,ax+.5,ay+5+dy,1.7,1.6,'skin',s+.05);
+  if(T.wrap&&front){px(b,ax-1,ay+3,'linen',.6+s);px(b,ax,ay+3,'linen',.75+s);px(b,ax+1,ay+3,'linen',.5+s)}};
+ if(S&&!hands&&!punch)arm(X-2-step*.8,14+Y,0,false);
+ // ---- bassin : haut du pantalon et ceinture (corde ou sangle de fer)
+ const tw=S?4.5:6;
+ rect(b,X-(S?4:5),20+Y,S?8:10,3,P,.05);
+ if(T.belt==='rope'){for(let x=-(S?4:5);x<(S?4:5);x++)px(b,X+x,20+Y,'leath',(x&1)?.45:.7);if(!U){px(b,X+(S?2:1),21+Y,'leath',.6);px(b,X+(S?2:1),22+Y,'leath',.4)}}
+ else{rect(b,X-(S?4:5),20+Y,S?8:10,1,'iron',.1);if(!U)px(b,X+(S?2:0),20+Y,'cy',.35)}
+ // ---- torse nu
+ blob(b,X+(S?.5:0),16.5+Y,tw,4.6,'skin',.02);
+ if(D){ // pectoraux, sternum, abdominaux
+  for(let x=1;x<=4;x++){px(b,X-x,16+Y,'skin',.2);px(b,X+x-1,16+Y,'skin',.25)}
+  px(b,X,14+Y,'skin',.35);px(b,X,15+Y,'skin',.3);
+  for(const yy of[18,19]){px(b,X-2,yy+Y,'skin',.3);px(b,X+1,yy+Y,'skin',.3)}
+  px(b,X-5,18+Y,'scar',.55);px(b,X-4,19+Y,'scar',.45);                       // ecchymose aux côtes
+ }else if(S){px(b,X+3,16+Y,'skin',.25);px(b,X+4,16+Y,'skin',.2);px(b,X+2,18+Y,'skin',.3);px(b,X-1,17+Y,'skin',.25)}
+ else{for(let yy=13;yy<=19;yy++)px(b,X,yy+Y,'skin',.3);px(b,X-3,14+Y,'skin',.25);px(b,X+3,14+Y,'skin',.25);px(b,X-2,15+Y,'skin',.3);px(b,X+2,15+Y,'skin',.3);
+  for(const[dx,dy]of[[-3,17],[-2,18],[2,16],[3,17]])px(b,X+dx,dy+Y,'scar',.55)} // marques de fouet dans le dos
+ if(T.mark&&D){const cx=X,cy=16+Y;for(const[dx,dy]of[[0,-1],[1,0],[0,1],[-1,0]])px(b,cx+dx,cy+dy,'cy',.32);px(b,cx,cy,'cy',.5)}
+ if(T.mark&&S){px(b,X+3,15+Y,'cy',.32);px(b,X+3,16+Y,'cy',.5)}
+ if(T.wrap){ // bandage en écharpe : épaule gauche → hanche droite
+  for(let i=0;i<9;i++){const sx=D?X-4+i:U?X+4-i:X-2+i*.6;if(S&&i<3)continue;px(b,sx,13+Y+i*.8,'linen',.7-i*.03);px(b,sx,14+Y+i*.8,'linen',.45)}}
+ // ---- épaules nues et cou
+ if(S)blob(b,X+1,13+Y,3,2.2,'skin',.15);
+ else{blob(b,X-5.8,13+Y,2.8,2.2,'skin',.12);blob(b,X+5.8,13+Y,2.8,2.2,'skin',.08)}
+ rect(b,X-2+(S?1:0),10+Y,S?3:4,3,'skin',.1);
+ if(D){px(b,X-3,12+Y,'skin',.3);px(b,X-2,12+Y,'skin',.32);px(b,X+2,12+Y,'skin',.32);px(b,X+3,12+Y,'skin',.3)} // clavicules
+ // ---- bras avant (face/dos)
+ if(!S){
+  const sw=pose==='walk'?step:0, L=X-8, Rr=X+7;
+  arm(L,14+Y,sw,true);
+  if(win){rect(b,Rr-1,9+Y,3,5,'skin',-.05);blob(b,Rr+.5,8+Y,1.7,1.6,'skin',.15)}
+  else arm(Rr,14+Y,-sw,true);
+ }
+ // ---- tête : même visage, coupe à raie, tempes et nuque couvertes ; barbe de quelques jours
+ const hx=X+(S?1:0),hy=6+Y+(hurt?1:0);
+ if(U){blob(b,hx,hy,4.4,4.4,'skin',-.05);blob(b,hx,hy,4.8,4.6,'hair',.1,(x,y)=>y<=hy+3);px(b,hx-2,hy-4,'hair',1);px(b,hx-1,hy-4,'hair',.9);px(b,hx+2,hy-1,'hair',.85)}
+ else{
+  blob(b,hx,hy,4.4,4.3,'skin',.08);rect(b,hx-(S?2:3),hy+2,S?6:7,3,'skin',.05);
+  if(S){blob(b,hx-.6,hy-1.2,4.8,3.8,'hair',.1,(x,y)=>y<=hy-1||x<=hx-1);rect(b,hx-4,hy+1,3,2,'hair',.05);px(b,hx+1,hy-4,'hair',1);px(b,hx+2,hy-4,'hair',.9);px(b,hx+3,hy-3,'hair',.7)}
+  else{blob(b,hx,hy-1.2,4.9,3.8,'hair',.1,(x,y)=>y<=hy-2||(x<=hx-4||x>=hx+4)&&y<=hy+2);
+   px(b,hx-2,hy-4,'hair',.05);px(b,hx-2,hy-3,'hair',.05);px(b,hx-1,hy-4,'hair',1);px(b,hx,hy-4,'hair',1);px(b,hx+1,hy-3,'hair',.85);px(b,hx+2,hy-2,'hair',.7)} // mèche tombante
+  const eye=ex=>{if(blink){px(b,ex,hy,'skin',.12);px(b,ex+1,hy,'skin',.12)}else if(hurt){px(b,ex,hy,'eye',.1);px(b,ex+1,hy,'eye',.1)}else{px(b,ex,hy,'eye',.1);px(b,ex+1,hy,'eye',.98)}px(b,ex,hy-1,'hair',.05);px(b,ex+1,hy-1,'hair',.05)};
+  if(S)eye(hx+2);else{eye(hx-3);eye(hx+1)}
+  if(!S){px(b,hx-3,hy-2,'scar',.6);px(b,hx-2,hy+1,'scar',.6);px(b,hx-2,hy+2,'scar',.5)}else px(b,hx,hy+1,'scar',.6);
+  // barbe naissante sur la mâchoire
+  if(S){px(b,hx+1,hy+4,'hair',.45);px(b,hx+3,hy+4,'hair',.45);px(b,hx,hy+3,'hair',.35)}
+  else for(const dx of[-3,-1,1,3])px(b,hx+dx,hy+4,'hair',.45);
+  for(let x=-1;x<=1;x++)if(!S||x>=0)px(b,hx+x+(S?2:0),hy+3,'skin',.12);
+  if(win&&!S){px(b,hx-2,hy+3,'skin',.12);px(b,hx+2,hy+3,'skin',.12)}
+ }
+ // ---- bras avant (profil)
+ if(S&&hands==='pray'){rect(b,X+1,14+Y,3,3,'skin',-.05);blob(b,X+4,15.5+Y,1.7,1.6,'skin',.15)}
+ else if(S&&hands==='knees'){rect(b,X+1,14+Y,3,4,'skin',-.05);blob(b,X+4.5,22+Yl-1,1.7,1.6,'skin',.1);blob(b,X-4.5,22+Yl-1,1.7,1.6,'skin',-.05)}
+ else if(S&&punch){const c=Math.cos(punch.ang),sn=Math.sin(punch.ang),sx=X+1,sy=15+Y,r=punch.rec||0,L=6-r;
+  for(let u=0;u<=L-1.5;u+=.5)for(let w=-1;w<=1;w+=.5)px(b,Math.round(sx+u*c-w*sn),Math.round(sy+u*sn+w*c),'skin',.55-w*.15);
+  blob(b,sx+L*c,sy+L*sn,1.8,1.7,'skin',.15);
+  if(T.wrap)px(b,Math.round(sx+(L-2)*c),Math.round(sy+(L-2)*sn),'linen',.7);
+  if(punch.hit)for(const[dx,dy]of[[2,-2],[3,0],[2,2]])px(b,sx+(L+dx)*c,sy+L*sn+dy,'linen',1)}
+ else if(S)arm(X+.5+step*.8,14+Y,0,true);
+ if(hurt){px(b,X+8,1,'linen',1);px(b,X+9,0,'linen',.7);px(b,X+7,0,'linen',.7)}
+ return b}
+
+// Portrait 48 × 48 : même visage, épaules nues.
+function raggedPortrait(v){const b=buf(48,48),cx=24,T=RAGGED[v];
+ blob(b,cx,46,21,9,'skin',.02);blob(b,7,42,6,5,'skin',.12);blob(b,41,42,6,5,'skin',.02);rect(b,18,33,12,8,'skin',.08);
+ for(let x=-9;x<=-3;x++)px(b,cx+x,40+(x>-6?1:0),'skin',.25);for(let x=3;x<=9;x++)px(b,cx+x,40+(x<6?1:0),'skin',.25); // clavicules
+ px(b,cx,44,'skin',.3);px(b,cx,45,'skin',.3);
+ if(T.wrap)for(let i=0;i<18;i++){px(b,10+i*1.4,38+i*.55,'linen',.75);px(b,10+i*1.4,39+i*.55,'linen',.5);px(b,10+i*1.4,40+i*.55,'linen',.3)}
+ if(T.mark){for(const[dx,dy]of[[0,-2],[2,0],[0,2],[-2,0],[1,-1],[1,1],[-1,1],[-1,-1]])px(b,cx+dx,46+dy,'cy',.3);px(b,cx,46,'cy',.5)}
+ if(!T.wrap&&!T.mark){px(b,12,45,'scar',.55);px(b,13,46,'scar',.45)}
+ blob(b,cx,20,11,12,'skin',.08);rect(b,cx-10,22,20,10,'skin',.05);blob(b,cx,32,8,3,'skin',-.05);
+ blob(b,cx,14,12,7,'hair',.1,(x,y)=>y<=15||((x<cx-9||x>cx+9)&&y<=27));
+ for(let y=8;y<=13;y++)px(b,cx-4,y,'hair',.05);
+ for(let x=-3;x<=6;x++)px(b,cx+x,8+(x>2?1:0),'hair',1);px(b,cx+5,12,'hair',.8);px(b,cx+6,13,'hair',.7);px(b,cx+6,15,'hair',.6);px(b,cx-8,11,'hair',.85);
+ const eye=ex=>{for(let x=-1;x<4;x++){px(b,ex+x,19,'hair',.05);px(b,ex+x,20,'hair',.08)}for(let x=0;x<3;x++){px(b,ex+x,22,'eye',.15);px(b,ex+x,23,'eye',.35)}px(b,ex+1,22,'eye',.99);px(b,ex+2,23,'eye',.8)};
+ eye(cx-8);eye(cx+5);
+ for(let i=0;i<7;i++)px(b,cx-9+(i>>1),17+i,'scar',.6);
+ px(b,cx,26,'skin',.15);px(b,cx+1,27,'skin',.12);for(let x=-3;x<=3;x++)px(b,cx+x,30,'skin',.08);
+ for(let y=28;y<=34;y++)for(let x=-10;x<=10;x++){if(y<31&&Math.abs(x)<8)continue;if(y===34&&Math.abs(x)>7)continue;if(y===30&&Math.abs(x)<4)continue;
+  px(b,cx+x,y,'skin',(x+y)&1?.2:.27)}                                                              // barbe de quelques jours (ombre de la mâchoire)
+ for(let x=-3;x<=3;x++)px(b,cx+x,30,'skin',.06);
+ px(b,cx+7,27,'scar',.5);px(b,cx+8,28,'scar',.4);                                                 // bleu à la pommette
+ return b}
+
+// Ingénieur, mise à jour des sprites et des animations (planches/ingenieur-maj-propositions.html).
+// Mêmes tenues validées (Templier technomancien, Chausses de l'Exil), même gabarit que l'export actuel :
+// images 48 × 48, pieds en (24, 45), tourné vers la droite. Ce qui change : membres articulés (cuisse, tibia,
+// bras, avant-bras) posés par cinématique inverse, pieds ancrés au sol, buste qui penche, manteau qui traîne.
+// Dépend de engineer-colosse.js (R, MAT, buf, put, blob, rect, px), engineer-exile.js, engineer-ragged.js,
+// engineer-cannon.js (cannonA). Expose eng(o), ENG_ANIMS, engFrame(nom, i, corps).
+
+const DEG=Math.PI/180;
+function capsule(b,x0,y0,x1,y1,r,mat,bias=0){const dx=x1-x0,dy=y1-y0,L2=dx*dx+dy*dy;
+ for(let y=Math.floor(Math.min(y0,y1)-r);y<=Math.ceil(Math.max(y0,y1)+r);y++)for(let x=Math.floor(Math.min(x0,x1)-r);x<=Math.ceil(Math.max(x0,x1)+r);x++){
+  const cx=x+.5,cy=y+.5;let t=L2?((cx-x0)*dx+(cy-y0)*dy)/L2:0;t=Math.max(0,Math.min(1,t));
+  const ex=cx-(x0+t*dx),ey=cy-(y0+t*dy);if(Math.hypot(ex,ey)>r)continue;
+  put(b,x,y,mat,.55+(-ex*.55-ey*.3)/r*.3+bias)}}
+// Deux segments de x0,y0 vers x1,y1 : renvoie l'articulation (k) et l'extrémité atteinte (e). dir = côté du pli.
+function ik2(x0,y0,x1,y1,l1,l2,dir){let dx=x1-x0,dy=y1-y0,d=Math.hypot(dx,dy)||.001;const m=l1+l2-.01;if(d>m){dx*=m/d;dy*=m/d;d=m}
+ const a=(l1*l1-l2*l2+d*d)/(2*d),h=Math.sqrt(Math.max(0,l1*l1-a*a));
+ return{kx:x0+dx*a/d+dir*h*dy/d,ky:y0+dy*a/d-dir*h*dx/d,ex:x0+dx,ey:y0+dy}}
+const lerp=(a,b,t)=>a+(b-a)*t,lerp2=(p,q,t)=>[lerp(p[0],q[0],t),lerp(p[1],q[1],t)],ease=t=>t<.5?2*t*t:1-2*(1-t)*(1-t);
+
+// ---------- Tête (visage validé, inchangé) ----------
+function engHead(b,hx,hy,dir,o,exil){const S=dir==='s',U=dir==='u';
+ if(U){blob(b,hx,hy,4.4,4.4,'skin',-.05);blob(b,hx,hy,4.8,4.6,'hair',.1,(x,y)=>y<=hy+3);px(b,hx-2,hy-4,'hair',1);px(b,hx-1,hy-4,'hair',.9);if(exil)px(b,hx+2,hy-1,'hair',.85);return}
+ blob(b,hx,hy,4.4,4.3,'skin',.08);rect(b,hx-(S?2:3),hy+2,S?6:7,3,'skin',.05);
+ if(S){blob(b,hx-.6,hy-1.2,4.8,3.8,'hair',.1,(x,y)=>y<=hy-1||x<=hx-1);rect(b,hx-4,hy+1,3,2,'hair',.05);px(b,hx+1,hy-4,'hair',1);px(b,hx+2,hy-4,'hair',.9);if(exil)px(b,hx+3,hy-3,'hair',.7)}
+ else{blob(b,hx,hy-1.2,4.9,3.8,'hair',.1,(x,y)=>y<=hy-2||(x<=hx-4||x>=hx+4)&&y<=hy+2);
+  px(b,hx-2,hy-4,'hair',.05);px(b,hx-2,hy-3,'hair',.05);px(b,hx-1,hy-4,'hair',1);px(b,hx,hy-4,'hair',1);px(b,hx+1,hy-3,'hair',.85);if(exil)px(b,hx+2,hy-2,'hair',.7)}
+ const eye=ex=>{if(o.blink){px(b,ex,hy,'skin',.12);px(b,ex+1,hy,'skin',.12)}else if(o.hurt){px(b,ex,hy,'eye',.1);px(b,ex+1,hy,'eye',.1)}else{px(b,ex,hy,'eye',.1);px(b,ex+1,hy,'eye',.98)}px(b,ex,hy-1,'hair',.05);px(b,ex+1,hy-1,'hair',.05)};
+ if(S)eye(hx+2);else{eye(hx-3);eye(hx+1)}
+ if(!S){px(b,hx-3,hy-2,'scar',.6);px(b,hx-2,hy+1,'scar',.6);px(b,hx-2,hy+2,'scar',.5)}else px(b,hx,hy+1,'scar',.6);
+ if(exil){if(S){px(b,hx+1,hy+4,'hair',.45);px(b,hx+3,hy+4,'hair',.45);px(b,hx,hy+3,'hair',.35)}else for(const dx of[-3,-1,1,3])px(b,hx+dx,hy+4,'hair',.45)}
+ for(let x=-1;x<=1;x++)if(!S||x>=0)px(b,hx+x+(S?2:0),hy+3,'skin',.12)}
+
+// ---------- Profil ----------
+// o : body 'templier' | 'exil' ; dy = bassin abaissé (px) ; ub = buste abaissé ; lean = épaules avancées (px) ;
+// hd [dx, dy] = tête ; legF / legB {x, lift, tilt} (pied par rapport au bassin) ou {K, A, lie} (points imposés) ;
+// armF / armB {a, e} (angles en degrés depuis la verticale, + = vers l'avant), {to:[x, y]} ou {aim:{ang, rec, pulse, flash}} ;
+// coat = traîne du pan arrière (px) ; rune, glow = éclat du cercle runique et du gantelet ; lotus ; blink ; hurt ;
+// cannon {ang (deg), rec, flash} = Arbalestrie en main ; fx [[x, y, matière, lumière]…].
+function engSide(o){
+ const b=buf(48,48),TP=(o.body||'templier')==='templier',X=24;
+ const dy=Math.round(o.dy||0),Yb=dy+(o.ub||0),lean=Math.round(o.lean||0),tx=X+Math.trunc(lean/2),hd=o.hd||[0,0];
+ const glow=o.glow??.7,rune=o.rune??.7,hip=[X,37+dy],lotus=!!o.lotus,SL=TP?'wool':'skin';
+ const leg=(L,far)=>{L=L||{};const s=far?-.25:0;let K,A;
+  if(L.K){K=L.K;A=L.A}else{const r=ik2(hip[0],hip[1],hip[0]+(L.x||0),42-(L.lift||0),2.6,2.6,1);K=[r.kx,r.ky];A=[r.ex,r.ey]}
+  const ax=Math.round(A[0]),ay=Math.round(A[1]),tl=c=>L.tilt>0?(c>=3?-1:0):L.tilt<0?(c<=1?-1:0):0;
+  capsule(b,hip[0],hip[1],K[0],K[1],2.4,'wool',s);
+  if(TP){capsule(b,K[0],K[1],A[0],A[1]+(L.lie?0:1),2.05,'wool',s);
+   if(L.lie){rect(b,ax-2,ay-1,3,3,'iron',s-.1);px(b,ax-1,ay,'cy',.5+s)}
+   else{for(let c=0;c<5;c++)for(let r=0;r<3;r++)put(b,ax-2+c,ay+r+tl(c),'iron',.75-c/5*.45-r/3*.2+s);
+    px(b,ax-1,ay-1,'iron',.9+s);px(b,ax-1,ay+1,'cy',.55+s)}}
+  else{const mx=(K[0]+A[0])/2,my=(K[1]+A[1])/2;
+   capsule(b,K[0],K[1],A[0],A[1]+(L.lie?0:1),1.45,'skin',s-.05);capsule(b,K[0],K[1],mx,my,2.1,'wool',s);
+   if(!L.lie){px(b,Math.round(mx)-2,Math.round(my)+2,'wool',.35+s);px(b,Math.round(mx),Math.round(my)+2,'wool',.35+s)}
+   if(!far)px(b,Math.round(K[0]),Math.round(K[1]),'skin',.5);
+   if(L.lie)rect(b,ax-2,ay,3,1,'skin',s);else for(let c=0;c<5;c++)put(b,ax-2+c,ay+2+tl(c),'skin',(c===4?.7:.45)+s)}};
+ const hand=(x,y,far,l)=>{const s=far?-.3:0;if(TP){blob(b,x,y,2.1,1.9,'iron',.1+s);px(b,x,y,'cy',(l??glow)+s)}else blob(b,x,y,1.9,1.8,'skin',s+.05)};
+ const arm=(A,far)=>{A=A||{};const s=far?-.3:0,sx=(far?X-2.5:X+.5)+lean,sy=29.5+Yb;
+  if(A.aim){ // même géométrie que l'export actuel : épaule (25, 30), bras tendu de 6 − recul px, bouche à 7,5 px
+   const m=A.aim,c=Math.cos(m.ang),sn=Math.sin(m.ang),ax=X+1+lean,ay=30+Yb,L=6-(m.rec||0);
+   for(let u=0;u<=L-1.5;u+=.5)for(let w=-1.5;w<=1.5;w+=.5)px(b,Math.round(ax+u*c-w*sn),Math.round(ay+u*sn+w*c),u>L-3.2&&TP?'iron':SL,(TP?.6:.55)-w*.13+s);
+   hand(ax+L*c,ay+L*sn,far,m.pulse?1:.75);
+   const mx=ax+(L+1.5)*c,my=ay+(L+1.5)*sn;if(m.pulse&&TP)px(b,mx,my,'cy',1);
+   if(m.flash)for(const[u,v,l]of[[0,0,1],[1,0,1],[0,-1,.85],[0,1,.85],[2,0,.8],[3,0,.6],[1,-2,.55],[1,2,.55]])px(b,mx+u*c-v*sn,my+u*sn+v*c,TP?'cy':'linen',l);
+   return}
+  let E,H;
+  if(A.to){const r=ik2(sx,sy,A.to[0],A.to[1],2.7,2.7,-1);E=[r.kx,r.ky];H=[r.ex,r.ey]}
+  else{const a=(A.a||0)*DEG,e=a+(A.e||0)*DEG;E=[sx+2.6*Math.sin(a),sy+2.6*Math.cos(a)];H=[E[0]+2.6*Math.sin(e),E[1]+2.6*Math.cos(e)]}
+  if(!TP&&!far){capsule(b,sx-1,sy,E[0]-1,E[1],1.9,'skin',-.4);capsule(b,E[0]-1,E[1],H[0]-1,H[1]+.5,1.7,'skin',-.4)} // ombre qui détache le bras nu du torse
+  capsule(b,sx,sy,E[0],E[1],1.9,SL,s);capsule(b,E[0],E[1],H[0],H[1],1.65,SL,s-.03);
+  if(TP)capsule(b,(E[0]+H[0])/2,(E[1]+H[1])/2,H[0],H[1],1.75,'iron',s);     // manchette du gantelet
+  hand(H[0],H[1],far)};
+ // ---- plan arrière : bras et jambe éloignés
+ if(!o.cannon)arm(o.armB,true);
+ if(!lotus)leg(o.legB,true);
+ // ---- pan arrière du manteau fendu (Templier) : suit le bassin, traîne à la marche, s'étale au sol à genoux
+ if(TP&&!lotus){let ex=19.5-(o.coat||0),ey=40.5+dy;if(ey>43){ex-=1.5+(ey-43)*.6;ey=43}capsule(b,19.8+lean*.3,36.5+Yb,ex,ey,1.8,'wool',-.12)}
+ if(!lotus)leg(o.legF,false);
+ // ---- buste
+ if(TP){
+  blob(b,tx+.5,32+Yb,6.2,5.3,'suit',.05);blob(b,tx+2.5,30.5+Yb,3.4,2.6,'suit',.14);    // plastron bombé
+  const cx=tx+3,cy=31+Yb;for(const[u,v]of[[0,-1],[1,0],[0,1],[-1,0]])px(b,cx+u,cy+v,'cy',rune);px(b,cx,cy,'cy',Math.min(1,rune+.3));
+  rect(b,X-5,35+Yb,11,2,'iron',-.05);
+  blob(b,X-4.2+lean,27+Yb,2.5,2.3,'linen',-.08);                             // capuche rabattue sur la nuque
+  blob(b,X+.3+lean,27.6+Yb,6.3,3.1,'linen',.1);for(let x=-3;x<=3;x++)px(b,X+x+1+lean,26+Yb,'linen',.55);
+ }else{
+  rect(b,X-5,35+Yb,10,3,'wool',.05);for(let x=-5;x<5;x++)px(b,X+x,35+Yb,'leath',(x&1)?.45:.7);px(b,X+3,36+Yb,'leath',.6);px(b,X+3,37+Yb,'leath',.4);
+  blob(b,tx+.3,31.4+Yb,5.7,4.9,'skin',.02);blob(b,tx+2.6,30+Yb,3.3,2.5,'skin',.1);                // dos large, pectoral
+  for(let x=1;x<=5;x++)px(b,tx+x,32+Yb,'skin',.25);px(b,tx+3,34+Yb,'skin',.3);px(b,tx+4,34+Yb,'skin',.28);px(b,tx-3,31+Yb,'skin',.25);px(b,tx-3,33+Yb,'skin',.25);
+  blob(b,X+.3+lean,28.3+Yb,4,2.9,'skin',.15);rect(b,X-1+lean,25+Yb,4,3,'skin',.08);
+ }
+ // ---- assis en tailleur : jambes croisées devant le bassin, manteau étalé derrière
+ if(lotus){const gy=43;if(TP)blob(b,X-5,gy+.2,3.2,1.6,'wool',-.15);
+  blob(b,X+1,gy-.3,7,2.2,'wool',-.22);blob(b,X+6,gy-1,2.4,2,'wool',-.1);
+  if(TP){rect(b,X-2,gy,4,2,'iron',-.05);px(b,X,gy,'cy',.55);rect(b,X-7,gy,2,2,'iron',-.25)}
+  else{rect(b,X-2,gy+1,4,1,'skin',.1);px(b,X+2,gy+1,'skin',.7);px(b,X+5,gy-1,'skin',.5);rect(b,X-7,gy+1,2,1,'skin',-.15)}}
+ engHead(b,X+1+lean+hd[0],21+Yb+hd[1],'s',o,!TP);
+ // ---- bras proche, Arbalestrie
+ if(o.cannon){const m=o.cannon,c=Math.cos(m.ang*DEG),sn=Math.sin(m.ang*DEG),L=6-(m.rec||0),ax=X+1+lean,ay=30+Yb,hx=ax+L*c,hy=ay+L*sn;
+  arm({aim:{ang:m.ang*DEG,rec:m.rec,pulse:m.flash}},false);
+  for(let y=0;y<48;y++)for(let x=0;x<48;x++){const u=x+.5-hx,v=y+.5-hy,r=cannonA(u*c+v*sn,-u*sn+v*c);if(r)px(b,x,y,r[0],r[1])}
+  blob(b,hx,hy,1.6,1.5,'iron',.15);px(b,hx,hy,'cy',m.flash?1:.7);
+  blob(b,hx+4.5*c+1*sn,hy+4.5*sn+1.2*c,1.5,1.4,'iron',-.1);                // main gauche sous le tube
+  if(m.flash){const mx=hx+11.5*c,my=hy+11.5*sn;for(const[u,v,l]of[[0,0,1],[1,0,1],[2,0,.85],[1,-1,.8],[1,1,.8],[3,0,.6],[2,-2,.5],[2,2,.5]])px(b,mx+u*c-v*sn,my+u*sn+v*c,'cy',l)}}
+ else arm(o.armF,false);
+ for(const[x,y,m,l]of o.fx||[])px(b,x,y,m,l);
+ return b}
+
+// ---------- Face et dos ----------
+// o : dir 'd' | 'u' ; dy (négatif = se hausse) ; ub ; hd ; liftL, liftR = pied levé (px) ; sw = balancement des bras (px) ;
+// sway = pans du manteau ; aim {rec, pulse, flash} ; rune ; glow ; blink.
+function engFront(o){
+ const b=buf(48,48),TP=(o.body||'templier')==='templier',U=o.dir==='u',D=!U,X=24;
+ const dy=o.dy||0,Yb=dy+(o.ub||0),hd=o.hd||[0,0],glow=o.glow??.7,rune=o.rune??.7,sw=o.sw||0,sway=o.sway||0,aim=o.aim,r=aim?(aim.rec||0):0;
+ const leg=(lx,lift,hole)=>{const ly=37+dy,len=5-dy-lift;
+  if(TP){rect(b,lx,ly,4,len,'wool');rect(b,lx,ly+len,4,3,'iron');px(b,lx+1,ly+len-1,'iron',.9);px(b,lx+1,ly+len+1,'cy',.55);if(lift>=2)px(b,lx+1,ly+2,'wool',.95)}
+  else{rect(b,lx,ly,4,len,'wool');for(let x=0;x<4;x++)if((x+lx)%2===0)px(b,lx+x,ly+len,'wool',.35);
+   if(hole){px(b,lx+1,ly+2,'skin',.55);px(b,lx+2,ly+2,'skin',.4);px(b,lx+1,ly+1,'wool',.15)}
+   for(let x=1;x<3;x++)if((x+lx)%2)px(b,lx+x,ly+len,'skin',.5);
+   px(b,lx+1,ly+len+1,'skin',.6);px(b,lx+2,ly+len+1,'skin',.45);rect(b,lx,ly+len+2,4,1,'skin',.1)}};
+ leg(X-5,o.liftL||0,!U);leg(X+1,o.liftR||0,false);
+ const arm=(ax,d)=>{if(TP){rect(b,ax-1,29+Yb,3,4+Math.max(0,d),'wool');blob(b,ax+.5,34+Yb+d,1.9,1.7,'iron',.1);px(b,ax+.5,34+Yb+d,'cy',glow)}
+  else{rect(b,ax-1,29+Yb,3,4+Math.max(0,d),'skin',-.05);blob(b,ax+.5,34+Yb+d,1.7,1.6,'skin',.05)}};
+ if(TP){
+  for(const s of[-1,1])blob(b,X+s*3.2+(s>0?Math.max(0,sway):Math.min(0,sway)),38.5+Yb,3,3.5,'wool',-.05,(x,y)=>y>=36+Yb);
+  blob(b,X,32+Yb,6.5,5,'suit',.05);
+  if(D){for(const[u,v]of[[0,-1],[1,0],[0,1],[-1,0]])px(b,X+u,31+Yb+v,'cy',rune);px(b,X,31+Yb,'cy',Math.min(1,rune+.3))}
+  else{rect(b,X-2,29+Yb,4,5,'iron',.05);px(b,X,31+Yb,'cy',Math.min(1,rune+.1))}
+  rect(b,X-6,35+Yb,12,2,'iron',-.05);
+ }else{
+  rect(b,X-5,35+Yb,10,3,'wool',.05);for(let x=-5;x<5;x++)px(b,X+x,35+Yb,'leath',(x&1)?.45:.7);if(D){px(b,X+1,36+Yb,'leath',.6);px(b,X+1,37+Yb,'leath',.4)}
+  blob(b,X,31.5+Yb,6,4.6,'skin',.02);
+  if(D){for(let x=1;x<=4;x++){px(b,X-x,31+Yb,'skin',.2);px(b,X+x-1,31+Yb,'skin',.25)}px(b,X,29+Yb,'skin',.35);px(b,X,30+Yb,'skin',.3);
+   for(const yy of[33,34]){px(b,X-2,yy+Yb,'skin',.3);px(b,X+1,yy+Yb,'skin',.3)}px(b,X-5,33+Yb,'scar',.55);px(b,X-4,34+Yb,'scar',.45)}
+  else{for(let yy=28;yy<=34;yy++)px(b,X,yy+Yb,'skin',.3);px(b,X-3,29+Yb,'skin',.25);px(b,X+3,29+Yb,'skin',.25);px(b,X-2,30+Yb,'skin',.3);px(b,X+2,30+Yb,'skin',.3);
+   for(const[u,v]of[[-3,32],[-2,33],[2,31],[3,32]])px(b,X+u,v+Yb,'scar',.55)}
+  blob(b,X-5.8,28+Yb,2.8,2.2,'skin',.12);blob(b,X+5.8,28+Yb,2.8,2.2,'skin',.08);rect(b,X-2,25+Yb,4,3,'skin',.1);
+  if(D){px(b,X-3,27+Yb,'skin',.3);px(b,X-2,27+Yb,'skin',.32);px(b,X+2,27+Yb,'skin',.32);px(b,X+3,27+Yb,'skin',.3)}
+ }
+ const L=X-8,Rr=X+7,GL=TP?'iron':'skin',FL=TP?'cy':'linen';
+ arm(L,sw);
+ if(U&&aim){rect(b,Rr-1,24+Yb+r,3,5,TP?'wool':'skin');blob(b,Rr+.5,23+Yb+r,1.9,1.7,GL,.15);if(TP)px(b,Rr,23+Yb+r,'cy',.9);
+  if(aim.flash)for(const[u,v,l]of[[0,-2,1],[1,-2,.9],[0,-3,.8],[-1,-3,.7],[1,-3,.7],[0,-4,.6],[-2,-4,.5],[2,-4,.5]])px(b,Rr+u,23+Yb+r+v,FL,l)}
+ else if(D&&aim){rect(b,X+3,30+Yb,3,3,TP?'wool':'skin');blob(b,X+4.5,34+Yb-r*.5,2.2,2,GL,.2);if(TP)px(b,X+4,34+Yb-r*.5,'cy',aim.pulse?1:.8);
+  if(aim.flash)for(const[u,v,l]of[[0,3,1],[1,3,.9],[0,4,.8],[-1,4,.7],[2,4,.7],[0,5,.6],[-2,5,.5],[3,5,.5]])px(b,X+4+u,34+Yb-r*.5+v,FL,l)}
+ else arm(Rr,-sw);
+ if(TP){blob(b,X,27.5+Yb,8.5,2.8,'linen',.1);if(D)for(let x=-2;x<=2;x++)px(b,X+x,26+Yb,'linen',.55);else blob(b,X,26+Yb,3.4,2.4,'linen',.2)}
+ engHead(b,X+hd[0],21+Yb+hd[1],o.dir,o,!TP);
+ for(const[x,y,m,l]of o.fx||[])px(b,x,y,m,l);
+ return b}
+function eng(o){return o.dir==='d'||o.dir==='u'?engFront(o):engSide(o)}
+
+// ---------- Animations ----------
+// Pied d'une jambe au fil du pas (p ∈ [0, 1)) : appui qui recule de +3,5 à −3,5 px, puis passage levé de 2 px.
+function walkLeg(p){p=((p%1)+1)%1;if(p<.5)return{x:3.5-14*p,lift:0,tilt:p<.07?1:p>.42?-1:0};
+ const s=(p-.5)*2;return{x:-3.5+7*s*s*(3-2*s),lift:2.2*Math.sin(Math.PI*s),tilt:s<.3?-1:s>.8?1:0}}
+// Respiration en quatre temps : la tête mène, le buste suit.
+function breath(i,n){const q=(i%n)/n;return q<.34?{ub:0,hd:[0,0]}:q<.5?{ub:0,hd:[0,1]}:q<.84?{ub:1,hd:[0,0]}:{ub:1,hd:[0,-1]}}
+// Un genou à terre, assis sur le talon : bassin 5 px plus bas, genou avant relevé, tibia arrière couché, buste penché.
+const KNEEL={dy:5,lean:2,legF:{x:4},legB:{K:[22.5,43.2],A:[18,43.2],lie:true}};
+const REST_H=[24.5,34.7],ANGLES=[];for(let a=-90;a<=90;a+=10)ANGLES.push(a);
+const pulse=(i,n)=>.6+.35*Math.sin(i/n*2*Math.PI);
+function walkPose(i){const ph=i/12,c=Math.cos(2*Math.PI*ph-.4);
+ return{legF:walkLeg(ph),legB:walkLeg(ph+.5),dy:Math.cos(4*Math.PI*ph)>.3?1:0,lean:1,coat:1+.9*Math.cos(4*Math.PI*ph-1),
+  armF:{a:-30*c,e:14+14*Math.max(0,-c)},armB:{a:30*c,e:14+14*Math.max(0,c)}}}
+const ENG_ANIMS={
+ idle:{n:72,cols:12,fps:12,note:'repos : souffle en quatre temps, cercle runique qui bat, clignements, geste d’attente toutes les 6 s',
+  f:(i,TP)=>{const o={...breath(i,24),blink:i===30||i===31||i===67,rune:pulse(i,24)};
+   if(i>=38&&i<62){const t=i-38,k=ease(Math.min(1,t/5,(24-t)/5));
+    if(TP){o.armF={to:lerp2(REST_H,[28.2,30.6],k)};if(k>.9){o.hd=[0,1];o.ub=0}const hot=t>=8&&t<15;o.glow=hot?1:.7;
+     if(hot)o.fx=[[28+(t%2),28-((t-8)>>1),'cy',1-(t-8)*.08],[29-(t%3),27-((t-8)>>1),'cy',.7]]}
+    else{o.armF={to:lerp2(REST_H,[27.6,26.4],k)};if(k>.9)o.blink=t%8<5}}
+   return o}},
+ walk:{n:12,cols:12,note:'marche : 12 poses, foulée de 7 px, pied levé, bras opposés, pan du manteau qui traîne',f:i=>walkPose(i)},
+ kneel:{n:36,cols:12,fps:12,note:'un genou à terre, tête basse, souffle court (24), puis se relève (12)',
+  f:i=>{if(i<24){const q=i%12;return{...KNEEL,ub:q<5?0:1,hd:[1,q<3?2:q<5?1:q<10?2:3],blink:q>8,armF:{to:[28.5,40+(q<5?0:1)]},armB:{to:[24.5,42]},
+    fx:q>=6&&q<=9?[[33+(q-6),31+(q<8?0:-1),'stone',.95-(q-6)*.1]]:[]}}
+   const t=1-ease((i-23)/12),o={dy:5*t,lean:Math.round(2*t),legF:{x:4*t},hd:[t>.5?1:0,Math.round(2*t)]};
+   o.legB=t>.4?{K:lerp2([24.5,39.5],[22.5,43.2],t),A:lerp2([24,42],[18,43.2],t),lie:true}:{x:-2*t};
+   if(t>.2){o.armF={to:lerp2(REST_H,[28.5,40],t)};o.armB={to:lerp2([21.5,34.7],[24.5,42],t)}}
+   return o}},
+ pray:{n:24,cols:12,fps:12,note:'un genou à terre, mains jointes : gantelets et cercle qui montent en lumière',
+  f:(i,TP)=>{const g=pulse(i,24),q=i%24;return{...KNEEL,lean:1,ub:q<12?0:1,hd:[0,1],blink:true,armF:{to:[29.5,35.5]},armB:{to:[28.5,36]},glow:g,rune:g,
+   fx:TP&&g>.75?[[30,32-(q&3),'cy',.9],[31+(q&1),30-(q&3),'cy',.6]]:[]}}},
+ settle:{n:10,cols:12,fps:12,note:'s’assoit en tailleur (jouée à l’envers pour se relever)',
+  f:i=>i<6?{dy:i,lean:i>1&&i<5?1:0,legF:{x:i>2?1.5:0},legB:{x:i>2?-1.5:0},coat:i*.4}:{dy:5,lotus:true,armF:i>=7?{to:[29,40.5]}:{to:[26.5,38]},armB:{to:[23,40]},hd:[0,i===6?1:0]}},
+ lotus:{n:48,cols:12,fps:12,note:'méditation en tailleur, yeux clos, souffle lent',
+  f:i=>({dy:5,lotus:true,...breath(i,48),blink:true,armF:{to:[29,40.5]},armB:{to:[23,40]},rune:pulse(i,48)})},
+ slash1:{n:14,cols:14,fps:21,note:'direct : épaule armée, pas en avant, buste qui part avec le poing, retour en garde',
+  f:i=>{const o={lean:[0,-1,-1,-1,0,2,2,2,1,1,0,0,0,0][i],dy:[0,0,0,0,0,1,1,1,1,0,0,0,0,0][i],coat:[0,-1,-1,0,1,2,2,1,1,0,0,0,0,0][i],
+    legF:{x:[0,0,0,0,1,3,3,3,2,2,1,0,0,0][i]},legB:{x:[0,0,-1,-1,-1,-2,-2,-2,-1,-1,0,0,0,0][i],tilt:i>=5&&i<=7?-1:0}};
+   o.armF=i<3?{a:-60,e:120}:i<11?{aim:{ang:0,rec:[3,4,4,2,0,-2,-2,-1,0,1,2][i],pulse:i>=4&&i<=6,flash:i===5||i===6}}:{a:(13-i)*8,e:(13-i)*30};
+   o.armB=i<4?{a:35,e:95}:i<10?{a:-45,e:70}:{a:(13-i)*10,e:(13-i)*25};return o}},
+ slash2:{n:16,cols:16,fps:18,note:'marteau des deux poings : se grandit, s’abat en pliant les genoux, onde au sol',
+  f:(i,TP)=>{let a,ly,ln,d;
+   if(i<5){const t=i/4;a=lerp(-15,-150,ease(t));ln=i>1?-1:0;d=0}
+   else if(i<9){const t=ease((i-5)/3.5>1?1:(i-5)/3.5);a=lerp(-150,62,t);ln=lerp(-1,2,t);d=lerp(0,2,t)}
+   else if(i<13){a=62;ln=2;d=2}else{const t=(i-12)/3;a=lerp(62,0,t);ln=lerp(2,0,t);d=lerp(2,0,t)}
+   const o={lean:ln,dy:d,armF:{a,e:i<5?25:8},armB:{a:a+10,e:i<5?25:8},legF:{x:d>.5?2:0},legB:{x:d>.5?-1.5:0},coat:i>=5&&i<10?-1.5:0,hd:[0,i>=8&&i<13?1:0]};
+   if(i>=8&&i<13){const k=i-8,m=TP?'cy':'rag';o.glow=1;o.fx=k?[[31-2*k,44,m,1-k*.15],[34+2*k,44,m,1-k*.15],[32-k,42-k,m,.9-k*.15],[33+k,43-k,m,.7]]:[[30,44,m,1],[31,44,m,1],[32,44,m,1],[33,44,m,1],[34,44,m,1],[35,44,m,.9]]}
+   return o}},
+ shoot:{n:6,cols:6,fps:12,note:'décharge du gantelet : main gauche en appui, recul du buste, pied arrière qui cale',
+  f:i=>({lean:[0,-1,-1,0,0,0][i],legB:{x:[0,-1,-1.5,-1,0,0][i]},coat:[0,1,2,1,0,0][i],rune:i<2?1:.7,hd:[i===1?-1:0,0],
+   armF:{aim:{ang:0,rec:[0,2,1.5,1,.5,0][i],flash:i<2,pulse:i<3}},armB:{to:[27.5-[0,2,1.5,1,.5,0][i],31.5]}})},
+ aim:{n:76,cols:19,note:'visée : la tête et le buste suivent l’angle du gantelet (géométrie de la bouche inchangée)',
+  f:i=>{const r=Math.floor(i/19),a=ANGLES[i%19];return{armF:{aim:{ang:a*DEG,rec:[0,1.5,3,0][r],pulse:r===3}},hd:a<=-50?[-1,0]:a>=50?[0,1]:[0,0],
+   legB:{x:r===2?-1:0},armB:a<-30?{a:-20,e:10}:{a:10,e:20}}}},
+ shoot_d:{n:6,cols:6,fps:12,note:'décharge vers le sud (de face)',f:i=>({dir:'d',aim:{rec:[0,2,1.5,1,.5,0][i],flash:i<2,pulse:i<3},ub:i===1||i===2?1:0,rune:i<2?1:.7})},
+ shoot_u:{n:6,cols:6,fps:12,note:'décharge vers le nord (de dos)',f:i=>({dir:'u',aim:{rec:[0,2,1.5,1,.5,0][i],flash:i<2,pulse:i<3},ub:i===1||i===2?1:0})},
+ idle_d:{n:24,cols:12,fps:12,note:'repos de face : souffle en quatre temps',f:i=>({dir:'d',...breath(i,24),blink:i===19||i===20,rune:pulse(i,24)})},
+ walk_d:{n:12,cols:12,note:'marche de face : pied levé de 2 px, hanches qui montent, bras et pans du manteau en opposition',f:i=>frontWalk(i,'d')},
+ idle_u:{n:24,cols:12,fps:12,note:'repos de dos',f:i=>({dir:'u',...breath(i,24),rune:pulse(i,24)})},
+ walk_u:{n:12,cols:12,note:'marche de dos',f:i=>frontWalk(i,'u')},
+ hit:{n:6,cols:6,fps:12,note:'touché (nouveau) : buste rejeté en arrière, pied qui recule',
+  f:i=>({hurt:i<3,lean:[-2,-2,-1,-1,0,0][i],dy:[0,1,1,0,0,0][i],hd:[[-1,0],[-1,-1],[0,0],[0,1],[0,0],[0,0]][i],legB:{x:[-2,-2,-2,-1,0,0][i]},
+   armF:{a:[55,65,40,20,8,0][i],e:25},armB:{a:[-45,-50,-30,-15,-5,0][i],e:10},coat:[-1,-2,-1,0,0,0][i]})},
+ c_idle:{n:48,cols:12,fps:12,note:'repos, Arbalestrie baissée, tenue à deux mains',f:i=>({...breath(i,24),blink:i===30||i===31,cannon:{ang:12+((i%24)>11?1:0)},rune:pulse(i,24)})},
+ c_walk:{n:12,cols:12,note:'marche, Arbalestrie baissée qui balance',f:i=>{const w=walkPose(i);return{...w,lean:0,cannon:{ang:12+3*Math.sin(i/12*4*Math.PI)}}}},
+ c_shoot:{n:6,cols:6,fps:12,note:'tir de l’Arbalestrie : pied arrière qui cale, manteau soufflé',
+  f:i=>({cannon:{ang:[0,-4,-2,-1,0,0][i],rec:[0,2,1.5,1,.5,0][i],flash:i<2},legB:{x:[0,-1.5,-2,-1.5,-1,0][i]},coat:[0,2,2,1,0,0][i],dy:i===1||i===2?1:0,rune:i<2?1:.7})},
+};
+function frontWalk(i,dir){const p=i/12*2*Math.PI,s=Math.sin(p);
+ return{dir,liftL:Math.round(2.4*Math.max(0,s)),liftR:Math.round(2.4*Math.max(0,-s)),dy:Math.abs(s)>.5?-1:0,sw:Math.round(2*Math.sin(p-.5)),sway:Math.round(Math.sin(p-.8)),hd:[0,i%6===1?1:0]}}
+// Image i de l'animation, pour le corps « templier » ou « exil ».
+function engFrame(name,i,body='templier'){const a=ENG_ANIMS[name];return eng({body,...a.f(i%a.n,body==='templier')})}
+
+</script>
+<script>
+'use strict';
+// ---------- Version du jeu : table de planches/ingenieur-export.html, telle qu'exportée aujourd'hui ----------
+const mix=(a,b,t)=>a+(b-a)*t;
+const OLD={
+ idle:{n:24,f:i=>({dir:'s',ub:(i%12)<6?0:1,blink:i===10||i===11})},
+ walk:{n:12,f:i=>({dir:'s',pose:'walk',f:Math.floor(i/3)%4})},
+ kneel:{n:36,fps:10,f:i=>i<24?{dir:'s',depth:4,hands:'knees',ub:(i%8)<4?0:1,blink:(i%12)>9}:{dir:'s',depth:Math.round(4*(1-(i-23)/12))}},
+ pray:{n:24,fps:10,f:i=>({dir:'s',depth:4,hands:'pray',ub:(i%12)<6?0:1,blink:true})},
+ settle:{n:10,fps:10,f:i=>i<5?{dir:'s',depth:i}:{dir:'s',depth:4+Math.min(2,i-5),lotus:i>=7,hands:i>=7?'knees':''}},
+ lotus:{n:24,fps:10,f:i=>({dir:'s',depth:6,lotus:true,hands:'knees',ub:(i%12)<6?0:1,blink:true})},
+ slash1:{n:14,fps:21,f:i=>({dir:'s',aim:{ang:0,rec:[3,4,4,2,0,-2,-2,-1,0,1,2,2,1,0][i],pulse:i>=4&&i<=6}})},
+ slash2:{n:16,fps:18,f:i=>({dir:'s',aim:{ang:(i<5?mix(-20,-140,i/4):mix(-140,70,ease(Math.min(1,(i-5)/7))))*DEG,pulse:i>=8&&i<=11}})},
+ shoot:{n:6,fps:12,f:i=>({dir:'s',aim:{ang:0,rec:[0,2,1.5,1,.5,0][i],flash:i<2}})},
+ aim:{n:76,f:i=>{const r=Math.floor(i/19),a=ANGLES[i%19];return{dir:'s',aim:{ang:a*DEG,rec:[0,1.5,3,0][r],pulse:r===3}}}},
+ shoot_d:{n:6,fps:12,f:i=>({dir:'d',aim:{ang:0,rec:[0,2,1.5,1,.5,0][i],flash:i<2}})},
+ shoot_u:{n:6,fps:12,f:i=>({dir:'u',aim:{ang:0,rec:[0,2,1.5,1,.5,0][i],flash:i<2}})},
+ idle_d:{n:12,f:i=>({dir:'d',ub:i<6?0:1,blink:i===10||i===11})},
+ walk_d:{n:12,f:i=>({dir:'d',pose:'walk',f:Math.floor(i/3)%4})},
+ idle_u:{n:12,f:i=>({dir:'u',ub:i<6?0:1})},
+ walk_u:{n:12,f:i=>({dir:'u',pose:'walk',f:Math.floor(i/3)%4})},
+ c_idle:{n:24,full:1,f:i=>cannonBody({ang:12,ub:(i%12)<6?0:1})},
+ c_walk:{n:12,full:1,f:i=>cannonBody({ang:12,pose:'walk',f:Math.floor(i/3)%4})},
+ c_shoot:{n:6,fps:12,full:1,f:i=>cannonBody({ang:0,rec:[0,2,1.5,1,.5,0][i],flash:i<2})},
+};
+OLD.hit={n:1,f:OLD.idle.f};
+const toRag=o=>{const{aim,...r}=o;if(aim&&r.dir==='s')r.punch={ang:aim.ang,rec:aim.rec,hit:!!(aim.flash||aim.pulse&&aim.rec<0)};return ragged({v:'A',...r})};
+const WALK_FPS=20;                 // 12 images par cycle, 14 px de sol par cycle à 23 px/s
+const fpsOf=(a,name)=>name.includes('walk')?WALK_FPS:(a.fps||10);
+const cache=new Map();
+function sprite(name,i,body,old){
+ const cannon=name.startsWith('c_'),bd=cannon?'templier':body,k=name+'|'+i+'|'+bd+'|'+old;let c=cache.get(k);if(c)return c;
+ if(old){const a=OLD[name];c=document.createElement('canvas');c.width=c.height=48;
+  const s=render(a.full?a.f(i):(bd==='exil'?toRag(a.f(i)):exile({v:'B',...a.f(i)})),1);c.getContext('2d').drawImage(s,a.full?0:8,a.full?0:15)}
+ else c=render(engFrame(name,i,bd),1);
+ cache.set(k,c);return c}
+const count=(name,old)=>(old?OLD:ENG_ANIMS)[name].n;
+
+// ---------- État ----------
+let body='templier',speed=1,paused=false,T=0,last=performance.now();
+const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+function group(id,fn){const g=document.getElementById(id);g.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;
+ for(const x of g.querySelectorAll('button'))x.setAttribute('aria-pressed',x===b);fn(b.dataset.v)})}
+group('g-body',v=>{body=v});group('g-speed',v=>{speed=+v});
+const pauseBtn=document.getElementById('pause');
+const setPause=p=>{paused=p;pauseBtn.setAttribute('aria-pressed',p);pauseBtn.textContent=p?'Lecture':'Pause'};
+pauseBtn.addEventListener('click',()=>setPause(!paused));
+
+// ---------- Sol d'ardoise ----------
+function ground(g,w,h,y0){g.fillStyle='#333a46';g.fillRect(0,0,w,h);g.fillStyle='#2b313c';
+ for(let x=0;x<w;x+=16)g.fillRect(x,0,1,h);for(let y=y0%16;y<h;y+=16)g.fillRect(0,y,w,1);
+ g.fillStyle='#3d4552';for(let x=5;x<w;x+=37)g.fillRect(x,(x*7)%h,2,1)}
+function shadow(g,x,y){g.fillStyle='rgba(8,10,14,.45)';g.fillRect(x-6,y,12,2);g.fillRect(x-4,y-1,8,1);g.fillRect(x-4,y+2,8,1)}
+
+// ---------- Pistes ----------
+const P=[
+ {id:'S1',t:'Silhouette et matières',anims:['idle','idle_d','idle_u'],lab:['Profil','Face','Dos'],still:true,cost:'dessin',
+  fait:'De profil, le Templier est <b>une colonne de 7 px</b> : la capuche rabattue ne se voit pas, les gantelets sont un point gris au bout de la manche. Torse nu, le bras a la couleur du torse et disparaît.',
+  prop:'Capuche de lin qui dépasse sur la nuque, manchette de fer sur tout l’avant-bras, pan arrière du manteau séparé des jambes. Avant la combinaison : une ombre détache le bras du torse, mollets et pieds nus plus fins que les chausses.'},
+ {id:'A1',t:'Repos',anims:['idle'],cost:'24 → 72 images',
+  fait:'Deux poses : le buste descend d’un pixel toutes les 0,6 s. <b>Rien d’autre ne bouge</b> en 2,4 s.',
+  prop:'Souffle en quatre temps (la tête mène, le buste suit), cercle runique qui bat avec la respiration, deux clignements. Toutes les 6 s un geste d’attente : le Templier lève son gantelet, qui s’allume ; l’Exilé s’essuie la bouche d’un revers de main.'},
+ {id:'A2',t:'Marche de profil',anims:['walk'],cost:'recalage de la foulée',
+  fait:'Quatre poses tenues trois images chacune. Les pieds se décalent d’<b>un seul pixel</b> : le personnage glisse.',
+  prop:'Douze poses distinctes. Foulée de 7 px, pied qui se lève de 2 px au passage, talon puis pointe, bras opposés aux jambes, buste penché d’un pixel, pan du manteau qui traîne derrière.'},
+ {id:'A3',t:'Repos et marche de face et de dos',anims:['walk_d','walk_u','idle_d','idle_u'],lab:['Marche face','Marche dos','Repos face','Repos dos'],cost:'idle 12 → 24 images',
+  fait:'Même raideur : une jambe raccourcit, tout le corps saute d’un pixel, <b>pieds compris</b>.',
+  prop:'Les pieds restent au sol, ce sont les hanches qui montent. Pied levé de 2 px avec le genou qui s’éclaire, bras en opposition sur trois hauteurs, pans du manteau qui balancent, tête qui encaisse l’appui.'},
+ {id:'A4',t:'Direct',anims:['slash1'],cost:'même durée (0,67 s)',
+  fait:'Seul le bras bouge : il recule de 4 px puis s’allonge. <b>Le corps reste planté.</b>',
+  prop:'Poing armé à la poitrine, épaules en arrière ; puis un pas en avant, le buste part avec le poing, la garde gauche se retire, les genoux plient à l’impact. Éclat au bout du gantelet (poussière claire à mains nues).'},
+ {id:'A5',t:'Marteau des deux poings',anims:['slash2'],cost:'même durée (0,89 s)',
+  fait:'Un bras raide qui tourne autour de l’épaule comme une aiguille. Un seul poing visible.',
+  prop:'Les deux bras montent derrière la tête, le corps se cambre ; il s’abat en fléchissant de 2 px, pieds écartés, tête rentrée. Onde au sol sur cinq images : cyan pour le Templier, poussière pour l’Exilé.'},
+ {id:'A6',t:'Décharge du gantelet',anims:['shoot','shoot_d','shoot_u'],lab:['Profil','Face','Dos'],cost:'même durée (0,5 s)',
+  fait:'Le bras recule de 2 px, cinq pixels cyan. Le tir <b>n’a pas de poids</b>.',
+  prop:'Main gauche en appui sous le poignet, buste et tête rejetés d’un pixel, pied arrière qui cale, manteau soufflé, cercle runique à pleine lumière pendant l’éclair. Éclair plus large de face et de dos.'},
+ {id:'A7',t:'Visée et creusement',anims:['aim'],sweep:true,cost:'géométrie inchangée',
+  fait:'Le bras pivote sur 19 angles, la tête et le corps regardent droit devant, même quand il vise le plafond.',
+  prop:'La tête se lève au-delà de 50° vers le haut et se baisse vers le bas, le bras gauche suit, le pied arrière recule sur l’image de fort recul. La bouche du gantelet reste aux mêmes coordonnées.'},
+ {id:'A8',t:'À genoux, puis se relève',anims:['kneel'],cost:'10 → 12 i/s',
+  fait:'Les jambes deviennent trois rectangles empilés ; pour se relever, le corps monte d’un bloc.',
+  prop:'Un genou à terre, l’autre jambe pliée devant, main sur le genou, pan du manteau étalé. Souffle court en trois hauteurs de tête, buée à l’expiration. Il se relève en dépliant les jambes.'},
+ {id:'A9',t:'Prière',anims:['pray'],cost:'10 → 12 i/s',
+  fait:'Même bloc agenouillé, un poing devant la poitrine, deux poses.',
+  prop:'Les deux mains jointes, tête baissée. Gantelets et cercle runique montent et descendent en lumière ensemble, deux étincelles s’élèvent au sommet de chaque battement (aucune lumière pour l’Exilé, qui n’a pas encore sa combinaison).'},
+ {id:'A10',t:'Assise et lotus',anims:['settle','lotus'],lab:['S’assoit','Médite'],cost:'lotus 24 → 48 images',
+  fait:'Les jambes croisées sont deux barres plates, et l’image <b>déborde sous le sol</b> de 3 px.',
+  prop:'Il fléchit, pose les mains, croise les jambes : genou proche en avant, pied rentré, manteau étalé derrière. Souffle lent sur 4 s, mains sur les genoux, tout tient dans le cadre.'},
+ {id:'A11',t:'Arbalestrie',anims:['c_idle','c_walk','c_shoot'],lab:['Repos','Marche','Tir'],cost:'casque à recaler',
+  fait:'Le tube est tenu d’une seule main à bout de bras ; au tir, seul le bras recule.',
+  prop:'Main gauche sous le tube. Au repos il respire avec le porteur, à la marche il balance de 3° avec la nouvelle foulée, au tir il se cabre de 4°, le pied arrière cale et le manteau est soufflé.'},
+ {id:'A12',t:'Touché',anims:['hit'],cost:'nouvelle animation · code',
+  fait:'L’Ingénieur n’a <b>aucune pose</b> quand il encaisse : seulement l’éclair blanc et le recul communs à toutes les unités.',
+  prop:'Six images à 12 i/s : buste rejeté de 2 px, tête qui part, yeux fermés, bras écartés, pied arrière qui rattrape. Jouée par-dessus l’éclair existant.'},
+];
+const list=document.getElementById('list');
+for(const p of P){const d=document.createElement('div');d.className='piste';p.cur=0;
+ d.innerHTML=`<div><h3><span class="id">${p.id}</span>${p.t}</h3><p class="fait">${p.fait}</p><p>${p.prop}</p>
+  <div class="meta"><label class="pick"><input type="checkbox" id="pk-${p.id}" data-id="${p.id}">Je retiens ${p.id}</label><span class="cost">${p.cost}</span></div></div>
+  <div class="scene">${p.lab?`<div class="grp">${p.lab.map((l,i)=>`<button data-i="${i}" aria-pressed="${!i}">${l}</button>`).join('')}</div>`:''}
+  <div class="stage"><canvas width="${p.anims[0].startsWith('c_')?512:448}" height="224"></canvas></div><div class="duo"><span>Dans le jeu</span><span>Proposé</span></div></div>`;
+ list.appendChild(d);p.cv=d.querySelector('canvas');p.g=p.cv.getContext('2d');p.g.imageSmoothingEnabled=false;
+ const g=d.querySelector('.grp');if(g)g.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;p.cur=+b.dataset.i;p.t0=T;
+  for(const x of g.querySelectorAll('button'))x.setAttribute('aria-pressed',x===b)})}
+// Image à l'instant t : boucle pour repos, marche, prière, lotus ; sinon lecture puis tenue de la dernière image.
+const LOOP=new Set(['idle','walk','pray','lotus','idle_d','idle_u','walk_d','walk_u','c_idle','c_walk']);
+function frameAt(name,old,t,period){const a=(old?OLD:ENG_ANIMS)[name],fps=fpsOf(a,name);
+ if(LOOP.has(name))return Math.floor(t*fps)%a.n;
+ if(name==='kneel'){const tt=t%period;if(tt<period-1.6)return Math.floor(tt*fps)%24;return Math.min(a.n-1,24+Math.floor((tt-(period-1.6))*fps))}
+ return Math.min(a.n-1,Math.floor((t%period)*fps))}
+const PERIOD={kneel:5.2,settle:2.2,slash1:1.5,slash2:1.7,shoot:1.3,shoot_d:1.3,shoot_u:1.3,c_shoot:1.3,hit:1.3};
+function drawPiste(p){const g=p.g,w=p.cv.width/4,name=p.anims[p.cur],t=T-(p.t0||0),half=w/2;
+ g.setTransform(4,0,0,4,0,0);ground(g,w,56,49);g.fillStyle='#1d222b';g.fillRect(half-.5,0,1,56);
+ for(const old of[true,false]){const x=(old?0:half)+(half-48)/2;let i;
+  if(p.still)i=0;
+  else if(p.sweep){const k=Math.floor(t*9)%44,c=k<19?k:k<22?18:k<41?40-k:0;i=(k>=19&&k<22?19*(k-19===1?2:1):0)+c}
+  else i=frameAt(name,old,t,PERIOD[name]||1);
+  shadow(g,x+24,45);g.drawImage(sprite(name,i,body,old),x,2)}}
+
+// ---------- Ronde ----------
+const RC=document.getElementById('c-ronde'),RG=RC.getContext('2d');RG.imageSmoothingEnabled=false;
+const V=23,X0=34,X1=150;
+// Segments : [durée, action] ; la marche couvre X0 → X1 à V px/s.
+const WALK_T=(X1-X0)/V,SEQ=[['walk',WALK_T,1],['idle',2.6,1],['slash1',.9,1],['idle',.5,1],['slash2',1.2,1],['idle',.6,1],['shoot',.8,1],['idle',1.2,1],['walk',WALK_T,-1],['idle',1.4,-1]];
+const TOTAL=SEQ.reduce((s,q)=>s+q[1],0);
+function drawRonde(){const g=RG;g.setTransform(4,0,0,4,0,0);const w=220,h=112;ground(g,w,h,0);g.fillStyle='#1d222b';g.fillRect(0,55.5,w,1);
+ let t=T%TOTAL,k=0;while(t>=SEQ[k][1]){t-=SEQ[k][1];k++}
+ const[name,dur,face]=SEQ[k];let x=face>0?X1:X0;if(name==='walk')x=face>0?X0+V*t:X1-V*t;
+ for(const old of[true,false]){const y=old?2:58,a=(old?OLD:ENG_ANIMS)[name],fps=fpsOf(a,name);
+  const i=name==='walk'?Math.floor((face>0?x-X0:X1-x)/14*12)%12:name==='idle'?Math.floor(t*fps)%a.n:Math.min(a.n-1,Math.floor(t*fps));
+  const s=sprite(name,i,body,old),px=Math.round(x);shadow(g,px,y+45);
+  if(face>0)g.drawImage(s,px-24,y);else{g.save();g.translate(px+24,y);g.scale(-1,1);g.drawImage(s,0,0);g.restore()}}}
+
+// ---------- Mesures ----------
+const NAMES={idle:'Repos',walk:'Marche',walk_d:'Marche de face',idle_d:'Repos de face',slash1:'Direct',slash2:'Marteau',shoot:'Décharge',kneel:'À genoux',pray:'Prière',lotus:'Lotus',c_idle:'Arbalestrie, repos',c_walk:'Arbalestrie, marche',hit:'Touché'};
+function distinct(name,old){const n=count(name,old),set=new Set();for(let i=0;i<n;i++){const d=sprite(name,i,'templier',old).getContext('2d').getImageData(0,0,48,48).data;
+  let h=0;for(let j=0;j<d.length;j+=4)if(d[j+3])h=(h*31+d[j]*7+d[j+1]*3+d[j+2]+j)|0;set.add(h)}return set.size}
+(function(){let html='<tr><th>Animation</th><th>Poses, jeu</th><th>Poses, proposé</th><th>Images</th><th>Cadence</th></tr>';
+ for(const k in NAMES){const o=k==='hit'?0:distinct(k,true),n=distinct(k,false),a=ENG_ANIMS[k],fo=k==='hit'?'':fpsOf(OLD[k],k),fn=fpsOf(a,k);
+  html+=`<tr><td>${NAMES[k]}</td><td class="${o<6?'low':''}">${o||'aucune'}</td><td class="up">${n}</td><td>${k==='hit'?'':OLD[k].n+' → '}${a.n}</td><td>${k.includes('walk')?'selon la distance':(fo&&fo!==fn?fo+' → ':'')+fn+' i/s'}</td></tr>`}
+ document.getElementById('mes').innerHTML=html})();
+
+// ---------- Sélection ----------
+const out=document.getElementById('out'),picks=()=>[...document.querySelectorAll('input[data-id]')];
+function sync(){const ids=picks().filter(c=>c.checked).map(c=>c.dataset.id);
+ out.value=ids.length?'Ingénieur, je retiens : '+ids.join(', ')+(ids.length===P.length?' (tout)':''):'Aucune piste cochée pour l’instant.'}
+document.addEventListener('change',e=>{if(e.target.matches('input[data-id]'))sync()});
+document.getElementById('all').addEventListener('click',()=>{const on=picks().some(c=>!c.checked);for(const c of picks())c.checked=on;sync()});
+document.getElementById('copy').addEventListener('click',async e=>{sync();const b=e.currentTarget;
+ try{await navigator.clipboard.writeText(out.value);b.textContent='Copié'}catch(_){out.focus();out.select();b.textContent='Sélectionné : Ctrl+C'}
+ setTimeout(()=>{b.textContent='Copier ma sélection'},1800)});
+sync();
+
+// ---------- Boucle : seules les cartes visibles sont redessinées ----------
+const seen=new Set();const io=new IntersectionObserver(es=>{for(const e of es){if(e.isIntersecting)seen.add(e.target);else seen.delete(e.target)}},{rootMargin:'200px'});
+for(const p of P)io.observe(p.cv);io.observe(RC);
+function tick(now){const dt=Math.min(.1,(now-last)/1000);last=now;if(!paused)T+=dt*speed;
+ if(seen.has(RC))drawRonde();for(const p of P)if(seen.has(p.cv))drawPiste(p);requestAnimationFrame(tick)}
+T=new URLSearchParams(location.search).get('t')*1||0;
+drawRonde();for(const p of P)drawPiste(p);
+if(reduce)setPause(true);
+requestAnimationFrame(tick);
+</script>

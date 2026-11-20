@@ -133,7 +133,7 @@ func finish() -> void:
 	terrain.flush()
 
 
-func _paint_region_cell(x: float, z: float) -> void:
+func _paint_region_cell(x: float, z: float) -> bool:
 	var any := false
 	var all := true
 	for o: Vector2 in [Vector2(0, 0), Vector2(4, 0), Vector2(0, 4), Vector2(4, 4), Vector2(2, 2), Vector2(2, 0), Vector2(0, 2), Vector2(4, 2), Vector2(2, 4)]:
@@ -142,7 +142,7 @@ func _paint_region_cell(x: float, z: float) -> void:
 		all = all and h
 	if not any:
 		stats["skip"] += 1
-		return
+		return false
 	stats["full" if all else "mixed"] += 1
 	var p := ground_px(x, z)
 	var cave := _sample(_floor_tex, p)
@@ -176,6 +176,32 @@ func _paint_region_cell(x: float, z: float) -> void:
 				elif mask[m - 2] == 1 or mask[m + 2] == 1:
 					_copy(out, o, _rock_c[0] if mask[m - 1] == 1 or mask[m + 1] == 1 else _rock_c[6])
 	terrain.blit(_image(out), p.x, p.y)
+	return true
+
+
+## Salle de départ retaillée bloc par bloc (CaveShape.in_cave) : le sol du baker garde le contour du
+## prototype. Chaque case de la zone est repeinte d'après la forme réelle : sol, bords, et roche pleine
+## là où le prototype avait du sol.
+func repaint_cave(x0: float, z0: float, x1: float, z1: float) -> void:
+	var z := z0
+	while z < z1:
+		var x := x0
+		while x < x1:
+			if not _paint_region_cell(x, z) and _prototype_floor(x, z):
+				var p := ground_px(x, z)
+				terrain.blit(_image(_sample(_rock_tex, p)), p.x, p.y)
+			x += 4.0
+		z += 4.0
+	terrain.flush()
+
+
+## La case (x, z) touche le sol du prototype (bords compris : 1 unité de marge).
+static func _prototype_floor(x: float, z: float) -> bool:
+	for a in range(-1, 6):
+		for b in range(-1, 6):
+			if CaveShape.in_prototype_outline(x + a, z + b):
+				return true
+	return false
 
 
 static func _copy(out: PackedByteArray, o: int, c: PackedByteArray) -> void:
@@ -191,8 +217,11 @@ static func _copy(out: PackedByteArray, o: int, c: PackedByteArray) -> void:
 func _hollow_mask(x: float, z: float) -> PackedByteArray:
 	var mask := PackedByteArray()
 	mask.resize(M * M)
-	var near_cave := x + 4.5 > -66.0 and x - 0.5 < 66.0 and z + 4.5 > -171.0 and z - 0.5 < -85.0
+	# Salle retaillée (CaveShape.in_cave) : parois déplacées jusqu'à |x| < 88, baies nord jusqu'à z −204.
+	var near_cave := x + 4.5 > -90.0 and x - 0.5 < 90.0 and z + 4.5 > -206.0 and z - 0.5 < -85.0
 	var near_tunnel := x + 4.5 > -CaveShape.CAVE_GATE and x - 0.5 < CaveShape.CAVE_GATE
+	if state.breach_open and x + 4.5 > -CaveShape.BREACH_W - 4.0 and x - 0.5 < CaveShape.BREACH_W + 4.0 and z + 4.5 > CaveShape.CAVE_Z1 - 2.0 and z - 0.5 < -70.0:
+		near_tunnel = true
 	var near_vault := state.vault_open and x + 4.5 > CaveShape.VAULT_X0 and x - 0.5 < CaveShape.VAULT_X1 \
 		and z + 4.5 > CaveShape.VAULT_Z0 and z - 0.5 < CaveShape.VAULT_Z1
 	if near_cave or near_tunnel or near_vault:

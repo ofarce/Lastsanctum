@@ -20,8 +20,7 @@ func _process(_delta: float) -> void:
 	if not state.lodes.has(origin):
 		queue_free()
 		return
-	_pool.queue_redraw()
-	_beam.queue_redraw()
+	_redraw_light()
 
 
 func _draw() -> void:

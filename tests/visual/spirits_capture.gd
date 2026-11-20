@@ -1,5 +1,5 @@
 extends Node
-## Capture des esprits mineurs (planches/esprits-v6-propositions.html) : Faon de cairn en prière à son autel,
+## Capture des esprits mineurs (planches/esprits-v6-propositions.html) : feu follet de Medeina en prière à son autel,
 ## Roue-mandala en marche, Orrery qui porte une caisse, Livre ailé au repos ; arrivée « Germe de l'autel »
 ## à 5 s (graine dans la statue) et à 9,7 s (esprit en trame) aux autels de Medeina et de Sigil.
 ## godot --path . res://tests/visual/spirits_capture.tscn

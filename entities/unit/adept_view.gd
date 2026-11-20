@@ -8,15 +8,22 @@ extends Node2D
 ## six modes de 24 images à 12 i/s (repos, marche, caisse, prière, poste, combat), et la fin de l'arrivée à l'autel
 ## (Germe de l'autel) : silhouette unie puis trame de couleurs (shaders/spirit_arrival.gdshader).
 
-## Z()/16 × 1,9 en pixels natifs.
+## Z()/16 × 1,9 en pixels natifs : échelle des rôles sans "scale" dans le manifeste (esprits). La Caserne est
+## dessinée à sa taille réelle ("scale": 1), sans agrandissement au plus proche voisin.
 const SCALE := 8.0 / 0.86 / 16.0 * 1.9
 const ZN := 8.0 / 0.86
+## Pennes de l'Empennage, dans le cadre 40 × 42 de l'archer (au-dessus des deux flèches du carquois).
+const FLETCHING: Array[Vector2] = [Vector2(8, 16), Vector2(9, 15), Vector2(9, 16), Vector2(9, 17), Vector2(11, 14), Vector2(11, 15), Vector2(11, 16), Vector2(12, 15)]
+const FLETCH := Color("#fffaea")
+const FLETCH_INK := Color("#b8a684")
 const SHADOW := Color("#0b1615a0")
-const SEL := Color("#ead08c55")
+const SEL := Color("#5ce8ff40")
 
 static var _meta: Dictionary
 ## Caisse portée (production_crate.png) et couleurs des objets transportés (matériaux, objets fabriqués).
 static var _crate: Texture2D
+## Contours des ellipses au sol (ombre, sélection), par rayon : les mêmes points pour tous les adeptes.
+static var _ellipses := {}
 const _ITEMS_A := preload("res://data/mineable_blocks.gd").ITEMS
 const _ITEMS_B := preload("res://data/recipes.gd").ITEMS
 
@@ -35,6 +42,20 @@ var _revive: ReviveFx
 var _spirit := false
 var _crate_at := Vector2.ZERO
 var _fps := {}
+## Cadences réelles dans le manifeste (grille commune 12 / 24 i/s) ; modes sans cadence : FPS_DEFAULT.
+const FPS_DEFAULT := 12.0
+## Marche à la foulée (manifeste "stride", unités de monde par cycle) ; sans foulée, marche à l'horloge.
+var _stride := 0.0
+var _scale := SCALE
+## Coup encaissé (mode "hit" du manifeste) : début, et durée minimale entre deux réactions (s).
+const HIT_GAP := 0.6
+var _hit_t := -INF
+var _feel := UnitFeel.new()
+var _dt := 0.0
+var _kx := 1.0
+var _jolt := 0.0
+var _dip := 0.0
+var _flash := 0.0
 var _arrive_mat: ShaderMaterial
 ## Fin de l'arrivée : apparition à ARRIVE_SHOW s de la fin, trame (4 paliers) de ARRIVE_FADE s à la fin.
 const ARRIVE_SHOW := 0.8
@@ -50,6 +71,8 @@ func setup(u: Unit, w: World) -> void:
 	_ax = R["ax"]
 	_ay = R["ay"]
 	_spirit = R.get("spirit", false)
+	_stride = float(R.get("stride", 0.0))
+	_scale = float(R.get("scale", SCALE))
 	if R.get("crate") != null:
 		_crate_at = Vector2(R["crate"][0], R["crate"][1])
 	for mode: String in R["modes"]:
@@ -67,12 +90,13 @@ func setup(u: Unit, w: World) -> void:
 	# L'effet est un calque enfant : le rendu standard de l'adepte reste intact.
 	_revive = ReviveFx.new()
 	_revive.view = self
-	_revive.scale = Vector2(SCALE, SCALE)
+	_revive.scale = Vector2(_scale, _scale)
 	add_child(_revive)
 	_update()
 
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
+	_dt = delta
 	_update()
 
 
@@ -87,20 +111,56 @@ func _update() -> void:
 	if is_nan(_lx):
 		_lx = u.x
 		_lz = u.z
-	_moving = Vector2(u.x - _lx, u.z - _lz).length() > 0.001
-	if absf(u.x - _lx) > 0.001:
+	var dist := Vector2(u.x - _lx, u.z - _lz).length()
+	_feel.step(dist, _stride if _stride > 0.0 else 4.0, _dt)
+	# Avec une foulée, la marche finit son pas avant de rendre la main au repos.
+	_moving = _feel.walking if _stride > 0.0 else dist > 0.001
+	var target := _work_target(u)
+	if u.working and u.job is Dictionary and u.job.get("type") == "pray_pylon":
+		# Canalisation : face au pylône, comme sur la planche.
+		var px := float(u.job["pylon"]["x"])
+		if absf(px - u.x) > 0.3:
+			_face = -1 if px < u.x else 1
+	elif not is_nan(target):
+		# Récolte (bois, minerai) : regard tourné vers la case travaillée, même si le dernier pas allait ailleurs.
+		if absf(target - u.x) > 0.3:
+			_face = -1 if target < u.x else 1
+	elif absf(u.x - _lx) > 0.001:
 		_face = -1 if u.x < _lx else 1
 	elif u.face != 0 and u.attack > 0.0:
 		# Orientation imposée par la dernière frappe (u._face).
 		_face = u.face
 	_lx = u.x
 	_lz = u.z
+	# Coup encaissé (éclair, recul) et demi-tour en trois images : UnitFeel.
+	var t := GameState.sim_time
+	var now := Time.get_ticks_msec() / 1000.0
+	_feel.track_hurt(u.hp, u.max_hp, _face, t)
+	if _feel.recoil(t) != 0.0 and t - _hit_t >= HIT_GAP:
+		_hit_t = t
+	_flash = snappedf(_feel.flash(t), 0.25)
+	_jolt = _feel.recoil(t)
+	_kx = _feel.turn(_face, now)
+	_dip = 1.0 if _feel.turning(now) else 0.0
 	# Redessin seulement si l'image, l'orientation, la sélection, les PV, le niveau ou PX changent.
-	var key := [_mode(), _frame_index(), _face, GameState.selected.has(u), u.hp, u.max_hp, Catalog.lvl(u),
-		world.camera.px if world else 1, u.carrying.get("item", ""), visible]
+	var mode := _mode()
+	var key := [mode, _frame_index(mode), _kx, _jolt, _flash, GameState.selected.has(u), u.hp, u.max_hp, Catalog.lvl(u),
+		world.camera.px if world else 1, u.carrying.get("item", ""), visible, preload("res://sim/placeables.gd").posted(u)]
 	if key != _key:
 		_key = key
 		queue_redraw()
+
+
+## Abscisse (unités de monde) du centre de la case que l'adepte récolte en ce moment (ordre de creusement
+## ou poste de mineur d'un bâtiment), NAN s'il ne récolte pas.
+func _work_target(u: Unit) -> float:
+	if not u.working or not (u.job is Dictionary):
+		return NAN
+	var j: Dictionary = u.job
+	var harvesting: bool = j.get("type") == "dig" or (j.get("type") == "staff" and j.get("step") == "mine")
+	if not harvesting or not (j.get("cell") is Dictionary):
+		return NAN
+	return float(j["cell"]["i"]) * 4.0 + 2.0
 
 
 func _draw() -> void:
@@ -112,9 +172,20 @@ func _draw() -> void:
 	var mode := _mode()
 	var F: Dictionary = _frames[mode]
 	var rects: Array[Rect2] = F["rects"]
-	var i := _frame_index()
-	draw_set_transform(Vector2.ZERO, 0.0, Vector2(SCALE * _face, SCALE))
-	draw_texture_rect_region(F["tex"], Rect2(-_ax, -_ay, rects[i].size.x, rects[i].size.y), rects[i])
+	var i := _frame_index(mode)
+	draw_set_transform(Vector2(_jolt, _dip), 0.0, Vector2(_scale * _kx, _scale))
+	# Éclair : blanc pour la Caserne, couleur du culte pour les esprits.
+	var glow: Color = Catalog.DEITY_GLOW.get(u.role, Color.WHITE) if _spirit else Color.WHITE
+	var lit := Color(1.0 + 2.4 * _flash * glow.r, 1.0 + 2.4 * _flash * glow.g, 1.0 + 2.4 * _flash * glow.b)
+	draw_texture_rect_region(F["tex"], Rect2(-_ax, -_ay, rects[i].size.x, rects[i].size.y), rects[i], lit)
+	# Empennage (recherche de la Caserne) : pennes blanches sur les flèches du carquois de l'archer.
+	if u.role == "archer" and mode != "death" and GameState.research_done.has("fletching"):
+		for q: Vector2 in FLETCHING:
+			draw_rect(Rect2(q.x - _ax, q.y - _ay, 1, 1), FLETCH_INK if q == FLETCHING[0] else FLETCH)
+	# Pointes de cuivre : deux pointes cuivrées dépassent du bas du carquois.
+	if u.role == "archer" and mode != "death" and GameState.research_done.has("copper_tips"):
+		for q: Vector2 in [Vector2(8, 27), Vector2(9, 28), Vector2(10, 27)]:
+			draw_rect(Rect2(q.x - _ax, q.y - _ay, 1, 1), Color("#f0b088") if q.y > 27 else Color("#c47b58"))
 	if not u.carrying.is_empty():
 		if _spirit and _frames.has("carry"):
 			_draw_load(String(u.carrying["item"]), Vector2(-_ax, -_ay) + _crate_at)
@@ -126,13 +197,19 @@ func _draw() -> void:
 	draw_set_transform(head, 0.0, Vector2(1.0 / px, 1.0 / px))
 	if u.hp < u.max_hp:
 		draw_rect(Rect2(-12, 0, 24, 3), Color("#000000aa"))
-		draw_rect(Rect2(-12, 0, 24.0 * u.hp / u.max_hp, 3), Color("#8fd16a"))
+		draw_rect(Rect2(-12, 0, 24.0 * u.hp / u.max_hp, 3), UnitView.HP_ALLY)
 	var lvl := Catalog.lvl(u)
 	if lvl >= 2:
 		var text := "★%d" % lvl
 		var w := _bold.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, 10).x
 		draw_string(_bold, Vector2(-w / 2.0 + 1.0, -3.0 + 1.0), text, HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color("#0b0a09cc"))
-		draw_string(_bold, Vector2(-w / 2.0, -3.0), text, HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color("#ffe08a"))
+		draw_string(_bold, Vector2(-w / 2.0, -3.0), text, HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color("#f4ecd6"))
+	# Bonus de poste de tir : pastille du créneau de rondins au-dessus de la tête (et du badge ★).
+	if preload("res://sim/placeables.gd").posted(u):
+		var at := Vector2(0, (-14.0 if lvl >= 2 else -4.0) - 9.0)
+		draw_circle(at, 9.0, Color("#0b0a09b0"))
+		draw_arc(at, 9.0, 0.0, TAU, 20, Color("#f4ecd6"), 1.0, true)
+		preload("res://ui/inventory/item_icon.gd").draw_item(self, "firing_post", at, 0.5)
 	draw_set_transform(Vector2.ZERO)
 
 
@@ -186,6 +263,8 @@ func _set_tint(t: float) -> void:
 func _mode() -> String:
 	if _spirit:
 		return _spirit_mode()
+	if _frames.has("hit") and _hit_age() < (_frames["hit"]["rects"] as Array).size() / float(_fps.get("hit", 24.0)):
+		return "hit"
 	var busy := unit.working or Combat.fight_busy(unit)
 	return "walk" if _moving else ("work" if busy else "idle")
 
@@ -197,28 +276,31 @@ func _spirit_mode() -> String:
 	if Combat.fight_busy(u):
 		return "fight"
 	if u.working:
-		return "pray" if u.job != null and u.job.get("type") == "pray" else "work"
+		return "pray" if u.job != null and u.job.get("type") in ["pray", "pray_pylon"] else "work"
 	return "walk" if _moving else "idle"
 
 
-func _frame_index() -> int:
-	var mode := _mode()
-	var t := GameState.sim_time + unit.id * 0.37
-	var i := 0
-	if _fps.has(mode):
-		i = floori(t * _fps[mode]) % (_frames[mode]["rects"] as Array).size()
-	elif mode == "walk":
-		i = floori(t * 6.0) & 1
-	elif mode == "work":
-		i = floori(t * 6.0) & 3
+## Temps écoulé depuis le début de la réaction au dernier gros coup (s).
+func _hit_age() -> float:
+	return GameState.sim_time - _hit_t
+
+
+func _frame_index(mode: String) -> int:
 	var rects: Array[Rect2] = _frames[mode]["rects"]
-	return mini(i, rects.size() - 1)
+	if mode == "hit":
+		return mini(rects.size() - 1, floori(_hit_age() * float(_fps.get(mode, 24.0))))
+	if mode == "walk" and _stride > 0.0:
+		return floori(_feel.wp * rects.size()) % rects.size()
+	var t := GameState.sim_time + unit.id * 0.37
+	return floori(t * float(_fps.get(mode, FPS_DEFAULT))) % rects.size()
 
 
 ## circle3 : ellipse au sol de rayon r unités (r·Z·0,9 sur r·Z·0,42), inclinée de −0,02 rad.
 func _ellipse(r: float, c: Color) -> void:
-	var pts := PackedVector2Array()
-	for k in 40:
-		var a := TAU * k / 40.0
-		pts.append(Vector2(cos(a) * r * ZN * 0.9, sin(a) * r * ZN * 0.42).rotated(-0.02))
-	draw_colored_polygon(pts, c)
+	if not _ellipses.has(r):
+		var pts := PackedVector2Array()
+		for k in 40:
+			var a := TAU * k / 40.0
+			pts.append(Vector2(cos(a) * r * ZN * 0.9, sin(a) * r * ZN * 0.42).rotated(-0.02))
+		_ellipses[r] = pts
+	draw_colored_polygon(_ellipses[r], c)

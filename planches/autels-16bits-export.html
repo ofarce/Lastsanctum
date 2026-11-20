@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Autels 16 bits</title>
+<style>
+body{margin:0;background:#1a2028;color:#d8dce4;font:14px/1.4 system-ui,sans-serif;padding:14px}h1{font-size:18px;margin:0 0 4px;color:#e8c870}#log{color:#e8c870}
+#out{display:grid;grid-template-columns:repeat(4,max-content);gap:8px}figure{margin:0;background:#242c36;padding:6px;font-size:12px}
+canvas{display:block;image-rendering:pixelated;background:#39424e}
+</style></head><body>
+<h1>Autels 16 bits : export vers le jeu</h1>
+<p id="log"></p><div id="out"></div>
+<script src="assets/autels-16bits.js"></script>
+<script>
+'use strict';
+// Par autel : boucle « on prie » (anim), boucle au repos (rest), image fixe, portrait. 24 images à 12 i/s.
+const save=new URLSearchParams(location.search).get('save'),log=document.querySelector('#log'),out=document.querySelector('#out');
+const post=(n,b)=>{const x=new XMLHttpRequest();x.open('POST','/out/'+n,false);x.send(b);if(x.status>=300)throw new Error(n+' '+x.status)};
+const Q=new URLSearchParams(location.search),U=+(Q.get('u')||16),RED=Q.get('red')==='1';
+const red=c=>{if(!RED)return c;const o=document.createElement('canvas');o.width=c.width;o.height=c.height;const g=o.getContext('2d');g.imageSmoothingEnabled=false;for(let fy=0;fy<c.height;fy+=240)for(let fx=0;fx<c.width;fx+=320)for(let Y=0;Y<240;Y++){const sy=Math.floor((Y-56+.5)/(2/3));if(Y<56||sy>=240)continue;for(let X=0;X<320;X++){const sx=Math.floor((X-53+.5-1/3)/(2/3));if(X<53||sx<0||sx>=320)continue;g.drawImage(c,fx+sx,fy+sy,1,1,fx+X,fy+Y,1,1)}}return o};
+const crop=(c,z)=>{const k=document.createElement('canvas');k.width=120*z;k.height=110*z;const g=k.getContext('2d');g.imageSmoothingEnabled=false;g.drawImage(c,100,100,120,110,0,0,120*z,110*z);return k};
+try{for(const god of['aether','indra','medeina','sigil']){
+  AUT.setWork(1);const w=AUT.exportSprite(god,24,12,U);w.sheet=red(w.sheet);w.base=red(w.base);AUT.setWork(0);const r=AUT.exportSprite(god,24,12,U);r.sheet=red(r.sheet);r.base=red(r.base);AUT.setWork(1);
+  const meta={...w.meta,top:Math.min(w.meta.top,r.meta.top),bottom:Math.max(w.meta.bottom,r.meta.bottom),rest:r.meta.anim,pick:w.pick};
+  const f8=document.createElement('canvas');f8.width=320;f8.height=240;f8.getContext('2d').drawImage(w.sheet,640,240,320,240,0,0,320,240);
+  for(const[c,cap]of[[crop(f8,4),god+' · '+w.pick+' · on prie'],[crop(r.base,4),'au repos'],[crop(w.base,1),'taille du jeu'],[w.portrait,'portrait']]){const f=document.createElement('figure');f.append(c,cap);out.append(f)}
+  if(save){post(`da-${god}_anim.png`,w.sheet.toDataURL('image/png'));post(`da-${god}_rest.png`,r.sheet.toDataURL('image/png'));post(`da-${god}_base.png`,w.base.toDataURL('image/png'));post(`bld-${god}.png`,w.portrait.toDataURL('image/png'));post(`meta-da-${god}.json`,JSON.stringify(meta))}}
+ log.textContent=save?'Écrit : quatre autels (prière, repos, base, portrait, manifeste).':'Aperçu seulement.'}catch(e){log.textContent='Erreur : '+e.message;if(save)post('erreur.txt',String(e&&e.stack||e));throw e}
+</script></body></html>

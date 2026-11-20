@@ -50,6 +50,14 @@ func reset() -> void:
 
 ## Valide ce qui peut l'être, dans l'ordre : une quête terminée lance aussitôt la suivante.
 func update() -> void:
+	var before := quest
+	_advance()
+	# Une quête vient de s'achever (le passage « » → salamandre n'en termine aucune).
+	if quest != before and before != "":
+		Sfx.play("quete")
+
+
+func _advance() -> void:
 	if quest == "anchor" and GameState.orb_active:
 		quest = ""
 	if quest == "" and _engineer_unarmored():
@@ -78,6 +86,9 @@ func objective() -> Dictionary:
 		return {}
 	# Le premier boss interrompt la quête en cours, qui reprend à sa chute.
 	var boss := Martyre.objective()
+	if not boss.is_empty():
+		return boss
+	boss = OeilMatrice.objective()
 	if not boss.is_empty():
 		return boss
 	match quest:

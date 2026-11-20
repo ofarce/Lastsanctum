@@ -1,0 +1,298 @@
+{
+ "source": "planches/assets/engineer-maj.js (Templier technomancien, mains nues) — tools/ingenieur/export.py",
+ "frame_w": 48,
+ "frame_h": 48,
+ "ax": 24,
+ "ay": 45,
+ "h": 31,
+ "stride": 5.0,
+ "self_bob": true,
+ "overlays": false,
+ "anims": {
+  "idle": {
+   "y": 0,
+   "cols": 12,
+   "rows": 6,
+   "count": 72,
+   "note": "repos : souffle en quatre temps, cercle runique qui bat, clignements, geste d’attente toutes les 6 s",
+   "fps": 12
+  },
+  "walk": {
+   "y": 288,
+   "cols": 12,
+   "rows": 1,
+   "count": 12,
+   "note": "marche : 12 poses, phase += distance / stride (5 unités par cycle : 3 cycles/s à 15,2 unités/s, les pieds glissent)"
+  },
+  "kneel": {
+   "y": 336,
+   "cols": 12,
+   "rows": 3,
+   "count": 36,
+   "note": "à genoux, souffle court (24), puis se relève (12)",
+   "fps": 12
+  },
+  "pray": {
+   "y": 480,
+   "cols": 12,
+   "rows": 2,
+   "count": 24,
+   "note": "agenouillé, mains jointes (incantation)",
+   "fps": 12
+  },
+  "settle": {
+   "y": 576,
+   "cols": 12,
+   "rows": 1,
+   "count": 10,
+   "note": "s’assoit en tailleur (jouée à l’envers pour se relever)",
+   "fps": 12
+  },
+  "lotus": {
+   "y": 624,
+   "cols": 12,
+   "rows": 4,
+   "count": 48,
+   "note": "méditation en tailleur, yeux clos, souffle lent",
+   "fps": 12
+  },
+  "slash1": {
+   "y": 816,
+   "cols": 14,
+   "rows": 1,
+   "count": 14,
+   "note": "direct du gantelet, 21 i/s",
+   "fps": 21
+  },
+  "slash2": {
+   "y": 864,
+   "cols": 16,
+   "rows": 1,
+   "count": 16,
+   "note": "coup de marteau des deux poings, onde au sol, 18 i/s",
+   "fps": 18
+  },
+  "shoot": {
+   "y": 912,
+   "cols": 6,
+   "rows": 1,
+   "count": 6,
+   "note": "décharge du gantelet (0,5 s), 12 i/s",
+   "fps": 12
+  },
+  "aim": {
+   "y": 960,
+   "cols": 19,
+   "rows": 4,
+   "count": 76,
+   "note": "visée du gantelet : 19 angles (−90° à +90°) × 4 lignes (recul 0 / 1,5 / 3, suspension)"
+  },
+  "shoot_d": {
+   "y": 1152,
+   "cols": 6,
+   "rows": 1,
+   "count": 6,
+   "note": "décharge vers le sud (de face), 12 i/s",
+   "fps": 12
+  },
+  "shoot_u": {
+   "y": 1200,
+   "cols": 6,
+   "rows": 1,
+   "count": 6,
+   "note": "décharge vers le nord (de dos), 12 i/s",
+   "fps": 12
+  },
+  "idle_d": {
+   "y": 1248,
+   "cols": 12,
+   "rows": 2,
+   "count": 24,
+   "note": "repos de face",
+   "fps": 12
+  },
+  "walk_d": {
+   "y": 1344,
+   "cols": 12,
+   "rows": 1,
+   "count": 12,
+   "note": "marche vers le bas (de face)"
+  },
+  "idle_u": {
+   "y": 1392,
+   "cols": 12,
+   "rows": 2,
+   "count": 24,
+   "note": "repos de dos",
+   "fps": 12
+  },
+  "walk_u": {
+   "y": 1488,
+   "cols": 12,
+   "rows": 1,
+   "count": 12,
+   "note": "marche vers le haut (de dos)"
+  },
+  "hit": {
+   "y": 1536,
+   "cols": 6,
+   "rows": 1,
+   "count": 6,
+   "note": "touché : buste rejeté en arrière (0,5 s)",
+   "fps": 12
+  },
+  "c_idle": {
+   "y": 1584,
+   "cols": 12,
+   "rows": 4,
+   "count": 48,
+   "note": "repos, Arbalestrie baissée (tête : +1 px sur les images 9 à 20 de chaque souffle de 24)",
+   "fps": 12
+  },
+  "c_walk": {
+   "y": 1776,
+   "cols": 12,
+   "rows": 1,
+   "count": 12,
+   "note": "marche, Arbalestrie baissée (tête : +1 px sur les images 0, 1, 5, 6, 7, 11)"
+  },
+  "c_shoot": {
+   "y": 1824,
+   "cols": 6,
+   "rows": 1,
+   "count": 6,
+   "note": "tir de l’Arbalestrie (0,5 s), 12 i/s (tête : +1 px sur les images 1 et 2)",
+   "fps": 12
+  },
+  "helm": {
+   "y": 1872,
+   "cols": 4,
+   "rows": 1,
+   "count": 4,
+   "note": "calque du casque de combat : fermeture 25 / 50 / 75 / 100 % (tête au repos, décaler de dy)"
+  }
+ },
+ "aim": {
+  "angles": [
+   -90,
+   -80,
+   -70,
+   -60,
+   -50,
+   -40,
+   -30,
+   -20,
+   -10,
+   0,
+   10,
+   20,
+   30,
+   40,
+   50,
+   60,
+   70,
+   80,
+   90
+  ],
+  "rows_def": [
+   {
+    "recoil": 0,
+    "pulse": 0.5
+   },
+   {
+    "recoil": 1.5,
+    "pulse": 0.5
+   },
+   {
+    "recoil": 3,
+    "pulse": 0.5
+   },
+   {
+    "recoil": 0,
+    "pulse": 1
+   }
+  ],
+  "muzzle": [
+   [
+    25.5,
+    23.0
+   ],
+   [
+    26.8,
+    23.1
+   ],
+   [
+    28.1,
+    23.5
+   ],
+   [
+    29.2,
+    24.0
+   ],
+   [
+    30.3,
+    24.8
+   ],
+   [
+    31.2,
+    25.7
+   ],
+   [
+    32.0,
+    26.8
+   ],
+   [
+    32.5,
+    27.9
+   ],
+   [
+    32.9,
+    29.2
+   ],
+   [
+    33.0,
+    30.5
+   ],
+   [
+    32.9,
+    31.8
+   ],
+   [
+    32.5,
+    33.1
+   ],
+   [
+    32.0,
+    34.2
+   ],
+   [
+    31.2,
+    35.3
+   ],
+   [
+    30.3,
+    36.2
+   ],
+   [
+    29.2,
+    37.0
+   ],
+   [
+    28.1,
+    37.5
+   ],
+   [
+    26.8,
+    37.9
+   ],
+   [
+    25.5,
+    38.0
+   ]
+  ],
+  "shoulder": [
+   25.5,
+   30.5
+  ]
+ }
+}

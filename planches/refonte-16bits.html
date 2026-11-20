@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Refonte 16 bits</title>
+<style>
+:root{--bg:#1d2a24;--panel:#26372f;--ink:#efe6cf;--mute:#a9b9a8;--line:#3d5448;--acc:#5ce8ff;--ok:#8ccf6a;--mid:#f0c050;--bad:#ff8a6a}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 Georgia,serif;padding:24px 16px}
+h1{font-size:26px;margin:0 0 4px}
+h2{font-size:20px;margin:28px 0 8px;color:var(--acc);font-weight:normal}
+h3{font-size:12px;margin:10px 0 4px;color:var(--mute);font-weight:normal;letter-spacing:1px;text-transform:uppercase}
+.sub{color:var(--mute);margin:0 0 16px;max-width:900px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,600px),1fr));gap:16px;max-width:1500px}
+.card{background:var(--panel);border:2px solid var(--line);border-radius:10px;padding:14px;min-width:0}
+.card h4{margin:0;font-size:18px;font-weight:normal}.card .side{color:var(--mute);font-size:13px}
+.row{display:flex;flex-wrap:wrap;gap:6px;align-items:flex-end}
+.pair{display:flex;flex-wrap:wrap;gap:8px 18px;align-items:flex-end}
+.pair>div{min-width:0;max-width:100%}
+.pair>.old{flex:0 1 auto}.pair>.old .note{max-width:240px;margin:0}
+canvas{image-rendering:pixelated;display:block;background:#4f7a3a;border-radius:4px;max-width:100%}
+.old canvas{background:#3f5a34;outline:2px dashed #6a5a40;outline-offset:-2px}
+table{border-collapse:collapse;max-width:1100px;width:100%;font-size:14px;background:var(--panel);border-radius:10px;overflow:hidden}
+td,th{padding:7px 10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+th{color:var(--mute);font-weight:normal;font-size:12px;letter-spacing:1px;text-transform:uppercase}
+.tag{display:inline-block;padding:1px 8px;border-radius:9px;font-size:12px;color:#111;white-space:nowrap}
+.ok{background:var(--ok)}.mid{background:var(--mid)}.bad{background:var(--bad)}
+.wrap{overflow-x:auto}
+.rules{max-width:1100px;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,250px),1fr));gap:10px}
+.rules div{background:var(--panel);border:2px solid var(--line);border-radius:10px;padding:10px 12px;font-size:14px}
+.rules b{color:var(--acc);font-weight:normal;display:block}
+.por canvas{background:#2e4a5a;border:4px solid #7a7e8c}
+.note{color:var(--mute);font-size:13px;margin:6px 0 0}
+</style></head><body>
+<h1>Refonte 16 bits, alignée sur l'Ingénieur</h1>
+<p class="sub">Audit de tous les assets graphiques chargés par le jeu, comparés au Templier technomancien. Pour chaque famille qui jure : à gauche l'actuel (cadre pointillé, image extraite des atlas du jeu), à droite la proposition dessinée avec le même moteur que l'Ingénieur (<code>engineer-colosse.js</code>).</p>
+
+<h2>Ce qui fait le style de l'Ingénieur</h2>
+<div class="rules">
+ <div><b>Paliers francs</b>Rampes de 5 tons par matière, sans trame ni grain. Les actuels sont texturés pixel à pixel.</div>
+ <div><b>Contour coloré</b>Le contour prend le ton le plus sombre de la matière qu'il borde. Pas de noir franc tout autour.</div>
+ <div><b>Proportions RPG 16 bits</b>Tête ~9 px pour ~31 px de haut, épaules rondes, bottes larges. Les actuels ont une petite tête sur un corps de 36–42 px.</div>
+ <div><b>Volumes en ellipses</b>Lumière en haut à gauche, liseré intérieur entre deux matières, quelques pixels cyan de lueur.</div>
+</div>
+
+<h2>Audit</h2>
+<div class="wrap"><table id="audit"><tr><th>Famille</th><th>Fichiers</th><th>Verdict</th><th>Constat</th></tr></table></div>
+
+<h2>Alignement à l'échelle du jeu (×3)</h2>
+<div class="card"><h3>Actuel</h3><canvas id="lineOld"></canvas><h3>Proposé</h3><canvas id="lineNew"></canvas>
+<p class="note">Le Templier est le premier de chaque rangée. Les nouveaux sprites gardent les mêmes ancres au pied : la taille à l'écran baisse d'environ 15 %, les zones de touche ne changent pas.</p></div>
+
+<h2>Personnages humains</h2>
+<div class="grid" id="humans"></div>
+
+<h2>Bêtes</h2>
+<div class="grid" id="beasts"></div>
+
+<h2>Portrait du panneau d'objectif</h2>
+<div class="card" style="max-width:720px"><div class="pair">
+ <div class="old por"><h3>Actuel · hud/portraits/engineer.png</h3><canvas id="porOld"></canvas></div>
+ <div class="por"><h3>Attendu · portrait du Templier</h3><canvas id="porNew"></canvas></div></div>
+<p class="note">Le panneau d'objectif (<code>ui/hud/objective_panel.gd</code>) charge encore l'ancien Ingénieur au chapeau. La galerie, elle, utilise déjà le portrait du Templier. Il suffit de changer un chemin.</p></div>
+
+<h2>Bâtiments et décor : aperçu automatique</h2>
+<p class="sub">Ce n'est pas un nouveau dessin : c'est un filtre appliqué aux atlas actuels (grain supprimé, luminosité ramenée à des paliers, contour noir remplacé par un contour coloré). Il montre ce que donnerait la règle « paliers francs + contour coloré » sur ces familles, avant de décider s'il faut les redessiner.</p>
+<div class="grid" id="filtered"></div>
+
+<script src="assets/engineer-colosse.js"></script>
+<script src="assets/engineer-exile.js"></script>
+<script src="assets/refonte-16bits.js"></script>
+<script>
+'use strict';
+const S=3;
+const AUDIT=[
+ ['Ingénieur (Templier)','imported/engineer/templier','ok','Référence.'],
+ ['Unités de caserne','baked/adepts/lame, archer, flammes','bad','Trame bruitée, contour noir, petite tête, 40–42 px. Elles côtoient l\'Ingénieur en permanence. À redessiner en premier.'],
+ ['Soldats de Laetan','imported/enemies/creep, spitter, scout, soldier, shield, archer','bad','Même écart, plus marqué : silhouettes de 36 px, visages de 2 px. Proposition ci-dessous.'],
+ ['Bêtes de la jungle','imported/enemies/beast, feline, croc, brute','bad','Pelage tramé, lecture floue à ×1. La Brute (golem) suivra la même règle.'],
+ ['Strazhar, Martyre (boss)','imported/enemies/strazhar_*, martyre_*','mid','Gabarits spéciaux (quadrupède, 150 × 120). Assez lisibles, mais tramés. À reprendre dans un second temps, avec leurs animations.'],
+ ['Héros (paladin, soigneur, garde, tireur)','baked/units/*','mid','Tous tramés et à l\'ancienne échelle. Ils passeront au même gabarit après la caserne.'],
+ ['Ancien Ingénieur','baked/units/engineer_*, imported/engineer/engineer_*, tyrien/','mid','Remplacé par le Templier. Restent l\'ancien portrait du panneau d\'objectif, la visée engineer_aim et les sprites des tests visuels.'],
+ ['Esprits (Faon, Roue, Orrery, Livre)','baked/adepts/medeina, indra, aether, sigil','ok','Formes simples à paliers. Seul le halo du feu follet de Medeina garde une trame, et elle passe bien pour une lueur.'],
+ ['Portraits du HUD','baked/hud/portraits/*','mid','Ce sont des recadrages des sprites de jeu : ils suivront la refonte. Le portrait de l\'Ingénieur dans le panneau d\'objectif est le mauvais (voir plus bas).'],
+ ['Temples et bâtiments','baked/buildings/da-*','mid','Les temples et le Creuset sont déjà en aplats. Les toits d\'ardoise (forge, atelier, bibliothèque) et la tour de baliste sont très tramés. Voir l\'aperçu automatique.'],
+ ['Décor de caverne','ardoise/world/*, baked/world/sprites','mid','Roches et buissons tramés, parois à texture fine. Ça passe pour un fond, mais ça fait plus Core Keeper que RPG 16 bits.'],
+ ['Objets, coffres, filons','ardoise/ui/items.png, production_chests, filons, mining_seal','ok','Aplats et contours propres, déjà dans l\'esprit de l\'Ingénieur.'],
+ ['Portails, Ancre','baked/portals/*, imported/portal','ok','Aplats lumineux, pourpre réservé à l\'Ancre : conformes.'],
+];
+const tb=document.getElementById('audit');
+for(const[a,f,v,c]of AUDIT){const tr=document.createElement('tr');
+ tr.innerHTML=`<td>${a}</td><td><code>${f}</code></td><td><span class="tag ${v}">${{ok:'conforme',mid:'à reprendre ensuite',bad:'à redessiner'}[v]}</span></td><td>${c}</td>`;tb.append(tr)}
+
+// ---- outils
+const img=src=>new Promise((ok,ko)=>{const i=new Image();i.onload=()=>ok(i);i.onerror=ko;i.src=src});
+function crop(im,x,y,w,h,sc=S){const c=document.createElement('canvas');c.width=w*sc;c.height=h*sc;const g=c.getContext('2d');g.imageSmoothingEnabled=false;g.drawImage(im,x,y,w,h,0,0,w*sc,h*sc);return c}
+function trimmed(cv){const g=cv.getContext('2d'),d=g.getImageData(0,0,cv.width,cv.height).data;let x0=1e9,y0=1e9,x1=-1,y1=-1;
+ for(let y=0;y<cv.height;y++)for(let x=0;x<cv.width;x++)if(d[(y*cv.width+x)*4+3]){x0=Math.min(x0,x);x1=Math.max(x1,x);y0=Math.min(y0,y);y1=Math.max(y1,y)}
+ return x1<0?{x:0,y:0,w:1,h:1}:{x:x0,y:y0,w:x1-x0+1,h:y1-y0+1}}
+const cv=b=>{const r=render(b,S);if(b.w!==40)return r;const x0=5,w=31,c=document.createElement('canvas');c.width=w*S;c.height=r.height;c.getContext('2d').drawImage(r,x0*S,0,w*S,r.height,0,0,w*S,r.height);return c};
+const card=(host,name,side)=>{const c=document.createElement('div');c.className='card';c.innerHTML=`<h4>${name}</h4><div class="side">${side}</div>`;host.append(c);return c};
+const sec=(parent,t,list,cls)=>{const d=document.createElement('div');if(cls)d.className=cls;const h=document.createElement('h3');h.textContent=t;d.append(h);const r=document.createElement('div');r.className='row';for(const x of list)r.append(x);d.append(r);parent.append(d);return d};
+
+// ---- 1. Propositions : dessinées tout de suite, sans dépendre des fichiers du jeu
+const OLDSLOT={};
+function slot(p,k){const d=document.createElement('div');d.className='old';d.innerHTML='<h3>Actuel</h3><div class="row"><span class="note">chargement…</span></div>';p.append(d);OLDSLOT[k]=d.querySelector('.row')}
+const H=document.getElementById('humans');
+for(const k of Object.keys(FIG)){const T=FIG[k],c=card(H,T.name,T.side);const p=document.createElement('div');p.className='pair';c.append(p);slot(p,k);
+ const n=document.createElement('div');p.append(n);
+ sec(n,'Proposé · face, profil, attaque',[cv(fig({k,dir:'d'})),cv(fig({k,dir:'s'})),cv(fig({k,dir:'d',pose:'atk'})),cv(fig({k,dir:'s',pose:'atk'}))]);
+ sec(n,'Marche · profil',[0,1,2,3].map(f=>cv(fig({k,dir:'s',pose:'walk',f}))))}
+const Bq=document.getElementById('beasts');
+for(const k of Object.keys(QUAD)){const T=QUAD[k],c=card(Bq,T.name,T.side);const p=document.createElement('div');p.className='pair';c.append(p);slot(p,k);
+ const n=document.createElement('div');p.append(n);
+ sec(n,'Proposé · repos, attaque',[cv(quad({k})),cv(quad({k,pose:'atk'}))]);
+ sec(n,'Marche',[0,1,2,3].map(f=>cv(quad({k,pose:'walk',f}))))}
+function lineup(id,list){const cv2=document.getElementById(id),pad=6;let W=pad,Hh=0;
+ for(const x of list){W+=x.w+pad;Hh=Math.max(Hh,x.h)}cv2.width=W*S;cv2.height=(Hh+6)*S;const g=cv2.getContext('2d');g.imageSmoothingEnabled=false;
+ g.fillStyle='#4f7a3a';g.fillRect(0,0,cv2.width,cv2.height);let x0=pad;
+ for(const x of list){g.fillStyle='#0003';g.beginPath();g.ellipse((x0+x.w/2)*S,(Hh+2)*S,x.w*.32*S,2*S,0,0,7);g.fill();
+  g.drawImage(x.c,x.x,x.y,x.w,x.h,x0*S,(Hh+2-x.h)*S,x.w*S,x.h*S);x0+=x.w+pad}}
+const T1=c=>{const r=trimmed(c);return{c,...r}};
+const tplDrawn=T1(render(exile({v:'B',dir:'d'}),1)); // Templier dessiné par le même moteur
+lineup('lineNew',[tplDrawn,...Object.keys(FIG).map(k=>T1(render(fig({k,dir:'d'}),1))),...Object.keys(QUAD).map(k=>T1(render(quad({k}),1)))]);
+{const c=document.getElementById('porNew');const r=render(exilePortrait('B'),3);c.width=r.width;c.height=r.height;c.getContext('2d').drawImage(r,0,0)}
+
+// ---- 2. Sprites actuels : lus dans assets/ si la page est servie depuis la racine du dépôt
+const miss=msg=>{for(const r of Object.values(OLDSLOT))r.innerHTML=`<span class="note">${msg}</span>`;
+ document.getElementById('lineOld').replaceWith(Object.assign(document.createElement('p'),{className:'note',textContent:msg}));
+ document.getElementById('filtered').innerHTML=`<p class="note">${msg}</p>`};
+(async()=>{
+ let ROOT=null;
+ if(location.protocol!=='file:')for(const r of['../assets/','/assets/']){try{const q=await fetch(r+'baked/manifest.json');if(q.ok){ROOT=r;break}}catch(e){}}
+ if(!ROOT){miss('Sprites actuels indisponibles ici : ouvrir la planche via http://localhost:8177/planches/refonte-16bits.html (serveur « planches-refonte », racine du dépôt).');return}
+ try{
+ const BM=await (await fetch(ROOT+'baked/manifest.json')).json(), EM=(await (await fetch(ROOT+'imported/enemies/manifest.json')).json()).enemies;
+ const AD=BM.adepts.roles;
+ const OLD={lame:['adepts','lame'],archer:['adepts','archer'],flammes:['adepts','flammes'],creep:['enemies','creep'],spitter:['enemies','spitter'],scout:['enemies','scout'],
+  soldier:['enemies','soldier'],shield:['enemies','shield'],larcher:['enemies','archer'],beast:['enemies','beast'],feline:['enemies','feline'],croc:['enemies','croc']};
+ async function oldFrames(k,sc=S){const[fam,id]=OLD[k];
+  if(fam==='adepts'){const m=AD[id].modes,i=await img(`${ROOT}baked/adepts/${id}_idle.png`),w=await img(`${ROOT}baked/adepts/${id}_work.png`);
+   let wk;for(const n of[8,12,4,0]){wk=crop(w,m.work.frame_w*n,0,m.work.frame_w,m.work.frame_h,sc);if(trimmed(wk).w>1)break}
+   return[crop(i,0,0,m.idle.frame_w,m.idle.frame_h,sc),wk]}
+  const m=EM[id],i=await img(`${ROOT}imported/enemies/${id}_idle.png`),a=await img(`${ROOT}imported/enemies/${id}_attack.png`);
+  const A=m.attack,cols=A.cols||Math.floor(a.width/A.frame_w);let at;
+  for(const n of[10,6,3,0].filter(n=>n<A.count)){at=crop(a,A.frame_w*(n%cols),A.frame_h*Math.floor(n/cols),A.frame_w,A.frame_h,sc);if(trimmed(at).w>1)break}
+  return[crop(i,0,0,m.idle.frame_w,m.idle.frame_h,sc),at]}
+ const oldL=[T1(crop(await img(ROOT+'imported/engineer/templier/templier_base.png'),0,0,48,48,1))];
+ for(const k of Object.keys(OLD)){const fr=await oldFrames(k);OLDSLOT[k].replaceChildren(...fr);oldL.push(T1((await oldFrames(k,1))[0]))}
+ lineup('lineOld',oldL);
+ const po=await img(ROOT+'baked/hud/portraits/engineer.png'),pn=await img(ROOT+'imported/engineer/templier/templier_portrait.png');
+ const put=(id,im,sc)=>{const c=document.getElementById(id);c.width=im.width*sc;c.height=im.height*sc;const g=c.getContext('2d');g.imageSmoothingEnabled=false;g.drawImage(im,0,0,c.width,c.height)};
+ put('porOld',po,128/po.width*1.5);put('porNew',pn,1.5);
+ const F=document.getElementById('filtered');
+ const SRC=[['Forge (toit d\'ardoise)','baked/buildings/da-forge_base.png'],['Atelier','baked/buildings/da-workshop_base.png'],
+  ['Bibliothèque','baked/buildings/da-library_base.png'],['Caserne','baked/buildings/da-caserne_base.png'],
+  ['Tour de baliste','baked/buildings/ballista_active_base.png'],['Bosquet (atlas)','ardoise/world/bosquet.png',[0,0,240,104]],
+  ['Roches et buissons (atlas de décor)','ardoise/world/decor_atlas.png',[0,96,520,240]]];
+ for(const[name,src,rc]of SRC){const im=await img(ROOT+src);const c0=document.createElement('canvas');
+  let x=0,y=0,w=im.width,h=im.height;if(rc)[x,y,w,h]=rc;c0.width=w;c0.height=h;c0.getContext('2d').drawImage(im,x,y,w,h,0,0,w,h);
+  const r=trimmed(c0),c1=document.createElement('canvas');c1.width=r.w;c1.height=r.h;c1.getContext('2d').drawImage(c0,r.x,r.y,r.w,r.h,0,0,r.w,r.h);
+  const sc=r.w>200?1.5:2;const a=document.createElement('canvas');a.width=r.w*sc;a.height=r.h*sc;const g=a.getContext('2d');g.imageSmoothingEnabled=false;g.drawImage(c1,0,0,a.width,a.height);
+  const c=card(F,name,'assets/'+src),p=document.createElement('div');p.className='pair';c.append(p);
+  sec(p,'Actuel',[a],'old');sec(p,'Filtré',[dedither(c1,sc)])}
+ }catch(e){console.error(e);miss('Erreur de lecture des sprites actuels : '+e)}
+})();
+</script></body></html>

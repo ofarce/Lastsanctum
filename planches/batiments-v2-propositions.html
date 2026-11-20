@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Bâtiments secondaires v2</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0b0f12;--panel:#111a1e;--line:#23343a;--txt:#dcd8bc;--mut:#8fa0a0;--acc:#e8c870;--hot:#c8ccd8}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--txt);font:15px/1.5 'Pixelify Sans',system-ui,sans-serif}
+header,main{max-width:1320px;margin:auto;padding:18px 16px}h1{margin:0;font-weight:600;letter-spacing:.08em;font-size:26px;color:var(--acc)}
+header p{color:var(--mut);margin:6px 0 0;max-width:960px}header p b{color:var(--txt);font-weight:600}
+button{font:inherit;color:var(--txt);background:#16252b;border:1px solid var(--line);padding:5px 11px;cursor:pointer}button:hover,button[aria-pressed=true]{border-color:var(--acc);color:var(--acc)}
+.clock{position:sticky;top:0;z-index:5;background:rgba(11,15,18,.94);border-bottom:1px solid var(--line);backdrop-filter:blur(4px)}
+.clock div{max-width:1320px;margin:auto;padding:8px 16px;display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px}
+.clock input{flex:1;min-width:140px;accent-color:var(--acc)}.clock output{min-width:84px;color:var(--acc)}
+.clock nav{display:flex;gap:4px;flex-wrap:wrap}.clock nav a{color:var(--mut);text-decoration:none;border:1px solid var(--line);padding:3px 8px;font-size:13px}.clock nav a:hover{color:var(--acc);border-color:var(--acc)}
+section{margin:30px 0 40px;scroll-margin-top:60px}h2{color:var(--acc);font-weight:600;letter-spacing:.06em;margin:0 0 4px;font-size:22px}
+.sub{color:var(--mut);margin:0 0 14px;max-width:960px}.sub b{color:var(--txt);font-weight:600}
+.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+figure{margin:0;background:var(--panel);border:1px solid var(--line);display:flex;flex-direction:column}figure canvas{display:block;width:100%;height:auto;image-rendering:pixelated}
+figure.cur{border-style:dashed}figure.cur figcaption b{color:var(--mut)}
+figcaption{padding:10px 14px 14px}figcaption b{color:var(--hot);font-weight:600;font-size:17px}figcaption p{margin:4px 0 0;color:var(--mut);font-size:14px}
+.native{display:flex;gap:10px;align-items:flex-end;margin-top:12px;padding:10px 12px;background:var(--panel);border:1px solid var(--line);overflow-x:auto}
+.native{scrollbar-color:#2a3a40 #111a1e}.native span{color:var(--mut);font-size:12px;min-width:90px}.native canvas{image-rendering:pixelated;width:264px;height:auto;flex:none}
+.note{border:1px solid var(--line);background:var(--panel);padding:12px 16px;color:var(--mut);max-width:960px}.note b{color:var(--txt)}
+@media(max-width:980px){.grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:620px){.grid{grid-template-columns:1fr}.native canvas{width:198px}}
+</style></head><body>
+<header><h1>BÂTIMENTS SECONDAIRES · MODÈLES v2</h1>
+<p>Cinq nouveaux modèles pour chacun des quatre bâtiments de production : <b>Bibliothèque, Atelier, Forge, Entrepôt logistique</b>. Même gabarit que le Creuset : <b>emprise 2 × 2 cases</b> (les traits sombres du dallage marquent les quatre cases), vue 3/4 du jeu, 24 px par unité, contour noir franc. La première vignette de chaque ligne (cadre pointillé) est le dessin actuel du jeu, à la même échelle. Tout est animé ; le curseur règle l’heure pour voir les lumières de nuit. Sous chaque groupe, la bande « taille en jeu » montre les six côte à côte en ×2.</p></header>
+<div class="clock"><div><button id="play" aria-pressed="false">▶ Cycle</button><input id="hour" type="range" min="0" max="24" step="0.05" value="11" aria-label="Heure de la journée"><output id="hl">11 h 00</output>
+<button data-h="11">Midi</button><button data-h="19">Crépuscule</button><button data-h="0.5">Nuit</button>
+<nav><a href="#library">Bibliothèque</a><a href="#workshop">Atelier</a><a href="#forge">Forge</a><a href="#warehouse">Entrepôt</a></nav></div></div>
+<main>
+<div class="note"><b>Charte :</b> pas de cyan (réservé aux Exilés et au Creuset), pas d’or (Laetan), pas de pourpre (l’Ancre). La Bibliothèque et l’Entrepôt, servis par Sigil, prennent le marbre gris veiné et la lumière blanche ; l’Atelier et la Forge, servis par Aether, la lueur bleu-violet. Les coffres bleus et rouges de l’Entrepôt reprennent ceux du jeu.</div>
+<div id="groups"></div>
+<section><h2>À trancher</h2><p class="note"><b>Pour chaque bâtiment, choisis un numéro</b> (par exemple « Bibliothèque 1, Atelier 5, Forge 3, Entrepôt 2 ») ou un mélange (« la tour du 3 avec les gradins du 5 »). Le modèle retenu sera exporté en sprite 320 × 240 animé, comme le Creuset, et remplacera le dessin actuel.</p></section>
+</main>
+<script src="assets/batiments-v2-planches.js?v=1"></script>
+<script>
+'use strict';
+const CUR=window.CURRENT_ART||{library:'assets/batiments-v2/actuel-library.png',workshop:'assets/batiments-v2/actuel-workshop.png',forge:'assets/batiments-v2/actuel-forge.png',warehouse:'assets/batiments-v2/actuel-warehouse.png'};
+const views=[],root=document.querySelector('#groups');
+// vignette « actuel » : sol de la planche + sprite du jeu (ancre 160,168 sur le centre de l’emprise 66,102)
+function currentScene(id){const S={img:Object.assign(new Image(),{hidden:true}),ready:false,render(g,hour){if(!this.base){this.base=BAT.floorScene();}this.base.render(g,hour,0);if(this.ready)g.drawImage(this.img,66-160,102-168)}};S.img.onload=()=>{S.ready=true;if(S.onready)S.onready()};S.img.src=CUR[id];document.body.append(S.img);return S}
+for(const G of BAT.GROUPS){const sec=document.createElement('section');sec.id=G.id;sec.innerHTML=`<h2>${G.name}</h2><p class="sub">${G.note}</p><div class="grid"></div><div class="native"><span>Taille en jeu (×2)</span></div>`;root.append(sec);
+ const grid=sec.querySelector('.grid'),nat=sec.querySelector('.native');
+ const add=(title,desc,make,cur)=>{const f=document.createElement('figure');if(cur)f.className='cur';f.innerHTML=`<canvas width="${BAT.W}" height="${BAT.H}"></canvas><figcaption><b>${title}</b><p>${desc}</p></figcaption>`;grid.append(f);
+  const cv=f.querySelector('canvas'),nc=document.createElement('canvas');nc.width=BAT.W;nc.height=BAT.H;nc.title=title;nat.append(nc);views.push({cv,g:cv.getContext('2d'),nc,ng:nc.getContext('2d'),make,S:null,vis:false})};
+ add('Actuel','Le dessin du jeu aujourd’hui, à la même échelle.',()=>currentScene(G.id),true);
+ BAT.ITEMS.forEach((it,i)=>{if(it.g!==G.id)return;const n=BAT.ITEMS.filter((o,j)=>o.g===G.id&&j<=i).length;add(`${n} · ${it.name}`,it.desc,()=>BAT.vignette(i))})}
+const io=new IntersectionObserver(es=>{for(const e of es){const v=views.find(v=>v.cv===e.target||v.nc===e.target);if(!v)continue;if(e.target===v.cv)v.a=e.isIntersecting;else v.b=e.isIntersecting;v.vis=v.a||v.b;if(v.vis&&!v.S)v.S=v.make()}},{rootMargin:'300px'});
+views.forEach(v=>{io.observe(v.cv);io.observe(v.nc)});
+const hourIn=document.querySelector('#hour'),hl=document.querySelector('#hl'),playB=document.querySelector('#play');let hour=11,playing=false,t=0,last,acc=0;
+const fmt=h=>{h=((h%24)+24)%24;return`${Math.floor(h)} h ${String(Math.floor(h%1*60)).padStart(2,'0')}`};
+hourIn.oninput=()=>{hour=+hourIn.value};document.querySelectorAll('[data-h]').forEach(b=>b.onclick=()=>{hour=+b.dataset.h;hourIn.value=hour});
+playB.onclick=()=>{playing=!playing;playB.setAttribute('aria-pressed',playing);playB.textContent=playing?'❚❚ Cycle':'▶ Cycle'};
+const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+function loop(now){const dt=last===undefined?0:Math.min((now-last)/1000,.1);last=now;t+=reduce?0:dt;if(playing){hour=(hour+dt*1.2)%24;hourIn.value=hour}
+ acc+=dt;if(acc>1/20){acc=0;hl.textContent=fmt(hour);for(const v of views)if(v.vis&&v.S){v.S.render(v.g,hour,t);v.ng.drawImage(v.cv,0,0)}}requestAnimationFrame(loop)}
+requestAnimationFrame(loop);
+// capture hors ligne : ?shot=1&h=11&t=1.3 rend tout de suite chaque vignette
+const Q=new URLSearchParams(location.search);if(Q.get('shot')){const h=+(Q.get('h')??11),tt=+(Q.get('t')??1.3);for(const v of views){v.S=v.make();const r=()=>{v.S.render(v.g,h,tt);v.ng.drawImage(v.cv,0,0)};r();v.S.onready=r}}
+</script></body></html>

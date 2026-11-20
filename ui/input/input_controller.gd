@@ -4,8 +4,8 @@ extends Node
 ## sélection, clic sur l'Ancre ; clic droit pour réactiver, creuser ou se déplacer ; glisser droit sur la
 ## roche pour mettre plusieurs cases en file. Touches 1–9, Ctrl+A, Échap, Maj+R et raccourcis HUD.
 
-const BOX_FILL := Color("#ead08c22")
-const BOX_LINE := Color("#f8df93")
+const BOX_FILL := Color("#5ce8ff22")
+const BOX_LINE := Color("#8ff2ff")
 
 var world: World
 var sim: Simulation
@@ -14,6 +14,7 @@ var _box_on := false
 var _box_shown := false
 var _box_from := Vector2.ZERO
 var _box_to := Vector2.ZERO
+var _box_prev: Array[Unit] = []
 var _layer := CanvasLayer.new()
 var _box := _SelectBox.new()
 var _mining_hover := preload("res://ui/input/mining_hover.gd").new()
@@ -52,17 +53,23 @@ func ground(p: Vector2) -> Vector2:
 
 
 func hit_orb(p: Vector2) -> bool:
-	var y := 3.0 + sin(GameState.sim_time * 1.7) * 0.2 if GameState.orb_active else 2.6
-	var o := project(CaveShape.CORE.x, y, CaveShape.CORE.y)
-	return o.distance_to(p) < maxf(18.0, zoom_k() * 1.15)
+	# Du puits à la sphère soulevée : la sphère éteinte est noyée au ras du sol, éveillée elle flotte.
+	var low := project(CaveShape.CORE.x, 0.2, CaveShape.CORE.y)
+	var high := project(CaveShape.CORE.x, 3.0, CaveShape.CORE.y)
+	return Geometry2D.get_closest_point_to_segment(p, low, high).distance_to(p) < maxf(18.0, zoom_k() * 1.4)
 
 
 func _process(_delta: float) -> void:
+	# Codex d'aide ouvert : jeu en pause, aucune commande.
+	if HelpPanel.open:
+		return
 	_engineer_keys()
 	if GameState.incarnated != null:
 		_incarnated_attack()
-		_mining_hover.cell = null
-		_mining_hover.selected_cells = []
+		# Sceau de Minage : le mur à un bloc de l'Exilé incarné est mis en surbrillance (clic droit : le miner).
+		var aim := ground(get_viewport().get_mouse_position())
+		_mining_hover.cell = sim.incarnated_mining_cell(GameState.incarnated, aim)
+		_mining_hover.selected_cells = _visible_mining_cells()
 		_mining_hover.queue_redraw()
 		return
 	var pointer := get_viewport().get_mouse_position()
@@ -81,7 +88,7 @@ func _process(_delta: float) -> void:
 
 
 ## ZQSD (lettres imprimées : Z haut, Q gauche, S bas, D droite à l'écran) : déplacement direct de
-## l'ingénieur. La direction écran est convertie en direction monde via la projection de la caméra.
+## l'Exilé incarné (désincarné, ces touches déplacent la caméra). La direction écran est convertie en direction monde via la projection de la caméra.
 var _eng_driving := false
 
 func _engineer_keys() -> void:
@@ -98,12 +105,9 @@ func _engineer_keys() -> void:
 		s += Vector2(float(Input.is_key_pressed(KEY_RIGHT)) - float(Input.is_key_pressed(KEY_LEFT)),
 			float(Input.is_key_pressed(KEY_DOWN)) - float(Input.is_key_pressed(KEY_UP)))
 		s = s.clamp(Vector2(-1, -1), Vector2(1, 1))
-	else:
-		for u: Unit in GameState.units:
-			if u.role == "engineer" and u.alive() and not u.hidden:
-				eng = u
-				break
 	if eng == null:
+		# Désincarné : ZQSD déplacent la caméra (WorldCamera), plus l'Ingénieur.
+		_eng_driving = false
 		return
 	if s == Vector2.ZERO:
 		if _eng_driving:
@@ -125,9 +129,66 @@ func _engineer_keys() -> void:
 	eng.force_move = true
 
 
-## Incarnation : clic droit maintenu = attaque vers le curseur si une arme est équipée (cadence de l'arme).
+## Clic droit commencé sur un bâtiment (incarnation) : ouvre ses options, sans tirer tant qu'il est maintenu.
+var _rc_building := false
+
+
+func _incarnated_pick(p: Vector2) -> void:
+	var inc := GameState.incarnated
+	var near: Unit = null
+	var best := INF
+	for u in GameState.units:
+		if u == inc or not u.alive() or u.hidden:
+			continue
+		var d := project(u.x, 1.0, u.z).distance_to(p)
+		if d < best:
+			best = d
+			near = u
+	GameState.hud_enemy = null
+	GameState.hud_menu = ""
+	GameState.hud_mode = ""
+	if near and best < maxf(18.0, 1.3 * zoom_k()):
+		GameState.hud_building = null
+		GameState.selected = [near]
+		return
+	var b := hit_building(ground(p))
+	if b:
+		GameState.selected = []
+		GameState.hud_building = b
+		return
+	if HudModel.incarnated_panel():
+		_close_incarnated_panel()
+
+
+## Le point visé désigne la case : dessous, ou case de mur retenue au survol comme hors incarnation.
+func _clicks_cell(point: Vector2, cell: Dictionary) -> bool:
+	var key := Vector2i(cell["i"], cell["j"])
+	if Vector2i((point / 4.0).floor()) == key:
+		return true
+	var hovered: Variant = world.terrain_state.diggable_cell(point)
+	return hovered != null and Vector2i(hovered["i"], hovered["j"]) == key
+
+
+## Incarnation : alliés sélectionnés au clic gauche (adeptes, unités militaires), hors Exilé incarné.
+func _incarnated_allies() -> Array[Unit]:
+	var out: Array[Unit] = []
+	for u: Unit in GameState.selected:
+		if u != GameState.incarnated and u.alive() and not u.hidden and not u.is_enemy():
+			out.append(u)
+	return out
+
+
+func _close_incarnated_panel() -> void:
+	GameState.hud_building = null
+	GameState.hud_mode = ""
+	GameState.hud_menu = ""
+	if GameState.incarnated:
+		GameState.selected = [GameState.incarnated]
+
+
+## Incarnation : clic droit maintenu = tir vers le curseur si une arme est équipée (cadence de l'arme).
 func _incarnated_attack() -> void:
-	if GameState.ended or not Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT) \
+	if GameState.ended or _rc_building or not Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT) \
 			or get_viewport().gui_get_hovered_control() != null:
 		return
 	sim.combat.aimed_attack(GameState.incarnated, ground(get_viewport().get_mouse_position()))
@@ -154,8 +215,29 @@ func _visible_mining_cells() -> Array[Dictionary]:
 
 
 func _input(event: InputEvent) -> void:
+	if Opening.cinematic() or HelpPanel.open:
+		return
+	# Capsule : E entre (désincarne) ou sort (réincarne).
+	if event is InputEventKey and event.pressed and not event.echo and not event.ctrl_pressed \
+			and not (get_viewport().gui_get_focus_owner() is LineEdit):
+		var key: Key = event.key_label if event.key_label != KEY_NONE else event.keycode
+		# Pylône de Merenor au contact : E lance (ou arrête) la bénédiction ; sinon la capsule.
+		if key == KEY_E and (Pylons.toggle_bless(sim) or Capsule.toggle(sim)):
+			get_viewport().set_input_as_handled()
+			return
+		# F3 : contrôle des hitboxes des ennemis (WorldOverlay._draw_hitboxes).
+		if key == KEY_F3:
+			WorldOverlay.show_hitboxes = not WorldOverlay.show_hitboxes
+			get_viewport().set_input_as_handled()
+			return
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_RIGHT and event.pressed:
 		if _pointer_inside and get_viewport().gui_get_hovered_control() == null and not _box_on:
+			# Pylône de Merenor sous le pointeur (son dessin, obélisque compris) : avant le minage, car l'obélisque
+			# se dessine par-dessus la roche au nord du socle.
+			var py := hit_pylon(event.position)
+			if not py.is_empty() and sim.channel_pylon(py):
+				get_viewport().set_input_as_handled()
+				return
 			var first: Variant = mining_hover_cell(event.position)
 			if first != null:
 				_mining_drag_on = true
@@ -217,13 +299,107 @@ func _mining_cell(point: Vector2) -> Variant:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	# Incarnation (mode action pur) : ni sélection, ni ordres, ni raccourcis ; Échap désincarne.
+	# Cinématique de la séquence d'ouverture, ou codex d'aide ouvert : aucune commande.
+	if Opening.cinematic() or HelpPanel.open:
+		return
+	# Incarnation (mode action pur) : ni sélection, ni ordres, ni raccourcis ; seule la capsule désincarne.
 	if GameState.incarnated != null:
-		_box_on = false
+		if event is InputEventMouseMotion:
+			GameState.build_pointer = ground(event.position)
+		# Clic droit sur un bâtiment : ouvre ses options (adeptes, recherches…) sans tirer ; ailleurs, referme.
+		# Construction ou pose armée (menu en bas à gauche) : clic gauche place, clic droit annule.
+		if event is InputEventMouseButton and event.pressed and GameState.hud_mode in ["build", "place"]:
+			if event.button_index == MOUSE_BUTTON_LEFT:
+				if GameState.hud_mode == "build":
+					sim.place_building(ground(event.position))
+				else:
+					sim.place_item(ground(event.position))
+				return
+			if event.button_index == MOUSE_BUTTON_RIGHT:
+				_rc_building = true
+				GameState.hud_mode = ""
+				return
+		if event is InputEventMouseButton and event.pressed:
+			GameState.hud_chest = {}
+		if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_RIGHT:
+			var wall: Variant = sim.incarnated_mining_cell(GameState.incarnated, ground(event.position)) if event.pressed else null
+			var allies := _incarnated_allies()
+			var box := hit_production_chest(event.position) if event.pressed else {}
+			if not box.is_empty():
+				# Coffre bleu ou rouge d'un bâtiment sous le pointeur : halo de sélection, et il s'ouvre au lieu de tirer.
+				_rc_building = true
+				GameState.hud_chest = box
+				sim.open_production_chest_incarnated(GameState.incarnated, box["building"], box["kind"])
+			elif event.pressed and hit_chest(event.position):
+				# Coffre antique : s'ouvre (réserve de la base) au lieu de tirer.
+				_rc_building = true
+				GameState.hud_chest = {"kind": "vault"}
+				sim.open_chest_incarnated(GameState.incarnated)
+			elif event.pressed and not allies.is_empty():
+				# Allié sélectionné (clic gauche) : le clic droit l'envoie (poste de tir, bâtiment, sol) au lieu de tirer.
+				_rc_building = true
+				var gp := ground(event.position)
+				var P := preload("res://sim/placeables.gd")
+				var post := P.firing_post_at(gp)
+				if post.is_empty():
+					post = P.firing_post_at(gp + Vector2(0.0, 4.0))
+				var target := hit_building(gp)
+				if not post.is_empty():
+					P.order_post(sim, post)
+				elif target != null and (sim.order_pray(target) or sim.order_staff(target)):
+					# Bâtiment sous le clic : l'adepte y prie (temple) ou y prend un poste, comme désincarné.
+					pass
+				else:
+					sim.issue_move(gp)
+			elif event.pressed and HudModel.selected_building() and HudModel.selected_building().produces_units() \
+					and hit_building(ground(event.position)) in [null, HudModel.selected_building()]:
+				# Bâtiment producteur sélectionné : le clic droit au sol pose son point de ralliement au lieu de tirer ;
+				# sur le bâtiment lui-même, il l'annule.
+				_rc_building = true
+				_set_rally(HudModel.selected_building(), ground(event.position))
+			elif wall != null and _clicks_cell(ground(event.position), wall):
+				# Mur en surbrillance sous le pointeur : le miner au lieu de tirer.
+				_rc_building = true
+				sim.incarnated_dig(GameState.incarnated, wall)
+			elif event.pressed:
+				var b := hit_building(ground(event.position))
+				_rc_building = b != null
+				if b:
+					GameState.hud_building = b
+					GameState.hud_enemy = null
+					GameState.hud_menu = ""
+					GameState.selected = []
+				elif HudModel.incarnated_panel():
+					_close_incarnated_panel()
+			else:
+				_rc_building = false
+		# Clic gauche : sélectionne un bâtiment, un adepte ou une unité militaire (options dans le bandeau).
+		# Maintenu et glissé : rectangle de sélection des alliés (hors Exilé incarné), comme désincarné.
+		if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
+			if event.pressed:
+				# Maj + glissé : ajoute aux alliés déjà sélectionnés avant l'appui (le clic court les remplace).
+				_box_prev = _incarnated_allies()
+				_incarnated_pick(event.position)
+				_box_begin(event.position)
+			elif _box_on:
+				var shown := _box_shown
+				_box_end()
+				if shown:
+					_incarnated_box_select(event.shift_pressed)
+		elif event is InputEventMouseMotion and _box_on:
+			_box_drag(event)
 		if event is InputEventKey and event.pressed and not event.echo:
 			var k: Key = event.key_label if event.key_label != KEY_NONE else event.keycode
-			if k == KEY_ESCAPE:
-				ExileGallery.disincarnate()
+			var menu := GameState.incarnated.role == "engineer" and not HudModel.incarnated_panel() and not GameState.ended
+			if k == KEY_ESCAPE and menu and not (GameState.hud_mode.is_empty() and GameState.hud_menu.is_empty()):
+				GameState.hud_mode = ""
+				GameState.hud_menu = ""
+			elif menu and not event.shift_pressed and (not GameState.hud_menu.is_empty() or k == KEY_B or k == KEY_P):
+				# Menu de construction / pose : B, P, puis la touche du bâtiment ou de l'objet.
+				hud_key(key_char(k))
+			elif k == KEY_ESCAPE and HudModel.incarnated_panel():
+				_close_incarnated_panel()
+			# Échap ne désincarne plus (2026-11-19) : seule la capsule (touche E) le fait.
 			elif k == KEY_R and event.shift_pressed:
 				sim.new_game()
 		return
@@ -232,29 +408,16 @@ func _unhandled_input(event: InputEvent) -> void:
 		GameState.build_pointer = ground(event.position)
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
 		if event.pressed:
-			if _armed_attack(event.position, event.shift_pressed):
-				return
 			_left_click(event.position, event.shift_pressed)
 			if GameState.hud_mode.is_empty():
-				_box_on = true
-				_box_shown = false
-				_box_from = event.position
-				_box_to = event.position
+				_box_begin(event.position)
 		elif _box_on:
-			_box_on = false
-			if _box_shown:
+			var shown := _box_shown
+			_box_end()
+			if shown:
 				_box_select(event.shift_pressed)
-			_box_shown = false
-			_box.queue_redraw()
 	elif event is InputEventMouseMotion and _box_on:
-		if not (event.button_mask & MOUSE_BUTTON_MASK_LEFT):
-			_box_on = false
-			_box_shown = false
-		else:
-			_box_to = event.position
-			var s := (_box_to - _box_from).abs()
-			_box_shown = _box_shown or not (s.x < 6.0 and s.y < 6.0)
-		_box.queue_redraw()
+		_box_drag(event)
 	elif event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_RIGHT and not event.pressed:
 		if not world.camera.consume_drag():
 			_right_click(event.position)
@@ -262,22 +425,9 @@ func _unhandled_input(event: InputEvent) -> void:
 		_key(event)
 
 
-## Ingénieur armé sélectionné : le clic gauche attaque (une arme de tir part en direction du curseur),
-## sauf sur l'Ancre ou une unité alliée (sélection), avec Maj (sélection) ou en mode construction/déplacement.
-func _armed_attack(p: Vector2, shift: bool) -> bool:
-	if shift or GameState.ended or not GameState.hud_mode.is_empty() or hit_orb(p):
-		return false
-	var eng := sim.builder()
-	if eng == null or Catalog.gear_weapon(eng).is_empty():
-		return false
-	for u in GameState.units:
-		if u.alive() and not u.hidden and project(u.x, 1.0, u.z).distance_to(p) < maxf(18.0, 1.3 * zoom_k()):
-			return false
-	return sim.combat.aimed_attack(eng, ground(p))
-
-
 ## Clic gauche (pointerdown, Index.html).
 func _left_click(p: Vector2, shift: bool) -> void:
+	GameState.hud_chest = {}
 	if GameState.hud_mode.is_empty():
 		GameState.hud_building = null
 	if GameState.hud_mode == "build":
@@ -290,6 +440,7 @@ func _left_click(p: Vector2, shift: bool) -> void:
 		sim.issue_move(ground(p))
 		return
 	if hit_orb(p):
+		Sfx.play("ui_selection")
 		GameState.selected = []
 		GameState.hud_enemy = null
 		GameState.anchor_selected = true
@@ -315,6 +466,7 @@ func _left_click(p: Vector2, shift: bool) -> void:
 	# Écart voulu D14 : un ennemi sous le pointeur (même tolérance que les alliés) s'affiche dans le HUD.
 	var foe := pick_enemy(p)
 	if foe:
+		Sfx.play("ui_selection")
 		GameState.selected = []
 		GameState.anchor_selected = false
 		GameState.hud_mode = ""
@@ -325,6 +477,7 @@ func _left_click(p: Vector2, shift: bool) -> void:
 	var b := hit_building(ground(p))
 	GameState.hud_enemy = null
 	if b:
+		Sfx.play("ui_selection")
 		GameState.selected = []
 		GameState.anchor_selected = false
 		GameState.hud_menu = ""
@@ -343,6 +496,13 @@ func pick_enemy(p: Vector2) -> Enemy:
 		if not e.alive() or e.hidden or not world.fog.visible_at(e.pos()):
 			continue
 		var d := project(e.x, 1.0, e.z).distance_to(p)
+		# Un clic n'importe où sur sa silhouette le désigne (Enemy.body_rect).
+		var r := e.body_rect()
+		var a := project(r.position.x, 0.0, r.position.y)
+		var b := project(r.end.x, 0.0, r.end.y)
+		# Silhouettes superposées : la plus au sud (dessinée devant) l'emporte.
+		if Rect2(a, b - a).has_point(p):
+			d = -1.0 - e.z * 1e-4
 		if d < best:
 			best = d
 			near = e
@@ -362,7 +522,33 @@ func hit_building(p: Vector2) -> Building:
 	return null
 
 
-func _box_select(shift: bool) -> void:
+## Rectangle de sélection : appui gauche (pas encore visible), glissé (visible au-delà de 6 px), relâché.
+func _box_begin(p: Vector2) -> void:
+	_box_on = true
+	_box_shown = false
+	_box_from = p
+	_box_to = p
+
+
+func _box_drag(event: InputEventMouseMotion) -> void:
+	if not (event.button_mask & MOUSE_BUTTON_MASK_LEFT):
+		_box_on = false
+		_box_shown = false
+	else:
+		_box_to = event.position
+		var s := (_box_to - _box_from).abs()
+		_box_shown = _box_shown or not (s.x < 6.0 and s.y < 6.0)
+	_box.queue_redraw()
+
+
+func _box_end() -> void:
+	_box_on = false
+	_box_shown = false
+	_box.queue_redraw()
+
+
+## Unités vivantes et visibles dont le point projeté tombe dans le rectangle tracé.
+func _units_in_box() -> Array[Unit]:
 	var r := Rect2(_box_from, Vector2.ZERO).expand(_box_to)
 	var inside: Array[Unit] = []
 	for u in GameState.units:
@@ -370,24 +556,54 @@ func _box_select(shift: bool) -> void:
 			var p := project(u.x, 1.0, u.z)
 			if p.x >= r.position.x and p.x <= r.end.x and p.y >= r.position.y and p.y <= r.end.y:
 				inside.append(u)
+	return inside
+
+
+## Incarnation : le rectangle sélectionne les alliés (adeptes, unités militaires), jamais l'Exilé incarné.
+## Rien dedans : la sélection du clic court (à l'appui) reste.
+func _incarnated_box_select(shift: bool) -> void:
+	var inside: Array[Unit] = []
+	for u: Unit in _units_in_box():
+		if u != GameState.incarnated and not u.is_enemy():
+			inside.append(u)
+	if inside.is_empty():
+		return
+	inside = Simulation.expand_squads(inside)
+	inside.assign(inside.filter(func(u: Unit) -> bool: return u != GameState.incarnated))
+	var base: Array[Unit] = []
+	if shift:
+		base.assign(_box_prev.filter(func(u: Unit) -> bool: return u.alive() and not u.hidden))
+	GameState.selected = _union(base, inside)
+	_show_selection()
+
+
+func _box_select(shift: bool) -> void:
+	var inside := _units_in_box()
 	if not inside.is_empty():
 		inside = Simulation.expand_squads(inside)
 		GameState.selected = _union(GameState.selected, inside) if shift else inside
 		_show_selection()
 
 
+## Pose le point de ralliement du bâtiment ; un clic sur le bâtiment lui-même l'annule.
+func _set_rally(b: Building, point: Vector2) -> void:
+	if hit_building(point) == b:
+		b.rally_point = null
+	elif sim.state().walkable(point.x, point.y):
+		b.rally_point = point
+
+
 ## Clic droit sans glisser (contextmenu, Index.html).
 func _right_click(p: Vector2) -> void:
 	if GameState.ended:
 		return
+	GameState.hud_chest = {}
 	if GameState.hud_mode == "build" or GameState.hud_mode == "place":
 		GameState.hud_mode = ""
 		return
 	var selected := HudModel.selected_building()
 	if selected and selected.produces_units():
-		var point := ground(p)
-		if sim.state().walkable(point.x, point.y):
-			selected.rally_point = point
+		_set_rally(selected, ground(p))
 		return
 	var eng := sim.builder()
 	if eng and hit_orb(p):
@@ -396,18 +612,14 @@ func _right_click(p: Vector2) -> void:
 		else:
 			sim.order_orb(eng)
 		return
-	if eng and preload("res://sim/item_storage.gd").character_available(eng):
-		for b: Building in GameState.buildings:
-			if not b.complete or not Production.has_chests(b):
-				continue
-			for kind: String in Production.chest_kinds(b):
-				var pos := Production.chest_pos(b, kind)
-				var origin := project(pos.x, 0.0, pos.y)
-				var k := float(world.camera.px)
-				if Rect2(origin - Vector2(13, 27) * k, Vector2(26, 30) * k).has_point(p) and world.fog.visible_at(Vector2(b.x, b.z)):
-					sim.set_job(eng, {"type": "collect", "building": b, "open_box": kind})
-					return
+	var box := hit_production_chest(p)
+	if not box.is_empty():
+		GameState.hud_chest = box
+		if eng and preload("res://sim/item_storage.gd").character_available(eng):
+			sim.set_job(eng, {"type": "collect", "building": box["building"], "open_box": box["kind"]})
+			return
 	if hit_chest(p) and sim.order_chest(eng):
+		GameState.hud_chest = {"kind": "vault"}
 		return
 	var turret: Variant = hit_turret(p)
 	if turret != null:
@@ -416,36 +628,61 @@ func _right_click(p: Vector2) -> void:
 	if _mining_cell(ground(p)) != null and sim.order_adepts(ground(p)):
 		return
 	# Poste de tir sous le clic : la sélection se place entre les rondins.
+	# Le créneau de rondins dépasse au-dessus de sa case : un clic sur le haut du dessin tombe sur la case au
+	# nord, on regarde donc aussi la case juste au sud.
 	var post := preload("res://sim/placeables.gd").firing_post_at(ground(p))
+	if post.is_empty():
+		post = preload("res://sim/placeables.gd").firing_post_at(ground(p) + Vector2(0.0, 4.0))
 	if not post.is_empty() and not GameState.selected.is_empty() and world.fog.visible_at(Vector2(post["x"], post["z"])):
 		preload("res://sim/placeables.gd").order_post(sim, post)
+		return
+	# Pylône de Merenor sous le clic : les esprits sélectionnés vont le canaliser.
+	var py := hit_pylon(p)
+	if not py.is_empty() and sim.channel_pylon(py):
 		return
 	if sim.order_pray(hit_building(ground(p))):
 		return
 	# Bâtiment servi par des adeptes : l'unité sélectionnée y prend un poste.
 	if sim.order_staff(hit_building(ground(p))):
 		return
-	# Ingénieur armé : le clic droit attaque (une arme de tir part en direction du curseur).
-	if eng and sim.combat.aimed_attack(eng, ground(p)):
-		return
-	# Ennemi proche du clic (moins de max(20, 1,2·Z) pixels) : ordre d'attaque, sinon déplacement.
-	var nearest: Enemy = null
-	var best := INF
-	for e: Enemy in GameState.enemies:
-		if not e.alive() or e.hidden or not world.fog.visible_at(e.pos()):
-			continue
-		var d := project(e.x, 1.0, e.z).distance_to(p)
-		if d < best:
-			best = d
-			nearest = e
-	if nearest and best < maxf(20.0, 1.2 * zoom_k()):
-		sim.issue_move(nearest.pos(), true)
-		sim.say("Ordre : attaquer la cible.", 1.0)
-	else:
-		sim.issue_move(ground(p))
+	# Hors incarnation, le clic droit ne donne jamais d'ordre d'attaque : simple déplacement.
+	sim.issue_move(ground(p))
 
 
 ## Coffre antique sous le pointeur (silhouette de 40 × 44 pixels natifs au-dessus de sa face avant).
+## Pylône de Merenor éveillé et visible dont le dessin (socle et obélisque) est sous le point écran, ou vide.
+func hit_pylon(p: Vector2) -> Dictionary:
+	if GameState.ended or not GameState.hud_mode.is_empty():
+		return {}
+	var m := PylonView.meta()
+	var k := float(world.camera.px)
+	for py: Dictionary in world.terrain_state.portals:
+		if not py["active"] or not world.fog.visible_at(Vector2(py["x"], py["z"])):
+			continue
+		var origin := project(py["x"], 0.0, py["z"])
+		var r := Rect2(origin - Vector2(float(m["ax"]), float(m["ay"])) * k, Vector2(float(m["frame_w"]), float(m["frame_h"])) * k)
+		if r.has_point(p):
+			return py
+	return Pylons.at(world.terrain_state, ground(p)) if world.fog.visible_at(ground(p)) else {}
+
+
+## Coffre de production (bleu « in », grenat « out ») sous le point écran : {"building", "kind"}, ou vide.
+func hit_production_chest(p: Vector2) -> Dictionary:
+	if GameState.ended or not GameState.hud_mode.is_empty():
+		return {}
+	var k := float(world.camera.px)
+	for b: Building in GameState.buildings:
+		if not b.complete or not Production.has_chests(b) or not Production.staffed(b) \
+				or not world.fog.visible_at(Vector2(b.x, b.z)):
+			continue
+		for kind: String in Production.chest_kinds(b):
+			var pos := Production.chest_pos(b, kind)
+			var origin := project(pos.x, 0.0, pos.y)
+			if Rect2(origin - Vector2(13, 27) * k, Vector2(26, 30) * k).has_point(p):
+				return {"building": b, "kind": kind}
+	return {}
+
+
 func hit_chest(p: Vector2) -> bool:
 	if not sim.state().vault_open:
 		return false
@@ -526,6 +763,7 @@ func _select_index(i: int, add: bool) -> void:
 
 
 func _show_selection() -> void:
+	Sfx.play("ui_selection")
 	GameState.hud_enemy = null
 	GameState.anchor_selected = false
 	GameState.hud_mode = ""

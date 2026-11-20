@@ -1,0 +1,84 @@
+<title>Atelier, pièces qui prennent forme</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;600&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
+<style>
+/* Mise en page : bandeau de commandes collant, puis une grille de vignettes à échelle entière (×3), une par recette de l'Atelier. Planche à un seul aspect, sombre comme la caverne du jeu. */
+:root{color-scheme:dark;--bg:#0d1114;--panel:#141c21;--line:#27363d;--txt:#e2dcc2;--mut:#93a3a4;--acc:#e8c870;--hot:#cfd4e2;
+ --disp:'Pixelify Sans',ui-monospace,monospace;--body:'Atkinson Hyperlegible',system-ui,sans-serif;--s:3}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--txt);font:16px/1.5 var(--body)}
+.wrap{max-width:1260px;margin:auto;padding-block:20px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+h1{font:600 28px/1.15 var(--disp);letter-spacing:.06em;color:var(--acc);margin:0 0 8px;text-wrap:balance}
+h2{font:600 23px/1.2 var(--disp);letter-spacing:.05em;color:var(--acc);margin:0 0 4px}
+h3{font:600 17px/1.25 var(--disp);letter-spacing:.03em;color:var(--hot);margin:0}
+p{margin:0;max-width:68ch}.mut{color:var(--mut)}b{color:var(--txt)}
+.bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);border-block:1px solid var(--line)}
+.bar .wrap{padding-block:8px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+button{font:400 15px/1 var(--disp);color:var(--txt);background:var(--panel);border:1px solid var(--line);padding:8px 11px;cursor:pointer}
+button:hover,button[aria-pressed=true]{border-color:var(--acc);color:var(--acc)}
+button:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin:16px 0 0;padding:0;list-style:none;counter-reset:s}
+.steps li{background:var(--panel);border:1px solid var(--line);padding:10px 12px;color:var(--mut);font-size:14.5px;line-height:1.45;min-width:0;counter-increment:s}
+.steps li::before{content:counter(s);font:600 17px var(--disp);color:var(--acc);margin-right:8px}
+.steps b{font:600 15px var(--disp);letter-spacing:.03em;color:var(--hot)}
+section{margin-top:28px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,calc(132px*var(--s)));gap:14px;margin-top:14px;justify-content:start}
+figure{margin:0;background:var(--panel);border:1px solid var(--line);display:flex;flex-direction:column;min-width:0}
+figure.rest{border-style:dashed}figure.rest h3{color:var(--mut)}
+canvas.v{display:block;width:calc(132px*var(--s));height:calc(136px*var(--s));max-width:100%;image-rendering:pixelated}
+figcaption{padding:10px 12px 12px;display:grid;grid-template-columns:auto 1fr;gap:4px 12px;align-items:center}
+canvas.ic{width:64px;height:64px;image-rendering:pixelated;grid-row:span 2;background:var(--bg);border:1px solid var(--line)}
+figcaption p{color:var(--mut);font-size:14.5px;line-height:1.4}
+figcaption .full{grid-column:1/-1}
+@media(max-width:460px){:root{--s:2}}
+</style>
+<div class="wrap">
+<h1>ATELIER · LES PIÈCES PRENNENT FORME</h1>
+<p class="mut">Au-dessus de la Table d’énonciation, les bouts de bois ne s’assemblent plus toujours en barricade : ils prennent <b>la silhouette de l’objet en cours de fabrication</b>, puis l’éclat d’Aether les change en l’objet lui-même. Les dix recettes de l’Atelier, à l’échelle du jeu agrandie trois fois. Sous chaque vignette, l’icône du jeu pour comparer.</p>
+<ol class="steps">
+ <li><b>Les pièces montent</b><br>Elles quittent la table et flottent en désordre, toutes pareilles.</li>
+ <li><b>Elles se rangent</b><br>Chacune change de longueur, d’épaisseur, puis de matière (fer, pierre, fibre).</li>
+ <li><b>L’éclat</b><br>La silhouette tient un instant, l’anneau d’Aether passe.</li>
+ <li><b>L’objet</b><br>La vraie icône apparaît, flotte, puis descend vers la table.</li>
+</ol>
+<p class="mut" style="margin-top:14px">Ici la boucle dure 6 secondes. En jeu elle suivrait l’avancement réel : l’éclat tombe au moment exact où l’objet arrive dans le coffre de sortie.</p>
+</div>
+<div class="bar"><div class="wrap">
+ <button id="bHold" aria-pressed="false">Boucle complète</button>
+ <button id="bIcon" aria-pressed="true">Finit en icône</button>
+ <button id="bNight" aria-pressed="false">Jour</button>
+ <button id="bPause" aria-pressed="false">Pause</button>
+</div></div>
+<div class="wrap">
+<section><h2>Les dix recettes</h2>
+<p class="mut">« Silhouette figée » arrête chaque vignette sur la forme assemblée, juste avant l’éclat : c’est là qu’on juge si l’objet se reconnaît.</p>
+<div class="grid" id="grid"></div></section>
+</div>
+<script>
+/*ENGINE*/
+</script>
+<script>
+'use strict';
+const ICONS=/*ICONS*/{};
+const ITEMS=/*ITEMS*/[];
+const W=BAT.W,H=BAT.H,views=[],grid=document.getElementById('grid'),IDX=BAT.ITEMS.findIndex(it=>it.name==='Table d’énonciation');
+for(const k in ICONS)BAT.morph.icons[k]=Int32Array.from(ICONS[k]);
+let night=false,hold=0,icon=1,paused=matchMedia('(prefers-reduced-motion: reduce)').matches,t=0,last,acc=1;
+function add(it,k){const f=document.createElement('figure');if(!it.id)f.className='rest';
+ f.innerHTML=`<canvas class="v" width="${W}" height="${H}" role="img" aria-label="${it.name}"></canvas><figcaption>${it.id?`<canvas class="ic" width="32" height="32" aria-hidden="true"></canvas>`:''}<h3 class="${it.id?'':'full'}">${it.name}</h3><p class="${it.id?'':'full'}">${it.cost}</p><p class="full">${it.note}</p></figcaption>`;grid.append(f);
+ const cv=f.querySelector('canvas.v');views.push({cv,g:cv.getContext('2d'),it,S:null,vis:false,dirty:true,off:k*.37});
+ const ic=f.querySelector('canvas.ic');if(ic&&ICONS[it.id]){const g=ic.getContext('2d'),im=g.createImageData(32,32);ICONS[it.id].forEach((v,i)=>{if(v>=0){im.data[i*4]=v>>16&255;im.data[i*4+1]=v>>8&255;im.data[i*4+2]=v&255;im.data[i*4+3]=255}});g.putImageData(im,0,0)}}
+ITEMS.forEach(add);
+const io=new IntersectionObserver(es=>{for(const e of es){const v=views.find(v=>v.cv===e.target);if(v){v.vis=e.isIntersecting;v.dirty=true}}},{rootMargin:'250px'});views.forEach(v=>io.observe(v.cv));
+const bH=document.getElementById('bHold'),bI=document.getElementById('bIcon'),bN=document.getElementById('bNight'),bP=document.getElementById('bPause');
+const sync=()=>{bH.setAttribute('aria-pressed',!!hold);bH.textContent=hold?'Silhouette figée':'Boucle complète';bI.setAttribute('aria-pressed',!!icon);bI.textContent=icon?'Finit en icône':'Reste en silhouette';
+ bN.setAttribute('aria-pressed',night);bN.textContent=night?'Nuit':'Jour';bP.setAttribute('aria-pressed',paused);bP.textContent=paused?'Reprendre':'Pause';views.forEach(v=>v.dirty=true)};
+bH.onclick=()=>{hold=hold?0:1;sync()};bI.onclick=()=>{icon=icon?0:1;sync()};bN.onclick=()=>{night=!night;sync()};bP.onclick=()=>{paused=!paused;sync()};
+function paint(v){if(!v.S)v.S=BAT.vignette(IDX);BAT.setWork(v.it.id?1:0);BAT.setMorph({id:v.it.id||'barricade',hold,icon});v.S.render(v.g,night?21:11,Math.floor((t+(SHOT?0:v.off))*12)/12);v.dirty=false}
+function loop(now){const dt=last===undefined?0:Math.min((now-last)/1000,.1);last=now;if(!paused)t+=dt;acc+=dt;if(acc>=1/12){acc=0;for(const v of views)if(v.vis&&(v.dirty||!paused))paint(v)}requestAnimationFrame(loop)}
+const Q=new URLSearchParams(location.search),SHOT=Q.get('shot');
+if(SHOT){t=+(Q.get('t')??3.3);hold=+(Q.get('h')??0);icon=+(Q.get('i')??1);night=Q.get('n')==='1';sync();
+ const st=document.createElement('style');st.textContent='h1,h1~p,.steps,.bar,section>p,h2,figcaption p{display:none!important}section{margin-top:0!important}.wrap{padding-block:0!important;max-width:none!important}.grid{gap:4px!important;margin-top:2px!important;grid-template-columns:repeat(6,calc(132px*var(--s)))!important}figcaption{padding:1px 6px!important}canvas.ic{width:32px!important;height:32px!important}h3{font-size:12px!important}';document.head.append(st);
+ const s=Q.get('s');if(s)document.documentElement.style.setProperty('--s',s);views.forEach(paint)}
+else{sync();requestAnimationFrame(loop)}
+</script>

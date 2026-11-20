@@ -1,0 +1,320 @@
+<title>Ancre tyrienne</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Cormorant+SC:wght@500;700&display=swap">
+<style>
+/* Planche de jeu, sombre par choix : une rangée par style, trois vignettes 96 × 96 en pixels natifs du monde
+   (éteinte · réveil · active), posées sur le dallage réel de la grotte. Accent = pourpre de l'Ancre. */
+:root{--bg:#14131a;--panel:#1d1c25;--line:#33303f;--fg:#dcd9e4;--mute:#918ca0;--acc:#c084ee;--acc-dk:#6a2a90;--ok:#9fd6a8;
+ --disp:"Cormorant SC",Georgia,serif;--mono:"Share Tech Mono",ui-monospace,monospace;color-scheme:dark}
+body{background:var(--bg);color:var(--fg);font:14px/1.5 system-ui,sans-serif;margin:0;
+ padding-block:24px 60px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+main{max-width:1080px;margin:0 auto;display:flex;flex-direction:column;gap:26px}
+header{display:flex;gap:20px;align-items:flex-start;flex-wrap:wrap}
+header>div{flex:1 1 420px;min-width:0}
+h1{font-family:var(--disp);font-size:2.3rem;line-height:1.1;margin:0;letter-spacing:.04em;text-wrap:balance}
+.lead{color:var(--mute);max-width:68ch;margin:.5rem 0 0}
+.ref{margin:0;background:var(--panel);border:1px solid var(--line);padding:6px;width:170px;max-width:100%}
+.ref img{width:100%;image-rendering:pixelated;display:block}
+figcaption{font-family:var(--mono);font-size:12px;color:var(--mute);padding-top:5px}
+.reco{border-left:3px solid var(--acc-dk);padding:2px 0 2px 14px;max-width:76ch}
+.reco h2{font-size:1.25rem}
+.reco p{margin:.3rem 0 0}
+.reco b{color:var(--acc);font-weight:600}
+.tools{position:sticky;top:env(safe-area-inset-top,0px);background:var(--bg);padding:10px 0;z-index:3;display:flex;flex-wrap:wrap;gap:10px;align-items:center;font-family:var(--mono);font-size:12px;border-bottom:1px solid var(--line)}
+.tools span{color:var(--mute)}
+button{font:inherit;font-family:var(--mono);font-size:12px;background:var(--panel);color:var(--fg);border:1px solid var(--line);padding:5px 12px;cursor:pointer}
+button:hover{border-color:var(--acc-dk)}
+button:focus-visible,textarea:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+button[aria-pressed="true"]{background:var(--acc-dk);border-color:var(--acc);color:#fff}
+section.m{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,560px);gap:8px 24px;align-items:start;padding-top:22px;border-top:1px solid var(--line)}
+section.m.sel{border-top-color:var(--acc)}
+@media (max-width:820px){section.m{grid-template-columns:minmax(0,1fr)}}
+.txt{min-width:0}
+h2{font-family:var(--disp);font-size:1.6rem;line-height:1.15;margin:0;text-wrap:balance}
+h2 i{font-family:var(--mono);font-style:normal;font-size:1rem;color:var(--acc);margin-right:10px}
+.txt p{margin:.45rem 0 0;max-width:60ch}
+.txt p.s{color:var(--mute)}
+.txt dl{margin:.7rem 0 0;display:grid;grid-template-columns:auto minmax(0,1fr);gap:3px 12px;font-size:13px}
+.txt dt{font-family:var(--mono);font-size:12px;color:var(--mute);padding-top:1px}
+.txt dd{margin:0}
+.txt button{margin-top:14px}
+.row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.row figure{margin:0;background:var(--panel);border:1px solid var(--line);padding:6px;min-width:0}
+canvas{width:100%;max-width:100%;aspect-ratio:1;image-rendering:pixelated;display:block;background:#000}
+.send{display:flex;flex-direction:column;gap:10px;padding-top:22px;border-top:1px solid var(--line);max-width:76ch}
+.send label{font-family:var(--mono);font-size:12px;color:var(--mute)}
+textarea{font:inherit;background:var(--panel);color:var(--fg);border:1px solid var(--line);padding:8px 10px;min-height:70px;resize:vertical;width:100%;box-sizing:border-box}
+.send .bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+#status{font-family:var(--mono);font-size:12px;color:var(--mute)}
+#status.ok{color:var(--ok)}
+</style>
+
+<main>
+<header>
+ <div>
+  <h1>L'Ancre tyrienne · cinq styles</h1>
+  <p class="lead">Chaque style est montré dans ses trois états, à la taille des pixels du jeu et sur le dallage de la grotte : éteinte au départ, pendant le réveil par l'Ingénieur, puis active. La charte est respectée partout : sphère noire, reflets pourpres, éclairs noirs et pourpres, pierre d'ardoise tyrienne, fer sombre et quartz laiteux. Ni cyan ni or. Le rendu est en 16 bits, en aplats sans trame, lumière en haut à gauche.</p>
+ </div>
+ <figure class="ref"><img src="%%ACTUELLE%%" alt="L'Ancre actuelle en jeu : sphère noire posée sur un autel de pierre claire"><figcaption>Actuelle, en jeu</figcaption></figure>
+</header>
+
+<div class="reco">
+ <h2>Votre mélange est en tête</h2>
+ <p>« La 2 avec le puits de la 4 en dessous » est dessinée juste en dessous, sous le numéro <b>6</b>. Les cinq styles d'origine restent à la suite pour comparer.</p>
+ <h2 style="margin-top:14px">Ma recommandation d'origine</h2>
+ <p><b>2 · La Sphère enchaînée</b> en premier choix. C'est la seule qui raconte le mot « Ancre » sans texte : quelque chose est amarré ici et tire sur ses liens. Le réveil se lit de loin (la sphère décolle, les chaînes se tendent) et la surcharge y gagne un temps fort tout trouvé, les chaînes qui cèdent une à une.</p>
+ <p><b>4 · Le Puits d'ombre</b> en second : très basse, elle gêne le moins la lecture des unités autour, et son réveil est le plus étrange. <b>1 · Le Sceau d'ardoise</b> si vous voulez seulement un redessin propre de l'existant, sans toucher aux animations déjà faites.</p>
+</div>
+
+<div class="tools">
+ <button id="pause" type="button" aria-pressed="false">Pause</button>
+ <button id="speed" type="button">Vitesse ×1</button>
+ <span>Vignettes 96 × 96 px du monde · le réveil boucle en 7 s</span>
+</div>
+
+<div id="list" style="display:contents"></div>
+
+<div class="send">
+ <h2>Votre choix</h2>
+ <div class="bar"><button id="none" type="button" aria-pressed="false">Aucune de ces cinq</button><span id="picked" style="font-family:var(--mono);font-size:12px;color:var(--mute)">Rien de choisi pour l'instant.</span></div>
+ <label for="note">Remarques (mélanges, détails à garder ou à retirer)</label>
+ <textarea id="note" placeholder="Par exemple : la 2, mais avec le puits de la 4 en dessous."></textarea>
+ <div class="bar"><button id="send" type="button">Envoyer mon choix</button><span id="status" role="status"></span></div>
+</div>
+</main>
+
+<script>
+const MODELS=[
+ {n:6,nom:"La Sphère enchaînée au puits",d:d6,
+  txt:"Votre mélange : la 2 avec le puits de la 4 en dessous. Éteinte, la sphère est à demi noyée dans l'ombre du puits, chaînes molles. Au réveil elle s'en arrache en tirant un fil d'ombre, les quatre chaînes se tendent depuis les bornes et les éclairs courent le long des maillons.",
+  pour:"Les deux idées se renforcent : les chaînes retiennent ce qui sort du puits. L'état se lit à la hauteur de la sphère et à la tension des chaînes.",
+  contre:"Emprise la plus large des six (environ 4 cases avec les bornes). Les cabochons de quartz passent de la margelle aux bornes.",
+  jeu:"Sprite, arcs et surcharge à refaire : chaînes qui rompent, sphère qui retombe dans le puits."},
+ {n:1,nom:"Le Sceau d'ardoise",d:d1,
+  txt:"La sphère repose dans la cuvette d'un dais rond à deux degrés. Un anneau de huit glyphes est gravé dans la pierre et s'allume segment par segment pendant le réveil, puis la sphère se soulève de quelques pixels.",
+  pour:"Le plus proche de l'existant : même sphère, même anneau à huit segments, donc la surcharge « Rupture du sceau » se rebranche telle quelle.",
+  contre:"Le moins surprenant. Sans les éclairs, la silhouette reste un simple socle.",
+  jeu:"Redessin du sprite seul, shader inchangé."},
+ {n:2,nom:"La Sphère enchaînée",d:d2,
+  txt:"Quatre bornes d'ardoise et quatre chaînes de fer retiennent la sphère par un cerclage. Éteinte, elle gît au sol, chaînes molles. Au réveil elle décolle, les chaînes se tendent et vibrent, les éclairs courent le long des maillons.",
+  pour:"Une vraie ancre : l'amarrage se voit. L'état se lit à la silhouette (hauteur de la sphère, tension des chaînes), même sans couleur.",
+  contre:"Emprise plus large (environ 3 cases) et chaînes animées à redessiner.",
+  jeu:"Surcharge : quatre chaînes qui rompent à la place des huit segments."},
+ {n:3,nom:"Le Monolithe fendu",d:d3,
+  txt:"Un obélisque d'ardoise fendu de haut en bas, la sphère logée dans la faille comme une pupille. Au réveil les deux moitiés s'écartent, les bandeaux gravés et les fissures du sol se chargent de pourpre.",
+  pour:"Silhouette haute, repère visible de toute la grotte. Très « ruine tyrienne ».",
+  contre:"Sphère plus petite (16 px), cachée en partie quand elle est éteinte. Masque ce qui passe derrière.",
+  jeu:"Sphère fixe : la surcharge serait à réécrire (moitiés qui basculent)."},
+ {n:4,nom:"Le Puits d'ombre",d:d4,
+  txt:"Une margelle d'ardoise au ras du sol, pleine d'une ombre liquide. Éteinte, la sphère y est à demi noyée. Au réveil elle s'en arrache en tirant un fil d'ombre, des gouttes remontent vers elle, quatre cabochons de quartz s'allument.",
+  pour:"Très basse, ne masque rien. Le réveil le plus étrange des cinq, et un lien naturel avec le trait d'énergie qui part vers la capsule.",
+  contre:"Peu de volume quand elle est éteinte : de loin, on voit un bassin sombre.",
+  jeu:"Le soulèvement de la sphère existe déjà dans le shader ; l'anneau devient la margelle."},
+ {n:5,nom:"Le Cœur d'obsidienne",d:d5,
+  txt:"Plus de sphère lisse : un cœur d'obsidienne taillé à facettes, serré par trois griffes de fer sur un trépied. Au réveil les griffes s'ouvrent, les facettes s'allument tour à tour et des éclats se mettent en orbite.",
+  pour:"Le plus « relique ». Les facettes donnent un scintillement que la sphère lisse n'a pas.",
+  contre:"S'écarte de la charte « sphère noire ». Les éclats en orbite ajoutent du bruit en plein combat.",
+  jeu:"Sprite et arcs à refaire ; l'orbite des éclats remplace l'anneau."}
+];
+
+/* ---------- moteur : tampon de matière 96 × 96, contour coloré automatique, effets par-dessus ---------- */
+const W=96,H=96,TAU=Math.PI*2;
+const S=[0x1c1f27,0x2f3440,0x444b5a,0x5d6678,0x7c869a,0xa3adbf];       // ardoise tyrienne
+const I=[0x15161b,0x282a33,0x3d404c,0x585c6b,0x8a8f9f];                // fer sombre
+const Q=[0x8f8a80,0xc9c4b6,0xefeadc];                                  // quartz laiteux
+const P={dk:0x2a1340,mid:0x6a2a90,hi:0x9a3ab8,hot:0xc884ee,core:0xf2d8ff};
+const ON=[0x06040a,0x120a1c,0x2a1340,0x6a2a90,0xc070e8,0xf2d8ff],OFF=[0x0a0a0d,0x141419,0x202027,0x33333d,0x55555f,0x85858f];
+const LIQ=0x07050b;
+let buf=new Int32Array(W*H),img=null,T=0;
+const hs=n=>{const s=Math.sin(n*127.1+311.7)*43758.5453;return s-Math.floor(s)};
+const ease=k=>k<=0?0:k>=1?1:k*k*(3-2*k);
+function mix(a,b,k){k=k<0?0:k>1?1:k;const r=(a>>16&255),g=(a>>8&255),bl=a&255;
+ return ((r+((b>>16&255)-r)*k)|0)<<16|((g+((b>>8&255)-g)*k)|0)<<8|((bl+((b&255)-bl)*k)|0)}
+function px(x,y,c){x=Math.round(x);y=Math.round(y);if(x>=0&&y>=0&&x<W&&y<H)buf[y*W+x]=c}
+function rect(x,y,w,h,c){for(let j=0;j<h;j++)for(let i=0;i<w;i++)px(x+i,y+j,c)}
+function ell(cx,cy,rx,ry,c,f){for(let y=Math.floor(cy-ry);y<=Math.ceil(cy+ry);y++)for(let x=Math.floor(cx-rx);x<=Math.ceil(cx+rx);x++){
+ const dx=(x-cx)/rx,dy=(y-cy)/ry;if(dx*dx+dy*dy<=1){const cc=f?f(x,y,dx,dy):c;if(cc!==null&&cc!==undefined)px(x,y,cc)}}}
+function line(x0,y0,x1,y1,c){const n=Math.max(Math.abs(x1-x0),Math.abs(y1-y0),1)|0;for(let i=0;i<=n;i++)px(x0+(x1-x0)*i/n,y0+(y1-y0)*i/n,c)}
+function poly(pts,c){let y0=1e9,y1=-1e9;for(const p of pts){y0=Math.min(y0,p[1]);y1=Math.max(y1,p[1])}
+ for(let y=Math.round(y0);y<=Math.round(y1);y++){const xs=[];for(let i=0;i<pts.length;i++){const a=pts[i],b=pts[(i+1)%pts.length];
+  if((a[1]<=y&&b[1]>y)||(b[1]<=y&&a[1]>y))xs.push(a[0]+(y-a[1])/(b[1]-a[1])*(b[0]-a[0]))}
+  xs.sort((a,b)=>a-b);for(let k=0;k+1<xs.length;k+=2)for(let x=Math.round(xs[k]);x<=Math.round(xs[k+1]);x++)px(x,y,c)}}
+function blend(x,y,c,a){x=Math.round(x);y=Math.round(y);if(x<0||y<0||x>=W||y>=H)return;const i=(y*W+x)*4;
+ img[i]+=((c>>16&255)-img[i])*a;img[i+1]+=((c>>8&255)-img[i+1])*a;img[i+2]+=((c&255)-img[i+2])*a}
+function gell(cx,cy,rx,ry,c,a){if(rx<=0||ry<=0)return;for(let y=Math.floor(cy-ry);y<=Math.ceil(cy+ry);y++)for(let x=Math.floor(cx-rx);x<=Math.ceil(cx+rx);x++){
+ const dx=(x-cx)/rx,dy=(y-cy)/ry;if(dx*dx+dy*dy<=1)blend(x,y,c,a)}}
+function glow(cx,cy,rx,ry,a){for(const k of[1,.72,.45])gell(cx,cy,rx*k,ry*k,P.hi,a)}          // halo en paliers
+function gring(cx,cy,rx,ry,c,a){for(let i=0;i<120;i++){const an=i/120*TAU;blend(cx+Math.cos(an)*rx,cy+Math.sin(an)*ry,c,a)}}
+function compose(){for(let y=0;y<H;y++)for(let x=0;x<W;x++){const i=y*W+x;let c=buf[i];
+ if(c<0){let n=-1;if(x>0&&buf[i-1]>=0)n=buf[i-1];else if(x<W-1&&buf[i+1]>=0)n=buf[i+1];else if(y>0&&buf[i-W]>=0)n=buf[i-W];else if(y<H-1&&buf[i+W]>=0)n=buf[i+W];
+  if(n<0)continue;c=mix(n,0x08060c,.72)}
+ img[i*4]=c>>16&255;img[i*4+1]=c>>8&255;img[i*4+2]=c&255}}
+
+/* disque de pierre vu de trois quarts : tranche + dessus, liseré clair en haut à gauche */
+function disc(cx,cy,rx,ry,h){for(let k=h;k>=1;k--)ell(cx,cy+k,rx,ry,0,(x,y,dx)=>dx<-.35?S[2]:dx>.55?S[0]:S[1]);
+ ell(cx,cy,rx,ry,0,(x,y,dx,dy)=>{const d=dx*dx+dy*dy;return d>.74&&dx+dy<-.25?S[5]:d>.74&&dx+dy>.6?S[2]:S[3]+0})}
+function sphere(cx,cy,r,p,t,clipY){const pal=ON.map((c,i)=>mix(OFF[i],c,p));
+ ell(cx,cy,r,r,0,(x,y,dx,dy)=>{if(clipY!==undefined&&y>clipY)return null;const d2=dx*dx+dy*dy,nz=Math.sqrt(Math.max(0,1-d2)),l=-dx*.5-dy*.62+nz*.6;
+  let k=l>.975?5:l>.92?4:l>.83?3:l>.66?2:l>.25?1:0;
+  if(p>0){const rim=dx*.62+dy*.72;if(rim>.76-.05*Math.sin(t*2.2)&&d2>.6)k=Math.max(k,p>.6?3:2);
+   const gx=Math.cos(t*.7)*.35,gy=Math.sin(t*.9)*.3+.15;if((dx-gx)**2+(dy-gy)**2<.04*p)k=Math.max(k,2)}
+  return pal[k]});return pal}
+/* éclair noir à frange pourpre ; « hot » = éclat clair au sommet de sa vie */
+function bolt(x0,y0,x1,y1,seed,amp,hot){const L=Math.hypot(x1-x0,y1-y0)||1,n=Math.max(2,Math.round(L/3.5)),e=Math.floor(T*13),nx=-(y1-y0)/L,ny=(x1-x0)/L,pts=[[x0,y0]];
+ for(let j=1;j<n;j++){const k=j/n,o=(hs(seed*7.3+e*1.7+j*3.1)-.5)*2*amp*Math.sin(k*Math.PI);pts.push([x0+(x1-x0)*k+nx*o,y0+(y1-y0)*k+ny*o])}
+ pts.push([x1,y1]);const cells=[];for(let j=0;j+1<pts.length;j++){const a=pts[j],b=pts[j+1],m=Math.max(Math.abs(b[0]-a[0]),Math.abs(b[1]-a[1]),1)|0;
+  for(let i=0;i<=m;i++)cells.push([Math.round(a[0]+(b[0]-a[0])*i/m),Math.round(a[1]+(b[1]-a[1])*i/m)])}
+ for(const c of cells){blend(c[0]-1,c[1],P.hi,.5);blend(c[0]+1,c[1],P.hi,.5);blend(c[0],c[1]-1,P.hi,.5);blend(c[0],c[1]+1,P.hi,.5)}
+ for(const c of cells)blend(c[0],c[1],hot?P.core:0x0a0510,1);blend(x1,y1,P.core,1)}
+function orbArcs(cx,cy,r,p,targets){const n=Math.ceil(p*6);for(let i=0;i<n;i++){const per=.8+((i*.37)%.8),off=i*.29,ph=((T+off)/per)%1,life=Math.sin(ph*Math.PI);
+ if(life<.2)continue;const ep=Math.floor((T+off)/per);if(p<1&&hs(i*5+ep)>p*1.25)continue;
+ const a0=i*1.047+ep*2.1+T*(i%2?.4:-.4),sx=cx+Math.cos(a0)*r,sy=cy+Math.sin(a0)*r,hot=life>.82;
+ if(targets&&targets.length&&i%2===0){const tg=targets[(ep+i)%targets.length];bolt(sx,sy,tg[0],tg[1],i+ep,3,hot)}
+ else if(i%3===1){const len=5+life*11;bolt(sx,sy,cx+Math.cos(a0)*(r+len),cy+Math.sin(a0)*(r+len),i+ep,2.5,hot)}
+ else{const a1=a0+.9,d=r+3+life*5,mx=cx+Math.cos(a0+.45)*d,my=cy+Math.sin(a0+.45)*d;bolt(sx,sy,mx,my,i+ep,1.5,hot);bolt(mx,my,cx+Math.cos(a1)*r,cy+Math.sin(a1)*r,i+ep+9,1.5,hot)}}
+ for(let k=0;k<6;k++){if(k>=n)break;const a=k*1.047+T*(k%2?.9:-.6),d=r+5+Math.sin(T*2.3+k*1.7)*5,tw=Math.sin(T*7+k*2.1);if(tw>.1)blend(cx+Math.cos(a)*d,cy+Math.sin(a)*d*.9,tw>.7?P.core:P.hot,1)}}
+
+/* ---------- 1 · Le Sceau d'ardoise ---------- */
+function d1(p,t){const cx=48,gy=75,on=p>=1;
+ gell(cx,gy+5,25,10,0,.32);if(p>0)glow(cx,gy,36,16,.06*p*(1+.25*Math.sin(t*3)));
+ disc(cx,gy,21,9.5,3);const lit=[];
+ for(let i=0;i<64;i++){const k=i>>3,j=i&7;if(j>4)continue;const a=i/64*TAU,isOn=on||k<Math.floor(p*8.999),c=isOn?(on&&Math.sin(t*4-k*.8)>.6?P.hot:P.hi):S[1];
+  px(cx+Math.cos(a)*16.5,gy+Math.sin(a)*7.2,c);if(j===2){px(cx+Math.cos(a)*14.6,gy+Math.sin(a)*6.3,c);if(isOn)lit.push([cx+Math.cos(a)*16.5,gy+Math.sin(a)*7.2])}}
+ disc(cx,gy-2,11,5,2);ell(cx,gy-3,6.5,2.8,S[1]);
+ const lift=ease(p)*(3+Math.sin(t*1.7)*1.2),cy=gy-14-lift;sphere(cx,cy,11,p,t);
+ return()=>{if(p>0)orbArcs(cx,cy,11,p,lit)}}
+
+/* ---------- 2 · La Sphère enchaînée ---------- */
+function borne(x,y,p,t,k){rect(x-3,y-8,6,9,S[2]);rect(x-3,y-8,2,9,S[4]);rect(x+2,y-8,1,9,S[1]);rect(x-3,y-10,6,2,S[5]);rect(x+1,y-10,2,2,S[4]);
+ rect(x-1,y-5,2,2,p>=1?(Math.sin(t*5+k)>0?P.core:P.hot):p>0?mix(Q[1],P.hi,p):Q[1]);px(x,y-11,I[4]);px(x-1,y-11,I[2])}
+function chain(x0,y0,x1,y1,sag,vib){const n=Math.max(4,Math.round(Math.hypot(x1-x0,y1-y0)+sag));
+ for(let i=0;i<=n;i++){const k=i/n,b=4*k*(1-k),x=x0+(x1-x0)*k,y=y0+(y1-y0)*k+b*sag+b*vib;px(x,y,i%3===0?I[1]:i%3===1?I[4]:I[3])}}
+function d2(p,t){const cx=48,gy=75,e=ease(p),r=11,cy=gy-r-e*15+(p>0?Math.sin(t*1.5)*p:0),on=p>=1;
+ const B=[[28,65],[68,65],[24,84],[72,84]],A=[[cx-9,cy-2],[cx+9,cy-2],[cx-10,cy+3],[cx+10,cy+3]];
+ gring(cx,gy,18,8,0x101116,.55);gring(cx,gy,13,5.6,0x101116,.35);gell(cx,gy+1,r-4*e,4.6-1.6*e,0,.42);
+ if(p>0)glow(cx,gy,38,17,.06*p*(1+.25*Math.sin(t*3)));
+ const sag=(1-e)*7+.5,vib=on?Math.sin(t*31)*.6:0;
+ for(const k of[0,1]){borne(B[k][0],B[k][1],p,t,k);chain(B[k][0],B[k][1]-11,A[k][0],A[k][1],sag*.6,vib)}
+ sphere(cx,cy,r,p,t);
+ for(let i=0;i<=22;i++){const a=i/22*Math.PI,x=cx+Math.cos(a)*r,y=cy+1+Math.sin(a)*3,c=i>15?I[4]:i>7?I[3]:I[1];px(x,y,c);px(x,y+1,i>15?I[3]:I[1])}
+ px(cx-10,cy+3,I[4]);px(cx+10,cy+3,I[3]);
+ for(const k of[2,3]){chain(B[k][0],B[k][1]-11,A[k][0],A[k][1],sag,-vib);borne(B[k][0],B[k][1],p,t,k)}
+ return()=>{if(p<=0)return;orbArcs(cx,cy,r,p*.7,null);
+  for(let k=0;k<4;k++){const ep=Math.floor(t*4+k*.6);if(hs(k*9.1+ep)<.32*p)bolt(A[k][0],A[k][1],B[k][0],B[k][1]-11,k+ep,2,hs(ep+k)>.6)}}}
+
+/* ---------- 3 · Le Monolithe fendu ---------- */
+function d3(p,t){const cx=48,gy=76,e=ease(p),g=2+e*6,on=p>=1,cy=49+(p>0?Math.sin(t*1.6)*.8*p:0);
+ const niche=y=>{const d=y-49;return Math.abs(d)<10?Math.max(0,Math.sqrt(100-d*d)-4):0};
+ gell(cx+2,gy+4,24,8,0,.34);if(p>0)glow(cx,gy+1,34,14,.06*p*(1+.25*Math.sin(t*3)));
+ // fissures du sol qui se chargent
+ const CR=[[-1,5,-22,12],[1,5,24,10],[-3,6,-9,19],[4,6,13,18]];
+ CR.forEach((c,ci)=>{const n=14,m=Math.round(n*(.35+.65*p));for(let i=0;i<m;i++){const k=i/n,x=cx+c[0]+(c[2]-c[0])*k+(hs(ci*13+i)-.5)*2.4,y=gy+c[1]+(c[3]-c[1])*k*.55;
+  blend(x,y,p>0?(on&&Math.sin(t*5-i*.6+ci)>.5?P.hot:P.hi):0x14161c,p>0?.4+.5*p:.5)}});
+ rect(cx-18,gy-3,36,3,S[4]);rect(cx-18,gy-3,36,1,S[5]);rect(cx-18,gy,36,5,S[2]);rect(cx-18,gy,2,5,S[3]);rect(cx+15,gy,3,5,S[1]);
+ sphere(cx,cy,8,p,t);
+ const band=p>0?mix(S[1],on&&Math.sin(t*3)>.3?P.hot:P.hi,p):S[1],inner=p>.3?mix(S[2],P.hi,(p-.3)/.7):null;
+ for(let y=22;y<=gy-3;y++){const k=(y-22)/51,w=8+k*4,nc=niche(y);
+  const inL=Math.round(cx-g/2-nc),outL=Math.round(cx-g/2-w),inR=Math.round(cx+g/2+nc),outR=Math.round(cx+g/2+w);
+  for(let x=outL;x<inL;x++){if(y<22+(inL-1-x)*.9)continue;let c=x-outL<2?S[4]:S[3];if(x>=inL-1)c=nc>0&&inner?inner:S[2];
+   if((y===35||y===63)&&x>outL+1&&x<inL-1)c=band;if((y===38||y===60)&&(x-outL)%3===2&&x<inL-1)c=band;px(x,y,c)}
+  for(let x=inR;x<outR;x++){if(y<27+(x-inR)*.9)continue;let c=outR-x<=2?S[1]:S[2];if(x===inR)c=nc>0&&inner?inner:S[4];
+   if((y===35||y===63)&&x>inR&&x<outR-2)c=band;if((y===38||y===60)&&(x-inR)%3===1&&x<outR-2)c=band;px(x,y,c)}}
+ rect(Math.round(cx-g/2-8),46,2,2,Q[2]);rect(Math.round(cx+g/2+7),52,2,2,Q[1]);
+ const tg=[[cx-g/2-1,38],[cx+g/2+1,40],[cx-g/2-1,60],[cx+g/2+1,59],[cx,18]];
+ return()=>{if(p>0)orbArcs(cx,cy,8,p,tg)}}
+
+/* ---------- 4 · Le Puits d'ombre ---------- */
+function d4(p,t){const cx=48,gy=75,e=ease(p),r=10,on=p>=1,cy=gy-2-e*22+(p>0?Math.sin(t*1.5)*1.2*p:0);
+ gell(cx,gy+4,28,12,0,.28);if(p>0)glow(cx,gy,38,17,.06*p*(1+.25*Math.sin(t*3)));
+ ell(cx,gy+2,25,11.5,S[1]);ell(cx+0,gy+2,25,11.5,0,(x,y,dx)=>dx<-.4?S[2]:dx>.6?S[0]:S[1]);
+ ell(cx,gy,25,11.5,0,(x,y,dx,dy)=>{const d=dx*dx+dy*dy;if(d<.46)return null;const seg=((Math.atan2(dy,dx)/TAU+1)*12)%1;
+  if(seg<.08)return S[1];return dx+dy<-.3?(d>.8?S[5]:S[4]):dx+dy>.55?S[2]:S[3]});
+ ell(cx,gy,17,7.8,0,(x,y,dx,dy)=>dy<-.5?S[0]:dy<-.15?S[1]:LIQ);
+ if(p>0)for(let k=0;k<3;k++){const rr=(t*.45+k/3)%1,c=mix(P.mid,LIQ,rr*.9+.1*(1-p));for(let i=0;i<60;i++){const a=i/60*TAU,x=cx+Math.cos(a)*rr*15,y=gy+2.5+Math.sin(a)*rr*4.6;
+   const dx=(x-cx)/17,dy=(y-gy)/7.8;if(dx*dx+dy*dy<.92&&dy>-.1)px(x,y,c)}}
+ const studs=[];for(let k=0;k<4;k++){const a=Math.PI/4+k*Math.PI/2,x=Math.round(cx+Math.cos(a)*21.5),y=Math.round(gy+Math.sin(a)*9.8);
+  const c=on?(Math.sin(t*5+k*1.6)>0?P.core:P.hot):p>0?mix(Q[1],P.hot,p):Q[1];rect(x-1,y-1,2,2,c);px(x-1,y-1,on?P.core:Q[2]);studs.push([x,y-1])}
+ if(e>.04){const y0=Math.round(cy+r-1),y1=gy+2;for(let y=y0;y<=y1;y++){const k=(y-y0)/Math.max(1,y1-y0),w=k<.25?2:k>.85?2:1,x=cx+Math.round(Math.sin(y*.5+t*3)*.7*k*(1-k)*4);
+   for(let i=0;i<w;i++)px(x-(w>>1)+i,y,(y+Math.floor(t*6))%5===0&&p>.5?P.dk:LIQ)}}
+ sphere(cx,cy,r,p,t,gy+1);
+ return()=>{if(p<=0)return;
+  if(p>.3)for(let k=0;k<6;k++){const u=(t*.35+hs(k*3.7))%1,x=cx+(hs(k*5.1)-.5)*26*(1-u*.75),y=gy+3-u*(gy+3-cy);blend(x,y,0x0a0510,1);blend(x,y+1,P.hi,.55)}
+  orbArcs(cx,cy,r,p,studs)}}
+
+/* ---------- 5 · Le Cœur d'obsidienne ---------- */
+function limb(x0,y0,cxx,cyy,x1,y1,dark){for(let i=0;i<=30;i++){const k=i/30,a=(1-k)*(1-k),b=2*k*(1-k),c=k*k,x=a*x0+b*cxx+c*x1,y=a*y0+b*cyy+c*y1;
+  px(x-1,y,dark?I[3]:I[4]);px(x,y,dark?I[2]:I[3]);px(x+1,y,I[1])}}
+function shard(x,y,pal,lit){px(x,y-1,lit?pal[4]:pal[3]);px(x,y,pal[1]);px(x+1,y,pal[0]);px(x,y+1,pal[0])}
+function d5(p,t){const cx=48,gy=76,e=ease(p),on=p>=1,o=e*2.5,cy=53-e*2+(p>0?Math.sin(t*1.6)*.9*p:0),pal=ON.map((c,i)=>mix(OFF[i],c,p));
+ gell(cx,gy+5,21,8,0,.32);if(p>0)glow(cx,gy,36,16,.06*p*(1+.25*Math.sin(t*3)));
+ const SH=[];for(let k=0;k<5;k++){const a=t*.8+k*TAU/5,fx=cx+Math.cos(k*1.9+.4)*24,fy=gy+5+Math.sin(k*1.9+.4)*6,ox=cx+Math.cos(a)*21,oy=cy+2+Math.sin(a)*7;
+  SH.push({x:fx+(ox-fx)*e,y:fy+(oy-fy)*e,back:e>.5&&Math.sin(a)<0,k})}
+ for(const s of SH)if(s.back)shard(s.x,s.y,pal,on&&Math.sin(t*6+s.k)>.5);
+ disc(cx,gy+1,15,7,3);for(let k=0;k<3;k++){const a=Math.PI/2+k*TAU/3+Math.PI/3;rect(Math.round(cx+Math.cos(a)*10),Math.round(gy+1+Math.sin(a)*4.4),2,1,on?P.hot:Q[1])}
+ limb(cx,gy-2,cx+4,gy-22,cx,38-o,true);line(cx,38-o,cx-2,41-o,I[4]);
+ const V=[[0,-13],[10,-6],[10,6],[0,13],[-10,6],[-10,-6]].map(v=>[cx+v[0],cy+v[1]]),C=[cx-2,cy-2],tone=[1,0,0,1,2,2],fl=on?Math.floor(t*2.5)%6:p>.4?(Math.floor(t*1.5)%9):-1;
+ for(let k=0;k<6;k++)poly([V[k],V[(k+1)%6],C],pal[k===fl?3:tone[k]]);
+ for(let k=0;k<6;k++)line(C[0],C[1],V[k][0],V[k][1],pal[k===0||k>=4?3:2]);
+ line(V[5][0],V[5][1],V[0][0],V[0][1],pal[3]);line(V[4][0],V[4][1],V[5][0],V[5][1],pal[2]);px(C[0],C[1],pal[5]);if(p>0)px(C[0]-1,C[1]-1,pal[4]);
+ limb(cx-11,gy,cx-25-o,gy-12,cx-12-o,cy+4,false);line(cx-12-o,cy+4,cx-9-o,cy+2,I[4]);
+ limb(cx+11,gy,cx+25+o,gy-12,cx+12+o,cy+4,true);line(cx+12+o,cy+4,cx+9+o,cy+2,I[3]);
+ for(const s of SH)if(!s.back)shard(s.x,s.y,pal,on&&Math.sin(t*6+s.k)>.5);
+ return()=>{if(p>0)orbArcs(cx,cy,12,p,e>.5?SH.map(s=>[s.x,s.y]):null)}}
+
+/* ---------- 6 · mélange retenu : la Sphère enchaînée (2) au-dessus du Puits d'ombre (4) ---------- */
+function d6(p,t){const cx=48,gy=75,e=ease(p),r=10,on=p>=1,cy=gy-2-e*22+(p>0?Math.sin(t*1.5)*1.2*p:0);
+ const B=[[23,66],[73,66],[19,85],[77,85]],A=[[cx-8,cy-2],[cx+8,cy-2],[cx-9,cy+3],[cx+9,cy+3]];
+ gell(cx,gy+4,28,12,0,.28);if(p>0)glow(cx,gy,40,18,.06*p*(1+.25*Math.sin(t*3)));
+ ell(cx,gy+2,25,11.5,0,(x,y,dx)=>dx<-.4?S[2]:dx>.6?S[0]:S[1]);
+ ell(cx,gy,25,11.5,0,(x,y,dx,dy)=>{const d=dx*dx+dy*dy;if(d<.46)return null;const seg=((Math.atan2(dy,dx)/TAU+1)*12)%1;
+  if(seg<.08)return S[1];return dx+dy<-.3?(d>.8?S[5]:S[4]):dx+dy>.55?S[2]:S[3]});
+ ell(cx,gy,17,7.8,0,(x,y,dx,dy)=>dy<-.5?S[0]:dy<-.15?S[1]:LIQ);
+ if(p>0)for(let k=0;k<3;k++){const rr=(t*.45+k/3)%1,c=mix(P.mid,LIQ,rr*.9+.1*(1-p));for(let i=0;i<60;i++){const a=i/60*TAU,x=cx+Math.cos(a)*rr*15,y=gy+2.5+Math.sin(a)*rr*4.6;
+   const dx=(x-cx)/17,dy=(y-gy)/7.8;if(dx*dx+dy*dy<.92&&dy>-.1)px(x,y,c)}}
+ const sag=(1-e)*5+.5,vib=on?Math.sin(t*31)*.6:0;
+ for(const k of[0,1]){borne(B[k][0],B[k][1],p,t,k);chain(B[k][0],B[k][1]-11,A[k][0],A[k][1],sag*.5,vib)}
+ if(e>.04){const y0=Math.round(cy+r-1),y1=gy+2;for(let y=y0;y<=y1;y++){const k=(y-y0)/Math.max(1,y1-y0),w=k<.25?2:k>.85?2:1,x=cx+Math.round(Math.sin(y*.5+t*3)*.7*k*(1-k)*4);
+   for(let i=0;i<w;i++)px(x-(w>>1)+i,y,(y+Math.floor(t*6))%5===0&&p>.5?P.dk:LIQ)}}
+ sphere(cx,cy,r,p,t,gy+1);
+ for(let i=0;i<=20;i++){const a=i/20*Math.PI,x=cx+Math.cos(a)*r,y=cy+1+Math.sin(a)*2.8,c=i>14?I[4]:i>7?I[3]:I[1];if(y+1>gy+1)continue;px(x,y,c);px(x,y+1,i>14?I[3]:I[1])}
+ for(const k of[2,3]){chain(B[k][0],B[k][1]-11,A[k][0],Math.min(A[k][1],gy+1),sag,-vib);borne(B[k][0],B[k][1],p,t,k)}
+ return()=>{if(p<=0)return;
+  if(p>.3)for(let k=0;k<6;k++){const u=(t*.35+hs(k*3.7))%1,x=cx+(hs(k*5.1)-.5)*26*(1-u*.75),y=gy+3-u*(gy+3-cy);blend(x,y,0x0a0510,1);blend(x,y+1,P.hi,.55)}
+  orbArcs(cx,cy,r,p*.7,null);
+  for(let k=0;k<4;k++){const ep=Math.floor(t*4+k*.6);if(hs(k*9.1+ep)<.32*p)bolt(A[k][0],A[k][1],B[k][0],B[k][1]-11,k+ep,2,hs(ep+k)>.6)}}}
+
+/* ---------- page ---------- */
+const STATES=[["Éteinte",()=>0],["Réveil",t=>{const u=(t%7)/7;return u<.1?0:u<.72?(u-.1)/.62:1}],["Active",()=>1]];
+const list=document.getElementById('list'),views=[];let bg=null;
+for(const m of MODELS){const s=document.createElement('section');s.className='m';s.id='m'+m.n;
+ s.innerHTML=`<div class="txt"><h2><i>${m.n}</i>${m.nom}</h2><p>${m.txt}</p><dl><dt>Pour</dt><dd>${m.pour}</dd><dt>Contre</dt><dd>${m.contre}</dd><dt>En jeu</dt><dd>${m.jeu}</dd></dl><button type="button" id="pick${m.n}" aria-pressed="false">Choisir la ${m.n}</button></div><div class="row"></div>`;
+ const row=s.querySelector('.row');
+ STATES.forEach(st=>{const f=document.createElement('figure'),c=document.createElement('canvas');c.width=W;c.height=H;c.setAttribute('role','img');c.setAttribute('aria-label',m.nom+', '+st[0].toLowerCase());
+  f.appendChild(c);const cap=document.createElement('figcaption');cap.textContent=st[0];f.appendChild(cap);row.appendChild(f);views.push({ctx:c.getContext('2d'),d:m.d,p:st[1]})});
+ list.appendChild(s);s.querySelector('button').addEventListener('click',()=>setPick(m.n))}
+function frame(t){T=t;for(const v of views){const id=v.ctx.createImageData(W,H);img=id.data;img.set(bg);buf.fill(-1);const fx=v.d(v.p(t),t);compose();if(fx)fx();v.ctx.putImageData(id,0,0)}}
+let time=2.2,last=0,paused=matchMedia('(prefers-reduced-motion:reduce)').matches,speed=1,acc=0;
+function loop(now){const dt=Math.min(.1,(now-last)/1000||0);last=now;if(!paused){time+=dt*speed;acc+=dt;if(acc>=1/24){acc=0;frame(time)}}requestAnimationFrame(loop)}
+const im=new Image();im.onload=()=>{const c=document.createElement('canvas');c.width=W;c.height=H;const x=c.getContext('2d');x.drawImage(im,0,0);bg=x.getImageData(0,0,W,H).data;frame(time);requestAnimationFrame(loop)};
+im.src="%%FOND%%";
+const bp=document.getElementById('pause'),bs=document.getElementById('speed');
+function showPause(){bp.setAttribute('aria-pressed',String(paused));bp.textContent=paused?'Reprendre':'Pause'}showPause();
+bp.addEventListener('click',()=>{paused=!paused;showPause()});
+bs.addEventListener('click',()=>{speed=speed===1?.35:speed<1?2:1;bs.textContent='Vitesse ×'+String(speed).replace('.',',')});
+
+/* ---------- choix : écrit dans le document partagé choix/courant ---------- */
+let pick=-1;const note=document.getElementById('note'),status=document.getElementById('status'),picked=document.getElementById('picked'),bnone=document.getElementById('none');
+function setPick(n){pick=pick===n?-1:n;showPick();status.textContent='';status.className=''}
+function showPick(){for(const m of MODELS){const on=pick===m.n,b=document.getElementById('pick'+m.n);b.setAttribute('aria-pressed',String(on));b.textContent=on?'Choisie':'Choisir la '+m.n;document.getElementById('m'+m.n).classList.toggle('sel',on)}
+ bnone.setAttribute('aria-pressed',String(pick===0));const m=MODELS.find(m=>m.n===pick);picked.textContent=m?m.n+' · '+m.nom:pick===0?'Aucune des cinq.':'Rien de choisi pour l\'instant.'}
+bnone.addEventListener('click',()=>setPick(0));
+let db=null;(async()=>{try{db=await window.claude?.use?.('db')}catch(e){}if(!db)return;
+ try{const s=await db.doc('choix/courant').get();if(s.exists&&pick===-1){const d=s.data()||{};if(typeof d.ancre==='number')pick=d.ancre;if(typeof d.note==='string'&&!note.value)note.value=d.note;showPick();if(pick>=0)status.textContent='Dernier choix envoyé rechargé.'}}catch(e){}})();
+document.getElementById('send').addEventListener('click',async()=>{status.className='';
+ if(pick<0&&!note.value.trim()){status.textContent='Choisissez un style ou écrivez une remarque.';return}
+ if(!db){status.textContent='Envoi indisponible ici : dites-moi votre choix dans la conversation.';return}
+ const m=MODELS.find(m=>m.n===pick);status.textContent='Envoi…';
+ try{await db.doc('choix/courant').set({ancre:pick,note:note.value.trim(),resume:m?m.n+' · '+m.nom:pick===0?'Aucune':'Pas choisi',at:Date.now()});status.textContent='Choix envoyé. Dites-le-moi dans la conversation, je le lirai.';status.className='ok'}
+ catch(e){status.textContent='L\'envoi a échoué : dites-moi votre choix dans la conversation.'}});
+</script>

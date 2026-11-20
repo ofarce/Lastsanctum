@@ -7,6 +7,9 @@ const TYPES := {
 	"iron": {"resistance": 4, "material_name": "Fer", "mining_label": "Mine le fer", "drop_item": "iron"},
 	"copper": {"resistance": 4, "material_name": "Cuivre", "mining_label": "Mine le cuivre", "drop_item": "copper"},
 	"rock": {"resistance": 4, "material_name": "Roche", "mining_label": "Creuse la roche", "drop_item": "rock"},
+	## Roche du biome 2 (Veines de vert-de-gris) : deux fois plus dure, et impossible à entamer sans la recherche
+	## « seal » (Sceau de cuivre, à la Forge). Toute case de roche sans type propre au nord du Temple (TerrainState.block_definition).
+	"rock2": {"resistance": 8, "material_name": "Roche de vert-de-gris", "mining_label": "Creuse la roche de vert-de-gris", "drop_item": "rock", "seal": "copper_seal"},
 	"wood": {"resistance": 4, "material_name": "Arbre pétrifié", "mining_label": "Récolte le bois", "drop_item": "wood"},
 }
 const ITEMS := {

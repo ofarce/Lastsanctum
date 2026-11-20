@@ -35,8 +35,17 @@ func setup(o: Dictionary) -> void:
 	position = Proj.nat(o["x"], 0.0, o["z"])
 
 
+var _key: Array = []
+
+
 func _process(_delta: float) -> void:
 	if not ghost:
+		# Barricade : redessin quand ses PV ou son bardage changent.
+		if _item == "barricade":
+			var key := [placed.get("hp", 0.0), placed.get("max_hp", 0.0), GameState.sim_time - float(placed.get("hit_at", -INF)) < 0.12]
+			if key != _key:
+				_key = key
+				queue_redraw()
 		return
 	var p: Variant = GameState.build_pointer
 	visible = GameState.hud_mode == "place" and p != null and not GameState.hud_place_item.is_empty()
@@ -63,4 +72,20 @@ func _draw() -> void:
 		# Case visée : contour de 32 px.
 		draw_rect(Rect2(-16, -16, 32, 32), Color(1, 1, 1, 0.5), false, 1.0)
 	draw_set_transform(-anchor * f, 0.0, Vector2(f, f))
-	draw_texture_rect(texture(_item), Rect2(0, 0, SW, SH), false)
+	var struck: bool = not ghost and GameState.sim_time - float(placed.get("hit_at", -INF)) < 0.12
+	draw_texture_rect(texture(_item), Rect2(0, 0, SW, SH), false, Color(1.6, 1.6, 1.6) if struck else Color.WHITE)
+	if _item != "barricade":
+		return
+	# Palissades (recherche de la Bibliothèque) : bardage de bois riveté en travers du muret.
+	if GameState.research_done.has("palisades"):
+		draw_rect(Rect2(145, 164, 31, 1), Color("#d4a462"))
+		draw_rect(Rect2(145, 165, 31, 2), Color("#7a4c24"))
+		draw_rect(Rect2(145, 167, 31, 1), Color("#1c1008"))
+		for x: int in [149, 160, 171]:
+			draw_rect(Rect2(x, 165, 1, 1), Color("#d6dce8"))
+	# Barre de vie dès qu'elle est entamée.
+	var hp := float(placed.get("hp", 0.0))
+	var hp_max := float(placed.get("max_hp", 0.0))
+	if not ghost and hp_max > 0.0 and hp < hp_max:
+		draw_rect(Rect2(148, 144, 26, 3), Color("#000000aa"))
+		draw_rect(Rect2(149, 145, 24.0 * clampf(hp / hp_max, 0.0, 1.0), 1), Color("#e2c682"))

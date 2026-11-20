@@ -1,6 +1,6 @@
 extends "res://tests/fight_case.gd"
-## Étape 8 (v2) : vagues (4 + 3w ennemis, types, instants, x = ±2), statistiques des ennemis, attente des
-## ennemis hors rejetons avant la pause de 4 s.
+## Étape 8 (v2) : vagues (4 + 3w ennemis comme le prototype, en escouades), statistiques des ennemis,
+## attente des ennemis hors rejetons avant la pause de 4 s.
 
 
 func test_waves_match_js() -> void:
@@ -10,13 +10,19 @@ func test_waves_match_js() -> void:
 		GameState.sim_time = 100.0
 		GameState.wave = w
 		sim.combat.start_wave()
-		var got := GameState.spawn_queue.map(func(s: Dictionary) -> Dictionary: return {"at": r4(s["at"]), "x": s["x"], "kind": s["kind"]})
-		check_eq(got.size(), want[w].size(), "vague %d : nombre" % (w + 1))
-		for i in mini(got.size(), want[w].size()):
-			check_near(got[i]["at"], want[w][i]["at"], 1e-6, "vague %d, ennemi %d : instant" % [w + 1, i])
-			check_eq(got[i]["x"], float(want[w][i]["x"]), "vague %d, ennemi %d : x" % [w + 1, i])
-			if w == 0:
-				check_eq(got[i]["kind"], want[w][i]["kind"], "première vague : type")
+		# Effectif du prototype ; l'ordre d'apparition suit désormais les escouades (Combat.wave_squads).
+		check_eq(GameState.spawn_queue.size(), want[w].size(), "vague %d : nombre" % (w + 1))
+		var squads := Combat.wave_squads(w + 1, want[w].size())
+		check_eq(GameState.wave_squads, squads.size(), "vague %d : escouades" % (w + 1))
+		var i := 0
+		for k in squads.size():
+			for kind: String in squads[k]:
+				var s: Dictionary = GameState.spawn_queue[i]
+				check_eq(s["kind"], kind, "vague %d, ennemi %d : type" % [w + 1, i])
+				check_near(s["at"], 102.0, 1e-6, "vague %d, ennemi %d : instant" % [w + 1, i])
+				check_eq(s["x"], -2.0 if k % 2 == 0 else 2.0, "vague %d, ennemi %d : colonne" % [w + 1, i])
+				check_eq(s["squad"], k, "vague %d, ennemi %d : escouade" % [w + 1, i])
+				i += 1
 
 
 func test_enemy_stats_match_js() -> void:
@@ -24,7 +30,9 @@ func test_enemy_stats_match_js() -> void:
 	var want: Dictionary = js()["enemies"]
 	for k: String in want:
 		var e := sim.combat.spawn_enemy({"x": 2.0, "kind": k})
-		check_eq([e.hp, e.max_hp, e.speed, e.reach, e.damage], [float(want[k]["hp"]), float(want[k]["max"]), float(want[k]["speed"]), float(want[k]["range"]), float(want[k]["damage"])], k)
+		# Allure des vagues : vitesse du prototype × Catalog.WAVE_PACE.
+		check_eq([e.hp, e.max_hp, e.reach, e.damage], [float(want[k]["hp"]), float(want[k]["max"]), float(want[k]["range"]), float(want[k]["damage"])], k)
+		check_near(e.speed, float(want[k]["speed"]) * Catalog.WAVE_PACE, 1e-6, k + " : vitesse")
 		check(e.z >= 62.0 and e.z <= 66.0 and absf(e.x - 2.0) <= 1.6, "%s apparaît au sud : %s" % [k, e.pos()])
 
 

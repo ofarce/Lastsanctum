@@ -251,6 +251,34 @@ async function init(){
     ready=true;$('loading').textContent='9 unités · pixels natifs du projet';
   }catch(e){$('error').textContent=e.message+' — ouvrez cette fiche depuis un serveur HTTP local.';$('loading').textContent='Chargement interrompu'}
 }
+// Respiration ajoutée au repos debout (Strazhar) : buste (lignes 0..waist) descendu de ub, tête (0..neck) de ub+hd ;
+// cycle de 12 images comme les humains de la refonte (la tête mène la descente, le buste la remontée).
+const BREATH=i=>{const j=i%12;return j<5?[0,0]:j===5||j===11?[0,1]:[1,0]};
+const BREATH_ROWS={strazhar:[25,11]};
+function breathe(cv,waist,neck,ub,hd){const w=cv.width,h=cv.height,s=cv.getContext('2d').getImageData(0,0,w,h),o=new ImageData(new Uint8ClampedArray(s.data),w,h);
+ for(let y=0;y<=waist;y++){const dy=y<=neck+ub+hd?ub+hd:ub,sy=y-dy;for(let x=0;x<w;x++){const j=(y*w+x)*4;if(sy<0){o.data[j+3]=0;continue}const i=(sy*w+x)*4;for(let q=0;q<4;q++)o.data[j+q]=s.data[i+q]}}
+ const c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').putImageData(o,0,0);return c}
+// Marche dessinée par le modèle (24 poses) au lieu des 6 poses de l'atlas du baker : la Brute.
+const PROC_WALK=new Set(['brute']);
+// Une image d'export (repos, marche, attaque, mort) ; i dans [0, count[.
+async function exportFrame(u,action,i,count,fps){
+  if(u.old&&(action==='idle'||(action==='walk'&&!PROC_WALK.has(u.id)))){
+    const a=metadata.enemies[u.id][action],im=action==='idle'?await load(`../assets/baked/enemies/${u.id}_idle.png`):imageCache.get(u.id);
+    const f=action==='idle'?i%a.count:Math.floor(i/count*a.count)%a.count;
+    const c=document.createElement('canvas');c.width=a.frame_w;c.height=a.frame_h;
+    c.getContext('2d').drawImage(im,(f%a.cols)*a.frame_w,Math.floor(f/a.cols)*a.frame_h,a.frame_w,a.frame_h,0,0,a.frame_w,a.frame_h);return c}
+  if(action==='walk'&&PROC_WALK.has(u.id)){const spec=pose(u,'walk',i/count*.9);return EnemyKit.draw(u.model,{...spec,walk:i/count},i/24,.5)}
+  if(action==='idle'){const spec=pose(u,'walk',i/10);delete spec.walk;
+    const c=u.model?EnemyKit.draw(u.model,spec,i/10,.5):ProjectUnitKit.figure(spec,i/10,.5);
+    if(BREATH_ROWS[u.id]){const[ub,hd]=BREATH(i);return breathe(c,...BREATH_ROWS[u.id],ub,hd)}return c}
+  return sprite(u,action,action==='walk'?i/count*.9:i/fps)}
+async function exportSheet(u,action){
+  const fps=action==='idle'?10:24,count=action==='idle'?24:action==='walk'?24:action==='death'?45:Math.ceil(u.cd*fps);
+  const images=[];for(let i=0;i<count;i++)images.push(await exportFrame(u,action,i,count,fps));
+  const fw=Math.max(...images.map(c=>c.width)),fh=Math.max(...images.map(c=>c.height)),cols=12,rows=Math.ceil(count/cols);
+  const sheet=document.createElement('canvas');sheet.width=fw*cols;sheet.height=fh*rows;
+  images.forEach((im,i)=>sheet.getContext('2d').drawImage(im,(i%cols)*fw,Math.floor(i/cols)*fh));
+  return{sheet,meta:{frame_w:fw,frame_h:fh,cols,rows,count,fps:action==='walk'?count/.9:fps}}}
 async function exportAssets(){
   if(!ready)throw Error('Sprites non chargés');
   const manifest={version:1,source:'planches/ennemis-animations.html',death_duration:1.8,enemies:{}};
@@ -269,27 +297,10 @@ async function exportAssets(){
         meta.walk={frame_w:Q.NW,frame_h:Q.NH,cols,rows,count:Q.FRAMES,fps:Q.FRAMES/v.dur,ax:Math.round((v.Hx+v.Sx)/4),ay:Q.ground};
         continue;
       }
-      const fps=action==='idle'?10:24;
-      const count=action==='idle'?24:action==='walk'?24:action==='death'?45:Math.ceil(u.cd*fps);
-      const images=[];
-      for(let i=0;i<count;i++){
-        let c;
-        if(u.old&&(action==='idle'||action==='walk')){
-          const a=metadata.enemies[u.id][action],im=action==='idle'?await load(`../assets/baked/enemies/${u.id}_idle.png`):imageCache.get(u.id);
-          const f=action==='idle'?i%a.count:Math.floor(i/count*a.count)%a.count;
-          c=document.createElement('canvas');c.width=a.frame_w;c.height=a.frame_h;
-          c.getContext('2d').drawImage(im,(f%a.cols)*a.frame_w,Math.floor(f/a.cols)*a.frame_h,a.frame_w,a.frame_h,0,0,a.frame_w,a.frame_h);
-        }else if(action==='idle'){
-          const spec=pose(u,'walk',i/10);delete spec.walk;
-          c=u.model?EnemyKit.draw(u.model,spec,i/10,.5):ProjectUnitKit.figure(spec,i/10,.5);
-        }else c=sprite(u,action,action==='walk'?i/count*.9:i/fps);
-        images.push(c);
-      }
-      const fw=Math.max(...images.map(c=>c.width)),fh=Math.max(...images.map(c=>c.height)),cols=12,rows=Math.ceil(count/cols);
-      const sheet=document.createElement('canvas');sheet.width=fw*cols;sheet.height=fh*rows;
-      images.forEach((im,i)=>sheet.getContext('2d').drawImage(im,(i%cols)*fw,Math.floor(i/cols)*fh));
+      const{sheet,meta:m}=await exportSheet(u,action);
       await send(`${u.id}_${action}.png`,await new Promise(resolve=>sheet.toBlob(resolve)));
-      meta[action]={frame_w:fw,frame_h:fh,cols,rows,count,fps:action==='walk'?count/.9:fps};
+      meta[action]=m;
+      if(action==='walk'&&PROC_WALK.has(u.id))meta.self_bob=true;
     }
     manifest.enemies[u.id]=meta;
   }
@@ -301,6 +312,6 @@ if(new URLSearchParams(location.search).has('export')){
   b.onclick=async()=>{b.disabled=true;try{await exportAssets();b.textContent='Export terminé : 9 ennemis, 36 atlas'}catch(e){b.textContent='Erreur : '+e.message;b.disabled=false}};
   document.querySelector('.toolbar').appendChild(b);
 }
-window.animationLab={exportAssets,units,get selected(){return selected},get time(){return time},get ready(){return ready},get cacheSize(){return frameCache.size},select};
+window.animationLab={exportAssets,exportSheet,units,get selected(){return selected},get time(){return time},get ready(){return ready},get cacheSize(){return frameCache.size},select};
 init();requestAnimationFrame(loop);
 })();

@@ -22,7 +22,7 @@ const ITEMS := {
 	"wood_fiber": {"name": "Fibre de bois", "color": Color("#c8b080"),
 		"desc": "Ingrédient des recettes de niveau supérieur."},
 	"firing_post": {"name": "Poste de tir", "color": Color("#7a5a38"),
-		"desc": "Une unité de tir postée derrière voit sa portée doublée ; ne bloque pas les lignes de vue. Se pose sur une case (Ingénieur · Poser)."},
+		"desc": "Une unité de tir postée derrière voit sa portée augmentée de moitié ; ne bloque pas les lignes de vue. Se pose sur une case (Ingénieur · Poser)."},
 	"barricade": {"name": "Barricade", "color": Color("#6e6a60"),
 		"desc": "Mur qui force le passage des attaquants ; ne bloque pas les lignes de vue. Se pose sur une case (Ingénieur · Poser)."},
 	"fishing_rod": {"name": "Canne à pêche", "color": Color("#a08858"), "pending": true,
@@ -31,6 +31,8 @@ const ITEMS := {
 		"desc": "Nécessaire pour recruter un archer (un par archer)."},
 	"caltrops": {"name": "Chausse-trappe", "color": Color("#5a5650"),
 		"desc": "Piège posé au sol : 25 dégâts par seconde à chaque ennemi qui marche dessus. Se pose sur une case (Ingénieur · Poser)."},
+	"focus_staff": {"name": "Bâton à focale", "color": Color("#b8e8d8"),
+		"desc": "Nécessaire pour former un mage cristallisé (un par mage)."},
 	# Forge
 	"sword": {"name": "Épée", "color": Color("#b8c0c8"),
 		"desc": "Nécessaire pour recruter un Épée et bouclier (une par soldat)."},
@@ -57,10 +59,11 @@ const RECIPES := {
 		"fishing_rod": {"wood": 2, "iron": 1, "wood_fiber": 1},
 		"bow": {"wood": 1, "wood_fiber": 1},
 		"caltrops": {"wood": 25},
+		"focus_staff": {"wood": 2, "quartz": 2},
 	},
 	"forge": {
-		"sword": {"copper": 5, "iron": 5},
-		"shield": {"copper": 5, "iron": 5},
+		"sword": {"copper": 10},
+		"shield": {"copper": 10},
 		"copper_ingot": {"copper": 5},
 		"iron_ingot": {"iron": 5},
 		"gold_ingot": {"gold": 5},
@@ -82,7 +85,12 @@ const RECIPES := {
 const CASERNE_ITEMS := {
 	"archer": {"bow": 1},
 	"lame": {"sword": 1, "shield": 1},
+	"guerisseuse": {"focus_staff": 1},
+	"chantre": {"focus_staff": 1},
+	"envouteur": {"focus_staff": 1},
 }
+## Rôles dont l'objet se compte par formation et non par combattant (un arc pour quatre archers, un bâton par mage).
+const PER_TRAINING := ["archer", "guerisseuse", "chantre", "envouteur"]
 
 
 static func output_quantity(item: String) -> int:
@@ -111,12 +119,16 @@ static func name_of(item: String) -> String:
 	var blocks: Dictionary = preload("res://data/mineable_blocks.gd").ITEMS
 	if blocks.has(item):
 		return blocks[item]["name"]
+	if Loot.ITEMS.has(item):
+		return Loot.ITEMS[item]["name"]
 	return preload("res://data/gear_items.gd").name_of(item)
 
 
 static func desc_of(item: String) -> String:
 	if ITEMS.has(item):
 		return ITEMS[item]["desc"]
+	if Loot.ITEMS.has(item):
+		return Loot.ITEMS[item]["desc"]
 	return preload("res://data/gear_items.gd").ITEMS.get(item, {}).get("desc", "")
 
 
@@ -131,7 +143,7 @@ static func cost_text(cost: Dictionary) -> String:
 ## Objets de caserne pour `count` unités du rôle `role` (vide si le rôle n'en demande pas).
 static func caserne_cost(role: String, count: int) -> Dictionary:
 	var out := {}
-	var item_count := ceili(count / 4.0) if role == "archer" else count
+	var item_count := ceili(count / 4.0) if role in PER_TRAINING else count
 	for k: String in CASERNE_ITEMS.get(role, {}):
 		out[k] = CASERNE_ITEMS[role][k] * item_count
 	return out

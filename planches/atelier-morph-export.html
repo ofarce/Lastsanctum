@@ -1,0 +1,13 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><title>Export de l’Atelier sans ses pièces</title>
+<style>body{margin:0;padding:16px;background:#0b120e;color:#dcd8bc;font:14px/1.4 system-ui,sans-serif}canvas{image-rendering:pixelated;background:#223}</style></head><body>
+<p>Boucle « au travail » de la Table d’énonciation sans les pièces de bois (dessinées en jeu par BuildingView selon la recette). <code>?save=sync</code> lancé par <code>tools/atelier-morph/export.py</code>.</p>
+<p id="log"></p><div id="out"></div>
+<script src="assets/atelier-morph-planches.js"></script>
+<script>
+'use strict';
+const save=new URLSearchParams(location.search).get('save'),log=document.querySelector('#log');
+const post=(n,b)=>{const x=new XMLHttpRequest();x.open('POST','/out/'+n,false);x.send(b);if(x.status>=300)throw new Error(n+' '+x.status)};
+try{const i=BAT.ITEMS.findIndex(it=>it.name==='Table d’énonciation');BAT.setWork(1);BAT.setMorph({id:'none'});const w=BAT.exportSprite(i,72,12);document.querySelector('#out').append(w.base);
+ if(save)post('da-workshop_anim.png',w.sheet.toDataURL('image/png'));log.textContent=save?'Écrit : da-workshop_anim.png':'Aperçu seulement.'}catch(e){log.textContent='Erreur : '+e.message;if(save)post('erreur.txt',String(e&&e.stack||e));throw e}
+</script></body></html>

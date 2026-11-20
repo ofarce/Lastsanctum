@@ -1,0 +1,6 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://tests/visual/temple_queue_capture.gd" id="1"]
+
+[node name="TempleQueueCapture" type="Node"]
+script = ExtResource("1")

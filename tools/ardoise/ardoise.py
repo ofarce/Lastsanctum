@@ -31,6 +31,8 @@ SL = [hx(c) for c in ['#141922', '#1c222d', '#262e3b', '#323c4b', '#424e5f', '#5
 SLF = [hx(c) for c in ['#2a2f37', '#353b45', '#424954', '#515863', '#626973', '#757b84', '#8a8f96']]
 EARTH1 = [hx(c) for c in ['#2a241d', '#372f26', '#463c30', '#574b3b', '#695a47']]
 MOSS = [hx(c) for c in ['#22401f', '#2f5528', '#3e6c31', '#52833a']]
+# Terre du dallage, ramenée à 40 % vers l'ardoise : elle reste lisible sans être le contraste chaud de la salle.
+EARTH_F = [tuple(round(e * .6 + g * .4) for e, g in zip(c, (58, 62, 70))) for c in EARTH1]
 QUARTZ = [hx(c) for c in ['#8e9aac', '#b6c0ce', '#dfe5ee', '#f6f8fb']]
 OUTL = hx('#0b0a0e')
 
@@ -71,10 +73,11 @@ def fbm(x, y, sx, sy, s):
 BAY = (np.array([0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5]) + .5) / 16
 
 
-def rp(R, v, x, y):
+def rp(R, v, x, y, cell=1):
+    """Rampe tramée (Bayer 4×4). `cell` : côté d'un point de trame en pixels (2 = trame deux fois plus grosse)."""
     R = np.array(R, np.uint8)
     n = len(R) - 1
-    i = np.floor(v * n + BAY[(y & 3) * 4 + (x & 3)]).astype(np.int64)
+    i = np.floor(v * n + BAY[((y // cell) & 3) * 4 + ((x // cell) & 3)]).astype(np.int64)
     return R[np.clip(i, 0, n)]
 
 
@@ -98,6 +101,9 @@ def tex_top():
 
 
 def tex_floor():
+    """Dallage. Revue graphique du 2026-11-19 : trame en points de 2 px (le bruit au pixel jurait avec les
+    aplats des sprites), taches de terre trois fois plus rares, groupées en plaques et ramenées vers
+    l'ardoise, et une variation lente de valeur qui casse le damier quand la caméra recule."""
     x, y = grid()
     row = y // 14
     off = (row & 1) * 9
@@ -105,13 +111,15 @@ def tex_floor():
     lu, lv = x + off - col * 18, y - row * 14
     colw = col % (P // 18)
     rowv = row % (P // 14)
-    earth = (hash_(colw, rowv, 31) > .88) | (fbm(x, y, 16, 12, 30) > .75)
+    # Plaques : une dalle ne peut être terreuse que là où un bruit lent, lu au centre de la dalle, est haut.
+    patch = fbm(col * 18 - off + 9, row * 14 + 7, 84, 70, 36)
+    earth = ((hash_(colw, rowv, 31) > .62) & (patch > .66)) | ((fbm(x, y, 16, 12, 30) > .80) & (patch > .52))
     joint = (lu == 0) | (lv == 0)
-    v = .55 + (hash_(colw, rowv, 32) - .5) * .26 + (fbm(x, y, 7, 7, 34) - .5) * .2
-    v = v + (lv == 1) * .12 - ((lu == 17) | (lv == 13)) * .12 - (hash_(x, y, 35) > .97) * .2
-    out = rp(SLF, v, x, y)
-    out = pick(joint, rp(EARTH1, np.full(x.shape, .15), x, y), out)
-    return pick(earth, rp(EARTH1, .35 + fbm(x, y, 5, 5, 33) * .45, x, y), out)
+    v = .55 + (hash_(colw, rowv, 32) - .5) * .22 + (fbm(x, y, 9, 9, 34) - .5) * .12 + (fbm(x, y, 168, 126, 37) - .5) * .14
+    v = v + (lv == 1) * .12 - ((lu == 17) | (lv == 13)) * .12 - (hash_(x >> 1, y >> 1, 35) > .975) * .16
+    out = rp(SLF, v, x, y, 2)
+    out = pick(joint, rp(EARTH_F, np.full(x.shape, .15), x, y), out)
+    return pick(earth, rp(EARTH_F, .35 + fbm(x, y, 7, 7, 33) * .4, x, y, 2), out)
 
 
 def tex_dug():

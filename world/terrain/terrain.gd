@@ -118,6 +118,15 @@ func _block_kind(key: Vector2i) -> String:
 	return ""
 
 
+## Teinte du sol et de la roche d'un bloc selon son biome : vert-de-gris au nord du Temple (biome 2).
+const BIOME_TINT: Array[Color] = [Color.WHITE, Color(0.72, 0.96, 0.86)]
+
+
+func _biome_tint(key: Vector2i) -> Color:
+	var z := (float(key.y * chunk - origin.y) + chunk * 0.5) / 8.0
+	return BIOME_TINT[mini(Biomes.index_at(z), BIOME_TINT.size() - 1)]
+
+
 func _add_block(key: Vector2i, image: Image) -> void:
 	var texture := ImageTexture.create_from_image(image)
 	var s := Sprite2D.new()
@@ -126,6 +135,7 @@ func _add_block(key: Vector2i, image: Image) -> void:
 	s.centered = false
 	s.position = Vector2(key * chunk - origin)
 	s.use_parent_material = true
+	s.modulate = _biome_tint(key)
 	add_child(s)
 	_blocks[key] = {"image": image, "texture": texture, "sprite": s}
 
@@ -141,6 +151,7 @@ func _add_plain(key: Vector2i, kind: String) -> void:
 	s.centered = false
 	s.position = Vector2(key * chunk - origin)
 	s.use_parent_material = true
+	s.modulate = _biome_tint(key)
 	add_child(s)
 	_plain[key] = kind
 	_plain_sprites[key] = s
@@ -358,7 +369,11 @@ func paint_road(road: Road) -> void:
 		for px in range(_px(xa, 0.0).x, _px(xb, 0.0).x):
 			var x := (px - origin.x + 0.5) / 8.0
 			var e := (Rng.hash3(px, py, 0x40ad) - 0.5) * 0.9 + 0.35 * sin(z * 0.9 + x * 0.3)
-			var d := absf(x - mx) - Road.MAIN_HALF
+			# Bord irrégulier : l'herbe mord sur la chaussée par touffes lentes, différentes de chaque côté,
+			# en plus du grain au pixel (sinon le bord se lit comme un trait au cordeau).
+			var side := 1.0 if x > mx else -1.0
+			var bite := 0.55 * sin(z * 1.9 + side * 2.1) * sin(z * 0.53 + side) + 0.3 * sin(z * 4.3 + side * 5.0)
+			var d := absf(x - mx) - Road.MAIN_HALF + bite
 			var p := Vector2i(px, py)
 			if d + e < 0.0:
 				pave.call(p, (x - mx) / Road.MAIN_HALF, z, true)
@@ -376,9 +391,10 @@ func paint_road(road: Road) -> void:
 				var z := (py - origin.y + 0.5) / 8.0
 				if absf(x - road.main_x(z)) < Road.MAIN_HALF - 0.3:
 					continue
-				var e := (Rng.hash3(px, py, 0x40ae) - 0.5) * 0.8
+				var side := 1.0 if z > bz else -1.0
+				var e := (Rng.hash3(px, py, 0x40ae) - 0.5) * 0.9 + 0.5 * sin(x * 1.9 + side * 2.1) * sin(x * 0.53 + side) + 0.28 * sin(x * 4.3 + side * 5.0)
 				if absf(z - bz) - hw + e < 0.0:
-					pave.call(Vector2i(px, py), (z - bz) / hw, x, false)
+					pave.call(Vector2i(px, py), (z - bz) / hw, x, true)
 		var b: Dictionary = j["b"]
 		var zt := road.branch_z(j, bx) - hw
 		var zb := float(b["z1"]) + 9.0

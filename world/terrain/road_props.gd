@@ -2,7 +2,8 @@ class_name RoadProps
 extends RefCounted
 ## Objets le long des chemins (fonction de la graine) : panneaux aux croisements, épaves de chariots,
 ## bornes de pierre, restes du Credo près de l'arrivée des vagues, petits détails, et un poste abandonné
-## à un croisement. Décor seulement. Entrées : {k (type), x, z, flip}.
+## à un croisement, et un petit dépôt du Credo au bout nord de chaque pont écarté. Entrées : {k (type), x, z,
+## flip} ; « cache » (cart, outpost, bridge) marque les objets à fouiller (Loot.place_caches).
 
 const OUTPOST_R := 7.0
 
@@ -29,20 +30,31 @@ static func place(road: Road, map_seed: int) -> Array[Dictionary]:
 			out.append({"k": "palisade" if k % 3 else "palisade_broken", "x": c.x + cos(a + PI) * OUTPOST_R, "z": c.y - sin(a) * OUTPOST_R * 0.8, "flip": k > 3})
 		out.append({"k": "campfire", "x": c.x, "z": c.y + 1.0, "flip": false})
 		out.append({"k": "tent", "x": c.x + 3.2 * s, "z": c.y - 1.5, "flip": s < 0.0})
-		out.append({"k": "crate", "x": c.x - 3.0 * s, "z": c.y - 0.5, "flip": false})
+		out.append({"k": "crate", "x": c.x - 3.0 * s, "z": c.y - 0.5, "flip": false, "cache": "outpost"})
 		out.append({"k": "crate", "x": c.x - 3.8 * s, "z": c.y + 0.6, "flip": true})
 		out.append({"k": "barrel", "x": c.x - 2.2 * s, "z": c.y + 2.2, "flip": false})
 	# Épaves : près de l'arrivée des vagues, sur la route du nord, sur un chemin secondaire.
 	var p := side_of.call(50.0 + r.next() * 8.0, 1.0, 1.8) as Vector2
-	out.append({"k": "cart", "x": p.x, "z": p.y, "flip": true})
+	out.append({"k": "cart", "x": p.x, "z": p.y, "flip": true, "cache": "cart"})
 	p = side_of.call(-30.0 + r.next() * 20.0, -1.0, 2.0)
-	out.append({"k": "cart", "x": p.x, "z": p.y, "flip": false})
+	out.append({"k": "cart", "x": p.x, "z": p.y, "flip": false, "cache": "cart"})
 	out.append({"k": "wheel", "x": p.x - 2.4, "z": p.y + 1.0, "flip": false})
 	if not road.junctions.is_empty():
 		var j: Dictionary = road.junctions[0]
 		var x := lerpf(float(j["x"]), float(j["bx"]), 0.55)
-		out.append({"k": "cart", "x": x, "z": road.branch_z(j, x) + Road.BRANCH_HALF + 1.6, "flip": true})
+		out.append({"k": "cart", "x": x, "z": road.branch_z(j, x) + Road.BRANCH_HALF + 1.6, "flip": true, "cache": "cart"})
 		out.append({"k": "crate", "x": x + 2.5, "z": road.branch_z(j, x) + Road.BRANCH_HALF + 2.4, "flip": false})
+	# Dépôts du Credo au bout nord des ponts écartés : une raison d'aller voir les ponts lointains.
+	if road.river != null:
+		for b in road.river.bridges:
+			var bx: float = b["x"]
+			if absf(bx) < 20.0:
+				continue
+			var s := 1.0 if bx > 0.0 else -1.0
+			var c := Vector2(bx + s * (River.DECK_HALF + 3.0), float(b["z0"]) - 2.5)
+			out.append({"k": "crate", "x": c.x, "z": c.y, "flip": s < 0.0, "cache": "bridge"})
+			out.append({"k": "barrel", "x": c.x + s * 1.6, "z": c.y + 0.7, "flip": false})
+			out.append({"k": "banner", "x": c.x + s * 0.4, "z": c.y - 1.4, "flip": s < 0.0})
 	# Bornes de pierre le long de la route principale.
 	var z := -50.0
 	var flip := 1.0

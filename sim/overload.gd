@@ -46,15 +46,15 @@ static func since_hit() -> float:
 	return GameState.sim_time - GameState.overload_hit if active() else NAN
 
 
-## Origine du sprite de l'orbe (Ancre active, sans l'oscillation), en pixels natifs : centre de la sphère
-## en (0, −8), centre de l'anneau runique en (0, +6) (orb_01 : 64 × 64, ancre (32, 32)).
+## Repère de l'orbe (Ancre active, sans l'oscillation), en pixels natifs : centre de la sphère en (0, −8),
+## 24 px au-dessus du puits (AnchorView : SUNK + RISE).
 static func orb_origin() -> Vector2:
-	return Proj.nat(CaveShape.CORE.x, 3.0, CaveShape.CORE.y)
+	return Proj.nat(CaveShape.CORE.x, 0.0, CaveShape.CORE.y) + Vector2(0.0, -16.0)
 
 
-## Centre de la nova au sol (anneau runique de l'Ancre), en pixels natifs.
+## Centre de la nova au sol (puits de l'Ancre), en pixels natifs.
 static func ring_center() -> Vector2:
-	return orb_origin() + Vector2(0.0, 6.0)
+	return Proj.nat(CaveShape.CORE.x, 0.0, CaveShape.CORE.y)
 
 
 ## Rayon (demi-grand axe) auquel la nova atteint un point du sol donné en pixels natifs.

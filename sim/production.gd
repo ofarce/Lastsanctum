@@ -44,11 +44,11 @@ static func staffed(b: Building) -> bool:
 
 ## Bâtiment producteur d'objets : il a ses deux coffres.
 static func has_chests(b: Building) -> bool:
-	return b != null and (Recipes.has_station(b.type) or b.type in ["caserne", "warehouse"])
+	return b != null and (Recipes.has_station(b.type) or b.type in ["caserne", "ecole", "warehouse", "eglise"])
 
 
 static func chest_kinds(b: Building) -> Array:
-	return ["out"] if b.type == "warehouse" else ["in", "out"]
+	return ["out"] if b.type in ["warehouse", "eglise"] else ["in", "out"]
 
 
 static func is_member(u: Unit, b: Building, post := "") -> bool:
@@ -151,7 +151,7 @@ static func needs(b: Building) -> Dictionary:
 		var cost: Dictionary = Recipes.RECIPES[b.type].get(b.recipe, {})
 		for k: String in cost:
 			out[k] = int(cost[k]) * STOCK_TARGET
-	elif b.type == "caserne":
+	elif Catalog.TRAINERS.has(b.type):
 		for id: String in b.queue.slice(0, 2):
 			var cost := Recipes.caserne_cost(id, 4)
 			for k: String in cost:
@@ -271,7 +271,7 @@ func update(dt: float) -> void:
 		_dispatch(b)
 		if Recipes.has_station(b.type):
 			_craft(b, dt)
-		elif b.type == "caserne":
+		elif Catalog.TRAINERS.has(b.type):
 			_train(b, dt)
 
 
@@ -302,6 +302,7 @@ func _craft(b: Building, dt: float) -> void:
 		take_from(b.input_box, k, int(cost[k]))
 	put_into(b.output_box, b.recipe, Recipes.output_quantity(b.recipe))
 	b.chest_out_at = GameState.sim_time
+	Sfx.at("forge", b.x, b.z)
 
 
 func _train(b: Building, dt: float) -> void:
@@ -426,6 +427,7 @@ func deliver_harvest(u: Unit) -> bool:
 	else:
 		var left := put_into(warehouse.output_box, item, u.carrying["quantity"])
 		warehouse.chest_out_at = GameState.sim_time
+		Sfx.at("coffre", warehouse.x, warehouse.z)
 		if left > 0:
 			u.carrying["quantity"] = left
 			return false
@@ -451,6 +453,7 @@ func _deliver(u: Unit, b: Building) -> void:
 		return
 	var left := put_into(b.input_box, item, int(u.carrying["quantity"]))
 	u.carrying = {}
+	Sfx.at("coffre", b.x, b.z)
 	for i in left:
 		ItemStorage.deposit(item, null, chest_pos(b, "in"))
 	b.chest_in_at = GameState.sim_time
@@ -481,6 +484,7 @@ func _mine(u: Unit, j: Dictionary, dt: float) -> void:
 		return
 	var item: String = block["drop_item"]
 	u.working = true
+	Sfx.at("minage", u.x, u.z)  # coups de pioche espacés par MIN_GAP
 	j["work"] = float(j.get("work", 0.0)) + dt
 	var interval := Simulation.adept_mining_seconds(u)
 	while j["work"] >= interval:
@@ -488,12 +492,17 @@ func _mine(u: Unit, j: Dictionary, dt: float) -> void:
 		j["mined"] = int(j.get("mined", 0)) + 1
 		u.carrying = {"item": item, "quantity": j["mined"]}
 		GameState.effects.append({"type": "mining_gain", "miner": u, "item": item, "age": 0.0, "duration": 1.0})
+		c["at"] = sim.next_lode_spot(key, c["at"])
 		if sim._spend_wood(u, key):
 			j["exhausted"] = true
 			j["step"] = "deliver"
 			return
 		if j["mined"] >= Catalog.MINE_BATCH:
 			j["step"] = "deliver"
+			return
+		# Filon illimité : il change de poste autour du filon avant le coup suivant.
+		if not _go(u, c["at"]):
+			j["work"] = 0.0
 			return
 
 
@@ -539,7 +548,7 @@ func try_miner(u: Unit, cells: Array) -> bool:
 	if not sim.state().permanent_ores.has(Vector2i(c["i"], c["j"])):
 		return false
 	var b: Building = u.job["building"]
-	if not has_chests(b) or b.type == "warehouse":
+	if not has_chests(b) or b.type in ["warehouse", "eglise"]:
 		return false
 	if not is_member(u, b, "miner") and members(b, "miner").size() >= Catalog.MINERS_MAX:
 		sim.say("%s : déjà %d mineurs." % [b.def()["name"], Catalog.MINERS_MAX], 2.0)
@@ -552,6 +561,9 @@ func try_miner(u: Unit, cells: Array) -> bool:
 ## Recette fabriquée en boucle ; la même recette une seconde fois l'arrête.
 func select_recipe(b: Building, item: String) -> void:
 	if b == null or not b.complete or not Recipes.RECIPES.get(b.type, {}).has(item):
+		return
+	if b.recipe != item and not Simulation.recipe_unlocked(item):
+		sim.say("%s : recherche « %s » requise (%s)." % [Recipes.name_of(item), Catalog.RESEARCH[Catalog.RECIPE_RESEARCH[item]]["name"], Catalog.BUILDINGS[Catalog.RESEARCH[Catalog.RECIPE_RESEARCH[item]]["building"]]["name"]], 2.5)
 		return
 	b.recipe = "" if b.recipe == item else item
 	b.craft = 0.0
@@ -589,7 +601,7 @@ func update_collect(u: Unit) -> void:
 		if stack.is_empty():
 			continue
 		for i in int(stack["quantity"]):
-			ItemStorage.deposit(stack["item"], u, u.pos())
+			ItemStorage.deposit(stack["item"], u, u.pos(), String(stack.get("owner", "")))
 			n += 1
 	b.output_box.clear()
 	b.chest_out_at = GameState.sim_time

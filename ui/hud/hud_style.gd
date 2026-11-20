@@ -52,6 +52,8 @@ static func _load_font(path: String) -> Font:
 
 ## Icônes ajoutées après le prototype (même grille 24×24) : portée et Œil qui veille.
 const EXTRA_ICONS := {
+	# Barillet à cinq chambres (Arbalestrie modulaire, planche arbalestrie-modulaire-planche.html, icône A).
+	"barillet": '<circle cx="12" cy="12" r="9.5"/><circle cx="12" cy="6.5" r="2"/><circle cx="17.2" cy="10.3" r="2"/><circle cx="15.2" cy="16.4" r="2"/><circle cx="8.8" cy="16.4" r="2"/><circle cx="6.8" cy="10.3" r="2"/><circle cx="12" cy="12" r=".6"/>',
 	"menace": '<path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Z"/><path d="m12 8 2 4-2 4-2-4Z M5 3l2 3m10 0 2-3"/>',
 	"range": '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/><path d="M12 1v6m0 10v6M1 12h6m10 0h6"/>',
 }
@@ -83,8 +85,25 @@ static func icon(name: String, px: int, stroke := 1.5, filled := false) -> Textu
 	return tex
 
 
+## Bandes des dégradés à plus de deux arrêts, par (taille, angle, arrêts) : [indices, points relatifs au coin du
+## rectangle, couleurs]. Le découpage (24 intersections de polygones) n'est fait qu'une fois par forme.
+static var _gradient_cache := {}
+const _GRADIENT_CACHE_MAX := 256
+
+
 ## Dégradé linéaire CSS (angle en degrés, 0 = vers le haut, 90 = vers la droite) dans `rect`.
 static func linear_gradient(ci: CanvasItem, rect: Rect2, deg: float, stops: Array) -> void:
+	if stops.size() > 2:
+		var key := [rect.size, deg, stops]
+		var mesh: Array = _gradient_cache.get(key, [])
+		if mesh.is_empty():
+			mesh = _gradient_mesh(rect.size, deg, stops)
+			if _gradient_cache.size() >= _GRADIENT_CACHE_MAX:
+				_gradient_cache.clear()
+			_gradient_cache[key] = mesh
+		if not (mesh[0] as PackedInt32Array).is_empty():
+			RenderingServer.canvas_item_add_triangle_array(ci.get_canvas_item(), mesh[0], Transform2D(0.0, rect.position) * (mesh[1] as PackedVector2Array), mesh[2])
+		return
 	var g := Gradient.new()
 	g.offsets = PackedFloat32Array(stops.map(func(s: Array) -> float: return s[0]))
 	g.colors = PackedColorArray(stops.map(func(s: Array) -> Color: return s[1]))
@@ -98,39 +117,59 @@ static func linear_gradient(ci: CanvasItem, rect: Rect2, deg: float, stops: Arra
 	var cols := PackedColorArray()
 	for p in pts:
 		cols.append(g.sample(clampf((p - p0).dot(dir) / (2.0 * half), 0.0, 1.0)))
-	# Quatre sommets suffisent pour deux arrêts ; au-delà, on découpe en bandes.
-	if stops.size() <= 2:
-		ci.draw_polygon(pts, cols)
-		return
+	# Quatre sommets suffisent pour deux arrêts ; au-delà, on découpe en bandes (_gradient_mesh).
+	ci.draw_polygon(pts, cols)
+
+
+## Dégradé à plus de deux arrêts dans un rectangle de taille `size` posé à l'origine : 24 bandes de couleur unie,
+## perpendiculaires à la direction et découpées au rectangle, réunies en une seule liste de triangles.
+static func _gradient_mesh(size: Vector2, deg: float, stops: Array) -> Array:
+	var rect := Rect2(Vector2.ZERO, size)
+	var g := Gradient.new()
+	g.offsets = PackedFloat32Array(stops.map(func(s: Array) -> float: return s[0]))
+	g.colors = PackedColorArray(stops.map(func(s: Array) -> Color: return s[1]))
+	var a := deg_to_rad(deg)
+	var dir := Vector2(sin(a), -cos(a))
+	var half := (absf(rect.size.x * dir.x) + absf(rect.size.y * dir.y)) / 2.0
+	var p0 := rect.get_center() - dir * half
+	var indices := PackedInt32Array()
+	var points := PackedVector2Array()
+	var colors := PackedColorArray()
 	var n := 24
 	for i in n:
 		var t0 := float(i) / n
 		var t1 := float(i + 1) / n
-		_band(ci, rect, p0, dir, half, t0, t1, g)
+		var col := g.sample((t0 + t1) / 2.0)
+		for poly: PackedVector2Array in _band(rect, p0, dir, half, t0, t1):
+			# Bande d'un rectangle : polygone convexe, triangulé en éventail.
+			var first := points.size()
+			for p in poly:
+				points.append(p)
+				colors.append(col)
+			for k in range(1, poly.size() - 1):
+				indices.append(first)
+				indices.append(first + k)
+				indices.append(first + k + 1)
+	return [indices, points, colors]
 
 
-static func _band(ci: CanvasItem, rect: Rect2, p0: Vector2, dir: Vector2, half: float, t0: float, t1: float, g: Gradient) -> void:
+static func _band(rect: Rect2, p0: Vector2, dir: Vector2, half: float, t0: float, t1: float) -> Array[PackedVector2Array]:
 	# Bande perpendiculaire à la direction, découpée au rectangle.
 	var normal := Vector2(-dir.y, dir.x)
 	var big := rect.size.length()
 	var a := p0 + dir * (2.0 * half * t0)
 	var b := p0 + dir * (2.0 * half * t1)
 	var quad := PackedVector2Array([a - normal * big, b - normal * big, b + normal * big, a + normal * big])
-	var clip := Geometry2D.intersect_polygons(quad, PackedVector2Array([rect.position, Vector2(rect.end.x, rect.position.y), rect.end, Vector2(rect.position.x, rect.end.y)]))
-	var col := g.sample((t0 + t1) / 2.0)
-	for poly in clip:
-		ci.draw_colored_polygon(poly, col)
+	return Geometry2D.intersect_polygons(quad, PackedVector2Array([rect.position, Vector2(rect.end.x, rect.position.y), rect.end, Vector2(rect.position.x, rect.end.y)]))
 
 
-## Panneau métallique (.metal-panel, .hud-module) : fond, liseré doré, anneaux intérieurs, coins.
+## Panneau du HUD : même cadre que la bannière 16 bits (SnesBanner), teinte ardoise. Remplace l'ancien fond
+## noir à liseré doré : l'or est réservé à Laetan et le cadre est désormais unique dans toute l'interface.
+static var panel_tone: Array[Color] = SnesBanner.INFO
+
+
 static func metal_panel(ci: CanvasItem, size: Vector2) -> void:
-	var r := Rect2(Vector2.ZERO, size)
-	linear_gradient(ci, r, 110.0, [[0.0, Color("#111610f5")], [1.0, Color("#0b0e0df7")]])
-	_soft_top_glow(ci, r)
-	_ring(ci, r.grow(-1.0), 3.0, Color("#0c100f"))
-	_ring(ci, r.grow(-4.0), 1.0, Color("#7c603138"))
-	_ring(ci, r, 1.0, GOLD)
-	corners(ci, r.grow(-6.0))
+	SnesBanner.paint(ci, Rect2(Vector2.ZERO, size), panel_tone)
 
 
 ## Halo clair en haut du panneau : radial-gradient(ellipse at 40% 0, #22251d99, transparent 75%).
@@ -175,9 +214,9 @@ static func corners(ci: CanvasItem, r: Rect2) -> void:
 static func diamond(ci: CanvasItem, center: Vector2) -> void:
 	var d := 3.5
 	var pts := PackedVector2Array([center + Vector2(0, -d), center + Vector2(d, 0), center + Vector2(0, d), center + Vector2(-d, 0)])
-	ci.draw_colored_polygon(pts, Color("#0b100d"))
+	ci.draw_colored_polygon(pts, SnesBanner.INFO[4])
 	pts.append(pts[0])
-	ci.draw_polyline(pts, GOLD, 1.0, true)
+	ci.draw_polyline(pts, SnesBanner.INFO[3], 1.0, true)
 
 
 ## Largeur d'une chaîne dans une police donnée.

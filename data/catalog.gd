@@ -36,7 +36,7 @@ const BUILDINGS := {
 	"workshop": {"name": "Atelier", "cost": {"forge": 50}, "deity": "", "requires": "aether", "art": "da-workshop", "key": "t", "icon": "repair", "time": 8.0, "size": 2,
 		"lore": "Établis et outils des artisans d’Aether."},
 	"bedroom": {"name": "Chambre à coucher", "cost": {"vie": 50}, "deity": "", "requires": "medeina", "art": "da-bedroom", "key": "n", "icon": "people", "time": 8.0, "size": 2,
-		"lore": "Le repos que Medeina accorde aux Exilés."},
+		"lore": "Le repos que Medeina accorde aux Exilés. Avec un adepte de Medeina au poste, elle loge 10 Exilés de plus ; chaque nouvelle Chambre coûte le double de la précédente."},
 	"soulwell": {"name": "Puits des Âmes", "cost": {"vie": 50}, "deity": "", "requires": "medeina", "art": "da-soulwell", "key": "u", "icon": "spirit", "time": 8.0, "size": 2,
 		"heal_radius": 12.0, "heal_per_second": 5.0,
 		"lore": "Soigne les unités proches de 5 PV par seconde dans un rayon de 12. Medeina y rend aussi leur souffle aux défunts, avec toute leur expérience."},
@@ -45,6 +45,13 @@ const BUILDINGS := {
 	## Écart voulu (fabrication, 2026-11-17) : absent du prototype ; dessin de la Forge en attendant le sien.
 	"creuset": {"name": "Creuset des Exilés", "cost": {"forge": 300}, "deity": "", "requires": "forge", "art": "da-creuset", "key": "k", "icon": "sword", "time": 8.0, "size": 2,
 		"lore": "On y coule les armes et armures que portent les Exilés."},
+	## Écart voulu (biomes, 2026-11-20) : absent du prototype. Chaque nuit, son Oublieux ramasse le butin (sim/oublieux.gd).
+	"eglise": {"name": "Église des Oublieux", "cost": {"vie": 150}, "deity": "", "requires": "soulwell", "art": "da-eglise", "key": "o", "icon": "spirit", "time": 8.0, "size": 2,
+		"lore": "Chaque nuit, un Oublieux en sort ramasser ce qui est tombé, douze objets par trajet, et le rapporte à son coffre. Tué, il revient la nuit suivante."},
+	## Écart voulu (biomes, 2026-11-20) : forme les trois mages cristallisés (sim/mages.gd). « research » : recherche
+	## exigée en plus du bâtiment requis.
+	"ecole": {"name": "École de magie cristallisée", "cost": {"vie": 300}, "deity": "", "requires": "soulwell", "research": "limbo_mastery", "art": "da-ecole", "key": "z", "icon": "spirit", "time": 8.0, "size": 2,
+		"lore": "Au bord du Fleuve des Limbes, des Exilés apprennent à laisser le cristal les gagner : Guérisseuse, Chantre, Envoûteur."},
 	"warehouse": {"name": "Entrepôt logistique", "cost": {"savoir": 50}, "deity": "", "requires": "sigil", "art": "da-warehouse", "key": "p", "icon": "wood", "time": 8.0, "size": 2,
 		"lore": "Les adeptes de Sigil y reçoivent le bois et les minerais pour les ateliers voisins."},
 }
@@ -53,13 +60,41 @@ const BUILDINGS := {
 ## un travailleur au poste (adepte du culte indiqué, ou l'Ingénieur) ; la vitesse est proportionnelle au nombre de
 ## travailleurs présents. Un seul culte par bâtiment.
 const STAFF_ROLE := {"warehouse": "sigil", "library": "sigil", "forge": "aether", "workshop": "aether", "creuset": "aether",
-	"bedroom": "medeina", "soulwell": "medeina", "caserne": "indra"}
+	"bedroom": "medeina", "soulwell": "medeina", "eglise": "medeina", "ecole": "medeina", "caserne": "indra"}
 const STAFF_MAX := 5
 ## Mineurs d'un bâtiment : adeptes d'Aether qui exploitent un gisement inépuisable et rapportent des lots au dépôt.
 ## Ils ne comptent pas dans la vitesse ; limite distincte de celle des postes.
 const MINER_ROLE := "aether"
 const MINERS_MAX := 5
 const MINE_BATCH := 5
+
+## Population (2026-11-19) : POP_BASE places, +POP_PER_BEDROOM par Chambre achevée et tenue par un adepte de
+## Medeina. Un combattant de caserne occupe POP_WEIGHT places, toute autre unité une seule. Le plafond ne
+## bloque que les nouvelles arrivées (invocation, entraînement, héros, résurrection).
+const POP_BASE := 10
+const POP_PER_BEDROOM := 10
+const POP_WEIGHT := {"flammes": 2, "archer": 2, "lame": 2, "oublieux": 0, "guerisseuse": 2, "chantre": 2, "envouteur": 2}
+
+
+static func pop_weight(role: String) -> int:
+	return int(POP_WEIGHT.get(role, 1))
+
+
+## Coût d'un nouveau bâtiment de ce type : celui du catalogue, sauf la Chambre à coucher qui double à
+## chaque Chambre déjà posée (50, 100, 200…).
+static func building_cost(type: String) -> Dictionary:
+	var cost: Dictionary = BUILDINGS[type]["cost"]
+	if type != "bedroom":
+		return cost
+	var n := 0
+	for b: Building in GameState.buildings:
+		if b.type == "bedroom":
+			n += 1
+	var out := {}
+	for k: String in cost:
+		out[k] = int(cost[k]) * (1 << mini(n, 20))
+	return out
+
 
 ## Recherches uniques du sceau de minage, partagées entre tous les bâtiments.
 const MINING_COST := {"forge": 10, "vie": 10, "discipline": 10, "savoir": 10}
@@ -68,9 +103,64 @@ const RESEARCH := {
 	"mining_spark": {"name": "Etincelle - Sceau de Minage", "building": "soulwell", "requires": []},
 	"mining_power": {"name": "Puissance - Sceau de Minage", "building": "caserne", "requires": []},
 	"mining_artifact": {"name": "Artefact - Sceau de Minage", "building": "forge", "requires": ["mining_concept", "mining_spark", "mining_power"]},
+	# Bibliothèque (2026-11-19) : coût propre (« cost »), sinon MINING_COST.
+	"minimap": {"name": "Minicarte", "building": "library", "requires": [], "cost": {"savoir": 500}, "icon": "move",
+		"desc": "La minicarte reste affichée pendant l’incarnation."},
+	"firing_post": {"name": "Poste de tir", "building": "library", "requires": [], "cost": {"discipline": 500}, "icon": "flag",
+		"desc": "Débloque la fabrication du poste de tir à l’Atelier."},
+	"modular_crossbow": {"name": "Arbalestrie modulaire", "building": "library", "requires": [],
+		"cost": {"forge": 200, "vie": 200, "discipline": 200, "savoir": 200}, "icon": "barillet",
+		"desc": "Débloque cinq munitions pour l’Arbalestrie, à choisir au barillet près de la barre de vie : spirituelles, d’Indra, de Medeina, de Sigil, d’Aether."},
+	# Biome 1 (2026-11-20, planches/biomes-1-2-elements.html) : payées en ressource et en bois (« items », pris au
+	# stock : coffre de base puis sac de l'Ingénieur). « glyph » : objet dont l'icône sert de dessin au bouton.
+	"gallery_props": {"name": "Étais de galerie", "building": "workshop", "requires": [], "cost": {"forge": 150}, "items": {"wood": 60}, "glyph": "pickaxe",
+		"desc": "Les adeptes minent 25 % plus vite."},
+	"sylviculture": {"name": "Sylviculture", "building": "soulwell", "requires": [], "cost": {"vie": 200}, "items": {"wood": 40}, "glyph": "wood",
+		"desc": "Un bosquet pétrifié abattu repousse en trois vagues."},
+	"copper_tips": {"name": "Pointes de cuivre", "building": "caserne", "requires": [], "cost": {"discipline": 300}, "items": {"copper_ingot": 10},
+		"desc": "Archers : + 25 % de dégâts. Leur carquois porte des pointes de cuivre."},
+	"verdigris_balm": {"name": "Baume de vert-de-gris", "building": "soulwell", "requires": [], "cost": {"vie": 400}, "items": {"copper_ingot": 10},
+		"desc": "Soin du Puits des Âmes : 5 → 8 PV par seconde."},
+	"copper_seal": {"name": "Sceau de cuivre", "building": "forge", "requires": ["mining_artifact"], "cost": {"forge": 300}, "items": {"copper": 20}, "glyph": "copper_ingot",
+		"desc": "La roche de vert-de-gris du biome 2 se creuse (8 coups)."},
+	# Biome 2 : payée en lingots de cuivre.
+	"limbo_mastery": {"name": "Maîtrise du Fleuve des Limbes", "building": "soulwell", "requires": [], "cost": {"vie": 400}, "items": {"copper_ingot": 10}, "glyph": "copper_ingot",
+		"desc": "Débloque l’École de magie cristallisée et le bâton à focale à l’Atelier."},
+	"palisades": {"name": "Palissades", "building": "library", "requires": [], "cost": {"savoir": 250}, "items": {"wood": 80}, "glyph": "barricade",
+		"desc": "Barricades : + 50 % de PV, y compris celles déjà posées. Elles portent un bardage de bois."},
+	"fletching": {"name": "Empennage", "building": "caserne", "requires": [], "cost": {"discipline": 200}, "items": {"wood": 100}, "glyph": "arrows",
+		"desc": "Archers : portée + 15 %. Leurs flèches portent une penne blanche."},
 }
+## Effets chiffrés des recherches du biome 1.
+const PROPS_MINING := 1.25
+const FLETCHING_REACH := 1.15
+const REGROW_WAVES := 3
+const COPPER_TIPS_DAMAGE := 1.25
+const BALM_HEAL := 8.0
+## Recettes verrouillées par une recherche : objet → recherche.
+const RECIPE_RESEARCH := {"firing_post": "firing_post", "focus_staff": "limbo_mastery"}
+
+
+static func research_cost(id: String) -> Dictionary:
+	return RESEARCH.get(id, {}).get("cost", MINING_COST)
+
+
+## Objets demandés en plus par une recherche (bois…), vide le plus souvent.
+static func research_items(id: String) -> Dictionary:
+	return RESEARCH.get(id, {}).get("items", {})
+
+
+static func can_pay_research(id: String) -> bool:
+	return can_pay(research_cost(id)) and ItemStorage.has_all(research_items(id))
+
+
+## « 150 Forge + 60 Bois ».
+static func research_cost_text(id: String) -> String:
+	var text := cost_text(research_cost(id))
+	var items := research_items(id)
+	return text if items.is_empty() else text + " + " + preload("res://data/recipes.gd").cost_text(items)
 const RESEARCH_TIME := 10.0
-const RESEARCH_MENACE := 20
+const RESEARCH_MENACE := 0
 const ANCHOR_MENACE_COST := {"forge": 100, "vie": 100, "discipline": 100, "savoir": 100}
 const ANCHOR_MENACE_GAIN := 50
 
@@ -80,11 +170,47 @@ const SUMMON_COST := 10
 const CASERNE_COST := {"discipline": 100}
 const CASERNE_TIME := 6.0
 const CASERNE_QUEUE := 5
+## File d'invocation d'un temple : une seule arrivée à la fois, les suivantes attendent (2026-11-19).
+const TEMPLE_QUEUE := 5
 const CASERNE_UNITS := [
 	{"id": "flammes", "label": "Lance-flammes", "key": "l", "icon": "flame"},
 	{"id": "archer", "label": "Archer", "key": "u", "icon": "bow"},
 	{"id": "lame", "label": "Épée et bouclier", "key": "e", "icon": "shield"},
 ]
+## École de magie cristallisée : un mage par formation (150 Vie et un bâton à focale apporté au coffre bleu).
+const ECOLE_COST := {"vie": 150}
+const ECOLE_UNITS := [
+	{"id": "guerisseuse", "label": "Guérisseuse", "key": "g", "icon": "heart"},
+	{"id": "chantre", "label": "Chantre", "key": "h", "icon": "flag"},
+	{"id": "envouteur", "label": "Envoûteur", "key": "j", "icon": "rune"},
+]
+## Bâtiments qui forment des unités : leurs unités, et le nombre de combattants que représente une formation
+## (la Caserne sort une unité qui en vaut quatre, l'École un mage).
+const TRAINERS := {"caserne": CASERNE_UNITS, "ecole": ECOLE_UNITS}
+const TRAIN_SIZE := {"caserne": 4, "ecole": 1}
+## Chiffres de départ des mages (planches/biomes-1-2-elements.html), en unités de monde (une case = 4).
+## Soin : PV par seconde à l'allié le plus blessé à portée. Aura : dégâts des alliés dans le rayon (deux auras ne
+## se cumulent pas). Envoûtement : armure retirée à la cible et à ses voisins (spread) pendant `time` s.
+const MAGE := {
+	"guerisseuse": {"rate": 6.0, "reach": 32.0, "status": "Soigne l’allié le plus blessé à portée · n’attaque pas"},
+	"chantre": {"bonus": 1.2, "radius": 24.0, "status": "Aura : + 20 % de dégâts aux alliés proches · n’attaque pas"},
+	"envouteur": {"armor": 3.0, "time": 5.0, "cd": 4.0, "reach": 32.0, "spread": 6.0, "status": "Envoûte : − 3 d’armure à la cible et à ses voisins · n’attaque pas"},
+}
+
+
+static func is_mage(role: String) -> bool:
+	return MAGE.has(role)
+
+
+static func train_cost(id: String) -> Dictionary:
+	return ECOLE_COST if is_mage(id) else CASERNE_COST
+
+
+## Objets consommés par une formation (arcs, épées, bâton à focale…).
+static func train_items(id: String) -> Dictionary:
+	return preload("res://data/recipes.gd").caserne_cost(id, 4)
+
+
 ## HERO_COST (adepts.js:158).
 const HERO_COST := {"forge": 100, "vie": 100, "discipline": 100, "savoir": 100}
 
@@ -111,6 +237,12 @@ const ADEPT := {
 	"flammes": {"name": "Adepte lance-flammes", "task": "fight", "hp": 120, "lore": "Le feu de sa lance ne laisse derrière lui que des cendres."},
 	"archer": {"name": "Adepte archer", "task": "fight", "hp": 85, "lore": "Sa flèche part avant que l’ennemi ne l’ait vu."},
 	"lame": {"name": "Adepte d’épée et bouclier", "task": "fight", "hp": 170, "lore": "Son bouclier est un mur que la meute ne franchit pas."},
+	## Ramasseur de l'Église des Oublieux (sim/oublieux.gd) : humain, ne se bat pas, ne reçoit pas d'ordres.
+	## Mages cristallisés (École de magie cristallisée) : humains, ne se battent pas, reculent au contact.
+	"guerisseuse": {"name": "Guérisseuse cristallisée", "task": "mage", "hp": 60, "lore": "Cinq éclats tournent derrière sa tête. Ce qu’ils touchent se referme."},
+	"chantre": {"name": "Chantre cristallisé", "task": "mage", "hp": 70, "lore": "Son diapason de cristal donne le ton ; les lames alentour frappent juste."},
+	"envouteur": {"name": "Envoûteur cristallisé", "task": "mage", "hp": 60, "lore": "Des fils de lumière lui pendent des doigts. Là où ils s’accrochent, le fer devient mou."},
+	"oublieux": {"name": "Oublieux", "task": "glean", "hp": 60, "lore": "Il ramasse la nuit ce que les morts ont laissé. Personne ne se rappelle son nom, lui non plus."},
 }
 
 ## FIGHT (adepts.js:16-25) : seek = rayon de détection, reach = portée, dmg, cd = recharge ; splash = rayon de
@@ -120,10 +252,12 @@ const ADEPT := {
 ## (14 → 56, détection 17 → 68). 2026-11-17 : portées encore ×2 (lance-flammes 24/36, archer 112/136).
 ## Écart voulu D15 : lance-flammes à portée 12, tir continu (dmg / cd par seconde, soit 20/s au niveau 1, dans
 ## `splash` autour de la cible), sans sillon de feu ; il explose à sa mort (FLAME_DEATH).
+## 2026-11-19 : archer ramené à 20 de portée (30 au poste de tir), détection 26 ; il ne repère un ennemi que
+## s'il le voit (ligne dégagée, Combat.archer_target).
 const MELEE_ADEPT := {"seek": 6.0, "reach": 1.9, "dmg": 4, "cd": 1.1, "status": "En attente · petite attaque au corps à corps"}
 const FIGHT := {
 	"flammes": {"seek": 36.0, "reach": 24.0, "dmg": 6, "cd": 0.3, "splash": 2.2, "continuous": true, "status": "Garde l’Ancre · flammes en continu ; explose à sa mort"},
-	"archer": {"seek": 136.0, "reach": 112.0, "dmg": 11, "cd": 0.95, "melee": {"reach": 2.3, "dmg": 13, "cd": 0.6}, "status": "Garde l’Ancre · arc, puis Charge du Lac au contact"},
+	"archer": {"seek": 26.0, "reach": 20.0, "dmg": 11, "cd": 0.95, "melee": {"reach": 2.3, "dmg": 13, "cd": 0.6}, "status": "Garde l’Ancre · arc, puis Charge du Lac au contact"},
 	"lame": {"seek": 7.0, "reach": 2.2, "dmg": 16, "cd": 0.85, "guard": 0.55, "status": "Garde l’Ancre · mêlée ; moulinet d’orage toutes les 3 frappes"},
 	"sigil": MELEE_ADEPT, "medeina": MELEE_ADEPT, "aether": MELEE_ADEPT, "indra": MELEE_ADEPT,
 	"engineer": {"seek": 6.0, "reach": 1.9, "dmg": 5, "cd": 1.15, "ranged": false, "status": "Prêt à recevoir vos ordres · corps à corps"},
@@ -135,12 +269,16 @@ const MOULINET := {"charges": 3, "r": 2.8, "dmg": 24}
 const FLAME_DEATH := {"dmg": 45, "r": 3.0}
 const SILLON := {"cd": 4.0, "len": 8.0, "w": 0.9, "dmg": 12, "wall": 2.0, "burn": 3.0, "slow": 0.6}
 ## Expérience gagnée en achevant un ennemi (KILL_XP).
-const KILL_XP := {"creep": 10, "spitter": 15, "brute": 35, "beast": 6, "scout": 12, "soldier": 22, "shield": 28, "archer": 15, "strazhar": 60, "martyre": 200}
+const KILL_XP := {"creep": 10, "spitter": 15, "brute": 35, "beast": 6, "skeleton": 4, "scout": 12, "soldier": 22, "shield": 28, "archer": 15, "strazhar": 60, "martyre": 200, "oeil": 300, "oeil_pupille": 15}
+## Menace gagnée à la mort d'un ennemi de vague, selon son type (les gardiens de pylône, errants, squelettes et
+## meutes nocturnes n'en rapportent pas : Enemy.beast). Type absent : 1.
+const KILL_MENACE := {"creep": 1, "scout": 2, "archer": 2, "spitter": 2, "soldier": 4, "shield": 5, "brute": 6, "strazhar": 12,
+	"martyre": 0, "oeil": 0, "oeil_pupille": 0}
 ## Un champion ouvre les assauts dès ce seuil, même avant la vague 8.
 const STRAZHAR_MENACE := 1000
 ## Difficulté par paliers de menace ; coefficients partagés par le combat et le HUD.
 const MENACE_STEP := 100
-const MENACE_WAVE := {"count": 2, "composition_step": 2, "hp": 0.04, "damage": 0.02, "armor_step": 5, "champion_start": 10, "champion_step": 5}
+const MENACE_WAVE := {"base": 6, "per_wave": 4, "count": 2, "composition_step": 2, "hp": 0.04, "damage": 0.02, "armor_step": 5, "champion_start": 10, "champion_step": 5}
 const MENACE_PORTAL := {"interval_step": 0.35, "min_interval": 3.5, "max_cap": 16, "hp": 0.08, "damage": 0.05}
 
 
@@ -162,26 +300,57 @@ static func menace_portal_cap(tier: int) -> int:
 	return mini(MENACE_PORTAL["max_cap"], EVIL["cap"] + tier)
 
 
+## Allure des ennemis de vague : vitesse de marche et cadence d'animation (+30 %).
+const WAVE_PACE := 1.3
+## Flot nocturne (sim/night.gd) : des squelettes épars se lèvent dehors, du crépuscule à la fin de nuit (fractions
+## de journée FROM → TO), toutes les EARLY s au début puis toutes les PEAK s au cœur de la nuit ; chaque palier de
+## menace resserre l'intervalle de RATE (plancher MIN_GAP). Ils sortent n'importe où sur le no man's land :
+## |x| ≤ X, à FLANK unités au moins du flanc de la montagne (jamais dans la grotte ni à sa porte) et à CLEAR
+## unités au moins de toute unité alliée.
+const NIGHT_FLOW := {"from": 0.62, "to": 0.92, "early": 7.0, "peak": 3.0, "rate": 0.15, "min_gap": 1.2,
+	"x": 150.0, "flank": 25.0, "clear": 30.0}
+## Meute nocturne d'un pylône non canalisé (sim/night.gd) : une par nuit, lancée à la fraction AT de la journée ;
+## BASE chiens + PER_TIER par palier de menace (CAP au plus), statistiques des gardiens (MENACE_PORTAL).
+const NIGHT_RAID := {"at": 0.7, "base": 3, "per_tier": 1, "cap": 12}
+
 ## Ennemis (spawn, Index.html ; rejetons : updateEvilPortals, galleries.js).
 const ENEMY := {
-	"creep": {"hp": 35, "speed": 2.7, "range": 1.5, "damage": 6, "cd": 1.15},
-	"spitter": {"hp": 48, "speed": 2.0, "range": 9.0, "damage": 5, "cd": 1.15},
-	"brute": {"hp": 110, "speed": 1.4, "range": 1.5, "damage": 12, "cd": 1.7},
-	"beast": {"hp": 22, "speed": 2.6, "range": 1.5, "damage": 4, "cd": 1.15},
-	"scout": {"hp": 45, "speed": 3.1, "range": 1.5, "damage": 6, "cd": 1.05, "armor": 1},
-	"soldier": {"hp": 75, "speed": 2.1, "range": 1.5, "damage": 9, "cd": 1.3, "armor": 3},
-	"shield": {"hp": 85, "speed": 1.7, "range": 1.5, "damage": 8, "cd": 1.5, "armor": 9},
-	"archer": {"hp": 45, "speed": 2.8, "range": 10.0, "damage": 6, "cd": 1.4, "armor": 1},
+	"creep": {"hp": 35, "speed": 3.2, "range": 1.5, "damage": 12, "cd": 1.15},
+	## Squelette du flot nocturne (sim/night.gd) : frêle, sans sprite propre pour l'instant (dessiné en fanatique pâle).
+	"skeleton": {"hp": 20, "speed": 3.4, "range": 1.5, "damage": 7, "cd": 1.15, "art": "creep"},
+	"spitter": {"hp": 48, "speed": 2.0, "range": 10.0, "damage": 10, "cd": 1.15},
+	"brute": {"hp": 110, "speed": 1.4, "range": 1.5, "damage": 22, "cd": 1.7},
+	"beast": {"hp": 88, "speed": 8.0, "range": 1.5, "damage": 4, "cd": 1.15},
+	"scout": {"hp": 45, "speed": 3.7, "range": 1.5, "damage": 12, "cd": 1.05, "armor": 1},
+	"soldier": {"hp": 75, "speed": 2.1, "range": 5.0, "damage": 18, "cd": 1.3, "armor": 3},
+	"shield": {"hp": 85, "speed": 1.7, "range": 1.5, "damage": 14, "cd": 1.5, "armor": 9},
+	"archer": {"hp": 45, "speed": 3.4, "range": 10.0, "damage": 11, "cd": 1.4, "armor": 1},
 	"strazhar": {"hp": 600, "speed": 8.4, "range": 1.7, "damage": 64.0 / 3.0, "cd": 0.85, "armor": 8},
+	## Faune des Veines de vert-de-gris (biome 2, errants des galeries : sim/roamers.gd). Chiffres de la planche.
+	"tick": {"hp": 40, "speed": 1.6, "range": 1.5, "damage": 5, "cd": 1.5, "armor": 4},
+	## Boss de fin du biome 2 (sim/gorge.gd) : armure des anneaux ; dégâts doublés gueule ouverte.
+	"gorge": {"hp": 2400, "speed": 0.0, "range": 0.0, "damage": 30, "cd": 99.0, "armor": 5},
+	## Anguille des puits : immobile dans son bassin (sim/wildlife.gd), sa décharge touche tout ce qui en approche.
+	"eel": {"hp": 60, "speed": 0.0, "range": 13.5, "damage": 8, "cd": 3.0},
+	"bat": {"hp": 18, "speed": 7.0, "range": 1.5, "damage": 3, "cd": 1.2},
 	## Premier boss (sim/martyre.gd) : jamais dans les vagues ; dégâts fixes à l'Ingénieur, impact différé.
 	## Faune hostile de la jungle (sim/wildlife.gd en surcharge les valeurs).
 	"croc": {"hp": 160, "speed": 3.4, "range": 1.6, "damage": 14, "cd": 1.6, "armor": 4},
 	"feline": {"hp": 90, "speed": 4.3, "range": 1.4, "damage": 10, "cd": 0.9, "armor": 1},
-	"martyre": {"hp": 500, "speed": 2.2, "range": 2.4, "damage": 10, "cd": 3.0 / 1.3},
+	"martyre": {"hp": 2000, "speed": 2.2, "range": 2.4, "damage": 10, "cd": 3.0 / 1.3},
+	## Boss de la frontière (sim/oeil.gd) : immobile au centre de sa salle ; racines au contact.
+	"oeil": {"hp": 5600, "speed": 0.0, "range": 0.0, "damage": 10, "cd": 1.2},
+	## Pupilles errantes de l'Œil (attaque « Pupilles errantes ») : volent en orbite et tirent ; cibles fragiles.
+	"oeil_pupille": {"hp": 60, "speed": 0.0, "range": 0.0, "damage": 0, "cd": 99.0},
 }
 ## Portails maléfiques (EVIL) : un rejeton toutes les 7 s, 8 au plus par portail.
 const EVIL := {"interval": 7.0, "cap": 8}
 ## Balistes (TURRET_CONFIG, turret-game.js).
+## Coups annoncés (planches/unites-maj-propositions.html, L4) : l'ennemi arme son geste pendant ce temps (s, à la
+## cadence de la vague) avant que le coup ne tombe ; hors de portée à ce moment-là, la cible l'esquive.
+const ENEMY_WINDUP := {"brute": 0.4, "strazhar": 0.25}
+## Marge de portée au moment où le coup tombe (unités de monde).
+const ENEMY_WINDUP_SLACK := 0.8
 const TURRET := {"range": 70.0, "damage": 40, "repair_time": 8.0, "cycle": 3.6, "bolt_speed": 85.0}
 ## Héros hors FIGHT (update, Index.html) : détection, portée, recharge.
 const HERO := {
@@ -192,17 +361,24 @@ const HERO := {
 }
 ## Fiches des ennemis sélectionnés dans le HUD (écart voulu D14 : le prototype ne sélectionne pas les ennemis).
 const ENEMY_INFO := {
+	"tick": {"name": "Tique de filon", "kind": "FAUNE · VERT-DE-GRIS", "lore": "Collée à son filon, elle se gave de cuivre et perfore de son rostre de fer quiconque vient le lui disputer. Elle n’attaque que ce qui l’approche."},
+	"gorge": {"name": "Gorge-Cuivre", "kind": "BOSS · DÉVOREUSE DE FILONS", "lore": "Un mille-pattes cuirassé long comme une galerie. Elle a mangé tous les filons de la grande salle et dort dessous. Ses anneaux arrêtent les coups ; sa gueule, non."},
+	"eel": {"name": "Anguille des puits", "kind": "FAUNE · NEUTRE", "lore": "Une crête d’épines de cuivre lui sort du dos. Elle ne quitte jamais son bassin ; sa décharge frappe tout ce qui s’en approche, Exilés comme ennemis."},
+	"bat": {"name": "Chauve-souris patinée", "kind": "FAUNE · VERT-DE-GRIS", "lore": "Poitrail plaqué de cuivre, ailes trouées. Elles chassent en nuées et piquent droit."},
+	"skeleton": {"name": "Squelette", "kind": "ENNEMI · NUIT", "lore": "Il monte de la jungle à la nuit tombée, seul ou par poignées, et ne s’arrête qu’à l’Ancre."},
 	"scout": {"name": "Infanterie légère", "kind": "ENNEMI · CREDO", "lore": "Un éclaireur rapide, légèrement protégé, qui ouvre la marche des soldats du Credo."},
-	"soldier": {"name": "Soldat du Credo", "kind": "ENNEMI · CREDO", "lore": "Casque, cuirasse et épée : l’infanterie régulière du Credo avance sans hésiter."},
+	"soldier": {"name": "Soldat du Credo", "kind": "ENNEMI · CREDO", "lore": "Casque à crête et cuirasse : l’infanterie régulière du Credo lance son pilum à courte portée."},
 	"shield": {"name": "Bouclier doré", "kind": "ENNEMI · BYRSA", "lore": "Un soldat humain en armure, protégé par un grand bouclier doré. Sa défense absorbe l’essentiel des frappes légères."},
 	"archer": {"name": "Archer de la Lumière", "kind": "ENNEMI · CREDO", "lore": "Un éclaireur armé d’un arc, qui décoche ses flèches de lumière à distance."},
 	"strazhar": {"name": "Strazhar", "kind": "ENNEMI · CHAMPION DE BYRSA", "lore": "Champion rapide de Byrsa, dont l’équipement magique est lié aux tissus vivants de la Bête."},
 	"creep": {"name": "Fanatique du Credo", "kind": "ENNEMI · CREDO SOUILLÉ", "lore": "Robe ivoire trempée d’ichor noir : il frappe au contact pour son maître caché."},
-	"spitter": {"name": "Thuriféraire de Fortuna", "kind": "ENNEMI · CREDO SOUILLÉ", "lore": "Il projette de loin une lumière souillée par la Bête."},
+	"spitter": {"name": "Thuriféraire de Fortuna", "kind": "ENNEMI · CREDO SOUILLÉ", "lore": "Prêtre du Credo : il lance de loin un sort de lumière souillée par la Bête."},
 	"brute": {"name": "Automate doré de Byrsa", "kind": "ENNEMI · CREDO SOUILLÉ", "lore": "Un automate d’or fêlé ; ses coups lourds brisent les lignes."},
 	"martyre": {"name": "Martyre de Byrsa", "kind": "BOSS · CHAMPIONNE DE BYRSA", "lore": "L’armure d’un automate d’or s’est soudée à son corps. Sous son bouclier, elle n’accepte que le combat singulier."},
 	"croc": {"name": "Crocodile des berges", "kind": "FAUNE · NEUTRE", "lore": "Il guette au ras de l’eau, près des ponts, et happe tout ce qui passe trop près : Exilés comme soldats du Credo."},
 	"feline": {"name": "Félin de la jungle", "kind": "FAUNE · NEUTRE", "lore": "Un grand fauve tacheté qui défend son territoire dans la forêt dense. La nuit, il voit de plus loin."},
+	"oeil": {"name": "Œil de la Matrice", "kind": "BOSS · GARDIEN DE LA FRONTIÈRE", "lore": "Une montagne de chair pâle, au cœur de laquelle un œil immense suit chacun de vos pas. Tant qu’il regarde, nul ne passe vers le nord."},
+	"oeil_pupille": {"name": "Pupille errante", "kind": "BOSS · ŒIL DE LA MATRICE", "lore": "L’iris de l’Œil, sorti de son orbite et divisé en trois. Elle tourne autour de la salle et vise l’Ingénieur ; un coup suffit presque à la crever."},
 	"beast": {"name": "Aberration du Dévoreur", "kind": "ENNEMI · CHAIR DU DÉVOREUR", "lore": "Chair pâle et gueules multiples, vomie par les galeries."},
 }
 ## Dégâts de base des unités hors FIGHT (updateHUD, hud.js).
@@ -301,7 +477,11 @@ static func base_reach(u: Unit) -> float:
 	# Épée du Creuset : taille à 1,5 bloc (data/gear_items.gd, melee).
 	if w.has("melee"):
 		return float(w["melee"])
-	return float(w["reach"]) if w.has("reach") else (Catalog.FIGHT[u.role]["reach"] if Catalog.FIGHT.has(u.role) else Catalog.HERO.get(u.role, {"reach": 8.6})["reach"])
+	var reach: float = float(w["reach"]) if w.has("reach") else (Catalog.FIGHT[u.role]["reach"] if Catalog.FIGHT.has(u.role) else Catalog.HERO.get(u.role, {"reach": 8.6})["reach"])
+	# Empennage (recherche de la Caserne) : les archers tirent plus loin.
+	if u.role == "archer" and GameState.research_done.has("fletching"):
+		reach *= FLETCHING_REACH
+	return reach
 
 
 ## Portée d'attaque d'une unité alliée (FIGHT, sinon HERO) : partagée par le combat et le HUD.
@@ -309,7 +489,10 @@ static func unit_reach(u: Unit) -> float:
 	var base := base_reach(u)
 	if u.role == "engineer" and not u.unarmored:
 		return base
-	# Poste de tir posé à côté : portée doublée (sim/placeables.gd).
+	# Brume (core/weather.gd) : dehors, les tireurs portent moins loin ; la mêlée n'est pas touchée.
+	if base > 3.0:
+		base *= Weather.reach_at(u.x, u.z)
+	# Poste de tir posé à côté : portée ×1,5 (sim/placeables.gd).
 	return base * Placeables.reach_factor(u, base) if not GameState.placed.is_empty() else base
 
 

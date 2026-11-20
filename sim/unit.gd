@@ -62,10 +62,19 @@ var inventory: Array[Dictionary] = []
 var inventory_capacity := 10
 ## Équipement porté sans armure : emplacement de la fiche (« Tête », « Torse »…) → objet (data/gear_items.gd).
 var equipment: Dictionary = {}
+## Ancien porteur des pièces équipées prises à un ennemi : emplacement → nom (absent pour une pièce fabriquée).
+var equipment_owner: Dictionary = {}
 ## Lot transporté par un adepte d'un bâtiment (sim/production.gd) : {item, quantity}, vide sinon.
 var carrying: Dictionary = {}
 var unarmored := false
+## Voile de la Martyre (module d'exo) : instant où il sera reformé ; dernier coup absorbé (éclair).
+var veil_ready_at := -INF
+var veil_hit_at := -INF
+## Dernière ration mangée par l'Exilé (sim/loot.gd).
+var ate_at := -INF
 var winded_at := INF
+## Direction du dernier tir ou coup d'arme (unités de monde, normée) : choisit le tir de face ou de dos.
+var aim_dir := Vector2.RIGHT
 ## Étourdi jusqu'à cet instant (fissure de la Martyre de Byrsa) : ni déplacement ni attaque.
 var stunned_until := -INF
 ## Dernier soin reçu (Puits des Âmes, Soigneur) : petits « + » verts tant qu'il dure (HealFx).

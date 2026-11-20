@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Boss invocateur</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0c0d10;--panel:#14161b;--line:#2c3038;--txt:#e2dccb;--mut:#9a9ca2;--acc:#d84a3a;--gold:#d0a038;--cy:#5fd4e0}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--txt);font:15px/1.45 'Pixelify Sans',system-ui,sans-serif}
+header,main{max-width:1240px;margin:auto;padding:18px 16px}h1{margin:0;font-weight:600;letter-spacing:.08em;font-size:26px;color:var(--acc)}
+h2{font-weight:600;font-size:20px;color:var(--gold);margin:34px 0 6px;letter-spacing:.05em}
+p.lead{color:var(--mut);margin:6px 0 0;max-width:980px}p.lead b{color:var(--txt);font-weight:600}
+button{font:inherit;color:var(--txt);background:#1c1f26;border:1px solid var(--line);padding:6px 12px;cursor:pointer}button:hover,button[aria-pressed=true]{border-color:var(--acc);background:#2a1a1a}
+.bar{display:flex;gap:8px;align-items:center;margin-top:12px;flex-wrap:wrap}.bar span{color:var(--mut);font-size:13px;margin-left:8px}
+figure{margin:0 0 22px;background:var(--panel);border:1px solid var(--line);min-width:0}
+canvas{image-rendering:pixelated;display:block;width:100%;height:auto}
+.row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.25fr)}
+.big{background:#07080a;border-right:1px solid var(--line)}
+.side{display:flex;flex-direction:column;min-width:0}
+.game{background:#07080a;padding:6px;border-bottom:1px solid var(--line)}.game small,.big small{display:block;color:var(--mut);font-size:12px;padding:4px 6px}
+figcaption{padding:10px 14px 14px}figcaption b{color:var(--acc);font-weight:600;font-size:19px}figcaption i{display:block;font-style:normal;color:var(--gold);font-size:13px;letter-spacing:.06em;margin-top:2px}
+figcaption p{margin:6px 0 0;color:var(--mut);font-size:14px}figcaption ul{margin:8px 0 0;padding-left:18px;font-size:14px}figcaption li{margin:2px 0}figcaption li span{color:var(--acc)}
+.sw{display:flex;gap:3px;margin-top:8px;flex-wrap:wrap}.sw div{display:flex}.sw span{width:12px;height:14px;display:block}
+.hpbar{margin:10px 0 0;padding:6px 8px;background:#0b0b0e;border:1px solid #3a2224}.hpbar .n{display:flex;justify-content:space-between;font-size:13px}.hpbar .n em{color:var(--mut);font-style:normal;font-size:12px}
+.hpbar .g{height:9px;margin-top:4px;background:#24100f;display:grid;grid-template-columns:repeat(20,1fr);gap:1px;padding:1px}.hpbar .g i{background:#b41c20}.hpbar .g i.p{background:#5a0c10}
+.hpbar .ward{height:4px;margin-top:2px;background:var(--gold);opacity:.85}
+.g3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.g3 canvas{background:#07080a}.status{padding:6px 14px 0;font-size:13px;color:var(--cy);min-height:1.5em}
+.rec{border-color:var(--gold)}.rec figcaption b::after{content:' · recommandé';color:var(--gold);font-size:13px;letter-spacing:.06em}
+table{border-collapse:collapse;width:100%;max-width:980px;margin-top:10px;font-size:14px}td,th{border-bottom:1px solid var(--line);padding:7px 10px;text-align:left;vertical-align:top}
+th{color:var(--gold);font-weight:600;width:210px}td{color:var(--mut)}td b{color:var(--txt);font-weight:600}
+blockquote{margin:6px 0;padding:6px 12px;border-left:3px solid #3a6fd8;background:#121a2c;color:#d8e2f2;font-size:14px;max-width:980px}
+@media(max-width:900px){.row{grid-template-columns:1fr}.big{border-right:0;border-bottom:1px solid var(--line)}.g3{grid-template-columns:1fr}th{width:auto}}
+</style></head><body>
+<header><h1>BOSS INVOCATEUR · 4 PROPOSITIONS</h1>
+<p class="lead">Même schéma que la Martyre de Byrsa : il apparaît seul quand la menace atteint son seuil, les vagues sont suspendues, un <b>dôme de 24 cases</b> se lève et <b>seul l’Ingénieur peut entrer</b>. Ce qui change : l’invocateur est <b>frêle</b> (peu de PV, aucune attaque directe), mais il s’abrite dans un <b>grand bouclier personnel</b> et passe le combat à <b>invoquer des unités variées</b> qui attaquent l’Ingénieur. Ses invocations restent prisonnières du dôme.</p>
+<p class="lead">À gauche, détail ×4 (repos puis invocation, en boucle). À droite, la même image <b>à l’échelle du jeu</b> : l’Ingénieur à gauche, les invocations qui naissent puis marchent sur lui. Les sprites des invocations sont ceux du jeu.</p>
+<div class="bar"><button id="m-cycle" aria-pressed="true">Repos → invocation</button><button id="m-idle">Repos</button><button id="m-atk">Invocation</button><button id="w-tog" aria-pressed="true">Bouclier</button><button id="pause">Pause</button></div></header>
+<main>
+<div id="list"></div>
+
+<h2>Le combat · trois règles pour percer le bouclier</h2>
+<p class="lead">Le dôme fonctionne exactement comme celui de la Martyre. Reste à décider <b>comment l’Ingénieur atteint l’invocateur</b> sous son bouclier personnel. Vue de dessus schématique : <span style="color:var(--cy)">●</span> l’Ingénieur, <span style="color:#f0cc66">◆</span> l’invocateur, <span style="color:#e2382e">●</span> les invocations. La barre en haut : PV (rouge) et bouclier (or).</p>
+<div class="g3" id="rules"></div>
+
+<h2>Fiche proposée</h2>
+<table>
+<tr><th>Apparition</th><td>Seuil de menace au-dessus de la Martyre (par exemple <b>900</b>), même route du sud. Les vagues s’arrêtent tant qu’il vit.</td></tr>
+<tr><th>Dôme</th><td>Identique à la Martyre : 24 cases, rien ne vise à travers, seul l’Ingénieur le traverse.</td></tr>
+<tr><th>Invocateur</th><td><b>150 PV</b> (la Martyre en a 500), aucune armure, aucune attaque. Il reste au centre et se décale lentement pour garder ses invocations entre lui et l’Ingénieur.</td></tr>
+<tr><th>Invocations</th><td>Un lot toutes les <b>6 s</b>, <b>6 au plus</b> en vie. Lots tirés dans la liste de la proposition retenue (par exemple 3 Aberrations, 2 Fanatiques, 1 Bouclier doré + 1 Archer, 1 Automate). Pas d’expérience, pas de butin : elles se dissipent à sa mort.</td></tr>
+<tr><th>Ingénieur sorti du dôme</th><td>Comme pour la Martyre, il regagne le centre sans se soigner ; ses invocations se dissipent et le bouclier se reforme.</td></tr>
+<tr><th>Répliques (bannière)</th><td>
+<blockquote>« Un second dôme s’est levé au sud. Il y a quelqu’un dedans, et il n’est pas seul. »</blockquote>
+<blockquote>« Il ne se bat pas : il appelle. Tant qu’ils répondent, je ne l’atteindrai pas. »</blockquote>
+<blockquote>« Plus personne ne répond à l’appel. Les assauts vont reprendre. »</blockquote></td></tr>
+</table>
+</main>
+<script src="assets/invocateur/invocateur-planches.js?v=1"></script>
+<script>
+'use strict';
+const {PROPS,PAL,WARD,render,ground,shadow,dot,gring,gline,gdisc,bay,cl,ease,lerp,W,H,CX,FY}=Inv;
+
+/* ---------- sprites du jeu (atlas de marche, regard vers la droite) ---------- */
+const SPR={creep:{ax:15,ay:40,fw:40,fh:42},spitter:{ax:15,ay:40,fw:40,fh:42},brute:{ax:20,ay:40,fw:40,fh:42},beast:{ax:21,ay:25,fw:48,fh:30},
+ scout:{ax:15,ay:40,fw:40,fh:42},shield:{ax:15,ay:40,fw:40,fh:42},archer:{ax:15,ay:40,fw:40,fh:42}};
+for(const[k,s]of Object.entries(SPR)){s.img=new Image();s.img.src='assets/invocateur/'+k+'_walk.png';s.cols=12;s.count=24;s.fps=24}
+const ENG=new Image();ENG.src='assets/invocateur/ingenieur.png';
+// une image de marche, tournée vers la gauche, pieds en (x, y) ; clip ∈ [0,1] : part visible depuis le bas
+function walker(g,k,x,y,age,clip=1,drop=0){const s=SPR[k];if(!s.img.complete||!s.img.width)return;const i=Math.floor(age*s.fps)%s.count,sx=(i%s.cols)*s.fw,sy=Math.floor(i/s.cols)*s.fh;
+ const vis=Math.round(s.ay*clip);if(vis<=0)return;g.save();g.translate(Math.round(x),0);g.scale(-1,1);
+ g.drawImage(s.img,sx,sy+s.ay-vis,s.fw,vis,-(s.ax),Math.round(y-vis-drop)+1,s.fw,vis);g.restore()}
+
+/* ---------- cartes ---------- */
+const GW=240,GH=118,GB=108;
+const list=document.getElementById('list'),cards=[];
+PROPS.forEach((p,i)=>{const f=document.createElement('figure');
+ const sw=p.sw.map(k=>`<div title="${k}">${PAL[k].map(c=>`<span style="background:${c}"></span>`).join('')}</div>`).join('');
+ const seg=Array.from({length:20},(_,k)=>`<i class="${k>=6?'p':''}"></i>`).join('');
+ f.innerHTML=`<div class="row"><div class="big"><small>Détail ×4</small><canvas width="${W}" height="${H}"></canvas></div><div class="side">
+ <div class="game"><small>À l’échelle du jeu : l’Ingénieur face aux invocations, l’invocateur dans son bouclier</small><canvas width="${GW}" height="${GH}"></canvas></div>
+ <figcaption><b>${p.name}</b><i>${p.title}</i><p>${p.desc}</p><ul>${p.pts.map(x=>`<li>${x}</li>`).join('')}</ul>
+ <div class="sw">${sw}</div>
+ <div class="hpbar"><div class="n"><span>${p.name.replace(/^\d · /,'')}</span><em>${p.title}</em></div><div class="g">${seg}</div><div class="ward"></div></div></figcaption></div></div>`;
+ list.appendChild(f);const[c1,c2]=f.querySelectorAll('canvas');cards.push({p,c1,c2,g1:ground(W,H,i*7+1),g2:ground(GW,GH,i*7+3)})});
+
+let mode='cycle',paused=false,showWard=true,t0=performance.now(),tp=0;
+const btn={cycle:'m-cycle',idle:'m-idle',atk:'m-atk'};
+for(const[m,id]of Object.entries(btn))document.getElementById(id).onclick=()=>{mode=m;for(const[k,j]of Object.entries(btn))document.getElementById(j).setAttribute('aria-pressed',k===m)};
+document.getElementById('pause').onclick=e=>{paused=!paused;e.target.textContent=paused?'Lecture':'Pause'};
+document.getElementById('w-tog').onclick=e=>{showWard=!showWard;e.target.setAttribute('aria-pressed',showWard)};
+const CYC=5,ATK=2.2,REL=.78;// la créature naît à a = REL
+
+// effet de naissance à l'échelle du jeu, selon l'invocateur
+function birthFx(g,style,x,y,k){const P=PAL;
+ if(style==='light'){gring(g,x,y,5+k*3,1.6+k,P.gold[4],1-k*.6);if(k<.6)for(let j=0;j<y;j++)for(let i=-2;i<=2;i++)dot(g,x+i,j,i?P.gold[4]:P.gold[5],(1-k/.6)*(1-Math.abs(i)/3))}
+ else if(style==='threads'){for(const o of[-3,0,3])gline(g,x+o,0,x+o*.6,y-22+k*10,P.bone[3],.7*(1-k*.5));gring(g,x,y,4+k*3,1.4+k,P.ichor[3],1)}
+ else if(style==='flesh'){const o=Math.sin(Math.min(1,k*1.4)*Math.PI);for(let i=-6;i<=6;i++){const h=Math.round(o*2.4*(1-(i/6)**2));dot(g,x+i,y-h,P.flesh[4]);dot(g,x+i,y+h,P.flesh[3])}}
+ else{gring(g,x,y,5+k*3,1.6+k,P.gold[3],1-k*.5);for(let i=0;i<6;i++){const t=i/6*6.283+k*3;gdisc(g,x+Math.cos(t)*(5+k*3),y-k*16+Math.sin(t)*1.6,.9,P.gold[5],1-k)}}}
+
+function scene(c,spr,lf,t,u,a){const h=c.c2.getContext('2d'),p=c.p;h.drawImage(c.g2,0,0);
+ const ex=24;// l'Ingénieur
+ const bx=186,born=CYC-ATK+ATK*REL;// instant de naissance dans le cycle
+ const list=[];
+ if(mode==='cycle')for(let n=0;n<2;n++){const age=((u-born+CYC)%CYC)-n*.25;if(age<0)continue;const R=p.roster.length,ix=((Math.floor((tp-age)/CYC)*2+n)%R+R)%R;list.push({k:p.roster[ix],x0:120-n*16,y:GB-2+n*4,age})}
+ // l'Ingénieur tire sur la première invocation qui marche
+ if(ENG.complete){shadow(h,ex,GB,6,1.8);h.drawImage(ENG,ex-7,GB-ENG.height+1)}
+ for(const s of list){const RISE=.7,SPD=26,walk=Math.max(0,s.age-RISE),x=Math.max(44,s.x0-walk*SPD),arrive=(s.x0-44)/SPD+RISE,gone=s.age>arrive?cl((s.age-arrive)/.5):0;
+  if(gone>=1)continue;const k=cl(s.age/RISE);
+  if(s.age<RISE+.3)birthFx(h,p.summon,s.x0,s.y,cl(s.age/(RISE+.3)));
+  if(gone>0){h.globalAlpha=1-gone}
+  shadow(h,x,s.y,s.k==='beast'?7:5,1.6);
+  if(p.summon==='threads')walker(h,s.k,x,s.y,walk,1,(1-ease(k))*24);else walker(h,s.k,x,s.y,walk,s.age<RISE?ease(k):1);
+  h.globalAlpha=1;
+  if(walk>.4&&gone===0&&(Math.floor(s.age*1.6)%2===0)){const f=(s.age*1.6)%1;gline(h,lerp(ex+5,x,f),GB-22,lerp(ex+5,x,f)+3,GB-22,'#5fd4e0')}}
+ shadow(h,bx,GB,14-lf*.6,3.5);h.drawImage(spr,bx-CX,GB-FY)}
+
+function frame(now){const dt=Math.min(.1,(now-t0)/1000);if(!paused)tp+=dt;t0=now;const t=Math.floor(tp*12)/12;
+ let a=null;const u=tp%CYC;if(mode==='atk')a=(t%ATK)/ATK;else if(mode==='cycle'&&u>CYC-ATK)a=(u-(CYC-ATK))/ATK;
+ for(const c of cards){const key=t+'|'+a+'|'+showWard;if(c.key!==key){c.key=key;c.spr=render(c.p,t,a,{ward:showWard})}const spr=c.spr,lf=spr.lift||0;
+  const g=c.c1.getContext('2d');g.drawImage(c.g1,0,0);shadow(g,CX,FY,16-lf*.6,4-lf*.15);g.drawImage(spr,0,0);
+  scene(c,spr,lf,t,u,a)}
+ rules.forEach(r=>r.draw(paused?0:dt));
+ requestAnimationFrame(frame)}
+
+/* ---------- schémas de combat (vue de dessus) ---------- */
+const RW=240,RH=170,OX=120,OY=94,DR=86,DRY=66;
+function topGround(seed){const c=document.createElement('canvas');c.width=RW;c.height=RH;const g=c.getContext('2d');g.drawImage(ground(RW,RH,seed),0,0);
+ // dôme : voile intérieur tramé et liseré d'or
+ for(let y=0;y<RH;y++)for(let x=0;x<RW;x++){const q=((x+.5-OX)/DR)**2+((y+.5-OY)/DRY)**2;if(q<1&&bay(x,y)<.12)dot(g,x,y,PAL.gold[1]);}
+ gring(g,OX,OY,DR,DRY,PAL.gold[3]);gring(g,OX,OY,DR-1,DRY-1,PAL.gold[2],.5);return c}
+function eng(g,x,y,fl){gdisc(g,x,y+1,3.6,'#06080a');gdisc(g,x,y,3,fl?'#ffffff':'#5fd4e0');dot(g,x-1,y-1,'#c8f6fa')}
+function foe(g,x,y,col){gdisc(g,x,y+1,3,'#06080a');gdisc(g,x,y,2.4,col);dot(g,x-1,y-1,PAL.blood[5])}
+function boss(g,x,y,ward,t,fl){if(ward>0){const r=12;gring(g,x,y,r,r*.8,PAL.gold[ward>.5?4:3],ward);gring(g,x,y,r-1.5,r*.8-1.2,PAL.gold[2],ward*.5)}
+ for(let j=-5;j<=5;j++)for(let i=-5;i<=5;i++){if(Math.abs(i)+Math.abs(j)>5)continue;dot(g,x+i,y+j,Math.abs(i)+Math.abs(j)>=5?'#0b090b':fl?'#ffffff':(i+j<0?PAL.gold[4]:PAL.gold[2]))}}
+function hpbar(g,hp,ward){g.fillStyle='#0b0b0e';g.fillRect(70,6,100,9);g.fillStyle='#24100f';g.fillRect(71,7,98,4);g.fillStyle='#b41c20';g.fillRect(71,7,Math.round(98*hp),4);
+ g.fillStyle=PAL.gold[3];g.fillRect(71,12,Math.round(98*ward),2)}
+function burstFx(g,x,y,k,col){gring(g,x,y,2+k*7,(2+k*7)*.75,col,1-k)}
+function walkPath(keys,t){if(t<=keys[0][0])return[keys[0][1],keys[0][2]];for(let i=1;i<keys.length;i++){const[t1,x1,y1]=keys[i],[t0,x0,y0]=keys[i-1];if(t<=t1){const k=ease((t-t0)/(t1-t0||1));return[lerp(x0,x1,k),lerp(y0,y1,k)]}}const L=keys[keys.length-1];return[L[1],L[2]]}
+
+// mini-simulation par règle : événements datés, invocations qui marchent sur l'Ingénieur
+function Rule(def,i){const f=document.createElement('figure');if(def.rec)f.className='rec';
+ f.innerHTML=`<canvas width="${RW}" height="${RH}"></canvas><div class="status"></div><figcaption><b>${def.name}</b><p>${def.desc}</p><ul>${def.pts.map(x=>`<li>${x}</li>`).join('')}</ul></figcaption>`;
+ document.getElementById('rules').appendChild(f);
+ const c=f.querySelector('canvas'),g=c.getContext('2d'),bg=topGround(i*5+2),st=f.querySelector('.status');
+ let S=null,hp=1;
+ const reset=()=>{S={t:0,ev:0,foes:[],fx:[],bolts:[],ward:1,wardT:1,open:0,foyers:(def.foyers||[]).map(([x,y])=>({x,y,hp:1,alive:true})),msg:def.msg0,flash:0};if(hp<=.05)hp=1};
+ reset();
+ const api={
+  spawn(list){for(const[dx,dy]of list){S.foes.push({x:OX+dx,y:OY+dy,alive:true,ang:Math.random()*6.283,col:PAL.robe[4]});S.fx.push({x:OX+dx,y:OY+dy,t:0,col:PAL.gold[4]})}},
+  spawnAt(x,y){S.foes.push({x,y,alive:true,ang:Math.random()*6.283});S.fx.push({x,y,t:0,col:PAL.gold[4]})},
+  kill(){const[ex,ey]=walkPath(def.path,S.t);let best=null,bd=1e9;for(const o of S.foes)if(o.alive){const d=Math.hypot(o.x-ex,o.y-ey);if(d<bd){bd=d;best=o}}
+   if(best){best.alive=false;S.bolts.push({x0:ex,y0:ey,x1:best.x,y1:best.y,t:0});S.fx.push({x:best.x,y:best.y,t:0,col:PAL.blood[4]})}},
+  hit(dmg=.07){const[ex,ey]=walkPath(def.path,S.t);S.bolts.push({x0:ex,y0:ey,x1:OX,y1:OY,t:0});if(S.ward<=0||S.open>0){hp=Math.max(0,hp-dmg);S.flash=.12}else S.fx.push({x:OX,y:OY,t:0,col:PAL.gold[5]})},
+  hitFoyer(n,dmg=.5){const F=S.foyers[n],[ex,ey]=walkPath(def.path,S.t);S.bolts.push({x0:ex,y0:ey,x1:F.x,y1:F.y,t:0});F.hp-=dmg;if(F.hp<=0&&F.alive){F.alive=false;S.fx.push({x:F.x,y:F.y,t:0,col:PAL.gold[5]})}},
+  ward(v){if(v<S.ward)S.fx.push({x:OX,y:OY,t:0,col:PAL.gold[5],big:1});S.ward=v},
+  open(v){S.open=v},say(m){S.msg=m},
+ };
+ return{draw(dt){S.t+=dt;while(S.ev<def.ev.length&&def.ev[S.ev][0]<=S.t){def.ev[S.ev][1](api,S);S.ev++}if(S.t>=def.T)reset();
+  const[ex,ey]=walkPath(def.path,S.t);
+  for(const o of S.foes){if(!o.alive)continue;const tx=ex+Math.cos(o.ang)*8,ty=ey+Math.sin(o.ang)*6,d=Math.hypot(tx-o.x,ty-o.y);if(d>1){o.x+=(tx-o.x)/d*Math.min(d,30*dt);o.y+=(ty-o.y)/d*Math.min(d,30*dt)}}
+  g.drawImage(bg,0,0);
+  // liens
+  if(def.links==='foes'&&S.ward>0)for(const o of S.foes)if(o.alive)gline(g,OX,OY,o.x,o.y,PAL.gold[4],.35+.25*Math.sin(S.t*8));
+  for(const F of S.foyers){if(F.alive&&S.ward>0)gline(g,F.x,F.y,OX,OY,PAL.gold[4],.35+.25*Math.sin(S.t*8));
+   for(let j=-5;j<=1;j++)for(let i=-2;i<=2;i++)dot(g,F.x+i,F.y+j,Math.abs(i)===2||j===-5||j===1?'#0b090b':F.alive?(i<0?PAL.gold[4]:PAL.gold[2]):PAL.slate[1]);
+   if(F.alive)gdisc(g,F.x,F.y-8,2+Math.sin(S.t*6),PAL.gold[5],.6)}
+  // canalisation : cercle d'invocation qui grandit
+  if(S.open>0){const k=(S.t*1.3)%1;gring(g,OX-24,OY+6,3+k*6,2+k*4,PAL.gold[4],1-k*.5);gring(g,OX+20,OY+12,3+k*6,2+k*4,PAL.gold[4],1-k*.5)}
+  const wv=S.open>0?.35+.25*Math.sin(S.t*20):S.ward;
+  const ents=[{y:OY,d:()=>boss(g,OX,OY,wv,S.t,S.flash>0)},{y:ey,d:()=>eng(g,ex,ey)}];
+  for(const o of S.foes)if(o.alive)ents.push({y:o.y,d:()=>foe(g,o.x,o.y,PAL.blood[3])});
+  ents.sort((a,b)=>a.y-b.y).forEach(e=>e.d());
+  for(const b of S.bolts){b.t+=dt;if(b.t>.2)continue;const k=b.t/.2;gline(g,lerp(b.x0,b.x1,k),lerp(b.y0,b.y1,k),lerp(b.x0,b.x1,Math.min(1,k+.25)),lerp(b.y0,b.y1,Math.min(1,k+.25)),'#c8f6fa')}
+  S.bolts=S.bolts.filter(b=>b.t<.2);
+  for(const e of S.fx){e.t+=dt;burstFx(g,e.x,e.y,cl(e.t/(e.big?.6:.35)),e.col);if(e.big&&e.t<.6)for(let n=0;n<10;n++){const a=n/10*6.283,r=6+e.t*30;dot(g,e.x+Math.cos(a)*r,e.y+Math.sin(a)*r*.8,PAL.gold[5])}}
+  S.fx=S.fx.filter(e=>e.t<(e.big?.6:.35));S.flash-=dt;
+  hpbar(g,hp,S.open>0?.4:S.ward);st.textContent=S.msg}}}
+
+const ENTER=[[0,14,OY],[1.4,52,OY]];
+const RULES=[
+{name:'A · Le lien',rec:true,T:12,links:'foes',msg0:'Bouclier levé · trois invocations liées',
+ desc:'Chaque invocation vivante est reliée à lui par un fil de lumière et nourrit le bouclier. Quand la dernière tombe, le bouclier se brise quelques secondes : l’Ingénieur doit foncer sur lui avant le lot suivant.',
+ pts:['<span>Pour</span> : les invocations sont le cœur du combat, et non une gêne à contourner.','<span>Pour</span> : se lit d’un coup d’œil (fils, bouclier qui se brise).','<span>Réglage</span> : bouclier brisé 4 s, nouveau lot 1 s après sa reformation ; 4 à 5 cycles pour le tuer.'],
+ path:[...ENTER,[5.4,56,OY],[6.4,104,OY+4],[9.4,104,OY+4],[10.6,56,OY]],
+ ev:[[.2,a=>a.spawn([[-22,-10],[-24,8],[-14,16]])],[2.6,a=>a.kill()],[3.6,a=>a.kill()],[4.6,a=>{a.kill();a.ward(0);a.say('Plus aucun lien · bouclier brisé pour 4 s')}],
+  [6.6,a=>a.hit()],[7.1,a=>a.hit()],[7.6,a=>a.hit()],[8.1,a=>a.hit()],[8.6,a=>{a.hit();a.ward(1);a.say('Bouclier reformé · nouvel appel')}],[9.6,a=>a.spawn([[-22,-6],[-18,12],[10,18]])],[11.3,a=>a.kill()]]},
+{name:'B · Les foyers',T:13,foyers:[[OX-44,OY-34],[OX+50,OY-26],[OX+6,OY+50]],msg0:'Bouclier levé · trois foyers allumés',
+ desc:'Trois foyers d’invocation sont plantés dans le dôme : ils alimentent le bouclier et chacun fait naître une créature de temps en temps. L’Ingénieur éteint les foyers un à un ; le dernier éteint, le bouclier tombe jusqu’à ce qu’ils se rallument.',
+ pts:['<span>Pour</span> : un parcours dans l’arène, des cibles fixes et lisibles.','<span>Contre</span> : l’invocateur lui-même passe au second plan.','<span>Réglage</span> : foyers à 2 coups, rallumés au bout de 20 s.'],
+ path:[...ENTER,[2.6,OX-44,OY-26],[4,OX-44,OY-26],[5.6,OX+42,OY-20],[7,OX+42,OY-20],[8.4,OX+6,OY+42],[9.4,OX+6,OY+42],[10,OX+6,OY+14],[12,OX+6,OY+14]],
+ ev:[[.5,(a,S)=>S.foyers.forEach(F=>a.spawnAt(F.x,F.y+4))],[2,a=>a.kill()],[2.8,a=>a.kill()],[3.1,a=>a.hitFoyer(0)],[3.6,a=>{a.hitFoyer(0);a.say('Foyer éteint · encore deux')}],
+  [4.4,(a,S)=>S.foyers.forEach(F=>F.alive&&a.spawnAt(F.x,F.y+4))],[5.8,a=>a.kill()],[6.2,a=>a.hitFoyer(1)],[6.6,a=>{a.hitFoyer(1);a.kill();a.say('Foyer éteint · encore un')}],
+  [8.6,a=>a.kill()],[8.8,a=>a.hitFoyer(2)],[9.2,a=>{a.hitFoyer(2);a.ward(0);a.say('Derniers feux éteints · bouclier tombé')}],
+  [10.2,a=>a.hit()],[10.7,a=>a.hit()],[11.2,a=>a.hit()],[11.7,a=>a.hit()],[12.4,(a,S)=>{S.foyers.forEach(F=>{F.alive=true;F.hp=1});a.ward(1);a.say('Les foyers se rallument')}]]},
+{name:'C · L’incantation',T:12,msg0:'Bouclier levé · il prépare un appel',
+ desc:'Pour invoquer, il doit ouvrir son bouclier pendant toute l’incantation (1,4 s, cercles visibles au sol). Un coup de l’Ingénieur pendant cette fenêtre interrompt l’appel et l’étourdit 3 s, bouclier ouvert.',
+ pts:['<span>Pour</span> : un vrai duel de placement, proche de la Martyre.','<span>Contre</span> : rester collé à lui suffit presque ; les invocations comptent moins.','<span>Réglage</span> : il recule et éloigne l’Ingénieur avec ses lots entre deux appels.'],
+ path:[...ENTER,[2,70,OY],[3.6,70,OY],[4.4,104,OY+4],[7.6,104,OY+4],[8.4,74,OY],[12,74,OY]],
+ ev:[[1,a=>{a.open(1);a.say('Incantation · bouclier ouvert')}],[2.4,a=>{a.open(0);a.spawn([[-24,6],[20,12]]);a.say('Appel réussi · deux invocations')}],[2.9,a=>a.kill()],[3.4,a=>a.kill()],
+  [4.5,a=>{a.open(1);a.say('Incantation · bouclier ouvert')}],[4.9,a=>{a.hit();a.open(0);a.ward(0);a.say('Interrompu · étourdi 3 s, bouclier ouvert')}],[5.4,a=>a.hit()],[5.9,a=>a.hit()],[6.4,a=>a.hit()],[6.9,a=>a.hit()],[7.4,a=>a.hit()],
+  [7.9,a=>{a.ward(1);a.say('Bouclier refermé')}],[8.4,a=>{a.open(1);a.say('Incantation · trop loin pour l’interrompre')}],[9.8,a=>{a.open(0);a.spawn([[-24,6],[20,12]]);a.say('Appel réussi · deux invocations')}],[10.6,a=>a.kill()],[11.2,a=>a.kill()]]},
+];
+const rules=RULES.map((d,i)=>Rule(d,i));
+requestAnimationFrame(frame);
+</script></body></html>

@@ -1,0 +1,416 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Matrice bullet hell</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0c0d10;--panel:#14161b;--line:#2c3038;--txt:#e2dccb;--mut:#9a9ca2;--acc:#d84a3a;--gold:#d0a038}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--txt);font:15px/1.45 'Pixelify Sans',system-ui,sans-serif}
+header,main{max-width:1320px;margin:auto;padding:18px 16px}h1{margin:0;font-weight:600;letter-spacing:.08em;font-size:26px;color:var(--acc)}
+h2{font-weight:600;font-size:20px;color:var(--gold);margin:34px 0 6px;letter-spacing:.05em}
+p.lead{color:var(--mut);margin:6px 0 0;max-width:1040px}p.lead b{color:var(--txt);font-weight:600}
+button{font:inherit;color:var(--txt);background:#1c1f26;border:1px solid var(--line);padding:6px 12px;cursor:pointer}button:hover,button[aria-pressed=true]{border-color:var(--acc);background:#2a1a1a}
+.bar{display:flex;gap:8px;align-items:center;margin-top:14px;flex-wrap:wrap}.bar span{color:var(--mut);font-size:13px;margin-left:6px}
+figure{margin:0 0 24px;background:var(--panel);border:1px solid var(--line);min-width:0}
+canvas{image-rendering:pixelated;display:block;width:100%;height:auto}
+.row{display:grid;grid-template-columns:minmax(0,.78fr) minmax(0,1.22fr)}
+.big{background:#07080a;border-right:1px solid var(--line)}.arena{background:#07080a;position:relative}
+.arena canvas{cursor:pointer}.arena canvas.on{outline:2px solid var(--acc);outline-offset:-2px}
+small.l{display:block;color:var(--mut);font-size:12px;padding:4px 6px}
+.hud{display:flex;justify-content:space-between;gap:10px;color:var(--mut);font-size:12px;padding:4px 8px;border-top:1px solid var(--line)}.hud em{font-style:normal;color:var(--txt)}
+figcaption{padding:10px 14px 14px;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:4px 22px}
+figcaption .hd{grid-column:1/-1}figcaption b{color:var(--acc);font-weight:600;font-size:20px}figcaption i{display:block;font-style:normal;color:var(--gold);font-size:13px;letter-spacing:.06em;margin-top:2px}
+figcaption p{margin:6px 0 0;color:var(--mut);font-size:14px}figcaption h3{margin:10px 0 0;font-size:14px;font-weight:600;color:var(--gold);letter-spacing:.05em}
+figcaption ul{margin:4px 0 0;padding-left:18px;font-size:14px}figcaption li{margin:2px 0}figcaption li span{color:var(--acc)}
+.bul{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;align-items:center}.bul canvas{width:44px;height:44px;background:#1b2028;border:1px solid var(--line)}.bul em{font-style:normal;font-size:12px;color:var(--mut)}
+.rec{border-color:var(--gold)}.rec figcaption b::after{content:' · recommandée';color:var(--gold);font-size:13px;letter-spacing:.06em}
+table{border-collapse:collapse;width:100%;max-width:1100px;margin-top:10px;font-size:14px}td,th{border-bottom:1px solid var(--line);padding:7px 10px;text-align:left;vertical-align:top}
+th{color:var(--gold);font-weight:600;width:220px}td{color:var(--mut)}td b{color:var(--txt);font-weight:600}
+@media (max-width:900px){.row{grid-template-columns:1fr}.big{border-right:0;border-bottom:1px solid var(--line)}figcaption{grid-template-columns:1fr}}
+</style></head><body>
+<header><h1>LA MATRICE · 5 VARIANTES · BULLET HELL</h1>
+<p class="lead">Base retenue : <b>1 · La Matrice</b>, la montagne de chair qui vomit les Aberrations. Voici cinq façons de la pousser plus loin. Chacune a <b>son anatomie, son style de balles et son motif</b>. À gauche, le détail animé. À droite, <b>l’arène à l’échelle du jeu</b> : la Matrice au centre du dôme, l’Ingénieur piloté par un bot qui esquive. Les gueules, les pustules, le cœur et l’œil du dessin réagissent au motif en direct.</p>
+<p class="lead">Cliquer une arène pour piloter l’Ingénieur (ZQSD, WASD ou flèches ; Échap pour rendre la main au bot). Le point blanc à ses pieds est la zone touchée.</p>
+<div class="bar"><button id="ph0" aria-pressed="true">Phase I</button><button id="ph1">Phase II</button><button id="ph2">Phase III</button><button id="pause">Pause</button><span>Changer de phase éteint les balles, comme pour la Martyre.</span></div></header>
+<main>
+<div id="list"></div>
+
+<h2>Règles communes</h2>
+<table>
+<tr><th>Repris de la Martyre</th><td>Vagues suspendues, dôme, <b>seul l’Ingénieur entre</b>. Balles à <b>4 dégâts</b> (grosses : 8), zone touchée aux pieds, <b>0,6 s d’invulnérabilité</b> après un coup, balles éteintes au changement de phase, fenêtres de souffle entre deux motifs.</td></tr>
+<tr><th>Propre à la Matrice</th><td><b>Immobile</b> au centre du dôme ; les balles partent du pourtour de sa base, dans la direction de l’organe qui tire. Si l’Ingénieur colle à la base, les <b>racines</b> balaient (coup au contact, 10 dégâts). Elle ne quitte jamais le dôme.</td></tr>
+<tr><th>Fiche proposée</th><td><b>1 400 PV</b>, phases à 66 % et 33 % ; seuil de menace au-dessus de la Martyre. Chaque variante a un <b>organe faible</b> qui prend double dégâts quand il est ouvert ou gonflé.</td></tr>
+<tr><th>Mélanger</th><td>Les motifs sont indépendants du corps : on peut garder le corps d’une variante et le motif d’une autre, ou enchaîner deux motifs par phase (par exemple Pouls en I, puis Pouls et Éclosion en III).</td></tr>
+<tr><th>Couleurs</th><td>Carmin, chair pâle, os et ichor noir : la Bête seule. Pas d’or (Credo), pas de pourpre (Ancre), pas de cyan (Exilés).</td></tr>
+</table>
+</main>
+<script>
+'use strict';
+/* ======================= tampon pixel (même outillage que boss-bete-propositions) ======================= */
+const W=200,H=150,CX=100,FY=140,OUT='#0b090b',TAU=Math.PI*2;
+const B4=[[0,8,2,10],[12,4,14,6],[3,11,1,9],[15,7,13,5]].map(r=>r.map(v=>(v+.5)/16));
+const bay=(x,y)=>B4[y&3][x&3];
+const cl=(v,a=0,b=1)=>v<a?a:v>b?b:v;
+const ease=x=>{x=cl(x);return x*x*(3-2*x)};
+const lerp=(a,b,t)=>a+(b-a)*t;
+function rng(s){return()=>{s|=0;s=s+0x6D2B79F5|0;let t=Math.imul(s^s>>>15,1|s);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+const PAL={
+ pale:['#2c2024','#4c3a3c','#76605e','#a08a82','#c8b4a8','#ecdcd0'],
+ flesh:['#2a0a0c','#4e1416','#7a2422','#a03a32','#c4604e','#e08c74'],
+ blood:['#200406','#4a0a0e','#7e1216','#b41c20','#e2382e','#ff8a6a'],
+ bone:['#1e1a16','#3a3228','#625644','#8e8068','#b8ac90','#e0d8c4'],
+ night:['#0a0a0e','#141218','#201c24','#2e2830','#40383e','#544a50'],
+ ichor:['#060606','#121014','#1e1a1e','#2c2628'],
+ slate:['#1b2028','#232933','#2b323d','#333a46','#404955'],
+ memb:['#3a1416','#6a2a2a','#9a4a44','#c47a6a','#e0a894','#f2cdb8'],
+ sclera:['#6a5a52','#a8988e','#d6c8bc','#efe4da','#fff6ee'],
+};
+const HEX={};const rgb=h=>HEX[h]||(HEX[h]=[1,3,5].map(i=>parseInt(h.slice(i,i+2),16)));
+class Px{constructor(){this.c=new Array(W*H).fill(null);this.fx=new Array(W*H).fill(null)}
+ has(x,y){x=Math.round(x);y=Math.round(y);return x>=0&&y>=0&&x<W&&y<H&&!!this.c[y*W+x]}
+ get(x,y){x=Math.round(x);y=Math.round(y);return x>=0&&y>=0&&x<W&&y<H?this.c[y*W+x]:null}
+ set(x,y,c){x=Math.round(x);y=Math.round(y);if(x<0||y<0||x>=W||y>=H||!c)return;this.c[y*W+x]=c}
+ paint(x,y,c){if(this.has(x,y))this.set(x,y,c)}
+ fxs(x,y,c,a=1){x=Math.round(x);y=Math.round(y);if(x<0||y<0||x>=W||y>=H||!c)return;if(a<1&&a<=bay(x,y))return;this.fx[y*W+x]=c}}
+const sh=(r,v,x,y)=>{v=cl(v);const f=v*(r.length-1),i=Math.floor(f);return r[Math.min(r.length-1,f-i>bay(x,y)?i+1:i)]};
+function ell(P,cx,cy,rx,ry,r,o={}){const v0=o.v??.6,l=o.l??.32,edge=o.edge??.22;
+ for(let y=Math.floor(cy-ry-1);y<=cy+ry+1;y++)for(let x=Math.floor(cx-rx-1);x<=cx+rx+1;x++){
+  const dx=(x+.5-cx)/rx,dy=(y+.5-cy)/ry,d=dx*dx+dy*dy;if(d>1)continue;
+  let v=v0+l*(-dx*.55-dy*.6)-(o.rim??.1)*d;
+  const dx2=(x+1.5-cx)/rx,dy2=(y+1.5-cy)/ry;if(edge&&(dx2*dx2+dy*dy>1||dx*dx+dy2*dy2>1))v-=edge;
+  (o.on?P.paint:P.set).call(P,x,y,sh(r,v,x,y))}}
+function inPoly(pts,x,y){let c=false;for(let i=0,j=pts.length-1;i<pts.length;j=i++){const[a,b]=pts[i],[e,f]=pts[j];if((b>y)!==(f>y)&&x<(e-a)*(y-b)/(f-b)+a)c=!c}return c}
+function poly(P,pts,r,o={}){let x0=1e9,x1=-1e9,y0=1e9,y1=-1e9;for(const[x,y]of pts){x0=Math.min(x0,x);x1=Math.max(x1,x);y0=Math.min(y0,y);y1=Math.max(y1,y)}
+ const cx=(x0+x1)/2,cy=(y0+y1)/2,hw=Math.max(1,(x1-x0)/2),hh=Math.max(1,(y1-y0)/2),v0=o.v??.55,l=o.l??.3,edge=o.edge??.2;
+ for(let y=Math.floor(y0);y<=y1;y++)for(let x=Math.floor(x0);x<=x1;x++){if(!inPoly(pts,x+.5,y+.5))continue;
+  const nx=(x+.5-cx)/hw,ny=(y+.5-cy)/hh;let v=v0+l*(-nx*.5-ny*.35);
+  if(edge&&(!inPoly(pts,x+1.5,y+.5)||!inPoly(pts,x-.5,y+.5)||!inPoly(pts,x+.5,y+1.5)))v-=edge;
+  P.set(x,y,sh(r,v,x,y))}}
+function bez(p,t){const u=1-t;return[0,1].map(k=>u*u*u*p[0][k]+3*u*u*t*p[1][k]+3*u*t*t*p[2][k]+t*t*t*p[3][k])}
+function tube(P,pts,r0,r1,ramp,o={}){const n=o.n??44;for(let i=0;i<=n;i++){const t=i/n,[x,y]=bez(pts,t),r=r0+(r1-r0)*t;
+ ell(P,x,y,Math.max(.7,r),Math.max(.7,r),ramp,{v:(o.v??.5)+t*(o.dv??.1)+(o.ring?((i%o.ring)<1?-.16:0):0),l:.42,edge:0,rim:.28})}}
+function line(P,x0,y0,x1,y1,c,mode,a){const n=Math.max(1,Math.ceil(Math.max(Math.abs(x1-x0),Math.abs(y1-y0))));
+ for(let i=0;i<=n;i++){const x=x0+(x1-x0)*i/n,y=y0+(y1-y0)*i/n;mode==='fx'?P.fxs(x,y,c,a):mode==='on'?P.paint(x,y,c):P.set(x,y,c)}}
+function glow(P,cx,cy,r,c,a=1){if(a<=.02)return;for(let y=Math.floor(cy-r);y<=cy+r;y++)for(let x=Math.floor(cx-r);x<=cx+r;x++){const d=Math.hypot(x+.5-cx,y+.5-cy)/r;if(d<1)P.fxs(x,y,c,a*(1-d)*(1-d))}}
+function veins(P,R,x,y,n,len,dir,pulse,col=PAL.blood){for(let k=0;k<n;k++){let px=x+(R()-.5)*6,py=y,a=dir+(R()-.5)*1.4;const L=len*(.6+R()*.6);
+ for(let i=0;i<L;i++){a+=(R()-.5)*.6;px+=Math.cos(a);py+=Math.sin(a);if(!P.has(px,py))break;P.paint(px,py,col[2]);
+  const lit=pulse*(1-i/L);if(lit>.05)P.fxs(px,py,lit>.55?col[5]:col[4],lit);if(R()<.06){const b=a+(R()<.5?1:-1)*.9;let qx=px,qy=py;for(let j=0;j<L*.3;j++){qx+=Math.cos(b);qy+=Math.sin(b);P.paint(qx,qy,col[1])}}}}}
+function maw(P,cx,cy,w,h,open,o={}){const oh=Math.max(.6,h*open),lip=o.lip??PAL.flesh;
+ ell(P,cx,cy,w/2+2.2,oh/2+2.4,lip,{v:.48,l:.3,edge:.25,on:o.on});
+ if(open<.08){line(P,cx-w/2,cy,cx+w/2,cy,PAL.ichor[0]);for(let x=Math.ceil(cx-w/2+1);x<cx+w/2-1;x+=(o.step??3))P.set(x,cy+1,PAL.bone[4]);return}
+ for(let y=Math.floor(cy-oh/2);y<=cy+oh/2;y++)for(let x=Math.floor(cx-w/2);x<=cx+w/2;x++){const dx=(x+.5-cx)/(w/2),dy=(y+.5-cy)/(oh/2);if(dx*dx+dy*dy>1)continue;
+  P.set(x,y,dy>.35?PAL.flesh[1]:PAL.ichor[1]);const d=dx*dx+dy*dy;if(d<.35)P.fxs(x,y,d<.12?PAL.blood[4]:PAL.blood[3],(1-d/.35)*open)}
+ const step=o.step??3;for(let x=Math.ceil(cx-w/2+1);x<cx+w/2-1;x+=step){const dx=(x-cx)/(w/2),e=Math.sqrt(Math.max(0,1-dx*dx))*oh/2,tl=Math.min(o.teeth??3,e+.6);
+  for(let j=0;j<tl;j++){P.set(x,cy-e+j,j<1?PAL.bone[5]:PAL.bone[4]);P.set(x,cy+e-j,j<1?PAL.bone[4]:PAL.bone[3])}}
+ if(open>.5&&o.drool!==false){const k=(open-.5)*2;for(let i=0;i<2;i++){const x=cx-w/4+i*w/2;for(let j=0;j<oh*.7*k;j++)P.fxs(x+Math.sin(j*.5)*.4,cy-oh/2+2+j,PAL.memb[4],.7)}}}
+function eye(P,x,y,r,lit=1,blink=0){if(blink>.5){line(P,x-r,y,x+r,y,PAL.ichor[0]);return}
+ ell(P,x,y,r+.8,r*.8+.6,PAL.ichor,{v:.1,l:0,edge:0});ell(P,x,y,r,r*.75,PAL.blood,{v:.75,l:.25,edge:.1});P.set(x-.3,y-.3,PAL.blood[5]);glow(P,x,y,r*3,PAL.blood[4],.55*lit)}
+function spike(P,base,tip,w,r){const[bx,by]=base,[tx,ty]=tip,L=Math.hypot(tx-bx,ty-by)||1,nx=-(ty-by)/L,ny=(tx-bx)/L;poly(P,[[bx+nx*w/2,by+ny*w/2],[tx,ty],[bx-nx*w/2,by-ny*w/2]],r,{v:.6,l:.35})}
+function drip(P,x,y0,len,t,sp=1,col=PAL.ichor){const k=((t*sp)%1),y=y0+k*len;line(P,x,y0,x,y0+Math.min(len,k*len*.6),col[2],'fx',1);P.fxs(x,y,col[3],1-k);P.fxs(x,y+1,col[1],1-k)}
+// reflets humides : points clairs sur le quart haut-gauche
+function wet(P,R,cx,cy,rx,ry,n){for(let i=0;i<n;i++){const an=Math.PI*(1.05+R()*.6),r=.3+R()*.55,x=cx+Math.cos(an)*rx*r,y=cy+Math.sin(an)*ry*r;if(P.has(x,y)){P.set(x,y,PAL.pale[5]);if(R()<.5)P.paint(x+1,y,PAL.pale[4])}}}
+
+/* ======================= corps commun de la Matrice ======================= */
+function mound(P,t,st,o={}){const R=rng(o.seed||11),br=Math.sin(t*1.7)*1.4,a=st.a||0,skin=o.skin||PAL.pale;
+ // flaque de mousse veinée sous la masse
+ for(let y=FY-6;y<=FY+6;y++)for(let x=CX-97;x<=CX+97;x++){const dx=(x-CX)/(94+Math.sin(y*1.3+x*.08)*4),dy=(y-FY)/5.5;if(dx*dx+dy*dy>1)continue;
+  const n=Math.sin(x*.9+y*1.7)*Math.cos(x*.31-y*.6);P.set(x,y,n>.62?PAL.pale[1]:n>.34?PAL.night[3]:sh(PAL.ichor,.5-dy*.3,x,y));
+  if(Math.abs(Math.sin(x*.21+y*.9)+Math.cos(x*.13))<.05)P.set(x,y,PAL.blood[2])}
+ // racines-tentacules
+ if(o.tent!==false)for(let i=0;i<6;i++){const s=i%2?1:-1,bx=CX+s*(40+(i>>1)*14),sw=Math.sin(t*1.3+i*1.7)*5+a*Math.sin(t*7+i)*2,ex=bx+s*(22+(i>>1)*6);
+  tube(P,[[bx,FY-14],[bx+s*10,FY-28+sw*.4],[ex-s*6,FY-3+sw*.5],[ex+s*6+sw,FY-8-sw*.5]],5.2-(i>>1)*.6,1,skin,{v:.42,dv:.15,ring:4})}
+ if(o.spikes!==false)for(let i=0;i<7;i++){const x=CX-40+i*13+(R()-.5)*4,y=FY-80-Math.sqrt(Math.max(0,1-((x-CX)/70)**2))*16-br;spike(P,[x,y+8],[x+(x-CX)*.18+(R()-.5)*6,y-10-R()*10],6,PAL.bone)}
+ ell(P,CX,FY-46-br*.5,72,48+br,skin,{v:.56,l:.38,rim:.18});
+ ell(P,CX-46,FY-16,32,18,skin,{v:.5,l:.34});ell(P,CX+50,FY-14,30,17,skin,{v:.46,l:.34});
+ for(let k=0;k<6;k++){const y0=FY-82+k*12+br*.3;for(let x=CX-70;x<=CX+70;x++){const y=y0+Math.sin(x*.07+k*1.3)*3+((x-CX)/70)**2*10;P.paint(x,y,skin[1]);P.paint(x,y+1,skin[4])}}
+ // plis de la base
+ for(let x=CX-74;x<=CX+78;x+=7){const y=FY-8+Math.sin(x)*1.5;line(P,x,y,x+2,y-6,skin[1],'on')}
+ veins(P,R,CX,FY-6,o.nv??5,58,-Math.PI/2,(o.vein??((Math.sin(t*3.2)*.5+.5)*.4))+a*.3);
+ veins(P,R,CX-40,FY-28,3,32,-Math.PI*.75,(Math.sin(t*3.2-1)*.5+.5)*.3);veins(P,R,CX+44,FY-28,3,32,-Math.PI*.25,(Math.sin(t*3.2-2)*.5+.5)*.3);
+ wet(P,R,CX,FY-46,72,48,o.wet??46);wet(P,R,CX-46,FY-16,32,18,8);
+ return br}
+function cluster(P,t,pts,br,lit=.7){const bl=(Math.sin(t*.9)>.95)?1:0;pts.forEach(([x,y,r],i)=>eye(P,x,y-br,r,lit,i%2?bl:0))}
+
+/* ---------- 1 · Gravide ---------- */
+function gravide(P,t,st){const br=mound(P,t,st,{seed:11}),R=rng(5),a=st.a,sw=Math.max(a,st.spit)*3+Math.sin(t*2.2);
+ const mx=CX-2,my=FY-56-br*.5,rx=31+sw,ry=23+sw*.8;
+ ell(P,mx,my,rx+3.5,ry+3.5,PAL.flesh,{v:.42,l:.3});
+ for(let y=Math.floor(my-ry);y<=my+ry;y++)for(let x=Math.floor(mx-rx);x<=mx+rx;x++){const dx=(x+.5-mx)/rx,dy=(y+.5-my)/ry,d=dx*dx+dy*dy;if(d>1)continue;P.set(x,y,sh(PAL.memb,.45+.35*(1-d)-dy*.15-dx*.08,x,y))}
+ // fœtus d'Aberration recroquevillés, vus par transparence
+ for(const[fx,fy,ph,s]of[[mx-11,my+3,0,1],[mx+12,my-5,2,.85],[mx+2,my+12,4,.6]]){const k=Math.sin(t*1.3+ph)*1.4,dk=Math.cos(t*.9+ph);
+  const sil=(x,y)=>{if(bay(x|0,y|0)<.78&&P.has(x,y))P.set(x,y,PAL.memb[1])};
+  for(let y=-8*s;y<=8*s;y++)for(let x=-10*s;x<=10*s;x++){const q=(x/(9*s))**2+(y/(7*s))**2;if(q<1)sil(fx+x+k*.3,fy+y)}
+  for(let y=-4*s;y<=4*s;y++)for(let x=-4*s;x<=4*s;x++)if(x*x+y*y<16*s*s)sil(fx-7*s+x,fy-5*s+y+k*.4);
+  for(let i=0;i<20;i++){const an=i/20*4.2+dk*.3,r=(4+i*.25)*s;sil(fx+5*s+Math.cos(an)*r,fy+3*s+Math.sin(an)*r*.8)}
+  P.fxs(fx-8*s,fy-6*s+k*.4,PAL.blood[4]);P.fxs(fx-6*s,fy-6*s+k*.4,PAL.blood[4],.6);glow(P,fx-7*s,fy-6*s,4,PAL.blood[3],.5)}
+ veins(P,R,mx,my+ry,5,26,-Math.PI/2,.2+a*.4,PAL.flesh);
+ for(let an=Math.PI*1.08;an<Math.PI*1.45;an+=.04)P.set(mx+Math.cos(an)*rx*.78,my+Math.sin(an)*ry*.78,PAL.memb[5]);
+ P.set(mx-rx*.45,my-ry*.35,'#fff6ee');
+ cluster(P,t,[[CX-34,FY-88,1.6],[CX-28,FY-92,1.2],[CX+34,FY-84,1.8],[CX+40,FY-78,1.2],[CX+12,FY-98,1.4]],br);
+ maw(P,CX-48,FY-64-br*.5,12,8,cl(Math.sin(t*1.1)*1.3),{on:true,step:2.5,teeth:2});maw(P,CX+46,FY-58-br*.5,12,8,cl(Math.sin(t*1.1+2.4)*1.3),{on:true,step:2.5,teeth:2});
+ const o=.1+Math.max(a*.5,st.spit)*.9;maw(P,CX+2,FY-22,38,22,o,{step:3.2,teeth:4});
+ if(st.spit>.15){const k=st.spit;ell(P,CX+2,FY-22+(1-k)*5,3+k*6,2+k*5,PAL.pale,{v:.62,l:.4});P.set(CX-1,FY-26,PAL.pale[5]);glow(P,CX+2,FY-22,20,PAL.blood[4],.5*k)}
+ for(let i=0;i<4;i++)drip(P,CX-14+i*10,FY-12,9,t+i*.37,.6);
+}
+/* ---------- 2 · Couronne de gueules ---------- */
+function couronne(P,t,st){const S6=[];for(let i=0;i<6;i++){const th=st.rot+i*TAU/6;S6.push({i,th,x:CX+Math.cos(th)*46,y:FY-88+Math.sin(th)*11,z:Math.sin(th)})}
+ const stalk=s=>{const o=cl(st.mouths[s.i]),bx=Math.cos(s.th),hx=s.x+bx*11+Math.sin(t*1.5+s.i)*1.2,hy=s.y-17-o*3+Math.sin(t*2+s.i)*.8;
+  tube(P,[[s.x,s.y+10],[s.x,s.y-1],[hx-bx*4,hy+6],[hx,hy]],5.6,4.4,PAL.pale,{v:.42+s.z*.1,ring:3});
+  ell(P,hx,hy,7.5,6.5,PAL.pale,{v:.5+s.z*.08,l:.4});maw(P,hx+bx*1.5,hy+1,9,9,.12+o*.88,{step:2.2,teeth:2,drool:false});
+  if(o>.3)glow(P,hx,hy,9,PAL.blood[4],o)};
+ S6.filter(s=>s.z<0).forEach(stalk);
+ const br=mound(P,t,st,{seed:17,spikes:false});
+ for(let r=0;r<3;r++){const y0=FY-72+r*13;for(let x=CX-60+r*7;x<=CX+60-r*7;x+=5){const y=y0+((x-CX)/70)**2*14+Math.sin(x*.2);if(!P.has(x,y))continue;spike(P,[x-1,y],[x,y+3.5],2.6,PAL.bone)}}
+ const sn=st.snap;maw(P,CX,FY-32,88,20,.08+sn*.92,{step:3,teeth:4});if(sn>.2)glow(P,CX,FY-32,40,PAL.blood[4],sn*.6);
+ cluster(P,t,[[CX-20,FY-58,1.4],[CX+22,FY-60,1.6],[CX-50,FY-44,1.2],[CX+54,FY-42,1.2]],br,.6);
+ S6.filter(s=>s.z>=0).forEach(stalk);
+ for(let i=0;i<5;i++)drip(P,CX-30+i*15,FY-24,12,t+i*.31,.5);
+}
+/* ---------- 3 · Ruche ---------- */
+const PUS=Array.from({length:8},(_,i)=>{const th=i*TAU/8;return{th,x:CX+Math.cos(th)*52,y:FY-52+Math.sin(th)*24}});
+function ruche(P,t,st){const br=mound(P,t,st,{seed:29,nv:3}),R=rng(29);
+ for(let i=0;i<34;i++){const x=CX+(R()-.5)*128,y=FY-50+(R()-.5)*76;if(!P.has(x,y))continue;const r=1.2+R()*1.8;ell(P,x,y,r,r*.9,PAL.bone,{v:.62,l:.35,on:true});P.paint(x-.6,y-.6,PAL.bone[5])}
+ for(let i=0;i<8;i++){const p=PUS[i],x=p.x,y=p.y-br*.5,w=st.pw[i]!=null&&st.now-st.pw[i]<.7?(st.now-st.pw[i])/.7:0,pp=st.pop[i]!=null?st.now-st.pop[i]:9;
+  if(pp<1.8){const g=cl((pp-1.1)/.7),r=6*g;
+   ell(P,x,y,6.5,5,PAL.flesh,{v:.38,l:.3});ell(P,x,y,4.4,3.2,PAL.ichor,{v:.3,l:0,edge:0});if(g>0)ell(P,x,y,Math.max(1,r*.8),Math.max(1,r*.65),PAL.bone,{v:.55,l:.35});
+   if(pp<.8)for(let j=0;j<18;j++){const an=j/18*TAU+j*1.7,rr=3+pp*20*(.5+(j%3)*.25);P.fxs(x+Math.cos(an)*rr,y+Math.sin(an)*rr*.7-pp*8,j%3?PAL.ichor[3]:PAL.blood[3],1-pp/.8)}
+  }else{const r=5.5+w*4.5+Math.sin(t*2+i)*.5,j=w>.6?Math.sin(t*40)*.6:0;ell(P,x+j,y,r+1.6,r*.85+1.3,PAL.flesh,{v:.42});
+   ell(P,x+j,y-.5,r,r*.8,PAL.bone,{v:.6+w*.15,l:.4});
+   if(w>0){ell(P,x+j,y,r*.55,r*.45,PAL.blood,{v:.55+w*.35,l:.2,edge:0});glow(P,x,y,r*2.8,PAL.blood[4],w*.9)}
+   for(let k=0;k<3;k++)line(P,x+j-r*.8+k*r*.6,y+r*.6,x+j-r*.3+k*r*.3,y-r*.2,PAL.bone[2],'on');
+   P.set(x+j-r*.4,y-r*.45,'#fffbe8')}}
+ cluster(P,t,[[CX-8,FY-92,1.4],[CX+6,FY-94,1.2],[CX-58,FY-40,1.2]],br,.6);
+ maw(P,CX,FY-22,28,14,.1+st.a*.5,{step:2.8,teeth:3});
+ for(let i=0;i<3;i++)drip(P,CX-40+i*40,FY-14,8,t+i*.4,.5);
+}
+/* ---------- 4 · Cœur ---------- */
+function coeur(P,t,st){const idle=Math.pow(Math.max(0,Math.sin(t*4.2)),8)*.45,beat=Math.max(st.beat,idle);
+ const br=mound(P,t,st,{seed:41,vein:.2+beat*.8,nv:8}),R=rng(41),hx=CX,hy=FY-56-br*.5;
+ const rag=an=>1+Math.sin(an*7)*.07+Math.sin(an*13+1)*.05;
+ for(let y=Math.floor(hy-30);y<=hy+30;y++)for(let x=Math.floor(hx-36);x<=hx+36;x++){const dx=(x+.5-hx)/31,dy=(y+.5-hy)/25,d=Math.hypot(dx,dy),an=Math.atan2(dy,dx),r=rag(an);
+  if(d<r)P.set(x,y,sh(PAL.ichor,.1+(1-d)*.5+(dy>0?.15:0),x,y));else if(d<r*1.16)P.set(x,y,sh(PAL.flesh,.6-dy*.3-(d-r)*2,x,y))}
+ for(const s of[-1,1])tube(P,[[hx+s*3,hy-8],[hx+s*5,hy-18],[hx+s*14,hy-22],[hx+s*22,hy-30]],4.2,3,PAL.blood,{v:.42+beat*.2,ring:5});
+ const k=1+beat*.16;ell(P,hx-5,hy+1,11.5*k,12.5*k,PAL.blood,{v:.52+beat*.22,l:.42});ell(P,hx+6,hy+3,9.5*k,10.5*k,PAL.blood,{v:.48+beat*.22,l:.42});
+ line(P,hx+1,hy-8,hx+3,hy+13,PAL.blood[1],'on');veins(P,R,hx-4,hy+13,3,16,-1.7,beat,PAL.flesh);
+ P.set(hx-9,hy-6,PAL.blood[5]);P.set(hx-8,hy-6,PAL.blood[5]);
+ glow(P,hx,hy,22+beat*12,PAL.blood[4],.3+beat*.55);
+ for(let i=0;i<3;i++){const y=hy-13+i*13,hw=28-Math.abs(i-1)*3;for(let x=-hw;x<=hw;x++){if(Math.abs(x)<3)continue;const yy=y-(1-(x/hw)**2)*5;P.set(hx+x,yy,PAL.bone[4]);P.set(hx+x,yy+1,PAL.bone[2])}}
+ seg2(P,hx,hy-20,hy-10);
+ cluster(P,t,[[CX-40,FY-80,1.6],[CX+38,FY-82,1.6],[CX-46,FY-74,1.1],[CX+46,FY-74,1.1]],br,.5);
+ maw(P,CX,FY-17,24,10,.1+st.a*.4,{step:2.6,teeth:2});
+ for(let i=0;i<4;i++)drip(P,hx-9+i*6,hy+16,14+i*2,t+i*.27,.7,[PAL.blood[0],PAL.blood[1],PAL.blood[2],PAL.blood[3]]);
+}
+function seg2(P,x,y0,y1){for(let y=y0;y<=y1;y++){P.set(x-1,y,PAL.bone[4]);P.set(x,y,PAL.bone[3]);P.set(x+1,y,PAL.bone[1])}}// sternum
+/* ---------- 5 · Œil ---------- */
+function oeil(P,t,st){const br=mound(P,t,st,{seed:53}),R=rng(53);
+ for(let i=0;i<24;i++){const x=CX+(R()-.5)*130,y=FY-44+(R()-.5)*74,ph=R()*20,r=1+R()*1.2;if(!P.has(x,y)||Math.hypot((x-CX)/36,(y-FY+58)/28)<1)continue;eye(P,x,y-br*.5,r,.4+st.a*.6,Math.sin(t*.9+ph)>.93?1:0)}
+ const ex=CX,ey=FY-58-br*.5,rx=25,ry=18,open=cl(.28+st.open*.72),lx=Math.cos(st.look)*7,ly=Math.sin(st.look)*4.5;
+ ell(P,ex,ey,rx+6,ry+6,PAL.flesh,{v:.46,l:.35});
+ const inA=(x,y)=>{const dx=(x+.5-ex)/rx,dy=(y+.5-ey)/ry;return dx*dx+dy*dy<=1&&Math.abs(dy)<=open*Math.sqrt(Math.max(0,1-dx*dx))};
+ for(let y=Math.floor(ey-ry);y<=ey+ry;y++)for(let x=Math.floor(ex-rx);x<=ex+rx;x++){const dx=(x+.5-ex)/rx,dy=(y+.5-ey)/ry;if(dx*dx+dy*dy>1)continue;const lid=open*Math.sqrt(1-dx*dx);
+  if(Math.abs(dy)>lid){const e=Math.abs(dy)-lid;P.set(x,y,sh(PAL.pale,.62-dy*.3-(e<.1?.3:0),x,y));continue}
+  const ix=(x+.5-ex-lx)/9,iy=(y+.5-ey-ly)/9,id=Math.hypot(ix,iy);let c;
+  if(id<1&&Math.abs(ix)<.16+.3*(1-st.a)&&id<.85)c=PAL.ichor[0];
+  else if(id<1)c=sh(PAL.blood,.5+(1-id)*.35-iy*.2,x,y);
+  else if(id<1.12)c=PAL.blood[1];
+  else c=sh(PAL.sclera,.75-dy*.25-(dx*dx+dy*dy)*.45,x,y);
+  P.set(x,y,c)}
+ for(let k=0;k<7;k++){const an=k/7*TAU+.4;let r=.98;for(let j=0;j<9;j++){const x=ex+Math.cos(an+Math.sin(j)*.08)*rx*r,y=ey+Math.sin(an)*ry*r;if(inA(x,y)&&Math.hypot(x-ex-lx,y-ey-ly)>10)P.set(x,y,PAL.blood[2]);r-=.045}}
+ if(inA(ex+lx-3,ey+ly-3))P.set(ex+lx-3,ey+ly-3,'#fffbe8');if(inA(ex+lx-2,ey+ly-3))P.set(ex+lx-2,ey+ly-3,PAL.sclera[3]);
+ for(let x=-rx+3;x<=rx-3;x+=4){const lid=open*Math.sqrt(1-(x/rx)**2)*ry;spike(P,[ex+x,ey-lid-1],[ex+x*1.08,ey-lid-4.5],2.4,PAL.bone);spike(P,[ex+x,ey+lid+1],[ex+x*1.08,ey+lid+4],2.2,PAL.bone)}
+ if(st.a>.2)glow(P,ex+lx,ey+ly,18,PAL.blood[4],st.a*.8);
+ maw(P,CX,FY-20,26,12,.1+st.a*.35,{step:2.8,teeth:3});
+ for(let i=0;i<3;i++)drip(P,ex-8+i*8,ey+ry+5,10,t+i*.33,.6);
+}
+
+const VARS=[
+ {key:'gravide',draw:gravide,pat:'couvee',name:'1 · La Matrice gravide',title:'MEMBRANE ET COUVÉE',bul:['egg','glaire'],
+  lore:'Le ventre est une membrane tendue où l’on voit, par transparence, des Aberrations recroquevillées qui bougent. Quand elle attaque, la membrane se gonfle et la gueule basse crache des œufs.',
+  ana:['<span>Membrane</span> rosée et translucide, trois fœtus qui remuent, reflet humide.','<span>Gueule basse</span> à quatre rangs de dents, bave qui file quand elle s’ouvre.','Deux petites gueules latérales et des grappes d’yeux au sommet.','<span>Organe faible</span> : la membrane, quand elle est gonflée.'],
+  atk:'<b>Couvée</b> : la gueule crache 2 à 4 œufs lents vers l’Ingénieur. Ils freinent, s’arrêtent, puis éclatent en couronnes de glaires. Viennent ensuite deux anneaux de glaires qui partent de toute la base et accélèrent.',
+  ph:['<span>I</span> : 2 œufs, couronnes de 12.','<span>II</span> : 3 œufs, couronnes de 14, un anneau de plus.','<span>III</span> : 4 œufs ; piste : un œuf sur deux éclôt en Aberration au lieu de glaires.']},
+ {key:'couronne',draw:couronne,pat:'rosace',name:'2 · La Couronne de gueules',title:'SIX GUEULES SUR TIGES',bul:['dent'],
+  lore:'Sur son sommet poussent six gueules au bout de tiges de chair, qui tournent lentement comme une couronne. Le corps est cousu de rangées de dents, et une gueule immense le fend sur toute sa largeur.',
+  ana:['<span>Couronne</span> : six tiges qui tournent ; celle qui tire s’ouvre et rougeoie.','<span>Grande gueule</span> horizontale qui ne s’ouvre que pour le claquement final.','Trois rangées de dents enchâssées dans les plis.','<span>Organe faible</span> : la grande gueule, pendant le claquement.'],
+  atk:'<b>Rosace des gueules</b> : chaque gueule crache à son tour un éventail de 3 dents. Les six bras ainsi formés tournent autour de la Matrice ; il faut tourner avec eux. Pour finir, le <b>claquement</b> : une couronne de 44 dents qui accélèrent, avec une seule brèche, face à l’Ingénieur.',
+  ph:['<span>I</span> : 30 tirs, sens tiré au hasard.','<span>II</span> : 36 tirs, dents plus rapides.','<span>III</span> : 42 tirs ; piste : la rotation s’inverse à mi-salve.']},
+ {key:'ruche',draw:ruche,pat:'eclosion',name:'3 · La Ruche',title:'PUSTULES ET SPORES',bul:['spore'],
+  lore:'Sa peau est grêlée de pustules d’os et de pus. Huit grosses pustules font le tour de la masse ; chacune vise une direction. Elles gonflent, rougeoient, tremblent, puis crèvent et laissent un cratère qui se referme.',
+  ana:['<span>Huit pustules</span> = huit directions dans l’arène (la pustule de droite tire vers l’est, etc.).','Gonflement de 0,7 s : la pustule grossit, rougeoie et tremble ; un cône rouge marque le sol.','Cratère noir après l’éclosion, qui se reforme en 1,8 s.','<span>Organe faible</span> : une pustule gonflée frappée crève vers l’intérieur, sans salve.'],
+  atk:'<b>Éclosion</b> : trois pustules gonflent ensemble (jamais les trois mêmes deux fois de suite), puis crèvent en nuées de spores. Les spores partent lentement puis accélèrent : on lit d’abord, on bouge ensuite.',
+  ph:['<span>I</span> : 5 éclosions de 14 spores.','<span>II</span> : 6 éclosions de 17 spores, spores plus rapides.','<span>III</span> : 7 éclosions de 20 spores.']},
+ {key:'coeur',draw:coeur,pat:'pouls',name:'4 · La Matrice au cœur',title:'LA PLAIE ET LE POULS',bul:['sang'],rec:true,
+  lore:'Une plaie déchirée sur son flanc laisse voir, derrière des côtes d’os, un cœur énorme qui bat. Tout le réseau de veines s’allume à chaque battement, jusque dans la flaque au sol.',
+  ana:['<span>Cœur</span> à deux lobes, aortes qui plongent dans la chair ; il enfle à chaque battement.','<span>Cage</span> de quatre côtes et un sternum par-dessus la plaie.','Veines du corps qui s’allument au rythme du cœur, sang qui goutte de la plaie.','<span>Organe faible</span> : le cœur, entre deux battements. La lecture est simple : on frappe au silence.'],
+  atk:'<b>Pouls</b> : chaque battement est double (lub-dub), avec deux anneaux de sang décalés. Une seule brèche les traverse, et elle tourne d’un battement à l’autre : il faut la suivre. Le rythme accélère à chaque phase.',
+  ph:['<span>I</span> : 6 battements, un toutes les 0,85 s.','<span>II</span> : 8 battements, toutes les 0,73 s.','<span>III</span> : 10 battements, toutes les 0,61 s ; anneaux plus rapides.']},
+ {key:'oeil',draw:oeil,pat:'regard',name:'5 · L’Œil de la Matrice',title:'LE REGARD',bul:['oeil'],
+  lore:'Un œil immense s’ouvre au milieu de la masse, entre des paupières bordées de dents. Il suit l’Ingénieur en permanence. Des dizaines de petits yeux carmin clignent sur le reste du corps.',
+  ana:['<span>Grand œil</span> : iris carmin, pupille fendue qui se dilate pour tirer, veines dans le blanc.','Paupières de chair aux cils-dents ; mi-clos au repos, grand ouvert pour viser.','Vingt-quatre petits yeux qui clignent chacun à leur rythme.','<span>Organe faible</span> : l’œil ouvert. Le viser oblige à se placer dans son axe, donc dans le danger.'],
+  atk:'<b>Regard</b> : l’œil vise l’Ingénieur et trace un rayon d’avertissement au sol pendant 0,7 s. Il lâche alors un torrent d’yeux rapides dans cet axe. Pendant ce temps, les petits yeux du corps lâchent des yeux lents qui suivent l’Ingénieur un court instant.',
+  ph:['<span>I</span> : 3 regards.','<span>II</span> : 4 regards, plus rapides.','<span>III</span> : 5 regards ; piste : deux axes à la fois.']},
+];
+
+/* ======================= balles ======================= */
+function mk(n,f){const c=document.createElement('canvas');c.width=c.height=n;const g=c.getContext('2d'),h=(n-1)/2,m=[];
+ for(let y=0;y<n;y++)for(let x=0;x<n;x++)m[y*n+x]=f(x-h,y-h,x,y);
+ for(let y=0;y<n;y++)for(let x=0;x<n;x++){const col=m[y*n+x];if(col){g.fillStyle=col;g.fillRect(x,y,1,1);continue}
+  for(const[dx,dy]of[[1,0],[-1,0],[0,1],[0,-1]]){const X=x+dx,Y=y+dy;if(X>=0&&Y>=0&&X<n&&Y<n&&m[Y*n+X]){g.fillStyle=OUT;g.fillRect(x,y,1,1);break}}}return c}
+const BSTY={
+ glaire:{rot:1,br:b=>b?5:2.5,n:b=>b?13:7,f:(b)=>(dx,dy)=>{const s=b?2:1,d=Math.hypot(dx,dy)/s;if(d>2.9)return null;if(d<1.15)return PAL.blood[4];if(dx+dy<-1.3*s&&d>1.3)return PAL.pale[5];return d<2.15?PAL.pale[4]:PAL.pale[2]}},
+ egg:{rot:1,br:()=>6,n:()=>15,f:()=>(dx,dy,x,y)=>{const d=Math.hypot(dx,dy*.9);if(d>6.4)return null;if(Math.abs(Math.sin(dx*1.1+dy*.5+1))<.13&&d>1.5&&d<5.6)return PAL.blood[3];return sh(PAL.pale,.62-(dx+dy)/14-d*.035,x,y)}},
+ dent:{rot:16,br:()=>2,n:()=>9,f:(b,a)=>{const ca=Math.cos(a),sa=Math.sin(a);return(dx,dy)=>{const u=dx*ca+dy*sa,v=-dx*sa+dy*ca;if(u<-3||u>3.9||Math.abs(v)>(3.9-u)/6.9*1.9+.15)return null;if(u<-2)return PAL.blood[3];return u>1.4?PAL.bone[5]:v>.6?PAL.bone[2]:PAL.bone[4]}}},
+ spore:{rot:1,flick:2,br:()=>2.5,n:()=>7,f:(b,a,fl)=>(dx,dy)=>{const d=Math.hypot(dx,dy);if(d>2.85)return null;if(d<1.25)return fl?PAL.blood[2]:PAL.ichor[3];if(d<2.05)return fl?PAL.blood[4]:PAL.blood[3];return PAL.blood[1]}},
+ sang:{rot:16,br:()=>2.2,n:()=>9,f:(b,a)=>{const ca=Math.cos(a),sa=Math.sin(a);return(dx,dy)=>{const u=dx*ca+dy*sa,v=-dx*sa+dy*ca,q=(u<0?(u/3.7)**2:(u/2.1)**2)+(v/1.8)**2;if(q>1)return null;if(q<.22&&u>.2)return PAL.blood[5];return q<.6?PAL.blood[4]:PAL.blood[3]}}},
+ oeil:{rot:16,br:b=>b?4.5:2.6,n:b=>b?11:7,f:(b,a)=>{const s=b?1.6:1,ca=Math.cos(a),sa=Math.sin(a);return(dx,dy)=>{const d=Math.hypot(dx,dy)/s;if(d>2.9)return null;const u=(dx*ca+dy*sa)/s-.9,v=(-dx*sa+dy*ca)/s,di=Math.hypot(u,v);
+  if(di<.6)return PAL.ichor[0];if(di<1.4)return PAL.blood[4];return dy>.9*s?PAL.sclera[2]:PAL.sclera[3]}}},
+};
+const BSPR={};for(const k in BSTY){const S=BSTY[k];BSPR[k]=[0,1].map(b=>Array.from({length:S.rot},(_,r)=>Array.from({length:S.flick||1},(_,fl)=>mk(S.n(b),S.f(b,r*TAU/S.rot,fl)))))}
+const BR=b=>BSTY[b.style].br(b.big);
+function bSprite(b,t){const S=BSTY[b.style];let r=0;if(S.rot>1){const a=Math.atan2(b.vy,b.vx);r=((Math.round(a/TAU*S.rot)%S.rot)+S.rot)%S.rot}return BSPR[b.style][b.big?1:0][r][S.flick?Math.floor(t*8+b.seed)%S.flick:0]}
+
+/* ======================= arène ======================= */
+const AW=560,AH=360,HB=3,LIFT=7,ENG_V=15.2*8;
+const F={x:280,y:200,rx:76,ry:24};// emprise au sol
+const SPX=F.x-CX,SPY=F.y+12-FY;
+const ang=(a,b)=>Math.atan2(b.y-a.y,b.x-a.x),rnd=(a,b)=>a+Math.random()*(b-a),adiff=(a,b)=>Math.abs(((a-b+Math.PI)%TAU+TAU)%TAU-Math.PI);
+const emit=a=>({x:F.x+Math.cos(a)*(F.rx+3),y:F.y+Math.sin(a)*(F.ry+3)});
+function newSim(v){return{v,t:0,bul:[],dec:[],fx:[],gens:[],eng:{x:F.x-160,y:F.y+60,hits:0,inv:0,face:1,mv:0},k:1,ph:0,wait:1,gen:null,
+ vis:{a:0,cast:0,spit:0,mouths:[0,0,0,0,0,0],rot:0,snap:0,pw:Array(8).fill(null),pop:Array(8).fill(null),beat:0,look:Math.PI*.8,open:0,lock:null,now:0}}}
+function shoot(S,x,y,a,v,o={}){S.bul.push({x,y,vx:Math.cos(a)*v,vy:Math.sin(a)*v,acc:o.acc||0,min:o.min??0,max:o.max??1e9,style:o.style||'glaire',big:o.big||0,
+ burst:o.burst||0,on:o.on,home:o.home||0,homeT:o.homeT||0,t0:S.t,seed:Math.random()*8})}
+function ring(S,x,y,n,v,off,o){for(let i=0;i<n;i++)shoot(S,x,y,off+i*TAU/n,v,o)}
+const deco=(S,type,o)=>S.dec.push(Object.assign({type,t0:S.t},o)),fx=(S,type,o)=>S.fx.push(Object.assign({type,t0:S.t},o));
+const castStart=S=>{S.vis.cast=1},castEnd=S=>{S.vis.cast=0};
+function hurt(S){const E=S.eng;if(E.inv>0)return;E.hits++;E.inv=.6;fx(S,'hit',{x:E.x,y:E.y})}
+const PAT={
+ couvee:{name:'Couvée',*gen(S){const E=S.eng,k=S.k;castStart(S);yield .5;const n=2+S.ph;
+  for(let i=0;i<n;i++){const ga=ang(F,E)+(i-(n-1)/2)*.75;S.vis.spit=1;const p=emit(ga);
+   shoot(S,p.x,p.y,ga,112*k,{acc:-96*k,style:'egg',burst:1.25,on:b=>{fx(S,'pop',{x:b.x,y:b.y});ring(S,b.x,b.y,12+2*S.ph,52*k,Math.random()*TAU,{style:'glaire'})}});yield .5}
+  yield .8;
+  for(let w=0;w<2+S.ph;w++){const off=Math.random()*TAU;for(let i=0;i<30;i++){const a=off+i*TAU/30,p=emit(a);shoot(S,p.x,p.y,a,40*k,{style:'glaire',acc:34,max:95*k,big:i%10===0?1:0})}S.vis.spit=.7;yield .6}
+  castEnd(S)}},
+ rosace:{name:'Rosace des gueules',*gen(S){const k=S.k;castStart(S);yield .35;let rot=S.vis.rot;const dir=Math.random()<.5?1:-1,N=30+6*S.ph;
+  for(let s=0;s<N;s++){const j=s%6,th=rot+j*TAU/6;S.vis.mouths[j]=1;S.vis.rot=rot;const p=emit(th);for(const o of[-.09,0,.09])shoot(S,p.x,p.y,th+o,(78+S.ph*8)*k,{style:'dent'});rot+=dir*.05;yield .1}
+  yield .35;S.vis.snap=1;const ga=ang(F,S.eng);for(let i=0;i<44;i++){const a=i*TAU/44;if(adiff(a,ga)<.32)continue;const p=emit(a);shoot(S,p.x,p.y,a,34*k,{style:'dent',acc:75,max:130*k})}
+  yield .9;castEnd(S)}},
+ eclosion:{name:'Éclosion',*gen(S){const k=S.k;castStart(S);let last=[];
+  for(let w=0;w<5+S.ph;w++){const pool=[0,1,2,3,4,5,6,7].filter(i=>!last.includes(i)).sort(()=>Math.random()-.5),pick=pool.slice(0,3);last=pick;
+   for(const i of pick){S.vis.pw[i]=S.t;deco(S,'cone',{a:PUS[i].th,dur:.75})}yield .7;
+   for(const i of pick){S.vis.pop[i]=S.t;S.vis.pw[i]=null;const th=PUS[i].th,p=emit(th);for(let j=0;j<14+S.ph*3;j++)shoot(S,p.x,p.y,th+rnd(-.8,.8),rnd(10,26),{style:'spore',acc:52*k,max:rnd(66,96)*k})}
+   yield .62}
+  castEnd(S)}},
+ pouls:{name:'Pouls',*gen(S){const k=S.k;castStart(S);yield .35;let off=Math.random()*TAU,gap=ang(F,S.eng);const dir=Math.random()<.5?1:-1,beats=6+2*S.ph,per=.85-S.ph*.12;
+  for(let b=0;b<beats;b++){for(const[sp,o]of[[56,0],[74,.5]]){S.vis.beat=1;for(let i=0;i<34;i++){const a=off+(i+o)*TAU/34;if(adiff(a,gap)<.3)continue;const p=emit(a);shoot(S,p.x,p.y,a,(sp+S.ph*6)*k,{style:'sang'})}yield .17}
+   off+=.07;gap+=dir*.3;yield per-.34}
+  castEnd(S)}},
+ regard:{name:'Regard',*gen(S){const k=S.k,E=S.eng;castStart(S);yield .5;
+  for(let r=0;r<3+S.ph;r++){const a=ang(F,E);S.vis.lock=a;deco(S,'lane',{a,warn:.7,dur:.7+1});yield .7;
+   for(let i=0;i<18;i++){const p=emit(a);shoot(S,p.x,p.y,a+rnd(-.035,.035),(170+S.ph*15)*k,{style:'oeil',big:i%6===0?1:0});
+    if(i%4===0){const b=rnd(0,TAU),q=emit(b);shoot(S,q.x,q.y,ang(q,E),58*k,{style:'oeil',home:1.2,homeT:1.3})}yield .05}
+   S.vis.lock=null;yield .5}
+  castEnd(S)}},
+};
+function cancel(S){for(const b of S.bul)fx(S,'mote',{x:b.x,y:b.y});S.bul.length=0;S.dec.length=0;S.gen=null;S.wait=1.2;castEnd(S);S.vis.pw.fill(null)}
+function step(S,dt,keys){S.t+=dt;const E=S.eng,V=S.vis;V.now=S.t;
+ if(!S.gen){S.wait-=dt;if(S.wait<=0){S.gen={it:PAT[S.v.pat].gen(S),w:0}}}
+ if(S.gen){const g=S.gen;g.w-=dt;while(g.w<=0){const r=g.it.next();if(r.done){S.gen=null;S.wait=1.3;break}g.w+=r.value||0}}
+ V.a+=(V.cast-V.a)*Math.min(1,dt*6);V.open+=((V.cast?1:0)-V.open)*Math.min(1,dt*(V.cast?5:2));
+ V.spit*=Math.exp(-dt*3);V.snap*=Math.exp(-dt*2.6);V.beat*=Math.exp(-dt*7);for(let i=0;i<6;i++)V.mouths[i]*=Math.exp(-dt*5);
+ if(!V.cast)V.rot+=dt*.12;
+ const tl=V.lock??ang(F,E);V.look+=Math.atan2(Math.sin(tl-V.look),Math.cos(tl-V.look))*Math.min(1,dt*(V.lock!=null?12:3));
+ const keep=[];
+ for(const b of S.bul){const age=S.t-b.t0;
+  if(b.acc){const s=Math.hypot(b.vx,b.vy)||1e-3,ns=cl(s+b.acc*dt,b.min,b.max);if(s<1e-3){b.vx=0;b.vy=0}else{b.vx*=ns/s;b.vy*=ns/s}}
+  if(b.home&&age<b.homeT){const a=Math.atan2(b.vy,b.vx),s=Math.hypot(b.vx,b.vy),ta=ang(b,E),d=Math.atan2(Math.sin(ta-a),Math.cos(ta-a)),na=a+cl(d,-b.home*dt,b.home*dt);b.vx=Math.cos(na)*s;b.vy=Math.sin(na)*s}
+  b.x+=b.vx*dt;b.y+=b.vy*dt;
+  if(b.burst&&age>=b.burst){b.on&&b.on(b);continue}
+  if(b.x<-30||b.y<-30||b.x>AW+30||b.y>AH+30)continue;
+  if(Math.hypot(E.x-b.x,E.y-b.y)<HB+BR(b)){hurt(S);continue}
+  keep.push(b)}
+ S.bul=keep;E.inv=Math.max(0,E.inv-dt);
+ S.dec=S.dec.filter(d=>S.t<d.t0+d.dur);S.fx=S.fx.filter(f=>S.t<f.t0+.6);
+ let mx=0,my=0;if(keys){if(keys.l)mx-=1;if(keys.r)mx+=1;if(keys.u)my-=1;if(keys.d)my+=1}
+ if(mx||my){const m=Math.hypot(mx,my);E.x+=mx/m*ENG_V*dt;E.y+=my/m*ENG_V*dt;E.mv=1;if(mx)E.face=mx>0?1:-1}else bot(S,dt);
+ E.x=cl(E.x,10,AW-10);E.y=cl(E.y,40,AH-6);
+ const qx=(E.x-F.x)/(F.rx+12),qy=(E.y-F.y)/(F.ry+12),q=qx*qx+qy*qy;if(q<1){const s=1/Math.sqrt(q||1e-3);E.x=F.x+(E.x-F.x)*s;E.y=F.y+(E.y-F.y)*s}}
+function bot(S,dt){const E=S.eng,th=S.t*.2;const hx=F.x+Math.cos(th)*170,hy=F.y+Math.sin(th)*118;let fx_=(hx-E.x)*1.2,fy_=(hy-E.y)*1.2;
+ for(const b of S.bul){const rx=E.x-b.x,ry=E.y-b.y;if(rx*rx+ry*ry>120*120)continue;const v2=b.vx*b.vx+b.vy*b.vy||1;let tc=(rx*b.vx+ry*b.vy)/v2;
+  if(tc<-.05)continue;tc=cl(tc,0,.75);const px=rx-b.vx*tc,py=ry-b.vy*tc,d=Math.hypot(px,py)||.01,lim=HB+BR(b)+11;
+  if(d<lim){const w=(lim-d)/lim*760/(tc*3+.35);fx_+=px/d*w;fy_+=py/d*w}}
+ for(const d of S.dec){if(d.type==='lane'){const p=emit(d.a),ux=Math.cos(d.a),uy=Math.sin(d.a),rx=E.x-p.x,ry=E.y-p.y,al=rx*ux+ry*uy,pe=-rx*uy+ry*ux;
+   if(al>-10&&Math.abs(pe)<22){const s=pe>=0?1:-1;fx_+=-uy*s*900*(22-Math.abs(pe))/22;fy_+=ux*s*900*(22-Math.abs(pe))/22}}
+  if(d.type==='cone'){const a=ang(F,E);if(adiff(a,d.a)<.85&&Math.hypot(E.x-F.x,E.y-F.y)<190){const s=Math.sin(a-d.a)>=0?1:-1;fx_+=-Math.sin(a)*s*500;fy_+=Math.cos(a)*s*500}}}
+ const m=Math.hypot(fx_,fy_);if(m<2){E.mv=0;return}const s=Math.min(ENG_V,m);E.x+=fx_/m*s*dt;E.y+=fy_/m*s*dt;E.mv=s;if(Math.abs(fx_)>4)E.face=fx_>0?1:-1}
+
+/* ======================= rendu ======================= */
+function toImage(P,d){const D=d.data;D.fill(0);
+ for(let y=0;y<H;y++)for(let x=0;x<W;x++){const i=y*W+x;let c=P.c[i];
+  if(!c&&((x>0&&P.c[i-1])||(x<W-1&&P.c[i+1])||(y>0&&P.c[i-W])||(y<H-1&&P.c[i+W])))c=OUT;
+  if(P.fx[i])c=P.fx[i];if(!c)continue;const[r,g,b]=rgb(c);D[i*4]=r;D[i*4+1]=g;D[i*4+2]=b;D[i*4+3]=255}return d}
+function ground(w,h,seed){const c=document.createElement('canvas');c.width=w;c.height=h;const g=c.getContext('2d'),d=g.createImageData(w,h),R=rng(seed),S=PAL.slate;
+ const off=[];for(let r=0;r<h/10+2;r++)off.push(Math.floor(R()*16));
+ for(let y=0;y<h;y++)for(let x=0;x<w;x++){const row=Math.floor(y/10),xx=x+off[row],cx=xx%18,cy=y%10;let v=.45+Math.sin(x*.37+y*.91)*.08+((Math.floor(xx/18)*7+row*3)%5)*.04;
+  if(cx===0||cy===0)v=.05;else if(cx===1||cy===1)v+=.15;const col=rgb(sh(S,v,x,y)),i=(y*w+x)*4;d.data[i]=col[0];d.data[i+1]=col[1];d.data[i+2]=col[2];d.data[i+3]=255}
+ g.putImageData(d,0,0);return c}
+// veines du sol (Pouls) : rayons qui partent de la base
+const FLOORV=(()=>{const R=rng(77),pts=[];for(let k=0;k<14;k++){let a=k/14*TAU+R()*.3,x=F.x+Math.cos(a)*(F.rx-4),y=F.y+Math.sin(a)*(F.ry-2);const L=60+R()*90;
+ for(let i=0;i<L;i++){a+=(R()-.5)*.35;x+=Math.cos(a);y+=Math.sin(a)*.7;pts.push([Math.round(x),Math.round(y),i/L])}}return pts})();
+const ENG=new Image();ENG.src='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAA4AAAAmCAYAAAD0t6qKAAADPklEQVR4nI2VX2gUVxTGfxu2are6QRPiUjQOu9OYh/YlhhBwDWnVGAKKQhCpUsQHwcaWgKDFGMyDDUYQfAgVfBAR9cEnsVTskjT+Y1nCEqwPbQizm3EbZIgxYSfrWP/Q+LB7786dWakHljtz9n73O+e755wJ4LFQaOWS1+c4hYDXF/SC4o013j08mmTJC65yg7rjOgCR2tXKGm+s8UWinOIGA1hzC8V1/hXGrKOEXMUHzJpbkIyD37b7/g96Hcf3dcpn08hy6Jc7aHrUB/QxJkaSmEYWAE2Pcvn7LiUV8ezLEeBmbxdTpgVAgxZh8MY9VmgxPl18ztjfFo5TCATcoLu/XpGHXPx5EAA7b2P9t4Id29uYTqdY9e5frqVzao5rnqYBmN/QzJG+kxhGlrqnaZLvatFjGn+OJlj12bKyOKHQyqXx4aPKAeNv1wAwu6EZHTAypiqOAEUaGhU13eYFgUtVa2pSgq6nDGWTHtPITpt+oGAwjSxTpoWdt9E9d9exrR2AxnW1ZaC4YLGeOHcWw8gqYCNjEq4Oy3df5QASZJQiETk+zNg8D+llRrcwkzNzEiQY9ZgGwLLly1m082VGtzBSEA9jauwub16XKzQIcPqPhdLrah7PfsLED710xjcCkHs2LzdviYXZ31rN3nQp1JmcyUzOJL11D7V1ER8AoPXrTkXAIMC6+mIOVmnT+i++pL3rGwCim5Dh5v6xSIwkgVJ3iOoR9/jwZYidJaBb1XsPkjx+YuA4hYDSj5oepUGLKCEaGVOqWr/+c+lXgIIxn88XVS2BKtWqLIAfr95nbdVrAAb6TwLl+6sElowD/cfY31qsCm/FCObbvz2Qky4IxUndufNgsSdThrz86XSK6XQKO29z69qLyqEK6zvQwYnjPwEQrg7Td6CDxEiSU6VZ80FxAIZ6ujmyo0n6vEorQMcpBPZeuKMcYOdtH6AiozBRVqL/Lo2OfxzQNLJcGh3nScasOMX/l9Edttd8k/y7do1nLwoc3trCxd8n2PxVhF1tcQBajg5LZSsyXj4/gKZHGerp5vrYX9J/ZneT/Ez4GHOJYWUiCKWFVWR0nEKgvqPYXqLghV/8KuboZvYyeO09T9GJyj8e0NYAAAAASUVORK5CYII=';
+function drawEng(g,E,t,alpha){if(!ENG.complete||!ENG.width)return;if(E.inv>0&&Math.floor(t*20)%2)return;g.save();g.globalAlpha=alpha;g.translate(Math.round(E.x),0);g.scale(E.face<0?-1:1,1);
+ const bob=E.mv>0?Math.round(Math.abs(Math.sin(t*12))):0;g.drawImage(ENG,-7,Math.round(E.y)-37-bob);g.restore()}
+function shadow(g,x,y,rx,ry,al=.5){g.fillStyle=`rgba(0,0,0,${al})`;for(let j=-ry;j<=ry;j++){const w=Math.round(rx*Math.sqrt(1-(j/ry)**2));if(w>0)g.fillRect(Math.round(x-w),Math.round(y+j),w*2,1)}}
+function drawArena(c){const g=c.g2,S=c.S,E=S.eng,t=S.t;g.imageSmoothingEnabled=false;g.drawImage(c.gr2,0,0);
+ if(S.v.key==='coeur'){const k=Math.max(S.vis.beat,Math.pow(Math.max(0,Math.sin(t*4.2)),8)*.45);for(const[x,y,u]of FLOORV){const a=k*(1-u);g.fillStyle=a>.5?PAL.blood[4]:a>.15?PAL.blood[3]:PAL.blood[1];g.fillRect(x,y,1,1)}}
+ for(const d of S.dec){const age=t-d.t0;
+  if(d.type==='lane'){const p=emit(d.a),ux=Math.cos(d.a),uy=Math.sin(d.a),warn=age<d.warn;g.fillStyle=warn?`rgba(226,56,46,${.18+.18*Math.sin(age*30)})`:'rgba(255,138,106,.22)';
+   for(let s=0;s<520;s+=2){const x=p.x+ux*s,y=p.y+uy*s;for(let o=-6;o<=6;o+=2){const X=Math.round(x-uy*o),Y=Math.round(y+ux*o);if(((X+Y)>>1)%2===0)g.fillRect(X,Y,2,1)}}}
+  if(d.type==='cone'){const k=cl(age/.7);g.fillStyle=`rgba(226,56,46,${.12+.2*k})`;for(let r=F.rx*.6;r<60+k*120;r+=3)for(let a=-.8;a<=.8;a+=.04){const x=Math.round(F.x+Math.cos(d.a+a)*r),y=Math.round(F.y+Math.sin(d.a+a)*r*.75);if(((x>>1)+(y>>1))%2===0)g.fillRect(x,y,2,2)}}}
+ g.fillStyle='rgba(0,0,0,.45)';for(const b of S.bul){const r=Math.round(BR(b)*.8);g.fillRect(Math.round(b.x-r),Math.round(b.y),r*2,1)}
+ shadow(g,E.x,E.y+1,6,1.8);
+ const behind=E.y<F.y+6;if(behind)drawEng(g,E,t,1);
+ g.drawImage(c.spr,SPX,SPY);
+ if(behind)drawEng(g,E,t,.42);else drawEng(g,E,t,1);
+ g.fillStyle='#ffffff';g.fillRect(Math.round(E.x)-1,Math.round(E.y)-1,2,2);
+ for(const b of S.bul){const s=bSprite(b,t);g.drawImage(s,Math.round(b.x-s.width/2),Math.round(b.y-LIFT-s.height/2))}
+ for(const f of S.fx){const k=(t-f.t0)/.6;if(f.type==='hit'){g.strokeStyle=`rgba(255,240,230,${1-k})`;g.beginPath();g.arc(f.x,f.y-14,6+k*10,0,TAU);g.stroke()}
+  else{g.fillStyle=f.type==='pop'?`rgba(226,56,46,${1-k})`:`rgba(200,180,168,${.8-k})`;const r=f.type==='pop'?4+k*10:2;for(let i=0;i<8;i++){const a=i/8*TAU;g.fillRect(Math.round(f.x+Math.cos(a)*r),Math.round(f.y-LIFT+Math.sin(a)*r),1,1)}}}}
+
+/* ======================= cartes ======================= */
+const list=document.getElementById('list'),cards=[];
+VARS.forEach((v,i)=>{const f=document.createElement('figure');if(v.rec)f.className='rec';
+ f.innerHTML=`<div class="row"><div class="big"><small class="l">Détail ×1, agrandi</small><canvas width="${W}" height="${H}"></canvas></div>
+ <div class="arena"><small class="l">Arène à l’échelle du jeu, centre du dôme · motif « ${PAT[v.pat].name} »</small><canvas width="${AW}" height="${AH}" tabindex="0" aria-label="Arène : ${v.name}"></canvas>
+ <div class="hud"><span>Bot <em class="who">actif</em></span><span>Touches subies <em class="hits">0</em></span><span>Balles <em class="nb">0</em></span></div></div></div>
+ <figcaption><div class="hd"><b>${v.name}</b><i>${v.title}</i><p>${v.lore}</p></div>
+ <div><h3>ANATOMIE</h3><ul>${v.ana.map(x=>`<li>${x}</li>`).join('')}</ul><div class="bul"></div></div>
+ <div><h3>ATTAQUE · BULLET HELL</h3><p>${v.atk}</p><ul>${v.ph.map(x=>`<li>${x}</li>`).join('')}</ul></div></figcaption>`;
+ list.appendChild(f);const[c1,c2]=f.querySelectorAll('canvas');
+ const bd=f.querySelector('.bul');for(const st of v.bul)for(const big of(BSTY[st].n(1)!==BSTY[st].n(0)?[0,1]:[0])){const cv=document.createElement('canvas'),s=BSPR[st][big][Math.floor(BSTY[st].rot*.1)][0];cv.width=cv.height=15;const gg=cv.getContext('2d');gg.drawImage(s,Math.floor((15-s.width)/2),Math.floor((15-s.height)/2));bd.appendChild(cv)}
+ bd.insertAdjacentHTML('beforeend',`<em>${v.bul.map(s=>({egg:'œuf',glaire:'glaires',dent:'dents',spore:'spores',sang:'gouttes de sang',oeil:'yeux'})[s]).join(', ')} (agrandis)</em>`);
+ const spr=document.createElement('canvas');spr.width=W;spr.height=H;
+ const card={v,f,c1,c2,g1:c1.getContext('2d'),g2:c2.getContext('2d'),spr,sg:spr.getContext('2d'),img:null,gr1:ground(W,H,i*7+1),gr2:ground(AW,AH,i*7+3),S:newSim(v),acc:0,vis:true,
+  hud:{who:f.querySelector('.who'),hits:f.querySelector('.hits'),nb:f.querySelector('.nb')}};
+ card.img=card.sg.createImageData(W,H);
+ c2.addEventListener('click',()=>{active=active===card?null:card;for(const k of cards)k.c2.classList.toggle('on',k===active);c2.focus()});
+ cards.push(card)});
+let active=null,paused=false,PH=0;const keys={l:0,r:0,u:0,d:0};
+const KM={ArrowLeft:'l',KeyA:'l',KeyQ:'l',ArrowRight:'r',KeyD:'r',ArrowUp:'u',KeyW:'u',KeyZ:'u',ArrowDown:'d',KeyS:'d'};
+addEventListener('keydown',e=>{if(e.code==='Escape'){active=null;for(const k of cards)k.c2.classList.remove('on');return}if(active&&KM[e.code]){keys[KM[e.code]]=1;e.preventDefault()}});
+addEventListener('keyup',e=>{if(KM[e.code])keys[KM[e.code]]=0});
+function setPhase(p){PH=p;for(let i=0;i<3;i++)document.getElementById('ph'+i).setAttribute('aria-pressed',i===p);for(const c of cards){c.S.ph=p;c.S.k=[1,1.15,1.3][p];cancel(c.S)}}
+for(let i=0;i<3;i++)document.getElementById('ph'+i).onclick=()=>setPhase(i);
+document.getElementById('pause').onclick=e=>{paused=!paused;e.target.textContent=paused?'Lecture':'Pause'};
+const io=new IntersectionObserver(es=>{for(const e of es){const c=cards.find(k=>k.f===e.target);if(c)c.vis=e.isIntersecting}},{rootMargin:'100px'});for(const c of cards)io.observe(c.f);
+function paint(c){const P=new Px();c.v.draw(P,c.S.t,c.S.vis);c.sg.putImageData(toImage(P,c.img),0,0);
+ c.g1.drawImage(c.gr1,0,0);c.g1.drawImage(c.spr,0,0);drawArena(c)}
+const q=new URLSearchParams(location.search);
+if(q.has('ph'))setPhase(+q.get('ph'));
+if(q.has('t')){const T=+q.get('t');for(const c of cards)for(let s=0;s<T*60;s++)step(c.S,1/60,null)}
+let last=performance.now(),hudT=0;
+function frame(now){const dt=Math.min(.05,(now-last)/1000);last=now;hudT+=dt;
+ for(const c of cards){if(!c.vis)continue;if(!paused){c.acc+=dt;while(c.acc>=1/60){step(c.S,1/60,active===c?keys:null);c.acc-=1/60}}paint(c);
+  if(hudT>.25){c.hud.who.textContent=active===c?'vous pilotez':'actif';c.hud.hits.textContent=c.S.eng.hits;c.hud.nb.textContent=c.S.bul.length}}
+ if(hudT>.25)hudT=0;requestAnimationFrame(frame)}
+for(const c of cards)paint(c);
+requestAnimationFrame(frame);
+</script>
+</body></html>

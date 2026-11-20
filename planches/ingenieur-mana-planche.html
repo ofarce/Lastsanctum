@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Ingénieur, planche 16 bits</title>
+<style>
+:root{--bg:#1d2a24;--panel:#26372f;--ink:#efe6cf;--mute:#a9b9a8;--line:#3d5448;--acc:#5ce8ff}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 Georgia,serif;padding:24px 16px}
+h1{font-size:26px;margin:0 0 4px;letter-spacing:.5px}
+.sub{color:var(--mute);margin:0 0 20px;max-width:780px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;max-width:1200px}
+.card{background:var(--panel);border:2px solid var(--line);border-radius:10px;padding:14px}
+.card h2{font-size:16px;margin:0 0 8px;color:var(--acc);font-weight:normal;letter-spacing:1px;text-transform:uppercase}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end}
+.cell{text-align:center;font-size:12px;color:var(--mute)}
+canvas{image-rendering:pixelated;display:block;background:#4f7a3a;border-radius:4px}
+.wide{grid-column:1/-1}
+.pal{display:flex;flex-wrap:wrap;gap:4px}
+.pal span{width:22px;height:22px;border-radius:3px;border:1px solid #0006}
+ul{margin:6px 0 0;padding-left:18px;color:var(--mute)}
+button{font:inherit;background:var(--line);color:var(--ink);border:0;border-radius:6px;padding:4px 10px;cursor:pointer}
+</style></head><body>
+<h1>L'Ingénieur, colosse en combinaison</h1>
+<p class="sub">Esquisse dans l'esprit des personnages 16 bits des RPG d'action SNES : grosse tête (environ 2,5 têtes de haut), modelé doux en 4 tons éclairé en haut à gauche, contour sélectif coloré au lieu du noir franc, couleurs chaudes et saturées. Croisement voulu : le colosse de guerre au visage nu (crâne rasé, mâchoire carrée, cicatrice) et la chasseuse en combinaison lisse (épaulières rondes) ; cheveux à raie sur le côté, tempes et nuque couvertes, bolter massif tenu à deux mains. Couleurs de la charte : acier sarcelle et fer, glyphes cyan, pas d'or.</p>
+
+<div class="grid">
+ <div class="card wide"><h2>Scène</h2><canvas id="scene" width="160" height="96"></canvas>
+  <p class="sub" style="margin:8px 0 0">Marche en ronde sur l'herbe, ×4. <button id="pause">Pause</button></p></div>
+ <div class="card"><h2>Repos · 4 directions</h2><div class="row" id="idle"></div></div>
+ <div class="card"><h2>Marche · face</h2><div class="row" id="walkD"></div></div>
+ <div class="card"><h2>Marche · profil</h2><div class="row" id="walkS"></div></div>
+ <div class="card"><h2>Marche · dos</h2><div class="row" id="walkU"></div></div>
+ <div class="card"><h2>Tir au bolter</h2><div class="row" id="atk"></div></div>
+ <div class="card"><h2>Touché · à genoux · victoire</h2><div class="row" id="misc"></div></div>
+ <div class="card"><h2>Portrait de dialogue</h2><div class="row" id="portrait"></div></div>
+ <div class="card"><h2>Palette</h2><div class="pal" id="pal"></div>
+  <ul><li>Contour = ton le plus sombre de la matière voisine</li><li>Reflets francs d'un pixel sur cheveux et pierre</li><li>Cyan réservé aux glyphes et au bolter (charte des Exilés)</li></ul></div>
+</div>
+
+<script src="assets/engineer-colosse.js"></script>
+<script>
+'use strict';
+// ---------- Montage ----------
+const S=4;
+function show(id,b,label){const d=document.createElement('div');d.className='cell';d.append(render(b,S));d.append(label);document.getElementById(id).append(d)}
+show('idle',hero({dir:'d'}),'face');show('idle',hero({dir:'s'}),'droite');show('idle',mirror(hero({dir:'s'})),'gauche');show('idle',hero({dir:'u'}),'dos');
+for(let f=0;f<4;f++){show('walkD',hero({dir:'d',pose:'walk',f}),'#'+(f+1));show('walkS',hero({dir:'s',pose:'walk',f}),'#'+(f+1));show('walkU',hero({dir:'u',pose:'walk',f}),'#'+(f+1))}
+show('atk',hero({dir:'d',pose:'atk'}),'face');show('atk',hero({dir:'s',pose:'atk'}),'profil');show('atk',hero({dir:'u',pose:'atk'}),'dos');
+show('misc',hero({dir:'d',pose:'hurt'}),'touché');show('misc',hero({dir:'d',pose:'kneel'}),'à genoux');show('misc',hero({dir:'d',pose:'win'}),'victoire');
+{const d=document.createElement('div');d.className='cell';const c=render(portrait(),4);c.style.background='#2e4a5a';c.style.border='4px solid #c8a676';d.append(c);document.getElementById('portrait').append(d)}
+for(const k of MAT)for(const c of R[k]){const s=document.createElement('span');s.style.background=c;s.title=k+' '+c;document.getElementById('pal').append(s)}
+// ---------- Scène animée ----------
+const sc=document.getElementById('scene'),sg=sc.getContext('2d');sc.style.width='640px';sc.style.maxWidth='100%';
+const cache={};const spr=(dir,f,m)=>{const k=dir+f+m;return cache[k]||(cache[k]=render(m?mirror(hero({dir,pose:'walk',f})):hero({dir,pose:'walk',f}),1))};
+const grass=document.createElement('canvas');grass.width=160;grass.height=96;{const g=grass.getContext('2d');g.fillStyle='#4f7a3a';g.fillRect(0,0,160,96);
+ let s=7;const rnd=()=>(s=(s*16807)%2147483647)/2147483647;for(let i=0;i<260;i++){const x=rnd()*160|0,y=rnd()*96|0;g.fillStyle=['#3e6330','#6a9a48','#8ab85a'][i%3];g.fillRect(x,y,1,2);if(i%3==2){g.fillRect(x-1,y+1,1,1)}}
+ for(let i=0;i<7;i++){const x=rnd()*150|0,y=rnd()*86|0;g.fillStyle='#f6906a';g.fillRect(x,y,1,1);g.fillStyle='#fff4d6';g.fillRect(x+1,y,1,1)}}
+let t=0,paused=false;document.getElementById('pause').onclick=e=>{paused=!paused;e.target.textContent=paused?'Lecture':'Pause'};
+const path=[[20,12,'s',0],[124,12,'d',0],[124,60,'s',1],[20,60,'u',0]];
+function frame(){if(!paused)t++;sg.drawImage(grass,0,0);const L=304,p=(t*.5)%L;let acc=0,x=20,y=12,dir='d',m=0;
+ const seg=[[104,0],[0,48],[-104,0],[0,-48]],dirs=[['s',0],['d',0],['s',1],['u',0]];
+ for(let i=0;i<4;i++){const len=Math.abs(seg[i][0]+seg[i][1]);if(p<acc+len){const u=p-acc;x=path[i][0]+Math.sign(seg[i][0])*u;y=path[i][1]+Math.sign(seg[i][1])*u;[dir,m]=dirs[i];break}acc+=len}
+ sg.fillStyle='#0003';sg.beginPath();sg.ellipse(x+16,y+31,6,2,0,0,TAU);sg.fill();
+ sg.drawImage(spr(dir,(t>>3)%4,m),x|0,y|0);requestAnimationFrame(frame)}
+const TAU=Math.PI*2;frame();
+</script></body></html>

@@ -766,120 +766,120 @@
   "note": "Échelle en jeu : Z()/16 × 1,9, soit 1,1047 × PX ; filtre « le plus proche ». Image : floor(t·6) & 3 (marche : & 1).",
   "roles": {
    "sigil": {
-    "ax": 12,
+    "ax": 18,
     "ay": 35,
     "spirit": true,
     "crate": [
-     7,
+     13,
      19
     ],
     "modes": {
      "idle": {
-      "frame_w": 34,
+      "frame_w": 40,
       "frame_h": 37,
       "cols": 24,
       "rows": 1,
       "count": 24,
-      "fps": 12
+      "fps": 24
      },
      "walk": {
-      "frame_w": 34,
+      "frame_w": 40,
       "frame_h": 37,
       "cols": 24,
       "rows": 1,
       "count": 24,
-      "fps": 12
+      "fps": 24
      },
      "carry": {
-      "frame_w": 34,
+      "frame_w": 40,
       "frame_h": 37,
       "cols": 24,
       "rows": 1,
       "count": 24,
-      "fps": 12
+      "fps": 24
      },
      "pray": {
-      "frame_w": 34,
+      "frame_w": 40,
       "frame_h": 37,
       "cols": 24,
       "rows": 1,
       "count": 24,
-      "fps": 12
+      "fps": 24
      },
      "work": {
-      "frame_w": 34,
+      "frame_w": 40,
       "frame_h": 37,
       "cols": 24,
       "rows": 1,
       "count": 24,
-      "fps": 12
+      "fps": 24
      },
      "fight": {
-      "frame_w": 34,
+      "frame_w": 40,
       "frame_h": 37,
       "cols": 24,
       "rows": 1,
       "count": 24,
-      "fps": 12
+      "fps": 24
      }
     }
    },
    "medeina": {
-    "ax": 15,
-    "ay": 31,
+    "ax": 21,
+    "ay": 40,
     "spirit": true,
     "crate": [
-     6,
-     10
+     16,
+     25
     ],
     "modes": {
      "idle": {
-      "frame_w": 41,
-      "frame_h": 33,
+      "frame_w": 47,
+      "frame_h": 49,
       "cols": 24,
       "rows": 1,
       "count": 24,
-      "fps": 12
+      "fps": 24
      },
      "walk": {
-      "frame_w": 41,
-      "frame_h": 33,
+      "frame_w": 47,
+      "frame_h": 49,
       "cols": 24,
       "rows": 1,
       "count": 24,
-      "fps": 12
+      "fps": 24
      },
      "carry": {
-      "frame_w": 41,
-      "frame_h": 33,
+      "frame_w": 47,
+      "frame_h": 49,
       "cols": 24,
       "rows": 1,
       "count": 24,
-      "fps": 12
+      "fps": 24
      },
      "pray": {
-      "frame_w": 41,
-      "frame_h": 33,
+      "frame_w": 47,
+      "frame_h": 49,
       "cols": 24,
       "rows": 1,
       "count": 24,
-      "fps": 12
+      "fps": 24
      },
      "work": {
-      "frame_w": 41,
-      "frame_h": 33,
+      "frame_w": 47,
+      "frame_h": 49,
       "cols": 24,
       "rows": 1,
       "count": 24,
-      "fps": 12
+      "fps": 24
      },
      "fight": {
-      "frame_w": 41,
-      "frame_h": 33,
+      "frame_w": 47,
+      "frame_h": 49,
       "cols": 24,
       "rows": 1,
       "count": 24,
-      "fps": 12
+      "fps": 24
      }
     }
    },
@@ -898,7 +898,7 @@
       "cols": 24,
       "rows": 1,
       "count": 24,
-      "fps": 12
+      "fps": 24
      },
      "walk": {
       "frame_w": 43,
@@ -906,7 +906,7 @@
       "cols": 24,
       "rows": 1,
       "count": 24,
-      "fps": 12
+      "fps": 24
      },
      "carry": {
       "frame_w": 43,
@@ -914,7 +914,7 @@
       "cols": 24,
       "rows": 1,
       "count": 24,
-      "fps": 12
+      "fps": 24
      },
      "pray": {
       "frame_w": 43,
@@ -922,7 +922,7 @@
       "cols": 24,
       "rows": 1,
       "count": 24,
-      "fps": 12
+      "fps": 24
      },
      "work": {
       "frame_w": 43,
@@ -930,7 +930,7 @@
       "cols": 24,
       "rows": 1,
       "count": 24,
-      "fps": 12
+      "fps": 24
      },
      "fight": {
       "frame_w": 43,
@@ -938,149 +938,376 @@
       "cols": 24,
       "rows": 1,
       "count": 24,
-      "fps": 12
+      "fps": 24
      }
     }
    },
    "indra": {
-    "ax": 11,
+    "ax": 17,
     "ay": 36,
     "spirit": true,
     "crate": [
-     6,
+     12,
      2
     ],
     "modes": {
      "idle": {
-      "frame_w": 34,
+      "frame_w": 40,
       "frame_h": 38,
       "cols": 24,
       "rows": 1,
       "count": 24,
-      "fps": 12
+      "fps": 24
      },
      "walk": {
-      "frame_w": 34,
+      "frame_w": 40,
       "frame_h": 38,
       "cols": 24,
       "rows": 1,
       "count": 24,
-      "fps": 12
+      "fps": 24
      },
      "carry": {
-      "frame_w": 34,
+      "frame_w": 40,
       "frame_h": 38,
       "cols": 24,
       "rows": 1,
       "count": 24,
-      "fps": 12
+      "fps": 24
      },
      "pray": {
-      "frame_w": 34,
+      "frame_w": 40,
       "frame_h": 38,
       "cols": 24,
       "rows": 1,
       "count": 24,
-      "fps": 12
+      "fps": 24
      },
      "work": {
-      "frame_w": 34,
+      "frame_w": 40,
       "frame_h": 38,
       "cols": 24,
       "rows": 1,
       "count": 24,
-      "fps": 12
+      "fps": 24
      },
      "fight": {
-      "frame_w": 34,
+      "frame_w": 40,
       "frame_h": 38,
       "cols": 24,
       "rows": 1,
       "count": 24,
-      "fps": 12
+      "fps": 24
      }
     }
    },
    "flammes": {
-    "ax": 12,
-    "ay": 37,
+    "ax": 15,
+    "ay": 40,
+    "scale": 1,
+    "stride": 4,
     "modes": {
      "idle": {
-      "frame_w": 29,
-      "frame_h": 38,
-      "cols": 1,
-      "rows": 1,
-      "count": 1
+      "frame_w": 40,
+      "frame_h": 42,
+      "cols": 12,
+      "rows": 4,
+      "count": 48,
+      "fps": 12
      },
      "walk": {
-      "frame_w": 29,
-      "frame_h": 38,
-      "cols": 2,
-      "rows": 1,
-      "count": 2
+      "frame_w": 40,
+      "frame_h": 42,
+      "cols": 12,
+      "rows": 2,
+      "count": 24,
+      "fps": 24
      },
      "work": {
-      "frame_w": 29,
-      "frame_h": 38,
-      "cols": 4,
+      "frame_w": 40,
+      "frame_h": 42,
+      "cols": 12,
+      "rows": 2,
+      "count": 24,
+      "fps": 24
+     },
+     "death": {
+      "frame_w": 60,
+      "frame_h": 47,
+      "cols": 12,
+      "rows": 4,
+      "count": 45,
+      "fps": 24
+     },
+     "hit": {
+      "frame_w": 40,
+      "frame_h": 42,
+      "cols": 12,
       "rows": 1,
-      "count": 4
+      "count": 6,
+      "fps": 24
      }
     }
    },
    "archer": {
-    "ax": 10,
-    "ay": 39,
+    "ax": 15,
+    "ay": 40,
+    "scale": 1,
+    "stride": 4,
     "modes": {
      "idle": {
-      "frame_w": 30,
-      "frame_h": 40,
-      "cols": 1,
-      "rows": 1,
-      "count": 1
+      "frame_w": 40,
+      "frame_h": 42,
+      "cols": 12,
+      "rows": 4,
+      "count": 48,
+      "fps": 12
      },
      "walk": {
-      "frame_w": 30,
-      "frame_h": 40,
-      "cols": 2,
-      "rows": 1,
-      "count": 2
+      "frame_w": 40,
+      "frame_h": 42,
+      "cols": 12,
+      "rows": 2,
+      "count": 24,
+      "fps": 24
      },
      "work": {
-      "frame_w": 30,
-      "frame_h": 40,
-      "cols": 4,
+      "frame_w": 40,
+      "frame_h": 42,
+      "cols": 12,
+      "rows": 2,
+      "count": 24,
+      "fps": 24
+     },
+     "death": {
+      "frame_w": 60,
+      "frame_h": 47,
+      "cols": 12,
+      "rows": 4,
+      "count": 45,
+      "fps": 24
+     },
+     "hit": {
+      "frame_w": 40,
+      "frame_h": 42,
+      "cols": 12,
       "rows": 1,
-      "count": 4
+      "count": 6,
+      "fps": 24
      }
     }
    },
    "lame": {
     "ax": 15,
     "ay": 40,
+    "scale": 1,
+    "stride": 4,
     "modes": {
      "idle": {
-      "frame_w": 33,
-      "frame_h": 41,
-      "cols": 1,
-      "rows": 1,
-      "count": 1
+      "frame_w": 40,
+      "frame_h": 42,
+      "cols": 12,
+      "rows": 4,
+      "count": 48,
+      "fps": 12
      },
      "walk": {
-      "frame_w": 33,
-      "frame_h": 41,
-      "cols": 2,
-      "rows": 1,
-      "count": 2
+      "frame_w": 40,
+      "frame_h": 42,
+      "cols": 12,
+      "rows": 2,
+      "count": 24,
+      "fps": 24
      },
      "work": {
-      "frame_w": 33,
-      "frame_h": 41,
-      "cols": 4,
+      "frame_w": 40,
+      "frame_h": 42,
+      "cols": 12,
+      "rows": 2,
+      "count": 24,
+      "fps": 24
+     },
+     "death": {
+      "frame_w": 60,
+      "frame_h": 47,
+      "cols": 12,
+      "rows": 4,
+      "count": 45,
+      "fps": 24
+     },
+     "hit": {
+      "frame_w": 40,
+      "frame_h": 42,
+      "cols": 12,
       "rows": 1,
-      "count": 4
+      "count": 6,
+      "fps": 24
      }
     }
+   },
+   "oublieux": {
+    "ax": 28,
+    "ay": 50,
+    "scale": 1,
+    "stride": 4.0,
+    "modes": {
+     "idle": {
+      "frame_w": 64,
+      "frame_h": 56,
+      "cols": 12,
+      "rows": 6,
+      "count": 67,
+      "fps": 12
+     },
+     "walk": {
+      "frame_w": 64,
+      "frame_h": 56,
+      "cols": 12,
+      "rows": 2,
+      "count": 20,
+      "fps": 24
+     },
+     "work": {
+      "frame_w": 64,
+      "frame_h": 56,
+      "cols": 12,
+      "rows": 6,
+      "count": 62,
+      "fps": 24
+     },
+     "death": {
+      "frame_w": 64,
+      "frame_h": 56,
+      "cols": 12,
+      "rows": 3,
+      "count": 30,
+      "fps": 24
+     }
+    },
+    "source": "planches/biomes-personnages-finaux.html, modèle 5 (tools/biomes-persos/export.py)"
+   },
+   "guerisseuse": {
+    "ax": 28,
+    "ay": 50,
+    "scale": 1,
+    "stride": 4.0,
+    "modes": {
+     "idle": {
+      "frame_w": 64,
+      "frame_h": 56,
+      "cols": 12,
+      "rows": 5,
+      "count": 60,
+      "fps": 12
+     },
+     "walk": {
+      "frame_w": 64,
+      "frame_h": 56,
+      "cols": 12,
+      "rows": 2,
+      "count": 20,
+      "fps": 24
+     },
+     "work": {
+      "frame_w": 64,
+      "frame_h": 56,
+      "cols": 12,
+      "rows": 6,
+      "count": 67,
+      "fps": 24
+     },
+     "death": {
+      "frame_w": 64,
+      "frame_h": 56,
+      "cols": 12,
+      "rows": 4,
+      "count": 43,
+      "fps": 24
+     }
+    },
+    "source": "planches/biomes-personnages-finaux.html, modèle 3 (tools/biomes-persos/export.py)"
+   },
+   "chantre": {
+    "ax": 28,
+    "ay": 50,
+    "scale": 1,
+    "stride": 4.0,
+    "modes": {
+     "idle": {
+      "frame_w": 64,
+      "frame_h": 56,
+      "cols": 12,
+      "rows": 6,
+      "count": 67,
+      "fps": 12
+     },
+     "walk": {
+      "frame_w": 64,
+      "frame_h": 56,
+      "cols": 12,
+      "rows": 2,
+      "count": 20,
+      "fps": 24
+     },
+     "work": {
+      "frame_w": 64,
+      "frame_h": 56,
+      "cols": 12,
+      "rows": 6,
+      "count": 67,
+      "fps": 24
+     },
+     "death": {
+      "frame_w": 64,
+      "frame_h": 56,
+      "cols": 12,
+      "rows": 4,
+      "count": 43,
+      "fps": 24
+     }
+    },
+    "source": "planches/biomes-personnages-finaux.html, modèle 2 (tools/biomes-persos/export.py)"
+   },
+   "envouteur": {
+    "ax": 28,
+    "ay": 50,
+    "scale": 1,
+    "stride": 4.0,
+    "modes": {
+     "idle": {
+      "frame_w": 64,
+      "frame_h": 56,
+      "cols": 12,
+      "rows": 6,
+      "count": 67,
+      "fps": 12
+     },
+     "walk": {
+      "frame_w": 64,
+      "frame_h": 56,
+      "cols": 12,
+      "rows": 2,
+      "count": 20,
+      "fps": 24
+     },
+     "work": {
+      "frame_w": 64,
+      "frame_h": 56,
+      "cols": 12,
+      "rows": 6,
+      "count": 67,
+      "fps": 24
+     },
+     "death": {
+      "frame_w": 64,
+      "frame_h": 56,
+      "cols": 12,
+      "rows": 4,
+      "count": 43,
+      "fps": 24
+     }
+    },
+    "source": "planches/biomes-personnages-finaux.html, modèle 2 (tools/biomes-persos/export.py)"
    }
   }
  },
@@ -1238,8 +1465,9 @@
      160,
      168
     ],
-    "top": 121,
-    "bottom": 201,
+    "top": 110,
+    "bottom": 200,
+    "scale": 1,
     "anim": {
      "frame_w": 320,
      "frame_h": 240,
@@ -1251,15 +1479,27 @@
      "exact": true,
      "seam_pixels": 0
     },
-    "scale": 1
+    "rest": {
+     "frame_w": 320,
+     "frame_h": 240,
+     "cols": 6,
+     "rows": 4,
+     "count": 24,
+     "seconds": 2,
+     "fps": 12,
+     "exact": true,
+     "seam_pixels": 0
+    },
+    "pick": "Rotonde"
    },
    "da-aether": {
     "anchor": [
      160,
      168
     ],
-    "top": 117,
-    "bottom": 201,
+    "top": 105,
+    "bottom": 200,
+    "scale": 1,
     "anim": {
      "frame_w": 320,
      "frame_h": 240,
@@ -1271,15 +1511,27 @@
      "exact": true,
      "seam_pixels": 0
     },
-    "scale": 1
+    "rest": {
+     "frame_w": 320,
+     "frame_h": 240,
+     "cols": 6,
+     "rows": 4,
+     "count": 24,
+     "seconds": 2,
+     "fps": 12,
+     "exact": true,
+     "seam_pixels": 0
+    },
+    "pick": "Disque des sphères"
    },
    "da-medeina": {
     "anchor": [
      160,
      168
     ],
-    "top": 121,
-    "bottom": 201,
+    "top": 110,
+    "bottom": 198,
+    "scale": 1,
     "anim": {
      "frame_w": 320,
      "frame_h": 240,
@@ -1291,15 +1543,27 @@
      "exact": true,
      "seam_pixels": 0
     },
-    "scale": 1
+    "rest": {
+     "frame_w": 320,
+     "frame_h": 240,
+     "cols": 6,
+     "rows": 4,
+     "count": 24,
+     "seconds": 2,
+     "fps": 12,
+     "exact": true,
+     "seam_pixels": 0
+    },
+    "pick": "Cercle de pierres"
    },
    "da-indra": {
     "anchor": [
      160,
      168
     ],
-    "top": 119,
-    "bottom": 198,
+    "top": 106,
+    "bottom": 197,
+    "scale": 1,
     "anim": {
      "frame_w": 320,
      "frame_h": 240,
@@ -1311,87 +1575,146 @@
      "exact": true,
      "seam_pixels": 0
     },
-    "scale": 1
+    "rest": {
+     "frame_w": 320,
+     "frame_h": 240,
+     "cols": 6,
+     "rows": 4,
+     "count": 24,
+     "seconds": 2,
+     "fps": 12,
+     "exact": true,
+     "seam_pixels": 0
+    },
+    "pick": "Foyer des guerriers"
    },
    "da-library": {
     "anchor": [
      160,
      168
     ],
-    "top": 125,
-    "bottom": 196,
+    "top": 89,
+    "bottom": 199,
+    "scale": 1,
     "anim": {
      "frame_w": 320,
      "frame_h": 240,
-     "cols": 1,
-     "rows": 1,
-     "count": 1,
-     "seconds": 0.08333333333333333,
+     "cols": 12,
+     "rows": 5,
+     "count": 60,
+     "seconds": 5,
      "fps": 12,
      "exact": true,
      "seam_pixels": 0
     },
-    "scale": 1
+    "rest": {
+     "frame_w": 320,
+     "frame_h": 240,
+     "cols": 12,
+     "rows": 5,
+     "count": 60,
+     "seconds": 5,
+     "fps": 12,
+     "exact": true,
+     "seam_pixels": 0
+    },
+    "pick": "Puits de lecture"
    },
    "da-forge": {
     "anchor": [
      160,
      168
     ],
-    "top": 110,
-    "bottom": 193,
+    "top": 81,
+    "bottom": 198,
+    "scale": 1,
     "anim": {
      "frame_w": 320,
      "frame_h": 240,
-     "cols": 1,
-     "rows": 1,
-     "count": 1,
-     "seconds": 0.08333333333333333,
+     "cols": 12,
+     "rows": 6,
+     "count": 72,
+     "seconds": 6,
      "fps": 12,
      "exact": true,
      "seam_pixels": 0
     },
-    "scale": 1
+    "rest": {
+     "frame_w": 320,
+     "frame_h": 240,
+     "cols": 12,
+     "rows": 6,
+     "count": 72,
+     "seconds": 6,
+     "fps": 12,
+     "exact": true,
+     "seam_pixels": 0
+    },
+    "pick": "Creuset suspendu"
    },
    "da-workshop": {
     "anchor": [
      160,
      168
     ],
-    "top": 130,
-    "bottom": 199,
+    "top": 114,
+    "bottom": 197,
+    "scale": 1,
     "anim": {
      "frame_w": 320,
      "frame_h": 240,
-     "cols": 1,
-     "rows": 1,
-     "count": 1,
-     "seconds": 0.08333333333333333,
+     "cols": 12,
+     "rows": 6,
+     "count": 72,
+     "seconds": 6,
      "fps": 12,
      "exact": true,
      "seam_pixels": 0
     },
-    "scale": 1
+    "rest": {
+     "frame_w": 320,
+     "frame_h": 240,
+     "cols": 12,
+     "rows": 6,
+     "count": 72,
+     "seconds": 6,
+     "fps": 12,
+     "exact": true,
+     "seam_pixels": 0
+    },
+    "pick": "Table d’énonciation"
    },
    "da-bedroom": {
     "anchor": [
      160,
      168
     ],
-    "top": 104,
-    "bottom": 205,
+    "top": 106,
+    "bottom": 199,
+    "scale": 1,
     "anim": {
      "frame_w": 320,
      "frame_h": 240,
-     "cols": 1,
-     "rows": 1,
-     "count": 1,
-     "seconds": 0.08333333333333333,
+     "cols": 12,
+     "rows": 5,
+     "count": 60,
+     "seconds": 5,
      "fps": 12,
      "exact": true,
      "seam_pixels": 0
     },
-    "scale": 1
+    "rest": {
+     "frame_w": 320,
+     "frame_h": 240,
+     "cols": 12,
+     "rows": 5,
+     "count": 60,
+     "seconds": 5,
+     "fps": 12,
+     "exact": true,
+     "seam_pixels": 0
+    },
+    "pick": "Tertre aux alcôves"
    },
    "da-soulwell": {
     "anchor": [
@@ -1418,20 +1741,32 @@
      160,
      168
     ],
-    "top": 128,
-    "bottom": 187,
+    "top": 108,
+    "bottom": 199,
+    "scale": 1,
     "anim": {
      "frame_w": 320,
      "frame_h": 240,
-     "cols": 1,
-     "rows": 1,
-     "count": 1,
-     "seconds": 0.08333333333333333,
+     "cols": 12,
+     "rows": 3,
+     "count": 30,
+     "seconds": 2.5,
      "fps": 12,
      "exact": true,
      "seam_pixels": 0
     },
-    "scale": 1
+    "rest": {
+     "frame_w": 320,
+     "frame_h": 240,
+     "cols": 12,
+     "rows": 3,
+     "count": 30,
+     "seconds": 2.5,
+     "fps": 12,
+     "exact": true,
+     "seam_pixels": 0
+    },
+    "pick": "Arène de sable"
    },
    "da-creuset": {
     "anchor": [
@@ -1458,20 +1793,32 @@
      160,
      168
     ],
-    "top": 96,
-    "bottom": 202,
+    "top": 123,
+    "bottom": 199,
     "scale": 1,
     "anim": {
      "frame_w": 320,
      "frame_h": 240,
-     "cols": 1,
-     "rows": 1,
-     "count": 1,
-     "seconds": 0.08333333333333333,
+     "cols": 12,
+     "rows": 6,
+     "count": 72,
+     "seconds": 6,
      "fps": 12,
      "exact": true,
      "seam_pixels": 0
-    }
+    },
+    "rest": {
+     "frame_w": 320,
+     "frame_h": 240,
+     "cols": 12,
+     "rows": 6,
+     "count": 72,
+     "seconds": 6,
+     "fps": 12,
+     "exact": true,
+     "seam_pixels": 0
+    },
+    "pick": "Carrousel aux coffres"
    },
    "da-firing_post": {
     "anchor": [
@@ -1532,6 +1879,70 @@
      "exact": true,
      "seam_pixels": 0
     }
+   },
+   "da-eglise": {
+    "anchor": [
+     160,
+     168
+    ],
+    "top": 94,
+    "bottom": 198,
+    "scale": 1,
+    "anim": {
+     "frame_w": 320,
+     "frame_h": 240,
+     "cols": 12,
+     "rows": 6,
+     "count": 72,
+     "seconds": 6,
+     "fps": 12,
+     "exact": true,
+     "seam_pixels": 0
+    },
+    "rest": {
+     "frame_w": 320,
+     "frame_h": 240,
+     "cols": 12,
+     "rows": 6,
+     "count": 72,
+     "seconds": 6,
+     "fps": 12,
+     "exact": true,
+     "seam_pixels": 0
+    },
+    "pick": "Campanile sans cloche"
+   },
+   "da-ecole": {
+    "anchor": [
+     160,
+     168
+    ],
+    "top": 115,
+    "bottom": 198,
+    "scale": 1,
+    "anim": {
+     "frame_w": 320,
+     "frame_h": 240,
+     "cols": 12,
+     "rows": 6,
+     "count": 72,
+     "seconds": 6,
+     "fps": 12,
+     "exact": true,
+     "seam_pixels": 0
+    },
+    "rest": {
+     "frame_w": 320,
+     "frame_h": 240,
+     "cols": 12,
+     "rows": 6,
+     "count": 72,
+     "seconds": 6,
+     "fps": 12,
+     "exact": true,
+     "seam_pixels": 0
+    },
+    "pick": "Géode ouverte"
    }
   },
   "constants": {

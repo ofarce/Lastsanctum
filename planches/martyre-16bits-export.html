@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><title>Export Martyre 16 bits</title>
+<style>body{margin:0;padding:16px;background:#0c0d10;color:#e2dccb;font:14px system-ui}canvas{image-rendering:pixelated;background:#2b323d;margin:4px 0;display:block;max-width:100%}h2{font-size:15px;margin:14px 0 4px;color:#d84a3a}</style></head><body>
+<p>Export de la Martyre de Byrsa refondue en 16 bits (variante A « Prêtresse d’or », planche <code>martyre-16bits-propositions.html</code>, bilan du 2026-11-19) au format des ennemis du jeu, à 24 images par seconde et 30 % plus vite que la planche : repos, marche, frappe (impact à la moitié), incantation, touchée, mort. Cadre 150 × 120, ancre (60, 114), comme la version précédente (<code>martyre-v3-export.html</code>). Avec <code>?save=1</code> (servie par <code>tools/martyre/serve.py</code>), écrit <code>assets/imported/enemies/martyre_*.png</code> et l’entrée du manifeste.</p>
+<div id="out"></div>
+<script src="assets/engineer-colosse.js"></script><script src="assets/refonte-16bits.js"></script><script src="assets/boss/martyre-16bits.js?v=3"></script>
+<script>
+'use strict';
+const M=MARTYRE16,V='A',SPEED=1.3,FW=M.FW,FH=M.FH,COLS=12;
+const LEN=Object.fromEntries(M.ANIMS.map(a=>[a.id,a.len]));
+// durées de la planche, divisées par SPEED ; n images à 24 i/s ; t en secondes de planche
+const ACTIONS={
+ idle:{dur:LEN.idle/SPEED,f:(i,n)=>M.frame(V,'idle',i/n*LEN.idle),loop:true},
+ walk:{dur:LEN.walk/SPEED,f:(i,n)=>M.frame(V,'walk',i/n*LEN.walk)},
+ attack:{dur:LEN.attack/SPEED,f:(i,n)=>M.frame(V,'attack',i/n*LEN.attack)},
+ cast:{dur:LEN.cast/SPEED,f:(i,n)=>M.frame(V,'cast',i/n*LEN.cast)},
+ hit:{dur:LEN.hit/SPEED,f:(i,n)=>M.frame(V,'hit',i/n*LEN.hit)},
+ death:{dur:LEN.death/SPEED,f:(i,n)=>M.frame(V,'death',i/(n-1)*(LEN.death-1e-3))},
+};
+// hauteur de la silhouette au repos (cornes comprises), mesurée sur l'image 0
+const probe=M.frame(V,'idle',0),pd=probe.getContext('2d').getImageData(0,0,FW,FH).data;let ytop=FH;
+for(let y=0;y<FH&&ytop===FH;y++)for(let x=0;x<FW;x++)if(pd[(y*FW+x)*4+3]>128){ytop=y;break}
+const OUT={strips:{}},meta={ax:M.AX,ay:M.AY,h:M.AY-ytop,stride:+(2.2*1.1/SPEED).toFixed(3),self_bob:true,version:4},root=document.getElementById('out');
+for(const[name,A]of Object.entries(ACTIONS)){const n=Math.max(2,Math.round(A.dur*24)),rows=Math.ceil(n/COLS),c=document.createElement('canvas');c.width=FW*COLS;c.height=FH*rows;const g=c.getContext('2d');
+ for(let i=0;i<n;i++)g.drawImage(A.f(i,n),(i%COLS)*FW,Math.floor(i/COLS)*FH);
+ OUT.strips[name]=c.toDataURL('image/png');(OUT.cv||(OUT.cv={}))[name]=c;
+ meta[name]={frame_w:FW,frame_h:FH,cols:COLS,rows,count:n,fps:+(n/A.dur).toFixed(4),duration:+A.dur.toFixed(4)};if(A.loop)meta[name].loop=true;
+ const h=document.createElement('h2');h.textContent=`${name} : ${n} images, ${A.dur.toFixed(3)} s`;root.appendChild(h);c.style.width=c.width+'px';root.appendChild(c)}
+OUT.meta=meta;window.OUT=OUT;
+// ?shot=1 : sans serveur, les atlas sont posés l'un sous l'autre (couleurs prémultipliées sur noir, puis
+// alpha en niveaux de gris) pour une capture headless que tools/martyre/from_shot.py remet en PNG.
+if(new URLSearchParams(location.search).has('shot')){document.body.innerHTML='';document.body.style.cssText='margin:0;padding:0;background:#000';
+ const W=FW*COLS,H=Object.values(meta).filter(m=>m&&m.rows).reduce((a,m)=>a+m.rows*FH,0),c=document.createElement('canvas');c.width=W;c.height=2*H;c.style.cssText='display:block;width:'+W+'px;height:'+2*H+'px;image-rendering:pixelated;background:#000;margin:0;max-width:none';
+ const g=c.getContext('2d');g.fillStyle='#000';g.fillRect(0,0,W,2*H);let y=0;const order=Object.keys(ACTIONS);
+ {for(const name of order){const im=OUT.cv[name];g.drawImage(im,0,y);
+  const t=document.createElement('canvas');t.width=im.width;t.height=im.height;const q=t.getContext('2d');q.drawImage(im,0,0);const d=q.getImageData(0,0,t.width,t.height);
+  for(let i=0;i<d.data.length;i+=4){const a=d.data[i+3];d.data[i]=d.data[i+1]=d.data[i+2]=a;d.data[i+3]=255}q.putImageData(d,0,0);g.drawImage(t,0,H+y);y+=im.height}
+  document.title='SHOT '+JSON.stringify({W,H,order,h:meta.h})}document.body.appendChild(c)}
+const SAVE=new URLSearchParams(location.search).get('save');
+if(SAVE!=null)(async()=>{const base=SAVE.startsWith('http')?SAVE:'',post=(n,b)=>fetch(base+'/out/'+n,{method:'POST',body:b}).then(r=>{if(!r.ok)throw new Error(n+' '+r.status)});
+ for(const n in OUT.strips)await post(`martyre_${n}.png`,OUT.strips[n]);await post('meta-martyre.json',JSON.stringify(meta));
+ document.title='EXPORT OK';window.SAVED=true})().catch(e=>{document.title='EXPORT ÉCHEC';console.error(e)});
+</script></body></html>

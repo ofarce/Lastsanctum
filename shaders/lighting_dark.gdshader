@@ -10,7 +10,7 @@ render_mode blend_disabled;
 
 const int MAX_LIGHTS = 128;
 uniform vec2 qsize = vec2(360.0, 225.0);
-// Sources en pixels du calque au quart : (x, y, rayon, inutilisé).
+// Sources en pixels du calque au quart : (x, y, rayon, force 0–1 : part de l'ombre creusée au centre).
 uniform vec4 lights[MAX_LIGHTS];
 uniform int light_count = 0;
 // Cycle jour/nuit (core/day_night.gd) : obscurité du dehors (non prémultipliée), appliquée au sud du flanc
@@ -19,15 +19,39 @@ uniform vec4 sky = vec4(0.047, 0.027, 0.016, 0.28);
 uniform vec2 cam = vec2(0.0);
 uniform float px = 2.0;
 uniform vec2 screen = vec2(1440.0, 900.0);
+// Lisière de la montagne (CaveShape.EDGE_*) : base, (a1, f1, a2, f2), phase.
+uniform float edge_base = -78.0;
+uniform vec4 edge_waves = vec4(4.0, 0.13, 3.0, 0.31);
+uniform float edge_phase = 1.0;
+// Ombres de nuages sur la jungle, de jour : force 0–1 et temps (s) de leur dérive vers l'est.
+uniform float clouds = 0.0;
+uniform float cloud_time = 0.0;
+
+float vhash(vec2 p) {
+	return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
+}
+
+float vnoise(vec2 p) {
+	vec2 i = floor(p);
+	vec2 f = fract(p);
+	f = f * f * (3.0 - 2.0 * f);
+	return mix(mix(vhash(i), vhash(i + vec2(1.0, 0.0)), f.x), mix(vhash(i + vec2(0.0, 1.0)), vhash(i + vec2(1.0, 1.0)), f.x), f.y);
+}
 
 void fragment() {
 	vec2 p = UV * qsize;
 	vec2 sp = p * 4.0;
 	float wx = (sp.x - screen.x * 0.5) / (8.0 * px) + cam.x;
 	float wz = (sp.y - screen.y * 0.45) / (8.0 * px) + cam.y;
-	float edge = -78.0 + 4.0 * sin(wx * 0.13) + 3.0 * sin(wx * 0.31 + 1.0);
+	float edge = edge_base + edge_waves.x * sin(wx * edge_waves.y) + edge_waves.z * sin(wx * edge_waves.w + edge_phase);
 	float w = smoothstep(edge - 2.0, edge + 5.0, wz);
 	float a = mix(0.28, sky.a, w);
+	if (clouds > 0.0) {
+		// Grandes ombres molles, étirées d'ouest en est.
+		vec2 cp = vec2(wx - cloud_time * 1.6, wz * 1.7) / 38.0;
+		float n = vnoise(cp) * 0.65 + vnoise(cp * 2.3 + 5.0) * 0.35;
+		a += clouds * w * 0.2 * smoothstep(0.5, 0.72, n);
+	}
 	vec3 rgb = mix(vec3(12.0, 7.0, 4.0) / 255.0, sky.rgb, w) * a;
 	for (int i = 0; i < MAX_LIGHTS; i++) {
 		if (i >= light_count) break;
@@ -35,6 +59,7 @@ void fragment() {
 		if (abs(p.x - l.x) > l.z || abs(p.y - l.y) > l.z) continue;
 		float t = distance(p, l.xy) / l.z;
 		float g = t < 0.45 ? mix(1.0, 0.8, t / 0.45) : (t < 1.0 ? mix(0.8, 0.0, (t - 0.45) / 0.55) : 0.0);
+		g *= l.w;
 		a *= 1.0 - g;
 		rgb *= 1.0 - g;
 	}

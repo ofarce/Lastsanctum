@@ -9,7 +9,14 @@ extends RefCounted
 const KINDS := {
 	"croc": {"hp": 160.0, "speed": 3.4, "range": 1.6, "damage": 14.0, "cd": 1.6, "armor": 4.0, "aggro": 4.0, "leash": 6.0},
 	"feline": {"hp": 90.0, "speed": 4.3, "range": 1.4, "damage": 10.0, "cd": 0.9, "armor": 1.0, "aggro": 6.0, "leash": 12.0},
+	# Biome 2 (Veines de vert-de-gris). Tique de filon : collée à un filon illimité, ne mord que ce qui vient le lui
+	# disputer. Anguille des puits : au centre d'un bassin, immobile ; « zap » : sa décharge frappe d'un coup tout
+	# ce qui se tient à portée du bassin, Exilés comme ennemis des vagues.
+	"tick": {"hp": 40.0, "speed": 1.6, "range": 1.5, "damage": 5.0, "cd": 1.5, "armor": 4.0, "aggro": 4.0, "leash": 7.0},
+	"eel": {"hp": 60.0, "speed": 0.0, "range": 13.5, "damage": 8.0, "cd": 3.0, "armor": 0.0, "aggro": 13.5, "leash": 20.0, "zap": true},
 }
+## Instant de la décharge dans l'animation d'attaque de l'anguille (elle dresse la tête, puis décharge).
+const ZAP_WINDUP := 0.7
 const CROCS := 10
 const FELINES := 6
 const RESPAWN_WAVES := 3
@@ -24,13 +31,25 @@ static func lairs(state: TerrainState, map_seed: int) -> Array[Dictionary]:
 	var f := state.flora
 	if r == null:
 		return out
+	# Biome 2 : une tique devant chaque filon illimité, une anguille dans chaque bassin.
+	var north := Biomes.north_z(0)
+	for origin: Vector2i in state.lodes:
+		var c := Vector2(origin + Vector2i.ONE) * 4.0
+		if c.y < north:
+			var at := state.push_out_of_rock(c + Vector2(0.0, 6.0))
+			out.append({"kind": "tick", "x": at.x, "z": at.y})
+	for pool: Dictionary in state.pools:
+		var pc: Vector2 = pool["center"]
+		if pc.y < north:
+			out.append({"kind": "eel", "x": pc.x, "z": pc.y})
 	var rng := Rng.new(map_seed ^ 0xc20c)
 	# Crocodiles : la moitié près d'un pont, le reste le long des berges.
 	var tries := 0
-	while out.size() < CROCS and tries < 400:
+	var base := out.size()
+	while out.size() - base < CROCS and tries < 400:
 		tries += 1
 		var x: float
-		if out.size() < CROCS / 2:
+		if out.size() - base < CROCS / 2:
 			var b: Dictionary = r.bridges[floori(rng.next() * r.bridges.size())]
 			x = float(b["x"]) + (1.0 if rng.next() < 0.5 else -1.0) * (River.DECK_HALF + 4.0 + rng.next() * 8.0)
 		else:
@@ -117,17 +136,30 @@ static func prey(e: Enemy, alive: Array[Unit]) -> Unit:
 	var reach := aggro(e)
 	var best: Unit = null
 	var bd := INF
+	var ex := e.x
+	var ez := e.z
 	for u in alive:
-		if u.hidden:
+		# Écart sur un seul axe déjà hors de portée : la distance (≥ |dx| et ≥ |dz|) l'est aussi.
+		var dx := u.x - ex
+		if dx >= reach or dx <= -reach:
 			continue
-		var d := Combat.hyp(u.x - e.x, u.z - e.z)
+		var dz := u.z - ez
+		if dz >= reach or dz <= -reach or u.hidden:
+			continue
+		var d := Combat.hyp(dx, dz)
 		if d < reach and d < bd and u.pos().distance_to(e.home) < leash + reach:
 			best = u
 			bd = d
 	for o: Enemy in GameState.enemies:
+		var dx := o.x - ex
+		if dx >= reach or dx <= -reach:
+			continue
+		var dz := o.z - ez
+		if dz >= reach or dz <= -reach:
+			continue
 		if o == e or o.neutral or o.hp <= 0.0:
 			continue
-		var d := Combat.hyp(o.x - e.x, o.z - e.z)
+		var d := Combat.hyp(dx, dz)
 		if d < reach and d < bd and o.pos().distance_to(e.home) < leash + reach:
 			best = o
 			bd = d
@@ -149,7 +181,7 @@ static func tick(sim: Simulation, dt: float, alive: Array[Unit]) -> void:
 		var d := Combat.hyp(goal.x - e.x, goal.y - e.z)
 		var limit := 0.3 if target == null else e.reach
 		if d > limit:
-			var spd := e.speed * (Catalog.SILLON["slow"] if e.slow_until > GameState.sim_time else 1.0) * Weather.speed_at(e.x, e.z)
+			var spd := e.speed * (Catalog.SILLON["slow"] if e.slow_until > GameState.sim_time else 1.0) * Weather.speed_at(e.x, e.z, e.kind != "croc")
 			if target == null:
 				spd *= 0.5
 			var next := sim.steer(e, goal)
@@ -160,12 +192,39 @@ static func tick(sim: Simulation, dt: float, alive: Array[Unit]) -> void:
 					e.x = step.x
 					e.z = step.y
 				e.face = -1 if dir.x < 0.0 else 1
-		if target != null and d <= e.reach and e.cooldown <= 0.0:
+		# Anguille : décharge différée de ZAP_WINDUP, sur tout ce qui est à portée du bassin.
+		if e.strike_at < INF and GameState.sim_time >= e.strike_at:
+			e.strike_at = INF
+			_zap(sim, e, alive)
+		if target != null and d <= e.reach and e.cooldown <= 0.0 and KINDS[e.kind].get("zap", false):
+			e.attack_started = GameState.sim_time
+			e.face = -1 if target.x < e.x else 1
+			e.strike_at = GameState.sim_time + ZAP_WINDUP
+			e.cooldown = KINDS[e.kind]["cd"]
+		elif target != null and d <= e.reach and e.cooldown <= 0.0:
 			e.attack_started = GameState.sim_time
 			e.face = -1 if target.x < e.x else 1
 			sim.combat.damage(target, Combat.after_armor(target, e.damage))
 			Combat.flash(target.x, target.z, Color("#c86a4a"))
+			Sfx.at("croc" if e.kind == "croc" else "felin", e.x, e.z)
 			e.cooldown = KINDS[e.kind]["cd"]
+
+
+static func _zap(sim: Simulation, e: Enemy, alive: Array[Unit]) -> void:
+	var hit := false
+	for u: Unit in alive:
+		if not u.hidden and Combat.hyp(u.x - e.x, u.z - e.z) <= e.reach:
+			sim.combat.damage(u, Combat.after_armor(u, e.damage))
+			Combat.flash(u.x, u.z, Color("#c0dcff"))
+			hit = true
+	for o: Enemy in GameState.enemies.duplicate():
+		if o != e and not o.neutral and o.hp > 0.0 and Combat.hyp(o.x - e.x, o.z - e.z) <= e.reach:
+			sim.combat.damage(o, e.damage)
+			Combat.flash(o.x, o.z, Color("#c0dcff"))
+			hit = true
+	Combat.zone(e.x, e.z, e.reach, Color("#6a9aff"))
+	if hit:
+		Sfx.at("bouclier_dore", e.x, e.z)
 
 
 ## Bête neutre qui attaque cet ennemi des vagues (pour qu'il riposte), ou null.

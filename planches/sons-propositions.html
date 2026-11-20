@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sons · propositions</title>
+<style>
+/* Planche d'écoute : barre d'outils collante, cartes par catégorie, verdict par son. */
+:root{--bg:#14161b;--panel:#1d2028;--line:#2c313c;--ink:#e6e8ee;--mute:#9aa1b0;--acc:#7ab0ff;
+  --ok:#5fbf7a;--redo:#e0b04a;--no:#e0583a;color-scheme:dark}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,sans-serif}
+main{max-width:1400px;margin:0 auto;padding:24px max(16px,env(safe-area-inset-right,0px)) 60px max(16px,env(safe-area-inset-left,0px))}
+h1{font-size:26px;margin:0 0 4px}
+h2{font-size:18px;margin:28px 0 10px;display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+h2 small{color:var(--mute);font-weight:400;font-size:13px}
+.sub{color:var(--mute);margin:0 0 14px;max-width:960px}
+.bar{position:sticky;top:0;background:var(--bg);padding:8px 0;z-index:2;display:flex;gap:6px;flex-wrap:wrap;align-items:center;border-bottom:1px solid var(--line);margin-bottom:6px}
+.bar .sep{width:1px;height:24px;background:var(--line);margin:0 4px}
+.bar .lab{color:var(--mute);font-size:13px}
+button{background:#2a2f3a;color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:5px 10px;cursor:pointer;font:inherit;font-size:13px}
+button:hover{border-color:#4a5262}
+button:focus-visible,textarea:focus-visible,input:focus-visible{outline:2px solid var(--acc);outline-offset:1px}
+button.on{background:#26364f;border-color:#3e5d8a}
+#tally{margin-left:auto;font-size:13px;color:var(--mute);font-variant-numeric:tabular-nums}
+#tally b.k{color:var(--ok)} #tally b.r{color:var(--redo)} #tally b.n{color:var(--no)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,330px),1fr));gap:12px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px 14px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.card[data-v="garder"]{border-color:#2f6a40}
+.card[data-v="revoir"]{border-color:#7a6226}
+.card[data-v="rejeter"]{border-color:#7a3a2a;opacity:.7}
+.top{display:flex;gap:10px;align-items:center}
+.play{flex:none;width:40px;height:40px;border-radius:50%;padding:0;font-size:15px;display:grid;place-items:center}
+.play.playing{background:#26364f;border-color:var(--acc)}
+.top h3{margin:0;font-size:15px;line-height:1.3}
+.top .meta{color:var(--mute);font-size:12px;font-variant-numeric:tabular-nums}
+.prog{height:3px;background:var(--line);border-radius:2px;overflow:hidden}
+.prog i{display:block;height:100%;width:0;background:var(--acc)}
+.card p{margin:0;color:#c9cdd6;font-size:14px}
+.hook{font:12px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--mute);overflow-wrap:anywhere}
+.verdict{display:flex;gap:6px;flex-wrap:wrap}
+.verdict button{flex:1 1 0;min-width:0}
+.verdict button.sel[data-v="garder"]{background:#1f3a28;border-color:var(--ok)}
+.verdict button.sel[data-v="revoir"]{background:#3a321b;border-color:var(--redo)}
+.verdict button.sel[data-v="rejeter"]{background:#3a2019;border-color:var(--no)}
+textarea{background:#171a21;color:var(--ink);border:1px solid var(--line);border-radius:6px;font:inherit;font-size:13px;padding:6px 8px;resize:vertical;min-height:32px;width:100%;box-sizing:border-box}
+.ref{border-style:dashed}
+.note{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px 14px;color:#c9cdd6;font-size:14px;max-width:960px}
+.note b{color:var(--ink)}
+#out{display:none;margin-top:10px;width:100%;min-height:160px;font-family:ui-monospace,monospace}
+input[type=range]{width:110px;accent-color:var(--acc)}
+@media (prefers-reduced-motion:reduce){.prog i{transition:none}}
+</style>
+</head>
+<body>
+<main>
+<h1>Sons · propositions</h1>
+<p class="sub">Un bruitage par élément du jeu qui en réclame un, 55 propositions plus « victoire » en référence. Tous sont synthétisés par le même moteur que <code>tools/sons/generer.py</code> (32 kHz, triangle, pulsation, bruit filtré), sur le ton validé : discret, sobre, en la ou mi mineur, sans fanfare ni basse lourde. Le dB indiqué est le volume conseillé pour <code>Events.sfx.emit</code> ; le mode « Volumes en jeu » l'applique pour entendre l'équilibre réel.</p>
+<div class="note"><b>Mode d'emploi.</b> Écoutez, puis marquez chaque son <b>Garder</b>, <b>À revoir</b> (avec une note : plus court, plus aigu…) ou <b>Rejeter</b>. Les choix restent dans ce navigateur. « Copier le bilan » produit un texte à me coller pour que j'intègre les sons gardés et refasse les autres. Source : <code>tools/sons/propositions.py</code>.</div>
+
+<div class="bar" id="bar">
+  <span class="lab">Catégorie</span>
+  <span id="cats"></span>
+  <span class="sep"></span>
+  <button id="ingame" class="on" aria-pressed="true">Volumes en jeu</button>
+  <label class="lab" for="vol">Volume</label><input id="vol" type="range" min="0" max="1" step="0.05" value="0.8">
+  <button id="playcat">▶ Enchaîner la catégorie</button>
+  <button id="stop">■</button>
+  <span class="sep"></span>
+  <button id="copy">Copier le bilan</button>
+  <span id="tally"></span>
+</div>
+<textarea id="out" readonly aria-label="Bilan"></textarea>
+<div id="list"></div>
+</main>
+
+<script src="assets/sons/sons.js"></script>
+<script>
+const SONS = window.SONS || [];
+const KEY = "sons-propositions-v1";
+let state = {};
+try { state = JSON.parse(localStorage.getItem(KEY) || "{}"); } catch (e) { state = {}; }
+const save = () => { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} };
+
+const cats = [...new Set(SONS.map(s => s.cat))];
+let curCat = "Toutes", inGame = true, current = null, chain = [];
+const audio = new Audio();
+const vol = document.getElementById("vol");
+
+function gainFor(s){
+  const master = +vol.value;
+  // Le plus fort (−6 dB) sert de plafond : les autres sont joués à leur écart réel.
+  return inGame ? master * Math.min(1, Math.pow(10, (s.db + 6) / 20)) : master;
+}
+
+function play(s, then){
+  stop(false);
+  audio.src = "assets/sons/" + s.id + ".wav";
+  audio.volume = gainFor(s);
+  current = s;
+  const card = document.getElementById("c-" + s.id);
+  card.querySelector(".play").classList.add("playing");
+  card.querySelector(".play").textContent = "■";
+  audio.onended = () => { reset(card); current = null; if (then) setTimeout(then, 350); };
+  audio.play().catch(() => reset(card));
+}
+function reset(card){
+  const b = card.querySelector(".play"); b.classList.remove("playing"); b.textContent = "▶";
+  card.querySelector(".prog i").style.width = "0";
+}
+function stop(clearChain = true){
+  if (clearChain) chain = [];
+  audio.pause();
+  if (current) reset(document.getElementById("c-" + current.id));
+  current = null;
+}
+audio.ontimeupdate = () => {
+  if (!current || !audio.duration) return;
+  document.querySelector("#c-" + current.id + " .prog i").style.width = (100 * audio.currentTime / audio.duration) + "%";
+};
+
+function render(){
+  const cbox = document.getElementById("cats");
+  cbox.innerHTML = "";
+  ["Toutes", ...cats].forEach(c => {
+    const b = document.createElement("button");
+    b.textContent = c; b.className = c === curCat ? "on" : "";
+    b.onclick = () => { curCat = c; render(); };
+    cbox.append(b, " ");
+  });
+  const list = document.getElementById("list");
+  list.innerHTML = "";
+  for (const c of cats) {
+    if (curCat !== "Toutes" && c !== curCat) continue;
+    const items = SONS.filter(s => s.cat === c);
+    const h = document.createElement("h2");
+    h.innerHTML = `${c} <small>${items.length} son${items.length > 1 ? "s" : ""}</small>`;
+    const g = document.createElement("div"); g.className = "grid";
+    for (const s of items) g.append(card(s));
+    list.append(h, g);
+  }
+  tally();
+}
+
+function card(s){
+  const st = state[s.id] || {};
+  const el = document.createElement("article");
+  el.className = "card" + (s.cat === "Référence" ? " ref" : "");
+  el.id = "c-" + s.id;
+  if (st.v) el.dataset.v = st.v;
+  el.innerHTML = `
+    <div class="top">
+      <button class="play" aria-label="Écouter ${s.elem}">▶</button>
+      <div><h3>${s.elem}</h3><div class="meta">${s.id} · ${s.dur.toFixed(2).replace(".", ",")} s · ${s.db} dB</div></div>
+    </div>
+    <div class="prog"><i></i></div>
+    <p>${s.desc}</p>
+    <div class="hook">${s.hook}</div>
+    ${s.cat === "Référence" ? "" : `
+    <div class="verdict">
+      <button data-v="garder">Garder</button><button data-v="revoir">À revoir</button><button data-v="rejeter">Rejeter</button>
+    </div>
+    <textarea id="n-${s.id}" placeholder="Note (facultatif) : plus court, plus aigu, autre idée…" rows="1"></textarea>`}`;
+  el.querySelector(".play").onclick = () => { if (current && current.id === s.id) stop(); else { chain = []; play(s); } };
+  el.querySelectorAll(".verdict button").forEach(b => {
+    if (st.v === b.dataset.v) b.classList.add("sel");
+    b.onclick = () => {
+      const v = (state[s.id] || {}).v === b.dataset.v ? undefined : b.dataset.v;
+      state[s.id] = { ...(state[s.id] || {}), v }; save();
+      el.querySelectorAll(".verdict button").forEach(x => x.classList.toggle("sel", x.dataset.v === v));
+      if (v) el.dataset.v = v; else delete el.dataset.v;
+      tally();
+    };
+  });
+  const ta = el.querySelector("textarea");
+  if (ta) { ta.value = st.note || ""; ta.oninput = () => { state[s.id] = { ...(state[s.id] || {}), note: ta.value }; save(); }; }
+  return el;
+}
+
+function tally(){
+  const vals = SONS.filter(s => s.cat !== "Référence").map(s => (state[s.id] || {}).v);
+  const k = vals.filter(v => v === "garder").length, r = vals.filter(v => v === "revoir").length, n = vals.filter(v => v === "rejeter").length;
+  document.getElementById("tally").innerHTML = `<b class="k">${k}</b> gardés · <b class="r">${r}</b> à revoir · <b class="n">${n}</b> rejetés · ${vals.length - k - r - n} sans avis`;
+}
+
+document.getElementById("ingame").onclick = e => {
+  inGame = !inGame; e.target.classList.toggle("on", inGame); e.target.setAttribute("aria-pressed", inGame);
+  if (current) audio.volume = gainFor(current);
+};
+vol.oninput = () => { if (current) audio.volume = gainFor(current); };
+document.getElementById("stop").onclick = () => stop();
+document.getElementById("playcat").onclick = () => {
+  chain = SONS.filter(s => curCat === "Toutes" || s.cat === curCat);
+  const next = () => { const s = chain.shift(); if (!s) return; document.getElementById("c-" + s.id).scrollIntoView({ block: "nearest", behavior: "smooth" }); play(s, next); };
+  next();
+};
+document.getElementById("copy").onclick = () => {
+  const lines = ["Bilan planche sons :"];
+  for (const [lab, v] of [["Garder", "garder"], ["À revoir", "revoir"], ["Rejeter", "rejeter"], ["Sans avis", undefined]]) {
+    const items = SONS.filter(s => s.cat !== "Référence" && (state[s.id] || {}).v === v);
+    if (!items.length) continue;
+    lines.push("", lab + " (" + items.length + ")");
+    for (const s of items) { const note = (state[s.id] || {}).note; lines.push(`- ${s.id} (${s.elem})${note ? " : " + note.trim() : ""}`); }
+  }
+  const txt = lines.join("\n"), out = document.getElementById("out");
+  out.value = txt; out.style.display = "block";
+  const sel = () => { out.focus(); out.select(); };
+  if (navigator.clipboard) navigator.clipboard.writeText(txt).then(() => { document.getElementById("copy").textContent = "Bilan copié"; setTimeout(() => document.getElementById("copy").textContent = "Copier le bilan", 1500); }, sel);
+  else sel();
+};
+
+if (!SONS.length) document.getElementById("list").innerHTML = '<p class="sub">Lancez <code>python3 tools/sons/propositions.py</code> pour générer les sons.</p>';
+else render();
+</script>
+</body>
+</html>

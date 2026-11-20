@@ -67,8 +67,23 @@ func _draw() -> void:
 		var o := openness(b.chest_in_at if kind == "in" else b.chest_out_at, now)
 		var i := clampi(roundi(o * (count - 1)), 0, count - 1)
 		var row := int(_meta["rows"][kind])
+		if GameState.hud_chest.get("building") == b and GameState.hud_chest.get("kind") == kind:
+			halo(self, Proj.nat(p.x, 0.0, p.y) - position + Vector2(0, -1), 16.0, 7.0)
 		draw_texture_rect_region(_tex, Rect2(Proj.nat(p.x, 0.0, p.y) - position - anchor, frame),
 			Rect2(Vector2(i, row) * frame, frame))
+
+
+## Halo de sélection d'un coffre (mêmes teintes que celui des unités) : disque clair et ellipse de contour au sol.
+static func halo(ci: CanvasItem, at: Vector2, rx: float, ry: float) -> void:
+	var fill := PackedVector2Array()
+	var line := PackedVector2Array()
+	for i in 49:
+		var d := Vector2(cos(TAU * i / 48.0) * rx, sin(TAU * i / 48.0) * ry)
+		if i < 48:
+			fill.append(at + d * 1.3)
+		line.append(at + d)
+	ci.draw_colored_polygon(fill, UnitView.SEL_FILL)
+	ci.draw_polyline(line, UnitView.SEL_LINE, 1.0, true)
 
 
 func _draw_ghost(at: Vector2, now: float) -> void:

@@ -1,0 +1,345 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Boutons de fabrication</title>
+<style>
+@font-face{font-family:NotoHud;src:url(../assets/fonts/NotoSerif-Regular.ttf)}
+:root{--bg:#0b120e;--panel:#111b14;--line:#2a3a2c;--txt:#dcd8bc;--mut:#93a08a;--acc:#e8c870}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--txt);font:15px/1.45 system-ui,sans-serif}
+header,main{max-width:900px;margin:auto;padding:18px 16px}
+h1{margin:0;font-weight:600;letter-spacing:.08em;font-size:24px;color:var(--acc)}
+header p,section>p{color:var(--mut);margin:6px 0 0}
+section{margin:34px 0 46px}
+h2{color:var(--acc);font-weight:600;letter-spacing:.05em;margin:0;font-size:21px}
+p.sub{margin:0 0 4px;color:var(--txt);font-style:italic}
+.wrap{position:relative;margin-top:44px}
+.wrap canvas{display:block;width:100%;image-rendering:pixelated;image-rendering:crisp-edges}
+.strip{max-width:760px;margin-top:60px}
+.labels{display:grid;grid-template-columns:repeat(5,1fr);max-width:760px;gap:0;text-align:center;color:var(--mut);font-size:13px;margin-top:4px}
+.hint{color:var(--mut);font-size:13px;margin-top:6px}
+.why{border:1px solid var(--line);background:var(--panel);padding:12px 16px;color:var(--mut)}
+.why b{color:var(--txt)}
+/* Bulle de survol : nom, coût (stock entre parenthèses), mention éventuelle. */
+.bubble{position:absolute;z-index:4;pointer-events:none;font-family:NotoHud,serif;font-size:15px;line-height:1.25;padding:6px 10px;white-space:nowrap;display:flex;flex-direction:column;gap:1px}
+.bubble[hidden]{display:none}
+.bubble b{font-weight:400;font-size:17px}
+.bubble i{font-style:normal}.bubble i.short{opacity:.55}
+.bubble em{font-style:normal;font-size:13px}
+.bb-brass .bubble{background:#10140d;border:2px solid #c29148;color:#eee3c9}.bb-brass .bubble b{color:#ffe5ac}.bb-brass .bubble em{color:#e8a090}
+.bb-slate .bubble{background:#272d37;border:2px solid #6e7a88;color:#e8e4da;clip-path:polygon(6px 0,calc(100% - 6px) 0,100% 6px,100% calc(100% - 6px),calc(100% - 6px) 100%,6px 100%,0 calc(100% - 6px),0 6px)}.bb-slate .bubble em{color:#e8a090}
+.bb-bronze .bubble{background:#1e1914;border:2px solid #a07448;color:#e8d4b0}.bb-bronze .bubble b{color:#f6e0b4}.bb-bronze .bubble em{color:#e09080}
+.bb-snes .bubble{background:linear-gradient(#5a6ad0,#141c6a);border:2px solid #e6e8f4;outline:2px solid #0a0c26;color:#fff;text-shadow:1px 1px 0 #10123a}.bb-snes .bubble em{color:#ffc8b8}
+.bb-bench .bubble{background:#e8dcc0;border:2px solid #6e4830;color:#2e2016}.bb-bench .bubble em{color:#802c24}
+@media(max-width:560px){.bubble{font-size:13px}.bubble b{font-size:15px}}
+</style></head><body>
+<header><h1>BOUTONS DE FABRICATION · HABILLAGES</h1>
+<p>Le bouton ne montre plus que l’objet, la touche et le nombre d’exemplaires au coffre rouge. Le nom et le coût s’affichent seulement au survol, dans une bulle. Chaque panneau est dessiné au pixel du jeu (grille 6 × 2, boutons de 66 × 46) puis agrandi. Les objets sont les icônes 32 × 32 de la planche <i>rendus-objets</i>, dans le style de la charte (contour noir, 4 valeurs). Dans chaque panneau, les Flèches sont en fabrication, le Poste de tir est bloqué, et il y a des Flèches et de la Fibre au coffre rouge. Sous chaque panneau, les cinq états de l’Arc sont montrés.</p></header>
+<main id="root"></main>
+<main><section><h2>À trancher</h2><p class="why"><b>Choisis un habillage</b> (1 à 5), ou un mélange : par exemple « 1, avec le coffre miniature de 5 ». Mon conseil : <b>2 · Alvéole d’ardoise</b>. C’est la matière de la caverne et du reliquaire, la languette grenat se repère bien, et l’objet en couleur ressort sur l’ardoise sans cadre doré. La <b>4</b> vaut le coup si le HUD doit s’accorder avec la bannière bleue.</p></section></main>
+<script>
+'use strict';
+/* Objets 32 × 32 extraits de rendus-objets-propositions.html (palettes M, raster R, DRAW). */
+const OUT = '#0b090b';
+const M = {
+  wood:['#3e2617','#6e4830','#9c7048','#c49a68'], bark:['#2e2016','#4e3826','#6e5238','#8e7050'],
+  iron:['#3c4550','#6a7784','#9aa8b4','#d0dae0'], copper:['#5e2e1c','#a45a34','#d4885e','#f2b890'],
+  gold:['#6a4614','#b8862a','#e8c060','#fff0a8'], rock:['#1e232b','#333a46','#4e5866','#6e7a88'],
+  fiber:['#6a5634','#a08a5c','#c8b080','#ecdcb0'], flame:['#a8401a','#e07a20','#f8c040','#fff4c8'],
+  cord:['#6a5a40','#a8946c','#d8c8a0','#f0e4c4'], blue:['#1c2c4c','#2e4c80','#4c76b0','#7ea4d8'],
+  red:['#4c1a18','#802c24','#b04a3a','#d87a64'], marble:['#4a4c50','#6e7074','#94969a','#bcbcb8'],
+  moss:['#22301e','#34482a','#4e6a3a','#6e8a4e'], cyan:['#1f6a74','#35a8b8','#5fe0f0','#c8f8ff'],
+};
+
+/* ---------- Petit raster ---------- */
+function R(w,h){ return {w,h,p:new Array(w*h).fill(null)}; }
+function px(r,x,y,c){ x=Math.round(x); y=Math.round(y); if(x>=0&&y>=0&&x<r.w&&y<r.h) r.p[y*r.w+x]=c; }
+function get(r,x,y){ return (x>=0&&y>=0&&x<r.w&&y<r.h)? r.p[y*r.w+x] : null; }
+function rect(r,x,y,w,h,c){ for(let j=0;j<h;j++) for(let i=0;i<w;i++) px(r,x+i,y+j,c); }
+function line(r,x0,y0,x1,y1,c){ const n=Math.max(Math.abs(x1-x0),Math.abs(y1-y0))||1; for(let i=0;i<=n;i++) px(r,x0+(x1-x0)*i/n,y0+(y1-y0)*i/n,c); }
+function disc(r,cx,cy,rad,c){ for(let y=Math.floor(cy-rad);y<=cy+rad;y++) for(let x=Math.floor(cx-rad);x<=cx+rad;x++) if((x-cx)**2+(y-cy)**2<=rad*rad+0.3) px(r,x,y,c); }
+function poly(r,pts,c){ let x0=1e9,x1=-1e9,y0=1e9,y1=-1e9; pts.forEach(([x,y])=>{x0=Math.min(x0,x);x1=Math.max(x1,x);y0=Math.min(y0,y);y1=Math.max(y1,y);});
+  for(let y=Math.floor(y0);y<=y1;y++) for(let x=Math.floor(x0);x<=x1;x++){ let ins=false; for(let i=0,j=pts.length-1;i<pts.length;j=i++){ const [xi,yi]=pts[i],[xj,yj]=pts[j]; if(((yi>y+.5)!=(yj>y+.5))&&(x+.5<(xj-xi)*(y+.5-yi)/(yj-yi)+xi)) ins=!ins; } if(ins) px(r,x,y,c);} }
+/* Bâton épais modelé : ombre dessous, lumière dessus. */
+function rod(r,x0,y0,x1,y1,rad,m){ const n=Math.ceil(Math.hypot(x1-x0,y1-y0)*2)||1;
+  for(let i=0;i<=n;i++){ const t=i/n; disc(r,x0+(x1-x0)*t,y0+(y1-y0)*t+0.6,rad,m[0]); }
+  for(let i=0;i<=n;i++){ const t=i/n; disc(r,x0+(x1-x0)*t,y0+(y1-y0)*t,rad,m[1]); }
+  if(rad>=1) for(let i=0;i<=n;i++){ const t=i/n; px(r,x0+(x1-x0)*t-0.4,y0+(y1-y0)*t-rad+0.4,m[2]); } }
+function outline(r,c=OUT){ const add=[]; for(let y=0;y<r.h;y++) for(let x=0;x<r.w;x++) if(!get(r,x,y)&&(get(r,x+1,y)||get(r,x-1,y)||get(r,x,y+1)||get(r,x,y-1))) add.push([x,y]); add.forEach(([x,y])=>px(r,x,y,c)); }
+
+/* ---------- Objets (32 × 32) ---------- */
+function ingot(r,m,glyph){
+  poly(r,[[5,20],[27,20],[29,25],[3,25]],m[0]);          // flanc avant
+  poly(r,[[3,25],[29,25],[28,27],[4,27]],m[0]);
+  poly(r,[[8,12],[24,12],[27,20],[5,20]],m[1]);          // face oblique avant
+  poly(r,[[10,9],[22,9],[24,12],[8,12]],m[2]);           // dessus
+  line(r,10,9,22,9,m[3]); line(r,8,12,24,12,m[3]); px(r,6,19,m[2]); line(r,9,13,7,18,m[2]);
+  if(glyph){ line(r,14,15,18,15,m[0]); line(r,16,14,16,18,m[0]); }
+}
+const DRAW = {
+  wood(r){ rod(r,6,22,24,10,4,M.bark); rod(r,9,25,27,17,3.5,M.bark);
+    [[24,10,4],[27,17,3.5]].forEach(([x,y,s])=>{ disc(r,x,y,s,M.wood[2]); disc(r,x,y,s-1.4,M.wood[3]); disc(r,x,y,s-2.6,M.wood[1]); px(r,x,y,M.wood[2]); }); },
+  rock(r){ poly(r,[[6,20],[9,11],[17,7],[25,10],[28,19],[22,26],[10,26]],M.rock[1]); poly(r,[[9,11],[17,7],[25,10],[20,15],[12,15]],M.rock[3]); poly(r,[[20,15],[25,10],[28,19],[22,26]],M.rock[2]); poly(r,[[6,20],[12,15],[20,15],[22,26],[10,26]],M.rock[1]); line(r,12,15,20,15,M.rock[0]); line(r,20,15,22,25,M.rock[0]); px(r,14,10,'#e8e4da'); px(r,15,10,'#bcb8ae'); },
+  torch(r){ rod(r,10,27,19,13,1.6,M.wood); rect(r,17,10,5,5,M.fiber[1]); line(r,17,11,21,11,M.fiber[3]); line(r,17,13,21,13,M.fiber[0]);
+    poly(r,[[16,10],[23,10],[22,5],[20,1],[18,4]],M.flame[1]); poly(r,[[17,10],[22,10],[21,6],[20,3],[19,6]],M.flame[2]); rect(r,19,7,2,3,M.flame[3]); },
+  pickaxe(r){ rod(r,8,27,21,9,1.6,M.wood);
+    const pts=[]; for(let a=-1.15;a<=1.15;a+=0.08) pts.push([18+Math.sin(a)*11-Math.cos(a)*1, 11-Math.cos(a)*4+Math.sin(a)*4]);
+    pts.forEach(([x,y],i)=>disc(r,x,y+0.7,1.7,M.iron[0])); pts.forEach(([x,y])=>disc(r,x,y,1.5,M.iron[2])); pts.forEach(([x,y])=>px(r,x,y-1,M.iron[3])); rect(r,19,9,3,4,M.iron[1]); },
+  arrows(r){ [[0,0],[3,3],[-3,3]].forEach(([dx,dy])=>{ line(r,6+dx,26+dy-3,22+dx,7+dy,M.wood[2]); line(r,7+dx,26+dy-3,23+dx,7+dy,M.wood[1]);
+      poly(r,[[21+dx,6+dy],[26+dx,3+dy],[24+dx,9+dy]],M.iron[2]); px(r,24+dx,5+dy,M.iron[3]);
+      poly(r,[[5+dx,22+dy],[3+dx,25+dy],[7+dx,26+dy],[9+dx,24+dy]],M.red[2]); px(r,5+dx,24+dy,M.red[3]); }); },
+  bow(r){ const pts=[]; for(let a=-1.2;a<=1.2;a+=0.05) pts.push([9+Math.cos(a)*11, 16+Math.sin(a)*12]);
+    line(r,pts[0][0],pts[0][1],pts[pts.length-1][0],pts[pts.length-1][1],M.cord[3]);
+    pts.forEach(([x,y])=>disc(r,x,y,1.3,M.wood[1])); pts.forEach(([x,y])=>px(r,x+0.5,y,M.wood[3])); rect(r,18,14,3,5,M.fiber[1]); line(r,18,15,20,15,M.fiber[3]); },
+  sword(r){ poly(r,[[25,3],[28,4],[14,19],[12,17]],M.iron[2]); line(r,26,4,13,18,M.iron[3]); line(r,27,5,14,19,M.iron[1]);
+    rod(r,9,15,17,23,1.2,M.gold); rod(r,11,21,6,26,1.3,M.wood); disc(r,5,27,1.8,M.gold[2]); },
+  shield(r){ disc(r,16,17,11.5,M.wood[0]); disc(r,16,16,11,M.iron[1]); disc(r,16,16,9.5,M.wood[1]); for(let x=8;x<=24;x+=4) line(r,x,8,x,25,M.wood[0]);
+    disc(r,16,16,3.3,M.iron[1]); disc(r,15.5,15.5,2.2,M.iron[2]); px(r,15,15,M.iron[3]); for(let a=0;a<6.28;a+=0.4) px(r,16+Math.cos(a)*10.3-0.4,16+Math.sin(a)*10.3-0.6,a>3.6&&a<5.8?M.iron[3]:M.iron[2]); },
+  chest(r){ rect(r,5,15,22,11,M.wood[1]); rect(r,5,24,22,2,M.wood[0]); poly(r,[[5,15],[27,15],[26,8],[6,8]],M.wood[2]); line(r,6,8,26,8,M.wood[3]);
+    for(let x=6;x<27;x+=5) line(r,x,16,x,23,M.wood[0]); [8,22].forEach(x=>{ rect(r,x,8,2,18,M.iron[1]); line(r,x,8,x,25,M.iron[2]); }); rect(r,14,14,4,5,M.iron[2]); px(r,15,16,OUT); px(r,16,16,OUT); },
+  wood_fiber(r){ for(let i=0;i<7;i++){ const y=9+i*2.2; const c=M.fiber[i%2?1:2]; line(r,5,y+3,27,y-1,c); line(r,5,y+4,27,y,M.fiber[0]); }
+    rect(r,11,7,3,16,M.cord[0]); line(r,11,7,11,22,M.cord[2]); rect(r,19,5,3,16,M.cord[0]); line(r,19,5,19,20,M.cord[2]); },
+  firing_post(r){ for(let i=0;i<5;i++){ const x=6+i*4; poly(r,[[x,10],[x+4,9],[x+4,26],[x,26]],M.wood[i%2?1:2]); line(r,x,10,x,26,M.wood[0]); poly(r,[[x,10],[x+2,6],[x+4,9]],M.wood[3]); }
+    rect(r,6,15,20,2,M.wood[0]); rect(r,6,21,20,2,M.wood[0]); rect(r,14,12,4,2,OUT); },
+  barricade(r){ rod(r,4,25,26,8,1.8,M.wood); rod(r,6,8,28,24,1.8,M.wood); rod(r,3,17,29,17,1.6,M.bark);
+    poly(r,[[9,27],[13,22],[20,22],[24,27]],M.rock[2]); line(r,13,22,20,22,M.rock[3]); line(r,9,27,24,27,M.rock[0]); },
+  fishing_rod(r){ line(r,4,28,27,4,M.wood[1]); line(r,5,28,27,5,M.wood[2]); rod(r,4,28,8,24,1.4,M.bark); disc(r,9,23,2.2,M.iron[1]); px(r,9,22,M.iron[3]);
+    for(let y=5;y<22;y++) px(r,27+Math.sin(y*0.4)*0.6,y,M.cord[3]); disc(r,27,23,1.5,M.red[2]); px(r,26,22,M.red[3]); line(r,27,25,27,27,M.iron[2]); px(r,26,28,M.iron[2]); px(r,25,27,M.iron[2]); },
+  caltrops(r){ [[10,20],[21,23],[18,12]].forEach(([x,y])=>{ line(r,x,y,x-4,y+3,M.iron[1]); line(r,x,y,x+4,y+3,M.iron[1]); line(r,x,y,x,y+4,M.iron[0]); line(r,x,y,x+1,y-5,M.iron[2]); px(r,x+1,y-5,M.iron[3]); disc(r,x,y,1,M.iron[2]); }); },
+  copper_ingot(r){ ingot(r,M.copper,true); }, iron_ingot(r){ ingot(r,M.iron,true); }, gold_ingot(r){ ingot(r,M.gold,true); },
+};
+function lum(h){ const n=parseInt(h.slice(1),16); return ((n>>16)*0.3+((n>>8)&255)*0.59+(n&255)*0.11)/255; }
+
+</script>
+<script>
+'use strict';
+/* Boutons de fabrication : 5 habillages graphiques, icône seule, nom + coût au survol.
+   Les objets (DRAW, 32 × 32) viennent de rendus-objets-propositions.html, injectés avant ce script. */
+const W = 66, H = 46, GAP = 3, PAD = 3;
+const PW = 6 * W + 5 * GAP + 2 * PAD, PH = 2 * H + GAP + 2 * PAD;
+const STOCK = {Bois: 8, Fer: 2, Roche: 4, 'Fibre de bois': 0};
+const ITEMS = [
+  ['torch', 'Torche', {Bois: 1}], ['pickaxe', 'Pioche', {Bois: 1, Fer: 1}], ['arrows', 'Flèches', {Bois: 1}],
+  ['chest', 'Coffre', {Bois: 5, Fer: 1}], ['wood_fiber', 'Fibre de bois', {Bois: 1}], ['firing_post', 'Poste de tir', {Bois: 10}],
+  ['barricade', 'Barricade', {Bois: 10, Roche: 10}], ['fishing_rod', 'Canne à pêche', {Bois: 2, Fer: 1, 'Fibre de bois': 1}],
+  ['bow', 'Arc', {Bois: 1, 'Fibre de bois': 1}], ['caltrops', 'Chausse-trappe', {Bois: 25}], ['collect', 'Vider le coffre', null]];
+const KEYS = '1234567890X';
+const COUNT = [0, 0, 12, 0, 3, 0, 0, 0, 0, 0, 15];
+const ACTIVE = 2, LOCKED = 5;
+
+DRAW.collect = r => {
+  rect(r, 5, 17, 22, 10, M.red[1]); rect(r, 5, 25, 22, 2, M.red[0]); poly(r, [[5, 17], [27, 17], [26, 12], [6, 12]], M.red[2]);
+  line(r, 6, 12, 26, 12, M.red[3]); [8, 22].forEach(x => { rect(r, x, 12, 2, 15, M.iron[1]); line(r, x, 12, x, 26, M.iron[2]); });
+  rect(r, 14, 16, 4, 4, M.iron[2]);
+  poly(r, [[16, 1], [22, 7], [18.5, 7], [18.5, 11], [13.5, 11], [13.5, 7], [10, 7]], '#eee3c9'); line(r, 16, 2, 12, 6, '#ffffff');
+};
+const ICON = {};
+ITEMS.forEach(([k]) => { const r = R(32, 32); DRAW[k](r); outline(r); ICON[k] = r; });
+
+/* ---------- outils ---------- */
+const BAY = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5].map(v => (v + .5) / 16);
+const bay = (x, y) => BAY[(y & 3) * 4 + (x & 3)];
+const ramp = (C, v, x, y) => { const n = C.length - 1, i = Math.floor(Math.max(0, Math.min(1, v)) * n + bay(x, y) - .5); return C[Math.max(0, Math.min(n, i))]; };
+function fill(r, x, y, w, h, C, f) { for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) px(r, x + i, y + j, ramp(C, f(i / (w - 1), j / (h - 1)), x + i, y + j)); }
+function frame(r, x, y, w, h, c) { line(r, x, y, x + w - 1, y, c); line(r, x, y + h - 1, x + w - 1, y + h - 1, c); line(r, x, y, x, y + h - 1, c); line(r, x + w - 1, y, x + w - 1, y + h - 1, c); }
+function oct(x, y, w, h, c) { return [[x + c, y], [x + w - c, y], [x + w, y + c], [x + w, y + h - c], [x + w - c, y + h], [x + c, y + h], [x, y + h - c], [x, y + c]]; }
+const hex = c => parseInt(c.slice(1), 16);
+const toHex = (r, g, b) => '#' + [r, g, b].map(v => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0')).join('');
+function grey(c, k = .55, tint = [1, 1, 1]) { const n = hex(c), l = ((n >> 16) * .3 + ((n >> 8) & 255) * .59 + (n & 255) * .11) * k; return toHex(l * tint[0], l * tint[1], l * tint[2]); }
+function shade(c, k) { const n = hex(c); return toHex((n >> 16) * k, ((n >> 8) & 255) * k, (n & 255) * k); }
+function blit(dst, src, dx, dy, map) { for (let y = 0; y < src.h; y++) for (let x = 0; x < src.w; x++) { const c = src.p[y * src.w + x]; if (c) px(dst, dx + x, dy + y, map ? map(c, x, y) : c); } }
+// Police 3 × 5.
+const F = {'0': '111101101101111', '1': '010110010010111', '2': '111001111100111', '3': '111001111001111', '4': '101101111001001',
+  '5': '111100111001111', '6': '111100111101111', '7': '111001001010010', '8': '111101111101111', '9': '111101111001111', 'X': '101101010101101'};
+const tw = s => s.length * 4 - 1;
+function text(r, s, x, y, c, sh) {
+  const pass = (col, ox) => { let cx = x; for (const ch of s) { const g = F[ch]; if (g) for (let j = 0; j < 5; j++) for (let i = 0; i < 3; i++) if (g[j * 3 + i] === '1') px(r, cx + i + ox, y + j + ox, col); cx += 4; } };
+  if (sh) pass(sh, 1); pass(c, 0);
+}
+// Petits pictogrammes.
+function chestGlyph(r, x, y, c, lid) { rect(r, x, y + 2, 5, 3, c); line(r, x, y + 1, x + 4, y + 1, lid || c); px(r, x + 2, y + 3, shade(c, .45)); }
+function padlock(r, x, y, c, d) { frame(r, x + 1, y, 3, 3, c); rect(r, x, y + 2, 5, 4, c); px(r, x + 2, y + 3, d); px(r, x + 2, y + 4, d); }
+function hand(r, x, y) { // gant de curseur 16 bits, pointant vers la droite
+  const G = ['..####....', '.#wwww#...', '#wwwwww####', '#wwwwwwwwww#', '#wwwwww####.', '#wwwww#w#..', '.#wwww#w#..', '..######...'];
+  G.forEach((row, j) => [...row].forEach((ch, i) => { if (ch === '#') px(r, x + i, y + j, '#10123a'); else if (ch === 'w') px(r, x + i, y + j, j < 3 ? '#ffffff' : '#c8cce8'); }));
+}
+
+/* ---------- 5 habillages ---------- */
+const T = [];
+
+T.push({id: 1, name: 'Laiton et objet franc', cls: 'bb-brass',
+  sub: 'le bouton actuel, l’icône au trait remplacée par l’objet en couleur',
+  intent: 'On garde le cadre de laiton du panneau d’ordres et on y pose l’objet à 32 px, au pixel près, contour noir franc. Touche dans un cartouche en haut à gauche, compteur grenat en bas à droite, absent à 0. En fabrication : fond éclairé et barre de laiton qui avance.',
+  panel(r) { fill(r, 0, 0, PW, PH, ['#171c15', '#121612', '#0e120e'], (u, v) => v); frame(r, 0, 0, PW, PH, '#6e5a36'); },
+  button(r, x, y, k, s, t) {
+    const lit = s.active || s.hover;
+    if (lit) fill(r, x, y, W, H, ['#7a561e', '#5a4018', '#382c14', '#201e12'], (u, v) => Math.hypot((u - .5) * 1.1, v - .3) * 1.5);
+    else fill(r, x, y, W, H, s.disabled ? ['#24261f', '#1a1c17', '#101510'] : ['#2d2b21', '#22231b', '#181c15', '#121712'], (u, v) => u * .4 + v * .6);
+    frame(r, x, y, W, H, s.disabled ? '#565443' : lit ? '#ffe0a0' : '#aa8851');
+    frame(r, x + 1, y + 1, W - 2, H - 2, lit ? '#c29148' : '#131710');
+    blit(r, ICON[k], x + 17, y + 6, s.disabled ? c => grey(c, .45) : null);
+    rect(r, x + 3, y + 3, tw(s.key) + 4, 9, '#10140d'); frame(r, x + 3, y + 3, tw(s.key) + 4, 9, s.disabled ? '#4d4f40' : '#8c744b');
+    text(r, s.key, x + 5, y + 5, s.disabled ? '#7c7c6c' : lit ? '#ffe5ac' : '#eee3c9');
+    if (s.active) { rect(r, x + 3, y + H - 4, W - 6, 1, '#2a2414'); rect(r, x + 3, y + H - 4, Math.round((W - 6) * t.p), 1, '#ffe0a0'); }
+    if (s.disabled) padlock(r, x + 4, y + H - 10, '#8a8a7a', '#24261f');
+    if (s.count > 0) { const n = String(s.count), w = tw(n) + 10;
+      rect(r, x + W - 3 - w, y + H - 12, w, 9, '#5a1e22'); frame(r, x + W - 3 - w, y + H - 12, w, 9, '#c0584c');
+      chestGlyph(r, x + W - 1 - w, y + H - 10, '#e8a090', '#ffd6c8'); text(r, n, x + W - 2 - w + 7, y + H - 10, '#ffe0d4'); }
+  }});
+
+T.push({id: 2, name: 'Alvéole d’ardoise', cls: 'bb-slate',
+  sub: 'chaque bouton est une plaquette d’ardoise tyrienne creusée',
+  intent: 'La matière de la caverne et du coffre-reliquaire : plaquette à angles coupés, arête claire en haut à gauche, alvéole creusée où l’objet repose. Le chiffre de la touche est gravé en quartz laiteux. Le compteur est une languette grenat qui dépasse du bord, comme une étiquette de coffre rouge. En fabrication : le quartz s’allume au fond de l’alvéole et des points de quartz comptent la progression.',
+  panel(r) { fill(r, 0, 0, PW, PH, ['#1e232b', '#181c23', '#12151b'], (u, v) => v); },
+  button(r, x, y, k, s, t) {
+    const lit = s.active || s.hover, P = oct(x, y, W - 1, H - 1, 4);
+    poly(r, P, s.disabled ? '#2a2f38' : lit ? '#46505e' : '#3a424f');
+    line(r, x + 4, y, x + W - 5, y, '#6e7a88'); line(r, x, y + 4, x, y + H - 5, '#5a6472'); line(r, x + 1, y + 3, x + 3, y + 1, '#6e7a88');
+    line(r, x + 4, y + H - 1, x + W - 5, y + H - 1, '#14181e'); line(r, x + W - 1, y + 4, x + W - 1, y + H - 5, '#14181e');
+    const wx = x + 4, wy = y + 3, ww = W - 8, wh = H - 6, Q = oct(wx, wy, ww - 1, wh - 1, 3);
+    if (lit) { const tmp = R(ww, wh); fill(tmp, 0, 0, ww, wh, ['#626a78', '#4a525f', '#343b47', '#272d37'], (u, v) => Math.hypot(u - .5, (v - .55) * .9) * 2.1);
+      const m = R(ww, wh); poly(m, oct(0, 0, ww - 1, wh - 1, 3), 1); m.p.forEach((c, i) => { if (c) px(r, wx + i % ww, wy + (i / ww | 0), tmp.p[i]); }); }
+    else poly(r, Q, s.disabled ? '#171a20' : '#1e232b');
+    line(r, wx + 3, wy, wx + ww - 4, wy, '#101318'); line(r, wx, wy + 3, wx, wy + wh - 4, '#101318');
+    line(r, wx + 3, wy + wh - 1, wx + ww - 4, wy + wh - 1, s.disabled ? '#2a2f38' : '#4e5866');
+    blit(r, ICON[k], x + 17, y + 7, s.disabled ? (c => c === OUT ? '#2e343e' : '#14181e') : null);
+    text(r, s.key, wx + 3, wy + 3, s.disabled ? '#4e5866' : '#e8e4da', '#0e1014');
+    if (s.active) for (let i = 0; i < 6; i++) px(r, wx + ww - 5 - (5 - i) * 3, wy + wh - 3, i < Math.round(t.p * 6) ? '#f4f0e6' : '#3a414d');
+    if (s.disabled) padlock(r, wx + 3, wy + wh - 9, '#6e7a88', '#171a20');
+    if (s.count > 0) { const n = String(s.count), w = tw(n) + 13, tx = x + W - w - 1, ty = y + H - 11;
+      poly(r, [[tx, ty], [tx + w, ty], [tx + w, ty + 10], [tx + 3, ty + 10], [tx, ty + 7]], '#3a1210');
+      poly(r, [[tx + 1, ty + 1], [tx + w - 1, ty + 1], [tx + w - 1, ty + 9], [tx + 3, ty + 9], [tx + 1, ty + 7]], '#802c24');
+      line(r, tx + 1, ty + 1, tx + w - 1, ty + 1, '#b04a3a'); chestGlyph(r, tx + 3, ty + 3, '#f0b0a0', '#ffd6c8');
+      text(r, n, tx + 10, ty + 3, '#fff0e8', '#3a1210'); }
+  }});
+
+const BRONZE = ['#3a2616', '#6a4a2c', '#a07448', '#d8b07a'], BRONZE_LIT = ['#5a3e22', '#9a7044', '#d4a872', '#f6e0b4'], VERDI = ['#22302c', '#3a5048', '#567064', '#7a9486'];
+T.push({id: 3, name: 'Jeton de bronze', cls: 'bb-bronze',
+  sub: 'l’objet frappé en deux tons sur une médaille, touche poinçonnée',
+  intent: 'Une médaille de bronze par recette, l’objet gravé dans le métal en deux tons : le panneau devient très calme, aucune couleur ne crie, et les jetons se distinguent par leur silhouette. Le compteur est un cachet de cire grenat posé sur le bord. En fabrication, la médaille se polit et un reflet fait le tour du listel. Bloquée, elle est ternie de vert-de-gris.',
+  panel(r) { fill(r, 0, 0, PW, PH, ['#1e1914', '#17130f', '#110e0b'], (u, v) => v); frame(r, 0, 0, PW, PH, '#5a4228'); },
+  button(r, x, y, k, s, t) {
+    const lit = s.active || s.hover, C = s.disabled ? VERDI : lit ? BRONZE_LIT : BRONZE;
+    fill(r, x, y, W, H, ['#2a221a', '#211b15', '#18140f'], (u, v) => u * .3 + v * .7);
+    frame(r, x, y, W, H, s.disabled ? '#3a3a30' : '#6a4a2c'); line(r, x + 1, y + 1, x + W - 2, y + 1, '#3e3226');
+    const cx = x + 33, cy = y + 23;
+    disc(r, cx + .5, cy + 1.5, 19.5, OUT); disc(r, cx, cy, 19.3, C[0]); disc(r, cx, cy, 18.3, C[1]); disc(r, cx - .5, cy - .5, 17, C[2]);
+    for (let a = 0; a < 6.283; a += .03) { const glint = s.active ? Math.abs(((a - t.tick * .25) % 6.283 + 6.283) % 6.283 - 3.14) > 2.7 : a > 3.4 && a < 5.4;
+      px(r, cx + Math.cos(a) * 17.8, cy + Math.sin(a) * 17.8, glint ? C[3] : C[0]); }
+    const o = ICON[k];
+    o.p.forEach((c, i) => { if (!c) return; const ix = i % 32, iy = i / 32 | 0;
+      px(r, Math.round(cx + (ix - 15.5) * .9), Math.round(cy + (iy - 15.5) * .9), lum(c) > .42 && c !== OUT ? C[3] : C[0]); });
+    text(r, s.key, x + 3, y + 3, s.disabled ? VERDI[2] : '#c49a68', '#0e0b08');
+    if (s.disabled) padlock(r, x + 3, y + H - 9, VERDI[3], '#18140f');
+    if (s.count > 0) { const n = String(s.count), sx = x + W - 10, sy = y + H - 10, rad = n.length > 1 ? 8 : 6.5;
+      disc(r, sx + .5, sy + 1, rad, '#2a0e0e'); disc(r, sx, sy, rad, '#7a2424'); disc(r, sx - .5, sy - .5, rad - 1.5, '#9a3430');
+      for (let a = 0; a < 6.283; a += .7) px(r, sx + Math.cos(a) * rad, sy + Math.sin(a) * rad, '#5a1a1a');
+      text(r, n, sx - Math.floor(tw(n) / 2), sy - 2, '#f6d4c4', '#4a1414'); }
+  }});
+
+T.push({id: 4, name: 'Fenêtre 16 bits', cls: 'bb-snes',
+  sub: 'chaque bouton reprend la fenêtre bleue de la bannière',
+  intent: 'La même matière que la bannière des dialogues : dégradé bleu nuit → bleu ciel tramé, liseré blanc à angles coupés, chiffres blancs ombrés. Le panneau d’ordres et la bannière parlent alors la même langue. Au survol, le gant-curseur des menus 16 bits vient pointer l’objet ; en fabrication, la fenêtre s’éclaire et une jauge blanche se remplit.',
+  panel(r) { fill(r, 0, 0, PW, PH, ['#0e1240', '#0a0c2e', '#070920'], (u, v) => v); frame(r, 0, 0, PW, PH, '#0a0c26'); },
+  button(r, x, y, k, s, t) {
+    const P = oct(x, y, W - 1, H - 1, 3), m = R(W, H); poly(m, oct(0, 0, W - 1, H - 1, 3), 1);
+    const tmp = R(W, H);
+    fill(tmp, 0, 0, W, H, s.disabled ? ['#5a5c6a', '#44465a', '#30323e', '#22242c'] : s.active ? ['#8a98f0', '#6a7ae0', '#4a5ac0', '#2a3490', '#1a2278'] : ['#5a6ad0', '#3e4cb0', '#2a3490', '#1c2478', '#141c6a'], (u, v) => v);
+    m.p.forEach((c, i) => { if (c) px(r, x + i % W, y + (i / W | 0), tmp.p[i]); });
+    const rim = s.disabled ? '#9a9caa' : '#e6e8f4';
+    const E = oct(x, y, W - 1, H - 1, 3); for (let i = 0; i < 8; i++) line(r, ...E[i], ...E[(i + 1) % 8], rim);
+    const I = oct(x + 1, y + 1, W - 3, H - 3, 3); for (let i = 0; i < 8; i++) line(r, ...I[i], ...I[(i + 1) % 8], s.disabled ? '#5a5c68' : '#8a90b8');
+    blit(r, ICON[k], x + 19, y + 6, s.disabled ? c => grey(c, .55, [.9, .92, 1.1]) : null);
+    text(r, s.key, x + 4, y + 4, s.disabled ? '#b0b2c0' : '#ffffff', '#10123a');
+    if (s.active) { rect(r, x + 4, y + H - 6, W - 8, 3, '#0a0c26'); rect(r, x + 5, y + H - 5, Math.round((W - 10) * t.p), 1, '#ffffff'); }
+    if (s.hover) hand(r, x + 4 + (t.tick % 6 < 3 ? 0 : 1), y + 19);
+    if (s.disabled) padlock(r, x + 4, y + H - 10, '#e6e8f4', '#30323e');
+    if (s.count > 0) { const n = String(s.count), w = tw(n);
+      chestGlyph(r, x + W - 9 - w, y + H - 10, '#d87a64', '#f0b0a0'); text(r, n, x + W - 3 - w, y + H - 10, '#ffffff', '#10123a'); }
+  }});
+
+T.push({id: 5, name: 'Établi et coffre rouge', cls: 'bb-bench',
+  sub: 'le bouton est un casier d’établi, le compteur un vrai petit coffre',
+  intent: 'Le compteur devient diégétique : un coffre rouge miniature dans le coin, fermé et sombre à 0, ouvert avec son chiffre dès qu’un objet attend. Les exemplaires s’empilent derrière l’objet (2 et plus, 5 et plus) : on voit la quantité avant de lire le nombre. Casier en planches de jungle, touche sur une étiquette de vélin. En fabrication, des encoches gravées comptent le temps.',
+  panel(r) { fill(r, 0, 0, PW, PH, ['#2a1a10', '#22150d', '#1a100a'], (u, v) => v); frame(r, 0, 0, PW, PH, '#0b090b'); },
+  button(r, x, y, k, s, t) {
+    const lit = s.active || s.hover, Wd = s.disabled ? ['#2a2622', '#221e1a', '#1a1714'] : lit ? ['#6e4830', '#5a3a26', '#4a2e1c'] : ['#4e3220', '#40291a', '#342114'];
+    for (let p = 0; p < 3; p++) fill(r, x, y + p * 15, W, p < 2 ? 15 : H - 30, Wd, (u, v) => v * .8 + (bay(p, 1) - .5) * .2);
+    for (let p = 1; p < 3; p++) line(r, x, y + p * 15, x + W - 1, y + p * 15, '#1e120a');
+    frame(r, x, y, W, H, OUT); frame(r, x + 1, y + 1, W - 2, H - 2, lit ? '#9c7048' : s.disabled ? '#3a342e' : '#6e4830');
+    [[x + 2, y + 2], [x + W - 3, y + 2], [x + 2, y + H - 3], [x + W - 3, y + H - 3]].forEach(([a, b]) => px(r, a, b, s.disabled ? '#5a5650' : '#c4a064'));
+    line(r, x + 10, y + 39, x + W - 11, y + 39, '#1e120a'); line(r, x + 10, y + 38, x + W - 11, y + 38, lit ? '#c49a68' : '#9c7048');
+    const map = s.disabled ? (c => grey(c, .4)) : null;
+    if (s.count >= 5) blit(r, ICON[k], x + 11, y + 3, c => shade(map ? map(c) : c, .45));
+    if (s.count >= 2) blit(r, ICON[k], x + 14, y + 5, c => shade(map ? map(c) : c, .7));
+    blit(r, ICON[k], x + 17, y + 7, map);
+    rect(r, x + 3, y + 3, tw(s.key) + 4, 9, s.disabled ? '#8a8478' : '#e8dcc0'); line(r, x + 3, y + 11, x + 3 + tw(s.key) + 3, y + 11, '#8a7a5a');
+    text(r, s.key, x + 5, y + 5, '#2e2016');
+    if (s.active) for (let i = 0; i < 8; i++) if (i < Math.round(t.p * 8)) line(r, x + 22 + i * 3, y + H - 5, x + 22 + i * 3, y + H - 3, '#e8dcc0');
+    if (s.disabled) padlock(r, x + 4, y + H - 10, '#9a9488', '#2a2622');
+    if (k !== 'collect') { const cx = x + W - 15, cy = y + H - 12, open = s.count > 0;
+      rect(r, cx, cy + 3, 11, 6, open ? '#802c24' : '#4c1a18'); line(r, cx, cy + 8, cx + 10, cy + 8, '#2e0e0c');
+      if (open) { poly(r, [[cx, cy + 3], [cx + 10, cy + 3], [cx + 9, cy - 1], [cx + 1, cy - 1]], '#b04a3a'); line(r, cx + 1, cy - 1, cx + 9, cy - 1, '#d87a64'); }
+      else { rect(r, cx, cy + 1, 11, 2, '#6a2620'); }
+      px(r, cx + 5, cy + 5, '#9aa8b4'); frame(r, cx - 1, cy + (open ? -2 : 0), 13, open ? 12 : 10, OUT);
+      if (open) { const n = String(s.count); text(r, n, cx - 2 - tw(n), cy + 3, '#f6dccf', '#1e120a'); } }
+    else if (s.count > 0) { const n = String(s.count); text(r, n, x + W - 4 - tw(n), y + H - 9, '#f6dccf', '#1e120a'); }
+  }});
+
+/* ---------- rendu ---------- */
+function toCanvasInto(c, r) { c.width = r.w; c.height = r.h; const g = c.getContext('2d'), im = g.createImageData(r.w, r.h);
+  r.p.forEach((col, i) => { if (!col || col[0] !== '#') return; const n = hex(col); im.data[i * 4] = n >> 16; im.data[i * 4 + 1] = n >> 8 & 255; im.data[i * 4 + 2] = n & 255; im.data[i * 4 + 3] = 255; });
+  g.putImageData(im, 0, 0); }
+const stateOf = (i, hover) => ({key: KEYS[i], count: COUNT[i], active: i === ACTIVE, disabled: i === LOCKED, hover});
+const cellPos = i => [PAD + (i % 6) * (W + GAP), PAD + (i / 6 | 0) * (H + GAP)];
+function bubbleHTML(i) {
+  const [k, name, cost] = ITEMS[i];
+  if (!cost) return `<b>Vider le coffre</b><span>L’Ingénieur rapporte ${COUNT[i]} objets au stock</span>`;
+  const parts = Object.entries(cost).map(([res, n]) => `<i class="${STOCK[res] >= n ? '' : 'short'}">${n} ${res} (${STOCK[res]})</i>`).join(' · ');
+  let extra = i === LOCKED ? '<em>Recherche « Défenses » requise</em>' : COUNT[i] ? `<em>${COUNT[i]} au coffre rouge</em>` : '';
+  return `<b>${name}</b><span>${parts} · 9 s</span>${extra}`;
+}
+const STRIP = [['Repos', {}], ['Survol', {hover: true}], ['En fabrication', {active: true}], ['Bloqué', {disabled: true}], ['Objets au coffre', {count: 7}]];
+const SG = 14, SW = STRIP.length * W + (STRIP.length - 1) * SG + 2 * PAD;
+const views = [];
+const root = document.getElementById('root');
+T.forEach(tr => {
+  const sec = document.createElement('section'); sec.className = tr.cls;
+  sec.innerHTML = `<h2>${tr.id} · ${tr.name}</h2><p class="sub">${tr.sub}</p><p>${tr.intent}</p>
+  <div class="wrap panel"><canvas></canvas><div class="bubble" hidden></div></div>
+  <div class="hint">Passe la souris sur un bouton : le nom et le coût n’apparaissent qu’au survol.</div>
+  <div class="wrap strip"><canvas></canvas><div class="bubble"></div></div>
+  <div class="labels">${STRIP.map(s => `<span>${s[0]}</span>`).join('')}</div>`;
+  root.appendChild(sec);
+  const [pc, sc] = sec.querySelectorAll('canvas'), [pb, sb] = sec.querySelectorAll('.bubble');
+  const v = {tr, pc, sc, pb, sb, hover: -1}; views.push(v);
+  pc.addEventListener('mousemove', e => { const b = pc.getBoundingClientRect(), s = b.width / PW, mx = (e.clientX - b.left) / s, my = (e.clientY - b.top) / s;
+    let h = -1; ITEMS.forEach((_, i) => { const [x, y] = cellPos(i); if (mx >= x && mx < x + W && my >= y && my < y + H) h = i; });
+    if (h !== v.hover) { v.hover = h; place(v); } });
+  pc.addEventListener('mouseleave', () => { v.hover = -1; place(v); });
+  sb.innerHTML = bubbleHTML(8);
+});
+function place(v) {
+  if (v.hover < 0) { v.pb.hidden = true; return; }
+  const [x, y] = cellPos(v.hover), s = v.pc.getBoundingClientRect().width / PW;
+  v.pb.innerHTML = bubbleHTML(v.hover); v.pb.hidden = false;
+  v.pb.style.left = Math.max(0, Math.min(v.pc.clientWidth - v.pb.offsetWidth, (x + W / 2) * s - v.pb.offsetWidth / 2)) + 'px';
+  v.pb.style.top = (y * s - v.pb.offsetHeight - 6) + 'px';
+}
+let tick = 0;
+function frameAll() {
+  const t = {tick, p: (tick * .12 / 9 * 4) % 1};
+  views.forEach(v => {
+    const r = R(PW, PH); v.tr.panel(r);
+    ITEMS.forEach(([k], i) => { const [x, y] = cellPos(i); v.tr.button(r, x, y, k, stateOf(i, i === v.hover), t); });
+    toCanvasInto(v.pc, r);
+    const q = R(SW, H + 2 * PAD);
+    STRIP.forEach(([, o], j) => v.tr.button(q, PAD + j * (W + SG), PAD, 'bow', Object.assign({key: '9', count: 0, active: false, disabled: false, hover: false}, o), t));
+    toCanvasInto(v.sc, q);
+    const s = v.sc.getBoundingClientRect().width / SW;
+    v.sb.style.left = Math.max(0, (PAD + W + SG + W / 2) * s - v.sb.offsetWidth / 2) + 'px'; v.sb.style.top = (-v.sb.offsetHeight + PAD * s - 4) + 'px';
+  });
+  tick++;
+}
+frameAll(); setInterval(frameAll, 120);
+
+</script>
+</body></html>

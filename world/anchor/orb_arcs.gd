@@ -6,6 +6,9 @@ extends Node2D
 
 const ORB_TIME := 8.0
 
+## Centre de la sphère dans le repère du parent (AnchorView) ; sans lui, l'ancien repère du sprite de l'orbe.
+var center_fn: Callable
+
 ## Six cycles d'arcs indépendants (ORB_SLOTS).
 var _slots: Array[Dictionary] = []
 
@@ -22,8 +25,14 @@ func _init() -> void:
 		})
 
 
+## Emprise des arcs, rameaux et étincelles autour de l'orbe (rayon ≤ 10,5 + 28 + rameau), avec marge.
+const BOUNDS := Rect2(-72, -96, 144, 168)
+
+
 func _process(_delta: float) -> void:
-	queue_redraw()
+	# Hors écran, rien à redessiner : le dessin reprend dès que l'orbe y revient.
+	if (get_global_transform_with_canvas() * BOUNDS).intersects(get_viewport_rect()):
+		queue_redraw()
 
 
 func visible_now() -> bool:
@@ -32,7 +41,12 @@ func visible_now() -> bool:
 
 
 func _draw() -> void:
-	if visible_now():
+	if not visible_now():
+		return
+	if center_fn.is_valid():
+		var c: Vector2 = center_fn.call()
+		draw_arcs(c.x, c.y)
+	else:
 		draw_arcs(0.0, -8.0 - Overload.sphere_lift())
 
 

@@ -1,9 +1,11 @@
 extends RefCounted
 ## Défenses de l'Atelier posées au sol par l'Ingénieur (spec du 2026-11-17) : un objet fabriqué occupe une
 ## case de la grille (4 × 4 unités) et est consommé du stock à la pose.
-##  - Poste de tir (Créneau de rondins) : une unité de tir à moins de POST_RADIUS du poste voit sa portée doublée.
+##  - Poste de tir (Créneau de rondins) : une unité de tir à moins de POST_RADIUS du poste voit sa portée multipliée par POST_FACTOR.
 ##  - Barricade (Muret hérissé) : la case devient infranchissable (TerrainState.walls), les ennemis la
-##    contournent ; refusée si elle fermait le dernier passage vers l'Ancre.
+##    contournent ; refusée si elle fermait le dernier passage vers l'Ancre. Depuis le 2026-11-20 elle a des PV
+##    (BARRICADE_HP, × PALISADES_FACTOR avec la recherche Palissades) : un ennemi de mêlée sans autre cible qui la
+##    touche en passant s'arrête pour la frapper ; à 0 PV elle cède et la case se rouvre.
 ##  - Chausse-trappe (Planches hérissées) : CALTROPS_DPS dégâts par seconde à chaque ennemi sur la case.
 ## Aucune ne bloque les lignes de vue (les tirs du jeu n'en testent pas).
 ## Rendu : entities/building/placed_view.gd, dessins exportés par tools/defenses/serve.py (da-<objet>).
@@ -12,10 +14,14 @@ const ItemStorage := preload("res://sim/item_storage.gd")
 
 const ITEMS: Array[String] = ["firing_post", "barricade", "caltrops"]
 const CELL := 4.0
+const BARRICADE_HP := 400.0
+const PALISADES_FACTOR := 1.5
+## Marge autour de la case dans laquelle un ennemi « touche » la barricade.
+const BARRICADE_TOUCH := 1.2
 const CALTROPS_DPS := 25.0
 const CALTROPS_PERIOD := 0.5
 const POST_RADIUS := 3.0
-const POST_FACTOR := 2.0
+const POST_FACTOR := 1.5
 ## Portée minimale d'une unité « de tir » (en deçà : corps à corps, le poste ne change rien).
 const RANGED_MIN := 4.0
 ## Point d'arrivée des assauts (spawn_enemy : z ≈ 62) pour le contrôle du passage.
@@ -58,7 +64,7 @@ static func _occupied(c: Vector2i) -> bool:
 static func refusal(sim: Simulation, item: String, p: Vector2) -> String:
 	if not is_placeable(item):
 		return "Cet objet ne se pose pas."
-	if ItemStorage.count(item) <= 0:
+	if ItemStorage.count_ammo(item) <= 0:
 		return "%s : aucun en stock." % preload("res://data/recipes.gd").name_of(item)
 	var c := cell_of(p)
 	var mid := center(c)
@@ -82,6 +88,7 @@ static func refusal(sim: Simulation, item: String, p: Vector2) -> String:
 static func place(sim: Simulation, item: String, p: Vector2) -> bool:
 	var why := refusal(sim, item, p)
 	if why != "":
+		Sfx.play("ui_refus")
 		sim.say(why, 2.0)
 		return false
 	var c := cell_of(p)
@@ -92,11 +99,55 @@ static func place(sim: Simulation, item: String, p: Vector2) -> bool:
 		if sim.world and sim.world.pathfinder.find_path(ASSAULT_FROM, CaveShape.CORE + Vector2(0.0, 6.0)) == null:
 			st.walls.erase(c)
 			st.version += 1
+			Sfx.play("ui_refus")
 			sim.say("La barricade fermerait le dernier passage vers l’Ancre.", 2.5)
 			return false
-	ItemStorage.take({item: 1})
-	GameState.placed.append({"item": item, "cell": c, "x": center(c).x, "z": center(c).y, "tick": 0.0})
+	ItemStorage.take_ammo(item)
+	var o := {"item": item, "cell": c, "x": center(c).x, "z": center(c).y, "tick": 0.0}
+	if item == "barricade":
+		o["hp"] = barricade_max()
+		o["max_hp"] = o["hp"]
+		o["hit_at"] = -INF
+	GameState.placed.append(o)
+	Sfx.at("chausse_trapes" if item == "caltrops" else "objet_pose", center(c).x, center(c).y)
 	return true
+
+
+static func barricade_max() -> float:
+	return BARRICADE_HP * (PALISADES_FACTOR if GameState.research_done.has("palisades") else 1.0)
+
+
+## Palissades achevée : les barricades déjà posées gagnent le même bonus, à proportion de leurs PV restants.
+static func reinforce() -> void:
+	for o: Dictionary in GameState.placed:
+		if o["item"] == "barricade":
+			var ratio := float(o.get("hp", BARRICADE_HP)) / float(o.get("max_hp", BARRICADE_HP))
+			o["max_hp"] = barricade_max()
+			o["hp"] = float(o["max_hp"]) * ratio
+
+
+## Barricade que l'ennemi touche (il est dans sa case élargie de BARRICADE_TOUCH), ou {}.
+static func barricade_touched(e: Unit) -> Dictionary:
+	var reach := CELL / 2.0 + BARRICADE_TOUCH
+	for o: Dictionary in GameState.placed:
+		if o["item"] == "barricade" and absf(e.x - float(o["x"])) <= reach and absf(e.z - float(o["z"])) <= reach:
+			return o
+	return {}
+
+
+## Coup porté à une barricade ; à 0 PV elle cède : la case se rouvre et les chemins sont recalculés.
+static func hit(sim: Simulation, o: Dictionary, dmg: float) -> void:
+	o["hp"] = float(o.get("hp", BARRICADE_HP)) - dmg
+	o["hit_at"] = GameState.sim_time
+	if o["hp"] > 0.0:
+		return
+	var st := sim.state()
+	st.walls.erase(o["cell"])
+	st.version += 1
+	GameState.placed.erase(o)
+	Combat.zone(o["x"], o["z"], CELL / 2.0, Color("#b4a07a"))
+	Sfx.at("objet_pose", o["x"], o["z"])
+	sim.say("Une barricade a cédé.", 2.5)
 
 
 ## Chausse-trappes : CALTROPS_DPS × CALTROPS_PERIOD dégâts à chaque ennemi sur la case, toutes les CALTROPS_PERIOD s.
@@ -111,6 +162,7 @@ static func tick(sim: Simulation, dt: float) -> void:
 		for e: Enemy in GameState.enemies.duplicate():
 			if e.hp > 0.0 and not e.hidden and cell_of(e.pos()) == o["cell"]:
 				sim.combat.damage(e, CALTROPS_DPS * CALTROPS_PERIOD)
+				Sfx.at("chausse_trapes", e.x, e.z)
 
 
 ## Multiplicateur de portée d'une unité de tir postée près d'un poste de tir (1 sinon).

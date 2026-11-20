@@ -83,13 +83,10 @@ func test_orb_reactivation() -> void:
 	check(GameState.orb_active, "Ancre réactivée")
 	check(not u.orb_job, "tâche terminée")
 	check_near(GameState.next_wave, GameState.orb_finished_at + 20.0, 1e-6, "premier assaut programmé à +20 s")
-	# Les balistes s'arment à l'arrivée de l'étincelle, SPARK_ARRIVAL après l'éveil.
-	if GameState.sim_time - GameState.orb_finished_at < Simulation.SPARK_ARRIVAL - 0.1:
-		check(woke.is_empty() and not GameState.turrets[0]["complete"], "balistes endormies pendant le trajet de l'étincelle")
+	# Plus de balistes ; le signal d'éveil (qui ramène la caméra sur l'Ingénieur) part toujours SPARK_ARRIVAL après.
+	check(GameState.turrets.is_empty(), "aucune baliste à l'entrée")
 	_run(sim, Simulation.SPARK_ARRIVAL + 0.1)
-	check_eq(woke.size(), 1, "tourelles éveillées une fois")
-	check(GameState.turrets[0]["complete"] and GameState.turrets[1]["complete"], "les deux balistes armées")
-	check_near(GameState.turrets[0]["finished_at"] - GameState.orb_finished_at, Simulation.SPARK_ARRIVAL, 0.05, "armées à l'arrivée de l'étincelle")
+	check_eq(woke.size(), 1, "éveil signalé une fois")
 	var f0: float = GameState.res["forge"]
 	_run(sim, 2.0)
 	check_near(GameState.res["forge"] - f0, 0.0, 0.05, "aucun revenu passif")
@@ -99,12 +96,12 @@ func test_orb_reactivation() -> void:
 	sim.set_job(u, {"type": "anchor_pray"})
 	_run(sim, 2.0)
 	for resource: String in Catalog.RES_ORDER:
-		check_near(GameState.res[resource] - before[resource], 6.0, 0.05, "deux secondes à l’Ancre")
-		check_eq(Simulation.resource_rates()[resource], 3.0, "revenu de prière")
+		check_near(GameState.res[resource] - before[resource], 2.0 * Simulation.ANCHOR_PRAY, 0.05, "deux secondes à l’Ancre")
+		check_eq(Simulation.resource_rates()[resource], Simulation.ANCHOR_PRAY, "revenu de prière")
 	sim.issue_move(Vector2(0, -130))
 	_run(sim, 1.0)
 	for resource: String in Catalog.RES_ORDER:
-		check_near(GameState.res[resource] - before[resource], 6.0, 0.05, "prière interrompue")
+		check_near(GameState.res[resource] - before[resource], 2.0 * Simulation.ANCHOR_PRAY, 0.05, "prière interrompue")
 
 
 func test_order_orb_cancelled_by_move() -> void:

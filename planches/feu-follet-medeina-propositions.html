@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Feu follet de Medeina</title>
+<style>
+:root{--bg:#14161b;--panel:#1d2028;--line:#2c313c;--ink:#e6e8ee;--mute:#9aa1b0}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,sans-serif}
+main{max-width:1400px;margin:0 auto;padding:24px 16px 60px}
+h1{font-size:26px;margin:0 0 4px}
+.sub{color:var(--mute);margin:0 0 18px;max-width:900px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:8px;overflow:hidden;margin:0 0 18px}
+canvas{display:block;width:100%;image-rendering:pixelated;background:#000}
+.labels{display:grid;grid-template-columns:repeat(6,1fr);font-size:12px;color:var(--mute);text-align:center;border-top:1px solid var(--line)}
+.labels span{padding:4px 2px}
+.txt{padding:10px 14px 14px}
+.txt h3{margin:0 0 4px;font-size:16px}
+.txt h3 span{color:var(--mute);font-weight:400;margin-right:6px}
+.txt p{margin:4px 0;color:#c9cdd6;font-size:14px}
+.bar{position:sticky;top:0;background:var(--bg);padding:8px 0;z-index:2;display:flex;gap:8px;flex-wrap:wrap}
+button{background:#2a2f3a;color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:6px 12px;cursor:pointer}
+button.on{background:#3b4456}
+</style>
+</head>
+<body>
+<main>
+<h1>Esprit mineur de Medeina · feu follet</h1>
+<p class="sub">Trois pistes pour remplacer l'esprit de Medeina par un feu follet : un noyau blanc presque pur, une lueur verte additive qui déborde sur le sol, et pas de corps. Chaque piste est montrée dans les six états de l'esprit, sur l'herbe de la jungle, à l'échelle du jeu (64 px, agrandi ×4). Le vert reste celui du culte : pas de cyan, réservé aux Exilés.</p>
+<div class="bar"><button id="day" class="on">Jour</button><button id="night">Nuit</button><button id="pause">Pause</button></div>
+<div id="root"></div>
+</main>
+<script>
+const S=64,PI2=Math.PI*2,POSES=['Flottement','Déplacement','Porter une caisse','Travail / minage','Combat','Mort'];
+const PROPS=[
+ {id:'A',name:'Étoile des racines',desc:'Le plus proche de la référence : noyau éblouissant, couronne de rayons fins qui tournent lentement et scintillent un par un, halo rond vert tendre. Lisible de loin, très « lumière ». Au travail, un rayon s’allonge jusqu’à la roche ; en combat, la couronne se contracte puis éclate.',draw:drawStar},
+ {id:'B',name:'Flamme sylvestre',desc:'Comme la capture en jeu : quatre à six langues de lumière ondulent vers le haut comme une flamme froide, avec deux ou trois lucioles en orbite. Plus organique, plus « esprit de la forêt ». Les langues se couchent dans le sens du déplacement.',draw:drawFlame},
+ {id:'C',name:'Graine du cycle',desc:'Lecture Medeina : orbe vert-jaune au cœur blanc, cerclé d’un anneau de pollen qui tourne, laisse une traînée de spores qui retombent. À la mort, les spores tombent au sol et une pousse apparaît brièvement (vie / mort / renaissance).',draw:drawSeed},
+];
+let night=false,paused=false,T=0;
+const R=Math.round,rnd=s=>{const x=Math.sin(s*127.1)*43758.5;return x-Math.floor(x)};
+function ground(g,x0){
+ for(let y=0;y<S;y++)for(let x=0;x<S;x++){const h=rnd(x*7.3+y*13.1+x0);let c;
+  if(y<40){c=h<.2?[52,98,40]:h<.6?[62,116,46]:[72,132,52];if(y>36&&rnd(x+x0)<.5)c=[86,66,46]}
+  else c=h<.3?[78,60,42]:h<.7?[90,70,48]:[102,80,54];
+  if(night)c=[c[0]*.38,c[1]*.45,c[2]*.75];g.fillStyle=`rgb(${c|0},${c[1]|0},${c[2]|0})`;g.fillStyle=`rgb(${c[0]|0},${c[1]|0},${c[2]|0})`;g.fillRect(x0+x,y,1,1)}
+}
+function glow(g,x,y,r,col,a){const gr=g.createRadialGradient(x,y,0,x,y,r);gr.addColorStop(0,`rgba(${col},${a})`);gr.addColorStop(1,`rgba(${col},0)`);g.fillStyle=gr;g.beginPath();g.arc(x,y,r,0,PI2);g.fill()}
+function crate(g,x,y){g.globalCompositeOperation='source-over';g.fillStyle='#0b090b';g.fillRect(x-5,y-4,10,8);g.fillStyle='#8a6038';g.fillRect(x-4,y-3,8,6);g.fillStyle='#5e3f22';g.fillRect(x-4,y,8,1);g.fillRect(x,y-3,1,6)}
+function rock(g,x,y,t){g.globalCompositeOperation='source-over';g.fillStyle='#0b090b';g.fillRect(x-7,y-9,14,12);g.fillStyle=night?'#3a3f4c':'#5c6372';g.fillRect(x-6,y-8,12,10);g.fillStyle=night?'#4a5060':'#7a8292';g.fillRect(x-6,y-8,12,3);if(t%.5<.12){g.fillStyle='#d8ffb0';g.fillRect(x-7+R(rnd(R(t*8))*4),y-3,2,2)}}
+function enemy(g,x,y,hit){g.globalCompositeOperation='source-over';g.fillStyle='#0b090b';g.fillRect(x-5,y-10,10,12);g.fillStyle=hit?'#ffd0c0':'#a8302a';g.fillRect(x-4,y-9,8,10);g.fillStyle='#ffe060';g.fillRect(x-3,y-7,2,1);g.fillRect(x+1,y-7,2,1)}
+/* état commun : position, intensité, échelle selon la pose */
+function state(p,t){
+ const b=Math.sin(t*PI2*.8)*1.6;let s={x:32,y:24+b,k:1,dir:0,act:0,die:0,sh:1};
+ if(p==1){s.x=32+Math.sin(t*PI2*.35)*14;s.dir=Math.cos(t*PI2*.35);s.y=24+Math.sin(t*PI2*1.6)*1}
+ if(p==2){s.y=20+b*.5;crateY=s.y+9}
+ if(p==3){s.x=24;s.act=(t*1.2)%1}
+ if(p==4){s.x=22;s.act=(t*.8)%1;s.k=s.act<.4?1-s.act*.6:s.act<.5?1.5:1}
+ if(p==5){s.die=(t*.4)%1;s.k=s.die<.15?1+s.die*3:Math.max(0,1-(s.die-.15)*2);s.y+= s.die*6}
+ return s}
+let crateY=0;
+function props(g,p,t,s,x0){
+ if(p==2)crate(g,x0+s.x,s.y+10);
+ if(p==3)rock(g,x0+46,40,t);
+ if(p==4)enemy(g,x0+48,40,s.act>.4&&s.act<.55);
+}
+function shadow(g,x,s,col){g.globalCompositeOperation=night?'lighter':'source-over';glow(g,x,44,14*s.k,col,night?.35:.25)}
+
+function drawStar(g,x0,p,t){
+ const s=state(p,t),x=x0+s.x,y=s.y,k=s.k;props(g,p,t,s,x0);if(k<=0)return;
+ shadow(g,x,s,'120,230,110');g.globalCompositeOperation='lighter';
+ glow(g,x,y,18*k,'70,200,90',.55);glow(g,x,y,9*k,'150,255,150',.7);
+ const n=10;for(let i=0;i<n;i++){const a=i/n*PI2+t*.6,tw=.5+.5*Math.sin(t*PI2*1.7+i*2.3),L=(7+tw*9+(i%2?0:4))*k*(p==4&&s.act>.4&&s.act<.6?1.8:1);
+  g.strokeStyle=`rgba(190,255,190,${.25+tw*.5})`;g.lineWidth=1;g.beginPath();g.moveTo(x,y);g.lineTo(x+Math.cos(a)*L,y+Math.sin(a)*L);g.stroke()}
+ if(p==3&&s.act<.5){g.strokeStyle='rgba(210,255,190,.9)';g.beginPath();g.moveTo(x,y);g.lineTo(x0+42,34);g.stroke();glow(g,x0+42,34,5,'190,255,160',.8)}
+ if(p==4&&s.act>.4&&s.act<.7){const q=(s.act-.4)/.3;glow(g,lerp(x,x0+48,q),lerp(y,34,q),5,'200,255,170',1)}
+ glow(g,x,y,4*k,'255,255,255',1);g.fillStyle='#fff';g.fillRect(R(x)-1,R(y)-1,2,2);
+ if(p==5&&s.die>.15)for(let i=0;i<8;i++){const a=i/8*PI2,d=(s.die-.15)*30;glow(g,x+Math.cos(a)*d,y+Math.sin(a)*d,2,'170,255,160',1-s.die)}
+}
+function drawFlame(g,x0,p,t){
+ const s=state(p,t),x=x0+s.x,y=s.y,k=s.k;props(g,p,t,s,x0);if(k<=0)return;
+ shadow(g,x,s,'110,220,100');g.globalCompositeOperation='lighter';
+ glow(g,x,y+2,16*k,'60,190,80',.5);
+ const n=6;for(let i=0;i<n;i++){const base=-Math.PI/2+(i-(n-1)/2)*.42 - s.dir*.5,L=(9+5*Math.sin(t*PI2*1.3+i*1.9))*k*(p==4&&s.act>.4&&s.act<.55?1.6:1);
+  for(let j=0;j<=8;j++){const q=j/8,w=Math.sin(t*PI2*2+i+q*4)*2*q,a=base+w*.12;const px=x+Math.cos(a)*L*q+w,py=y+Math.sin(a)*L*q;glow(g,px,py,(3.2-q*2.2)*k,'150,255,150',.45*(1-q*.6))}}
+ for(let i=0;i<3;i++){const a=t*PI2*.7+i*2.1,d=11+Math.sin(t*PI2+i)*2;glow(g,x+Math.cos(a)*d,y+Math.sin(a)*d*.5,1.8,'210,255,170',.9)}
+ if(p==3&&s.act<.5){for(let j=0;j<8;j++){const q=j/8;glow(g,lerp(x,x0+42,q)+Math.sin(t*40+j)*1.5,lerp(y,34,q),1.6,'190,255,160',.8)}}
+ if(p==4&&s.act>.4&&s.act<.7){const q=(s.act-.4)/.3;glow(g,lerp(x,x0+48,q),lerp(y,34,q),5,'170,255,140',1)}
+ glow(g,x,y,5*k,'255,255,240',1);g.fillStyle='#fff';g.fillRect(R(x)-1,R(y)-1,3,2);
+ if(p==5&&s.die>.15)for(let i=0;i<6;i++){const d=(s.die-.15);glow(g,x+(rnd(i)-.5)*20*d,y-d*24*rnd(i+3),2,'170,255,150',1-s.die)}
+}
+function drawSeed(g,x0,p,t){
+ const s=state(p,t),x=x0+s.x,y=s.y,k=s.k;props(g,p,t,s,x0);
+ if(p==5&&s.die>.4){g.globalCompositeOperation='source-over';const q=Math.min(1,(s.die-.4)*3);g.fillStyle='#2e7a2a';g.fillRect(x-0,44-R(q*4),1,R(q*4));g.fillStyle='#6fd860';g.fillRect(x-2,44-R(q*4),2,1);g.fillRect(x+1,43-R(q*4),2,1)}
+ if(k<=0)return;
+ shadow(g,x,s,'150,230,90');g.globalCompositeOperation='lighter';
+ for(let i=0;i<6;i++){const q=((t*.7+i/6)%1),tx=x-s.dir*q*14+Math.sin(i*3+t*4)*2,ty=y+q*16;glow(g,tx,ty,1.4,'200,240,110',.8*(1-q))}
+ glow(g,x,y,15*k,'110,200,60',.55);glow(g,x,y,7*k,'190,250,120',.8);
+ g.strokeStyle='rgba(220,255,150,.55)';g.lineWidth=1;g.beginPath();g.ellipse(x,y,11*k,4*k,0,0,PI2);g.stroke();
+ for(let i=0;i<5;i++){const a=t*PI2*.9+i/5*PI2;glow(g,x+Math.cos(a)*11*k,y+Math.sin(a)*4*k,1.6,'240,255,170',1)}
+ if(p==3&&s.act<.5){g.strokeStyle='rgba(220,255,150,.8)';g.beginPath();g.moveTo(x,y);g.quadraticCurveTo(x+8,y-8,x0+42,34);g.stroke()}
+ if(p==4&&s.act>.4&&s.act<.7){const q=(s.act-.4)/.3;for(let i=0;i<3;i++)glow(g,lerp(x,x0+48,q-i*.08),lerp(y,34,q-i*.08)+i,3-i*.6,'210,255,120',1)}
+ glow(g,x,y,3.5*k,'255,255,230',1);g.fillStyle='#fff';g.fillRect(R(x)-1,R(y)-1,2,2);
+ if(p==5&&s.die>.15)for(let i=0;i<10;i++){const d=s.die-.15;glow(g,x+(rnd(i)-.5)*18*d,y+d*(20+rnd(i+9)*10),1.4,'210,245,120',1-s.die)}
+}
+const lerp=(a,b,k)=>a+(b-a)*k;
+const cards=PROPS.map(pr=>{const c=document.createElement('div');c.className='card';
+ c.innerHTML=`<canvas width="${S*6}" height="${S}"></canvas><div class="labels">${POSES.map(l=>`<span>${l}</span>`).join('')}</div><div class="txt"><h3><span>${pr.id}</span>${pr.name}</h3><p>${pr.desc}</p></div>`;
+ document.getElementById('root').append(c);return{pr,g:c.querySelector('canvas').getContext('2d')}});
+let last=performance.now();
+function frame(now){if(!paused)T+=(now-last)/1000;last=now;const t=Math.floor(T*12)/12;
+ for(const {pr,g} of cards){g.globalCompositeOperation='source-over';for(let p=0;p<6;p++){ground(g,p*S);g.save();g.beginPath();g.rect(p*S,0,S,S);g.clip();pr.draw(g,p*S,p,t);g.restore()}}
+ requestAnimationFrame(frame)}
+requestAnimationFrame(frame);
+const b=id=>document.getElementById(id);
+b('day').onclick=()=>{night=false;b('day').classList.add('on');b('night').classList.remove('on')};
+b('night').onclick=()=>{night=true;b('night').classList.add('on');b('day').classList.remove('on')};
+b('pause').onclick=()=>{paused=!paused;b('pause').classList.toggle('on',paused)};
+</script>
+</body>
+</html>

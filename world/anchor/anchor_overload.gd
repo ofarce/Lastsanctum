@@ -284,10 +284,8 @@ func _draw() -> void:
 		return
 	var t := Overload.time()
 	var h := Overload.since_hit()
-	var orb := Proj.nat(CaveShape.CORE.x, 3.0 + sin(GameState.sim_time * 1.7) * 0.2, CaveShape.CORE.y)
-	var lift := float(Overload.sphere_lift())
-	var sphere := orb + Vector2(0.0, -8.0 - lift)
-	var ring_c := orb + Vector2(0.0, 6.0)
+	var sphere := AnchorView.sphere_native()
+	var ring_c := Overload.ring_center()
 	_debris_draw(h, false)
 	if t < Overload.END + 2.0:
 		_ring_shards(t, ring_c)
@@ -306,7 +304,7 @@ func _ring_shards(t: float, c: Vector2) -> void:
 		if age < 0.0 or age > 0.9:
 			continue
 		var ang := (k * 8 + 2) / 64.0 * TAU
-		var o := c + Vector2(cos(ang) * 15.0, sin(ang) * 6.0)
+		var o := c + Vector2(cos(ang) * 21.0, sin(ang) * 9.6)
 		if age < 0.12:
 			_disc(o.x, o.y, 2.5, PUR[6], 1.0 - age / 0.12)
 		_burst(k * 7 + 3, 5, age, o, -3.0, -0.1, 15.0, 45.0, 0.4, 0.8, 200.0, o.y, [PUR[6], PUR[5], PUR[3]])

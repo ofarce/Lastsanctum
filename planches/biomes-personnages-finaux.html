@@ -1,0 +1,886 @@
+<meta charset="utf-8">
+<title>Oublieux et mages, modèles</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=VT323&family=IBM+Plex+Sans:wght@400;500;700&display=swap">
+<style>
+/* Mise en page : barre de réglages collante, puis une section par élément = cinq modèles animés côte à côte, puis la rangée à l'échelle du jeu. Un seul aspect, sombre comme la caverne. */
+:root{
+  --bg:#0d1114; --panel:#141c21; --line:#27363d; --ink:#e6e0c8; --muted:#93a3a4;
+  --acc:#9fe0c0; --acc-dim:#3d6a58; --warn:#e58a5a;
+  --display:"VT323","Courier New",monospace; --body:"IBM Plex Sans","Segoe UI",system-ui,sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 var(--body)}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--panel)}
+.wrap{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));max-width:1320px;margin:0 auto}
+header.top{padding-block:26px 16px}
+h1{font:400 clamp(34px,5vw,46px)/1 var(--display);margin:0 0 8px;color:var(--acc);letter-spacing:.03em;text-wrap:balance}
+.lede{margin:0;color:var(--muted);max-width:72ch}
+.bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--panel);border-block:1px solid var(--line)}
+.bar .wrap{display:flex;flex-wrap:wrap;gap:8px 18px;align-items:center;padding-block:9px}
+.grp{display:flex;flex-wrap:wrap;gap:4px;align-items:center}
+.grp>span{font:400 17px var(--display);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-right:2px}
+.spacer{flex:1}
+button{font:500 14px var(--body);color:var(--ink);background:transparent;border:1px solid var(--line);border-radius:3px;padding:5px 10px;cursor:pointer}
+button:hover{border-color:var(--acc-dim)}
+button[aria-pressed="true"]{background:var(--acc);color:#0a1a14;border-color:var(--acc)}
+button.main{background:var(--acc);color:#0a1a14;border-color:var(--acc);font-weight:700}
+button:focus-visible,input:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+main{display:flex;flex-direction:column;gap:46px;padding-block:28px 60px}
+section>h2{font:400 32px/1.05 var(--display);margin:0 0 4px;letter-spacing:.03em;color:var(--acc)}
+section>p.sub{margin:0 0 16px;color:var(--muted);max-width:74ch}
+.row{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:16px}
+.card{display:flex;flex-direction:column;gap:8px;min-width:0}
+.card canvas{display:block;width:100%;height:auto;image-rendering:pixelated;image-rendering:crisp-edges;border:1px solid var(--line);border-radius:3px}
+.card h3{font:700 17px/1.2 var(--body);margin:0}
+.card p{margin:0;color:var(--muted);font-size:14.5px;line-height:1.45}
+label.pick{display:flex;gap:7px;align-items:center;cursor:pointer;font-weight:500;margin-top:auto;padding-top:4px}
+label.pick input{accent-color:var(--acc);width:17px;height:17px}
+.note{border-left:2px solid var(--warn);padding-left:12px;margin:16px 0 0;max-width:74ch;color:var(--muted)}
+.note b{color:var(--ink)}
+.scale{overflow-x:auto;border:1px solid var(--line);border-radius:3px;background:#0c0f0e;scrollbar-color:var(--line) transparent}
+.scale canvas{display:block;margin:0 auto;image-rendering:pixelated;image-rendering:crisp-edges}
+.cap{font-size:14px;color:var(--muted);margin:8px 0 0}
+#out{width:100%;margin-top:10px;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:3px;padding:8px;font:15px var(--body);resize:vertical}
+</style>
+
+<header class="top"><div class="wrap">
+  <h1>Oublieux et mages, modèles</h1>
+  <p class="lede">Cinq modèles animés pour chacun des quatre nouveaux personnages : l’Oublieux de l’Église et les trois mages de l’École de magie cristallisée. Tous humains, dessinés avec le moteur des unités de la Caserne : aplats francs, contour teinté, lumière en haut à gauche, 24 images par seconde. Les lueurs restent vives de nuit. Rien n’est changé en jeu.</p>
+</div></header>
+
+<div class="bar"><div class="wrap">
+  <div class="grp" id="anim"><span>Animation</span><button data-v="idle" aria-pressed="true">Repos</button><button data-v="walk">Marche</button><button data-v="act">Action</button><button data-v="death">Mort</button></div>
+  <div class="grp" id="sol"><span>Fond</span><button data-v="ardoise" aria-pressed="true">Ardoise</button><button data-v="nuit">Nuit</button></div>
+  <span class="spacer"></span>
+  <button id="pause" aria-pressed="false">Pause</button>
+  <button id="copy" class="main">Copier mon choix</button>
+</div></div>
+
+<main class="wrap" id="main">
+<section id="echelle">
+  <h2>À l’échelle du jeu</h2>
+  <p class="sub">Les vingt modèles au repos à côté des trois unités de la Caserne, deux fois la taille réelle.</p>
+  <div class="scale"><canvas id="scale"></canvas></div>
+  <p class="cap" id="cap"></p>
+  <textarea id="out" rows="2" readonly hidden aria-label="Choix à copier"></textarea>
+</section>
+</main>
+
+<script>
+// Ingénieur « colosse en combinaison », dessin 16 bits partagé par planches/ingenieur-mana-planche.html
+// et planches/ingenieur-colosse-export.html (sprites du jeu). Expose R, MAT, buf, render, hero, mirror, portrait.
+'use strict';
+// ---------- Palettes (rampes sombre → clair) ----------
+const R={
+ skin:['#5a2c1c','#a0583a','#d88e62','#f4c093','#ffe2bf'],
+ hair:['#0e0a08','#1e1610','#2e2218','#423226','#5e4a3a'],
+ linen:['#3a2a20','#8a6a48','#c8a676','#ecd6a4','#fff4d6'],
+ sash:['#2a0e14','#6a1e2a','#a8323a','#d85a4a','#f6906a'],
+ stone:['#1c1e26','#4a4c5a','#7a7e8c','#a8acb8','#dcdee6'],
+ leath:['#20120a','#5a3418','#8a5428','#b67a3c','#dca460'],
+ cy:['#0a3a48','#1f9fb8','#5ce8ff','#c8fbff','#ffffff'],
+ eye:['#10101e','#1e2850','#3a5aa8','#7aa8f0','#ffffff'],
+ suit:['#0e1a20','#1e3a44','#2f5a66','#4a8290','#8cc4cc'],
+ scar:['#5a2c1c','#8a4030','#b05a44','#c87458','#e09070'],
+ iron:['#141820','#3a4250','#646e80','#98a2b4','#d6dce8'],
+};
+const MAT=Object.keys(R);
+// ---------- Tampon de pixels ----------
+function buf(w,h){return{w,h,m:new Int8Array(w*h).fill(-1),s:new Float32Array(w*h)}}
+function put(b,x,y,mat,s){x|=0;y|=0;if(x<0||y<0||x>=b.w||y>=b.h)return;b.m[y*b.w+x]=MAT.indexOf(mat);b.s[y*b.w+x]=s}
+// ellipse ombrée : lumière en haut à gauche
+function blob(b,cx,cy,rx,ry,mat,bias=0,cut){
+ for(let y=Math.floor(cy-ry);y<=Math.ceil(cy+ry);y++)for(let x=Math.floor(cx-rx);x<=Math.ceil(cx+rx);x++){
+  const dx=(x+.5-cx)/rx,dy=(y+.5-cy)/ry,d=dx*dx+dy*dy;if(d>1)continue;if(cut&&!cut(x,y))continue;
+  const nz=Math.sqrt(1-Math.min(d,1));const l=(-dx*.55-dy*.65+nz*.75)*.62+.28+bias;put(b,x,y,mat,l)}}
+function rect(b,x0,y0,w,h,mat,bias=0){for(let y=y0;y<y0+h;y++)for(let x=x0;x<x0+w;x++){const u=(x-x0+.5)/w,v=(y-y0+.5)/h;put(b,x,y,mat,.75-u*.45-v*.2+bias)}}
+function px(b,x,y,mat,s){put(b,x,y,mat,s)}
+// ---------- Rendu ----------
+function render(b,scale){
+ const c=document.createElement('canvas');c.width=b.w*scale;c.height=b.h*scale;c.style.background='transparent';
+ const g=c.getContext('2d');const BY=[[0,8,2,10],[12,4,14,6],[3,11,1,9],[15,7,13,5]];
+ const col=(i,x,y)=>{const r=R[MAT[b.m[i]]];let v=Math.max(0,Math.min(.999,b.s[i]))*(r.length-1.0001);let k=Math.floor(v);
+  if(v-k>(BY[y&3][x&3]+.5)/16*0+.5)k++; /* pas de trame : paliers francs, à la manière 16 bits */
+  return r[Math.min(Math.max(k,1),r.length-1)]};
+ // remplissage
+ for(let y=0;y<b.h;y++)for(let x=0;x<b.w;x++){const i=y*b.w+x;if(b.m[i]<0)continue;g.fillStyle=col(i,x,y);g.fillRect(x*scale,y*scale,scale,scale)}
+ // contour sélectif : pixel vide touchant une matière → ton sombre de cette matière
+ for(let y=0;y<b.h;y++)for(let x=0;x<b.w;x++){if(b.m[y*b.w+x]>=0)continue;let best=-1;
+  for(const[dx,dy]of[[0,1],[1,0],[-1,0],[0,-1]]){const X=x+dx,Y=y+dy;if(X<0||Y<0||X>=b.w||Y>=b.h)continue;const j=Y*b.w+X;if(b.m[j]>=0){best=b.m[j];if(dy===-1||dx===-1)break}}
+  if(best>=0){g.fillStyle=R[MAT[best]][0];g.fillRect(x*scale,y*scale,scale,scale)}}
+ // liseré intérieur entre matières (bas/droite)
+ for(let y=0;y<b.h-1;y++)for(let x=0;x<b.w-1;x++){const i=y*b.w+x,a=b.m[i];if(a<0)continue;
+  const d=b.m[i+b.w],r=b.m[i+1];if((d>=0&&d!==a&&b.s[i+b.w]<b.s[i])){g.fillStyle=R[MAT[d]][1];g.fillRect(x*scale,(y+1)*scale,scale,scale)}}
+ return c}
+// ---------- Personnage (gabarit 32×34, pieds y≈31) ----------
+// Colosse au visage nu (crâne rasé, mâchoire carrée, cicatrice) dans une combinaison blindée lisse :
+// épaulières rondes surdimensionnées, plastron bombé, bras droit = canon lance-pitons, glyphes cyan.
+// Options du jeu (vue de profil) : gun {ang (rad), rec, flash, pulse} = bolter orienté ; slung = bolter dans le dos ;
+// hands 'pray' | 'knees' ; depth 0..4 = agenouillement ; lotus = assis en tailleur ; blink = yeux clos ; ub = buste décalé.
+function hero(o){
+ const{dir='d',f=0,pose='idle',gun=null,slung=false,hands='',lotus=false,blink=false,ub=0}=o;const b=buf(32,34);
+ const step=pose==='walk'?[0,1,0,-1][f]:0, bob=pose==='walk'?(f%2?-1:0):0;
+ const hurt=pose==='hurt', win=pose==='win', atk=pose==='atk';
+ const depth=o.depth??(pose==='kneel'?4:0), kneel=depth>=2&&!lotus;
+ const Yl=bob+depth+(hurt?1:0), Y=Yl+ub, X=16+(hurt?-1:0);
+ // jambes blindées : cuisse, genouillère, botte massive
+ const leg=(lx,ly,len,back)=>{const s=back?-.25:0;rect(b,lx,ly,4,len,'suit',s);px(b,lx+1,ly+2,'iron',.8+s);rect(b,lx-(dir==='s'?0:0),ly+len,dir==='s'?5:4,3,'iron',s);px(b,lx+1,ly+len+2,'cy',.5+s)};
+ if(lotus){rect(b,X-6,26+Yl-2,12,2,'suit',-.05);rect(b,X-6,28+Yl-2,5,2,'iron',-.1);rect(b,X+1,28+Yl-2,5,2,'iron');px(b,X+4,28+Yl-2,'cy',.6)}
+ else if(!kneel){
+  if(dir==='s'){leg(X-2-step,22+Yl,5,true);leg(X-2+step,22+Yl,5,false)}
+  else{leg(X-5,22+Yl+(step>0?-1:0),5-(step>0?1:0),false);leg(X+1,22+Yl+(step<0?-1:0),5-(step<0?1:0),false)}
+ }else{const k=Yl-2;rect(b,X-5,23+k,10,3,'suit',-.1);rect(b,X-6,25+k,5,3,'iron');rect(b,X+2,25+k,4,3,'iron')}
+ // bassin
+ rect(b,X-5,20+Y,10,3,'iron',-.05);if(dir!=='u')px(b,X,21+Y,'cy',.8);
+ // bras gauche (gant) et bras droit (canon)
+ const fist=(ax,ay,front)=>{rect(b,ax-1,ay,3,4,'suit',front?0:-.3);blob(b,ax+.5,ay+5,1.9,1.7,'iron',front?0:-.25)};
+ // bolter : boîtier massif, chargeur, bouche large ; tenu à deux mains
+ const bolter=(x,y,ang,L,sh=0)=>{const c=Math.cos(ang),sn=Math.sin(ang);
+  const P=(u,v,m,l)=>px(b,Math.round(x+u*c-v*sn),Math.round(y+u*sn+v*c),m,l);
+  for(let u=0;u<=L;u++)for(let v=-1.5;v<=1.5;v+=.5){const top=v<-.9;P(u,v,u<3?'leath':(u>L-2?'iron':(top?'suit':'iron')),(top?.8:.55-v*.12)+sh)}
+  for(let u=L*.35;u<=L*.55;u+=.5)for(let v=1.5;v<=3.5;v+=.5)P(u,v,'iron',.35+sh);   // chargeur
+  for(let v=-1;v<=1;v+=.5)P(L+1,v,'iron',.15+sh);P(L+1,0,'cy',.9);P(L*.7,-1.5,'cy',.7)}; // bouche, voyant
+ const grip=(x,y)=>blob(b,x,y,1.8,1.6,'iron',.15);
+ if(dir==='s'&&slung)bolter(X-6,21+Y,-1.15,12,-.3);
+ if(dir==='s')rect(b,X-3,14+Y,3,4,'suit',-.3);
+ // plastron bombé
+ const tw=dir==='s'?5:6.5;
+ blob(b,X,17+Y,tw,5,'suit',.05);
+ if(dir!=='u'){blob(b,X+(dir==='s'?1:0),16+Y,tw-2.5,3,'suit',.25);px(b,X+(dir==='s'?2:0),17+Y,'cy',.9);px(b,X+(dir==='s'?2:0)-1,17+Y,'cy',.5);px(b,X+(dir==='s'?2:0)+1,17+Y,'cy',.5)}
+ else{rect(b,X-3,13+Y,6,6,'iron',.05);px(b,X-1,15+Y,'cy',.8);px(b,X+1,15+Y,'cy',.8);px(b,X,17+Y,'cy',.6)} // module dorsal
+ // bras de face/dos
+ if(dir==='d'){
+  if(win){rect(b,X-9,14+Y,3,4,'suit');rect(b,X+6,12+Y,3,4,'suit');bolter(X+7,13+Y,-Math.PI/2,11);grip(X+7.5,12+Y);grip(X+7.5,17+Y)}
+  else if(atk){rect(b,X-8,14+Y,3,4,'suit');rect(b,X+5,14+Y,3,4,'suit');bolter(X-4,19+Y,-.25,13);grip(X-3,19+Y);grip(X+6,17+Y)}
+  else{const sw=pose==='walk'?step*.5:0;rect(b,X-9,14+Y,3,4,'suit');rect(b,X+6,14+Y,3,4,'suit');bolter(X-7,21+Y+sw,-.55,13);grip(X-6.5,19.5+Y+sw);grip(X+3,15.5+Y+sw)}
+ }else if(dir==='u'){
+  rect(b,X-9,14+Y,3,4,'suit',-.1);rect(b,X+6,14+Y,3,4,'suit',-.1);
+  if(atk)bolter(X-10,15+Y,Math.PI+.1,4,-.2);else bolter(X+9,13+Y,-.6,3,-.2);
+ }
+ // épaulières rondes surdimensionnées
+ const pauld=(cx,cy,s)=>{blob(b,cx,cy,3.6,3,'suit',.12+s);px(b,cx-1,cy-2,'suit',1);px(b,cx,cy+1,'cy',.55+s)};
+ if(dir==='s'){pauld(X+1,12.5+Y,0)}else{pauld(X-6.5,12.5+Y,0);pauld(X+6.5,12.5+Y,0)}
+ // col
+ rect(b,X-3,10+Y,6,2,'iron',.1);
+ // tête nue : crâne rasé, mâchoire carrée
+ const hx=X+(dir==='s'?1:0),hy=6+Y+(hurt?1:0);
+ // coupe classique : raie sur le côté, tempes et nuque couvertes
+ if(dir==='u'){blob(b,hx,hy,4.4,4.4,'skin',-.05);blob(b,hx,hy,4.8,4.6,'hair',.1,(x,y)=>y<=hy+3);px(b,hx-2,hy-4,'hair',1);px(b,hx-1,hy-4,'hair',.9);px(b,hx+2,hy+1,'scar',.6)}
+ else{
+  blob(b,hx,hy,4.4,4.3,'skin',.08);rect(b,hx-(dir==='s'?2:3),hy+2,dir==='s'?6:7,3,'skin',.05); // mâchoire
+  if(dir==='s'){blob(b,hx-.6,hy-1.2,4.8,3.8,'hair',.1,(x,y)=>y<=hy-1||x<=hx-1);rect(b,hx-4,hy+1,3,2,'hair',.05);px(b,hx-4,hy+1,'hair',.3);px(b,hx+1,hy-4,'hair',1);px(b,hx+2,hy-4,'hair',.9)}
+  else{blob(b,hx,hy-1.2,4.9,3.8,'hair',.1,(x,y)=>y<=hy-2||(x<=hx-4||x>=hx+4)&&y<=hy+2);
+   px(b,hx-2,hy-4,'hair',.05);px(b,hx-2,hy-3,'hair',.05);px(b,hx-1,hy-4,'hair',1);px(b,hx,hy-4,'hair',1);px(b,hx+1,hy-3,'hair',.85)} // raie + mèche
+  const eye=ex=>{if(blink){px(b,ex,hy,'skin',.12);px(b,ex+1,hy,'skin',.12)}else{px(b,ex,hy,'eye',.1);px(b,ex+1,hy,'eye',.98)}px(b,ex,hy-1,'hair',.05);px(b,ex+1,hy-1,'hair',.05)};
+  if(hurt){for(const ex of dir==='s'?[hx+2]:[hx-3,hx+1]){px(b,ex,hy,'eye',.1);px(b,ex+1,hy,'eye',.1)}}
+  else if(dir==='s')eye(hx+2);else{eye(hx-3);eye(hx+1)}
+  // cicatrice sur l'arcade gauche et bouche serrée
+  if(dir!=='s'){px(b,hx-3,hy-2,'scar',.6);px(b,hx-2,hy+1,'scar',.6);px(b,hx-2,hy+2,'scar',.5)}else px(b,hx,hy+1,'scar',.6);
+  for(let x=-1;x<=1;x++)if(dir!=='s'||x>=0)px(b,hx+x+(dir==='s'?2:0),hy+3,'skin',.12);
+  if(win&&dir!=='s'){px(b,hx-2,hy+3,'skin',.12);px(b,hx+2,hy+3,'skin',.12)}
+  // micro-oreillette cyan
+  px(b,dir==='s'?hx-2:hx+4,hy,'cy',.7);
+ }
+ if(dir==='s'&&slung){if(hands==='pray'){grip(X+4,15.5+Y);px(b,X+4,13+Y,'cy',.7)}else if(hands==='knees'){grip(X-4,24+Yl-2);grip(X+5,24+Yl-2)}else grip(X+1,19+Y)}
+ else if(dir==='s'&&gun){const c=Math.cos(gun.ang),sn=Math.sin(gun.ang),sx=X+1,sy=15+Y,r=gun.rec||0;
+  bolter(sx-(3+r)*c,sy-(3+r)*sn,gun.ang,12);grip(sx+(1-r)*c,sy+1+(1-r)*sn);grip(sx+(6-r)*c,sy+1+(6-r)*sn);
+  const mx=sx+(10-r)*c,my=sy+(10-r)*sn;if(gun.pulse)px(b,mx,my,'cy',1);
+  if(gun.flash){for(const[dx,dy,l]of[[1,0,1],[2,0,.9],[1,-1,.8],[1,1,.8],[3,0,.6]])px(b,mx+dx*c-dy*sn,my+dx*sn+dy*c,'cy',l)}}
+ else if(dir==='s'){if(atk){bolter(X-1,14+Y,0,13);grip(X+1,15.5+Y);grip(X+6,16+Y);px(b,X+15,13+Y,'cy',1);px(b,X+16,14+Y,'cy',.8);px(b,X+15,15+Y,'cy',1)}
+  else{bolter(X-3,19+Y+step*.3,-.3,13);grip(X-1,18.5+Y+step*.3);grip(X+5,16.5+Y+step*.3)}}
+ if(dir==='d'&&atk){px(b,X+9,14+Y,'cy',1);px(b,X+10,13+Y,'cy',.8);px(b,X+10,15+Y,'cy',.8)}
+ if(hurt){px(b,X+8,1,'cy',1);px(b,X+9,0,'cy',.7);px(b,X+7,0,'cy',.7)}
+ return b}
+function mirror(b){const o=buf(b.w,b.h);for(let y=0;y<b.h;y++)for(let x=0;x<b.w;x++){const i=y*b.w+x,j=y*b.w+(b.w-1-x);o.m[j]=b.m[i];o.s[j]=b.m[i]>=0?b.s[i]*.9+.05:0}return o}
+// ---------- Portrait 48×48 ----------
+function portrait(){const b=buf(48,48),cx=24;
+ blob(b,8,44,9,7,'suit',.15);blob(b,40,44,9,7,'suit',.05);rect(b,14,40,20,8,'suit',.1);px(b,24,44,'cy',.9);px(b,23,44,'cy',.5);px(b,25,44,'cy',.5);
+ rect(b,17,35,14,5,'iron',.1);
+ blob(b,cx,20,11,12,'skin',.08);rect(b,cx-10,22,20,10,'skin',.05);blob(b,cx,32,8,3,'skin',-.05);
+ blob(b,cx,14,12,7,'hair',.1,(x,y)=>y<=15||((x<cx-9||x>cx+9)&&y<=27));
+ for(let y=8;y<=13;y++)px(b,cx-4,y,'hair',.05);
+ for(let x=-3;x<=6;x++)px(b,cx+x,8+(x>2?1:0),'hair',1);px(b,cx+5,12,'hair',.8);px(b,cx+6,13,'hair',.7);px(b,cx-8,11,'hair',.85);
+ const eye=ex=>{for(let x=-1;x<4;x++){px(b,ex+x,19,'hair',.05);px(b,ex+x,20,'hair',.08)}for(let x=0;x<3;x++){px(b,ex+x,22,'eye',.15);px(b,ex+x,23,'eye',.35)}px(b,ex+1,22,'eye',.99);px(b,ex+2,23,'eye',.8)};
+ eye(cx-8);eye(cx+5);
+ for(let i=0;i<7;i++)px(b,cx-9+(i>>1),17+i,'scar',.6);
+ px(b,cx,26,'skin',.15);px(b,cx+1,27,'skin',.12);for(let x=-3;x<=3;x++)px(b,cx+x,30,'skin',.08);
+ for(let x=-8;x<=8;x+=3)px(b,cx+x,33,'skin',.25);
+ px(b,cx+11,22,'cy',.8);px(b,cx+11,23,'cy',.5);
+ return b}
+
+// Refonte 16 bits des personnages, alignée sur l'Ingénieur (Templier technomancien).
+// Réutilise le moteur de engineer-colosse.js (R, MAT, buf, blob, rect, px, render, mirror) :
+// rampes de 5 tons sans trame, contour coloré (ton le plus sombre de la matière), lumière en haut à gauche,
+// même gabarit que l'Ingénieur (tête ~9 px, épaules rondes, pieds au même niveau, ~31 px de haut).
+// Expose : FIG (fiches), fig(o) humanoïde, QUAD (fiches), quad(o) quadrupède, dedither(canvas) aperçu automatique.
+'use strict';
+Object.assign(R,{
+ ind:['#2a0e04','#7a3008','#c25a12','#f08a2a','#ffc070'],   // orange d'Indra (caserne)
+ or:['#2a1a04','#6e4a0c','#b08218','#e2b83a','#fff0a0'],    // or de Laetan (Credo Divin) — ennemis seulement
+ crm:['#2e2418','#7a6a50','#b8a684','#e2d6b4','#fffaea'],   // lin crème des soldats de Laetan
+ car:['#1e060c','#58101e','#8e1e2c','#c2384a','#ec6a74'],   // carmin de Laetan
+ robe:['#121216','#2c2c34','#4a4a56','#706e7c','#a2a0ae'],  // bure grise des fidèles
+ bete:['#1a0406','#5a0e12','#9a1c1c','#d83c2e','#ff8a66'],  // rouge de la Bête
+ bone:['#2a2418','#6a5e46','#aa9c7c','#dcd2b4','#fffbe8'],
+ fur:['#2a1606','#6e3e12','#ae6a24','#dc9a44','#ffd690'],   // félin fauve
+ croc:['#0c1608','#24401a','#3e6a2a','#6a9a3e','#a8cc6a'],
+ wood:['#1c1008','#4a2c14','#7a4c24','#a8743a','#d4a462'],
+ fire:['#5a1404','#c23a08','#f2800e','#ffc83a','#fff6c0'],
+ clay:['#24180e','#5e4024','#946a3c','#c49a5e','#ecd09a'],  // golem de terre (Brute)
+});
+MAT.push('ind','or','crm','car','robe','bete','bone','fur','croc','wood','fire','clay');
+
+function line(b,x0,y0,x1,y1,mat,l){const n=Math.max(Math.abs(x1-x0),Math.abs(y1-y0))*2|0||1;
+ for(let i=0;i<=n;i++){const t=i/n;px(b,Math.round(x0+(x1-x0)*t),Math.round(y0+(y1-y0)*t),mat,typeof l==='function'?l(t):l)}}
+// écu : bord droit en haut, pointe en bas
+function ecu(b,cx,y0,w,h,mat,trim,emb){for(let y=0;y<h;y++){const v=y/h,hw=v<.55?w/2:w/2*(1-(v-.55)/.45*.85);
+ for(let x=Math.round(cx-hw);x<=Math.round(cx+hw)-1;x++){const u=(x-cx+hw)/(2*hw),edge=x===Math.round(cx-hw)||x===Math.round(cx+hw)-1||y===0;
+  px(b,x,y0+y,edge&&trim?trim:mat,edge?.75-u*.3:.78-u*.45-v*.2)}}
+ if(emb){const ey=y0+(h*.38|0);px(b,cx,ey-1,emb,.95);px(b,cx,ey,emb,.9);px(b,cx,ey+1,emb,.8);px(b,cx-1,ey,emb,.8);px(b,cx+1,ey-0,emb,.75)}}
+
+// ---------- Fiches humanoïdes ----------
+// head: bare | hood | helm | crest | sallet ; weapon: sword | bow | staff | dagger | flamer | spear
+const FIG={
+ lame:{name:'Épée et bouclier',side:'allié · caserne',skin:'skin',hair:'hair',head:'sallet',helm:'ind',visor:'iron',
+  torso:'iron',tabard:'ind',sleeve:'iron',glove:'iron',leg:'wool',boot:'iron',paul:'iron',belt:'leath',
+  weapon:'sword',shield:{mat:'ind',trim:'iron',emb:'iron'},tall:2},
+ archer:{name:'Archer',side:'allié · caserne',skin:'skin',hair:'hair',head:'hood',hood:'ind',
+  torso:'leath',sleeve:'leath',glove:'leath',leg:'wool',boot:'leath',cape:'ind',belt:'brz',weapon:'bow',quiver:true,tall:2},
+ flammes:{name:'Lance-flammes',side:'allié · caserne',skin:'skin',head:'helm',helm:'iron',visor:'ind',
+  torso:'ind',sleeve:'iron',glove:'iron',leg:'iron',boot:'iron',paul:'iron',bigpaul:true,belt:'leath',weapon:'flamer',tank:true,tall:2},
+ creep:{name:'Fidèle',side:'Laetan · bas rang',skin:'skin',head:'hood',hood:'robe',torso:'robe',sleeve:'robe',glove:'skin',
+  leg:'robe',boot:'leath',robe:'robe',belt:'car',weapon:'dagger'},
+ spitter:{name:'Prêtre du Credo',side:'Laetan · sort à distance, portée moyenne (10)',skin:'skin',head:'hood',hood:'or',torso:'or',sleeve:'or',glove:'skin',
+  leg:'car',boot:'leath',robe:'or',stole:'car',belt:'car',weapon:'staff'},
+ scout:{name:'Éclaireur',side:'Laetan · rapide',skin:'skin',hair:'hair',head:'helm',helm:'crm',torso:'leath',sleeve:'crm',glove:'leath',
+  leg:'leath',boot:'leath',belt:'car',sash:true,weapon:'sword',scarf:'car'},
+ soldier:{name:'Soldat',side:'Laetan · pilum lancé, portée courte (5)',skin:'skin',head:'crest',helm:'crm',crest:'car',torso:'crm',sleeve:'crm',glove:'leath',
+  leg:'crm',boot:'leath',skirt:'car',paul:'crm',belt:'or',weapon:'spear',pike:true},
+ shield:{name:'Porte-bouclier',side:'Laetan · tank',skin:'skin',head:'crest',helm:'or',crest:'car',torso:'crm',sleeve:'crm',glove:'leath',
+  leg:'crm',boot:'leath',skirt:'car',paul:'or',belt:'or',weapon:'sword',shield:{mat:'or',trim:'or',emb:'car',pavois:true}},
+ larcher:{name:'Archer de Laetan',side:'Laetan · arc, portée moyenne (10)',skin:'skin',hair:'hair',head:'helm',helm:'crm',torso:'leath',sleeve:'crm',glove:'leath',
+  leg:'car',boot:'leath',belt:'or',weapon:'bow',quiver:true,longbow:true},
+};
+// Formes-signatures des soldats de Laetan (planches/unites-maj-propositions.html, L2) : scarf = cape courte au vent
+// (éclaireur), pike = pilum porté droit devant, plus haut que le cimier (soldat), pavois = grand bouclier du menton
+// aux genoux (porte-bouclier), longbow = arc de la tête aux tibias (archer). tall = jambes allongées de n px
+// (caserne, dessinée à l'échelle 1 dans le jeu).
+
+function fig(o){
+ const{k,dir='d',f=0,pose='idle'}=o;const T=FIG[k];const b=buf(40,38);
+ const walk=pose==='walk',atk=pose==='atk',strike=pose==='strike',thr=pose==='throw',nw=!!o.nowpn;
+ // Marche : 4 poses (f, caserne) ou phase continue o.ph ∈ [0, 1) (ennemis, 12 poses : pas de 2 px, appuis tenus).
+ // Chaque phase est distincte : pied levé sur la jambe qui passe, bras en retard de 30°, choc de la tête au contact.
+ const PH=walk&&o.ph!==undefined,phi=PH?o.ph*2*Math.PI:0,cs=Math.cos(phi);
+ const step=walk?(PH?Math.round(2*Math.sin(phi)):[0,1,0,-1][f]):0;
+ const bob=walk?(PH?(Math.abs(cs)>.7?-1:0):(f%2?-1:0)):0;
+ const liftF=PH&&cs>0&&Math.abs(step)<=1?1:0,liftB=PH&&cs<=0&&Math.abs(step)<=1?1:0;
+ const armS=PH?1.6*Math.sin(phi-Math.PI/6):step*.8;
+ if(PH&&Math.round(o.ph*12)%6===3)o={...o,hd:(o.hd||0)+1};
+ const tall=T.tall||0,Yl=bob+3-tall,Y=Yl+(o.ub||0),X=20,S=dir==='s',D=!S;
+ // o.hd : la tête descend d'autant de plus que le buste (respiration en trois temps, sans jour au cou).
+ const hx=X+(S?1:0),hy=6+Y+(o.hd||0);
+ // ---- dos : cape, réservoir
+ // cape courte de l'éclaireur : flotte derrière les épaules (o.fl : battement 0 à 3)
+ if(T.scarf&&S){const fl=o.fl!==undefined?o.fl:(walk?Math.round(1.5+1.5*Math.sin(phi*2)):0);
+  for(let i=0;i<8;i++){const t=i/7,yy=12+Y+t*(3+[0,1,2,1][fl%4])+(i>4?[0,0,1,-1][fl%4]:0),th=i<3?3:i<6?2:1;
+   for(let d=0;d<th;d++)px(b,X-3-i,Math.round(yy)+d,T.scarf,.7-t*.3-d*.12)}}
+ if(T.scarf&&D)rect(b,X-5,12+Y,10,3,T.scarf,-.2);
+ if(T.cape){if(D)rect(b,X-6,13+Y,12,13,T.cape,-.3);else blob(b,X-3,19+Y,3.5,7,T.cape,-.15,(x,y)=>y>=12+Y)}
+ if(T.tank){if(D){rect(b,X-5,9+Y,3,6,'iron',-.2);rect(b,X+2,9+Y,3,6,'iron',-.2);px(b,X-4,9+Y,'ind',.8);px(b,X+3,9+Y,'ind',.8)}
+  else{blob(b,X-5.5,16+Y,2.6,5,'iron',.05);px(b,X-6,13+Y,'ind',.9);px(b,X-6,18+Y,'ind',.6)}}
+ if(T.quiver){if(D){line(b,X+3,8+Y,X+5,12+Y,'leath',.5);px(b,X+3,7+Y,'wood',.9);px(b,X+4,7+Y,'bone',.95)}
+  else{rect(b,X-6,11+Y,3,8,'leath',-.05);px(b,X-6,10+Y,'bone',.95);px(b,X-5,10+Y,'wood',.9);px(b,X-4,9+Y,'bone',.9)}}
+ // ---- jambes
+ const leg=(lx,ly,len,back)=>{const s=back?-.25:0;rect(b,lx,ly,4,len,T.leg,s);rect(b,lx,ly+len,S?5:4,3,T.boot,s);
+  if(T.boot==='iron')px(b,lx+1,ly+len-1,'iron',.9+s)};
+ if(S){leg(X-2-step,22+Yl,5+tall-liftB,true);leg(X-2+step,22+Yl,5+tall-liftF,false)}
+ else{leg(X-5,22+Yl+(step>0?-1:0),5+tall-(step>0?1:0),false);leg(X+1,22+Yl+(step<0?-1:0),5+tall-(step<0?1:0),false)}
+ // ---- bras arrière (profil)
+ const arm=(ax,ay,dy,s=0)=>{rect(b,ax-1,ay,3,4,T.sleeve,s);blob(b,ax+.5,ay+5+dy,1.8,1.6,T.glove,.1+s)};
+ if(S&&!(T.weapon==='bow'))arm(X-2-armS,14+Y,0,-.3);
+ // ---- robe longue ou jupe
+ if(T.robe){for(let y=19;y<=29;y++){const hw=(S?4.5:5.5)+(y-19)*.32;for(let x=Math.round(X-hw);x<Math.round(X+hw);x++){const u=(x-X+hw)/(2*hw);
+   const fold=D&&((x-X+40)%4===0)&&y>22?-.12:0;px(b,x+(S?(y-19)*.1|0:0),y+Y,T.robe,.72-u*.45-(y-19)*.02+fold)}}}
+ if(T.skirt&&!T.robe)for(let y=20;y<=24;y++){const hw=(S?4:6)+(y-20)*.3;for(let x=Math.round(X-hw);x<Math.round(X+hw);x++){const u=(x-X+hw)/(2*hw);px(b,x,y+Y,T.skirt,(x-X)%2?.55-u*.3:.7-u*.4)}}
+ // ---- torse
+ const tw=S?5:6.5;
+ blob(b,X,17+Y,tw,5,T.torso,.05);
+ if(T.tabard&&D){rect(b,X-2,13+Y,5,11,T.tabard,.1);px(b,X,16+Y,'iron',.9);px(b,X,17+Y,'iron',.6)}
+ if(T.tabard&&S)rect(b,X+1,13+Y,3,11,T.tabard,.05);
+ if(T.stole){if(D){rect(b,X-3,12+Y,2,14,T.stole,.1);rect(b,X+2,12+Y,2,14,T.stole,.05);px(b,X-3,17+Y,'or',.95);px(b,X+2,17+Y,'or',.9)}else rect(b,X+2,12+Y,2,13,T.stole,.1)}
+ if(T.sash)line(b,X-4,13+Y,X+4,20+Y,'car',.6);
+ if(k==='flammes'&&D){px(b,X,16+Y,'fire',.9);px(b,X-1,16+Y,'fire',.5);px(b,X+1,16+Y,'fire',.5)}
+ if(T.belt)rect(b,X-tw+1|0,20+Y,(tw*2-1)|0,2,T.belt,.05);
+ // ---- bras avant
+ const W=T.weapon;
+ const hand=D?[X+7.5,19+Y]:[X+1.5,19+Y]; // main d'arme
+ if(D){
+  const sw=walk?step:0;
+  if(!T.shield&&!(W==='bow'))arm(X-8,14+Y,sw);
+  if(atk&&(W==='sword'||W==='spear'||W==='staff'||W==='dagger')){rect(b,X+6,9+Y,3,5,T.sleeve);blob(b,X+7.5,8+Y,1.8,1.6,T.glove,.15);hand[1]=8+Y}
+  else if(W!=='bow'&&W!=='flamer')arm(X+7,14+Y,-sw);
+ }else{
+  // o.mid : bras à mi-hauteur, en avant (élan ou armé) ; o.rec : retour de garde, main basse en avant.
+  if(atk&&o.mid&&W!=='bow'&&W!=='flamer'){rect(b,X+1,13+Y,3,3,T.sleeve);blob(b,X+4.5,12+Y,1.8,1.6,T.glove,.15);hand[0]=X+4.5;hand[1]=12+Y}
+  else if(o.rec&&!strike&&!thr&&!atk&&W!=='bow'&&W!=='flamer'){rect(b,X+1,15+Y,3,3,T.sleeve);blob(b,X+4.5,18+Y,1.8,1.6,T.glove,.15);hand[0]=X+4.5;hand[1]=18+Y}
+  else if(strike&&(W==='sword'||W==='dagger')){rect(b,X+1,15+Y,5,2,T.sleeve);blob(b,X+6.5,16+Y,1.8,1.6,T.glove,.15);hand[0]=X+6.5;hand[1]=16+Y}
+  else if(thr){rect(b,X+1,12+Y,5,2,T.sleeve);blob(b,X+6.5,11+Y,1.8,1.6,T.glove,.15)}
+  else if(atk&&W!=='bow'&&W!=='flamer'){rect(b,X,9+Y,3,5,T.sleeve);blob(b,X+1.5,8+Y,1.8,1.6,T.glove,.15);hand[1]=8+Y}
+  else if(T.pike&&!nw){rect(b,X+1,15+Y,4,3,T.sleeve);blob(b,X+5.5,17+Y,1.8,1.6,T.glove,.15);hand[0]=X+5.5;hand[1]=17+Y}
+  else if(W!=='bow'&&W!=='flamer'&&!T.shield)arm(X+.5+armS,14+Y,0);
+ }
+ // ---- épaules
+ if(T.paul){const r=T.bigpaul?3.8:3.2;const pl=(cx,cy)=>{blob(b,cx,cy,r,T.bigpaul?3:2.5,T.paul,.15);if(T.bigpaul)px(b,cx,cy,'ind',.8)};
+  if(S)pl(X+1,12.5+Y);else{pl(X-6.5,12.5+Y);pl(X+6.5,12.5+Y)}}
+ else if(T.head!=='hood'){if(S)blob(b,X+1,12.8+Y,2.6,2,T.sleeve,.15);else{blob(b,X-6,13+Y,2.6,2,T.sleeve,.15);blob(b,X+6,13+Y,2.6,2,T.sleeve,.15)}}
+ // ---- tête
+ const face=()=>{blob(b,hx,hy,4.4,4.3,T.skin,.08);rect(b,hx-(S?2:3),hy+2,S?6:7,3,T.skin,.05)};
+ const eyes=(m='eye')=>{if(S){px(b,hx+2,hy,m,.1);px(b,hx+3,hy,m,.95)}else for(const ex of[hx-3,hx+1]){px(b,ex,hy,m,.1);px(b,ex+1,hy,m,.95)}};
+ const mouth=()=>{for(let x=-1;x<=1;x++)if(D||x>=0)px(b,hx+x+(S?2:0),hy+3,T.skin,.12)};
+ if(T.head==='hood'){ // capuche : visage dans l'ombre, yeux visibles
+  blob(b,hx-(S?1:0),hy-.5,5.4,5.2,T.hood,.12);
+  blob(b,hx+(S?1.5:0),hy+1,S?2.6:3.4,3,T.skin,-.2);
+  if(S){px(b,hx+3,hy+1,'eye',.95);px(b,hx+2,hy+1,'eye',.1)}else{px(b,hx-2,hy+1,'eye',.95);px(b,hx+2,hy+1,'eye',.95)}
+  blob(b,hx,hy+5.5,S?3:5.5,1.6,T.hood,.05); // camail
+  if(k==='spitter'){px(b,hx,hy-4,'car',.9);px(b,hx,hy-5,'or',1)}
+ }else if(T.head==='bare'){face();eyes();mouth()}
+ else{ // casques
+  face();eyes();mouth();
+  const H=T.helm;
+  blob(b,hx,hy-1.6,4.9,3.6,H,.15,(x,y)=>y<=hy-1||(S?x<=hx-2:(x<=hx-4||x>=hx+4))&&y<=hy+2);
+  rect(b,hx-(S?3:5),hy-1,S?8:10,1,H,.45); // bord du casque
+  if(T.head==='crest'){for(let i=-3;i<=(S?1:3);i++)px(b,hx+(S?i-1:0),hy-5+(S?Math.abs(i+1)>2?1:0:0),T.crest,.85-(S?0:Math.abs(i)*.04));
+   if(D){px(b,hx,hy-5,T.crest,.95);px(b,hx,hy-6,T.crest,.8);px(b,hx-1,hy-5,T.crest,.6);px(b,hx+1,hy-5,T.crest,.6)}
+   else{for(let i=0;i<6;i++)px(b,hx-3+i,hy-5-(i<2?0:1),T.crest,.9-i*.06);px(b,hx-4,hy-4,T.crest,.6);px(b,hx-5,hy-3,T.crest,.5)}}
+  if(T.head==='sallet'||T.visor){ // visière fermée
+   for(let x=(S?0:-4);x<=(S?4:4);x++)px(b,hx+x,hy,T.visor||'iron',T.visor==='ind'?(x%2?.7:.95):.25);
+   if(T.head==='sallet'){rect(b,hx-(S?1:4),hy+1,S?5:8,2,T.visor,.45);px(b,hx+(S?2:0),hy-4,T.helm,1)}
+  }
+ }
+ // ---- armes et boucliers (au premier plan)
+ const [hx2,hy2]=hand;
+ if(W==='sword'&&!strike&&!nw){if(atk){line(b,hx2,hy2-1,hx2+2,hy2-8,'iron',t=>.95-t*.2);px(b,hx2-1,hy2,'leath',.6);px(b,hx2+1,hy2,'leath',.6);px(b,hx2+2,hy2-9,'iron',1)}
+  else{line(b,hx2+.5,hy2+1,hx2+3,hy2+8,'iron',t=>.9-t*.25);px(b,hx2-1,hy2+1,'leath',.55);px(b,hx2+2,hy2+1,'leath',.55)}}
+ if(W==='dagger'&&!strike&&!nw){if(atk)line(b,hx2,hy2-1,hx2+1,hy2-4,'iron',.9);else line(b,hx2+.5,hy2+1,hx2+1.5,hy2+4,'iron',.85)}
+ if(W==='spear'&&!thr&&!nw){const wy=o.wy||0,top=(atk?hy2-12:hy2-(T.pike&&S?19:15))+wy,xx=hx2+(atk?1:0);line(b,xx,hy2+(atk?4:9)+wy,xx,top+3,'wood',.6);
+  px(b,xx,top+2,'iron',.95);px(b,xx,top+1,'iron',.9);px(b,xx,top,'iron',.8);px(b,xx-1,top+3,'iron',.6);px(b,xx+1,top+3,'iron',.6);px(b,xx,top+4,'car',.8)}
+ if(W==='staff'){const xx=hx2+.5,top=atk?hy2-10:hy2-14;line(b,xx,hy2+9,xx,top+3,'wood',.6);
+  blob(b,xx,top+1,1.8,1.8,'or',.25);px(b,xx,top+1,'fire',atk?1:.8);if(atk&&!o.mid){const fl=o.flick||0,sway=[0,1,0,-1][fl%4];for(const[dx,dy,l]of[[0,-2,1],[2,0,.9],[-2,0,.9],[0,-3,.7],[1,-2,.8],[-1,-2,.8]])px(b,xx+dx+(dy<-1?sway:0),top+1+dy,'fire',l);
+  if(fl%3===1)px(b,xx+sway,top-3,'fire',.6);if(fl%3===2){px(b,xx+2,top-1,'fire',.75);px(b,xx-2,top-2,'fire',.55)}
+  // o.burst : gerbe qui se dissipe après le sort (rayon croissant, de plus en plus clairsemée)
+  if(o.burst){const r=o.burst;for(let a=0;a<8;a++){if(r>3&&a%2)continue;const an=a*Math.PI/4+r*.4;px(b,xx+Math.cos(an)*r,top+1+Math.sin(an)*r*.8,'fire',1-r*.1)}}}
+  if(o.ember&&!atk){px(b,xx,top-1,'fire',.9);if(o.ember>1){px(b,xx-1,top,'fire',.7);px(b,xx+1,top-2,'fire',.6)}}}
+ if(W==='bow'){ // arc tenu devant, corde
+  const bx=D?X+7:X+6,by=16+Y,pull=atk?3:(o.pull||0); // pull < 0 : corde qui vibre en avant
+  const BL=T.longbow?12:8,BC=T.longbow?4:3;
+  for(let i=-BL;i<=BL;i++){const c=Math.round((1-(i/BL)**2)*BC);px(b,bx+c,by+i,'wood',.75-i*.02);if(T.longbow&&Math.abs(i)<2)px(b,bx+c+1,by+i,'car',.7)}
+  for(let i=-BL+1;i<=BL-1;i++)px(b,bx-pull*(1-Math.abs(i)/(BL-1))|0,by+i,'bone',.95);
+  if(D){arm(X-8,14+Y,0);rect(b,X+4,15+Y,3,2,T.sleeve);blob(b,bx+3,by,1.6,1.5,T.glove,.15)}
+  else{rect(b,X+1,14+Y,bx-X,2,T.sleeve);blob(b,bx+3,by,1.6,1.5,T.glove,.15);if(pull>0||o.nock){blob(b,bx-pull,by,1.5,1.4,T.glove,.1);line(b,bx-pull,by,bx+6-pull,by,'wood',.7);px(b,bx+7-pull,by,'iron',.95)}
+   // o.quiv : la main arrière va chercher une flèche au carquois (1 = à mi-chemin, 2 = au carquois)
+   else if(o.quiv){const qx=o.quiv>1?X-4:X-1,qy=o.quiv>1?11+Y:13+Y;rect(b,Math.min(qx,X),13+Y,Math.abs(X-qx)+2,2,T.sleeve,-.1);blob(b,qx,qy,1.5,1.4,T.glove,.1);if(o.quiv>2){line(b,qx,qy,qx+1,qy-4,'wood',.7);px(b,qx+1,qy-5,'bone',.95)}}}
+ }
+ if(W==='flamer'){ // lance au niveau de la hanche, tuyau vers le réservoir
+  if(D){rect(b,X+3,15+Y,3,4,T.sleeve);blob(b,X+4.5,20+Y,1.8,1.6,T.glove,.15);rect(b,X-7,15+Y,3,4,T.sleeve);blob(b,X-5.5,20+Y,1.8,1.6,T.glove,.1);
+   rect(b,X-4,20+Y,10,2,'iron',.15);px(b,X+6,20+Y,'ind',.8);px(b,X+6,21+Y,'fire',.7);
+   if(atk)for(const[dx,dy,l]of[[1,1,1],[2,2,.95],[2,3,.9],[3,4,.8],[1,3,.85],[3,2,.7],[4,5,.6]])px(b,X+5+dx,20+Y+dy,'fire',l)}
+  else{rect(b,X,15+Y,3,4,T.sleeve);blob(b,X+2,20+Y,1.8,1.6,T.glove,.15);rect(b,X-1,19+Y,12,2,'iron',.2);rect(b,X+10,19+Y,2,2,'ind',.6);
+   line(b,X-5,18+Y,X-1,20+Y,'leath',.4);
+   if(o.pilot&&!atk){px(b,X+12,19+Y,'fire',.95);if(o.pilot>1)px(b,X+13,18+Y,'fire',.7);if(o.pilot>2)px(b,X+12,18+Y,'fire',.8)}
+   if(atk)for(let i=0,fl=o.flick||0;i<6+fl%3;i++){px(b,X+12+i,19+Y+(i>3?(i&1):0),'fire',1-i*.07);if(i>1)px(b,X+12+i,20+Y-(i>4?1:0),'fire',.8-i*.06);if(i>4)px(b,X+12+i,18+Y,'fire',.6)}}}
+ if(T.shield){const s=T.shield;
+  const sy=o.sy||0;
+  if(s.pavois){if(D)ecu(b,X-6,11+Y+sy,11,17,s.mat,s.trim,s.emb);
+   else{ecu(b,X+6,11+Y+sy,9,17,s.mat,s.trim,s.emb);for(let y=3;y<13;y++)px(b,X+6,11+Y+sy+y,s.emb,.8-y*.02)}}
+  else if(D)ecu(b,X-7,13+Y+sy,8,11,s.mat,s.trim,s.emb);
+  else{ecu(b,X+5,13+Y+sy,5,11,s.mat,s.trim,null);px(b,X+6,17+Y+sy,s.emb,.85)}}
+ // estoc (profil) : lame à l'horizontale devant le bouclier, traînée claire
+ if(strike&&(W==='sword'||W==='dagger')){const L=W==='sword'?9:4;line(b,hx2+1,hy2,hx2+L,hy2+1,'iron',t=>.95-t*.15);px(b,hx2,hy2-1,'leath',.6);px(b,hx2,hy2+1,'leath',.6);
+  if(o.swoosh)for(let a=-1.3;a<=.5;a+=.12){const r=W==='sword'?11:7,t=(a+1.3)/1.8;if(t<o.swoosh&&t>=(o.fade||0))px(b,X+1+Math.cos(a)*r,16+Y+Math.sin(a)*r,'bone',.6+t*.4)}}
+ return b}
+
+// ---------- Quadrupèdes (profil) ----------
+const QUAD={
+ beast:{name:'La Bête',side:'Bête · meute',body:'bete',belly:'bone',rx:8,ry:4.4,hx:7,head:3.6,snout:3,spikes:'bone',eye:'fire',tail:7,leg:'bete',claw:'bone'},
+ feline:{name:'Félin',side:'jungle · embuscade',body:'fur',belly:'bone',rx:8.5,ry:3.6,hx:8,head:3.2,snout:1.5,spots:'leath',ears:true,eye:'croc',tail:10,leg:'fur',claw:'fur',rich:true},
+ croc:{name:'Crocodile',side:'rivière',body:'croc',belly:'bone',rx:11,ry:3.4,hx:10,head:2.8,snout:7,scutes:'croc',eye:'or',tail:12,leg:'croc',claw:'bone',low:true,rich:true},
+};
+function quad(o){const{k,f=0,pose='idle'}=o;const T=QUAD[k];const b=buf(48,28);
+ const walk=pose==='walk',atk=pose==='atk';
+ // Marche : 4 poses (f) ou phase continue o.ph (12 poses, pattes jusqu'à 2 px) ; o.tw : balancement de la queue.
+ const sw=walk?(o.ph!==undefined?2*Math.sin(o.ph*2*Math.PI):[0,1,0,-1][f]):0;
+ const PH=walk&&o.ph!==undefined,cs=PH?Math.cos(o.ph*2*Math.PI):0;
+ const bob=walk?(PH?(Math.abs(sw)>=1.5?-1:0):(f%2?-1:0)):0,tw=(o.tw||0)+(PH?sw*.6:0);
+ // patte qui passe levée d'un pixel (groupe 1 en avant quand cs > 0), tête qui accuse l'appui
+ const lift1=PH&&cs>0&&Math.abs(sw)<1.5?1:0,lift0=PH&&cs<=0&&Math.abs(sw)<1.5?1:0,nod=PH&&Math.round(o.ph*12)%6===3?1:0;
+ const br=o.br||0,cx=21,cy0=(T.low?20:15)+bob,cy=cy0+br,legH=T.low?3:6,G=cy0+T.ry+legH-1;
+ // queue
+ for(let i=0;i<=T.tail;i++){const t=i/T.tail;px(b,Math.round(cx-T.rx+1-i),Math.round(cy-1+(T.low?t*1.5:-Math.sin(t*2.4)*3+sw*.3*t+tw*t*t)),T.body,.6-t*.25);if(i<T.tail*.5)px(b,Math.round(cx-T.rx+1-i),Math.round(cy+(T.low?t*1.5:-Math.sin(t*2.4)*3)),T.body,.35);
+  if(T.rich&&T.low&&i<T.tail-2){px(b,Math.round(cx-T.rx+1-i),Math.round(cy-1+t*1.5)+1,T.body,.3);if(i%2===0)px(b,Math.round(cx-T.rx+1-i),Math.round(cy-2+t*1.5),T.scutes,.95)}
+  if(T.rich&&!T.low&&i>=T.tail-2)px(b,Math.round(cx-T.rx+1-i),Math.round(cy-1-Math.sin(t*2.4)*3+sw*.3*t+tw*t*t),'leath',.4)}
+ // pattes arrière (sombres)
+ const leg=(x,ph,back)=>{const s=back?-.3:0,o=Math.round(sw*(ph?1:-1)),lf=ph?lift1:lift0;for(let y=0;y<legH-br-lf;y++){px(b,x+o*(y/legH),cy+T.ry-2+y,T.leg,.5+s);px(b,x+1+o*(y/legH),cy+T.ry-2+y,T.leg,.35+s);if(T.rich)px(b,x-1+o*(y/legH),cy+T.ry-2+y,T.leg,(T.low?.7:.75)+s)}
+  px(b,x+o+1,G-lf,T.claw,.85+s);px(b,x+o+2,G-lf,T.claw,.7+s)};
+ leg(cx-T.rx+3,1,true);leg(cx+T.rx-4,0,true);
+ // corps
+ blob(b,cx,cy,T.rx,T.ry,T.body,.1);
+ blob(b,cx+1,cy+T.ry*.55,T.rx*.75,T.ry*.4,T.belly,-.1,(x,y)=>y>=cy+T.ry*.4);
+ if(T.spots)for(const[dx,dy]of[[-4,-1],[-1,-2],[2,-1],[5,-2],[-6,1],[0,0],[3,1]])px(b,cx+dx,cy+dy,T.spots,.5);
+ if(T.spikes)for(let i=0;i<5;i++){const x=cx-5+i*2.6|0;px(b,x,cy-T.ry,T.spikes,.9);px(b,x+1,cy-T.ry-1,T.spikes,.95);if(i%2)px(b,x+1,cy-T.ry-2,T.spikes,.8)}
+ if(T.scutes)for(let x=cx-T.rx+2;x<cx+T.rx-1;x+=2)px(b,x,cy-T.ry,T.scutes,.95);
+ if(T.rich&&T.low){ // crocodile : crête dorsale en dents de scie, bande sombre sous la crête, plaques du flanc
+  for(let x=cx-T.rx+2;x<cx+T.rx-2;x++){px(b,x,cy-T.ry+1,T.body,.28);if((x-cx+40)%3===0)px(b,x,cy-T.ry-1,T.scutes,1);if((x-cx+40)%4===1)px(b,x,cy,T.body,.5)}}
+ if(T.rich&&!T.low){ // félin : épaule et cuisse en plans clairs, rosettes à deux tons, poitrail pâle
+  blob(b,cx+T.rx-3,cy-.5,2.6,2.6,T.body,.28);blob(b,cx-T.rx+3.5,cy,3,2.8,T.body,.2);
+  for(const[dx,dy]of[[-4,-1],[-1,-2],[2,-1],[5,-2],[-6,1],[0,0],[3,1]]){px(b,cx+dx,cy+dy,T.spots,.35);px(b,cx+dx+1,cy+dy,T.spots,.7)}
+  px(b,cx+T.rx-1,cy+2,T.belly,.8);px(b,cx+T.rx,cy+1,T.belly,.9)}
+ leg(cx-T.rx+4,0,false);leg(cx+T.rx-3,1,false);
+ // tête
+ const reach=o.reach!==undefined?o.reach:(atk?2:0),jaw=o.jaw!==undefined?o.jaw:atk;
+ const hx=cx+T.rx+1+reach,hy=cy-(T.low?0:T.ry*.6)+(reach>0?1:0)+(o.nod||0)+nod;
+ blob(b,hx,hy,T.head+.4,T.head,T.body,.18);
+ const sn=T.snout;rect(b,hx+1,hy-(T.low?1:0),sn+2,T.low?2:2,T.body,.2);
+ if(jaw||k==='beast'){rect(b,hx+1,hy+(T.low?1:2),sn+1,1,T.body,-.15);for(let x=0;x<=sn;x+=2)px(b,hx+2+x,hy+(T.low?1:2),'bone',.95)}
+ if(jaw&&k==='croc')for(let x=0;x<sn;x+=2)px(b,hx+2+x,hy-2,'bone',.9);
+ if(T.rich&&T.low){if(!jaw)for(let x=1;x<sn;x+=2)px(b,hx+2+x,hy+1,'bone',.9);px(b,hx,hy-T.head,T.body,.85);px(b,hx+1,hy-T.head,T.body,.7);px(b,hx+sn+2,hy-2,T.body,.8)}
+ if(T.rich&&!T.low){px(b,hx+sn+1,hy+1,'bone',.9);px(b,hx+sn+2,hy+1,'bone',.8);px(b,hx-1,hy-T.head,'bone',.7)}
+ px(b,hx+sn+3,hy-(T.low?1:0),T.body,.05); // truffe
+ if(T.ears){px(b,hx-1,hy-T.head-1,T.body,.8);px(b,hx-1,hy-T.head,T.body,.6);px(b,hx+1,hy-T.head-1,T.body,.7)}
+ if(k==='beast'){px(b,hx-2,hy-T.head,'bone',.95);px(b,hx-3,hy-T.head-1,'bone',.9);px(b,hx-4,hy-T.head-1,'bone',.75)}
+ px(b,hx+1,hy-1-(T.low?1:0),T.eye,1);
+ return b}
+
+// ---------- Aperçu automatique pour les assets « à texture » (bâtiments, décor) ----------
+// 1. dé-tramage : chaque pixel prend la couleur médoïde de son voisinage 3×3 (les grains isolés disparaissent) ;
+// 2. paliers : luminosité ramenée à 5 paliers par teinte ;
+// 3. contour coloré : le contour noir franc devient le ton sombre de la matière voisine.
+function dedither(src,scale){
+ const w=src.width,h=src.height,g=src.getContext('2d'),I=g.getImageData(0,0,w,h).data;
+ const O=new Uint8ClampedArray(I.length);const A=(x,y)=>I[(y*w+x)*4+3];
+ const lum=(r,gg,b2)=>.3*r+.59*gg+.11*b2;
+ for(let y=0;y<h;y++)for(let x=0;x<w;x++){const i=(y*w+x)*4;if(I[i+3]<128){O[i]=I[i];O[i+1]=I[i+1];O[i+2]=I[i+2];O[i+3]=I[i+3];continue} // ombres portées gardées
+  const n=[];for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){const X=x+dx,Y=y+dy;if(X<0||Y<0||X>=w||Y>=h||A(X,Y)<128)continue;const j=(Y*w+X)*4;n.push([I[j],I[j+1],I[j+2]])}
+  let best=n[0],bd=1e18;for(const a of n){let d=0;for(const c of n)d+=Math.abs(a[0]-c[0])+Math.abs(a[1]-c[1])+Math.abs(a[2]-c[2]);if(d<bd){bd=d;best=a}}
+  // garde les petits détails lumineux (glyphes, braises) : écart fort et pixel plus clair que le médoïde
+  const me=[I[i],I[i+1],I[i+2]];if(lum(...me)-lum(...best)>70)best=me;
+  // paliers de luminosité (HSL)
+  let[r,gg,b2]=best.map(v=>v/255);const mx=Math.max(r,gg,b2),mn=Math.min(r,gg,b2);let L=(mx+mn)/2;
+  const q=Math.round(L*6)/6,k2=L>0?q/L:1;r=Math.min(1,r*k2);gg=Math.min(1,gg*k2);b2=Math.min(1,b2*k2);
+  O[i]=r*255;O[i+1]=gg*255;O[i+2]=b2*255;O[i+3]=255}
+ // contour : pixel presque noir au bord → ton sombre de la matière voisine
+ const P=new Uint8ClampedArray(O);
+ for(let y=0;y<h;y++)for(let x=0;x<w;x++){const i=(y*w+x)*4;if(!O[i+3])continue;if(lum(O[i],O[i+1],O[i+2])>34)continue;
+  let edge=false,col=null;for(const[dx,dy]of[[1,0],[-1,0],[0,1],[0,-1]]){const X=x+dx,Y=y+dy;if(X<0||Y<0||X>=w||Y>=h||!O[(Y*w+X)*4+3]){edge=true;continue}
+   const j=(Y*w+X)*4;if(lum(O[j],O[j+1],O[j+2])>40)col=[O[j],O[j+1],O[j+2]]}
+  if(edge&&col){P[i]=col[0]*.38;P[i+1]=col[1]*.38;P[i+2]=col[2]*.42}}
+ const c=document.createElement('canvas');c.width=w*scale;c.height=h*scale;const q2=c.getContext('2d');
+ const t=document.createElement('canvas');t.width=w;t.height=h;t.getContext('2d').putImageData(new ImageData(P,w,h),0,0);
+ q2.imageSmoothingEnabled=false;q2.drawImage(t,0,0,w*scale,h*scale);return c}
+
+// L'Oublieux (Église des Oublieux) et les trois mages cristallisés (École de magie cristallisée) :
+// cinq modèles chacun, au standard de la refonte 16 bits (moteur engineer-colosse.js : R, MAT, buf, blob, rect, px,
+// render ; rampes de refonte-16bits.js). Paliers francs sans trame, contour teinté, lumière en haut à gauche.
+// Profil tourné vers la droite (le jeu retourne le sprite). Rig procédural : poses continues, membres en cinématique
+// inverse, tissus en retard sur le corps. Les lueurs et particules vont sur un calque à part, sans contour.
+// Charte : pas d'or (Credo), pas de cyan (Exilés) ; cendre et lueur pâle pour l'Oublieux, vert de Medeina pour la
+// Guérisseuse, orange d'Indra pour le Chantre, bleu-violet d'Aether pour l'Envoûteur.
+// Expose : PERSO = {ROLES, LIST, ANIMS, SIZE, frame(rôle, variante, anim, t) → {c, fx}}.
+'use strict';
+for(const[k,v]of Object.entries({
+ wool:['#141519','#272a33','#3e4250','#5a5f72','#848a9e'],
+ ash:['#131218','#33313c','#55525f','#807c8a','#b6b2be'],     // bure cendre
+ lin2:['#26262c','#68666c','#a2a0a2','#d0cec8','#f6f4ea'],    // linceul blême
+ lueur:['#1e4034','#5cb088','#b0f0cc','#e8fff2','#ffffff'],   // lueur des Limbes (veilleuses)
+ nuit:['#0a0a12','#1a1a28','#2c2c40','#464664','#6c6c98'],    // drap de nuit
+ osier:['#22160a','#5a3e1c','#8e6a34','#bc9650','#e2c682'],
+ med:['#0a2212','#1c5a2e','#32924a','#6cc870','#c8f6b0'],     // vert de Medeina
+ foret:['#08160c','#143a20','#22582e','#3a7c40','#64a45a'],   // manteau vert sombre
+ cmed:['#0a3a2a','#1f9a6a','#5ce8a8','#c0ffe0','#ffffff'],    // cristal vert
+ cind:['#4a1a04','#c25a12','#ff9a3a','#ffd68a','#fffbe0'],    // cristal orange
+ aet:['#100a2a','#2a1e66','#4a3aa8','#7a6ae0','#b8b0ff'],     // bleu-violet d'Aether
+ caet:['#1e0a4a','#5a3ac8','#9a7aff','#d6c8ff','#ffffff'],    // cristal violet
+ hairw:['#3a3a44','#8a8a96','#b8b8c2','#dcdce2','#ffffff'],   // cheveux blancs
+ hairr:['#2a0e06','#6a2a10','#a04a1c','#c8742e','#e8a050'],   // cheveux roux
+}))if(!R[k]){R[k]=v;MAT.push(k)}
+
+const PERSO=(()=>{
+const TAU=Math.PI*2,cl=(v,a=0,b=1)=>Math.max(a,Math.min(b,v)),lerp=(a,b,t)=>a+(b-a)*t,ease=t=>t*t*(3-2*t);
+const sm=(a,b,t)=>ease(cl((t-a)/(b-a))),L2=(p,q,t)=>[lerp(p[0],q[0],t),lerp(p[1],q[1],t)];
+const hash=(x,y)=>{const v=Math.sin(x*12.9898+y*78.233)*43758.5453;return v-Math.floor(v)};
+const W=64,H=56,AX=28,G=50;   // cadre, pieds en (AX, G)
+
+// ---------- primitives ----------
+function seg(b,x0,y0,x1,y1,r0,r1,mat,bias=0){const n=Math.max(2,Math.ceil(Math.hypot(x1-x0,y1-y0)*2.2));
+ for(let i=0;i<=n;i++){const t=i/n,r=Math.max(.75,lerp(r0,r1,t));blob(b,lerp(x0,x1,t),lerp(y0,y1,t),r,r,mat,bias)}}
+function over(b,x,y,mat,s){x=Math.round(x);y=Math.round(y);if(x<0||y<0||x>=b.w||y>=b.h||b.m[y*b.w+x]<0)return;px(b,x,y,mat,s)}
+function dot(b,x,y,mat,s=.9){px(b,Math.round(x),Math.round(y),mat,s)}
+function ln(b,x0,y0,x1,y1,mat,l=.7){const n=Math.max(Math.abs(x1-x0),Math.abs(y1-y0))*2|0||1;
+ for(let i=0;i<=n;i++){const t=i/n;dot(b,lerp(x0,x1,t),lerp(y0,y1,t),mat,typeof l==='function'?l(t):l)}}
+function ik(a,c,l1,l2,bend){const dx=c[0]-a[0],dy=c[1]-a[1],d=cl(Math.hypot(dx,dy),Math.abs(l1-l2)+.05,l1+l2-.05),base=Math.atan2(dy,dx),
+ al=Math.acos(cl((l1*l1+d*d-l2*l2)/(2*l1*d),-1,1)),an=base+bend*al;return[a[0]+Math.cos(an)*l1,a[1]+Math.sin(an)*l1]}
+function gem(b,x,y,r,mat,l=0){x=Math.round(x);y=Math.round(y);for(let dy=-r;dy<=r;dy++){const w=r-Math.abs(dy);for(let dx=-w;dx<=w;dx++)px(b,x+dx,y+dy,mat,cl(.6-dx*.17-dy*.12+l,.05,.99))}}
+function shard(b,x,y,h,mat,l=0,w=1){x=Math.round(x);y=Math.round(y);for(let i=0;i<h;i++){const ww=(i===0||i===h-1)?0:w;for(let dx=0;dx<=ww;dx++)px(b,x+dx,y-h+1+i,mat,cl(.95-i/h*.4-dx*.3+l,.05,.99))}}
+// calque des lueurs : F = liste de [x, y, matière, clarté], peinte sans contour par-dessus le sprite
+const fdot=(F,x,y,mat,l=.9)=>{F.push([Math.round(x),Math.round(y),mat,cl(l,0,.99)])};
+function fplus(F,x,y,mat,l=.95){fdot(F,x,y,mat,l);fdot(F,x-1,y,mat,l-.25);fdot(F,x+1,y,mat,l-.25);fdot(F,x,y-1,mat,l-.25);fdot(F,x,y+1,mat,l-.25)}
+function fring(F,cx,cy,rx,ry,mat,l,n,rot=0,skip=1){for(let i=0;i<n;i++){if(skip>1&&i%skip)continue;const a=i/n*TAU+rot;fdot(F,cx+Math.cos(a)*rx,cy+Math.sin(a)*ry,mat,l)}}
+function farc(F,cx,cy,r,a0,a1,mat,l){const n=Math.max(2,Math.ceil(r*(a1-a0)*1.2));for(let i=0;i<=n;i++){const a=lerp(a0,a1,i/n);fdot(F,cx+Math.cos(a)*r,cy+Math.sin(a)*r,mat,l)}}
+function fstar(F,x,y,mat,r){fdot(F,x,y,mat,.99);for(let i=1;i<=r;i++){const l=.95-i*.2;fdot(F,x+i,y,mat,l);fdot(F,x-i,y,mat,l);fdot(F,x,y+i,mat,l);fdot(F,x,y-i,mat,l)}}
+function lantern(b,F,x,y,glow,mat='lueur'){x=Math.round(x);y=Math.round(y);px(b,x,y,'iron',.6);rect(b,x-1,y+1,3,1,'iron',.1);rect(b,x-1,y+2,3,3,mat,.15+glow*.3);rect(b,x-1,y+5,3,1,'iron',-.15);
+ fdot(F,x,y+3,mat,.99);if(glow>.42){fdot(F,x-1,y+3,mat,.8);fdot(F,x+1,y+3,mat,.8)}}
+function panier(b,x,y,w,h){x=Math.round(x);y=Math.round(y);for(let j=0;j<h;j++){const k=j>h-3?1:0;for(let i=k;i<w-k;i++)px(b,x+i,y+j,'osier',((i+j)&1?.68:.44)-i*.02)}rect(b,x-1,y,w+2,1,'osier',.2)}
+
+// ---------- tête ----------
+function headBack(b,V,J,P){const M=V.m,hx=J.hd[0],hy=J.hd[1],sw=P.sw||0;
+ if(V.hair==='braid'){let x=hx-4,y=hy;for(let i=0;i<8;i++){const t=i/7;blob(b,x-t*2-sw*t*t*1.6,y+i*1.9,1.5-(t>.8?.4:0),1.4,M.hair,-.05-(i&1)*.12)}dot(b,hx-6-sw*1.6,hy+15,V.cry||'lin2',.9)}
+ if(V.hair==='long')for(let i=0;i<10;i++){const t=i/9;blob(b,hx-3.4-sw*t*t,hy+1+i*1.2,3-t*.8,1.6,M.hair,-.12)}
+ if(V.head==='veil')for(let y=-3;y<=14;y++){const t=(y+3)/17,x0=hx-5.6-t*1.6-sw*t*t*1.4,x1=hx-1+(y>5?-1:0);for(let x=Math.round(x0);x<=x1;x++)px(b,x,Math.round(hy+y),M.veil,.55-t*.2-(x1-x)*.03-((x&1)&&y>4?.1:0))}
+ if(V.peak){const tx=hx-8-sw*1.2,ty=hy-6+Math.abs(sw)*.6;seg(b,hx-3,hy-3.5,tx,ty,2.4,.8,M.hood,-.05)}
+ if(V.cape){const top=J.sh[1]-1,bot=G-4;for(let y=Math.round(top);y<=bot;y++){const t=(y-top)/(bot-top),x0=J.sh[0]-4-t*4.5-sw*t*t*1.8,x1=lerp(J.sh[0],J.hip[0],cl(t*2))+1;
+   for(let x=Math.round(x0);x<=x1;x++)px(b,x,y,V.cape,.5-t*.12-(x1-x)*.02-(((x+y)%4===0)&&t>.3?.1:0))}}}
+function head(b,V,J,P){const M=V.m,hx=J.hd[0],hy=J.hd[1],K=V.head,sk=M.skin||'skin';
+ const face=()=>{blob(b,hx,hy,4.3,4.3,sk,.08);rect(b,Math.round(hx)-2,Math.round(hy)+2,6,3,sk,.05)};
+ const eye=(dy=0)=>{if(V.blind)return;const ex=Math.round(hx)+2,ey=Math.round(hy)+dy;if(P.blink){px(b,ex,ey,sk,.18);px(b,ex+1,ey,sk,.18)}else{px(b,ex,ey,'eye',.1);px(b,ex+1,ey,'eye',.95)}};
+ const mouth=()=>{const mx=Math.round(hx)+2,my=Math.round(hy)+3;if(P.sing){px(b,mx+1,my,'eye',.05);px(b,mx+1,my+1,'eye',.05);px(b,mx,my,'eye',.05)}else{px(b,mx,my,sk,.12);px(b,mx+1,my,sk,.12)}};
+ if(K==='hood'){blob(b,hx-1,hy-.5,5.4,5.2,M.hood,.12);
+  if(V.mask){blob(b,hx+1.6,hy+1,2.7,3.3,V.mask,.25);px(b,Math.round(hx)+3,Math.round(hy),'eye',.05);px(b,Math.round(hx)+3,Math.round(hy)+1,'eye',.05)}
+  else{blob(b,hx+1.5,hy+1,2.6,3,sk,-.2);eye(1);if(P.sing){px(b,Math.round(hx)+3,Math.round(hy)+3,'eye',.05)}}
+  blob(b,hx,hy+5.5,3.2,1.6,M.hood,.05)}
+ else{face();eye();mouth();
+  if(V.beard){blob(b,hx+1.6,hy+4.6,2.9,2.7,M.beard||M.hair,-.05,(x,y)=>y>=hy+2);if(P.sing)px(b,Math.round(hx)+3,Math.round(hy)+3,'eye',.05)}
+  if(V.blind){rect(b,Math.round(hx)-4,Math.round(hy)-1,9,2,'lin2',.15);px(b,Math.round(hx)-5,Math.round(hy),'lin2',.5);px(b,Math.round(hx)-6,Math.round(hy)+1,'lin2',.4)}
+  if(K==='bare'&&M.hair){blob(b,hx-.6,hy-1.2,4.9,4.5,M.hair,.1,(x,y)=>y<=hy-2.2||(x<=hx-2&&y<=hy+2.5));
+   if(V.hair==='bun')blob(b,hx-5.2,hy-2.6,2.3,2.3,M.hair,.05);
+   if(V.hair==='long'||V.hair==='braid')blob(b,hx-3.6,hy+1,2,3,M.hair,-.05)}
+  if(K==='veil')blob(b,hx-.6,hy-1.6,5.1,4.6,M.veil,.15,(x,y)=>y<=hy-2.2||x<=hx-2.2);
+  if(K==='hat'){blob(b,hx-.4,hy-4.6,4,3.4,M.hat,.12,(x,y)=>y<=hy-3);rect(b,Math.round(hx)-8,Math.round(hy)-3,16,1,M.hat,.25);rect(b,Math.round(hx)-7,Math.round(hy)-2,14,1,M.hat,-.15)}
+  if(K==='turban'){blob(b,hx-.4,hy-3,5.1,3.5,M.turban,.15,(x,y)=>y<=hy-1.6);for(let i=-3;i<=3;i+=2)over(b,hx+i,hy-3+((i+3)>>1&1),M.turban,.3);
+   px(b,Math.round(hx)+3,Math.round(hy)-3,V.cry,.99);blob(b,hx-5,hy,1.4,2.4,M.turban,-.1)}
+  if(V.halfc)for(let y=-5;y<=1;y++)for(let x=-5;x<=4;x++){if(x+y*.6>-1.2)continue;over(b,hx+x,hy+y,V.cry,cl(.55-x*.07-y*.07+(hash(x,y)>.6?.25:0),.1,.99))}
+  if(V.halfc){shard(b,hx-3,hy-4,3,V.cry,.05,0);shard(b,hx-1,hy-4.6,2,V.cry,.05,0)}}}
+
+// ---------- corps ----------
+function man(V,P){
+ const b=buf(W,H),F=[],M=V.m,X=AX+(P.x||0),a=P.lean||0,LL=11+(V.tall??1),TL=9;b.fx=F;
+ const hip=[X-Math.sin(a)*2,G-2-LL+(P.crouch||0)+(P.bob||0)];
+ const sh=[hip[0]+Math.sin(a)*TL,hip[1]-Math.cos(a)*TL+(P.ub||0)];
+ const hd=[sh[0]+.5+Math.sin(a)*5.5,sh[1]-Math.cos(a)*5.5+(P.hy||0)],sj=[sh[0],sh[1]+1.5];
+ let hF=[sj[0]+P.hf[0],sj[1]+P.hf[1]],hB=[sj[0]+P.hb[0],sj[1]+P.hb[1]];
+ if(P.reach)hF=L2(hF,[X+P.reach[0],P.reach[1]],P.reach[2]);
+ if(P.stow)hF=L2(hF,[sj[0]+P.stow[0],sj[1]+P.stow[1]],P.stow[2]);
+ const fF=[X+P.ff[0],G-2-P.ff[1]],fB=[X+P.fb[0],G-2-P.fb[1]];
+ const J={X,hip,sh,hd,sj,hF,hB,fF,fB};
+ const arm=(h,s,ms,mg)=>{const el=ik(sj,h,5,5,1);seg(b,sj[0],sj[1],el[0],el[1],1.9,1.7,ms,s);seg(b,el[0],el[1],h[0],h[1],1.6,1.5,ms,s);blob(b,h[0],h[1],1.8,1.7,mg,.1+s)};
+ const boot=(f,s)=>rect(b,Math.round(f[0])-2,Math.round(f[1])-1,5,3,M.boot,s);
+ const leg=(f,s)=>{const kn=ik(hip,f,LL/2+.3,LL/2+.3,-1);seg(b,hip[0],hip[1],kn[0],kn[1],2.3,2,M.leg,s);seg(b,kn[0],kn[1],f[0],f[1],1.9,1.6,M.leg,s);boot(f,s)};
+ headBack(b,V,J,P);
+ if(V.back)V.back(b,J,P,F,V);
+ arm(hB,-.28,M.sleeveB||M.sleeve,M.gloveB||M.glove);
+ if(V.robe===2){boot(fB,-.25);boot(fF,0)}else{leg(fB,-.25);leg(fF,0)}
+ if(V.robe){const y0=Math.round(hip[1])-1,y1=V.robe===2?G-4:Math.round(hip[1])+6,cx1=V.robe===2?(fF[0]+fB[0])/2:hip[0],sp=Math.abs(fF[0]-fB[0]);
+  for(let y=y0;y<=y1;y++){const v=(y-y0)/Math.max(1,y1-y0),hw=3.7+v*(V.robeW||2.4)+v*sp*(V.robe===2?.3:.12),cx=lerp(hip[0],cx1,v)+(P.sw||0)*v*v*(V.robe===2?1:.5),xc=Math.round(cx);
+   for(let x=Math.round(cx-hw);x<Math.round(cx+hw);x++){const u=(x-cx+hw)/(2*hw),fold=((x-xc+40)%3===0&&v>.3)?-.1:0;
+    px(b,x,y,(V.hem&&y>=y1-1)?V.hem:M.robe,cl(.74-u*.48-v*.06+fold,.05,.99))}}}
+ seg(b,hip[0],hip[1]-1,sh[0],sh[1]+1.5,V.slim?3.6:4.2,V.slim?3.9:4.6,M.torso);
+ if(M.belt)rect(b,Math.round(hip[0])-4,Math.round(hip[1])-2,8,2,M.belt,.05);
+ if(V.mid)V.mid(b,J,P,F,V);
+ head(b,V,J,P);
+ if(hB[0]>sj[0]+3)blob(b,hB[0],hB[1],1.8,1.7,M.gloveB||M.glove,-.1);
+ blob(b,sj[0],sj[1]-.6,2.6,2.2,M.armF||M.sleeve,.15);
+ arm(hF,0,M.armF||M.sleeve,M.handF||M.glove);
+ if(V.front)V.front(b,J,P,F,V);
+ if(P.item){let ix,iy;if(P.item==='sol'){ix=X+13;iy=G-2;if(Math.sin(P.t*9)>.5)fdot(F,ix+1,iy-2,'lin2',.99)}
+  else{const o=V.reachOff||[0,1],w=P.reach?P.reach[2]:0;ix=hF[0]+o[0]*w+.5;iy=hF[1]+o[1]*w}
+  rect(b,Math.round(ix)-1,Math.round(iy)-1,2,2,'bone',.25);px(b,Math.round(ix)-1,Math.round(iy)-1,'bone',.99)}
+ return b}
+
+// ---------- poses ----------
+const HOLD={free:{f:[1.5,9],b:[-1,9]},staff:{f:[5.5,4],b:[-1,9]},lantern:{f:[6,5],b:[-1,9]},carry:{f:[5.5,4.5],b:[4,5.5]},pray:{f:[4.5,3],b:[3.5,3.5]},
+ pole:{f:[3,-1],b:[-1,9]},palmup:{f:[6,3],b:[-1,9]},dangle:{f:[6,1],b:[-1,9]},drum:{f:[6,5],b:[4,6]},horn:{f:[4,7],b:[-1,9]}};
+const CAST={palm:{f:[9.5,0],b:[6,3],lean:.1},raise:{f:[5,-4.5],b:[-2,8],lean:-.04},open:{f:[8,-4],b:[-7,-3],lean:-.1,rise:1},lift:{f:[7,-5],b:[5.5,-4],lean:-.05},
+ horn:{f:[6,-4.5],b:[-3,7],lean:-.14},drum:{f:[6,5],b:[4,6],lean:.05},swing:{f:[7.5,-1],b:[-1,9],lean:.05},threads:{f:[9,-3],b:[7,0],lean:.08},
+ mirror:{f:[8.5,-2],b:[7,1],lean:.05},pray:{f:[4.5,1.5],b:[3.5,2],lean:0,rise:1},palmup:{f:[7.5,0],b:[-2,8],lean:0}};
+function pose(role,V,anim,t){
+ const Hd=HOLD[V.hold||'free'],P={hf:Hd.f.slice(),hb:Hd.b.slice(),ff:[2.5,0],fb:[-2,0],t,anim,glow:.35,k:0,sw:0,lean:0};
+ P.blink=(t%3.7)<.13;
+ if(anim==='idle'){const s=Math.sin(t/2.8*TAU),s2=Math.sin(t/2.8*TAU-.8);P.ub=s>.25?1:0;P.hy=(s2>.25?1:0)-P.ub;P.sw=Math.sin(t*1.1)*.5;P.glow=.35+.15*Math.sin(t*2.2)}
+ else if(anim==='walk'){const len=V.pace||.85,phi=(t/len%1)*TAU,s=Math.sin(phi),c=Math.cos(phi),S=4;
+  P.ff=[S*s+.5,Math.max(0,c)*2.2];P.fb=[-S*s+.5,Math.max(0,-c)*2.2];P.bob=Math.abs(s)>.8?1:0;P.lean=.07;P.sw=-Math.sin(phi-.9)*1.3;
+  P.hy=(Math.abs(Math.sin(phi-.7))>.8?1:0)-P.bob;
+  if(!V.hold||V.hold==='free')P.hf=[Hd.f[0]-3.2*s,Hd.f[1]-Math.abs(s)];
+  if(Hd.b[1]===9)P.hb=[Hd.b[0]+3.2*s,Hd.b[1]-Math.abs(s)];P.glow=.4}
+ else if(anim==='act'&&role==='obl'){const u=t%2.6,bd=V.bend??1,d=sm(.15,.6,u)-sm(1.0,1.45,u),st=sm(1.45,1.7,u)-sm(1.95,2.25,u),o=V.reachOff||[0,1];
+  P.crouch=d*4.5*bd;P.lean=d*.8*bd;P.ff=[3.5,0];P.fb=[-3,0];P.reach=[13-o[0],G-2-o[1],d];if(V.stow)P.stow=[V.stow[0],V.stow[1],st];
+  P.hb=[Hd.b[0]+d*4*bd,Hd.b[1]-d*2];P.hy=d>.5?1:0;P.item=u<.62?'sol':u<1.82?'main':u>2.3?'sol':null;P.sw=d*.8;P.glow=.4}
+ else if(anim==='act'){const u=t%2.8,k=sm(.1,.5,u)-sm(2.0,2.4,u),C=CAST[V.cast];P.k=k;P.u=u;
+  P.hf=L2(Hd.f,C.f,k);P.hb=L2(Hd.b,C.b,k);P.glow=k*(.75+.25*Math.sin(t*9));P.lean=(C.lean||0)*k;if(C.rise)P.bob=-Math.round(k*.9);
+  P.sing=role==='chant'&&k>.6&&Math.sin(t*7)>-.5;P.sw=-k*.8+Math.sin(t*3)*.4*k;
+  if(V.cast==='drum'){const bt=(u*2.5)%1;P.beat=bt;P.hf=[C.f[0],C.f[1]-4.5*Math.sin(bt*Math.PI)*k];P.hb=[C.b[0],C.b[1]-3*Math.sin(((bt+.5)%1)*Math.PI)*k];P.ub=bt<.12&&k>.5?1:0}}
+ else if(anim==='death'){const r=sm(0,.1,t)*(1-sm(.14,.45,t));P.lean=-.24*r;P.hf=[Hd.f[0]+r*2,Hd.f[1]-r*4];P.hb=[Hd.b[0]-r*2,Hd.b[1]-r*3];P.blink=t>.08;P.glow=.3*(1-sm(0,.6,t));P.dead=1;P.hy=-Math.round(r)}
+ return P}
+
+// ---------- fins ----------
+function crystallize(b,k,mat){const m=MAT.indexOf(mat),top=lerp(G,6,k);for(let y=0;y<b.h;y++){if(y<top)continue;for(let x=0;x<b.w;x++){const i=y*b.w+x;if(b.m[i]<0)continue;
+  b.m[i]=m;b.s[i]=cl(b.s[i]*.55+.3+(hash(x>>1,y>>1)>.72?.25:0)+(y-top<1.5?.4:0),.05,.99)}}}
+function shatter(b,k){const o=buf(b.w,b.h);for(let y=0;y<b.h;y++)for(let x=0;x<b.w;x++){const i=y*b.w+x;if(b.m[i]<0)continue;const bx=x>>2,by=y>>2,h1=hash(bx,by),h2=hash(by+7,bx+3),h3=hash(x,y);
+  if(h3<k*.82)continue;const vx=(h1-.5)*26,vy=-(3+h2*12);let nx=x+vx*k,ny=y+vy*k+34*k*k;const fl=G-1-Math.floor(h3*3);if(ny>fl){ny=fl}
+  const j=Math.round(ny)*b.w+Math.round(nx);if(nx<0||nx>=b.w||ny<0)continue;o.m[j]=b.m[i];o.s[j]=b.s[i]}return o}
+function squash(b,k){if(k<=0)return b;const o=buf(b.w,b.h),sy=1-k*.8,sx=1+k*.3,cx=AX-k*2;for(let y=0;y<G;y++){const syy=G-(G-y)/sy;if(syy<0)continue;for(let x=0;x<b.w;x++){const sxx=Math.round(cx+(x-cx)/sx),i=Math.round(syy)*b.w+sxx;
+  if(sxx<0||sxx>=b.w||b.m[i]<0)continue;o.m[y*b.w+x]=b.m[i];o.s[y*b.w+x]=b.s[i]}}return o}
+
+// ---------- accessoires partagés ----------
+function sangle(b,J,mat='leath'){for(let i=0;i<=7;i++)over(b,J.sh[0]-2+i*.7,J.sh[1]+1+i,mat,.45)}
+function etole(b,J,mat,x0=1,w=3){const y0=Math.round(J.sh[1])+2,y1=Math.round(J.hip[1])+8;for(let y=y0;y<=y1;y++){const t=(y-y0)/(y1-y0),cx=lerp(J.sh[0],J.hip[0],cl(t*1.6));for(let i=0;i<w;i++)over(b,cx+x0+i,y,mat,.7-i*.15-t*.1)}}
+function tablier(b,J,mat){const y0=Math.round(J.hip[1])-5,y1=Math.round(J.hip[1])+7;for(let y=y0;y<=y1;y++){const t=(y-y0)/(y1-y0),cx=lerp(J.sh[0],J.hip[0],cl(t*2+.4));for(let i=0;i<=4+(t>.5?1:0);i++)px(b,Math.round(cx)+i,y,mat,.72-i*.1-t*.12)}}
+
+// ---------- Oublieux ----------
+const OBL=[
+ {id:'1',name:'Le Glaneur à la hotte',desc:'Bure cendre à capuche, grande hotte d’osier sur le dos, veilleuse au bout du bras. Il se penche, ramasse et jette par-dessus l’épaule. La silhouette la plus simple à lire de nuit.',
+  head:'hood',robe:2,hold:'lantern',stow:[-6,-4],m:{hood:'ash',robe:'ash',torso:'ash',sleeve:'ash',glove:'lin2',boot:'leath',belt:'leath'},
+  back(b,J){const x=Math.round(J.sh[0])-10,y=Math.round(J.sh[1])-2;panier(b,x,y,6,12);px(b,x+1,y-1,'bone',.9);px(b,x+2,y-1,'iron',.7);px(b,x+4,y-1,'lin2',.9);px(b,x+4,y-2,'lin2',.8)},
+  mid(b,J){sangle(b,J)},
+  front(b,J,P,F){lantern(b,F,J.hF[0]+(P.sw||0)*.8,J.hF[1]+2,P.glow)}},
+ {id:'2',name:'Le Gaffeur',desc:'Chapeau à large bord, manteau de nuit, longue gaffe à crochet : il accroche l’objet sans presque se baisser, le fait glisser jusqu’à sa main puis dans la besace. Veilleuse à la ceinture.',
+  head:'hat',beard:true,robe:1,robeW:1.6,hold:'staff',bend:.3,reachOff:[7,9],stow:[-2,7],m:{hat:'nuit',hair:'hairw',robe:'nuit',torso:'nuit',sleeve:'nuit',glove:'leath',leg:'ash',boot:'leath',belt:'leath'},
+  back(b,J){blob(b,J.hip[0]-5.5,J.hip[1]+2.5,3.6,5,'lin2',-.1);px(b,Math.round(J.hip[0])-5,Math.round(J.hip[1])-3,'leath',.6)},
+  mid(b,J){sangle(b,J,'lin2')},
+  front(b,J,P,F){const d=P.reach?P.reach[2]:0,th=lerp(-Math.PI/2,.91,d),c=Math.cos(th),s=Math.sin(th),h=J.hF,bl=lerp(Math.min(15,G-1-h[1]),6,d),tl=lerp(18,12,d),tx=h[0]+c*tl,ty=h[1]+s*tl;
+   ln(b,h[0]-c*bl,h[1]-s*bl,tx,ty,'wood',.62);dot(b,tx,ty,'iron',.9);dot(b,tx-s,ty+c,'iron',.95);dot(b,tx-s*2,ty+c*2,'iron',.85);dot(b,tx-s*2-c,ty+c*2-s,'iron',.7);dot(b,tx-s*2-c*2,ty+c*2-s*2,'iron',.6);
+   blob(b,h[0],h[1],1.8,1.7,'leath',.1);lantern(b,F,J.hip[0]+3,J.hip[1]-1,P.glow)}},
+ {id:'3',name:'Le Porte-noms',desc:'Crâne nu, yeux bandés, linceul blême sous un scapulaire cendre. Un collier de plaques de noms lui pend sur la poitrine et tinte à la marche. Pas de lumière : il trouve à tâtons. Besace de cuir à la hanche.',
+  head:'bald',blind:true,robe:2,hold:'free',stow:[-3,8],m:{robe:'lin2',torso:'lin2',sleeve:'lin2',glove:'skin',boot:'leath',belt:'ash'},
+  back(b,J){blob(b,J.hip[0]-5,J.hip[1]+3,3.4,4.2,'leath',-.1)},
+  mid(b,J,P,F){etole(b,J,'ash',0,3);sangle(b,J);const sw=P.sw||0;for(let i=0;i<5;i++){const x=J.sh[0]+2.5+i*.4+sw*i*.35,y=J.sh[1]+1+i*1.7;px(b,Math.round(x),Math.round(y),'iron',i&1?.95:.6)}
+   if(Math.sin(P.t*5)>.8)fdot(F,J.sh[0]+4+sw,J.sh[1]+7,'lin2',.99)},
+  front(b,J,P){over(b,J.hip[0]-4,J.hip[1]+1,'iron',.9)}},
+ {id:'4',name:'Le Fossoyeur',desc:'Tête nue, barbe, tablier de cuir sur une tunique cendre, pelle en travers du dos et sac de toile. Le seul sans robe : il marche vite, on voit ses jambes. Veilleuse à la ceinture.',
+  head:'bare',beard:true,hold:'free',stow:[-5,1],pace:.72,m:{hair:'hair',torso:'ash',sleeve:'ash',glove:'leath',leg:'nuit',boot:'leath',belt:'leath'},
+  back(b,J){const x0=J.hip[0]-9,y0=J.hip[1]+5,x1=J.sh[0]-5,y1=J.sh[1]-9;ln(b,x0,y0,x1,y1,'wood',.6);rect(b,Math.round(x1)-2,Math.round(y1)-5,5,5,'iron',.05);rect(b,Math.round(x1)-1,Math.round(y1)-6,3,1,'iron',.2);
+   blob(b,J.sh[0]-6,J.sh[1]+5.5,3.4,4.6,'lin2',-.08)},
+  mid(b,J){tablier(b,J,'leath');sangle(b,J,'lin2')},
+  front(b,J,P,F){lantern(b,F,J.hip[0]-1+(P.sw||0)*.4,J.hip[1],P.glow)}},
+ {id:'5',name:'Le Pèlerin à la palanche',desc:'Voile de linceul, bure cendre, une perche en travers de l’épaule avec deux paniers qui se balancent. Il pose ce qu’il trouve dans le panier de devant, où brûle sa veilleuse. La silhouette la plus large, reconnaissable de loin.',
+  head:'veil',robe:2,hold:'pole',stow:[9,2],m:{veil:'lin2',robe:'ash',torso:'ash',sleeve:'ash',glove:'skin',boot:'leath',belt:'lin2'},
+  front(b,J,P,F){const y=Math.round(J.sh[1])-1,x=J.sh[0],sw=P.sw||0;ln(b,x-12,y+1,x+12,y,'wood',.62);
+   for(const[s,ph]of[[-1,.6],[1,0]]){const ex=x+s*11,dx=Math.round(sw*(s>0?1:.7)*.9+ph*sw);ln(b,ex,y+1,ex-2+dx,y+6,'leath',.4);ln(b,ex,y+1,ex+2+dx,y+6,'leath',.4);panier(b,ex-3+dx,y+6,6,5);
+    if(s>0){rect(b,Math.round(ex)-1+dx,y+4,2,2,'lueur',.3+P.glow*.3);fdot(F,ex+dx,y+4,'lueur',.99);if(P.glow>.42)fdot(F,ex-1+dx,y+5,'lueur',.8)}else{px(b,Math.round(ex)-1+dx,y+5,'bone',.9);px(b,Math.round(ex)+1+dx,y+5,'iron',.7)}}
+   blob(b,J.hF[0],J.hF[1],1.8,1.7,'skin',.1)}},
+];
+
+// ---------- Guérisseuse cristallisée ----------
+const soin=(F,x,y,t,k,n=5)=>{for(let i=0;i<n;i++){const p=(t*.7+i/n)%1;if(p>k)continue;const xx=x+Math.sin(i*2.4+p*5)*5,yy=y-p*16;if(i%2)fplus(F,xx,yy,'cmed',.95-p*.5);else fdot(F,xx,yy,'cmed',.95-p*.5)}};
+const HEAL=[
+ {id:'1',name:'La Main de cristal',desc:'Robe de lin, étole verte, chignon. Son bras d’avant est devenu cristal jusqu’à l’épaule : elle soigne paume tendue, un filet de lumière part de la main vers le blessé.',
+  head:'bare',hair:'bun',robe:2,slim:true,hold:'free',cast:'palm',cry:'cmed',m:{hair:'hair',robe:'linen',torso:'linen',sleeve:'linen',glove:'skin',armF:'cmed',handF:'cmed',boot:'leath',belt:'med'},
+  mid(b,J){etole(b,J,'med',0,3)},
+  front(b,J,P,F){const h=J.hF,t=P.t;if(P.k>.3){fstar(F,h[0]+2,h[1],'cmed',P.glow>.8?2:1);for(let i=0;i<7;i++){const p=(t*1.3+i/7)%1;if(p>P.k)continue;fdot(F,h[0]+3+p*18,h[1]+Math.sin(p*7+i)*1.6-p*2,'cmed',.99-p*.5)}fplus(F,h[0]+22,h[1]-3+Math.sin(t*4),'cmed',.9)}
+   else if(Math.sin(t*1.7)>.93)fdot(F,J.sj[0]+1,J.sj[1]+3,'cmed',.99)}},
+ {id:'2',name:'La Porteuse de géode',desc:'Voile vert, robe de lin. Elle porte à deux mains une demi-géode comme un calice ; pour soigner elle l’élève et la lumière en déborde en croix vertes. Deux éclats lui ont poussé sur l’épaule.',
+  head:'veil',robe:2,slim:true,hold:'carry',cast:'lift',cry:'cmed',m:{veil:'med',robe:'linen',torso:'linen',sleeve:'linen',glove:'skin',boot:'leath',belt:'med'},
+  mid(b,J){shard(b,J.sh[0]-3,J.sh[1]+1,4,'cmed');shard(b,J.sh[0]-5,J.sh[1]+2,3,'cmed',-.1,0)},
+  front(b,J,P,F){const x=Math.round(J.hF[0])+1,y=Math.round(J.hF[1])-2;rect(b,x-3,y-3,7,1,'cmed',.2+P.glow*.3);rect(b,x-3,y-2,7,1,'stone',.1);rect(b,x-2,y-1,5,1,'stone',-.05);rect(b,x-1,y,3,1,'stone',-.15);
+   fdot(F,x,y-3,'cmed',.99);if(P.k>.2){fdot(F,x-2,y-3,'cmed',.9);fdot(F,x+2,y-3,'cmed',.9);soin(F,x,y-4,P.t,P.k,6)}else if(Math.sin(P.t*2)>.6)fdot(F,x+1,y-4,'cmed',.8)}},
+ {id:'3',name:'La Couronne d’éclats',desc:'Cheveux blancs dénoués, robe verte. Cinq éclats tournent lentement derrière sa tête. Elle soigne mains jointes : la couronne s’élargit, accélère et sème des croix autour d’elle.',
+  head:'bare',hair:'long',robe:2,slim:true,hold:'pray',cast:'pray',cry:'cmed',m:{hair:'hairw',robe:'med',torso:'med',sleeve:'med',glove:'skin',boot:'leath',belt:'linen'},hem:'linen',
+  back(b,J,P,F){const r=8+P.k*4,rot=P.t*.5+P.k*P.t*2;for(let i=0;i<5;i++){const a=i/5*TAU+rot,x=J.hd[0]-1+Math.cos(a)*r,y=J.hd[1]-1+Math.sin(a)*r*.9;shard(b,x,y+1,3,'cmed',P.glow*.2,0);if(P.k>.5)fdot(F,x,y-1,'cmed',.99)}},
+  front(b,J,P,F){if(P.k>.2){soin(F,J.X+2,J.sh[1]+4,P.t,P.k,6);fring(F,J.X,G-1,10+4*Math.sin(P.t*3),3,'cmed',.7,20,P.t,2)}}},
+ {id:'4',name:'La Source',desc:'Natte rousse, tablier d’herboriste sur une robe verte, bâton coiffé d’une goutte de cristal. Elle lève le bâton : la goutte perle, des gouttes de lumière tombent devant elle et font des ronds au sol.',
+  head:'bare',hair:'braid',robe:2,slim:true,hold:'staff',cast:'raise',cry:'cmed',m:{hair:'hairr',robe:'med',torso:'med',sleeve:'linen',glove:'skin',boot:'leath',belt:'leath'},
+  mid(b,J){tablier(b,J,'leath')},
+  front(b,J,P,F){const h=J.hF,x=h[0]+.5,top=h[1]-13,bot=Math.min(G-1,h[1]+13);ln(b,x,bot,x,top+3,'wood',.6);gem(b,x,top,2,'cmed',P.glow*.3);px(b,Math.round(x),Math.round(top)-3,'cmed',.99);blob(b,h[0],h[1],1.8,1.7,'skin',.1);
+   fdot(F,x,top,'cmed',.99);if(P.k>.3){fstar(F,x,top,'cmed',1);for(let i=0;i<4;i++){const p=(P.t*.9+i/4)%1,xx=x+3+p*12,yy=top+p*p*(G-2-top);fdot(F,xx,yy,'cmed',.99);fdot(F,xx,yy-1,'cmed',.7)}
+    const rp=(P.t*.9)%1;fring(F,x+15,G-1,2+rp*6,.8+rp*1.6,'cmed',.9-rp*.6,14,0,1)}}},
+ {id:'5',name:'Les Larmes figées',desc:'Manteau vert sombre, cheveux dénoués. Le cristal lui a pris la moitié du crâne, une larme de cristal lui tourne autour à hauteur de poitrine. Pour soigner elle ouvre les bras : la larme monte en spirale et laisse une traînée.',
+  head:'bare',hair:'long',halfc:true,robe:2,slim:true,hold:'free',cast:'open',cry:'cmed',cape:'foret',m:{hair:'hair',robe:'med',torso:'foret',sleeve:'foret',glove:'skin',boot:'leath',belt:'linen'},
+  orb(J,P,dt=0){const t=P.t-dt,w=t*(1.6+P.k*2.4),r=11-P.k*2;return[J.X+Math.cos(w)*r,J.sh[1]+3-P.k*(12+3*Math.sin(t*2))+Math.sin(w)*2.5,Math.sin(w)]},
+  back(b,J,P,F,V){const o=V.orb(J,P);if(o[2]<0){gem(b,o[0],o[1],1,'cmed',.2);fdot(F,o[0],o[1],'cmed',.99)}},
+  front(b,J,P,F,V){const o=V.orb(J,P);if(o[2]>=0){gem(b,o[0],o[1],1,'cmed',.2);fdot(F,o[0],o[1],'cmed',.99)}
+   for(let i=1;i<=5;i++){const q=V.orb(J,P,i*.05);if(q[2]>=0||P.k>.3)fdot(F,q[0],q[1],'cmed',.8-i*.13)}if(P.k>.4)soin(F,J.X+2,J.sh[1]-4,P.t,P.k,4)}},
+];
+
+// ---------- Chantre cristallisé ----------
+const ondes=(F,x,y,t,k,a0=-.6,a1=.6)=>{for(let i=0;i<3;i++){const p=(t*1.1+i/3)%1;if(p>k)continue;farc(F,x,y,3+p*17,a0,a1,'cind',.99-p*.6)}};
+const aura=(F,X,t,k)=>{if(k>.3){const p=(t*.8)%1;fring(F,X,G-1,6+p*14,1.5+p*3.5,'cind',.9-p*.6,26,0,2)}};
+const CHANT=[
+ {id:'1',name:'La Gorge de cristal',desc:'Tête nue, tunique orange, bras ouverts. Sa gorge et le haut de sa poitrine sont de cristal et s’allument quand il chante : les ondes sortent de sa bouche.',
+  head:'bare',robe:1,hold:'free',cast:'open',cry:'cind',m:{hair:'hair',robe:'ind',torso:'ind',sleeve:'ind',glove:'skin',leg:'wool',boot:'leath',belt:'leath'},
+  mid(b,J,P,F){const x=J.sh[0]+2,y=J.sh[1]+1;for(let j=0;j<6;j++)for(let i=-1-(j>>1);i<=2;i++)if(hash(i,j)>.25)over(b,x+i,y+j,'cind',cl(.5+P.glow*.4-i*.08-j*.05,.1,.99));
+   gem(b,x+1,y-1,1,'cind',P.glow*.4);if(P.glow>.4){fdot(F,x+1,y-1,'cind',.99);fdot(F,x,y+2,'cind',.9)}},
+  front(b,J,P,F){if(P.k>.5)ondes(F,J.hd[0]+5,J.hd[1]+3,P.t,P.k);aura(F,J.X,P.t,P.k)}},
+ {id:'2',name:'Le Porte-diapason',desc:'Capuche orange, robe grise à étole. Son bâton est un grand diapason de cristal : il le lève, les deux branches vibrent et des ondes s’en écartent des deux côtés.',
+  head:'hood',robe:2,hold:'staff',cast:'raise',cry:'cind',m:{hood:'ind',robe:'robe',torso:'robe',sleeve:'robe',glove:'skin',boot:'leath',belt:'ind'},
+  mid(b,J){etole(b,J,'ind',1,2)},
+  front(b,J,P,F){const h=J.hF,x=Math.round(h[0]+.5),y=Math.round(h[1]),bot=Math.min(G-1,y+13),vib=P.k>.5?((P.t*24|0)&1):0;ln(b,x,bot,x,y-5,'iron',.55);rect(b,x-2,y-6,5,1,'cind',.1);
+   for(let i=0;i<10;i++){px(b,x-2-(i>2?vib:0),y-7-i,'cind',.95-i*.04);px(b,x+2+(i>2?vib:0),y-7-i,'cind',.7-i*.03)}blob(b,h[0],h[1],1.8,1.7,'skin',.1);
+   if(P.k>.5){fdot(F,x-2-vib,y-16,'cind',.99);fdot(F,x+2+vib,y-16,'cind',.99);for(let i=0;i<3;i++){const p=(P.t*1.2+i/3)%1,r=4+p*14;farc(F,x,y-12,r,-.5,.5,'cind',.99-p*.6);farc(F,x,y-12,r,Math.PI-.5,Math.PI+.5,'cind',.99-p*.6)}}aura(F,J.X,P.t,P.k)}},
+ {id:'3',name:'Le Tambour de géode',desc:'Crâne rasé, barbe, bras nus. Il porte à la hanche un tambour taillé dans une géode et le frappe à deux mains : chaque coup allume la peau du tambour et lance un cercle au sol. Le rayon de l’aura se lit tout seul.',
+  head:'bald',beard:true,robe:1,hold:'drum',cast:'drum',cry:'cind',m:{hair:'hair',robe:'wool',torso:'ind',sleeve:'skin',glove:'skin',leg:'leath',boot:'leath',belt:'leath'},
+  mid(b,J){sangle(b,J)},
+  front(b,J,P,F){const x=J.hip[0]+6.5,y=J.hip[1]+1,hit=P.beat!==undefined&&P.beat<.14&&P.k>.4;blob(b,x,y+1,4.2,4.8,'stone',-.05);for(let i=-4;i<=4;i++){px(b,Math.round(x+i),Math.round(y-3-(Math.abs(i)>3?-1:0)),'cind',hit?.99:.6-i*.04)}
+   for(let i=-2;i<=2;i+=2)over(b,x+i,y+2,'cind',.5);if(hit)for(let i=-3;i<=3;i++)fdot(F,x+i,y-3,'cind',.99);
+   blob(b,J.hF[0],J.hF[1],1.8,1.7,'skin',.1);
+   if(P.k>.4&&P.beat!==undefined){const p=P.beat;fring(F,J.X+2,G-1,5+p*18,1.4+p*4,'cind',.99-p*.7,30,0,2);if(p<.5)farc(F,x,y-3,3+p*10,-2.2,-.9,'cind',.9-p)}}},
+ {id:'4',name:'Le Cor de cristal',desc:'Turban orange, manteau de cuir. Un cor de cristal lui pend à la main ; il le porte à la bouche, se cambre et souffle : les ondes partent du pavillon, plus larges et plus loin que la voix.',
+  head:'turban',robe:1,hold:'horn',cast:'horn',cry:'cind',cape:'leath',m:{turban:'ind',hair:'hair',robe:'ind',torso:'ind',sleeve:'leath',glove:'skin',leg:'wool',boot:'leath',belt:'leath'},
+  front(b,J,P,F){const h=J.hF,th0=lerp(1.25,-.45,P.k);let x=h[0],y=h[1],th=th0;for(let i=0;i<11;i++){const r=.7+i*.19;blob(b,x,y,r,r,'cind',.1+P.glow*.15-(i&1)*.06);x+=Math.cos(th)*1.25;y+=Math.sin(th)*1.25;th-=.07}
+   blob(b,h[0],h[1],1.7,1.6,'skin',.1);if(P.k>.6){fdot(F,x,y,'cind',.99);ondes(F,x,y,P.t,P.k,th-.7,th+.7)}aura(F,J.X,P.t,P.k)}},
+ {id:'5',name:'Le Chœur d’éclats',desc:'Haute capuche pointue, robe orange. Trois éclats flottent au-dessus de ses épaules et chantent à sa place, l’un après l’autre : chacun s’allume, monte et laisse tomber une colonne de lumière.',
+  head:'hood',peak:true,robe:2,hold:'pray',cast:'open',cry:'cind',m:{hood:'ind',robe:'ind',torso:'ind',sleeve:'ind',glove:'skin',boot:'leath',belt:'wool'},
+  mid(b,J){etole(b,J,'wool',1,2)},
+  front(b,J,P,F){const lit=P.k>.5?Math.floor(P.t*3.5)%3:-1;[[-9,-6,0],[1,-17,1.3],[11,-7,2.6]].forEach(([dx,dy,ph],i)=>{const on=i===lit,x=J.sh[0]+dx,y=J.sh[1]+dy+Math.sin(P.t*2+ph)*1.3-P.k*3-(on?1:0);
+    shard(b,x,y,i===1?6:5,'cind',on?.3:-.05);fdot(F,x,y-(i===1?5:4),'cind',on?.99:.8);if(on){fstar(F,x,y-2,'cind',1);for(let j=2;j<12;j+=2)fdot(F,x,y+j,'cind',.95-j*.06)}});aura(F,J.X,P.t,P.k)}},
+];
+
+// ---------- Envoûteur cristallisé ----------
+// marque d'armure brisée au-dessus de la cible (bouclier fendu)
+const brise=(F,x,y,t,k)=>{if(k<.5||Math.sin(t*10)<-.7)return;const l=.95;for(const[dx,dy]of[[-3,-3],[-2,-3],[-1,-3],[1,-3],[2,-3],[3,-3],[-3,-2],[3,-2],[-3,-1],[3,-1],[-3,0],[3,0],[-2,1],[2,1],[-1,2],[1,2],[0,3],[0,-2],[-1,-1],[0,0],[1,1]])fdot(F,x+dx,y+dy,'caet',dx===0||Math.abs(dx)===1&&Math.abs(dy)<2?.6:l)};
+const HEX=[
+ {id:'1',name:'Le Masque',desc:'Capuche et manteau de nuit doublé de violet. Son visage est un masque de cristal lisse, ses mains aussi. Il tend la paume : un trait part du masque et la marque d’armure brisée se forme sur la cible.',
+  head:'hood',mask:'caet',robe:2,hold:'pray',cast:'palm',cry:'caet',m:{hood:'nuit',robe:'nuit',torso:'nuit',sleeve:'nuit',glove:'caet',boot:'leath',belt:'aet'},hem:'aet',
+  mid(b,J){etole(b,J,'aet',2,1)},
+  front(b,J,P,F){const hx=J.hd[0]+4,hy=J.hd[1];fdot(F,hx,hy,'caet',.6+P.glow*.39);if(P.k>.3){for(let i=0;i<9;i++){const p=(P.t*1.6+i/9)%1;if(p<P.k)fdot(F,hx+1+p*20,hy+p*3,'caet',.99-p*.4)}brise(F,J.X+26,J.sh[1]-3,P.t,P.k)}}},
+ {id:'2',name:'Le Marionnettiste',desc:'Cheveux blancs, col haut, long manteau violet. Des fils de lumière lui pendent des doigts ; il avance les deux mains, les fils descendent, se balancent et s’accrochent.',
+  head:'bare',hair:'long',robe:2,hold:'free',cast:'threads',cry:'caet',m:{hair:'hairw',robe:'aet',torso:'nuit',sleeve:'aet',glove:'skin',boot:'leath',belt:'nuit'},
+  mid(b,J){rect(b,Math.round(J.sh[0])-3,Math.round(J.sh[1])-2,3,3,'aet',-.1);rect(b,Math.round(J.sh[0])+1,Math.round(J.sh[1])-1,3,2,'aet',.1)},
+  front(b,J,P,F){const fil=(h,n,len,ph)=>{for(let i=0;i<n;i++){const x0=h[0]-1+i*2;let x=x0;for(let j=1;j<=len;j++){x=x0+Math.sin(P.t*3+ph+i+j*.35)*j*.14;if(j%2||j===len)fdot(F,x,h[1]+1+j,'caet',.95-j*.03)}gem(b,x,h[1]+2+len,0,'caet');fdot(F,x,h[1]+2+len,'caet',.99)}};
+   fil(J.hF,2,Math.round(3+P.k*11),0);if(P.k>.3){fil(J.hB,2,Math.round(P.k*9),2);brise(F,J.X+24,J.sh[1]-8,P.t,P.k)}}},
+ {id:'3',name:'Le Miroir',desc:'Turban violet à pierre, robe de nuit. Il porte un miroir de cristal poli ; il le tourne vers l’ennemi, le miroir éclate de lumière et un rayon haché file vers la cible.',
+  head:'turban',robe:2,hold:'carry',cast:'mirror',cry:'caet',m:{turban:'aet',hair:'hair',robe:'nuit',torso:'nuit',sleeve:'nuit',glove:'skin',boot:'leath',belt:'aet'},hem:'aet',
+  mid(b,J){etole(b,J,'aet',1,2)},
+  front(b,J,P,F){const x=J.hF[0]+2.5,y=J.hF[1]-4.5;blob(b,x,y,3,4.6,'iron',-.1);blob(b,x+.3,y,2,3.6,'caet',.15+P.glow*.3);px(b,Math.round(x)-1,Math.round(y)-2,'caet',.99);ln(b,x-.5,y+5,x-.5,y+7,'iron',.5);
+   blob(b,J.hF[0],J.hF[1]+1,1.8,1.7,'skin',.1);if(P.k>.5){fstar(F,x+1,y,'caet',P.glow>.8?3:2);for(let i=0;i<24;i++){if(((i+(P.t*20|0))%4)<2)fdot(F,x+4+i,y+i*.1,'caet',.99-i*.02)}brise(F,J.X+27,J.sh[1]-10,P.t,P.k)}
+   else if(Math.sin(P.t*1.3)>.95)fdot(F,x,y-1,'caet',.99)}},
+ {id:'4',name:'L’Œil prismatique',desc:'Crâne à demi pris par le cristal, mantelet de nuit sur une robe violette. Un prisme flotte au-dessus de sa paume ; il le laisse monter, le prisme tourne et lâche trois rayons en éventail.',
+  head:'bald',halfc:true,robe:2,hold:'palmup',cast:'palmup',cry:'caet',m:{robe:'aet',torso:'aet',sleeve:'aet',glove:'skin',boot:'leath',belt:'nuit'},
+  mid(b,J){blob(b,J.sh[0]-.5,J.sh[1]+2,5.2,3,'nuit',.05)},
+  front(b,J,P,F){const x=J.hF[0]+.5,y=J.hF[1]-5-Math.sin(P.t*2.2)*1.2-P.k*7,r=P.k>.5&&Math.sin(P.t*12)>0?3:2;gem(b,x,y,2,'caet',P.glow*.3+Math.sin(P.t*5)*.1);fdot(F,x-1,y-1,'caet',.99);
+   if(P.k>.4){fstar(F,x,y,'caet',r-1);[.15,.5,.85].forEach((an,i)=>{for(let j=3;j<22*P.k;j++){if((j+(P.t*18|0)+i)%3===0)continue;fdot(F,x+Math.cos(an)*j,y+Math.sin(an)*j,'caet',.99-j*.03-i*.1)}})}}},
+ {id:'5',name:'Le Pendule',desc:'Capuche violette pointue, robe violette. Il laisse pendre un éclat au bout d’une chaîne et le balance lentement. Pour envoûter, le balancier s’emballe, laisse des images fantômes et une spirale se referme sur la cible.',
+  head:'hood',peak:true,robe:2,hold:'dangle',cast:'swing',cry:'caet',m:{hood:'aet',robe:'aet',torso:'aet',sleeve:'aet',glove:'skin',boot:'leath',belt:'nuit'},hem:'nuit',
+  pend(J,P,dt=0){const t=P.t-dt,A=.28+P.k*.8,an=A*Math.sin(t*(2.2+P.k*3.8));return[J.hF[0]+Math.sin(an)*10,J.hF[1]+Math.cos(an)*10]},
+  front(b,J,P,F,V){const e=V.pend(J,P);for(let i=1;i<=4;i++)if(P.k>.3){const q=V.pend(J,P,i*.045);fdot(F,q[0],q[1]+1,'caet',.75-i*.14)}
+   ln(b,J.hF[0],J.hF[1]+1,e[0],e[1],'iron',.5);gem(b,e[0],e[1]+1,1,'caet',.2);fdot(F,e[0],e[1]+1,'caet',.99);
+   if(P.k>.4){const cx=J.X+25,cy=J.sh[1]+2;for(let i=0;i<16;i++){const a=i*.55-P.t*5,r=1+i*.55;fdot(F,cx+Math.cos(a)*r,cy+Math.sin(a)*r*.8,'caet',.99-i*.04)}}}},
+];
+
+const ROLES=[
+ {key:'obl',name:'L’Oublieux',act:'Ramasse',list:OBL},
+ {key:'heal',name:'Guérisseuse cristallisée',act:'Soigne',list:HEAL},
+ {key:'chant',name:'Chantre cristallisé',act:'Chante',list:CHANT},
+ {key:'hex',name:'Envoûteur cristallisé',act:'Envoûte',list:HEX},
+];
+const LIST=Object.fromEntries(ROLES.map(r=>[r.key,r.list]));
+const ANIMS={idle:{len:2.8,loop:true},walk:{len:.85,loop:true},act:{len:2.8,loop:true},death:{len:2.0,loop:false}};
+
+function paint(b){const c=render(b,1),fx=document.createElement('canvas');fx.width=b.w;fx.height=b.h;const g=fx.getContext('2d');
+ for(const[x,y,mat,l]of b.fx||[]){const r=R[mat];g.fillStyle=r[Math.min(4,1+Math.round(l*3))];g.fillRect(x,y,1,1)}
+ return{c,fx}}
+function buffer(role,vi,anim,t){const V=LIST[role][vi];
+ if(anim!=='death')return man(V,pose(role,V,anim,t));
+ if(role==='obl'){ // s'affaisse en tas de bure, une lueur s'en échappe, puis il se relève (il revient la nuit suivante)
+  const u=t%4.2,k=sm(.25,1.05,u)-sm(2.5,3.4,u);let b=man(V,pose(role,V,'death',u<2?u:9));const F=u<2.4?b.fx.filter(()=>k<.5):b.fx;b=squash(b,k);b.fx=k>.5?[]:F;
+  if(k>.6){const w=u-1;for(let i=0;i<5;i++){const y=G-6-((w*9+i*4)%20),x=AX-2+Math.sin(w*3+i*1.3)*(3+i*.4);fdot(b.fx,x,y,'lueur',.99-i*.12)}fplus(b.fx,AX-2+Math.sin(w*2)*2,G-28-Math.sin(w*1.5)*2,'lueur',.95)}
+  return b}
+ // mages : le cristal les gagne des pieds à la tête, un éclair, puis ils volent en éclats
+ const u=t%3.1,V2=V,c=sm(.2,.9,u);let b=man(V2,pose(role,V2,'death',u));b.fx=[];
+ if(c>0)crystallize(b,c,V.cry);if(u>.9&&u<1.0)for(let i=0;i<b.s.length;i++)if(b.m[i]>=0)b.s[i]=.99;
+ const s=sm(1.0,1.8,u);if(s>0){const fx=[];b=shatter(b,s);b.fx=fx;if(u<1.25)fstar(fx,AX,G-18,V.cry,4)}
+ else if(c>0&&c<1){const top=lerp(G,6,c);for(let x=AX-9;x<AX+9;x++)if(hash(x,Math.floor(u*24))>.6)fdot(b.fx,x,top,V.cry,.99)}
+ return b}
+const frame=(role,vi,anim,t)=>paint(buffer(role,vi,anim,t));
+return{ROLES,LIST,ANIMS,SIZE:{w:W,h:H,ax:AX,ay:G},frame,buffer}})();
+
+</script>
+<script>
+'use strict';
+const CFG = {"api": "PERSO", "store": "biomes-persos-choix", "scaleW": 640, "scaleH": 64, "refs": ["lame", "archer", "flammes"], "cap": "De gauche à droite : épée et bouclier, archer, lance-flammes, puis les cinq Oublieux, Guérisseuses, Chantres et Envoûteurs.", "text": {"obl": {"sub": "Sort de l’Église chaque nuit, ramasse 12 objets par trajet, ne se bat pas. Cendre et linceul, une veilleuse aux couleurs des Limbes, jamais d’or. « Action » = ramasser un objet et le ranger. « Mort » = il s’affaisse en tas de bure, sa lueur s’échappe, puis il se relève : c’est aussi son retour de la nuit suivante.", "note": "<b>À trancher avec le modèle.</b> Le 3 n’a pas de veilleuse : de nuit il se lit moins bien que les autres, c’est voulu mais c’est un risque."}, "heal": {"sub": "Vert de Medeina, cristal vert. Soigne l’allié le plus blessé à portée, n’attaque pas. « Action » = le soin, tenu tant qu’elle canalise. « Mort » = le cristal la gagne des pieds à la tête, puis elle vole en éclats ; même fin pour les trois mages."}, "chant": {"sub": "Orange d’Indra, cristal orange. Aura : les alliés autour de lui frappent plus fort. Le cercle au sol marque le rayon de l’aura dans les cinq modèles ; ce qui change, c’est d’où part le chant."}, "hex": {"sub": "Bleu-violet d’Aether, cristal violet. Marque une cible et ses voisins : leur armure baisse. Le petit bouclier fendu qui apparaît à droite est la marque posée sur la cible, pas une partie du personnage."}}};
+const API = window[CFG.api] || eval(CFG.api);
+const GROUND = {ardoise:["#333a46", "#3b434f", "#2b313c"], nuit:["#333a46", "#3b434f", "#2b313c"], eau:["#1f4a4a", "#2a5c58", "#183c3e"], cuivre:["#3a4a44", "#46584e", "#2e3c38"]};
+function ground(g, w, h, kind){
+  const [a, b, c] = GROUND[kind]; g.fillStyle = a; g.fillRect(0, 0, w, h);
+  let r = 7; const rnd = () => (r = (r * 16807) % 2147483647) / 2147483647;
+  for (let i = 0; i < w * h / 26; i++){ g.fillStyle = rnd() < .5 ? b : c; g.fillRect(Math.floor(rnd() * w), Math.floor(rnd() * h), rnd() < .3 ? 2 : 1, 1); }
+}
+function night(g, w, h){ g.globalCompositeOperation = "multiply"; g.fillStyle = "#6a78b4"; g.fillRect(0, 0, w, h); g.globalCompositeOperation = "source-over"; }
+function shadow(g, x, y, rx){ g.save(); g.translate(x, y); g.scale(1, .36); g.beginPath(); g.arc(0, 0, rx, 0, 7); g.fillStyle = "rgba(8,14,14,.5)"; g.fill(); g.restore(); }
+function seg(id){
+  const el = document.getElementById(id); let v = el.querySelector('[aria-pressed="true"]').dataset.v;
+  el.addEventListener("click", e => { const b = e.target.closest("button"); if (!b) return;
+    el.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", x === b)); v = b.dataset.v; });
+  return () => v;
+}
+const anim = seg("anim"), sol = seg("sol");
+const main = document.getElementById("main"), ech = document.getElementById("echelle"), cards = [];
+for (const U of API.ROLES){
+  const S = API.sizeOf ? API.sizeOf(U.key) : API.SIZE, T = CFG.text[U.key] || {};
+  const sec = document.createElement("section");
+  sec.innerHTML = `<h2></h2><p class="sub"></p><div class="row"></div>` + (T.note ? `<p class="note"></p>` : "");
+  sec.querySelector("h2").textContent = U.name; sec.querySelector(".sub").textContent = T.sub || "";
+  if (T.note) sec.querySelector(".note").innerHTML = T.note;
+  const row = sec.querySelector(".row"); main.insertBefore(sec, ech);
+  U.list.forEach((V, vi) => {
+    const card = document.createElement("div"); card.className = "card";
+    const c = document.createElement("canvas"); c.width = S.w; c.height = S.h;
+    const h = document.createElement("h3"); h.textContent = V.id + " · " + V.name;
+    const p = document.createElement("p"); p.textContent = V.desc;
+    const l = document.createElement("label"); l.className = "pick";
+    l.innerHTML = `<input type="radio" name="${U.key}" value="${V.id}">Je retiens le ${V.id}`;
+    card.append(c, h, p, l); row.append(card);
+    const g = c.getContext("2d"); g.imageSmoothingEnabled = false; cards.push({U, vi, g, S});
+  });
+}
+function drawUnit(g, U, vi, a, t, x, y){
+  const S = API.sizeOf ? API.sizeOf(U.key) : API.SIZE, f = API.frame(U.key, vi, a, t);
+  g.drawImage(f.c, x - S.ax, y - S.ay); return () => g.drawImage(f.fx, x - S.ax, y - S.ay);
+}
+function paint(t){
+  const a = anim(), k = sol();
+  for (const {U, vi, g, S} of cards){
+    ground(g, S.w, S.h, k === "nuit" ? "nuit" : (U.ground && k === "ardoise" ? U.ground : k));
+    if (!U.noShadow) shadow(g, S.ax, S.ay, S.sh || 8);
+    const fx = drawUnit(g, U, vi, a, t, S.ax, S.ay);
+    if (k === "nuit") night(g, S.w, S.h);
+    fx();
+  }
+  const sc = document.getElementById("scale"), W = CFG.scaleW, H = CFG.scaleH, g = sc.getContext("2d"), gy = H - 8;
+  if (sc.width !== W){ sc.width = W; sc.height = H; sc.style.width = W * 2 + "px"; sc.style.height = H * 2 + "px"; }
+  g.imageSmoothingEnabled = false; ground(g, W, H, k === "nuit" ? "nuit" : "ardoise");
+  let x = 16; const late = [];
+  for (const kk of CFG.refs){ shadow(g, x, gy, 7); g.drawImage(render(fig({k:kk, dir:"s"}), 1), x - 20, gy - 33); x += 22; }
+  x += 10;
+  for (const U of API.ROLES){ const S = API.sizeOf ? API.sizeOf(U.key) : API.SIZE;
+    U.list.forEach((V, i) => { x += S.gap || 13; if (U.ground === "eau"){ g.fillStyle = "#1f4a4a"; g.beginPath(); g.ellipse(x, gy + 1, (S.gap || 13) - 1, 7, 0, 0, 7); g.fill(); } if (!U.noShadow) shadow(g, x, gy, S.sh || 8); late.push(drawUnit(g, U, i, U.scaleAnim || "idle", t + i * .4, x, gy)); x += S.gap || 13; }); x += 12; }
+  if (k === "nuit") night(g, W, H);
+  late.forEach(f => f());
+}
+document.getElementById("cap").textContent = CFG.cap;
+let paused = matchMedia("(prefers-reduced-motion: reduce)").matches, clock = 0, last = 0, acc = 0;
+const pb = document.getElementById("pause");
+const setPause = p => { paused = p; pb.setAttribute("aria-pressed", p); pb.textContent = p ? "Lecture" : "Pause"; };
+pb.addEventListener("click", () => setPause(!paused));
+// 24 images par seconde, comme les atlas du jeu
+function loop(now){ const dt = Math.min(.1, (now - last) / 1000); last = now; acc += dt; if (acc >= 1 / 24){ if (!paused) clock += acc; acc = 0; paint(clock); } requestAnimationFrame(loop); }
+const Q = new URLSearchParams(location.search);
+if (Q.get("anim")) document.querySelector(`#anim [data-v="${Q.get("anim")}"]`)?.click();
+if (Q.get("sol")) document.querySelector(`#sol [data-v="${Q.get("sol")}"]`)?.click();
+if (Q.get("t")) { clock = +Q.get("t"); paused = true; }
+setPause(paused); paint(clock); requestAnimationFrame(n => { last = n; loop(n); });
+
+const radios = [...document.querySelectorAll('input[type="radio"]')];
+try { const s = JSON.parse(localStorage.getItem(CFG.store) || "{}"); radios.forEach(r => { if (s[r.name] === r.value) r.checked = true; }); } catch (e) {}
+const picked = () => { const o = {}; radios.forEach(r => { if (r.checked) o[r.name] = r.value; }); return o; };
+radios.forEach(r => r.addEventListener("change", () => { try { localStorage.setItem(CFG.store, JSON.stringify(picked())); } catch (e) {} }));
+document.getElementById("copy").addEventListener("click", e => {
+  const o = picked(), parts = API.ROLES.filter(U => o[U.key]).map(U => U.name + " " + o[U.key]);
+  const text = parts.length ? "Mon choix : " + parts.join(", ") + "." : "Aucun modèle choisi pour l’instant.";
+  const out = document.getElementById("out"); out.value = text;
+  const done = () => { e.target.textContent = "Copié"; setTimeout(() => e.target.textContent = "Copier mon choix", 1600); };
+  const fallback = () => { out.hidden = false; out.scrollIntoView({block: "center"}); out.select(); };
+  if (!parts.length) return fallback();
+  try { navigator.clipboard.writeText(text).then(done, fallback); } catch (err) { fallback(); }
+});
+</script>

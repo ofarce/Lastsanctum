@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Export refonte 16 bits</title>
+<style>body{background:#1d2a24;color:#efe6cf;font:14px Georgia,serif;padding:16px}
+h2{color:#5ce8ff;font-weight:normal;margin:18px 0 4px}h3{color:#a9b9a8;font-weight:normal;font-size:12px;margin:8px 0 2px}
+canvas{image-rendering:pixelated;background:#4f7a3a;display:block;margin:2px 0 6px;max-width:100%}</style></head><body>
+<h1>Export de la refonte 16 bits</h1>
+<p id="st">Rendu…</p>
+<div id="out"></div>
+<script src="assets/engineer-colosse.js"></script>
+<script src="assets/engineer-exile.js"></script>
+<script src="assets/refonte-16bits.js"></script>
+<script>
+'use strict';
+// Atlas des personnages redessinés (planches/refonte-16bits.html) au format du jeu :
+// - ennemis : assets/imported/enemies/<kind>_<idle|walk|attack|death>.png + manifest.json (lu par EnemyArt / UnitView) ;
+// - caserne : assets/baked/adepts/<rôle>_<idle|walk|work>.png + manifest adepts.roles (lu par AdeptView) + portraits.
+// ?save=1 : envoie tout à tools/refonte/serve.py (POST /out/<nom>).
+// Tous tournés vers la droite (le jeu retourne l'image selon face). Gabarit humain 40 × 42, pieds en (15, 40).
+const FW=40,FH=42,AX=15,AY=40,OX=-5,OY=7,DW=60,DH=47;
+const ease=t=>t<.5?2*t*t:1-2*(1-t)*(1-t), easeIn=t=>t*t;
+const one=(b,w,h,ox,oy)=>{const c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(render(b,1),ox,oy);return c};
+const human=(k,o,w=FW,h=FH)=>one(fig({k,dir:'s',...o}),w,h,OX,OY);
+function sheet(frames,cols){const w=frames[0].width,h=frames[0].height,rows=Math.ceil(frames.length/cols),c=document.createElement('canvas');
+ c.width=w*cols;c.height=h*rows;const g=c.getContext('2d');frames.forEach((f,i)=>g.drawImage(f,(i%cols)*w,Math.floor(i/cols)*h));return c}
+function bbox(cv){const d=cv.getContext('2d').getImageData(0,0,cv.width,cv.height).data;let y0=1e9,x0=1e9,x1=-1,y1=-1;
+ for(let y=0;y<cv.height;y++)for(let x=0;x<cv.width;x++)if(d[(y*cv.width+x)*4+3]){y0=Math.min(y0,y);y1=Math.max(y1,y);x0=Math.min(x0,x);x1=Math.max(x1,x)}return{x0,y0,x1,y1}}
+// Rotation au plus proche voisin autour du pied (px, py), corps relevé de `lift`, rien sous le sol (py) : pixels nets.
+function rotated(src,w,h,px0,py0,ang,lift,sink=0){const s=src.getContext('2d').getImageData(0,0,src.width,src.height),c=document.createElement('canvas');c.width=w;c.height=h;
+ const g=c.getContext('2d'),o=g.createImageData(w,h),cs=Math.cos(ang),sn=Math.sin(ang);
+ for(let y=0;y<h;y++)for(let x=0;x<w;x++){if(y>=py0)continue;const dx=x+.5-px0,dy=y+.5-py0+lift-sink;
+  const sx=Math.floor(px0+dx*cs+dy*sn),sy=Math.floor(py0-dx*sn+dy*cs);if(sx<0||sy<0||sx>=src.width||sy>=src.height)continue;
+  const i=(sy*src.width+sx)*4,j=(y*w+x)*4;for(let q=0;q<4;q++)o.data[j+q]=s.data[i+q]}
+ g.putImageData(o,0,0);return c}
+
+// ---------- Ennemis humains ----------
+const HUM={creep:'creep',spitter:'spitter',scout:'scout',soldier:'soldier',shield:'shield',archer:'larcher'};
+// Attaque : 24 images à 24 i/s, jouées dès le coup (les dégâts partent au début, comme dans la simulation).
+// Poses intermédiaires : élan (mid), estoc avec traînée qui s'efface (fade), retour de garde (rec).
+const ATTACK={
+ melee:i=>i<1?{pose:'atk',mid:true}:i<2?{pose:'atk'}:i<9?{pose:'strike',swoosh:Math.min(1,(i-1)/3),fade:i>=5?Math.min(.9,(i-4)/4):0}:i<12?{rec:true}:{},
+ // Pilum : le bras part, le buste accompagne puis se redresse, la main va en chercher un autre dans le dos, le lève
+ // et le ramène en garde (10 poses).
+ soldier:i=>i<1?{pose:'throw'}:i<3?{pose:'throw',nowpn:true,ub:1}:i<5?{pose:'throw',nowpn:true,ub:1,hd:1}:i<7?{pose:'throw',nowpn:true}:i<10?{rec:true,nowpn:true}:
+  i<13?{nowpn:true}:i<14?{pose:'atk',mid:true,nowpn:true}:i<15?{pose:'atk',mid:true}:i<18?{pose:'atk'}:i<20?{pose:'atk',mid:true}:i<22?{wy:1}:{},
+ // Arc : la flèche part à la première image, la corde vibre, puis main au carquois, flèche encochée, demi-tension (9 poses).
+ archer:i=>i<1?{pull:3}:i<2?{pull:-1}:i<3?{pull:1,hd:1}:i<4?{pull:-1}:i<6?{}:i<8?{quiv:1}:i<11?{quiv:2}:i<13?{quiv:3}:i<15?{quiv:1}:i<18?{nock:true}:i<21?{pull:1}:{nock:true},
+ // Sort : bâton levé, gerbe qui s'élargit et se dissipe, la flamme vacille, retour.
+ spitter:i=>i<1?{pose:'atk',mid:true}:i<8?{pose:'atk',flick:i,burst:i}:i<14?{pose:'atk',flick:i}:i<16?{pose:'atk',mid:true}:i<18?{rec:true,ember:2}:{ember:1},
+};
+// Repos, 48 images à 12 i/s (4 s) : respiration en trois temps (cycle de 12 : buste et tête ensemble, puis la tête
+// d'abord à la descente, le buste d'abord à la remontée), et un geste d'attente par rôle sur les 12 dernières.
+const BREATH=i=>{const j=i%12;return j<5?{}:j===5||j===11?{hd:1}:{ub:1}};
+const WAIT={
+ creep:j=>j<2?{pose:'atk',mid:true}:j<4?{hd:1}:j<6?{pose:'atk',mid:true}:j<8?{hd:1}:j<10?{pose:'atk',mid:true}:{},          // égrène, tête basse
+ spitter:j=>j<3?{ember:1}:j<6?{ember:2}:j<8?{ember:2,hd:1}:j<10?{ember:1}:{},                                              // la braise du bâton se ravive
+ scout:j=>j<2?{pose:'atk',mid:true}:j<6?{pose:'atk',fl:1+j%2}:j<8?{pose:'atk',mid:true}:j<10?{rec:true}:{},                 // soupèse sa lame
+ soldier:j=>j<2?{wy:-1}:j<4?{wy:-2}:j<6?{wy:-1}:j<7?{wy:1}:j<9?{wy:1,ub:1}:{},                                              // fait sauter son pilum dans la main
+ shield:j=>j<2?{sy:-1}:j<5?{sy:-2,ub:1}:j<7?{sy:-1}:j<9?{sy:1,ub:1}:{},                                                     // recale son pavois
+ larcher:j=>j<2?{nock:true}:j<5?{pull:1}:j<7?{pull:2}:j<9?{pull:1}:j<10?{pull:-1}:{},                                       // éprouve sa corde
+ lame:j=>j<2?{sy:-1}:j<5?{sy:-2}:j<7?{sy:-1}:j<9?{ub:1}:{},
+ archer:j=>j<3?{quiv:1}:j<6?{quiv:2}:j<8?{quiv:1}:{},                                                                       // compte ses flèches
+ flammes:j=>j<2?{pilot:1}:j<5?{pilot:2}:j<8?{pilot:3}:j<10?{pilot:1}:{},                                                    // veilleuse
+};
+const idleOf=k=>[...Array(48)].map((_,i)=>human(k,i<36?BREATH(i):{...WAIT[k](i-36)}));
+// Bêtes : morsure qui part tout de suite, gueule ouverte, tête qui revient en deux temps.
+const BITE=i=>i<1?{reach:1,jaw:true}:i<4?{reach:3,jaw:true}:i<6?{reach:2,jaw:true}:i<7?{reach:2,jaw:false}:i<9?{reach:1,jaw:false}:{};
+const atkOf=k=>k==='soldier'?ATTACK.soldier:k==='archer'?ATTACK.archer:k==='spitter'?ATTACK.spitter:ATTACK.melee;
+// Coup encaissé, 6 images à 24 i/s : le corps part en arrière sur ses pieds, tête rentrée, puis revient.
+const HIT_A=[-.1,-.17,-.17,-.11,-.05,0];
+function humanHit(k){return HIT_A.map((a,i)=>rotated(human(k,i<4?{ub:1,hd:1}:{ub:1}),FW,FH,AX,AY,a,0))}
+// Mort, 45 images : accuse le coup, recule sur ses talons, les genoux cèdent, bascule sur 20 images, rebondit et
+// se tasse (une trentaine de poses) ; la dernière image reste au sol.
+function humanDeath(k){const out=[];const base=human(k,{},DW,DH),hurt=human(k,{ub:1,hd:1},DW,DH),low=human(k,{ub:1},DW,DH);
+ for(let i=0;i<45;i++){
+  if(i<2){out.push(hurt);continue}
+  if(i<8){out.push(rotated(i<5?hurt:low,DW,DH,AX,AY,-.05*(i-1),0));continue}        // recule, de plus en plus cambré
+  if(i<28){const t=(i-8)/20,a=-.3+(Math.PI/2+.3)*easeIn(t);out.push(rotated(base,DW,DH,AX,AY,a,7*Math.sin(Math.max(0,a))));continue}
+  const bounce=i<30?1:i<32?2:i<34?1:0;                                                // rebond au sol
+  out.push(rotated(base,DW,DH,AX,AY,Math.PI/2,7+bounce))}
+ return out}
+const META={enemies:{},adepts:{}};const FILES=[];
+for(const[kind,k]of Object.entries(HUM)){
+ const idle=idleOf(k);
+ const walk=[...Array(24)].map((_,i)=>human(k,{pose:'walk',ph:(i%12)/12}));   // 12 poses par foulée, deux foulées
+ const atk=[...Array(24)].map((_,i)=>human(k,atkOf(kind)(i)));
+ const death=humanDeath(k),hit=humanHit(k);
+ const bb=bbox(idle[0]);
+ FILES.push([`enemy_${kind}_idle.png`,sheet(idle,12)],[`enemy_${kind}_walk.png`,sheet(walk,12)],[`enemy_${kind}_attack.png`,sheet(atk,12)],[`enemy_${kind}_death.png`,sheet(death,12)],[`enemy_${kind}_hit.png`,sheet(hit,12)]);
+ const L=(w,h,n,fps)=>({frame_w:w,frame_h:h,cols:12,rows:Math.ceil(n/12),count:n,fps});
+ META.enemies[kind]={ax:AX,ay:AY,h:AY-bb.y0,stride:4.0,self_bob:true,idle:L(FW,FH,48,12),walk:L(FW,FH,24,24),attack:L(FW,FH,24,24),death:L(DW,DH,45,24),hit:{...L(FW,FH,6,24),duration:.25}};
+}
+// ---------- Bêtes de la jungle (cadre 48 × 30, pieds au sol de chaque espèce) ----------
+// Le chien de la Bête (beast) a son propre export : tools/chiens/export_beast.py.
+for(const k of Object.keys(QUAD)){
+ if(k==='beast')continue;
+ const T=QUAD[k],QW=48,QH=30,G=Math.floor((T.low?20:15)+T.ry+(T.low?3:6)-1),ay=G+1,ax=21;
+ const q=o=>one(quad({k,...o}),QW,QH,0,0);
+ // repos, 48 images : souffle sur 12, queue qui balance sur 24, puis un geste (le crocodile bâille, le félin s'étire)
+ const wait=k==='croc'?(j=>j<2?{jaw:true,reach:0}:j<8?{jaw:true,reach:0,nod:-1}:j<10?{jaw:true,reach:0}:{}):(j=>j<3?{nod:1}:j<7?{nod:1,reach:1}:j<9?{nod:1}:{});
+ const idle=[...Array(48)].map((_,i)=>q({br:(i%12)<6?0:1,tw:Math.round(Math.sin(i/24*2*Math.PI)*(i>=36?2.5:1.5)),...(i>=36?wait(i-36):{})}));
+ const walk=[...Array(24)].map((_,i)=>q({pose:'walk',ph:(i%12)/12}));
+ const atk=[...Array(12)].map((_,i)=>q(BITE(i)));
+ const base=q({}),flinch=q({br:1,nod:1}),death=[];
+ // mort : sursaut, puis s'affaisse en roulant sur le flanc, un dernier coup de queue
+ for(let i=0;i<45;i++){if(i<3){death.push(rotated(flinch,QW,QH,ax+6,ay,.06*(i+1),0));continue}
+  const t=Math.min(1,(i-3)/22),e=ease(t),tail=i>26&&i<34?Math.round(Math.sin((i-26)/8*Math.PI)*2):0;
+  death.push(rotated(tail?q({tw:tail}):base,QW,QH,ax+6,ay,.18-.36*e,0,Math.round((T.low?2:5)*e)))}
+ const hit=[.05,.1,.1,.06,.03,0].map((a,i)=>rotated(i<4?flinch:base,QW,QH,ax-6,ay,a,0));
+ const bb=bbox(idle[0]);
+ FILES.push([`enemy_${k}_idle.png`,sheet(idle,12)],[`enemy_${k}_walk.png`,sheet(walk,12)],[`enemy_${k}_attack.png`,sheet(atk,12)],[`enemy_${k}_death.png`,sheet(death,12)],[`enemy_${k}_hit.png`,sheet(hit,12)]);
+ const L=(n,fps)=>({frame_w:QW,frame_h:QH,cols:12,rows:Math.ceil(n/12),count:n,fps});
+ META.enemies[k]={ax,ay,h:ay-bb.y0,stride:k==='croc'?2.4:3.2,self_bob:true,idle:L(48,12),walk:L(24,24),attack:L(12,24),death:L(45,24),hit:{...L(6,24),duration:.25}};
+}
+// ---------- Caserne (AdeptView, échelle 1 : jambes allongées de 2 px, 33 px de haut) ----------
+// Mêmes animations que les soldats ennemis : repos de 48 images, marche de 12 poses par foulée jouée à la distance
+// parcourue (stride), combat en boucle de 24 images à 24 i/s, coup encaissé, mort.
+const WORK={
+ lame:i=>i<2?{pose:'atk',mid:true}:i<4?{pose:'atk'}:i<11?{pose:'strike',swoosh:Math.min(1,(i-3)/3),fade:i>=7?Math.min(.9,(i-6)/4):0}:i<14?{rec:true}:i<18?{sy:-1}:{},
+ archer:i=>i<2?{quiv:1}:i<4?{quiv:2}:i<6?{quiv:3}:i<8?{nock:true}:i<10?{pull:1,nock:true}:i<12?{pull:2,nock:true}:i<16?{pull:3,nock:true}:i<17?{pull:-1}:i<18?{pull:1,hd:1}:i<19?{pull:-1}:{},
+ flammes:i=>i<1?{pose:'atk',mid:true}:{pose:'atk',flick:i,ub:i%8<4?0:1},
+};
+for(const k of ['lame','archer','flammes']){
+ const idle=idleOf(k);
+ const walk=[...Array(24)].map((_,i)=>human(k,{pose:'walk',ph:(i%12)/12}));
+ const work=[...Array(24)].map((_,i)=>human(k,WORK[k](i)));
+ const death=humanDeath(k),hit=humanHit(k);
+ FILES.push([`adept_${k}_idle.png`,sheet(idle,12)],[`adept_${k}_walk.png`,sheet(walk,12)],[`adept_${k}_work.png`,sheet(work,12)],[`adept_${k}_death.png`,sheet(death,12)],[`adept_${k}_hit.png`,sheet(hit,12)]);
+ const L=(n,fps,w=FW,h=FH)=>({frame_w:w,frame_h:h,cols:12,rows:Math.ceil(n/12),count:n,fps});
+ META.adepts[k]={ax:AX,ay:AY,scale:1,stride:4.0,modes:{idle:L(48,12),walk:L(24,24),work:L(24,24),death:L(45,24,DW,DH),hit:L(6,24)}};
+ // Portrait du HUD : de face, ×3, posé en bas d'un carré 128 × 128.
+ const p=document.createElement('canvas');p.width=p.height=128;const pg=p.getContext('2d');pg.imageSmoothingEnabled=false;
+ pg.drawImage(render(fig({k,dir:'d'}),3),5*3,0,31*3,114,(128-93)/2|0,10,31*3,114);
+ FILES.push([`portrait_${k}.png`,p]);
+}
+// ---------- Affichage et envoi ----------
+const out=document.getElementById('out');
+for(const[n,c]of FILES){const h=document.createElement('h3');h.textContent=n+' · '+c.width+' × '+c.height;const v=document.createElement('canvas');
+ v.width=c.width*2;v.height=c.height*2;const g=v.getContext('2d');g.imageSmoothingEnabled=false;g.drawImage(c,0,0,v.width,v.height);out.append(h,v)}
+const st=document.getElementById('st');st.textContent=FILES.length+' atlas prêts.';
+window.EXPORT={FILES,META};
+const SAVE=new URLSearchParams(location.search).get('save');
+if(SAVE==='sync'){ // XHR synchrones : l'export est fini avant l'événement load (capture Firefox headless)
+ const send=(n,body)=>{const x=new XMLHttpRequest();x.open('POST','/out/'+n,false);x.send(body);if(x.status>=300)throw new Error(n+' : '+x.status)};
+ for(const[n,c]of FILES)send(n,c.toDataURL('image/png'));send('meta.json',JSON.stringify(META));
+ st.textContent='Export terminé : '+FILES.length+' atlas et manifestes.';window.EXPORT_DONE=true}
+else if(SAVE!==null)(async()=>{
+ for(const[n,c]of FILES){const r=await fetch('/out/'+n,{method:'POST',body:c.toDataURL('image/png')});if(!r.ok)throw new Error(n+' : '+r.status)}
+ const r=await fetch('/out/meta.json',{method:'POST',body:JSON.stringify(META)});if(!r.ok)throw new Error('meta : '+r.status);
+ st.textContent='Export terminé : '+FILES.length+' atlas et manifestes.';window.EXPORT_DONE=true})().catch(e=>{st.textContent='Échec : '+e;window.EXPORT_DONE='err'});
+</script></body></html>

@@ -1,0 +1,217 @@
+<meta charset="utf-8">
+<title>Bestiaire animé</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@500;700&family=Alegreya+Sans:wght@400;500;700&display=swap">
+<style>
+/* Mise en page : barre de commandes collante, puis une carte par ennemi avec deux scènes (avant | après) sur sol de caverne. */
+:root{
+  --bg:#121614; --panel:#1b211e; --line:#2c3530; --ink:#ece4cc; --muted:#9ba597;
+  --gold:#e2b83a; --gold-dim:#8a6d1c; --stage:#33402f; --stage-dark:#27321f; --new:#8fd3b0;
+  --display:"Pixelify Sans","Courier New",monospace; --body:"Alegreya Sans","Segoe UI",system-ui,sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 var(--body)}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--panel)}
+.wrap{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));max-width:1280px;margin:0 auto}
+header.top{padding-block:28px 14px}
+h1{font:700 clamp(28px,4vw,40px)/1.1 var(--display);margin:0 0 6px;color:var(--gold);letter-spacing:.02em;text-wrap:balance}
+.lede{margin:0;color:var(--muted);max-width:68ch}
+.bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--panel);border-block:1px solid var(--line)}
+.bar .wrap{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;padding-block:10px}
+.group{display:flex;flex-wrap:wrap;gap:4px;align-items:center}
+.group>span{font:500 12px var(--display);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-right:4px}
+button.seg{font:500 14px var(--body);color:var(--ink);background:transparent;border:1px solid var(--line);border-radius:4px;padding:5px 10px;cursor:pointer}
+button.seg:hover{border-color:var(--gold-dim)}
+button.seg[aria-pressed="true"]{background:var(--gold);color:#1b1404;border-color:var(--gold)}
+button.seg:focus-visible,label.tog:focus-within{outline:2px solid var(--new);outline-offset:2px}
+label.tog{display:flex;gap:6px;align-items:center;font-size:14px;cursor:pointer}
+label.tog input{accent-color:var(--gold)}
+main{padding-block:18px 40px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr));gap:14px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:12px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.card.wide{grid-column:1/-1}
+.card h2{font:700 17px/1.2 var(--display);margin:0;letter-spacing:.02em}
+.card .fam{font:500 11px var(--display);letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.card p{margin:0;font-size:14px;color:var(--muted)}
+.stages{display:flex;gap:8px;overflow-x:auto}
+figure{margin:0;display:flex;flex-direction:column;gap:3px;flex:1 1 0;min-width:0;align-items:center}
+figcaption{font:500 11px var(--display);letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+figure.after figcaption{color:var(--new)}
+canvas{image-rendering:pixelated;image-rendering:crisp-edges;background:var(--stage);border-radius:3px;max-width:100%;height:auto}
+.counts{display:flex;flex-wrap:wrap;gap:4px 10px;font-size:13px;font-variant-numeric:tabular-nums;color:var(--muted)}
+.counts b{color:var(--ink);font-weight:500}
+.counts .up{color:var(--new)}
+.solo figure.before{display:none}
+footer{color:var(--muted);font-size:13px;padding-block:0 32px}
+@media (prefers-reduced-motion: reduce){.motion-note{display:block}}
+.status{margin:0 0 12px;color:var(--muted);font-size:14px}
+.status.err{color:var(--gold)}
+.motion-note{display:none;color:var(--gold);font-size:14px;margin-top:6px}
+</style>
+
+<header class="top wrap">
+  <h1>Bestiaire animé</h1>
+  <p class="lede">Chaque ennemi joue ses planches à la cadence du jeu : la marche avance au rythme de sa vitesse réelle (le sol défile sous ses pieds), l’attaque revient à chaque recharge. « Avant » montre les anciennes planches sans réaction ; « Après » montre les nouvelles poses avec la nervosité ajoutée en jeu (éclair et recul au coup, fente à l’attaque, projection à la mort).</p>
+  <p class="motion-note">Votre système demande moins d’animations : la planche démarre en pause, lancez-la avec « Lecture ».</p>
+</header>
+
+<nav class="bar" aria-label="Commandes">
+  <div class="wrap">
+    <div class="group" role="group" aria-label="Animation"><span>Animation</span>
+      <button class="seg" id="a-chain" data-action="chain">Enchaînement</button>
+      <button class="seg" id="a-idle" data-action="idle">Repos</button>
+      <button class="seg" id="a-walk" data-action="walk">Marche</button>
+      <button class="seg" id="a-attack" data-action="attack">Attaque</button>
+      <button class="seg" id="a-hurt" data-action="hurt">Coup reçu</button>
+      <button class="seg" id="a-death" data-action="death">Mort</button>
+    </div>
+    <div class="group" role="group" aria-label="Vitesse"><span>Vitesse</span>
+      <button class="seg" id="s-25" data-speed="0.25">×¼</button>
+      <button class="seg" id="s-50" data-speed="0.5">×½</button>
+      <button class="seg" id="s-100" data-speed="1">×1</button>
+      <button class="seg" id="play">Pause</button>
+    </div>
+    <div class="group" role="group" aria-label="Zoom"><span>Zoom</span>
+      <button class="seg" id="z-2" data-zoom="2">×2</button>
+      <button class="seg" id="z-3" data-zoom="3">×3</button>
+      <button class="seg" id="z-4" data-zoom="4">×4</button>
+    </div>
+    <label class="tog"><input type="checkbox" id="cmp" checked> Comparer avec avant</label>
+  </div>
+</nav>
+
+<main class="wrap"><p class="status" id="status" role="status">Chargement des planches…</p><div class="grid" id="grid"></div></main>
+<footer class="wrap">Les vagues du Credo et de Byrsa jouent à la cadence ×1,3 des assauts ; la faune et la Martyre à ×1. Les nombres sous chaque carte comptent les poses distinctes de l’animation affichée, avant → après.</footer>
+
+<script>
+/*__DATA__*/
+'use strict';
+// Constantes reprises de entities/unit/unit_view.gd.
+const SPR_LOOP=2.4, ZN=8/0.86, UNIT_PX=8;
+const HURT_FLASH=.11, HURT_GLOW=2.4, HURT_RECOIL_T=.16, HURT_RECOIL=3, LUNGE_IN=.06, LUNGE_OUT=.26, DEATH_KICK=4, DEATH_KICK_T=.22, ATTACK_MIN_S=.25;
+const LUNGE={creep:3,scout:3,shield:2,soldier:2,brute:3,strazhar:4,croc:5,feline:6,archer:-1,spitter:-1};
+const CORPSE_HOLD=1.4, DEATH_DURATION=1.8;
+
+const state={action:'chain',speed:1,zoom:3,playing:!matchMedia('(prefers-reduced-motion: reduce)').matches,compare:true,t:0};
+try{const s=JSON.parse(localStorage.getItem('bestiaire')||'{}');Object.assign(state,{action:s.action||state.action,speed:s.speed||state.speed,zoom:s.zoom||state.zoom,compare:s.compare??state.compare})}catch(e){}
+const remember=()=>{try{localStorage.setItem('bestiaire',JSON.stringify({action:state.action,speed:state.speed,zoom:state.zoom,compare:state.compare}))}catch(e){}};
+
+const images={};
+// Atlas décodés en mémoire (base64 → Blob → ImageBitmap) : aucune requête ni balise <img>, que la visionneuse pourrait refuser.
+function bytes(src){const b=atob(src.slice(src.indexOf(',')+1)),u=new Uint8Array(b.length);for(let i=0;i<b.length;i++)u[i]=b.charCodeAt(i);return new Blob([u],{type:'image/png'})}
+function decode(src){const blob=bytes(src);
+  if(window.createImageBitmap)return createImageBitmap(blob).catch(()=>viaImg(blob));return viaImg(blob)}
+function viaImg(blob){return new Promise((res,rej)=>{const url=URL.createObjectURL(blob),im=new Image();im.onload=()=>res(im);im.onerror=()=>rej(new Error('image illisible'));im.src=url})}
+const loadAll=()=>Promise.all(Object.entries(DATA.pool).map(([k,src])=>decode(src).then(im=>{images[k]=im})));
+
+// Découpe d'un atlas en images, comptage des poses distinctes et fin du geste (dernière image qui diffère de la finale).
+function slice(im,m){const out=[];for(let i=0;i<m.count;i++){const c=document.createElement('canvas');c.width=m.frame_w;c.height=m.frame_h;
+  c.getContext('2d',{willReadFrequently:true}).drawImage(im,(i%m.cols)*m.frame_w,Math.floor(i/m.cols)*m.frame_h,m.frame_w,m.frame_h,0,0,m.frame_w,m.frame_h);out.push(c)}return out}
+function sig(c){const d=c.getContext('2d').getImageData(0,0,c.width,c.height).data;let h=2166136261;for(let i=0;i<d.length;i+=4){const a=d[i+3];const v=a?(d[i]<<16|d[i+1]<<8|d[i+2])^(a<<24):0;h=Math.imul(h^v,16777619)}return h>>>0}
+function analyse(frames,fps){const s=frames.map(sig),distinct=new Set(s).size;let used=1;for(let i=s.length-2;i>=0;i--)if(s[i]!==s[s.length-1]){used=i+2;break}
+  return{distinct,active:Math.max(ATTACK_MIN_S,Math.min(s.length,used)/fps)}}
+
+const units=[];
+function build(){
+  const grid=document.getElementById('grid');
+  for(const k of DATA.kinds){
+    const u={k,set:{}};
+    for(const side of ['old','new']){const meta=k.meta[side],anims={};
+      for(const[a,key]of Object.entries(k.sheets[side])){const frames=slice(images[key],meta[a]);anims[a]={frames,meta:meta[a],...analyse(frames,meta[a].fps||24)}}
+      u.set[side]={meta,anims}}
+    // Cadre de la scène : toutes les animations, ancres comprises, avec la marge des décalages.
+    let L=0,R=0,T=0,B=0;for(const side of ['old','new'])for(const[a,an]of Object.entries(u.set[side].anims)){const m=u.set[side].meta,ax=an.meta.ax??m.ax,ay=an.meta.ay??m.ay;
+      L=Math.max(L,ax);R=Math.max(R,an.meta.frame_w-ax);T=Math.max(T,ay);B=Math.max(B,an.meta.frame_h-ay)}
+    u.box={L:L+8,R:R+8,T:T+3,B:Math.max(B,6)+3};
+    const card=document.createElement('article');card.className='card'+(k.id==='martyre'?' wide':'');
+    card.innerHTML=`<div><div class="fam">${k.family}</div><h2>${k.name}</h2></div><div class="stages"><figure class="before"><canvas></canvas><figcaption>Avant</figcaption></figure><figure class="after"><canvas></canvas><figcaption>Après</figcaption></figure></div><div class="counts"></div><p>${k.note}</p>`;
+    grid.append(card);
+    const cv=card.querySelectorAll('canvas');u.card=card;u.cv={old:cv[0],new:cv[1]};u.counts=card.querySelector('.counts');
+    units.push(u)}
+}
+
+// Sol de caverne : dalles et cailloux fixes en monde, qui défilent pendant la marche.
+function ground(g,w,h,gy,scroll){g.fillStyle=getComputedStyle(document.documentElement).getPropertyValue('--stage');g.fillRect(0,0,w,h);
+  g.fillStyle=getComputedStyle(document.documentElement).getPropertyValue('--stage-dark');
+  for(let i=-2;i<w/6+4;i++){const wx=i*6+Math.floor(scroll/6)*6,x=Math.round(wx-scroll),r=Math.abs(Math.sin(wx*12.9898)*43758.5453)%1;
+    if(r<.35)g.fillRect(x,gy+2+Math.floor(r*10)%Math.max(1,h-gy-3),2,1);if(r>.8)g.fillRect(x+3,gy-1-Math.floor(r*7)%3,1,1)}}
+function shadow(g,x,y,r,dx=0,sx=1){g.fillStyle='rgba(11,22,21,.63)';g.beginPath();g.ellipse(x+dx,y,r*1.3*ZN*.9*sx,r*1.3*ZN*.42,0,0,Math.PI*2);g.fill()}
+const tint=document.createElement('canvas');
+function blit(g,frame,x,y,flash){if(flash<=0){g.drawImage(frame,x,y);return}
+  tint.width=frame.width;tint.height=frame.height;const t=tint.getContext('2d');t.drawImage(frame,0,0);t.globalCompositeOperation='source-atop';
+  t.fillStyle=`rgba(255,255,255,${Math.min(.85,flash*HURT_GLOW/3)})`;t.fillRect(0,0,frame.width,frame.height);t.globalCompositeOperation='source-over';g.drawImage(tint,x,y)}
+
+// Segments de l'enchaînement (secondes de jeu) : marche, deux attaques, deux coups reçus, mort.
+function chainPlan(u){const cd=u.k.cd/u.k.pace;return[['walk',2.4],['attack',cd*2],['hurt',1.6],['death',DEATH_DURATION/u.k.pace+CORPSE_HOLD]]}
+function phase(u,t){if(state.action!=='chain')return[state.action,t];const plan=chainPlan(u),tot=plan.reduce((s,p)=>s+p[1],0);let r=t%tot;for(const[a,d]of plan){if(r<d)return[a,r];r-=d}return['idle',0]}
+
+const walkPos=new Map();
+function draw(u,side,t,dt){
+  const S=u.set[side],m=S.meta,k=u.k,juice=side==='new',an=S.anims,pace=k.pace;
+  const[action,at]=phase(u,t);
+  const{L,R,T,B}=u.box,w=L+R,h=T+B,cv=u.cv[side];
+  if(cv.width!==w*state.zoom){cv.width=w*state.zoom;cv.height=h*state.zoom}
+  cv.style.width=(w*state.zoom)+'px';
+  const g=cv.getContext('2d');g.setTransform(state.zoom,0,0,state.zoom,0,0);g.imageSmoothingEnabled=false;
+  let frame=null,ax=m.ax,ay=m.ay,dx=0,dy=0,flash=0,shadowDx=0,shadowSx=1;
+  const idleFrame=tt=>{const f=an.idle;if(f.meta.loop)return f.frames[Math.floor(tt*pace*f.meta.fps)%f.frames.length];return f.frames[Math.floor(tt*f.frames.length/SPR_LOOP)%f.frames.length]};
+  // Position de marche : la planche avance de 1/stride par unité parcourue (UnitView._wp).
+  const key=u.k.id+side;let wp=walkPos.get(key)||{wp:0,dist:0};
+  let scroll=0;
+  if(action==='walk'){const v=k.speed*pace*dt;wp.wp=(wp.wp+v/m.stride)%1;wp.dist+=v;walkPos.set(key,wp);
+    const f=an.walk;frame=f.frames[Math.floor(wp.wp*f.frames.length)%f.frames.length];
+    if(f.meta.ax!=null){ax=f.meta.ax;ay=f.meta.ay}
+    const bi=Math.floor(wp.wp*6);if(!m.self_bob&&(bi===1||bi===4))dy=-1;scroll=wp.dist*UNIT_PX}
+  else if(action==='idle')frame=idleFrame(at);
+  else if(action==='attack'){const cd=k.cd/pace,age=(at%cd)*pace,f=an.attack;
+    const span=f.meta.duration??(juice?Math.min(k.cd,f.active):k.cd);
+    // Martyre : une recharge sur deux, l'incantation.
+    const castTurn=an.cast&&Math.floor(at/cd)%2===1;
+    if(castTurn&&age<an.cast.meta.duration)frame=an.cast.frames[Math.min(an.cast.frames.length-1,Math.floor(age*an.cast.meta.fps))];
+    else if(!castTurn&&age<span)frame=f.frames[Math.min(f.frames.length-1,Math.floor(age*f.meta.fps))];
+    else frame=idleFrame(at);
+    if(juice&&!castTurn){const amp=LUNGE[k.id]||0;if(amp&&age<LUNGE_IN+LUNGE_OUT){const p=age<LUNGE_IN?1-Math.pow(1-age/LUNGE_IN,2):1-Math.pow((age-LUNGE_IN)/LUNGE_OUT,2);dx=Math.round(amp*p)}}}
+  else if(action==='hurt'){const every=.8,ha=at%every;frame=idleFrame(at);
+    if(an.hit){const hp=ha*pace;if(hp<an.hit.meta.duration)frame=an.hit.frames[Math.min(an.hit.frames.length-1,Math.floor(hp*an.hit.meta.fps))]}
+    if(juice){if(ha<HURT_FLASH)flash=1-ha/HURT_FLASH;const a=ha/HURT_RECOIL_T;if(a<1&&k.id!=='martyre')dx=-Math.round(HURT_RECOIL*Math.pow(1-a,2))}}
+  else if(action==='death'){const f=an.death,age=at;frame=f.frames[Math.min(f.frames.length-1,Math.floor(age*pace*f.meta.fps))];
+    const p=Math.min(1,age/DEATH_DURATION);shadowDx=8*p;shadowSx=1+p;
+    if(juice){const kick=-Math.round(DEATH_KICK*(1-Math.pow(1-Math.min(1,age/DEATH_KICK_T),3)));dx=kick;shadowDx+=kick;if(age<HURT_FLASH)flash=1-age/HURT_FLASH}}
+  const gx=L,gy=T;
+  ground(g,w,h,gy,scroll);
+  shadow(g,gx,gy,u.k.radius,shadowDx,shadowSx);
+  if(frame)blit(g,frame,gx-ax+dx,gy-ay+dy,flash);
+  return action}
+
+const NAMES={idle:'Repos',walk:'Marche',attack:'Attaque',hurt:'Coup reçu',death:'Mort'};
+function counts(u,action){const a=action==='hurt'?(u.set.new.anims.hit?'hit':'idle'):action,o=u.set.old.anims[a],n=u.set.new.anims[a];if(!o||!n)return'';
+  const up=n.distinct>o.distinct?' class="up"':'';return `<span>${NAMES[action]||a} · <b${up}>${o.distinct} → ${n.distinct}</b> poses</span>`}
+function refreshCounts(){for(const u of units){const acts=state.action==='chain'?['idle','walk','attack','death']:[state.action];u.counts.innerHTML=acts.map(a=>counts(u,a)).join('')}}
+
+let last=performance.now();
+// La boucle se replanifie d'abord : une carte en erreur n'arrête pas les autres.
+function frameLoop(now){requestAnimationFrame(frameLoop);const real=Math.min(.05,(now-last)/1000);last=now;const dt=state.playing?real*state.speed:0;state.t+=dt;
+  for(const u of units){try{draw(u,'new',state.t,dt);if(state.compare)draw(u,'old',state.t,dt)}catch(e){if(!u.failed){u.failed=true;console.error(u.k.id,e)}}}}
+
+function syncUI(){
+  for(const b of document.querySelectorAll('[data-action]'))b.setAttribute('aria-pressed',String(b.dataset.action===state.action));
+  for(const b of document.querySelectorAll('[data-speed]'))b.setAttribute('aria-pressed',String(+b.dataset.speed===state.speed));
+  for(const b of document.querySelectorAll('[data-zoom]'))b.setAttribute('aria-pressed',String(+b.dataset.zoom===state.zoom));
+  document.getElementById('play').textContent=state.playing?'Pause':'Lecture';
+  document.getElementById('cmp').checked=state.compare;
+  document.getElementById('grid').classList.toggle('solo',!state.compare);
+  refreshCounts();remember()}
+document.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;
+  if(b.dataset.action){state.action=b.dataset.action;state.t=0;walkPos.clear()}
+  else if(b.dataset.speed)state.speed=+b.dataset.speed;
+  else if(b.dataset.zoom)state.zoom=+b.dataset.zoom;
+  else if(b.id==='play')state.playing=!state.playing;
+  syncUI()});
+document.getElementById('cmp').addEventListener('change',e=>{state.compare=e.target.checked;syncUI()});
+
+const status=document.getElementById('status');
+loadAll().then(()=>{build();syncUI();for(const u of units){draw(u,'new',0.35,0);draw(u,'old',0.35,0)}status.hidden=true;requestAnimationFrame(t=>{last=t;frameLoop(t)})})
+  .catch(e=>{status.textContent='Les planches n’ont pas pu être décodées dans ce navigateur ('+(e&&e.message||e)+'). Rechargez la page ; si le problème persiste, essayez Chrome ou Firefox récents.';status.classList.add('err');console.error(e)});
+</script>

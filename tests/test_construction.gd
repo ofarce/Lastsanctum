@@ -1,6 +1,6 @@
 extends "res://tests/econ_case.gd"
 ## Étape 7 (v2) : chantier (placeBuilding, updateBuildings, cancelBuild), comme dans buildings.js (73b410f) :
-## paiement, Ingénieur requis sur son point de travail, durée d'Énonciation, annulation remboursée,
+## paiement, progression automatique sans Ingénieur, interdit en incarnation,
 ## déblocages en chaîne.
 
 
@@ -11,18 +11,32 @@ func _arm(type: String) -> void:
 	GameState.hud_build_type = type
 
 
-func test_place_pays_and_sends_engineer() -> void:
+func test_place_pays_without_engineer() -> void:
 	var sim := game()
 	give(25.0)
 	_arm("sigil")
+	var u := engineer()
+	var at := Vector2(u.x, u.z)
 	sim.place_building(Vector2(-27.0, -119.0))
 	check_eq(GameState.buildings.size(), 1, "chantier créé")
 	var b: Building = GameState.buildings[0]
 	check_eq(Vector2(b.x, b.z), Vector2(-28.0, -120.0), "aligné sur la grille (nœud : temple 2 × 2)")
 	check_near(GameState.res["savoir"], 5.0, 1e-9, "20 Savoir payés")
-	check(engineer().build_job == b and b.owner == engineer(), "Ingénieur affecté")
-	check_eq(Vector2(engineer().tx, engineer().tz), b.spot, "envoyé au point de travail")
+	check(u.build_job == null and b.owner == null, "aucun Ingénieur affecté")
+	check_eq(Vector2(u.tx, u.tz), at, "l'Ingénieur ne bouge pas")
 	check_eq(GameState.hud_mode, "", "mode construction quitté")
+
+
+func test_no_build_while_incarnated() -> void:
+	var sim := game()
+	give(25.0)
+	var u := engineer()
+	u.hidden = false
+	ExileGallery.incarnate(u)
+	_arm("sigil")
+	sim.place_building(Vector2(-27.0, -119.0))
+	check(GameState.buildings.is_empty(), "pas de construction en incarnation")
+	ExileGallery.disincarnate()
 
 
 func test_invalid_site_and_cost() -> void:
@@ -39,31 +53,22 @@ func test_invalid_site_and_cost() -> void:
 	check_eq(GameState.hud_mode, "", "mode construction quitté faute de ressources")
 
 
-func test_progress_needs_engineer_on_spot() -> void:
+func test_progress_is_automatic() -> void:
 	var sim := game()
 	give(25.0)
 	_arm("sigil")
 	sim.place_building(Vector2(-27.0, -119.0))
 	var b: Building = GameState.buildings[0]
 	var u := engineer()
-	u.x = b.spot.x + 3.0
+	u.x = b.spot.x + 30.0
 	u.z = b.spot.y
-	u.tx = u.x
-	u.tz = u.z
 	sim.update_buildings(1.0)
-	check_eq(b.progress, 0.0, "pas de progression loin du point de travail")
-	u.x = b.spot.x
-	u.z = b.spot.y
-	check(not sim.kneeling(u), "pas encore agenouillé (progression nulle)")
-	sim.update_buildings(1.0)
-	check_near(b.progress, 1.0, 1e-9, "1 s d'Énonciation")
-	check(sim.kneeling(u), "agenouillé pendant l'Énonciation")
+	check_near(b.progress, 1.0, 1e-9, "progression loin de l'Ingénieur")
 	sim.update_buildings(2.5)
 	check(not b.complete, "pas encore achevé à 3,5 s")
 	sim.update_buildings(0.6)
 	check(b.complete, "achevé après 4 s")
 	check_eq(b.finished_at, GameState.sim_time, "instant d'achèvement")
-	check(u.build_job == null, "Ingénieur libéré")
 
 
 func test_fast_construction_toggle_during_work() -> void:
@@ -72,9 +77,6 @@ func test_fast_construction_toggle_during_work() -> void:
 	_arm("sigil")
 	sim.place_building(Vector2(-27.0, -119.0))
 	var b: Building = GameState.buildings[0]
-	var u := engineer()
-	u.x = b.spot.x
-	u.z = b.spot.y
 	GameState.fast_construction = true
 	sim.update_buildings(1.0)
 	check_near(b.progress, 2.0, 1e-9, "vitesse doublée")
@@ -119,21 +121,17 @@ func test_walk_and_build_in_real_time() -> void:
 	sim.place_building(Vector2(-27.0, -119.0))
 	var b: Building = GameState.buildings[0]
 	run(sim, 7.0)
-	check(b.complete, "chantier achevé : trajet puis 4 s d'Énonciation (progression %.2f)" % b.progress)
+	check(b.complete, "chantier achevé : 4 s (progression %.2f)" % b.progress)
 
 
-func test_cancel_refunds() -> void:
+func test_move_keeps_site() -> void:
 	var sim := game()
 	give(25.0)
 	_arm("sigil")
 	sim.place_building(Vector2(-27.0, -119.0))
-	var b: Building = GameState.buildings[0]
-	b.progress = 2.0
 	GameState.selected = [engineer()]
 	sim.issue_move(Vector2(-10.0, -125.0))
-	check(GameState.buildings.is_empty(), "un ordre de déplacement abandonne le chantier")
-	check_near(GameState.res["savoir"], 25.0, 1e-9, "coût remboursé")
-	check(engineer().build_job == null, "plus de chantier")
+	check_eq(GameState.buildings.size(), 1, "déplacer l'Ingénieur n'abandonne pas le chantier")
 
 
 func test_unlock_chain() -> void:

@@ -4,6 +4,7 @@ Outils hors jeu, exclus de l'export.
 
 - `baker/` : extrait les graphismes procéduraux et les références du prototype JS (lecture seule) vers `res://assets/baked/` et `tests/visual/reference/`.
 - `batiments_2x2/reduce.py` : réduit à 2/3 (« natif · plus proche », planche `batiments-2x2.html`) les sprites de bâtiments dessinés pour 3×3 et les marque `scale: 1`. À relancer après un passage du baker.
+- `bestiaire/build.py` : régénère `planches/bestiaire-anime.html`, la planche animée avant / après de tous les ennemis (atlas du jeu contre `bestiaire/avant/`, page autonome qui s'ouvre sans serveur). À relancer après tout export d'atlas ennemis.
 - `resync.py` : **procédure R**, la resynchronisation avec une nouvelle version du prototype.
 
 ```bash

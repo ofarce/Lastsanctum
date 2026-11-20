@@ -22,10 +22,12 @@ var complete := false
 var queue: Array[String] = []
 var train := 0.0
 var rally_point: Variant = null
+## Coût réellement payé à la pose (la Chambre à coucher renchérit à chaque exemplaire) : remboursé à l'annulation.
+var paid: Dictionary = {}
 
 
 func produces_units() -> bool:
-	return type == "caserne" or is_temple()
+	return Catalog.TRAINERS.has(type) or is_temple()
 ## Point où l'Ingénieur se tient pendant l'Énonciation (b.spot, workSpot).
 var spot := Vector2.ZERO
 ## Instant d'achèvement (b.finishedAt), INF tant que le chantier n'est pas fini.
@@ -43,6 +45,11 @@ var input_box: Array[Dictionary] = []
 var output_box: Array[Dictionary] = []
 var chest_in_at := -INF
 var chest_out_at := -INF
+## Église des Oublieux (sim/oublieux.gd) : identifiant de l'Oublieux dehors (-1 sinon), nuit où il est tombé
+## (il ne ressort que la suivante), objets rapportés cette nuit.
+var gleaner_id := -1
+var gleaner_lost_night := -1
+var gleaned := 0
 
 
 static func create(bid: int, btype: String, px: float, pz: float) -> Building:

@@ -14,6 +14,11 @@ var ic: InputController
 var log := PackedStringArray()
 var stats := {}
 var violations := PackedStringArray()
+var eng: Unit
+var next_think := 0.0
+var next_check := 1.0
+var trained_flip := 0
+var dig_cells: Array = []
 
 
 func test_full_game_by_player_inputs() -> void:
@@ -43,138 +48,12 @@ func test_full_game_by_player_inputs() -> void:
 
 
 func _play() -> PackedStringArray:
-	sim = game()
-	ic = sim.get_node("../Input")
-	log = PackedStringArray()
-	violations = PackedStringArray()
-	stats = {"orb_at": -1.0, "built": [], "adepts": 0, "trained": 0, "dug": 0, "galleries": 0, "wave": 0, "kills": 0,
-		"levels": 0, "revived": 0, "prayer_gain": 0.0, "time": 0.0, "ended": ""}
-	# Partie depuis le tout début : l'Ingénieur sort du portail (game() le sort d'office).
-	sim.new_game(SEED)
-	sim.combat.log_events = true
-	sim.combat.events.clear()
-	var eng: Unit = GameState.units[0]
-	var initial_mana := 0.0
-	for resource: String in Catalog.RES_ORDER:
-		initial_mana += GameState.res[resource]
-	var next_think := 0.0
-	var next_check := 1.0
-	var res_prev := 0.0
-	var trained_flip := 0
-	var dig_cells: Array = JSON.parse_string(FileAccess.get_file_as_string("res://assets/baked/fixtures/dig_scenario.json"))["cells"]
+	var initial_mana := begin()
 	var on_ended := func(won: bool) -> void: stats["ended"] = "victoire" if won else "défaite"
 	Events.game_over.connect(on_ended)
-	while GameState.sim_time < MAX_TIME and not GameState.ended and GameState.wave < 8:
+	while playing():
 		sim.tick(STEP)
-		var t := GameState.sim_time
-		if t >= next_check:
-			next_check += 1.0
-			_invariants()
-		if t < next_think:
-			continue
-		next_think = t + 0.5
-		sim.world.fog.refresh(sim.state())
-		# 1. Réactivation : l'Ingénieur sorti, touche R (bouton Réactiver du panneau).
-		if not GameState.orb_active:
-			if not eng.hidden and GameState.orb_owner == null:
-				_select(eng)
-				_key(KEY_R)
-				_mark("R : réactivation demandée")
-			continue
-		if stats["orb_at"] < 0.0:
-			stats["orb_at"] = GameState.orb_finished_at
-			_mark("Ancre active")
-		var idle: bool = eng.alive() and eng.build_job == null and (eng.job == null or eng.job["type"] == "anchor_pray") and not eng.orb_job
-		# 2. Bâtiments dans l'ordre, dès qu'ils sont payables.
-		var todo := ""
-		for type: String in ORDER:
-			if not GameState.buildings.any(func(b: Building) -> bool: return b.type == type):
-				todo = type
-				break
-		if idle and todo and HudModel.unlocked(todo) and Catalog.can_pay(Catalog.BUILDINGS[todo]["cost"]):
-			var site: Variant = _site(todo)
-			if site != null:
-				_select(eng)
-				_key(KEY_B)
-				_key(OS.find_keycode_from_string(String(Catalog.BUILDINGS[todo]["key"]).to_upper()))
-				ic._left_click(ic.project(site.x, 0.0, site.y), false)
-				if GameState.buildings.any(func(b: Building) -> bool: return b.type == todo):
-					_mark("chantier %s" % todo)
-				continue
-		# 3. Creusement vers une galerie quand les temples sont posés et l'Ingénieur libre.
-		var exploring := todo.is_empty() and sim.state().found == 0
-		if idle and exploring:
-			for c: Array in dig_cells:
-				if not sim.state().dug.has(Vector2i(int(c[0]), int(c[1]))):
-					_select(eng)
-					var target := Vector2(c[0] * 4.0 + 2.0, c[1] * 4.0 + 2.0)
-					if sim.world.fog.visible_at(target):
-						ic._right_click(ic.project(target.x, 0.0, target.y))
-					else:
-						var approach: Variant = sim.state().dig_cell_at(c[0], c[1], eng.pos())
-						if approach != null:
-							var spot: Vector2 = approach["at"]
-							ic._right_click(ic.project(spot.x, 0.0, spot.y))
-					if eng.job != null:
-						_mark("clic droit : creuser %s" % [c])
-					break
-		if idle and eng.job == null and not exploring:
-			_select(eng)
-			ic._right_click(ic.project(CaveShape.CORE.x, 3.0, CaveShape.CORE.y))
-		# 4. Invocations : 2 adeptes par temple achevé.
-		for b: Building in GameState.buildings:
-			if b.complete and b.is_temple():
-				var n := GameState.units.filter(func(u: Unit) -> bool: return u.role == b.type and u.alive()).size()
-				if n < 2 and HudModel.can_summon_at(b):
-					_click_building(b)
-					var before := GameState.units.size()
-					_key(KEY_I)
-					if GameState.units.size() > before:
-						stats["adepts"] += 1
-						_mark("I : adepte de %s" % b.type)
-		# 4 bis. Personnel (règle du 2026-11-17) : un adepte du culte envoyé au poste par clic droit sur le bâtiment.
-		for b: Building in GameState.buildings:
-			if b.complete and Production.staffed(b) and Production.members(b, "worker").is_empty():
-				var role := Production.staff_role(b)
-				var free := GameState.units.filter(func(u: Unit) -> bool: return u.role == role and u.alive() and not u.hidden \
-					and (u.job == null or u.job.get("type") != "staff"))
-				if not free.is_empty():
-					GameState.anchor_selected = false
-					GameState.hud_building = null
-					GameState.selected.assign([free[0]])
-					ic._right_click(ic.project(b.x, 0.0, b.z))
-					if Production.is_member(free[0], b):
-						_mark("clic droit : %s au poste du %s" % [role, b.type])
-		# 5. Caserne : archer (U) et épée et bouclier (E) en alternance, file de 1.
-		for b: Building in GameState.buildings:
-			if b.type == "caserne" and b.complete and b.queue.is_empty() and Catalog.can_pay(Catalog.CASERNE_COST):
-				# Fabrication hors scénario : arcs, flèches, épées et boucliers fournis au coffre bleu.
-				_stock_caserne_items(b)
-				_click_building(b)
-				_key(KEY_U if trained_flip % 2 == 0 else KEY_E)
-				if not b.queue.is_empty():
-					trained_flip += 1
-					_mark("caserne : %s" % b.queue[0])
-		# 6. Puits des Âmes : rappel de la première âme (touche 1).
-		for b: Building in GameState.buildings:
-			if b.type == "soulwell" and b.complete and not GameState.fallen.is_empty() and Catalog.can_pay(Catalog.revive_cost(GameState.fallen.back())):
-				_click_building(b)
-				var n := GameState.fallen.size()
-				var revive_price: int = Catalog.revive_cost(GameState.fallen.back())["vie"]
-				_key(KEY_1)
-				if GameState.fallen.size() < n:
-					stats["revive_spent"] = stats.get("revive_spent", 0) + revive_price
-					stats["revived"] += 1
-					_mark("Puits : âme rappelée")
-		# 7. Combattants libres : rassemblés à l'entrée de la grotte (clic droit sur le sol).
-		var idle_fighters := GameState.units.filter(func(u: Unit) -> bool:
-			return u.alive() and Catalog.FIGHT.has(u.role) and u.role != "engineer" and not Catalog.prays(u) and u.job == null \
-				and Vector2(u.x, u.z).distance_to(Vector2(0, -84)) > 10.0 and Vector2(u.tx, u.tz).distance_to(Vector2(0, -84)) > 6.0)
-		if not idle_fighters.is_empty():
-			GameState.anchor_selected = false
-			GameState.hud_building = null
-			GameState.selected.assign(idle_fighters)
-			ic._right_click(ic.project(0.0, 0.0, -84.0))
+		think()
 	Events.game_over.disconnect(on_ended)
 	stats["time"] = snappedf(GameState.sim_time, 0.001)
 	stats["wave"] = GameState.wave
@@ -200,6 +79,151 @@ func _play() -> PackedStringArray:
 	out.append_array(sim.combat.events)
 	sim.combat.log_events = false
 	return out
+
+
+## Nouvelle partie à la graine de référence et joueur automatique remis à zéro ; renvoie le mana initial.
+func begin() -> float:
+	sim = game()
+	ic = sim.get_node("../Input")
+	log = PackedStringArray()
+	violations = PackedStringArray()
+	stats = {"orb_at": -1.0, "built": [], "adepts": 0, "trained": 0, "dug": 0, "galleries": 0, "wave": 0, "kills": 0,
+		"levels": 0, "revived": 0, "prayer_gain": 0.0, "time": 0.0, "ended": ""}
+	# Partie depuis le tout début : l'Ingénieur sort du portail (game() le sort d'office).
+	sim.new_game(SEED)
+	sim.combat.log_events = true
+	sim.combat.events.clear()
+	eng = GameState.units[0]
+	var initial_mana := 0.0
+	for resource: String in Catalog.RES_ORDER:
+		initial_mana += GameState.res[resource]
+	next_think = 0.0
+	next_check = 1.0
+	trained_flip = 0
+	dig_cells = JSON.parse_string(FileAccess.get_file_as_string("res://assets/baked/fixtures/dig_scenario.json"))["cells"]
+	return initial_mana
+
+
+## Partie en cours (arrêt à MAX_TIME, à la fin ou à la 8e vague).
+func playing() -> bool:
+	return GameState.sim_time < MAX_TIME and not GameState.ended and GameState.wave < 8
+
+
+## Décisions du joueur automatique après un pas de simulation (réutilisé par tests/perf/bench.gd).
+func think() -> void:
+	var t := GameState.sim_time
+	if t >= next_check:
+		next_check += 1.0
+		_invariants()
+	# Cinématique de surcharge (jeu rendu seulement : déclenchée par l'étincelle de l'Ancre) : on attend sa fin,
+	# un ordre donné pendant la séquence laisserait l'Ingénieur figé sur place.
+	if Overload.active() and GameState.overload_stage < 3:
+		return
+	if t < next_think:
+		return
+	next_think = t + 0.5
+	sim.world.fog.refresh(sim.state())
+	# 1. Réactivation : l'Ingénieur sorti, touche R (bouton Réactiver du panneau).
+	if not GameState.orb_active:
+		if not eng.hidden and GameState.orb_owner == null:
+			_select(eng)
+			_key(KEY_R)
+			_mark("R : réactivation demandée")
+		return
+	if stats["orb_at"] < 0.0:
+		stats["orb_at"] = GameState.orb_finished_at
+		_mark("Ancre active")
+	var idle: bool = eng.alive() and eng.build_job == null and (eng.job == null or eng.job["type"] == "anchor_pray") and not eng.orb_job
+	# 2. Bâtiments dans l'ordre, dès qu'ils sont payables.
+	var todo := ""
+	for type: String in ORDER:
+		if not GameState.buildings.any(func(b: Building) -> bool: return b.type == type):
+			todo = type
+			break
+	if idle and todo and HudModel.unlocked(todo) and Catalog.can_pay(Catalog.BUILDINGS[todo]["cost"]):
+		var site: Variant = _site(todo)
+		if site != null:
+			_select(eng)
+			_key(KEY_B)
+			_key(OS.find_keycode_from_string(String(Catalog.BUILDINGS[todo]["key"]).to_upper()))
+			ic._left_click(ic.project(site.x, 0.0, site.y), false)
+			if GameState.buildings.any(func(b: Building) -> bool: return b.type == todo):
+				_mark("chantier %s" % todo)
+			return
+	# 3. Creusement vers une galerie quand les temples sont posés et l'Ingénieur libre.
+	var exploring := todo.is_empty() and sim.state().found == 0
+	if idle and exploring:
+		for c: Array in dig_cells:
+			if not sim.state().dug.has(Vector2i(int(c[0]), int(c[1]))):
+				_select(eng)
+				var target := Vector2(c[0] * 4.0 + 2.0, c[1] * 4.0 + 2.0)
+				if sim.world.fog.visible_at(target):
+					ic._right_click(ic.project(target.x, 0.0, target.y))
+				else:
+					var approach: Variant = sim.state().dig_cell_at(c[0], c[1], eng.pos())
+					if approach != null:
+						var spot: Vector2 = approach["at"]
+						ic._right_click(ic.project(spot.x, 0.0, spot.y))
+				if eng.job != null:
+					_mark("clic droit : creuser %s" % [c])
+				break
+	if idle and eng.job == null and not exploring:
+		_select(eng)
+		ic._right_click(ic.project(CaveShape.CORE.x, 3.0, CaveShape.CORE.y))
+	# 4. Invocations : 2 adeptes par temple achevé.
+	for b: Building in GameState.buildings:
+		if b.complete and b.is_temple():
+			var n := GameState.units.filter(func(u: Unit) -> bool: return u.role == b.type and u.alive()).size()
+			if n < 2 and HudModel.can_summon_at(b):
+				_click_building(b)
+				var before := GameState.units.size()
+				_key(KEY_I)
+				if GameState.units.size() > before:
+					stats["adepts"] += 1
+					_mark("I : adepte de %s" % b.type)
+	# 4 bis. Personnel (règle du 2026-11-17) : un adepte du culte envoyé au poste par clic droit sur le bâtiment.
+	for b: Building in GameState.buildings:
+		if b.complete and Production.staffed(b) and Production.members(b, "worker").is_empty():
+			var role := Production.staff_role(b)
+			var free := GameState.units.filter(func(u: Unit) -> bool: return u.role == role and u.alive() and not u.hidden \
+				and (u.job == null or u.job.get("type") != "staff"))
+			if not free.is_empty():
+				GameState.anchor_selected = false
+				GameState.hud_building = null
+				GameState.selected.assign([free[0]])
+				ic._right_click(ic.project(b.x, 0.0, b.z))
+				if Production.is_member(free[0], b):
+					_mark("clic droit : %s au poste du %s" % [role, b.type])
+	# 5. Caserne : archer (U) et épée et bouclier (E) en alternance, file de 1.
+	for b: Building in GameState.buildings:
+		if b.type == "caserne" and b.complete and b.queue.is_empty() and Catalog.can_pay(Catalog.CASERNE_COST):
+			# Fabrication hors scénario : arcs, flèches, épées et boucliers fournis au coffre bleu.
+			_stock_caserne_items(b)
+			_click_building(b)
+			_key(KEY_U if trained_flip % 2 == 0 else KEY_E)
+			if not b.queue.is_empty():
+				trained_flip += 1
+				_mark("caserne : %s" % b.queue[0])
+	# 6. Puits des Âmes : rappel de la première âme (touche 1).
+	for b: Building in GameState.buildings:
+		if b.type == "soulwell" and b.complete and not GameState.fallen.is_empty() and Catalog.can_pay(Catalog.revive_cost(GameState.fallen.back())):
+			_click_building(b)
+			var n := GameState.fallen.size()
+			var revive_price: int = Catalog.revive_cost(GameState.fallen.back())["vie"]
+			_key(KEY_1)
+			if GameState.fallen.size() < n:
+				stats["revive_spent"] = stats.get("revive_spent", 0) + revive_price
+				stats["revived"] += 1
+				_mark("Puits : âme rappelée")
+	# 7. Combattants libres : rassemblés à l'entrée de la grotte (clic droit sur le sol).
+	var idle_fighters := GameState.units.filter(func(u: Unit) -> bool:
+		return u.alive() and Catalog.FIGHT.has(u.role) and u.role != "engineer" and not Catalog.prays(u) and u.job == null \
+			and Vector2(u.x, u.z).distance_to(Vector2(0, -84)) > 10.0 and Vector2(u.tx, u.tz).distance_to(Vector2(0, -84)) > 6.0)
+	if not idle_fighters.is_empty():
+		GameState.anchor_selected = false
+		GameState.hud_building = null
+		GameState.selected.assign(idle_fighters)
+		ic._right_click(ic.project(0.0, 0.0, -84.0))
 
 
 ## Coûts payés pendant la partie (bâtiments posés, adeptes, entraînements, rappels).

@@ -3,7 +3,9 @@ extends Node2D
 ## Bouclier de la Martyre de Byrsa (sim/martyre.gd) : un mur circulaire d'or du Credo, tramé, qui s'éteint
 ## vers le haut, avec un liseré doré au sol ponctué de carmin. Deux nœuds : un voile au sol sous les sprites,
 ## puis le mur (moitié arrière au nord, moitié avant plus pâle au sud) et ses étincelles par-dessus. Le mur s'allume en
-## RISE s à l'apparition et s'éteint en clignotant pendant Martyre.COLLAPSE s à la chute.
+## RISE s à l'apparition et s'éteint en clignotant pendant Martyre.COLLAPSE s à la chute. En phase III il se resserre
+## (Martyre.radius) : les textures du mur, faites au rayon plein, sont mises à l'échelle autour du centre, et il
+## rougeoie tant qu'il se referme.
 ## Repère : pixels natifs du monde.
 
 ## Hauteur du mur, en unités de monde.
@@ -94,26 +96,34 @@ func _draw() -> void:
 	var r := radius_px()
 	var hp := height_px()
 	var t := GameState.sim_time
+	var sc := Martyre.radius() / Martyre.RADIUS
+	var rc := r * sc
 	if not front:
 		# Sous les sprites : seulement le voile au sol.
 		var pts := PackedVector2Array()
 		for k in 64:
 			var ang := TAU * k / 64.0
-			pts.append(c + Vector2(cos(ang), sin(ang)) * r)
+			pts.append(c + Vector2(cos(ang), sin(ang)) * rc)
 		draw_colored_polygon(pts, Color(VEIL, VEIL.a * s))
 		# Attaques à distance, partie au sol (faille, cercles des sceaux).
 		MartyreFx.ground(self)
 		return
 	# Par-dessus les sprites : le mur est de la lumière, les arbres ne doivent pas le cacher.
 	var f := floori(t * FPS) % FRAMES
-	draw_texture(textures(false)[f], c + Vector2(-r, -r - hp), Color(1, 1, 1, s))
-	draw_texture(textures(true)[f], c + Vector2(-r, -hp), Color(1, 1, 1, s))
+	var tint := Color(1, 1, 1, s)
+	if Martyre.active() and t - GameState.martyre_shrink_at < Martyre.SHRINK:
+		var glow := 0.5 + 0.5 * sin(t * 18.0)
+		tint = Color(1.0, lerpf(0.75, 0.5, glow), lerpf(0.6, 0.35, glow), s)
+	draw_set_transform(c, 0.0, Vector2(sc, sc))
+	draw_texture(textures(false)[f], Vector2(-r, -r - hp), tint)
+	draw_texture(textures(true)[f], Vector2(-r, -hp), tint)
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 	# Étincelles d'or (et quelques carmin) qui montent le long du mur.
 	for j in SPARKS:
 		var ang := _h(j, 1) * TAU
 		var per := 1.6 + _h(j, 2) * 1.8
 		var p := fposmod(t + _h(j, 3) * per, per) / per
-		var at := (c + Vector2(cos(ang), sin(ang)) * r + Vector2(0.0, -p * hp * 1.2)).round()
+		var at := (c + Vector2(cos(ang), sin(ang)) * rc + Vector2(0.0, -p * hp * sc * 1.2)).round()
 		var col: Color = CARMINE if j % 7 == 0 else GOLD[3]
 		draw_rect(Rect2(at, Vector2.ONE), Color(col, sin(PI * p) * s))
 	# Attaques à distance, partie lumineuse (éruptions, rai et colonnes des sceaux, étourdissement).

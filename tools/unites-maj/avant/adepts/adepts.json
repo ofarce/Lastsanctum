@@ -1,0 +1,443 @@
+{
+ "fps": 6,
+ "scale_k": 1.9,
+ "adept": {
+  "sigil": {
+   "name": "Adepte de Sigil",
+   "task": "pray",
+   "hp": 90,
+   "lore": "Sa prière au temple de Sigil nourrit le Savoir."
+  },
+  "medeina": {
+   "name": "Adepte de Medeina",
+   "task": "pray",
+   "hp": 95,
+   "lore": "Sa prière au temple de Medeina nourrit la Vie."
+  },
+  "aether": {
+   "name": "Adepte d’Aether",
+   "task": "pray",
+   "hp": 100,
+   "lore": "Sa prière au temple d’Aether nourrit la Forge."
+  },
+  "indra": {
+   "name": "Adepte d’Indra",
+   "task": "pray",
+   "hp": 110,
+   "lore": "Sa prière au temple d’Indra nourrit la Discipline."
+  },
+  "flammes": {
+   "name": "Adepte lance-flammes",
+   "task": "fight",
+   "hp": 120,
+   "lore": "Le feu de sa lance ne laisse derrière lui que des cendres."
+  },
+  "archer": {
+   "name": "Adepte archer",
+   "task": "fight",
+   "hp": 85,
+   "lore": "Sa flèche part avant que l’ennemi ne l’ait vu."
+  },
+  "lame": {
+   "name": "Adepte d’épée et bouclier",
+   "task": "fight",
+   "hp": 170,
+   "lore": "Son bouclier est un mur que la meute ne franchit pas."
+  }
+ },
+ "fight": {
+  "flammes": {
+   "seek": 9,
+   "reach": 4.5,
+   "dmg": 6,
+   "cd": 0.3,
+   "splash": 2.2,
+   "status": "Garde l’Ancre · flammes ; sillon de feu toutes les 4 s"
+  },
+  "archer": {
+   "seek": 17,
+   "reach": 14,
+   "dmg": 11,
+   "cd": 0.95,
+   "melee": {
+    "reach": 2.3,
+    "dmg": 13,
+    "cd": 0.6
+   },
+   "status": "Garde l’Ancre · arc, puis Charge du Lac au contact"
+  },
+  "lame": {
+   "seek": 7,
+   "reach": 2.2,
+   "dmg": 16,
+   "cd": 0.85,
+   "guard": 0.55,
+   "status": "Garde l’Ancre · mêlée ; moulinet d’orage toutes les 3 frappes"
+  },
+  "sigil": {
+   "seek": 6,
+   "reach": 1.9,
+   "dmg": 4,
+   "cd": 1.1,
+   "status": "En attente · petite attaque au corps à corps"
+  },
+  "medeina": {
+   "seek": 6,
+   "reach": 1.9,
+   "dmg": 4,
+   "cd": 1.1,
+   "status": "En attente · petite attaque au corps à corps"
+  },
+  "aether": {
+   "seek": 6,
+   "reach": 1.9,
+   "dmg": 4,
+   "cd": 1.1,
+   "status": "En attente · petite attaque au corps à corps"
+  },
+  "indra": {
+   "seek": 6,
+   "reach": 1.9,
+   "dmg": 4,
+   "cd": 1.1,
+   "status": "En attente · petite attaque au corps à corps"
+  },
+  "engineer": {
+   "seek": 86,
+   "reach": 86,
+   "dmg": 80,
+   "cd": 1.15,
+   "ranged": true,
+   "status": "Prêt à recevoir vos ordres"
+  }
+ },
+ "note": "Échelle en jeu : Z()/16 × 1,9, soit 1,1047 × PX ; filtre « le plus proche ». Image : floor(t·6) & 3 (marche : & 1).",
+ "roles": {
+  "sigil": {
+   "ax": 12,
+   "ay": 35,
+   "spirit": true,
+   "crate": [
+    7,
+    19
+   ],
+   "modes": {
+    "idle": {
+     "frame_w": 34,
+     "frame_h": 37,
+     "cols": 24,
+     "rows": 1,
+     "count": 24,
+     "fps": 12
+    },
+    "walk": {
+     "frame_w": 34,
+     "frame_h": 37,
+     "cols": 24,
+     "rows": 1,
+     "count": 24,
+     "fps": 12
+    },
+    "carry": {
+     "frame_w": 34,
+     "frame_h": 37,
+     "cols": 24,
+     "rows": 1,
+     "count": 24,
+     "fps": 12
+    },
+    "pray": {
+     "frame_w": 34,
+     "frame_h": 37,
+     "cols": 24,
+     "rows": 1,
+     "count": 24,
+     "fps": 12
+    },
+    "work": {
+     "frame_w": 34,
+     "frame_h": 37,
+     "cols": 24,
+     "rows": 1,
+     "count": 24,
+     "fps": 12
+    },
+    "fight": {
+     "frame_w": 34,
+     "frame_h": 37,
+     "cols": 24,
+     "rows": 1,
+     "count": 24,
+     "fps": 12
+    }
+   }
+  },
+  "medeina": {
+   "ax": 21,
+   "ay": 40,
+   "spirit": true,
+   "crate": [
+    16,
+    25
+   ],
+   "modes": {
+    "idle": {
+     "frame_w": 47,
+     "frame_h": 49,
+     "cols": 24,
+     "rows": 1,
+     "count": 24,
+     "fps": 12
+    },
+    "walk": {
+     "frame_w": 47,
+     "frame_h": 49,
+     "cols": 24,
+     "rows": 1,
+     "count": 24,
+     "fps": 12
+    },
+    "carry": {
+     "frame_w": 47,
+     "frame_h": 49,
+     "cols": 24,
+     "rows": 1,
+     "count": 24,
+     "fps": 12
+    },
+    "pray": {
+     "frame_w": 47,
+     "frame_h": 49,
+     "cols": 24,
+     "rows": 1,
+     "count": 24,
+     "fps": 12
+    },
+    "work": {
+     "frame_w": 47,
+     "frame_h": 49,
+     "cols": 24,
+     "rows": 1,
+     "count": 24,
+     "fps": 12
+    },
+    "fight": {
+     "frame_w": 47,
+     "frame_h": 49,
+     "cols": 24,
+     "rows": 1,
+     "count": 24,
+     "fps": 12
+    }
+   }
+  },
+  "aether": {
+   "ax": 14,
+   "ay": 35,
+   "spirit": true,
+   "crate": [
+    9,
+    11
+   ],
+   "modes": {
+    "idle": {
+     "frame_w": 43,
+     "frame_h": 37,
+     "cols": 24,
+     "rows": 1,
+     "count": 24,
+     "fps": 12
+    },
+    "walk": {
+     "frame_w": 43,
+     "frame_h": 37,
+     "cols": 24,
+     "rows": 1,
+     "count": 24,
+     "fps": 12
+    },
+    "carry": {
+     "frame_w": 43,
+     "frame_h": 37,
+     "cols": 24,
+     "rows": 1,
+     "count": 24,
+     "fps": 12
+    },
+    "pray": {
+     "frame_w": 43,
+     "frame_h": 37,
+     "cols": 24,
+     "rows": 1,
+     "count": 24,
+     "fps": 12
+    },
+    "work": {
+     "frame_w": 43,
+     "frame_h": 37,
+     "cols": 24,
+     "rows": 1,
+     "count": 24,
+     "fps": 12
+    },
+    "fight": {
+     "frame_w": 43,
+     "frame_h": 37,
+     "cols": 24,
+     "rows": 1,
+     "count": 24,
+     "fps": 12
+    }
+   }
+  },
+  "indra": {
+   "ax": 11,
+   "ay": 36,
+   "spirit": true,
+   "crate": [
+    6,
+    2
+   ],
+   "modes": {
+    "idle": {
+     "frame_w": 34,
+     "frame_h": 38,
+     "cols": 24,
+     "rows": 1,
+     "count": 24,
+     "fps": 12
+    },
+    "walk": {
+     "frame_w": 34,
+     "frame_h": 38,
+     "cols": 24,
+     "rows": 1,
+     "count": 24,
+     "fps": 12
+    },
+    "carry": {
+     "frame_w": 34,
+     "frame_h": 38,
+     "cols": 24,
+     "rows": 1,
+     "count": 24,
+     "fps": 12
+    },
+    "pray": {
+     "frame_w": 34,
+     "frame_h": 38,
+     "cols": 24,
+     "rows": 1,
+     "count": 24,
+     "fps": 12
+    },
+    "work": {
+     "frame_w": 34,
+     "frame_h": 38,
+     "cols": 24,
+     "rows": 1,
+     "count": 24,
+     "fps": 12
+    },
+    "fight": {
+     "frame_w": 34,
+     "frame_h": 38,
+     "cols": 24,
+     "rows": 1,
+     "count": 24,
+     "fps": 12
+    }
+   }
+  },
+  "flammes": {
+   "ax": 15,
+   "ay": 40,
+   "modes": {
+    "idle": {
+     "frame_w": 40,
+     "frame_h": 42,
+     "cols": 12,
+     "rows": 2,
+     "count": 24,
+     "fps": 5
+    },
+    "walk": {
+     "frame_w": 40,
+     "frame_h": 42,
+     "cols": 12,
+     "rows": 1,
+     "count": 12,
+     "fps": 6
+    },
+    "work": {
+     "frame_w": 40,
+     "frame_h": 42,
+     "cols": 12,
+     "rows": 1,
+     "count": 12,
+     "fps": 6
+    }
+   }
+  },
+  "archer": {
+   "ax": 15,
+   "ay": 40,
+   "modes": {
+    "idle": {
+     "frame_w": 40,
+     "frame_h": 42,
+     "cols": 12,
+     "rows": 2,
+     "count": 24,
+     "fps": 5
+    },
+    "walk": {
+     "frame_w": 40,
+     "frame_h": 42,
+     "cols": 12,
+     "rows": 1,
+     "count": 12,
+     "fps": 6
+    },
+    "work": {
+     "frame_w": 40,
+     "frame_h": 42,
+     "cols": 12,
+     "rows": 1,
+     "count": 12,
+     "fps": 6
+    }
+   }
+  },
+  "lame": {
+   "ax": 15,
+   "ay": 40,
+   "modes": {
+    "idle": {
+     "frame_w": 40,
+     "frame_h": 42,
+     "cols": 12,
+     "rows": 2,
+     "count": 24,
+     "fps": 5
+    },
+    "walk": {
+     "frame_w": 40,
+     "frame_h": 42,
+     "cols": 12,
+     "rows": 1,
+     "count": 12,
+     "fps": 6
+    },
+    "work": {
+     "frame_w": 40,
+     "frame_h": 42,
+     "cols": 12,
+     "rows": 1,
+     "count": 12,
+     "fps": 6
+    }
+   }
+  }
+ }
+}

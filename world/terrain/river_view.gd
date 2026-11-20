@@ -19,6 +19,10 @@ const MOSS := Color8(88, 108, 64)
 const CAP := Color8(168, 161, 142)
 const CAP_DARK := Color8(58, 56, 50)
 
+## Graine de rivière → bandes [px0, py0, texture d'eau, texture des berges] ; quelques graines au plus.
+const CACHE_SIZE := 4
+static var _cache := {}
+
 var river: River
 var _mats: Array[ShaderMaterial] = []
 
@@ -32,10 +36,20 @@ func setup(r: River) -> void:
 	var zr := river.z_range()
 	var py0 := floori(zr.x * PX)
 	var h := ceili(zr.y * PX) - py0
-	var x := CaveShape.WORLD_X0
-	while x < CaveShape.WORLD_X1:
-		_build_segment(floori(x * PX), py0, mini(SEG * PX, floori((CaveShape.WORLD_X1 - x) * PX)), h)
-		x += SEG
+	# Les images ne dépendent que de la graine de la rivière : calculées une fois (boucle par pixel,
+	# plusieurs secondes), puis reprises à chaque nouvelle partie de même graine (tests, Recommencer).
+	var segs: Array = _cache.get(river.seed, [])
+	if segs.is_empty():
+		var x := CaveShape.WORLD_X0
+		while x < CaveShape.WORLD_X1:
+			var px0 := floori(x * PX)
+			segs.append([px0, py0] + _segment_textures(px0, py0, mini(SEG * PX, floori((CaveShape.WORLD_X1 - x) * PX)), h))
+			x += SEG
+		if _cache.size() >= CACHE_SIZE:
+			_cache.erase(_cache.keys()[0])
+		_cache[river.seed] = segs
+	for s: Array in segs:
+		_add_segment(s[0], s[1], s[2], s[3])
 
 
 ## Crue (unités au-delà des berges) affichée par l'eau.
@@ -44,7 +58,8 @@ func set_flood(units: float) -> void:
 		m.set_shader_parameter("flood", clampf(units / FLOOD_RANGE, 0.0, 1.0))
 
 
-func _build_segment(px0: int, py0: int, w: int, h: int) -> void:
+## Textures [eau, berges] d'une bande.
+func _segment_textures(px0: int, py0: int, w: int, h: int) -> Array:
 	var water := PackedByteArray()
 	water.resize(w * h * 4)
 	var top := Image.create(w, h, false, Image.FORMAT_RGBA8)
@@ -61,11 +76,17 @@ func _build_segment(px0: int, py0: int, w: int, h: int) -> void:
 		for j in range(j0, j1):
 			var wz := (py0 + j + 0.5) / PX
 			var d := absf(wz - c) - hw
+			# Banc de sable au milieu d'une mare : berge dans l'eau (River.bank_distance).
+			if d < 0.0 and not river.bars.is_empty():
+				d = river.bank_distance(wx, wz)
 			var k := (j * w + i) * 4
 			if d < 0.0:
 				water[k] = int(clampf(-d / maxf(hw, 0.5), 0.0, 1.0) * 255.0)
 				water[k + 1] = int(_rapids(wx, d, hw) * 255.0)
 				water[k + 3] = 255
+			elif d < FLOOD_RANGE and absf(wz - c) < hw:
+				# Banc de sable : noyé dès la première crue.
+				water[k + 2] = 1
 			elif d < FLOOD_RANGE and (b.is_empty() or wz < float(b["z0"]) - 0.5 or wz >= float(b["z1"]) + 0.5):
 				water[k + 2] = maxi(1, int(d / FLOOD_RANGE * 255.0))
 			var col := _bank(px0 + i, py0 + j, d)
@@ -76,10 +97,14 @@ func _build_segment(px0: int, py0: int, w: int, h: int) -> void:
 			if col.a > 0.0:
 				top.set_pixel(i, j, col)
 	var data := Image.create_from_data(w, h, false, Image.FORMAT_RGBA8, water)
+	return [ImageTexture.create_from_image(data), ImageTexture.create_from_image(top)]
+
+
+func _add_segment(px0: int, py0: int, water_tex: Texture2D, top_tex: Texture2D) -> void:
 	var ws := Sprite2D.new()
 	ws.centered = false
 	ws.position = Vector2(px0, py0)
-	ws.texture = ImageTexture.create_from_image(data)
+	ws.texture = water_tex
 	var m := ShaderMaterial.new()
 	m.shader = SHADER
 	m.set_shader_parameter("origin", Vector2(px0, py0))
@@ -89,7 +114,7 @@ func _build_segment(px0: int, py0: int, w: int, h: int) -> void:
 	var ts := Sprite2D.new()
 	ts.centered = false
 	ts.position = Vector2(px0, py0)
-	ts.texture = ImageTexture.create_from_image(top)
+	ts.texture = top_tex
 	add_child(ts)
 	# Crue : l'eau qui déborde passe par-dessus les berges.
 	var fs := Sprite2D.new()

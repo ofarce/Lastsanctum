@@ -9,7 +9,7 @@ Sert le dossier planches/ et reçoit les PNG produits par planches/soldats-expor
 - assets/baked/adepts/<rôle>_<idle|walk|work|carry|pray|fight>.png ;
 - assets/baked/hud/portraits/<rôle>.png ;
 - les métadonnées (ax, ay, modes) remplacent assets/baked/manifest.json → adepts.roles.<rôle>.
-Rôles : medeina (Faon de cairn), indra (Roue-mandala), aether (Orrery), sigil (Livre ailé).
+Rôles : medeina (feu follet, Flamme sylvestre), indra (Roue-mandala), aether (Orrery), sigil (Livre ailé).
 """
 from __future__ import annotations
 

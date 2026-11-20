@@ -1,0 +1,663 @@
+<title>Strates vers Byrsa</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=VT323&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Mise en page : une coupe de la montagne en tête (sud → nord), puis une section par strate,
+   chacune teintée par son métal ; planche dessinée d'abord, tableaux ensuite. Thème sombre unique (planche de jeu). */
+:root{
+  color-scheme:dark;
+  --bg:#12131a; --panel:#1a1c26; --panel2:#222533; --line:#32364a;
+  --fg:#e4e2da; --mute:#9a9cae; --ink:#0b0a0f;
+  --wood:#9a7a52; --copper:#c47b58; --verdigris:#5fa890; --iron:#8796a2; --rust:#b8683a; --gold:#ddb457; --crimson:#a02a36;
+  --beast:#c2202a; --exile:#5fd8e8;
+  --display:"VT323","Courier New",monospace; --body:"IBM Plex Sans",system-ui,sans-serif;
+  --acc:var(--fg);
+}
+body{background:var(--bg);color:var(--fg);font:15px/1.55 var(--body);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 64px}
+.wrap{max-width:1080px;margin:0 auto;display:flex;flex-direction:column;gap:44px}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0;line-height:1.15}
+h1{font-size:clamp(36px,6vw,56px);font-weight:400}
+h2{font-weight:400;font-size:clamp(30px,4.4vw,40px);color:var(--acc)}
+h3{font-size:25px;font-weight:400;margin-top:6px}
+p{margin:0;max-width:68ch}
+.lede{color:var(--mute);font-size:16px}
+.eyebrow{font-family:var(--display);font-size:17px;letter-spacing:.08em;text-transform:uppercase;color:var(--mute)}
+canvas{image-rendering:pixelated;display:block;max-width:100%}
+a{color:inherit}
+
+/* coupe de la montagne */
+.coupe{display:grid;grid-template-columns:.7fr 1.2fr 1.2fr 1.2fr 1.2fr .9fr;gap:3px;border:3px solid var(--ink);background:var(--ink)}
+.coupe a{display:flex;flex-direction:column;gap:2px;padding:12px 10px 14px;text-decoration:none;min-width:0;min-height:96px;justify-content:flex-end}
+.coupe b{font-family:var(--display);font-size:20px;font-weight:400;line-height:1.1}
+.coupe span{font-size:12px;opacity:.85}
+.coupe a:focus-visible{outline:2px solid var(--exile);outline-offset:-4px}
+.c0{background:#24482e}.c1{background:#4a4234}.c2{background:#2a5a50}.c3{background:#4a2c24}.c4{background:#6a5424}.c5{background:#3a3440}
+.sens{display:flex;justify-content:space-between;font-size:12px;color:var(--mute);margin-top:6px}
+@media(max-width:640px){.coupe{grid-template-columns:1fr 1fr 1fr}.coupe a{min-height:76px}}
+
+/* avis */
+.avis{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:28px}
+.avis ul{margin:8px 0 0;padding-left:18px;display:flex;flex-direction:column;gap:8px}
+.avis li{max-width:62ch}
+.verdict{border-left:4px solid var(--exile);padding:4px 0 4px 16px;font-size:17px;max-width:66ch}
+code{font:13px ui-monospace,Menlo,monospace;background:var(--panel2);padding:1px 5px;border-radius:3px}
+
+/* strates */
+.strate{display:flex;flex-direction:column;gap:20px;border-top:3px solid var(--acc);padding-top:18px}
+.s1{--acc:var(--wood)}.s2{--acc:var(--verdigris)}.s3{--acc:var(--rust)}.s4{--acc:var(--gold)}
+.head{display:flex;flex-wrap:wrap;gap:8px 24px;align-items:baseline;justify-content:space-between}
+.scene{border:3px solid var(--ink);background:var(--ink)}
+.scene canvas{width:100%;height:auto}
+.legende{font-size:13px;color:var(--mute);margin-top:6px}
+.pal{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12px;color:var(--mute)}
+.pal i{display:inline-block;width:14px;height:14px;border:2px solid var(--ink);vertical-align:-3px;margin-right:5px}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px}
+.card{background:var(--panel);border:2px solid var(--ink);display:flex;flex-direction:column;min-width:0}
+.card.wide{grid-column:span 2}
+@media(max-width:480px){.card.wide{grid-column:span 1}}
+.card .art{background:var(--panel2);display:flex;justify-content:center;align-items:flex-end;padding:10px;min-height:150px}
+.card .txt{padding:10px 12px 14px;display:flex;flex-direction:column;gap:4px}
+.card .role{font-family:var(--display);font-size:16px;letter-spacing:.06em;text-transform:uppercase;color:var(--acc)}
+.card b{font-family:var(--display);font-weight:400;font-size:23px;line-height:1.15}
+.card p{font-size:13.5px;color:#c9c8c4}
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px 28px}
+.cols ul{margin:4px 0 0;padding-left:18px;display:flex;flex-direction:column;gap:5px;font-size:14px}
+
+.tw{overflow-x:auto;border:2px solid var(--ink);background:var(--panel)}
+table{border-collapse:collapse;width:100%;min-width:640px;font-size:13.5px}
+th,td{text-align:left;padding:8px 12px;vertical-align:top;border-bottom:1px solid var(--line)}
+th{font-family:var(--display);font-weight:400;font-size:16px;letter-spacing:.06em;text-transform:uppercase;color:var(--mute);background:var(--panel2)}
+tr:last-child td{border-bottom:0}
+td:first-child{font-weight:600;white-space:nowrap}
+td.cost{font-variant-numeric:tabular-nums;white-space:nowrap}
+.tag{display:inline-block;font-size:11px;padding:0 6px;border:1px solid var(--line);border-radius:3px;color:var(--mute);margin-left:4px;font-weight:400}
+.exo{color:var(--exile);font-weight:600}
+.deja{color:var(--mute);font-style:italic}
+.note{font-size:13px;color:var(--mute)}
+</style>
+
+<div class="wrap">
+
+<header style="display:flex;flex-direction:column;gap:14px">
+  <div class="eyebrow">Exiles Defense · planche de propositions · 19 novembre 2026</div>
+  <h1>Quatre strates pour traverser la montagne</h1>
+  <p class="lede">Bois, cuivre, fer, or : mon avis sur l’échelle, puis pour chaque strate les recherches, les butins et, pour les biomes 2 à 4, une planche de faune, de décor et de boss.</p>
+  <div>
+    <nav class="coupe" aria-label="Coupe de la montagne, du sud au nord">
+      <a class="c0" href="#avis"><b>Jungle</b><span>rivière, ponts</span></a>
+      <a class="c1" href="#temple"><b>1 · Temple</b><span>bois</span></a>
+      <a class="c2" href="#cuivre"><b>2 · Veines de vert-de-gris</b><span>cuivre</span></a>
+      <a class="c3" href="#fer"><b>3 · Forges mortes</b><span>fer</span></a>
+      <a class="c4" href="#or"><b>4 · Cryptes de l’Aube</b><span>or</span></a>
+      <a class="c5" href="#avis"><b>Byrsa</b><span>rues, Église, Laetan</span></a>
+    </nav>
+    <div class="sens"><span>◄ sud · l’Ancre</span><span>nord · le Concile de l’Aube ►</span></div>
+  </div>
+</header>
+
+<section id="avis" style="display:flex;flex-direction:column;gap:20px">
+  <h2>Ce que j’en pense</h2>
+  <p class="verdict">L’échelle est bonne et il faut la garder. Telle quelle, par contre, c’est une liste de métaux : il manque à chaque strate un danger à elle et un verrou qui oblige à la finir avant de passer à la suivante.</p>
+  <div class="avis">
+    <div>
+      <h3>Ce qui marche</h3>
+      <ul>
+        <li><b>C’est lisible tout de suite.</b> Le joueur sait où il en est rien qu’à la couleur de ce qu’il mine, et le Creuset suit déjà cette logique (cuivre puis fer).</li>
+        <li><b>L’or en dernier raconte l’arrivée.</b> L’or est la couleur du Credo Divin : plus on en voit dans la roche, plus on est sous Byrsa. Miner l’or, c’est piller Laetan.</li>
+        <li><b>L’arc des ennemis tombe juste.</b> La Bête monte en puissance jusqu’au biome 3, où l’Œil de la Matrice (déjà en jeu) ferme son histoire. Le biome 4 passe au Credo et prépare Laetan.</li>
+      </ul>
+    </div>
+    <div>
+      <h3>Ce que je changerais</h3>
+      <ul>
+        <li><b>Le Temple contient déjà les quatre minerais</b> (<code>data/biomes.gd</code>) et l’épée demande cuivre + fer. Il faut redistribuer : sinon l’« Épée et bouclier » n’arrive qu’au biome 3. Je propose une unité de caserne par strate : archer (bois), épée et bouclier (cuivre), une unité lourde (fer).</li>
+        <li><b>« Principale » ne veut pas dire « seule ».</b> Chaque strate garde des traces du métal suivant dans son cinquième nord. C’est ce qui paie la recherche qui ouvre la suite.</li>
+        <li><b>L’or est interdit chez les alliés par la charte.</b> Il ne s’équipe donc pas : il se fond, se ternit et se dépense (recherches, offrandes à l’Ancre, munitions).</li>
+        <li><b>Le bois doit rester utile jusqu’au bout</b> (flèches, barricades, étais, balistes), sinon le Temple devient une zone morte dès le biome 2.</li>
+        <li><b>Un verrou par strate :</b> la roche durcit (4, 8, 12, 16 coups) et le Sceau de minage monte d’un palier. Le sceau suivant demande la clef que lâche le boss de fin.</li>
+        <li><b>Combien de biomes ?</b> Je m’arrêterais à ces quatre strates minières. Byrsa (les rues) et l’Église font les actes 5 et 6 avec d’autres règles que « creuser ».</li>
+      </ul>
+    </div>
+  </div>
+  <p class="note">Tous les chiffres ci-dessous sont des points de départ calés sur les coûts actuels (Minicarte 500 Savoir, Arbalestrie modulaire 4 × 200, Creuset 300 Forge). Rien n’est codé.</p>
+</section>
+
+<!-- ───────────── 1 ───────────── -->
+<section id="temple" class="strate s1">
+  <div class="head"><h2>1 · Le Temple</h2><span class="eyebrow">ressource : bois · roche 4 coups · menace 1</span></div>
+  <p>Déjà en jeu, donc pas de planche. Je retire le fer, le quartz et l’or de cette strate et je ne laisse que des traces de cuivre tout au nord.</p>
+  <h3>Recherches</h3>
+  <div class="tw"><table>
+    <tr><th>Recherche</th><th>Bâtiment</th><th>Coût</th><th>Effet</th></tr>
+    <tr><td>Sceau de minage <span class="tag">en jeu</span></td><td>4 bâtiments</td><td class="cost">4 × (10 de chaque)</td><td>Les adeptes peuvent miner.</td></tr>
+    <tr><td>Minicarte, Poste de tir, Arbalestrie modulaire <span class="tag">en jeu</span></td><td>Bibliothèque</td><td class="cost">500 · 500 · 4 × 200</td><td>Inchangés.</td></tr>
+    <tr><td>Étais de galerie</td><td>Atelier</td><td class="cost">150 Forge + 60 bois</td><td>Les adeptes minent 25 % plus vite. Débloque la torche murale à poser.</td></tr>
+    <tr><td>Sylviculture</td><td>Puits des Âmes</td><td class="cost">200 Vie + 40 bois</td><td>Un arbre pétrifié abattu repousse en 3 vagues. Les adeptes de Medeina récoltent + 50 %.</td></tr>
+    <tr><td>Empennage</td><td>Caserne</td><td class="cost">200 Discipline + 100 bois</td><td>Archers : portée + 15 %. Les lots de flèches passent de 15 à 20.</td></tr>
+    <tr><td>Palissades</td><td>Bibliothèque</td><td class="cost">250 Savoir + 80 bois</td><td>Barricades + 50 % de PV, coût en roche supprimé.</td></tr>
+    <tr><td>Fonte du cuivre</td><td>Forge</td><td class="cost">300 Forge + 20 cuivre + Clef du Seuil</td><td><b>Ouvre le biome 2.</b> Sceau de cuivre : la roche à 8 coups se mine, lingots et recettes de cuivre débloqués.</td></tr>
+  </table></div>
+  <h3>Butins</h3>
+  <div class="tw"><table>
+    <tr><th>Source</th><th>Butin</th><th>À quoi ça sert</th></tr>
+    <tr><td>Soldats du Credo</td><td>25 % : 1 à 3 flèches · 15 % : 2 bois (hampes brisées) · 5 % : ration</td><td>Rend les vagues rentables sans court-circuiter la récolte. La ration rend 20 PV à l’Exilé.</td></tr>
+    <tr><td>Brute, Strazhar</td><td>100 % : 1 Insigne du Credo</td><td>5 insignes = une recherche lancée sans faire monter la menace.</td></tr>
+    <tr><td>Rampants, cracheurs, chiens</td><td>30 % : Ichor · cracheur 20 % : Glande acide</td><td>Ichor : ingrédient des chausse-trappes et des munitions. Glande : munition acide du barillet.</td></tr>
+    <tr><td>Alpha de pylône</td><td>100 % : 1 Éclat de pylône (une fois par pylône)</td><td>Monnaie des Sceaux : chaque sceau en demande 3. Oblige à aller chercher les pylônes.</td></tr>
+    <tr><td>Reliquaire, salle d’armes <span class="tag">en jeu</span></td><td>Pièce d’équipement</td><td>Je retire le fer de ces tables : capuche, cape, lanterne, cuivre uniquement.</td></tr>
+    <tr><td>Gardien du sanctum</td><td><span class="exo">Module d’exo · Cœur de sève</span> + 40 bois</td><td>+ 25 PV max pour l’Exilé, régénération de 1 PV/s hors combat.</td></tr>
+    <tr><td>Martyre de Byrsa</td><td><span class="exo">Module d’exo · Voile de la Martyre</span></td><td>Un bouclier qui absorbe un coup, rechargé en 20 s. Récompense directe du bullet hell.</td></tr>
+    <tr><td>Boss de fin (à définir)</td><td><span class="exo">Module d’exo · Pas de l’Exilé</span> + Clef du Seuil</td><td>Une ruée courte (3 cases, 4 s de recharge). La clef est exigée par « Fonte du cuivre ».</td></tr>
+  </table></div>
+</section>
+
+<!-- ───────────── 2 ───────────── -->
+<section id="cuivre" class="strate s2">
+  <div class="head"><h2>2 · Les Veines de vert-de-gris</h2><span class="eyebrow">ressource : cuivre · roche 8 coups · menace 2</span></div>
+  <p>Les anciennes mines de cuivre tyriennes, noyées depuis des siècles. Le danger de la strate est l’eau : des galeries inondées qui ralentissent tout le monde, et une faune qui s’en sert. Le vert-de-gris tire vers le vert pour ne jamais se confondre avec le cyan des Exilés.</p>
+  <div>
+    <div class="scene"><canvas data-scene="b2" aria-label="Scène du biome 2 : galerie noyée, tuyaux de cuivre, roue de pompe, stalagmites de malachite"></canvas></div>
+    <div class="legende">Galerie type : canal noyé et pont de pierre, colonne de pompage tyrienne, malachite, quartz laiteux pour la lumière.</div>
+  </div>
+  <div class="pal"><span><i style="background:#28383b"></i>ardoise humide</span><span><i style="background:#4f9a83"></i>vert-de-gris</span><span><i style="background:#2f7d5a"></i>malachite</span><span><i style="background:#c47b58"></i>cuivre</span><span><i style="background:#24565e"></i>eau noire</span><span><i style="background:#dfe8ff"></i>quartz laiteux</span></div>
+  <div class="cards" data-cards="b2"></div>
+  <div class="cols">
+    <div><h3>Décors</h3><ul><li>Colonnes de pompage et tuyaux de cuivre qui gouttent</li><li>Roues à aubes et rails de wagonnets effondrés</li><li>Stalagmites de malachite, concrétions vertes sur les parois</li><li>Bassins noirs, ponts de pierre anciens (la règle de la rivière)</li></ul></div>
+    <div><h3>Règle de la strate</h3><ul><li>Eau peu profonde : vitesse − 40 % pour tous, sauf la faune</li><li>Un choc électrique dans l’eau touche toute la flaque</li><li>Les pompes (recherche) assèchent une salle, définitivement</li><li>Prépare le terrain aux sorts de crue prévus pour la rivière</li></ul></div>
+  </div>
+  <h3>Recherches</h3>
+  <div class="tw"><table>
+    <tr><th>Recherche</th><th>Bâtiment</th><th>Coût</th><th>Effet</th></tr>
+    <tr><td>Pompes tyriennes</td><td>Bibliothèque</td><td class="cost">400 Savoir + 15 lingots</td><td>Débloque la pompe à l’Atelier : posée dans une salle noyée, elle l’assèche en 30 s.</td></tr>
+    <tr><td>Lames de cuivre</td><td>Caserne</td><td class="cost">300 Discipline + 10 lingots</td><td>Débloque l’« Épée et bouclier » (épée et bouclier passent en cuivre seul à la Forge).</td></tr>
+    <tr><td>Pointes de cuivre</td><td>Caserne</td><td class="cost">300 Discipline + 10 lingots</td><td>Archers : + 25 % de dégâts.</td></tr>
+    <tr><td>Rivets et cerclages</td><td>Atelier</td><td class="cost">300 Forge + 10 lingots</td><td>Coffres à 20 emplacements. Les mineurs rapportent des lots de 10 au lieu de 5.</td></tr>
+    <tr><td>Piège à arc</td><td>Bibliothèque</td><td class="cost">500 Savoir + 20 lingots</td><td>Nouveau piège à l’Atelier : étourdit 1,5 s, et toute la flaque s’il est posé dans l’eau.</td></tr>
+    <tr><td>Baume de vert-de-gris</td><td>Puits des Âmes</td><td class="cost">400 Vie + 10 lingots</td><td>Soin du Puits : 5 → 8 PV/s, rayon 12 → 15.</td></tr>
+    <tr><td>Sceau de fer</td><td>Forge</td><td class="cost">4 × 150 + 20 lingots + 3 Éclats + Clef des Eaux</td><td><b>Ouvre le biome 3.</b> Roche à 12 coups, lingots et recettes de fer.</td></tr>
+  </table></div>
+  <h3>Butins</h3>
+  <div class="tw"><table>
+    <tr><th>Source</th><th>Butin</th><th>À quoi ça sert</th></tr>
+    <tr><td>Soldats du Credo</td><td>Comme au Temple + 10 % : 1 cuivre (boucles, rivets)</td><td>Un filet de cuivre pour qui défend bien, jamais de quoi se passer de la mine.</td></tr>
+    <tr><td>Tique de filon</td><td>100 % : 2 à 4 cuivre</td><td>Elle s’accroche aux filons : la tuer « nettoie » le filon et paie tout de suite.</td></tr>
+    <tr><td>Anguille des puits</td><td>40 % : Organe voltaïque</td><td>Ingrédient du piège à arc et de la munition d’Aether.</td></tr>
+    <tr><td>Chauve-souris patinée</td><td>20 % : Guano</td><td>Engrais : un bosquet du Temple repousse tout de suite. Garde le bois vivant.</td></tr>
+    <tr><td>Colosse de vert-de-gris <span class="tag">sanctum</span></td><td><span class="exo">Module d’exo · Plaques du Colosse</span> + 15 lingots</td><td>+ 2 d’armure permanente, immunité au ralentissement de l’eau.</td></tr>
+    <tr><td>Martyre des Eaux</td><td><span class="exo">Module d’exo · Souffle long</span></td><td>Régénération de mana de l’Arbalestrie + 50 %.</td></tr>
+    <tr><td>Gorge-Cuivre <span class="tag">fin</span></td><td><span class="exo">Module d’exo · Foreuse de Gorge-Cuivre</span> + Clef des Eaux</td><td>L’Exilé mine deux fois plus vite et sur 2 blocs de large : le passage réglementaire en un seul trajet.</td></tr>
+  </table></div>
+</section>
+
+<!-- ───────────── 3 ───────────── -->
+<section id="fer" class="strate s3">
+  <div class="head"><h2>3 · Les Forges mortes</h2><span class="eyebrow">ressource : fer · roche 12 coups · menace 3</span></div>
+  <p>Le cœur chaud de la montagne : les fonderies tyriennes abandonnées, que la Bête a prises pour nid. Basalte noir, rouille, coulées de lave. C’est ici que les pylônes sont les plus serrés et que l’histoire de la Bête se termine.</p>
+  <div>
+    <div class="scene"><canvas data-scene="b3" aria-label="Scène du biome 3 : coulée de lave, orgues de basalte, engrenage géant, chaînes"></canvas></div>
+    <div class="legende">Galerie type : coulée de lave à franchir, orgues de basalte, engrenage de fonderie à demi enseveli, gueule de four dans la paroi.</div>
+  </div>
+  <div class="pal"><span><i style="background:#2a2630"></i>basalte</span><span><i style="background:#a3562e"></i>rouille</span><span><i style="background:#8796a2"></i>fer</span><span><i style="background:#f0602a"></i>lave</span><span><i style="background:#ffc060"></i>cœur de coulée</span><span><i style="background:#c2202a"></i>rouge de la Bête</span></div>
+  <div class="cards" data-cards="b3"></div>
+  <div class="cols">
+    <div><h3>Décors</h3><ul><li>Orgues de basalte, tas de scories fumants</li><li>Engrenages, lingotières et chaînes de fonderie</li><li>Gueules de four dans les parois, encore tièdes</li><li>Le Broutefer de la planche existante vit ici, sur les filons</li></ul></div>
+    <div><h3>Règle de la strate</h3><ul><li>Lave : infranchissable, 20 dégâts/s au contact</li><li>Un bloc de roche posé dessus fait un gué (la barricade aussi)</li><li>Près de la lave, les lance-flammes font + 25 % de dégâts</li><li>Deux fois plus de pylônes de Merenor que dans le Temple</li></ul></div>
+  </div>
+  <h3>Recherches</h3>
+  <div class="tw"><table>
+    <tr><th>Recherche</th><th>Bâtiment</th><th>Coût</th><th>Effet</th></tr>
+    <tr><td>Acier trempé</td><td>Forge</td><td class="cost">800 Forge + 30 lingots de fer</td><td>Palier d’acier au Creuset : armure 9, épée 14, épée à deux mains 24.</td></tr>
+    <tr><td>Formation serrée</td><td>Caserne</td><td class="cost">800 Discipline + 20 lingots</td><td>Épée et bouclier : − 25 % de dégâts subis avec deux alliés adjacents.</td></tr>
+    <tr><td>Baliste</td><td>Bibliothèque</td><td class="cost">1 000 Savoir + 25 lingots + 100 bois</td><td>Débloque la baliste à l’Atelier : poste de tir lourd servi par un archer, perce 3 ennemis.</td></tr>
+    <tr><td>Feu grégeois</td><td>Caserne</td><td class="cost">800 Discipline + 20 lingots + 10 Ichor</td><td>Lance-flammes : le sol brûle 3 s après le jet.</td></tr>
+    <tr><td>Dortoirs</td><td>Puits des Âmes</td><td class="cost">800 Vie + 20 lingots</td><td>Chaque Chambre loge 15 Exilés au lieu de 10.</td></tr>
+    <tr><td>Voile de l’Ancre</td><td>Bibliothèque</td><td class="cost">1 000 Savoir + 5 Insignes</td><td>Une recherche ne fait plus monter la menace que de 10 au lieu de 20.</td></tr>
+    <tr><td>Sceau d’or terni</td><td>Forge</td><td class="cost">4 × 300 + 20 lingots + 3 Éclats + Iris de la Matrice</td><td><b>Ouvre le biome 4.</b> La maçonnerie de Byrsa (16 coups) se perce.</td></tr>
+  </table></div>
+  <h3>Butins</h3>
+  <div class="tw"><table>
+    <tr><th>Source</th><th>Butin</th><th>À quoi ça sert</th></tr>
+    <tr><td>Soldats du Credo</td><td>20 % : Ferraille (2 = 1 fer) · 5 % : pièce d’équipement de fer abîmée</td><td>Les vagues deviennent une vraie source de fer d’appoint.</td></tr>
+    <tr><td>Scorie vive</td><td>100 % : 1 à 3 fer · 15 % : Braise vive</td><td>Braise : ingrédient du feu grégeois et d’une torche qui ne s’éteint pas.</td></tr>
+    <tr><td>Vouivre de rouille</td><td>30 % : Écaille de rouille</td><td>5 écailles au Creuset : une pièce d’armure qui annule la brûlure.</td></tr>
+    <tr><td>Essaim de limaille</td><td>100 % : 1 fer</td><td>Faible mais vole les flèches en vol : butin modeste, nuisance réelle.</td></tr>
+    <tr><td>Maître-Forgeron enchaîné <span class="tag">sanctum</span></td><td><span class="exo">Module d’exo · Marteau-pilon</span> + 20 lingots de fer</td><td>Le troisième coup de mêlée d’affilée frappe en onde de choc (rayon 2 cases).</td></tr>
+    <tr><td>Martyre du Fer</td><td><span class="exo">Module d’exo · Chaîne de pénitence</span></td><td>Grappin : l’Exilé se tire jusqu’à un mur ou attire un ennemi léger (8 s).</td></tr>
+    <tr><td>Œil de la Matrice <span class="tag">fin</span></td><td><span class="exo">Module d’exo · Iris de la Matrice</span></td><td>Les ennemis apparaissent sur la minicarte à travers la roche. Exigé par le Sceau d’or terni.</td></tr>
+  </table></div>
+</section>
+
+<!-- ───────────── 4 ───────────── -->
+<section id="or" class="strate s4">
+  <div class="head"><h2>4 · Les Cryptes de l’Aube</h2><span class="eyebrow">ressource : or · maçonnerie 16 coups · menace 4</span></div>
+  <p>On ne creuse plus la montagne mais les fondations de Byrsa : ossuaires, reliquaires et caveaux du Concile. L’or n’est pas en filons, il est dans le quartz blanc des murs et dans les offrandes. Plus de bêtes ici : des gardiens de pierre, des encensoirs qui veillent, et la garde du Credo.</p>
+  <div>
+    <div class="scene"><canvas data-scene="b4" aria-label="Scène du biome 4 : crypte dallée, niches à crânes, sarcophages, bannières cramoisies"></canvas></div>
+    <div class="legende">Salle type : dallage à filet d’or, niches à crânes et cierges, sarcophages à gisants, bannières du Concile.</div>
+  </div>
+  <div class="pal"><span><i style="background:#4e4854"></i>pierre de taille</span><span><i style="background:#a8a0ac"></i>marbre veiné</span><span><i style="background:#ddb457"></i>or du Credo</span><span><i style="background:#8a1f2c"></i>cramoisi</span><span><i style="background:#d8cfb8"></i>os</span><span><i style="background:#ffd890"></i>cierges</span></div>
+  <div class="cards" data-cards="b4"></div>
+  <div class="cols">
+    <div><h3>Décors</h3><ul><li>Niches à crânes, cierges, bannières au soleil du Concile</li><li>Sarcophages à gisants (certains se lèvent)</li><li>Colonnes de marbre gris veiné, dallage à filets d’or</li><li>Cloches d’alarme suspendues aux voûtes</li></ul></div>
+    <div><h3>Règle de la strate</h3><ul><li>Sol consacré : les adeptes n’y prient pas, pas de temple dessus</li><li>Une cloche qui sonne appelle une escouade de la surface</li><li>Briser un autel du Credo désacralise la salle</li><li>L’or miné fait monter la menace : 1 point par bloc</li></ul></div>
+  </div>
+  <h3>Recherches</h3>
+  <div class="tw"><table>
+    <tr><th>Recherche</th><th>Bâtiment</th><th>Coût</th><th>Effet</th></tr>
+    <tr><td>Désacralisation</td><td>Bibliothèque</td><td class="cost">1 500 Savoir + 30 lingots d’or</td><td>Les adeptes prient sur le sol consacré. Les boucliers bénis du Credo n’absorbent plus que la moitié.</td></tr>
+    <tr><td>Canalisation à trois</td><td>Puits des Âmes</td><td class="cost">1 500 Vie + 20 lingots</td><td>Un pylône de Merenor se canalise avec 3 esprits au lieu de 4.</td></tr>
+    <tr><td>Vétérans</td><td>Caserne</td><td class="cost">1 500 Discipline + 25 lingots</td><td>Les unités sortent de la Caserne au niveau 2.</td></tr>
+    <tr><td>Riposte de l’Ancre</td><td>Forge</td><td class="cost">1 500 Forge + 30 lingots</td><td>L’Ancre frappe d’un éclair noir-pourpre l’ennemi le plus proche : 40 dégâts toutes les 5 s.</td></tr>
+    <tr><td>Carreaux d’or terni</td><td>Bibliothèque</td><td class="cost">4 × 400 + 20 lingots</td><td>Sixième munition du barillet : perce les boucliers, coûte 1 lingot les 20 tirs.</td></tr>
+    <tr><td>Second Exilé</td><td>Bibliothèque</td><td class="cost">4 × 500 + 10 Insignes</td><td>Un deuxième héros peut être appelé et incarné.</td></tr>
+    <tr><td>Brèche de Byrsa</td><td>Forge</td><td class="cost">4 × 600 + 40 lingots + 3 Éclats + Ostensoir éteint</td><td><b>Ouvre les rues de Byrsa.</b> Les remparts enterrés se percent.</td></tr>
+  </table></div>
+  <h3>Butins</h3>
+  <div class="tw"><table>
+    <tr><th>Source</th><th>Butin</th><th>À quoi ça sert</th></tr>
+    <tr><td>Garde du Credo</td><td>15 % : 1 or (dorures) · 10 % : Insigne</td><td>Les insignes paient « Second Exilé » : la défense finance le héros.</td></tr>
+    <tr><td>Gisant</td><td>100 % : 2 à 3 or · 10 % : Masque fêlé</td><td>Masque : à la Bibliothèque, révèle une salle des cryptes sur la minicarte.</td></tr>
+    <tr><td>Encensoir veilleur</td><td>30 % : Encens noirci</td><td>Consommable : 20 s sans être vu par les cloches et les veilleurs.</td></tr>
+    <tr><td>Rat des ossuaires</td><td>10 % : objet d’un butin précédent</td><td>Ils volent ce qui traîne au sol : les tuer rend le butin.</td></tr>
+    <tr><td>Gardien des Reliques <span class="tag">sanctum</span></td><td><span class="exo">Module d’exo · Reliquaire vide</span> + 20 lingots d’or</td><td>Une fois par vague, l’Exilé se relève sur place avec 30 % de ses PV au lieu de retourner à la capsule.</td></tr>
+    <tr><td>Martyre couronnée</td><td><span class="exo">Module d’exo · Auréole brisée</span></td><td>Aura de 8 cases autour de l’Exilé incarné : + 10 % de dégâts pour les alliés.</td></tr>
+    <tr><td>Hiérophante de Byrsa <span class="tag">fin</span></td><td><span class="exo">Module d’exo · Ostensoir éteint</span></td><td>Appelle 2 esprits mineurs pendant 30 s (2 min de recharge). Exigé par la Brèche de Byrsa.</td></tr>
+  </table></div>
+  <p class="note">Les modules d’exo restent cyan à l’écran (couleur des Exilés) : même l’Ostensoir se porte éteint, sans or visible.</p>
+</section>
+
+</div>
+
+<script>
+const K='#0b0a0f', BEAST='#c2202a';
+const RK=['#1b2629','#28383b','#3a4f51'], VG=['#2f6a5c','#4f9a83','#8fd0b0'], CU=['#7a4530','#c47b58','#f0b088'], WA=['#17383f','#24565e','#3f8a8c'], MA=['#1c5540','#2f7d5a','#5fb888'];
+const BA=['#17151b','#2a2630','#443e4c'], RU=['#6a3220','#a3562e','#d08a4e'], FE=['#55626e','#8796a2','#c8d2da'], LA=['#b8281c','#f0602a','#ffc060'];
+const ST=['#2c2832','#4e4854','#7c7484'], GO=['#8a6a2a','#ddb457','#fae69a'], CR=['#4a1018','#8a1f2c','#b83a44'], BONE='#d8cfb8', SKIN='#e2c4a8', MAR='#a8a0ac';
+
+function rng(s){return()=>{s|=0;s=s+0x6D2B79F5|0;let t=Math.imul(s^s>>>15,1|s);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+
+function G(w,h){
+  const d=new Array(w*h).fill(null), g={w,h,d,sym:false};
+  g.px=(x,y,c)=>{x=Math.round(x);y=Math.round(y);if(y<0||y>=h)return;if(x>=0&&x<w)d[y*w+x]=c;if(g.sym){const m=w-1-x;if(m>=0&&m<w)d[y*w+m]=c}};
+  g.rect=(x,y,a,b,c)=>{for(let j=0;j<b;j++)for(let i=0;i<a;i++)g.px(x+i,y+j,c)};
+  g.ell=(cx,cy,rx,ry,c)=>{rx=Math.max(.6,rx);ry=Math.max(.6,ry);for(let y=Math.floor(cy-ry);y<=Math.ceil(cy+ry);y++)for(let x=Math.floor(cx-rx);x<=Math.ceil(cx+rx);x++){const u=(x-cx)/rx,v=(y-cy)/ry;if(u*u+v*v<=1)g.px(x,y,c)}};
+  g.blob=(cx,cy,rx,ry,p)=>{g.ell(cx,cy,rx,ry,p[0]);g.ell(cx,cy-.8,rx-1,ry-1,p[1]);g.ell(cx-rx*.2,cy-ry*.4,rx*.4,ry*.3,p[2])};
+  g.line=(x0,y0,x1,y1,c,t=1)=>{const n=Math.max(Math.abs(x1-x0),Math.abs(y1-y0),1);for(let i=0;i<=n;i++)g.rect(Math.round(x0+(x1-x0)*i/n),Math.round(y0+(y1-y0)*i/n),t,t,c)};
+  g.poly=(p,c)=>{const ys=p.map(q=>q[1]);for(let y=Math.min(...ys);y<=Math.max(...ys);y++){const xs=[];for(let i=0;i<p.length;i++){const[a,b]=p[i],[e,f]=p[(i+1)%p.length];if((b<=y&&f>y)||(f<=y&&b>y))xs.push(a+(y-b)/(f-b)*(e-a))}xs.sort((m,n)=>m-n);for(let k=0;k+1<xs.length;k+=2)for(let x=Math.round(xs[k]);x<=Math.round(xs[k+1]);x++)g.px(x,y,c)}};
+  g.ring=(cx,cy,r,c,t=1.4,dot=0)=>{for(let y=Math.floor(cy-r-2);y<=cy+r+2;y++)for(let x=Math.floor(cx-r-2);x<=cx+r+2;x++){const q=Math.hypot(x-cx,y-cy);if(Math.abs(q-r)<=t/2&&(!dot||((x+y)%dot===0)))g.px(x,y,c)}};
+  g.outline=(c=K)=>{g.sym=false;const s=d.slice();for(let y=0;y<h;y++)for(let x=0;x<w;x++){if(s[y*w+x])continue;if((x>0&&s[y*w+x-1])||(x<w-1&&s[y*w+x+1])||(y>0&&s[(y-1)*w+x])||(y<h-1&&s[(y+1)*w+x]))d[y*w+x]=c}};
+  g.blit=(ctx,ox,oy)=>{for(let y=0;y<h;y++)for(let x=0;x<w;x++){const c=d[y*w+x];if(c){ctx.fillStyle=c;ctx.fillRect(ox+x,oy+y,1,1)}}};
+  return g;
+}
+
+/* Martyre : même silhouette que celle de Byrsa, déclinée par strate (56 × 56). */
+function martyre(g,robe,trim,before,after){
+  before&&before(g);
+  g.ring(27.5,13,10,GO[1],1.8);
+  g.sym=true;
+  g.poly([[22,21],[28,21],[28,52],[12,52],[18,36]],robe[0]);
+  g.poly([[24,21],[28,21],[28,52],[19,52],[22,36]],robe[1]);
+  g.rect(27,23,1,29,trim);
+  g.line(22,23,10,17,robe[1],3);
+  g.ell(9,16,2,2,SKIN);
+  g.ell(27,14,4.5,5.5,robe[0]);
+  g.ell(27,15,3,3.4,SKIN);
+  g.px(26,15,K);
+  g.sym=false;
+  after&&after(g);
+  g.outline();
+}
+
+const S={
+/* ── biome 2 ── */
+'b2-eel':[40,40,g=>{
+  g.ell(20,32,16,5,WA[0]);g.ell(20,31,14,3.5,WA[1]);
+  const pt=t=>[7+22*t,31-21*Math.sin(Math.PI*t*.85)+2*Math.sin(t*12),2.1+1.7*Math.sin(Math.PI*t)];
+  for(let i=0;i<=44;i++){const[x,y,r]=pt(i/44);g.ell(x,y,r,r,VG[0])}
+  for(let i=4;i<=44;i+=2){const[x,y]=pt(i/44);g.px(x,y+1,VG[2])}
+  for(let i=6;i<=40;i+=5){const[x,y,r]=pt(i/44);g.px(x,y-r+1,WA[2])}
+  g.blob(30,20,4.2,3.4,VG);g.px(32,19,'#f6fff2');g.px(33,21,K);g.rect(31,22,3,1,VG[0]);
+  g.outline();
+  [[12,9],[26,6],[35,13],[5,20]].forEach(([x,y])=>{g.px(x,y,'#eafff6');g.px(x-1,y,'#9fe8d0');g.px(x+1,y,'#9fe8d0');g.px(x,y-1,'#9fe8d0');g.px(x,y+1,'#9fe8d0')});
+  g.rect(7,33,5,1,WA[2]);g.rect(26,34,6,1,WA[2]);
+}],
+'b2-tick':[40,40,g=>{
+  g.sym=true;
+  g.line(11,24,4,20,'#2a1a14',2);g.line(10,27,3,28,'#2a1a14',2);g.line(12,30,6,35,'#2a1a14',2);
+  g.ell(19,31,4,3.5,'#2a1a14');g.line(18,34,16,37,CU[2]);
+  g.blob(19,22,11,8.5,CU);
+  g.sym=false;
+  g.ell(13,20,3,2,VG[1]);g.ell(25,25,2.4,1.6,VG[1]);g.ell(22,17,1.6,1,VG[2]);g.px(12,19,VG[2]);
+  g.line(19,14,19,29,CU[0]);g.line(20,14,20,29,CU[0]);
+  g.px(17,31,'#f0f4d8');g.px(22,31,'#f0f4d8');
+  g.outline();
+}],
+'b2-bat':[40,40,g=>{
+  g.sym=true;
+  g.poly([[17,17],[4,9],[1,21],[5,18],[7,25],[10,20],[13,27],[17,23]],VG[0]);
+  g.line(17,18,4,10,VG[1]);g.line(16,19,7,24,VG[1]);g.line(16,20,13,26,VG[1]);
+  g.ell(19,21,3.4,6,'#22302f');g.ell(19,14,3.6,3.2,'#2c3c3a');
+  g.poly([[15,12],[16,6],[19,11]],'#2c3c3a');
+  g.px(18,14,'#f0f4d8');g.px(19,17,CU[1]);
+  g.sym=false;
+  g.outline();
+}],
+'b2-colosse':[56,56,g=>{
+  g.sym=true;
+  g.rect(18,40,8,13,VG[0]);g.rect(18,50,9,3,RK[2]);
+  g.poly([[13,19],[28,19],[28,41],[17,41]],VG[1]);
+  g.poly([[13,19],[19,19],[20,41],[17,41]],VG[0]);
+  g.rect(7,23,6,16,VG[1]);g.rect(7,23,2,16,VG[0]);
+  g.blob(12,21,6.5,5,VG);
+  g.blob(10,41,5,4.5,CU);
+  g.rect(22,7,6,10,VG[1]);g.rect(21,5,7,3,VG[2]);g.rect(25,2,3,4,CU[1]);
+  g.rect(23,11,5,1,CU[2]);
+  g.ell(27,29,3.5,4.5,CU[0]);g.ell(27,29,2.2,3.2,CU[2]);
+  g.sym=false;
+  g.line(17,24,22,31,K);g.line(36,35,40,26,K);g.line(22,31,20,36,K);
+  g.px(27,28,'#fff4e0');g.px(28,28,'#fff4e0');
+  [[15,33],[39,22],[33,38]].forEach(([x,y])=>g.rect(x,y,2,1,VG[2]));
+  g.outline();
+}],
+'b2-martyre':[56,56,g=>martyre(g,['#1f4a52','#2f6d73','#3f8a8c'],VG[2],null,g=>{
+  g.px(25,17,'#bfe8f0');g.px(25,18,'#bfe8f0');g.px(30,17,'#bfe8f0');g.px(30,18,'#bfe8f0');
+  g.ell(27.5,53,17,2.4,WA[1]);
+  [[6,30],[49,28],[4,42],[51,40],[14,8],[42,7]].forEach(([x,y])=>{g.px(x,y,'#bfe8f0');g.px(x,y+1,WA[2])});
+})],
+'b2-boss':[88,72,g=>{
+  g.ell(44,61,32,9,'#0d1214');
+  [[14,60],[22,66],[66,67],[74,60],[34,69],[54,69]].forEach(([x,y],i)=>g.blob(x,y,4+i%2,3,RK));
+  for(let i=0;i<7;i++){const cx=44+Math.sin(i*.8)*5,cy=58-i*6.6,rx=16-i*.5;
+    g.ell(cx,cy,rx,6.5,'#2b2228');g.ell(cx,cy-1,rx-1.5,4.6,'#4a343a');
+    g.rect(cx-rx*.55,cy-3,rx*1.1,3,CU[1]);g.rect(cx-rx*.55,cy-3,rx*1.1,1,CU[2]);
+    g.px(cx-rx+2,cy,VG[1]);g.px(cx+rx-3,cy+1,VG[1]);}
+  const hx=47,hy=15;
+  g.ell(hx,hy,15,13,'#2b2228');g.ell(hx,hy,13.5,11.5,CU[0]);g.ell(hx,hy-1,12.5,10,CU[1]);
+  g.ell(hx,hy+1,10,8.2,'#2a0a0e');g.ell(hx,hy+2,6.5,5.2,'#7a1218');g.ell(hx,hy+3,3.4,2.8,BEAST);g.px(hx,hy+3,'#ff7a6a');
+  for(let a=0;a<12;a++){const an=a/12*Math.PI*2,x=hx+Math.cos(an)*9,y=hy+1+Math.sin(an)*7.4;g.rect(x-1,y-1,2,2,'#fbe8d0');g.px(x-Math.cos(an)*2,y-Math.sin(an)*2,CU[2])}
+  [[35,8],[59,8],[33,17],[61,17],[41,3],[53,3]].forEach(([x,y])=>{g.px(x,y,BEAST);g.px(x+1,y,'#ff7a6a')});
+  g.outline();
+}],
+/* ── biome 3 ── */
+'b3-scorie':[40,40,g=>{
+  g.sym=true;
+  g.blob(14,19,4.5,3.5,['#1c181c','#3a3438','#57505a']);
+  g.blob(19,26,12,8.5,['#1c181c','#3a3438','#57505a']);
+  g.rect(14,24,3,2,LA[2]);g.rect(14,26,3,1,LA[1]);
+  g.line(8,29,13,31,LA[1]);g.line(13,31,16,29,LA[1]);g.px(11,24,LA[0]);g.px(10,27,LA[1]);
+  g.rect(17,31,3,2,LA[0]);g.rect(18,30,2,1,LA[2]);
+  g.sym=false;
+  g.line(24,18,22,22,LA[1]);g.px(22,23,LA[2]);g.rect(6,35,3,1,LA[0]);g.rect(30,36,4,1,LA[0]);
+  g.outline();
+  g.px(15,10,'#6a6068');g.px(16,7,'#6a6068');g.px(25,9,'#6a6068');g.px(24,5,'#57505a');
+}],
+'b3-vouivre':[40,40,g=>{
+  const pt=t=>[5+27*t,33-23*t+4*Math.sin(t*9),.9+2.9*Math.sin(Math.PI*Math.min(1,t*1.12))];
+  g.line(13,27,8,22,RU[0],2);g.line(15,29,20,34,RU[0],2);g.line(23,15,18,11,RU[0],2);g.line(25,18,31,22,RU[0],2);
+  for(let i=0;i<=50;i++){const[x,y,r]=pt(i/50);g.ell(x,y,r,r,RU[0])}
+  for(let i=6;i<=50;i++){const[x,y,r]=pt(i/50);g.ell(x-.5,y-.6,r-1,r-1,RU[1])}
+  for(let i=8;i<=46;i+=4){const[x,y]=pt(i/50);g.px(x,y-1,FE[2]);g.px(x+1,y,FE[1])}
+  g.blob(33,9,4,3.2,RU);g.px(35,8,LA[2]);g.px(36,10,K);g.px(37,11,LA[1]);g.px(38,12,LA[1]);
+  g.outline();
+}],
+'b3-limaille':[40,40,g=>{
+  g.blob(20,21,4,4,BA);g.px(19,20,LA[1]);g.px(21,22,LA[1]);
+  g.outline();
+  const r=rng(7);
+  for(let k=0;k<3;k++)for(let i=0;i<34;i++){const a=i/34*Math.PI*2+k,rad=7+k*4.5+Math.sin(a*3+k)*1.5;if(r()<.72){const x=20+Math.cos(a)*rad,y=21+Math.sin(a)*rad*.8;g.px(x,y,r()<.4?FE[2]:FE[1]);if(r()<.3)g.px(x+1,y,FE[0])}}
+}],
+'b3-forgeron':[56,56,g=>{
+  g.sym=true;
+  g.rect(19,42,7,11,BA[0]);g.rect(18,51,8,2,FE[0]);
+  g.poly([[14,22],[28,22],[28,43],[18,43]],BA[1]);g.poly([[14,22],[18,22],[20,43],[18,43]],BA[0]);
+  g.rect(22,27,6,8,K);g.rect(23,28,5,6,LA[1]);g.rect(25,29,3,4,LA[2]);g.rect(23,30,5,1,K);g.rect(23,32,5,1,K);
+  g.rect(8,25,6,14,BA[1]);g.rect(7,36,8,3,FE[1]);g.rect(7,36,8,1,FE[2]);g.blob(11,42,4,3.5,BA);
+  g.blob(12,23,6.5,5,FE);
+  g.ell(27,14,4.5,5,FE[0]);g.ell(27,14,3.5,4,FE[1]);g.rect(25,14,3,1,LA[2]);g.rect(27,16,1,4,FE[0]);
+  for(let i=0;i<7;i++){g.px(6-i*.8,40+i*2,i%2?FE[2]:FE[0]);g.px(7-i*.8,41+i*2,FE[1])}
+  g.sym=false;
+  g.line(44,40,50,15,'#6a4a30',2);g.rect(43,7,12,8,FE[1]);g.rect(43,7,12,2,FE[2]);g.rect(43,13,12,2,FE[0]);g.rect(53,9,2,4,LA[1]);
+  g.outline();
+}],
+'b3-martyre':[56,56,g=>martyre(g,['#3a2a2c','#5c4038','#7a5a48'],FE[2],g=>{
+  for(let a=0;a<10;a++){const an=a/10*Math.PI*2;g.line(27.5+Math.cos(an)*10,13+Math.sin(an)*10,27.5+Math.cos(an)*14,13+Math.sin(an)*14,FE[1])}
+},g=>{
+  for(let i=0;i<22;i++){const c=i%2?FE[2]:FE[0];g.px(17+i,26+i*.8,c);g.px(38-i,26+i*.8,c)}
+  for(let i=0;i<9;i++){g.px(9,19+i*2,i%2?FE[2]:FE[0]);g.px(46,19+i*2,i%2?FE[2]:FE[0])}
+  g.rect(8,38,3,3,FE[1]);g.rect(45,38,3,3,FE[1]);
+})],
+'b3-boss':[88,72,g=>{
+  const r=rng(3);
+  for(let a=0;a<11;a++){const an=a/11*Math.PI*2+.2,x=44+Math.cos(an)*38,y=38+Math.sin(an)*28;g.line(44+Math.cos(an)*20,38+Math.sin(an)*15,x,y,'#5a1218',2);g.px(x,y,BEAST)}
+  g.blob(44,38,27,21,['#2e0a10','#6a1620','#8f2430']);
+  for(let i=0;i<26;i++)g.px(22+r()*44,22+r()*32,r()<.5?'#8f2430':'#4a0e16');
+  g.ell(44,37,16,12.5,'#2e0a10');g.ell(44,37,14.5,11,'#e9dccb');g.ell(44,39,14,9,'#d2bfae');
+  g.ell(44,37,8.5,8.5,'#7a1218');g.ell(44,37,7,7,BEAST);g.ring(44,37,5,'#ff7a6a',1.2,2);
+  g.ell(44,37,2.2,7,K);g.rect(40,32,2,2,'#fff');
+  g.line(30,34,34,36,'#b8404a');g.line(58,41,54,39,'#b8404a');
+  [[8,14],[80,16],[10,60],[78,58]].forEach(([x,y])=>{g.blob(x,y,4.5,4.5,['#4a0e16',BEAST,'#ff7a6a'])});
+  g.outline();
+}],
+/* ── biome 4 ── */
+'b4-gisant':[40,40,g=>{
+  g.rect(6,35,28,3,ST[0]);g.rect(6,35,28,1,ST[1]);
+  g.sym=true;
+  g.rect(15,29,4,7,ST[1]);g.rect(15,14,5,16,ST[2]);g.rect(15,14,2,16,ST[1]);
+  g.rect(11,14,4,6,ST[2]);g.rect(11,20,3,7,ST[1]);
+  g.ell(19,9,3.6,4.2,ST[2]);g.rect(17,7,3,5,GO[1]);g.rect(17,7,3,1,GO[2]);g.rect(18,9,1,1,K);
+  g.rect(19,15,1,19,'#d8dce4');g.rect(16,18,4,2,ST[2]);g.rect(17,17,3,1,GO[1]);
+  g.sym=false;
+  g.line(13,24,15,28,K);g.px(26,22,K);g.px(27,23,K);
+  g.outline();
+  g.px(8,31,ST[2]);g.px(31,29,ST[2]);g.px(33,32,ST[1]);
+}],
+'b4-encensoir':[40,40,g=>{
+  for(let y=1;y<12;y++)g.px(19+(y%2),y,y%2?GO[0]:GO[1]);
+  g.sym=true;
+  g.poly([[17,12],[20,12],[20,16],[14,16]],GO[1]);g.rect(18,11,2,1,GO[2]);
+  g.blob(19,21,7,6,GO);
+  g.rect(13,20,7,1,GO[0]);
+  g.rect(15,22,2,2,K);g.px(15,23,LA[1]);g.px(16,22,LA[2]);g.rect(18,23,2,2,K);g.px(19,24,LA[1]);
+  g.poly([[17,27],[20,27],[20,31],[18,31]],GO[0]);
+  g.sym=false;
+  g.rect(19,32,2,3,GO[1]);g.px(19,35,GO[2]);
+  g.outline();
+  const sm=['#8e8894','#6e6878'];
+  [[26,13,3,2],[30,9,2.4,1.8],[28,5,2,1.4],[11,10,2.4,1.6],[8,6,1.8,1.2]].forEach(([x,y,a,b],i)=>g.ell(x,y,a,b,sm[i%2]));
+  [[25,11],[31,7],[10,8]].forEach(([x,y])=>g.px(x,y,'#b8b0c0'));
+}],
+'b4-rat':[40,40,g=>{
+  [[8,33,5],[22,34,6],[14,36,4]].forEach(([x,y,w])=>{g.rect(x,y,w,2,BONE);g.px(x-1,y,BONE);g.px(x+w,y+1,BONE)});
+  g.ell(30,35,3,2.4,BONE);g.px(29,35,K);g.px(31,35,K);
+  g.line(9,26,4,22,'#a88a90');g.line(4,22,5,16,'#a88a90');g.line(5,16,9,13,'#a88a90');
+  const f=['#2a2428','#4a4048','#6a5e68'];
+  g.blob(18,26,9.5,5.5,f);g.blob(28,25,4.6,3.6,f);g.ell(26,21,1.8,2,'#a88a90');
+  g.px(30,24,GO[2]);g.px(33,26,'#a88a90');g.px(32,27,'#a88a90');
+  g.rect(13,31,2,2,f[0]);g.rect(22,31,2,2,f[0]);
+  g.outline();
+}],
+'b4-gardien':[56,56,g=>{
+  g.sym=true;
+  g.poly([[11,22],[28,22],[28,52],[7,50]],CR[0]);
+  g.rect(20,43,6,10,GO[0]);g.rect(19,51,7,2,GO[1]);
+  g.poly([[15,20],[28,20],[28,43],[19,43]],GO[1]);g.poly([[15,20],[19,20],[21,43],[19,43]],GO[0]);
+  g.rect(8,25,6,13,GO[1]);g.rect(8,25,2,13,GO[0]);g.blob(11,40,4,3.5,GO);
+  g.blob(13,21,7,5.5,GO);
+  g.rect(23,8,5,10,GO[1]);g.rect(22,10,2,6,GO[0]);g.rect(24,12,4,1,K);g.rect(27,13,1,4,K);
+  g.poly([[26,8],[28,2],[28,8]],CR[2]);
+  g.poly([[20,24],[28,24],[28,47],[23,41]],CR[1]);g.poly([[21,25],[28,25],[28,27],[21,27]],GO[2]);
+  g.ell(27,33,2.6,4,GO[0]);g.ell(27,33,1.8,3,'#f4f0e0');
+  g.sym=false;
+  g.px(27,32,BONE);g.px(28,32,BONE);g.rect(27,34,2,1,'#b8b0a0');
+  g.outline();
+}],
+'b4-martyre':[56,56,g=>martyre(g,CR,GO[2],g=>{
+  g.ring(27.5,13,14,GO[0],1.6);
+  for(let a=0;a<16;a++){if(a%4===1)continue;const an=a/16*Math.PI*2;g.line(27.5+Math.cos(an)*15,13+Math.sin(an)*15,27.5+Math.cos(an)*18,13+Math.sin(an)*18,GO[1])}
+  g.rect(36,0,6,6,null);
+},g=>{
+  g.sym=true;g.poly([[23,9],[23,5],[25,8],[27,3],[28,8],[28,10]],GO[1]);g.px(27,6,CR[2]);g.sym=false;
+  g.rect(13,50,30,2,GO[0]);
+})],
+'b4-boss':[88,72,g=>{
+  g.ell(44,64,14,3,'#1c1820');
+  [[14,50],[72,52]].forEach(([x,y])=>{g.rect(x,y,5,10,'#2c2832');g.ell(x+2,y-2,2.4,2.4,'#2c2832');g.rect(x+5,y-6,1,16,GO[0]);g.px(x+2,y-2,GO[2]);g.rect(x+1,y+3,3,1,GO[1])});
+  g.sym=true;
+  g.poly([[40,31],[44,31],[44,63],[34,63],[38,46]],'#cfc6b4');g.poly([[42,31],[44,31],[44,63],[40,63]],'#f0e8d8');
+  g.rect(43,32,1,31,GO[1]);g.rect(34,61,10,2,GO[1]);
+  g.ell(43,26,3,3.4,SKIN);g.px(42,26,K);
+  g.poly([[40,23],[43,10],[44,10],[44,23]],GO[1]);g.rect(43,14,1,8,CR[1]);
+  g.sym=false;
+  g.line(48,36,56,40,'#cfc6b4',2);g.rect(57,16,2,48,GO[0]);
+  for(let a=0;a<12;a++){const an=a/12*Math.PI*2;g.line(58+Math.cos(an)*5,12+Math.sin(an)*5,58+Math.cos(an)*9,12+Math.sin(an)*9,GO[1])}
+  g.ell(58,12,5,5,GO[1]);g.ell(58,12,3.4,3.4,GO[2]);g.ell(58,12,1.6,1.6,'#fffbe8');
+  g.outline();
+  g.ring(44,42,31,GO[1],1.6,2);g.ring(44,42,28,GO[0],1,3);
+  [[44,11],[13,42],[75,42],[22,20],[66,20]].forEach(([x,y])=>{g.px(x,y,GO[2]);g.px(x-1,y,GO[1]);g.px(x+1,y,GO[1]);g.px(x,y-1,GO[1]);g.px(x,y+1,GO[1])});
+}],
+};
+
+function sprite(k){const[w,h,fn]=S[k];const g=G(w,h);fn(g);g.sym=false;return g}
+
+/* ── scènes (240 × 112) ── */
+function scene(cv,k){
+  const W=240,H=112;cv.width=W;cv.height=H;const c=cv.getContext('2d'),r=rng(k.seed);
+  const R=(x,y,w,h,col)=>{c.fillStyle=col;c.fillRect(Math.round(x),Math.round(y),Math.round(w),Math.round(h))};
+  const put=(name,x,y)=>{const g=sprite(name);c.fillStyle='rgba(0,0,0,.35)';for(let i=-g.w*.3;i<g.w*.3;i++)c.fillRect(Math.round(x+g.w/2+i),y+g.h-3,1,2);g.blit(c,x,y)};
+  const gput=(g,x,y)=>g.blit(c,x,y);
+  R(0,0,W,H,k.floor[1]);
+  if(k.flags)for(let y=30;y<H;y+=11)for(let x=((y/11|0)%2)*-9;x<W;x+=18){R(x,y,18,11,r()<.3?k.floor[2]:k.floor[1]);R(x,y,18,1,k.floor[0]);R(x,y,1,11,k.floor[0])}
+  else for(let i=0;i<1100;i++)R(r()*W,28+r()*(H-28),1+(r()*3|0),1,k.floor[r()<.55?0:2]);
+  k.under&&k.under(R,r,c);
+  const dep=[];let prev=25;
+  for(let x=0;x<W;x+=6){const d=k.flat?24:Math.max(17,Math.min(33,prev+((r()*9|0)-4)));prev=d;dep.push(d);
+    R(x,0,6,d,k.wall[0]);R(x,d,6,12,k.wall[1]);R(x,d,6,1,k.wall[2]);R(x,d+12,6,2,'rgba(0,0,0,.5)');
+    if(k.flat){R(x,d+6,6,1,k.wall[0]);R(x+((x/6)%2?1:4),d+1,1,5,k.wall[0]);R(x+((x/6)%2?4:1),d+7,1,5,k.wall[0])}
+    else{if(r()<.6)R(x+(r()*5|0),d+2+(r()*7|0),1,3,k.wall[0]);if(r()<.4)R(x+(r()*4|0),d+3+(r()*6|0),2,1,k.wall[2])}
+    for(let i=0;i<3;i++)if(r()<.35)R(x+r()*5,r()*(d-3),2,1,k.wall[1]);
+    if(r()<k.ore){const n=3+(r()*4|0);for(let i=0;i<n;i++){const ox=x+r()*6-1,oy=d+2+r()*8;R(ox,oy,2,2,k.oreC[1]);R(ox,oy,1,1,k.oreC[2]);if(r()<.5)R(ox+1,oy+2,1,1,k.oreC[3])}}
+  }
+  k.props(R,r,c,dep,put,gput);
+  R(0,0,W,H,'rgba(6,6,14,.34)');
+  const halo=(x0,y0,rad,col)=>{c.fillStyle=col;for(let y=-rad;y<=rad;y++)for(let x=-rad;x<=rad;x++){const q=Math.hypot(x,y*1.5)/rad;if(q>1)continue;const a=q<.4?.26:q<.7?.15:((x+y)&1?.12:0);if(a){c.globalAlpha=a;c.fillRect(x0+x,y0+y,1,1)}}c.globalAlpha=1};
+  k.lights.forEach(l=>halo(...l));
+}
+const stal=(R,x,y,h,p)=>{for(let i=0;i<h;i++){const w=Math.max(1,Math.round((h-i)/2.3));R(x-w/2-1,y-i,w+2,1,K);}for(let i=0;i<h;i++){const w=Math.max(1,Math.round((h-i)/2.3));R(x-w/2,y-i,w,1,i>h*.55?p[2]:p[1]);R(x-w/2,y-i,1,1,p[0])}};
+const quartz=(R,x,y)=>{R(x-1,y-6,5,8,K);R(x,y-5,3,6,'#b9c2dc');R(x+1,y-5,1,5,'#f4f6ff');R(x+3,y-2,3,4,K);R(x+3,y-1,2,2,'#dfe8ff')};
+
+const SC={
+b2:{seed:21,floor:RK,wall:['#10181a','#22302f','#3a4f51'],ore:.3,oreC:[0,CU[1],CU[2],VG[1]],
+  under(R,r){
+    for(let x=0;x<240;x++){const y0=74+Math.sin(x/19)*4+Math.sin(x/7)*1.5;R(x,y0-1,1,1,'#0f1719');R(x,y0,1,19,WA[1]);R(x,y0,1,2,WA[0]);R(x,y0+17,1,2,WA[0]);R(x,y0+19,1,1,'#0f1719')}
+    for(let i=0;i<34;i++)R(r()*236,78+r()*12,3+(r()*4|0),1,WA[2]);
+    [[26,48,20,8],[196,100,22,7]].forEach(([x,y,w,h])=>{for(let j=0;j<h;j++){const k=Math.sin(j/h*Math.PI)*w/2;R(x+w/2-k,y+j,k*2,1,WA[1])}R(x+5,y+3,5,1,WA[2])});
+  },
+  props(R,r,c,dep,put,gput){
+    /* pont de pierre */
+    R(146,69,28,29,K);R(147,70,26,27,'#5a6a6a');for(let y=70;y<97;y+=5){R(147,y,26,1,'#3a4a4a');R(150+((y/5|0)%2)*9,y,1,5,'#3a4a4a')}R(147,70,2,27,'#7a8a88');R(171,70,2,27,'#3a4a4a');
+    /* colonne de pompage */
+    const px=74;R(px-1,dep[12]+4,6,52,K);R(px,dep[12]+4,4,51,CU[1]);R(px,dep[12]+4,1,51,CU[2]);R(px+3,dep[12]+4,1,51,CU[0]);
+    for(let y=dep[12]+10;y<86;y+=11){R(px-2,y,8,3,K);R(px-1,y,6,2,CU[0]);R(px-1,y,6,1,CU[1])}
+    R(px+1,48,2,5,VG[1]);R(px,60,2,7,VG[1]);R(px+2,66,1,3,VG[2]);
+    const wh=G(30,30);wh.ring(14.5,14.5,11,'#6a4a30',2.6);for(let a=0;a<8;a++){const an=a/8*Math.PI*2;wh.line(14.5,14.5,14.5+Math.cos(an)*11,14.5+Math.sin(an)*11,'#8a6844');wh.rect(13+Math.cos(an)*12.5,13+Math.sin(an)*12.5,3,3,'#8a6844')}wh.ell(14.5,14.5,2.6,2.6,CU[1]);wh.outline();gput(wh,88,62);
+    R(88,84,30,2,WA[2]);
+    /* tuyau horizontal le long de la paroi */
+    for(let x=78;x<132;x++){R(x,43,1,4,K)}R(78,44,54,2,CU[1]);R(78,44,54,1,CU[2]);for(let x=90;x<132;x+=14){R(x,43,3,4,CU[0])}R(100,46,1,4,VG[1]);R(121,46,1,6,VG[1]);R(121,53,1,1,VG[2]);
+    /* malachite */
+    stal(R,18,66,13,MA);stal(R,25,68,8,MA);stal(R,205,62,15,MA);stal(R,214,64,9,MA);stal(R,198,65,6,MA);stal(R,128,66,7,MA);
+    quartz(R,44,62);quartz(R,186,50);quartz(R,224,104);
+    /* rails */
+    for(let x=10;x<70;x+=6)R(x,103,4,1,'#5a4630');R(8,101,64,1,FE[0]);R(8,105,58,1,FE[0]);
+    put('b2-tick',96,26);put('b2-eel',104,60);put('b2-bat',160,34);
+  },
+  lights:[[46,58,26,'#dfe8ff'],[188,46,24,'#dfe8ff'],[226,100,18,'#dfe8ff'],[124,84,22,'#9fe8d0']]},
+b3:{seed:5,floor:BA,wall:['#0f0d12','#221e27','#3a3440'],ore:.32,oreC:[0,FE[1],FE[2],RU[1]],
+  under(R,r){
+    for(let x=0;x<240;x++){const y0=78+Math.sin(x/23)*5+Math.sin(x/6)*1.2;R(x,y0-2,1,2,'#0d0b0f');R(x,y0,1,18,LA[0]);R(x,y0+3,1,11,LA[1]);R(x,y0+7+Math.sin(x/9)*2,1,3,LA[2]);R(x,y0+18,1,2,'#0d0b0f')}
+    for(let i=0;i<26;i++){const x=r()*234,y=80+r()*12;R(x,y,3+(r()*4|0),2,'#3a1410');R(x,y,2,1,'#1c0c0c')}
+  },
+  props(R,r,c,dep,put,gput){
+    /* orgues de basalte */
+    const org=(x,y,n)=>{for(let i=0;i<n;i++){const h=6+((i*7+x)%9),xx=x+i*6;R(xx-1,y-h-5,7,h+6,K);R(xx,y-h,5,h,BA[1]);R(xx,y-h,1,h,BA[0]);R(xx,y-h-4,5,4,BA[2]);R(xx+1,y-h-4,3,1,'#5a5464')}};
+    org(8,66,4);org(196,60,5);org(120,110,3);
+    /* gué de roche */
+    R(86,76,16,22,K);R(87,77,14,20,'#3a3440');R(87,77,14,2,'#57505a');R(90,84,5,1,'#221e27');R(94,91,4,1,'#221e27');
+    /* engrenage enseveli */
+    const ge=G(48,30);for(let a=0;a<14;a++){const an=a/14*Math.PI*2;ge.rect(22+Math.cos(an)*19,24+Math.sin(an)*19,4,4,RU[1])}ge.ring(23.5,25.5,15,RU[1],6);ge.ring(23.5,25.5,17,RU[2],1.2);ge.ell(23.5,25.5,5,5,FE[0]);for(let a=0;a<6;a++){const an=a/6*Math.PI*2;ge.line(23.5,25.5,23.5+Math.cos(an)*13,25.5+Math.sin(an)*13,RU[0],2)}for(let x=0;x<48;x++)for(let y=27;y<30;y++)ge.d[y*48+x]=null;ge.outline();gput(ge,140,38);
+    R(138,64,54,3,BA[0]);for(let i=0;i<12;i++)R(138+r()*52,63+r()*4,3,2,BA[2]);
+    /* gueule de four */
+    const fx=54,fd=dep[9];R(fx-1,fd+1,14,12,K);R(fx,fd+2,12,11,RU[0]);R(fx+2,fd+4,8,9,'#1c0c0c');R(fx+3,fd+8,6,5,LA[0]);R(fx+4,fd+10,4,3,LA[1]);R(fx+5,fd+11,2,2,LA[2]);R(fx,fd+2,12,1,RU[2]);
+    /* chaînes */
+    [[30,16],[108,22],[178,14],[226,18]].forEach(([x,n],k)=>{const d=dep[x/6|0]+12;for(let i=0;i<n;i++)R(x+(i%2),d+i,1,1,i%2?FE[2]:FE[0]);R(x-1,d+n,3,2,FE[1])});
+    /* scories */
+    [[36,104],[70,58],[214,104],[168,106]].forEach(([x,y])=>{const g=G(20,12);g.blob(10,7,8,4,['#1c181c','#3a3438','#57505a']);g.px(7,6,LA[1]);g.px(12,8,LA[0]);g.px(14,5,LA[1]);g.outline();gput(g,x-10,y-8)});
+    /* enclume */
+    R(20,98,12,3,K);R(21,95,10,3,FE[1]);R(21,95,10,1,FE[2]);R(24,98,4,5,FE[0]);R(22,103,8,2,FE[0]);
+    put('b3-scorie',104,36);put('b3-vouivre',160,66);put('b3-limaille',28,56);
+  },
+  lights:[[30,86,30,LA[1]],[94,86,26,LA[2]],[150,88,30,LA[1]],[212,86,30,LA[1]],[60,44,20,LA[2]]]},
+b4:{seed:11,flat:true,flags:true,floor:['#26222c','#3a3540','#443e4a'],wall:['#1a171e','#4e4854','#6a6272'],ore:.16,oreC:[0,GO[1],GO[2],'#d8d4e0'],
+  props(R,r,c,dep,put,gput){
+    /* filet d'or du dallage */
+    for(let x=0;x<240;x+=2)R(x,74,1,1,GO[0]);for(let x=1;x<240;x+=4)R(x,74,1,1,GO[1]);
+    const su=G(24,16);su.ring(11.5,7.5,5,GO[0],1.4);for(let a=0;a<8;a++){const an=a/8*Math.PI*2;su.px(11.5+Math.cos(an)*8,7.5+Math.sin(an)*6,GO[1])}su.ell(11.5,7.5,2,1.6,GO[1]);gput(su,108,67);
+    /* niches */
+    for(const x of[14,50,170,206]){R(x-1,26,9,11,K);R(x,27,7,10,'#141018');R(x+1,26,5,1,K);R(x+2,31,3,3,BONE);R(x+2,34,3,1,'#a89c88');R(x+2,32,1,1,K);R(x+4,32,1,1,K);R(x+6,33,1,3,'#f0e8d8');R(x+6,32,1,1,'#ffd890')}
+    /* bannières */
+    for(const x of[32,88,146,188]){R(x-1,24,9,16,K);R(x,25,7,14,CR[1]);R(x,25,2,14,CR[0]);R(x+3,37,1,2,'#3a3540');R(x,25,7,1,GO[1]);R(x+2,29,3,3,GO[1]);R(x+3,30,1,1,GO[2]);R(x+3,27,1,1,GO[0]);R(x+3,33,1,1,GO[0])}
+    /* colonnes */
+    for(const x of[70,126]){R(x-2,22,10,36,K);R(x,24,6,32,MAR);R(x,24,2,32,'#8a8290');R(x+5,24,1,32,'#c8c2cc');R(x-1,23,8,3,'#c8c2cc');R(x-1,54,8,3,'#8a8290');R(x+2,30,1,6,'#8a8290');R(x+3,40,1,8,'#8a8290');R(x-3,58,14,2,'rgba(0,0,0,.4)')}
+    /* sarcophages */
+    const sar=(x,y,open)=>{R(x-1,y-1,28,18,K);R(x,y,26,10,ST[2]);R(x,y+10,26,6,ST[1]);R(x,y,26,1,'#9a92a2');R(x,y+12,26,1,GO[0]);if(!open){R(x+4,y+3,16,4,'#948c9c');R(x+3,y+4,3,2,GO[1]);R(x+20,y+4,2,2,'#948c9c')}else{R(x+2,y+2,22,7,'#0d0b10')}};
+    sar(18,52,true);sar(172,84,false);sar(206,48,false);
+    /* candélabres */
+    for(const[x,y]of[[58,96],[150,54],[100,100]]){R(x-1,y-12,3,13,K);R(x,y-11,1,11,GO[0]);R(x-3,y-12,7,2,K);R(x-2,y-12,5,1,GO[1]);R(x-2,y-14,1,2,'#f0e8d8');R(x+2,y-14,1,2,'#f0e8d8');R(x-2,y-15,1,1,'#ffd890');R(x+2,y-15,1,1,'#ffd890');R(x-2,y,5,2,GO[0])}
+    /* ossements */
+    for(let i=0;i<10;i++){const x=120+r()*30,y=92+r()*14;R(x,y,3+(r()*3|0),1,BONE)}R(132,96,3,3,BONE);R(133,97,1,1,K);
+    put('b4-gisant',22,34);put('b4-encensoir',82,58);put('b4-rat',124,76);
+  },
+  lights:[[58,82,26,'#ffd890'],[150,42,24,'#ffd890'],[100,86,24,'#ffd890'],[18,30,10,'#ffd890'],[210,30,10,'#ffd890'],[101,78,14,LA[1]]]},
+};
+
+const CARDS={
+b2:[
+ ['b2-eel','Faune','Anguille des puits','Tapie dans l’eau noire. Sa décharge frappe tout ce qui a les pieds dans la même flaque.'],
+ ['b2-tick','Faune','Tique de filon','Carapace de cuivre, collée aux veines. Neutre tant qu’on ne mine pas son filon.'],
+ ['b2-bat','Faune','Chauve-souris patinée','En nuées au plafond des grandes salles. Éteint les torches en passant.'],
+ ['b2-colosse','Mini-boss · sanctum','Colosse de vert-de-gris','Automate tyrien rongé par l’oxyde. Invulnérable tant que ses plaques tiennent : il faut les faire sauter une à une pour atteindre le cœur de cuivre.'],
+ ['b2-martyre','Mini-boss · martyre','Martyre des Eaux','Même duel sous dôme que celle de Byrsa, mais l’arène se noie par paliers : les motifs glissent sur l’eau et les tirs y ricochent.'],
+ ['b2-boss','Boss de fin','Gorge-Cuivre, la Dévoreuse de filons','Un ver de la Bête engraissé au minerai. Elle creuse ses propres galeries pendant le combat et ouvre des brèches vers la base : on se bat pour elle et pour les murs.',1],
+],
+b3:[
+ ['b3-scorie','Faune','Scorie vive','Boule de laitier qui roule vers la chaleur. Explose en flaque brûlante à sa mort.'],
+ ['b3-vouivre','Faune','Vouivre de rouille','Lézard des coulées. Sa morsure ronge l’armure : − 1 jusqu’à la fin du combat.'],
+ ['b3-limaille','Faune','Essaim de limaille','Poussière de fer autour d’une pierre d’aimant. Dévie les flèches, craint le feu.'],
+ ['b3-forgeron','Mini-boss · sanctum','Maître-Forgeron enchaîné','Le dernier fondeur tyrien, rivé à son four. Ses chaînes délimitent l’arène ; les briser le libère et l’enrage, mais coupe l’alimentation de son marteau.'],
+ ['b3-martyre','Mini-boss · martyre','Martyre du Fer','Ses motifs sont des chaînes tendues qui balaient le dôme, à sauter ou à trancher. Auréole de clous.'],
+ ['b3-boss','Boss de fin · déjà en jeu','L’Œil de la Matrice','Je le place ici : il ferme l’histoire de la Bête juste avant les cryptes. Croquis de rappel, le vrai modèle est celui de la piste Orbite.',1],
+],
+b4:[
+ ['b4-gisant','Faune','Gisant','Statue funéraire au masque d’or. Immobile sur son sarcophage jusqu’à ce qu’on passe à côté.'],
+ ['b4-encensoir','Faune','Encensoir veilleur','Flotte au bout de sa chaîne. Ne se bat pas : s’il vous voit, il sonne la cloche de la salle.'],
+ ['b4-rat','Faune','Rat des ossuaires','Vole les objets laissés au sol et file vers son nid.'],
+ ['b4-gardien','Mini-boss · sanctum','Gardien des Reliques','Porte une châsse en guise de bouclier. Tant que la relique brille, les gisants de la salle se relèvent ; il faut la lui faire lâcher.'],
+ ['b4-martyre','Mini-boss · martyre','Martyre couronnée','La version complète du duel : les quatre motifs connus, une auréole brisée qui tourne et tire, et une cinquième phase.'],
+ ['b4-boss','Boss de fin','Le Hiérophante de Byrsa','Le modèle 1 de la planche « invocateur » : frêle, derrière un dôme, il appelle la garde sans fin. Règle « Le lien » : le bouclier tombe quand toutes ses invocations sont mortes.',1],
+]};
+
+document.querySelectorAll('[data-cards]').forEach(el=>{
+  CARDS[el.dataset.cards].forEach(([k,role,name,txt,wide])=>{
+    const g=sprite(k),cv=document.createElement('canvas');cv.width=g.w;cv.height=g.h;g.blit(cv.getContext('2d'),0,0);
+    cv.style.width=(g.w*3)+'px';cv.setAttribute('aria-label',name);
+    const card=document.createElement('div');card.className='card'+(wide?' wide':'');
+    const art=document.createElement('div');art.className='art';art.appendChild(cv);
+    const t=document.createElement('div');t.className='txt';
+    const a=document.createElement('span');a.className='role';a.textContent=role;
+    const b=document.createElement('b');b.textContent=name;
+    const p=document.createElement('p');p.textContent=txt;
+    t.append(a,b,p);card.append(art,t);el.appendChild(card);
+  });
+});
+document.querySelectorAll('[data-scene]').forEach(cv=>scene(cv,SC[cv.dataset.scene]));
+</script>

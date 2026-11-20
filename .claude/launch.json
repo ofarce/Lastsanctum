@@ -240,6 +240,113 @@
         "127.0.0.1"
       ],
       "port": 8171
+    },
+    {
+      "name": "planches-refonte",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8177",
+        "--bind",
+        "127.0.0.1"
+      ],
+      "port": 8177
+    },
+    {
+      "name": "refonte-export",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "tools/refonte/serve.py"
+      ],
+      "port": 8179
+    },
+    {
+      "name": "planches-sons",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8183",
+        "--bind",
+        "127.0.0.1",
+        "--directory",
+        "planches"
+      ],
+      "port": 8183
+    },
+    {
+      "name": "planches-arbalestrie",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8185",
+        "--bind",
+        "127.0.0.1"
+      ],
+      "port": 8185
+    },
+    {
+      "name": "pylone-export",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "tools/pylone/serve.py"
+      ],
+      "port": 8179
+    },
+    {
+      "name": "planches-invocateur",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8187",
+        "--bind",
+        "127.0.0.1",
+        "--directory",
+        "planches"
+      ],
+      "port": 8187
+    },
+    {
+      "name": "planches-martyre-bh",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8187",
+        "--bind",
+        "127.0.0.1"
+      ],
+      "port": 8187
+    },
+    {
+      "name": "planches-recherche",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8193",
+        "--bind",
+        "127.0.0.1",
+        "--directory",
+        "planches"
+      ],
+      "port": 8193
+    },
+    {
+      "name": "planches-chiens",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8195",
+        "--bind",
+        "127.0.0.1"
+      ],
+      "port": 8195,
+      "url": "http://127.0.0.1:8195"
     }
   ]
 }

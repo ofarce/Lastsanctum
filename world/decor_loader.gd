@@ -55,9 +55,19 @@ func texture(path: String) -> Texture2D:
 func build_decor(registry: DecorRegistry) -> void:
 	var placements: Array = read_json(BAKED + "decor_placements.json")["placements"]
 	for p: Dictionary in placements:
+		if _retired(p):
+			continue
 		var e := p.duplicate()
 		e["node"] = make_node(e)
 		registry.add_raw(e)
+
+
+## Anciens portails retirés du jeu : portail central des Exilés (la capsule le remplace), portails des
+## quatre dieux, leurs effets et les piliers sculptés qui les encadrent ; autel de pierre de l'Ancre (le puits
+## d'AnchorView le remplace).
+static func _retired(p: Dictionary) -> bool:
+	return p.has("portal") or p.has("dportal") or p.has("deity_fx") or String(p.get("s", "")).begins_with("deity_deco") \
+		or p.get("s", "") == "altar_01"
 
 
 ## Crée et ajoute le nœud d'une entrée du décor ; renvoie ce nœud.

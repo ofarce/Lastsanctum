@@ -71,6 +71,20 @@ func zone_at(x: float, z: float) -> Zone:
 	return Zone.JUNGLE
 
 
+## Poids continus des sous-zones en un point, pour le sol teinté (GroundZones) : r marais, g clairière,
+## b forêt dense, a coin rocheux. Mêmes bruits et mêmes seuils que zone_at, adoucis sur quelques unités.
+func zone_weights(x: float, z: float) -> Color:
+	var marsh := 0.0
+	if river:
+		marsh = 1.0 - smoothstep(3.5, 9.0, river.bank_distance(x, z))
+	var n := Rng.vnoise(x / 46.0, z / 46.0, seed ^ 0xf10a)
+	var clearing := smoothstep(0.66, 0.80, n)
+	var dense := 1.0 - smoothstep(0.20, 0.34, n)
+	var rocky := smoothstep(0.74, 0.88, Rng.vnoise(x / 30.0, z / 30.0, seed ^ 0x40c4)) * (1.0 - clearing) * (1.0 - dense)
+	var dry := 1.0 - marsh
+	return Color(marsh, clearing * dry, dense * dry, rocky * dry)
+
+
 ## Faut-il retirer cet arbre du décor ? La jungle devient une prairie un peu boisée : les arbres ne
 ## restent guère qu'en bosquets (bruit GROVE), rares ailleurs, presque absents des clairières et des chemins.
 const GROVE := 0.6

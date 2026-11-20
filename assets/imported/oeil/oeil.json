@@ -1,0 +1,51 @@
+{
+ "source": "planches/oeil-matrice-export.html",
+ "ax": 100,
+ "ay": 128,
+ "h": 132,
+ "phases": 3,
+ "idle": {
+  "frame_w": 200,
+  "frame_h": 150,
+  "cols": 8,
+  "count": 48,
+  "fps": 12.0,
+  "rows": 6
+ },
+ "cast": {
+  "frame_w": 200,
+  "frame_h": 150,
+  "cols": 8,
+  "count": 24,
+  "fps": 12.0,
+  "rows": 3
+ },
+ "iris": {
+  "frame_w": 32,
+  "frame_h": 32,
+  "cols": 5,
+  "count": 4,
+  "socket": 4,
+  "cx": 16,
+  "cy": 16,
+  "rows": 3
+ },
+ "lids": {
+  "frame_w": 72,
+  "frame_h": 56,
+  "cols": 12,
+  "count": 12,
+  "cx": 36,
+  "cy": 28,
+  "rows": 3
+ },
+ "eye": {
+  "x": 100,
+  "y": 80,
+  "rx": 27,
+  "ry": 19,
+  "look_x": 7.0,
+  "look_y": 4.5,
+  "rest_open": 0.22
+ }
+}

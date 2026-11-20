@@ -48,4 +48,6 @@ func _process(_delta: float) -> void:
 
 func _draw() -> void:
 	var f := frame_at(GameState.sim_time)
+	if GameState.hud_chest.get("kind") == "vault":
+		ProductionView.halo(self, Vector2(0, -4), 26.0, 11.0)
 	draw_texture_rect_region(_tex, Rect2(-_anchor, _frame), Rect2(Vector2(f.x, f.y) * _frame, _frame))

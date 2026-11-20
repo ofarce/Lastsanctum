@@ -13,4 +13,4 @@ func test_pixel_art_settings() -> void:
 	# L'alignement sur la grille native est fait par shaders/pixel_snap.gdshader (comme natP) :
 	# l'arrondi global de Godot doit rester désactivé, sinon il arrondit une seconde fois.
 	check_eq(ProjectSettings.get_setting("rendering/2d/snap/snap_2d_transforms_to_pixel"), false, "snap 2D global")
-	check_eq(ProjectSettings.get_setting("application/run/main_scene"), "res://main/main.tscn", "scène principale")
+	check_eq(ProjectSettings.get_setting("application/run/main_scene"), "res://boot/loader.tscn", "scène principale")

@@ -27,6 +27,13 @@ var overload_unit: Unit = null
 var overload_stage: int = 0
 ## Instant de (re)lancement de la séquence du portail des Exilés (PORTAL.start).
 var portal_start: float = 0.0
+## Séquence d'ouverture (sim/opening.gd) : étape (vide = pas de séquence) et son début.
+var opening_stage := ""
+var opening_at: float = 0.0
+var door_closed := false
+var shield_up := false
+var shield_at: float = INF
+var shield_line_said := false
 ## Portails divins actifs (DEITY_PORTALS[].active) : id du dieu -> vrai pendant une invocation.
 var deity_active: Dictionary = {}
 ## Unité qui réactive l'Ancre (ORB.owner), ou null.
@@ -58,6 +65,8 @@ var placed: Array[Dictionary] = []
 var hud_place_item: String = ""
 ## Objets persistants au sol : {item: identifiant, position: Vector2(x, z)}.
 var ground_items: Array[Dictionary] = []
+## Caches de la jungle à fouiller (sim/loot.gd, place_caches) : {x, z, kind, loot}.
+var caches: Array[Dictionary] = []
 
 ## Unités alliées et sélection (units, selected).
 var units: Array[Unit] = []
@@ -70,6 +79,9 @@ var hud_mode: String = ""
 var hud_menu: String = ""
 var hud_build_type: String = ""
 var hud_building: Building = null
+## Coffre désigné au clic droit (halo de sélection) : {"kind": "vault"} pour le coffre antique,
+## {"building": Building, "kind": "in" | "out"} pour un coffre de production ; vide sinon.
+var hud_chest: Dictionary = {}
 ## Ennemi sélectionné (écart voulu D14), ou null.
 var hud_enemy: Enemy = null
 
@@ -77,10 +89,22 @@ var hud_enemy: Enemy = null
 var wave: int = 0
 ## Repaires de la faune hostile (sim/wildlife.gd) : {kind, x, z, beast, empty_since}.
 var wildlife_lairs: Array[Dictionary] = []
+## Errants des galeries (sim/roamers.gd) : {state, seed, dens} ; vide = à tirer.
+var roamers: Dictionary = {}
+## Flot nocturne (sim/night.gd) : instant du prochain squelette (0 = à tirer), nuit déjà annoncée (numéro du jour).
+var night_next: float = 0.0
+var night_day: int = 0
+## Décor et salles à thème du Temple (sim/sanctum.gd) : {state, seed, layout, lit, done, next} ; vide = à tirer.
+var sanctum: Dictionary = {}
+## Gorge-Cuivre, boss du biome 2 (sim/gorge.gd) : {state, seed, e, mode, phase, marks…} ; vide = à créer.
+var gorge: Dictionary = {}
 ## Météo de la jungle (core/weather.gd) : {kind, from, since} ; vide = temps clair.
 var weather: Dictionary = {}
 ## Assauts programmés (spawnQueue : {"at": instant}) et ennemis vivants (étape 8).
 var spawn_queue: Array = []
+## Escouades de la vague en cours : total et déjà sorties (compteur du HUD).
+var wave_squads := 0
+var squads_out := 0
 var enemies: Array = []
 ## Corps purement visuels : ne bloquent ni les assauts ni le ciblage.
 var enemy_corpses: Array[Enemy] = []
@@ -93,13 +117,34 @@ var martyre_at: float = INF
 var martyre_down_at: float = INF
 var martyre_hit_at: float = INF
 ## Coup de bâton attendu ("melee" ou "fissure") et point visé ; incantation des sceaux en cours ; geste en
-## cours (elle ne bouge pas) ; prochaines attaques à distance prêtes ; effets au sol (sim/martyre.gd).
+## cours (elle ne bouge pas) ; effets au sol (sim/martyre.gd).
 var martyre_hit_kind := "melee"
 var martyre_aim := Vector2.ZERO
 var martyre_cast_at: float = INF
 var martyre_busy_until: float = -INF
-var martyre_ready: Dictionary = {}
 var martyre_fx: Array[Dictionary] = []
+## Salves (planches/martyre-bullet-hell.html) : balles en vol, gestes à venir, phase (0, 1, 2), prochain
+## motif (instant, combinaison imposée sinon rotation de la phase, rang dans chaque rotation), rayon courant
+## du bouclier et début de son resserrement, fin de l'invulnérabilité de l'Ingénieur après un coup.
+## Balles des ennemis à distance tirées sur l'Exilé incarné (sim/enemy_shots.gd).
+var enemy_shots: Array[Dictionary] = []
+var martyre_bullets: Array[Dictionary] = []
+var martyre_events: Array[Dictionary] = []
+var martyre_phase := 0
+var martyre_next_at: float = INF
+var martyre_next: Array = []
+var martyre_rot: Array = [0, 0, 0]
+var martyre_radius := 48.0
+var martyre_shrink_at: float = INF
+var martyre_iframe_until: float = -INF
+## Boss de la frontière, l'Œil de la Matrice (sim/oeil.gd) : "" salle pas encore découverte, "waiting" éveillé,
+## "duel" Ingénieur dans la salle, "defeated" tombé (porte de chair ouverte). Balles en vol, couloirs du Regard
+## (fx), et le reste de son état dans oeil_run (phase, prochain motif, ouverture de l'œil, regard…).
+var oeil: Enemy = null
+var oeil_state := ""
+var oeil_bullets: Array[Dictionary] = []
+var oeil_fx: Array[Dictionary] = []
+var oeil_run: Dictionary = {}
 ## Bâtiments du sanctuaire (buildings) et unités tombées que le Puits des Âmes peut rappeler (FALLEN).
 var buildings: Array[Building] = []
 var fallen: Array[Unit] = []
@@ -119,12 +164,27 @@ var pray_popups: Array[Dictionary] = []
 var deity_until: Dictionary = {}
 ## Point du sol sous le pointeur (templePointer), pour l'aperçu de construction ; null hors du monde.
 var build_pointer: Variant = null
-## Exilé incarné (galerie des Exilés) : la caméra le suit, ZQSD/flèches le pilotent, clic droit attaque.
+## Exilé incarné (galerie des Exilés) : la caméra le suit, ZQSD/flèches le pilotent, clic droit tire.
 var incarnated: Unit = null
+## L'Ingénieur est entré dans la capsule (au centre de la paroi nord, Capsule) : caché, désincarné.
+var in_capsule := false
+## Capsule alimentée par l'Ancre (trait d'énergie arrivé) : allumée et utilisable.
+var capsule_on := false
+## Première entrée dans la capsule faite (soin complet et canon remis).
+var capsule_gift := false
+## Retour de l'Ingénieur tombé : instant où il réapparaît dans la capsule (INF s'il est en vie).
+var engineer_respawn_at: float = INF
+## Munition choisie pour l'Arbalestrie (data/ammo.gd), gardée d'une incarnation à l'autre.
+var ammo := "spirit"
 
 
 func reset() -> void:
 	incarnated = null
+	in_capsule = false
+	capsule_on = false
+	capsule_gift = false
+	engineer_respawn_at = INF
+	ammo = "spirit"
 	sim_time = 0.0
 	fast_construction = false
 	ended = false
@@ -137,6 +197,12 @@ func reset() -> void:
 	overload_unit = null
 	overload_stage = 0
 	portal_start = 0.0
+	opening_stage = ""
+	opening_at = 0.0
+	door_closed = false
+	shield_up = false
+	shield_at = INF
+	shield_line_said = false
 	deity_active = {}
 	orb_owner = null
 	core_hp = 1.0
@@ -150,6 +216,7 @@ func reset() -> void:
 	vault_hint_said = false
 	base_inventory.clear()
 	ground_items.clear()
+	caches.clear()
 	placed.clear()
 	units.clear()
 	selected.clear()
@@ -160,11 +227,21 @@ func reset() -> void:
 	hud_build_type = ""
 	hud_place_item = ""
 	hud_building = null
+	hud_chest = {}
 	hud_enemy = null
 	wave = 0
 	wildlife_lairs.clear()
+	roamers = {}
+	night_next = 0.0
+	night_day = 0
+	sanctum = {}
+	gorge = {}
 	weather = {}
+	Weather.river = null
+	Weather.road = null
 	spawn_queue = []
+	wave_squads = 0
+	squads_out = 0
 	enemies = []
 	martyre = null
 	martyre_state = ""
@@ -176,8 +253,22 @@ func reset() -> void:
 	martyre_aim = Vector2.ZERO
 	martyre_cast_at = INF
 	martyre_busy_until = -INF
-	martyre_ready = {}
 	martyre_fx.clear()
+	martyre_bullets.clear()
+	enemy_shots.clear()
+	martyre_events.clear()
+	martyre_phase = 0
+	martyre_next_at = INF
+	martyre_next = []
+	martyre_rot = [0, 0, 0]
+	martyre_radius = 48.0
+	martyre_shrink_at = INF
+	martyre_iframe_until = -INF
+	oeil = null
+	oeil_state = ""
+	oeil_bullets.clear()
+	oeil_fx.clear()
+	oeil_run = {}
 	enemy_corpses.clear()
 	buildings.clear()
 	fallen.clear()

@@ -52,7 +52,7 @@ func _ready() -> void:
 		await RenderingServer.frame_post_draw
 		var img := get_viewport().get_texture().get_image()
 		img.save_png(ProjectSettings.globalize_path(OUT + "t_%.2f.png" % t))
-		print("capture %.2f s · caméra %s · balistes %s" % [t, world.camera.cam, [GameState.turrets[0]["complete"], GameState.turrets[1]["complete"]]])
+		print("capture %.2f s · caméra %s · balistes %s" % [t, world.camera.cam, GameState.turrets.size()])
 	print("ÉTINCELLE : %.1f im/s" % ((Engine.get_frames_drawn() - f0) * 1000.0 / (Time.get_ticks_msec() - s0)))
 	# Même vue, étincelle terminée : référence pour le coût de l'effet.
 	while GameState.sim_time - GameState.orb_finished_at < AnchorSpark.END + 0.2:
