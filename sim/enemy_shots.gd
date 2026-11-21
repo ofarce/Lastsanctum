@@ -280,10 +280,18 @@ static func tick(sim: Simulation, dt: float) -> void:
 			var reach: float = HIT + b["r"]
 			var dx: float = u.x - b["x"]
 			var dz: float = u.z - b["z"]
-			if dx * dx + dz * dz < reach * reach and _hurt(sim, u, b["dmg"], now):
+			var d2 := dx * dx + dz * dz
+			if d2 < reach * reach and _hurt(sim, u, b["dmg"], now):
 				if b["kind"] == "arrow":
 					Sfx.at("fleche_impact", u.x, u.z)
 				continue
+			# Écaille d'esquive (sim/mods.gd) : le tir est passé tout près sans toucher, puis s'éloigne.
+			var graze := reach + Mods.GRAZE
+			if d2 < graze * graze:
+				b["near"] = true
+			elif b.get("near", false):
+				b.erase("near")
+				Mods.graze(u)
 		keep.append(b)
 	GameState.enemy_shots = keep
 	for b: Dictionary in landed:

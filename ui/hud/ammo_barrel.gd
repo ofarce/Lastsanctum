@@ -70,7 +70,7 @@ func _gui_input(event: InputEvent) -> void:
 		if h == -2:
 			_open = not _open
 		elif h >= 0:
-			GameState.ammo = Ammo.ORDER[h]
+			Ammo.select(Ammo.ORDER[h])
 			_open = false
 		accept_event()
 		queue_redraw()

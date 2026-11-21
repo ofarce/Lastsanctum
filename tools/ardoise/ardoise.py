@@ -3,7 +3,7 @@
 
 Lit res://assets/baked/ (jamais modifié) et écrit res://assets/ardoise/ :
   world/ground/ground_r*_c*.png   sol complet : roche → dessus d'ardoise, sol de grotte → dalles
-  world/tiles/{floor,rock,dug}.png textures 504×504 périodiques, échantillonnées en coordonnées
+  world/tiles/{floor,rock,dug}[2].png textures 504×504 (2 = biome 2, roche de vert-de-gris) périodiques, échantillonnées en coordonnées
                                    absolues du sol (le peintre du jeu et ce script lisent les mêmes)
   world/decor_atlas.png            planche du décor, mêmes régions que celle du baker
   world/runtime/*.png              faces et stalagmites ajoutées en cours de partie
@@ -35,6 +35,12 @@ MOSS = [hx(c) for c in ['#22401f', '#2f5528', '#3e6c31', '#52833a']]
 EARTH_F = [tuple(round(e * .6 + g * .4) for e, g in zip(c, (58, 62, 70))) for c in EARTH1]
 QUARTZ = [hx(c) for c in ['#8e9aac', '#b6c0ce', '#dfe5ee', '#f6f8fb']]
 OUTL = hx('#0b0a0e')
+# Roche de vert-de-gris (biome 2, Sceau de cuivre) : même échelle de clarté que SL, teinte de patine.
+SL2 = [hx(c) for c in ['#101a1b', '#172526', '#1f3433', '#294643', '#365a55', '#48726a', '#618f84', '#86b0a1']]
+VEIN2 = hx('#4a9480')
+COPPER = hx('#c47b58')
+# Teinte du sol du biome 2 (ancien Terrain.BIOME_TINT, désormais cuit dans floor2 / dug2).
+TINT2 = (0.72, 0.96, 0.86)
 
 M32 = 0xFFFFFFFF
 
@@ -96,8 +102,41 @@ def tex_top():
     v = .36 + (fbm(x, y, 9, 7, 11) - .5) * .4
     seam = ((x + y * 2 + np.floor(vn(x, y, 12, 12, 3) * 10).astype(np.int64)) % 9) == 0
     v = v - seam * .14
+    # Feuillets d'ardoise (planche roches-minables, piste 2) : lits horizontaux serrés, ondulés, interrompus.
+    w = (y + np.floor(vn(x, y, 28, 42, 3) * 5).astype(np.int64)) % 7
+    whole = hash_((x // 9) % (P // 9), (y // 7) % (P // 7), 5) >= .22
+    v = v - (whole & (w == 0)) * .26 + (whole & (w == 1)) * .12
     moss = fbm(x, y, 10, 8, 13) > .78
     return pick(moss, rp(MOSS, v - .05, x, y), rp(SL, v, x, y))
+
+
+def tex_top2():
+    """Roche de vert-de-gris : masse sombre sans mousse, veines de patine en biais, paillettes de cuivre."""
+    x, y = grid()
+    v = .24 + (fbm(x, y, 9, 7, 51) - .5) * .4
+    out = rp(SL2, v, x, y)
+    # Veines : droites de pente 1/2 déformées par un bruit lent, tous les 36 px (504 = 14 × 36), trouées.
+    d = (x + 2 * y + np.floor(vn(x, y, 24, 24, 53) * 26).astype(np.int64)) % 36
+    solid = vn(x, y, 14, 14, 55) >= .42
+    out = pick(solid & (d == 1), rp(SL2, v + .16, x, y), out)
+    out = pick(solid & (d == 0), np.broadcast_to(np.array(VEIN2, np.uint8), out.shape), out)
+    fleck = hash_((x >> 1) % (P // 2), (y >> 1) % (P // 2), 57) < .003
+    return pick(fleck, np.broadcast_to(np.array(COPPER, np.uint8), out.shape), out)
+
+
+def tinted(t):
+    return np.clip(np.round(t.astype(np.float64) * np.array(TINT2)), 0, 255).astype(np.uint8)
+
+
+def to_tier2(a):
+    """Sprite d'ardoise → même sprite en roche de vert-de-gris (teintes SL remplacées une à une)."""
+    a = a.copy()
+    rgb = a[..., :3]
+    src = rgb.copy()
+    # La mousse ne pousse pas sur le vert-de-gris : ses quatre teintes rejoignent la roche, au même rang de clarté.
+    for c, c2 in list(zip(SL, SL2)) + list(zip(MOSS, SL2[2:6])):
+        rgb[np.all(src == np.array(c, np.uint8), axis=-1) & (a[..., 3] > 0)] = c2
+    return a
 
 
 def tex_floor():
@@ -312,14 +351,16 @@ def main():
     W = json.load(open(f"{SRC}/manifest.json"))["world"]
     os.makedirs(f"{OUT}/world/tiles", exist_ok=True)
     top, flo, dug = tex_top(), tex_floor(), tex_dug()
-    for name, t in (("rock", top), ("floor", flo), ("dug", dug)):
+    for name, t in (("rock", top), ("floor", flo), ("dug", dug), ("rock2", tex_top2()), ("floor2", tinted(flo)), ("dug2", tinted(dug))):
         Image.fromarray(np.dstack([t, np.full(t.shape[:2], 255, np.uint8)])).save(f"{OUT}/world/tiles/{name}.png", optimize=True)
     rmap = rock_map(W["CAVE_C"]["rock"])
     json.dump({"note": "Style ardoise tyrienne (tools/ardoise/ardoise.py)", "period": P,
                "rock": ["#%02x%02x%02x" % c for c in rmap],
+               "rock2": ["#%02x%02x%02x" % SL2[SL.index(c)] for c in rmap],
                "light": [0.95, 1.02, 1.14]}, open(f"{OUT}/palette.json", "w"), indent=1)
     build_ground(W, top, flo, rmap)
     atlas = np.array(Image.open(f"{SRC}/world/decor_atlas.png").convert("RGBA"))
+    rocky = np.zeros(atlas.shape[:2], bool)
     regions = json.load(open(f"{SRC}/world/decor_atlas.json"))["sprites"]
     n = 0
     pad = json.load(open(f"{SRC}/world/decor_atlas.json"))["pad"]
@@ -332,13 +373,19 @@ def main():
                     if (x <= xx < x + w and y <= yy < y + h) or atlas[yy, xx, 3] == 0:
                         continue
                     atlas[yy, xx] = atlas[min(max(yy, y), y + h - 1), min(max(xx, x), x + w - 1)]
+            rocky[max(0, y - pad):y + h + pad, max(0, x - pad):x + w + pad] = True
             n += 1
     Image.fromarray(atlas).save(f"{OUT}/world/decor_atlas.png", optimize=True)
+    # Même planche pour le décor posé sur la roche de vert-de-gris (DecorLoader la prend au nord du Temple).
+    Image.fromarray(np.where(rocky[..., None], to_tier2(atlas), atlas)).save(f"{OUT}/world/decor_atlas_r2.png", optimize=True)
     os.makedirs(f"{OUT}/world/runtime", exist_ok=True)
     for f in sorted(os.listdir(f"{SRC}/world/runtime")):
         if f.endswith(".png"):
             a = np.array(Image.open(f"{SRC}/world/runtime/{f}").convert("RGBA"))
-            Image.fromarray(convert_sprite(f[:-4], a)).save(f"{OUT}/world/runtime/{f}", optimize=True)
+            out = convert_sprite(f[:-4], a)
+            Image.fromarray(out).save(f"{OUT}/world/runtime/{f}", optimize=True)
+            if f.startswith(("face5_", "gallery_spire_")):
+                Image.fromarray(to_tier2(out)).save(f"{OUT}/world/runtime/{f[:-4]}_r2.png", optimize=True)
             n += 1
     print("sprites repeints :", n)
 

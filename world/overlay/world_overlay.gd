@@ -627,9 +627,10 @@ static func building_jobs(b: Building) -> Array[Dictionary]:
 	var jobs: Array[Dictionary] = []
 	if not b.complete:
 		return jobs
-	for id: String in GameState.research_jobs:
+	# Recherche qui avance (une par bâtiment ; les suivantes attendent en file).
+	for id: String in Simulation.research_queue(b).slice(0, 1):
 		var job: Dictionary = GameState.research_jobs[id]
-		if job["building"] == b:
+		if true:
 			jobs.append({"icon": String(Catalog.RESEARCH[id].get("icon", "mining_seal")), "progress": clampf(job["progress"] / Catalog.RESEARCH_TIME, 0, 1)})
 	if Simulation.Recipes.has_station(b.type) and b.recipe != "":
 		jobs.append({"icon": HudModel.CRAFT_ICON.get(b.recipe, "hammer"), "item": b.recipe,

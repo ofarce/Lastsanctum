@@ -54,6 +54,12 @@ static func at(z: float) -> Dictionary:
 	return LIST[index_at(z)]
 
 
+## Palier de la roche nue à la profondeur z : 0 ardoise du Temple, 1 roche de vert-de-gris (« rock2 »).
+## Il choisit la texture du dessus, la paroi et les teintes de bord (une roche par sceau de minage).
+static func rock_tier(z: float) -> int:
+	return 1 if String(at(z).get("rock", "rock")) == "rock2" else 0
+
+
 ## Bord nord (z minimal, exclu) du biome k ; -INF pour le dernier.
 static func north_z(k: int) -> float:
 	var top := BASE_Z

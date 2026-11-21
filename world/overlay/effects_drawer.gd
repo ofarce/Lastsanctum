@@ -93,7 +93,54 @@ func _mage_marks(now: float) -> void:
 			ci.draw_rect(Rect2((o + Vector2(q)) * px, Vector2(px, px)), Color("#9a7aff"))
 
 
-## Trait de lumière en quatre paliers au-dessus d'un butin, base en `at` (pixels d'écran).
+## Phare du butin (planches/butin-propositions.html, piste 1 « Le phare », renforcée le 2026-11-21) : disque tramé
+## au sol qui pulse, anneau, trait de lumière haut de 60 px natifs (cœur éclairci, gaine large) et éclats qui
+## montent le long du trait. Un butin normal garde le petit trait d'avant et scintille toutes les 2 s.
+## `ground` = point au sol, `lift` = hauteur du pied du trait au-dessus du sol (pixels natifs).
+func _loot_beacon(ground: Vector2, c: Color, now: float, normal: bool, lift := 4.0) -> void:
+	var x := roundf(ground.x / px) * px
+	var y := roundf(ground.y / px) * px
+	var phase := ground.x * 0.05
+	if normal:
+		_loot_beam(Vector2(x, y - lift * px), c, now)
+		var g := fmod(now * 0.5 + phase * 0.2, 1.0)
+		if g < 0.18:
+			var n := int(g * 22.0) % 4
+			var at := Vector2(x, y - (lift + 3.0) * px)
+			ci.draw_rect(Rect2(at.x - px, at.y - px, 2 * px, 2 * px), Color.WHITE)
+			ci.draw_rect(Rect2(at.x - (n + 1) * px, at.y, (n * 2 + 2) * px, px), Color(1, 1, 1, 0.7))
+			ci.draw_rect(Rect2(at.x, at.y - (n + 1) * px, px, (n * 2 + 2) * px), Color(1, 1, 1, 0.7))
+		return
+	var pulse := 0.5 + 0.5 * sin(now * 3.0 + phase)
+	var core := c.lerp(Color.WHITE, 0.55)
+	# Disque au sol, tramé une case sur deux sur le pourtour.
+	var rx := 9.0 + pulse * 2.0
+	var ry := 3.0 + pulse
+	for j in range(-int(ry), int(ry) + 1):
+		var w := roundf(rx * sqrt(maxf(0.0, 1.0 - float(j * j) / (ry * ry))))
+		ci.draw_rect(Rect2(x - w * px, y + j * px, 2 * w * px, px), Color(c, 0.36))
+	for i in 48:
+		var t := float(i) / 48.0 * TAU
+		var q := Vector2(roundf(cos(t) * (rx + 1.5 + pulse)), roundf(sin(t) * (ry + 0.6)))
+		ci.draw_rect(Rect2(x + q.x * px, y + q.y * px, px, px), Color(core, 1.0))
+	# Trait : cinq paliers de 12 px, gaine de 6 px puis de 4 px, cœur éclairci de 2 px.
+	var base := y - lift * px
+	var step := (12.0 + roundf(sin(now * 2.5 + phase) * 2.0)) * px
+	var fade: Array[float] = [1.0, 0.8, 0.55, 0.32, 0.14]
+	for i in 5:
+		var top := base - (i + 1) * step
+		ci.draw_rect(Rect2(x - 3 * px, top, 6 * px, step), Color(c, 0.2 * fade[i]))
+		ci.draw_rect(Rect2(x - 2 * px, top, 4 * px, step), Color(c, 0.55 * fade[i]))
+		ci.draw_rect(Rect2(x - px, top, 2 * px, step), Color(core, 0.95 * fade[i]))
+	# Éclats qui montent le long du trait.
+	for k in 3:
+		var u := fmod(now * 0.7 + k / 3.0 + phase, 1.0)
+		var side := -2.0 if k % 2 == 0 else 1.0
+		ci.draw_rect(Rect2(x + side * px, base - u * 5.0 * step, px, px), Color(core, 1.0 - u))
+	ci.draw_rect(Rect2(x - 3 * px, base - px, 6 * px, px), Color(core, 0.95))
+
+
+## Trait de lumière en quatre paliers au-dessus d'un butin normal, base en `at` (pixels d'écran).
 func _loot_beam(at: Vector2, c: Color, now: float) -> void:
 	var x := roundf(at.x / px) * px
 	var y := roundf(at.y / px) * px
@@ -115,21 +162,25 @@ func draw_all(now: float) -> void:
 		if not world.fog.visible_at(position):
 			continue
 		var screen := nat_p(position.x, position.y) * px
+		var rarity := Loot.rarity_of(drop["item"])
+		if rarity != "normal":
+			_loot_beacon(screen + Vector2(0, 3 * px), Loot.rarity_color(drop["item"]), now, false, 11.0)
 		ci.draw_circle(screen + Vector2(0, 3 * px), 7 * px, Color("#00000066"))
 		ItemIcon.draw_item(ci, drop["item"], screen, px)
-		if Loot.rarity_of(drop["item"]) != "normal":
-			_loot_beam(screen - Vector2(0, 8 * px), Loot.rarity_color(drop["item"]), now)
 	# Corps à fouiller (sim/loot.gd) : trait de lumière de la couleur de la meilleure rareté, une fois le corps tombé.
 	for corpse: Enemy in GameState.enemy_corpses:
 		if corpse.loot.is_empty() or GameState.sim_time - corpse.died_at < 1.0 or not world.fog.visible_at(corpse.pos()):
 			continue
-		_loot_beam(nat_p(corpse.x, corpse.z) * px - Vector2(0, 5 * px), Loot.RARITY[Loot.best_rarity(corpse.loot)]["color"], now)
+		var best := Loot.best_rarity(corpse.loot)
+		_loot_beacon(nat_p(corpse.x, corpse.z) * px, Loot.RARITY[best]["color"], now, best == "normal", 5.0)
 	# Caches de la jungle encore pleines : même trait de lumière.
 	for cache: Dictionary in GameState.caches:
 		if (cache["loot"] as Array).is_empty() or not world.fog.visible_at(Vector2(cache["x"], cache["z"])):
 			continue
-		_loot_beam(nat_p(cache["x"], cache["z"]) * px - Vector2(0, 9 * px), Loot.RARITY[Loot.best_rarity(cache["loot"])]["color"], now)
+		var cbest := Loot.best_rarity(cache["loot"])
+		_loot_beacon(nat_p(cache["x"], cache["z"]) * px, Loot.RARITY[cbest]["color"], now, cbest == "normal", 9.0)
 	_mage_marks(now)
+	_harvest_marks()
 	_fire_walls(now)
 	_skel_chains()
 	for e in GameState.effects:
@@ -137,6 +188,7 @@ func draw_all(now: float) -> void:
 			continue
 		match e["type"]:
 			"mining_gain": _mining_gain(e)
+			"harvest_hit": _harvest_hit(e)
 			"new_resource": _new_resource(e)
 			"rivet": _rivet(e)
 			"rivethit": _rivet_hit(e)
@@ -296,6 +348,9 @@ func _mining_gain(effect: Dictionary) -> void:
 	var at: Variant = _head(miner)
 	if at == null:
 		return
+	if effect.has("from"):
+		_harvest_jump(effect, miner)
+		return
 	var head: Vector2 = at
 	var item: String = effect["item"]
 	var label := "+1 %s" % ItemIcon.Blocks.ITEMS[item]["name"]
@@ -306,6 +361,154 @@ func _mining_gain(effect: Dictionary) -> void:
 	var baseline := origin + Vector2(26, 0)
 	ci.draw_string_outline(font, baseline, label, HORIZONTAL_ALIGNMENT_LEFT, -1, 15, 4, INK)
 	ci.draw_string(font, baseline, label, HORIZONTAL_ALIGNMENT_LEFT, -1, 15, Color("#fff2ce"))
+
+
+# ---------------------------------------------------------------- Récolte des esprits (sim/harvest_fx.gd)
+# Planche « Effets de récolte », choix « 1 + 3 + saut » (2026-11-21) : éclats de matière, fissures du bloc qui se
+# referment à chaque objet, feuille du bosquet, paillette du filon, ∞ sur le node travaillé, saut de l'objet. Les
+# crans de charge sont dessinés par AdeptView.
+
+const HARVEST_DUST := Color("#b8b0a0")
+const HARVEST_LEAF: Array[Color] = [Color("#2f5e2c"), Color("#4f8e3c"), Color("#7cbc52")]
+const HARVEST_INF := Color("#e0b04a")
+## ∞ (7 × 3 pixels natifs).
+const HARVEST_INF_MAP := [".##.##.", "#..#..#", ".##.##."]
+## Fissures du bloc, depuis le point frappé : une de plus par coup, effacées au coup qui donne l'objet.
+const HARVEST_CRACKS := [[Vector2(0, 0), Vector2(-3, 5), Vector2(-1, 10), Vector2(-4, 16)],
+	[Vector2(0, 0), Vector2(4, -4), Vector2(3, -9), Vector2(7, -14)],
+	[Vector2(0, 0), Vector2(-7, -2), Vector2(-10, -7), Vector2(-13, -6)],
+	[Vector2(0, 0), Vector2(8, 5), Vector2(11, 11), Vector2(13, 17)]]
+## Paillettes du filon, depuis l'origine du nœud (milieu du bord bas de l'emprise), pixels natifs.
+const HARVEST_GLINTS: Array[Vector2] = [Vector2(-23, -32), Vector2(2, -14), Vector2(22, -50), Vector2(27, -29), Vector2(19, -14), Vector2(4, -29)]
+
+
+## Point frappé, en pixels natifs.
+func _harvest_point(h: Dictionary) -> Vector2:
+	return nat_p(h["x"], h["z"]) - Vector2(0, roundf(float(h["h"]) * Proj.KH))
+
+
+## Origine native d'un filon ou d'un bosquet (milieu du bord bas de son emprise 2 × 2).
+func _node_origin(o: Vector2i) -> Vector2:
+	return nat_p(o.x * 4.0 + 4.0, o.y * 4.0 + 8.0)
+
+
+func _harvest_ramp(item: String) -> Array[Color]:
+	var base: Color = ItemIcon.Blocks.ITEMS.get(item, {}).get("color", Color("#9da2a9"))
+	return [base.darkened(0.55), base.darkened(0.2), base, base.lightened(0.4)]
+
+
+## Un coup : éclats projetés à l'opposé de l'esprit, poussière au pied, fissures du bloc, feuille du bosquet.
+func _harvest_hit(e: Dictionary) -> void:
+	var t: float = e["age"]
+	var p := _harvest_point(e)
+	var ramp := _harvest_ramp(e["item"])
+	var sd: int = e["seed"]
+	var dir: float = e["dir"]
+	var last: bool = int(e["k"]) >= int(e["n"])
+	var block: bool = e["node"] == "block"
+	if block and not last:
+		for L in mini(int(e["k"]), HARVEST_CRACKS.size()):
+			var path: Array = HARVEST_CRACKS[L]
+			for q in path.size() - 1:
+				_px_line(p + path[q] + Vector2.ONE, p + path[q + 1] + Vector2.ONE, ramp[2])
+				_px_line(p + path[q], p + path[q + 1], INK)
+	# Au coup qui donne l'objet, un morceau du bloc se détache : plus d'éclats, plus gros, partout.
+	var burst := block and last
+	for i in 14 if burst else 6:
+		var life := 0.45 + Rng.hash3(i, sd, 1) * 0.25
+		if t > life:
+			continue
+		var vx := dir * (15.0 + Rng.hash3(i, sd, 2) * 40.0) + (Rng.hash3(i, sd, 3) - 0.5) * 30.0
+		var vy := -(25.0 + Rng.hash3(i, sd, 4) * 45.0)
+		var o := Vector2.ZERO
+		if burst:
+			vx = (Rng.hash3(i, sd, 2) - 0.5) * 60.0
+			vy = -(10.0 + Rng.hash3(i, sd, 4) * 40.0)
+			o = Vector2((Rng.hash3(i, sd, 7) - 0.5) * 20.0, (Rng.hash3(i, sd, 8) - 0.5) * 16.0)
+		var q := p + o + Vector2(vx * t, vy * t + 85.0 * t * t)
+		var c: Color = ramp[1 + int(Rng.hash3(i, sd, 5) * 3.0) % 3]
+		var s := 2.0 if Rng.hash3(i, sd, 6) < (0.5 if burst else 0.35) else 1.0
+		ci.draw_rect(Rect2(jr(q.x) * px, jr(q.y) * px, s * px, s * px), Color(c, clampf((1.0 - t / life) * 2.5, 0.0, 1.0)))
+	if t < 0.5:
+		for i in 3:
+			var r := 1.0 + Rng.hash3(i, sd, 9) + t * 6.0
+			var at := p + Vector2((Rng.hash3(i, sd, 10) - 0.5) * 8.0, 6.0 + Rng.hash3(i, sd, 11) * 4.0 - t * 6.0)
+			ci.draw_rect(Rect2(jr(at.x - r) * px, jr(at.y - r * 0.6) * px, roundf(r * 2.0) * px, maxf(1.0, roundf(r * 1.2)) * px),
+				Color(HARVEST_DUST, 0.45 * (1.0 - t / 0.5)))
+	# Bosquet : une feuille tombe du houppier un coup sur deux.
+	if e["node"] == "grove" and int(e["k"]) % 2 == 1:
+		var top := _node_origin(e["origin"])
+		var ph := Rng.hash3(1, sd, 12) * TAU
+		var lp := Vector2(p.x - 6.0 + Rng.hash3(2, sd, 13) * 14.0 + sin(t * 5.0 + ph) * 2.0, top.y - 66.0 + Rng.hash3(3, sd, 14) * 10.0 + 12.0 * t)
+		var la := clampf((1.9 - t) * 3.0, 0.0, 1.0)
+		ci.draw_rect(Rect2(jr(lp.x) * px, jr(lp.y) * px, 2 * px, px), Color(HARVEST_LEAF[int(Rng.hash3(4, sd, 15) * 3.0) % 3], la))
+		ci.draw_rect(Rect2(jr(lp.x + (1.0 if sin(t * 5.0 + ph) > 0.0 else 0.0)) * px, jr(lp.y + 1.0) * px, px, px), Color(HARVEST_LEAF[0], la))
+
+
+func _px_line(a: Vector2, b: Vector2, c: Color) -> void:
+	var n := maxi(1, roundi(a.distance_to(b)))
+	for i in n + 1:
+		npx(lerpf(a.x, b.x, float(i) / n), lerpf(a.y, b.y, float(i) / n), c)
+
+
+## L'objet gagné jaillit du point frappé, décrit un arc et tombe dans la charge de l'esprit ; « +1 » à l'arrivée.
+## Sur un filon, une paillette s'y rallume (il ne s'épuise pas).
+func _harvest_jump(effect: Dictionary, miner: Unit) -> void:
+	var t: float = effect["age"]
+	var from: Dictionary = effect["from"]
+	var a := _harvest_point(from)
+	var b := nat_p(miner.x, miner.z) - Vector2(0, 30)
+	var item: String = effect["item"]
+	var s := px * 0.35
+	if from["node"] == "lode" and t < 0.9:
+		var g: Vector2 = _node_origin(from["origin"]) + HARVEST_GLINTS[int(Rng.hash3(int(float(from["x"]) * 7.0), int(float(from["z"]) * 7.0), 3) * 6.0) % 6]
+		var r := roundi(t / 0.3 * 3.0) if t < 0.3 else roundi((1.0 - (t - 0.3) / 0.6) * 3.0)
+		for i in range(-r, r + 1):
+			npx(g.x + i, g.y, Color.WHITE if i == 0 else Color("#ffd9a0"))
+			npx(g.x, g.y + i, Color.WHITE if i == 0 else Color("#ffd9a0"))
+	if t < 0.6:
+		var e := t / 0.6
+		var q := a.lerp(b, e) - Vector2(0, sin(e * PI) * 20.0)
+		ItemIcon.draw_item(ci, item, q * px, s)
+		return
+	var u := (t - 0.6) / 0.4
+	var font := HudStyle.font()
+	var at := (b * px - Vector2(0, (8.0 + u * 10.0) * px)).round()
+	var col := Color("#fff2ce", 1.0 - u)
+	ci.draw_string_outline(font, at, "+1", HORIZONTAL_ALIGNMENT_CENTER, -1, 13, 4, Color(INK, 1.0 - u))
+	ci.draw_string(font, at, "+1", HORIZONTAL_ALIGNMENT_CENTER, -1, 13, col)
+
+
+## ∞ au-dessus de chaque bloc, filon ou bosquet qu'un esprit travaille en ce moment.
+func _harvest_marks() -> void:
+	var seen := {}
+	var st: TerrainState = world.terrain_state
+	for u: Unit in GameState.units:
+		if not u.working or u.hidden or not Catalog.is_adept(u) or not (u.job is Dictionary):
+			continue
+		var j: Dictionary = u.job
+		if not (j.get("type") == "dig" or (j.get("type") == "staff" and j.get("step") == "mine")) or not (j.get("cell") is Dictionary):
+			continue
+		var key := Vector2i(j["cell"]["i"], j["cell"]["j"])
+		var at: Vector2
+		if st.lode_cells.has(key) or st.grove_cells.has(key):
+			var o: Vector2i = st.lode_cells[key] if st.lode_cells.has(key) else st.grove_cells[key]
+			if seen.has(o):
+				continue
+			seen[o] = true
+			at = _node_origin(o) + Vector2(-3, -78 if st.lode_cells.has(key) else -100)
+		else:
+			if seen.has(key):
+				continue
+			seen[key] = true
+			at = nat_p(key.x * 4.0 + 2.0, key.y * 4.0) + Vector2(-3, -10)
+		if not world.fog.visible_at(u.pos()):
+			continue
+		ci.draw_rect(Rect2((at.x - 1) * px, (at.y - 1) * px, 9 * px, 5 * px), Color(INK, 0.85))
+		for r in 3:
+			for q in 7:
+				if HARVEST_INF_MAP[r][q] == "#":
+					npx(at.x + q, at.y + r, HARVEST_INF)
 
 
 func _z() -> float:
@@ -1697,3 +1900,39 @@ func _suspend(e: Dictionary, now: float) -> void:
 			var hand := _muzzle(u.x, u.z, Vector2(e["x"], e["z"]), u) if u else cc
 			p = T[k].lerp(hand, _ein((q - 0.85) / 0.15))
 		_pin(p, k, now)
+
+
+## Sceau sensible (sim/mods.gd) : chaque case de filon à moins de 12 cases du porteur luit à travers la roche et le
+## brouillard, d'un losange de sa couleur qui pulse ; le plus proche pulse plus fort.
+const SEAL_ORE := {"copper": Color("#e09450"), "iron": Color("#c8d0da"), "quartz": Color("#e6f0ff"), "gold": Color("#f0d050")}
+var _seal_cache: Array = []
+var _seal_at := -INF
+
+
+## Calque au-dessus du brouillard (world/overlay/seal_glints_view.gd).
+func draw_seal_layer(now: float) -> void:
+	px = float(world.camera.px)
+	_seal_glints(now)
+
+
+func _seal_glints(now: float) -> void:
+	var u := Mods.wearer("seal")
+	if u == null or world.terrain_state == null:
+		return
+	if now - _seal_at > 0.5:
+		_seal_at = now
+		_seal_cache = Mods.ores_near(u, world.terrain_state)
+		u.mods["seal_dir"] = (_seal_cache[0][0] - u.pos()) if not _seal_cache.is_empty() else Vector2.ZERO
+	for k in _seal_cache.size():
+		var o: Array = _seal_cache[k]
+		var c: Vector2 = o[0]
+		var col: Color = SEAL_ORE.get(o[1], Color.WHITE)
+		var q := 0.5 + 0.5 * sin(now * 3.0 - float(o[2]) * 0.15)
+		var a := (0.55 + 0.45 * q) * (1.0 if k == 0 else 0.7) * clampf(1.2 - float(o[2]) / (Mods.SEAL_CELLS * 4.0), 0.25, 1.0)
+		var s := nat_p(c.x, c.y) * px - Vector2(0, 6 * px)
+		var r := (2.0 + roundf(q)) * px
+		ci.draw_colored_polygon(PackedVector2Array([s + Vector2(0, -r - px), s + Vector2(r, 0), s + Vector2(0, r + px), s + Vector2(-r, 0)]), Color(col, a * 0.85))
+		ci.draw_rect(Rect2(s - Vector2(px, 2 * px), Vector2(px, px)), Color(Color.WHITE, a))
+		if k == 0:
+			ci.draw_rect(Rect2(s - Vector2(r + 3 * px, 0), Vector2(px, px)), Color(col, a * q))
+			ci.draw_rect(Rect2(s + Vector2(r + 2 * px, 0), Vector2(px, px)), Color(col, a * q))

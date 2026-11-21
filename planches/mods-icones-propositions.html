@@ -1,0 +1,385 @@
+<title>Icônes des mods</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;600&display=swap" rel="stylesheet">
+<style>
+/* Planche : une icône dédiée par mod de l'Exilé (15 : les 3 butins de boss + les 12 proposés le 2026-11-21).
+   Le motif reprend ce qui se voit sur l'Ingénieur quand le mod est porté ; trois styles de cadre au choix.
+   Grille native 32 × 32 comme ui/inventory/item_icon.gd (affichée ×1,8 dans la fiche). Ambiance sombre unique. */
+:root{--bg:#0c0d10;--panel:#14161b;--line:#2c3038;--txt:#e2dccb;--mut:#9a9ca2;--acc:#5ce8ff;--gold:#d0a038;--ok:#5fbf7a;--redo:#e0b04a;--no:#e0583a;--fiche:#081920;color-scheme:dark}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--txt);font:15px/1.45 'Pixelify Sans',system-ui,sans-serif}
+header,main{max-width:1280px;margin:auto;padding-block:18px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}main{padding-bottom:80px}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+h1{margin:0;font-weight:600;letter-spacing:.08em;font-size:26px;color:var(--acc);text-wrap:balance}
+h2{font-weight:600;font-size:20px;color:var(--gold);margin:34px 0 6px;letter-spacing:.05em;text-wrap:balance}
+p.lead{color:var(--mut);margin:6px 0 0;max-width:72ch}p.lead b{color:var(--txt);font-weight:600}
+.rules{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,270px),1fr));gap:10px;margin-top:14px}
+.rules div{background:var(--panel);border:1px solid var(--line);padding:10px 12px;font-size:14px;color:var(--mut)}.rules b{color:var(--gold);display:block;font-weight:600}
+button{font:inherit;color:var(--txt);background:#1c1f26;border:1px solid var(--line);padding:5px 11px;cursor:pointer}
+button:hover{border-color:#2a6a78}button[aria-pressed=true]{border-color:var(--acc);background:#0f2a32}
+button:focus-visible,textarea:focus-visible{outline:2px solid var(--gold);outline-offset:1px}
+.bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);border-bottom:1px solid var(--line);display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding-block:8px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.bar .lab{color:var(--mut);font-size:13px}#tally{margin-left:auto;color:var(--mut);font-size:13px}
+.g3{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,370px),1fr));gap:14px;margin-top:12px}
+.card{background:var(--panel);border:1px solid var(--line);display:flex;flex-direction:column;min-width:0}
+.card[data-v=garder]{border-color:#2f6a40}.card[data-v=revoir]{border-color:#7a6226}.card[data-v=rejeter]{border-color:#7a3a2a;opacity:.72}
+canvas.px{image-rendering:pixelated;display:block;max-width:100%;height:auto}
+.sheet{background:var(--fiche);padding:12px;display:flex;justify-content:center}
+.sheet canvas{width:100%}
+.cap{padding:10px 14px 12px;display:flex;flex-direction:column;gap:6px}
+.cap b.t{color:var(--acc);font-weight:600;font-size:18px}.cap p{margin:0;color:var(--mut);font-size:14px}
+.verdict{display:flex;gap:6px}.verdict button{flex:1 1 0;min-width:0;font-size:13px}
+.verdict button.sel[data-v=garder]{background:#1f3a28;border-color:var(--ok)}.verdict button.sel[data-v=revoir]{background:#3a321b;border-color:var(--redo)}.verdict button.sel[data-v=rejeter]{background:#3a2019;border-color:var(--no)}
+textarea{background:#101217;color:var(--txt);border:1px solid var(--line);font:13px system-ui,sans-serif;padding:6px 8px;resize:vertical;min-height:32px;width:100%}
+.wide{margin-top:12px;overflow-x:auto}
+.list{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr));gap:10px;margin-top:12px}
+.item{background:var(--panel);border:1px solid var(--line);display:grid;grid-template-columns:auto 1fr;gap:10px;padding:10px;min-width:0}
+.item[data-v=garder]{border-color:#2f6a40}.item[data-v=revoir]{border-color:#7a6226}
+.item canvas{width:64px;height:64px;background:var(--fiche)}
+.item .txt{min-width:0;display:flex;flex-direction:column;gap:4px}
+.item b{color:var(--acc);font-weight:600}.item .fam{font-size:12px;color:var(--gold);letter-spacing:.05em;text-transform:uppercase}
+.item p{margin:0;color:var(--mut);font-size:13px}
+.item .verdict{grid-column:1/-1}.item textarea{grid-column:1/-1;min-height:28px}
+.bar .sep{width:1px;height:22px;background:var(--line);margin:0 4px}
+.g4{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,460px),1fr));gap:14px;margin-top:12px}
+.item select{font:13px system-ui,sans-serif;background:#101217;color:var(--txt);border:1px solid var(--line);padding:3px 6px;max-width:100%}
+.item .rr{display:flex;gap:6px;align-items:center;font-size:12px;color:var(--mut);flex-wrap:wrap}
+/* Infobulle : cadre « Sarcelle » du HUD (ui/banner/snes_banner.gd, INFO) — contour, liseré clair en haut, liseré bas, coins coupés. */
+.tipw{filter:drop-shadow(3px 4px 0 rgba(0,0,0,.35));width:min(320px,calc(100vw - 32px))}
+.tipo{background:#04141a;padding:2px;clip-path:polygon(4px 0,calc(100% - 4px) 0,100% 4px,100% calc(100% - 4px),calc(100% - 4px) 100%,4px 100%,0 calc(100% - 4px),0 4px)}
+.tip{background:linear-gradient(#1f4f5c,#0a1d24);box-shadow:inset 0 2px 0 #d6f6fb,inset 2px 0 0 #d6f6fb88,inset 0 -2px 0 #5fa9b8,inset -2px 0 0 #5fa9b888;padding:10px 12px 10px;clip-path:polygon(3px 0,calc(100% - 3px) 0,100% 3px,100% calc(100% - 3px),calc(100% - 3px) 100%,3px 100%,0 calc(100% - 3px),0 3px);color:#d6f6fb;font:14px/1.35 'Pixelify Sans',system-ui,sans-serif}
+.tip .h{display:grid;grid-template-columns:auto 1fr;gap:10px;align-items:center}
+.tip canvas{width:58px;height:58px;image-rendering:pixelated;background:#0a2a33;box-shadow:0 0 0 1px #5ce8ff}
+.tip .n{font-weight:600;font-size:17px;line-height:1.15;text-shadow:1px 1px 0 #04141a;text-wrap:balance}
+.tip .r{font-size:12px;color:#8ac4d0;letter-spacing:.04em}.tip .r i{font-style:normal;font-weight:600}
+.tip hr{border:0;height:1px;background:#5fa9b8;opacity:.5;margin:8px 0}
+.tip .e{margin:0;color:#ffffff}
+.tip dl{margin:6px 0 0;display:grid;grid-template-columns:auto 1fr;gap:1px 10px;font-size:13px}.tip dt{color:#8ac4d0}.tip dd{margin:0;color:#f0e6b8;text-align:right;font-variant-numeric:tabular-nums}
+.tip .w{margin:8px 0 0;font-size:12px;color:#a8d8e0}.tip .o{margin:2px 0 0;font-size:12px;color:#d0a038}
+.tip .k{margin:8px 0 0;font-size:11px;color:#5fa9b8;letter-spacing:.04em}
+#tip{position:fixed;z-index:20;pointer-events:none;display:none}
+.tips{display:flex;gap:16px;flex-wrap:wrap;padding:16px;background:var(--fiche);justify-content:center;align-items:flex-start}
+#out{margin-top:10px;min-height:140px;font-family:ui-monospace,monospace}
+</style>
+<header><h1>ICÔNES DES MODS</h1>
+<p class="lead">Une icône par mod, les 3 butins de boss compris. Aujourd’hui le Voile, l’Iris et la Foreuse partagent le même carré cyan et ne se distinguent qu’en lisant le nom. Ici, <b>le motif est l’objet qu’on voit sur l’Ingénieur</b> (le pendentif, l’orbe, les cinq billes…), dans la matière de son origine. Trois styles de cadre sont proposés pour les 15 mods.</p>
+<div class="rules">
+ <div><b>Grille 32 × 32</b>Même format que les icônes d’objets du jeu ; affichées ×1,8 dans les cases de la fiche (68 × 64).</div>
+ <div><b>Un motif, une couleur</b>Chaque mod a sa forme et sa teinte dominante, pour qu’aucun ne se confonde avec un autre, même en petit.</div>
+ <div><b>Reconnaître sur le corps</b>Le motif de l’icône est le dessin porté : on retrouve sur l’Exilé ce qu’on a vu dans la fiche.</div>
+ <div><b>Mod ou objet ?</b>Le cadre dit « c’est un mod » dans le paquetage et le réseau des coffres, au milieu du bois et des lingots.</div>
+</div></header>
+<div class="bar"><span class="lab">Style montré dans la fiche et la liste :</span><button data-style="0" aria-pressed="true">A · Cartouche</button><button data-style="1">B · Objet nu</button><button data-style="2">C · Médaillon</button><span class="sep"></span><span class="lab">Rareté :</span><button data-rmode="0">Liseré de case</button><button data-rmode="1" aria-pressed="true">1 · Cadre</button><button data-rmode="2">2 · Gemmes</button><button data-rmode="3">3 · Halo</button><span id="tally"></span></div><div id="tip"></div>
+<main>
+<h2>Les trois styles</h2><p class="lead">Les 15 icônes à ×2, dans l’ordre de la liste plus bas.</p>
+<div class="g3" id="styles"></div>
+
+<h2>La rareté</h2><p class="lead">Six raretés en jeu (<code>sim/loot.gd</code>) : normal, peu commun, rare, épique, unique, mythique. Aujourd’hui un objet rare n’a qu’un liseré de 2 px dans sa case. Le problème des styles A et C : leur cadre porte déjà la couleur du mod ou de la famille, qui se confond avec celle des raretés (Lanterne verte = peu commun, Sac violet = unique, Culasse cyan = mythique). Chaque carte montre ces trois mods dans les six raretés, avec le style de cadre choisi dans la barre. <b>La barre « Rareté » applique la façon choisie à toute la planche.</b></p>
+<div class="g4" id="rarity"></div>
+
+<h2>Au survol</h2><p class="lead">L’infobulle quand la souris passe sur un mod (fiche, paquetage, réseau des coffres). <b>Le titre prend la couleur de la rareté</b>, la rareté est redite en clair sous le nom. Passe la souris sur n’importe quelle icône de la planche pour voir la sienne ; trois exemples restent affichés ici. Les chiffres des 12 nouveaux mods et les raretés sont des propositions de ma part.</p>
+<div class="card wide" data-id="tip-panel"><div class="tips" id="tips"></div><div class="cap"><b class="t">Infobulle de mod</b><p>Cadre Sarcelle des panneaux du HUD. Dans l’ordre : icône et nom coloré, rareté · type · famille, l’effet en une phrase, les caractéristiques chiffrées, ce qu’on voit sur l’Ingénieur, l’origine, et le geste pour l’équiper.</p>
+ <div class="verdict"><button data-v="garder">Garder</button><button data-v="revoir">Revoir</button><button data-v="rejeter">Rejeter</button></div>
+ <label for="n-tip" style="font-size:12px;color:var(--mut)">Note</label><textarea id="n-tip" rows="1"></textarea></div></div>
+
+<h2>Dans la fiche</h2><p class="lead">Six cases de mod, à ×1,8 comme en jeu, avec le style choisi dans la barre. En dessous, une ligne du paquetage où un mod se trouve au milieu d’autres objets.</p>
+<div class="card wide"><div class="sheet"><canvas class="px" id="fiche" width="640" height="300"></canvas></div></div>
+
+<h2>Coup d’œil</h2><p class="lead">Les 15 icônes à ×1 (32 px), puis leurs silhouettes en aplat noir : si deux silhouettes se ressemblent, les deux mods se confondront de loin.</p>
+<div class="card wide"><div class="sheet"><canvas class="px" id="glance" width="600" height="96"></canvas></div></div>
+
+<h2>Les 15 mods, un par un</h2><p class="lead">Le motif, ce qu’il représentera sur l’Ingénieur, et l’effet du mod. Les 12 nouveaux mods ne sont pas encore codés : leur dessin porté suivra cette icône.</p>
+<div class="list" id="list"></div>
+
+<h2>Bilan</h2><p class="lead">Les choix restent dans ce navigateur. « Copier le bilan » donne le texte à me renvoyer.</p>
+<div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap"><button id="copy">Copier le bilan</button><button id="clear">Tout effacer</button></div>
+<label for="general" style="display:block;margin-top:10px;color:var(--mut);font-size:13px">Remarque générale</label>
+<textarea id="general" rows="2"></textarea>
+<textarea id="out" readonly rows="8"></textarea>
+</main>
+<script>
+/* ---------- Palettes (sombre → clair) ---------- */
+const PAL={
+ amethyste:['#2a1640','#5a2d82','#8a4fc0','#b98ae6','#e6d2ff'],
+ carmin:['#3a0c10','#8a1a20','#d8402a','#f0a040','#fff0b0'],
+ laiton:['#3a2810','#8a6420','#d0a038','#f0d070','#fff4c8'],
+ metal:['#14121a','#2a2430','#4a4454','#7a7488','#c8c4d4'],
+ cuivre:['#3a1e10','#7a3e1c','#b8642c','#e09450','#ffd4a0'],
+ argent:['#202832','#465461','#6d7b88','#b5c1ca','#eff4f5'],
+ acier:['#0e2630','#2a5a70','#4a90a8','#8ad0e0','#e0f8ff'],
+ braise:['#3a0a04','#8a2008','#d84a10','#f8902a','#ffe08a'],
+ ichor:['#1a0608','#4a1018','#8a1f2c','#d85a5a','#ffc0b8'],
+ verre:['#0a2a2a','#1a6a60','#3ab0a0','#9ae8d8','#f0fff8'],
+ bois:['#1c1008','#4a2c14','#7a4c24','#a8743a','#d8a868'],
+ givre:['#0a1a30','#2a5080','#5a9ad0','#a8dcff','#f0fbff'],
+ sylve:['#0a2a10','#1a6a2a','#3ab040','#9af070','#f0ffc0'],
+ ombre:['#100a20','#2a1a50','#4a3a8a','#8a7ad0','#e0d8ff'],
+ toile:['#2a1a0e','#7a5a38','#a8865a','#c8a676','#ecd6a4'],
+ pylone:['#0a2020','#1a4a48','#2a8a80','#7ad8c8','#e0fff8'],
+ fer:['#1a1c20','#3a3e46','#5e646e','#9aa2ac','#e0e6ec'],
+ rouge:['#2a0808','#6a1414','#a82a2a','#e05a4a','#ffb0a0'],
+ or:['#3a2a08','#7a5a10','#c89a20','#f0d050','#fff8c0'],
+};
+/* ---------- Dessin au pixel sur une grille 32 × 32 ---------- */
+let X;
+function P(x,y,c,a=1){if(c==null||a<=0)return;x=Math.round(x);y=Math.round(y);if(x<0||y<0||x>31||y>31)return;X.globalAlpha=Math.min(1,a);X.fillStyle=c;X.fillRect(x,y,1,1);X.globalAlpha=1;}
+function R(x,y,w,h,c){X.fillStyle=c;X.fillRect(x,y,w,h);}
+function LINE(x0,y0,x1,y1,c,a=1){x0=Math.round(x0);y0=Math.round(y0);x1=Math.round(x1);y1=Math.round(y1);const dx=Math.abs(x1-x0),dy=-Math.abs(y1-y0),sx=x0<x1?1:-1,sy=y0<y1?1:-1;let e=dx+dy;for(let k=0;k<80;k++){P(x0,y0,c,a);if(x0===x1&&y0===y1)break;const e2=2*e;if(e2>=dy){e+=dy;x0+=sx}if(e2<=dx){e+=dx;y0+=sy}}}
+function ARC(cx,cy,r,a0,a1,c,a=1){const n=Math.max(6,Math.round(r*(a1-a0)*1.3));const s=new Set();for(let i=0;i<=n;i++){const t=a0+(a1-a0)*i/n;const x=Math.round(cx+Math.cos(t)*r),y=Math.round(cy+Math.sin(t)*r);const k=x*99+y;if(s.has(k))continue;s.add(k);P(x,y,c,a);}}
+// Forme ombrée au style 16 bits : contour sombre, lumière en haut à gauche, ombre en bas à droite. inside(x,y) → bool.
+function SHAPE(inside,pal,cx,cy,opt={}){const pts=[];for(let y=0;y<32;y++)for(let x=0;x<32;x++)if(inside(x+0.5,y+0.5))pts.push([x,y]);
+ const has=(x,y)=>x>=0&&y>=0&&x<32&&y<32&&inside(x+0.5,y+0.5);
+ for(const[x,y]of pts){const edge=!has(x-1,y)||!has(x+1,y)||!has(x,y-1)||!has(x,y+1);
+  if(edge&&!opt.noEdge){P(x,y,pal[0]);continue;}
+  const s=(x-cx)*0.7+(y-cy);let c=s<-4?pal[4]:s<-1.5?pal[3]:s<2.5?pal[2]:pal[1];
+  if(opt.flat)c=pal[2];P(x,y,c);}}
+const disc=(cx,cy,r)=>(x,y)=>(x-cx)**2+(y-cy)**2<=r*r;
+const ell=(cx,cy,rx,ry)=>(x,y)=>((x-cx)/rx)**2+((y-cy)/ry)**2<=1;
+const diamond=(cx,cy,hw,hh)=>(x,y)=>Math.abs(x-cx)/hw+Math.abs(y-cy)/hh<=1;
+function BALL(cx,cy,r,pal){SHAPE(disc(cx,cy,r),pal,cx,cy);P(cx-r*0.45,cy-r*0.45,pal[4]);}
+
+/* ---------- Les 15 mods ---------- */
+// fam : origine ou famille (couleur du cadre C) ; tint : teinte dominante (cadre A) ; worn : ce qu'on verra sur l'Ingénieur.
+const FAM={boss:{n:'Butin de boss',c:'#d0a038'},combat:{n:'Combat',c:'#e05a4a'},arb:{n:'Arbalestrie',c:'#f0d070'},explo:{n:'Exploration',c:'#5ce8ff'},gest:{n:'Gestion',c:'#9af070'},def:{n:'Défense',c:'#b98ae6'}};
+const MODS=[
+ {id:'veil',name:'Voile de la Martyre',fam:'boss',tint:'amethyste',from:'Martyre',
+  effect:'Absorbe entièrement un coup, puis se reforme en 20 s.',worn:'En jeu : le pendentif d’améthyste qui rayonne et le liseré violet autour de la silhouette.',
+  draw(){const p=PAL.amethyste;for(let y=3;y<8;y++)P(16,y,y%2?p[1]:p[2]);
+   SHAPE(diamond(16,16,6,9),p,16,16);LINE(16,8,16,24,p[1]);for(let y=10;y<15;y++)P(14,y,p[4]);P(15,10,p[4]);
+   for(const[dx,dy]of[[-1,-1],[1,-1],[-1,1],[1,1]]){P(16+dx*8,16+dy*8,p[4]);P(16+dx*9,16+dy*9,p[3],0.8);P(16+dx*10,16+dy*10,p[2],0.5);}}},
+ {id:'iris',name:'Iris de la Matrice',fam:'boss',tint:'carmin',from:'Œil de la Matrice',
+  effect:'Les ennemis apparaissent sur la minicarte à travers la roche.',worn:'En jeu : l’orbe-satellite au-dessus de l’épaule, pupille carmin, arcs de sonar quand il repère un ennemi.',
+  draw(){const m=PAL.metal,l=PAL.laiton,c=PAL.carmin;SHAPE(disc(13,16,8),[l[1],m[1],m[2],m[3],m[4]],13,16);ARC(13,16,8,-2.6,-0.9,l[2]);ARC(13,16,8.6,-2.4,-1.1,l[3]);
+   SHAPE(ell(15,16,3.2,2.6),c,15,16);R(15,15,2,2,c[2]);P(15,15,c[4]);P(14,17,c[0]);
+   ARC(13,16,12,-0.55,0.55,c[2]);ARC(13,16,15.5,-0.45,0.45,c[1]);ARC(13,16,12.6,-0.4,0.4,c[3],0.7);}},
+ {id:'drill',name:'Foreuse de Gorge-Cuivre',fam:'boss',tint:'cuivre',from:'Gorge-Cuivre',
+  effect:'L’Exilé creuse la roche deux fois plus vite.',worn:'En jeu : les cinq billes cuivre et argent du Sceau, qui se mettent en mèche quand il creuse.',
+  draw(){const k=PAL.cuivre,s=PAL.argent;const B=[[7,18,4.6,k],[13,16.5,3.8,s],[18.5,15.3,3.1,k],[23,14.3,2.4,s],[26.5,13.5,1.7,k]];
+   for(const[x,y,r,p]of B)BALL(x,y,r,p);P(29,12,'#fff4c8');P(29,15,'#ffd060');P(28,10,'#ffd060');P(30,13,'#ffd060',0.7);}},
+ {id:'scale',name:'Écaille d’esquive',fam:'combat',tint:'acier',
+  effect:'Après une esquive de justesse, la prochaine attaque fait +50 % de dégâts.',worn:'Porté : une écaille d’acier sur l’épaule avant ; elle s’allume en cyan après une esquive.',
+  draw(){const p=PAL.acier;SHAPE((x,y)=>{const t=(y-6)/20;if(t<0||t>1)return false;const w=t<0.55?7*Math.sqrt(t/0.55):7*Math.sqrt((1-t)/0.45);return Math.abs(x-18)<=w;},p,18,14);
+   LINE(18,8,18,24,p[1]);LINE(14,12,18,16,p[1]);LINE(22,12,18,16,p[1]);for(const y of[11,16,21])LINE(3,y,8,y,p[3],0.8);P(9,11,p[4]);P(9,21,p[4]);LINE(5,16,10,16,p[4]);}},
+ {id:'ember',name:'Cœur de braise',fam:'combat',tint:'braise',
+  effect:'Sous 30 % de PV, cadence +25 % pendant 6 s (une fois par minute).',worn:'Porté : un cœur de braise incrusté dans la poitrine ; il flambe quand l’effet se déclenche.',
+  draw(){const p=PAL.braise;SHAPE((x,y)=>{const u=(x-16)/8.5,v=-(y-17)/8.5;return (u*u+v*v-1)**3-u*u*v*v*v<=0;},p,16,15);
+   SHAPE((x,y)=>{const t=(y-2)/9;if(t<0||t>1)return false;return Math.abs(x-17-Math.sin(t*3)*1.2)<=t*2.4;},[p[1],p[2],p[3],p[4],'#ffffff'],17,6);
+   R(14,15,4,4,p[3]);R(15,16,2,2,p[4]);}},
+ {id:'magnet',name:'Aimant d’ichor',fam:'combat',tint:'ichor',
+  effect:'Chaque ennemi tué rend 3 % des PV max.',worn:'Porté : un aimant en fer à cheval à la ceinture ; des gouttes d’ichor filent vers lui à chaque mort.',
+  draw(){const r=PAL.rouge,f=PAL.fer,i=PAL.ichor;
+   SHAPE((x,y)=>{const inU=(x>=4&&x<=19&&y>=14&&y<=28)&&!(x>=8&&x<=15&&y<=24);const arch=(x-11.5)**2+(y-21)**2<=8*8&&!((x-11.5)**2+(y-21)**2<=4*4)&&y>21;return inU&&(y<=21||arch);},r,11,18);
+   R(4,13,4,3,f[3]);R(16,13,4,3,f[3]);R(4,13,4,1,f[4]);R(16,13,4,1,f[4]);
+   SHAPE((x,y)=>{const t=(y-3)/10;if(t<0||t>1)return false;return Math.abs(x-24)<=(t<0.45?t*7:Math.sqrt(1-(t-0.45)/0.55)*3.6+0.2);},i,24,8);P(22,9,i[4]);
+   for(const[x,y]of[[21,13],[19,14],[22,15]])P(x,y,i[2],0.7);}},
+ {id:'lens',name:'Lentille de souffle',fam:'arb',tint:'verre',
+  effect:'Les carreaux de l’Arbalestrie traversent un ennemi de plus.',worn:'Porté : une lentille de verre vert d’eau vissée à la bouche de l’Arbalestrie.',
+  draw(){const v=PAL.verre,l=PAL.laiton,b=PAL.bois,a=PAL.acier;SHAPE(ell(16,16,6,10),[l[1],l[2],l[3],l[3],l[4]],16,16);SHAPE(ell(16,16,4.6,8.6),v,14,12,{noEdge:true});
+   LINE(2,16,29,16,b[2]);LINE(2,17,26,17,b[1]);P(2,15,l[3]);P(3,15,l[3]);P(2,18,l[3]);
+   R(27,15,2,3,a[2]);P(29,16,a[4]);P(30,16,a[3]);for(let x=4;x<10;x++)P(x,13,v[3],(x-3)/7);P(13,10,v[4]);P(14,9,v[4]);}},
+ {id:'barrel',name:'Barillet double',fam:'arb',tint:'laiton',
+  effect:'Deux munitions chargées à la fois, qui alternent à chaque tir.',worn:'Porté : un second barillet à deux chambres sur l’Arbalestrie, l’une cyan, l’autre carmin.',
+  draw(){const l=PAL.laiton;SHAPE(disc(16,16,11),l,16,16);SHAPE(disc(16,16,2.4),PAL.metal,16,16);
+   for(const[a,c]of[[Math.PI,['#06303a','#1f9fb8','#5ce8ff','#c8fbff','#ffffff']],[0,PAL.carmin]]){const x=16+Math.cos(a)*6.5,y=16+Math.sin(a)*6.5;SHAPE(disc(x,y,3.4),c,x,y);}
+   for(const a of[Math.PI/2,-Math.PI/2]){const x=16+Math.cos(a)*6.5,y=16+Math.sin(a)*6.5;SHAPE(disc(x,y,2.2),[l[0],l[0],l[1],l[1],l[1]],x,y,{flat:true});}}},
+ {id:'frost',name:'Culasse froide',fam:'arb',tint:'givre',
+  effect:'Le rechargement est 30 % plus court après un changement de munition.',worn:'Porté : la culasse de l’Arbalestrie couverte de givre, petite fumée froide au changement de munition.',
+  draw(){const f=PAL.fer,g=PAL.givre;SHAPE((x,y)=>x>=3&&x<=21&&y>=15&&y<=25,f,12,20);R(5,17,12,2,f[1]);R(17,12,4,4,f[2]);R(17,12,4,1,f[3]);R(3,15,18,1,g[3]);R(6,14,3,1,g[4]);R(12,14,5,1,g[3]);
+   const cx=23,cy=10;for(let k=0;k<6;k++){const a=k*Math.PI/3;LINE(cx,cy,cx+Math.cos(a)*6,cy+Math.sin(a)*6,g[3]);P(cx+Math.cos(a)*4+Math.cos(a+1.2)*1.5,cy+Math.sin(a)*4+Math.sin(a+1.2)*1.5,g[2]);}P(cx,cy,g[4]);}},
+ {id:'seal',name:'Sceau sensible',fam:'explo',tint:'argent',
+  effect:'Les filons de minerai à moins de 12 blocs brillent à travers la roche.',worn:'Porté : un prisme d’argent au centre de l’orbite du Sceau, qui pulse vers le filon le plus proche.',
+  draw(){const s=PAL.argent;SHAPE(diamond(16,10,6,8),s,16,10);LINE(16,3,16,17,s[1]);P(14,7,s[4]);
+   for(const[x,p]of[[7,PAL.cuivre],[16,PAL.fer],[25,PAL.or]]){SHAPE(disc(x,25,3.3),p,x,25);ARC(x,25,5,-2.4,-0.7,p[3],0.8);}}},
+ {id:'wisp',name:'Lanterne de Medeina',fam:'explo',tint:'sylve',
+  effect:'Un feu follet suit l’Exilé et dissipe le brouillard autour de lui.',worn:'Porté : le feu follet vert de Medeina, qui flotte derrière la tête et laisse une traîne.',
+  draw(){const p=PAL.sylve;SHAPE((x,y)=>{const t=(y-4)/22;if(t<0||t>1)return false;const sway=Math.sin(t*4.5)*2.5*(1-t);const w=t<0.7?t/0.7*7:7*Math.sqrt((1-t)/0.3);return Math.abs(x-16-sway)<=w*(t<0.7?1:1);},p,15,20);
+   SHAPE(ell(16,21,3,3.6),[p[2],p[3],p[4],'#ffffff','#ffffff'],15,19,{noEdge:true});for(const[x,y,a]of[[25,9,0.9],[27,6,0.6],[7,11,0.7],[5,8,0.4]])P(x,y,p[3],a);}},
+ {id:'anchor',name:'Ancre de rappel',fam:'explo',tint:'ombre',
+  effect:'Un retour à la capsule toutes les 3 minutes, hors combat.',worn:'Porté : une petite sphère enchaînée à la hanche, comme l’Ancre en réduction.',
+  draw(){const o=PAL.ombre,l=PAL.laiton;for(let y=2;y<11;y+=3){R(15,y,3,2,l[1]);P(16,y,l[3]);}
+   SHAPE(disc(16,19,7),o,16,19);P(13,16,o[4]);P(14,16,o[3]);
+   ARC(16,19,11,0.5,2.65,l[2]);ARC(16,19,11,-0.7,-0.2,l[2]);LINE(26,13,27,17,l[3]);LINE(26,13,23,15,l[3]);}},
+ {id:'chant',name:'Voix du Chantre',fam:'gest',tint:'or',
+  effect:'Les adeptes à moins de 8 blocs travaillent 20 % plus vite.',worn:'Porté : un diapason d’or dans le dos ; des ondes dorées passent sur les adeptes proches.',
+  draw(){const o=PAL.or;SHAPE((x,y)=>(x>=9&&x<=13&&y>=3&&y<=18)||(x>=19&&x<=23&&y>=3&&y<=18)||(y>=15&&y<=21&&x>=9&&x<=23&&!(x>13&&x<19&&y<18))||(x>=14&&x<=18&&y>=21&&y<=29),o,16,12);
+   R(14,28,5,2,o[1]);ARC(16,10,11,-0.6,0.6,o[3],0.9);ARC(16,10,11,Math.PI-0.6,Math.PI+0.6,o[3],0.9);ARC(16,10,14,-0.4,0.4,o[2],0.6);ARC(16,10,14,Math.PI-0.4,Math.PI+0.4,o[2],0.6);}},
+ {id:'sack',name:'Sac sans fond',fam:'gest',tint:'toile',
+  effect:'Le paquetage gagne une rangée ; le butin des corps se ramasse en passant.',worn:'Porté : un sac de toile à la ceinture, dont l’ouverture montre un tourbillon violet.',
+  draw(){const t=PAL.toile,o=PAL.ombre;SHAPE((x,y)=>((x-16)/11)**2+((y-20)/9)**2<=1&&y>=12,t,16,20);SHAPE(ell(16,12,8,3),[t[0],o[0],o[1],o[2],o[3]],16,12);
+   ARC(16,12,4.5,0,4.4,o[3]);ARC(16,12,2.2,1,5,o[4]);P(16,12,'#ffffff');R(13,15,7,2,t[1]);P(16,16,t[4]);for(const x of[9,13,19,23])P(x,23,t[1]);}},
+ {id:'echo',name:'Écho du pylône',fam:'def',tint:'pylone',
+  effect:'Les vagues et les meutes nocturnes s’annoncent 15 s plus tôt.',worn:'Porté : un éclat de pylône en pendentif dorsal, qui bourdonne et luit avant une vague.',
+  draw(){const p=PAL.pylone;SHAPE((x,y)=>y>=8&&y<=28&&Math.abs(x-16)<=2+(y-8)*0.12,p,16,18);SHAPE(diamond(16,6,3,4.5),[p[1],p[3],p[4],'#ffffff','#ffffff'],16,5);
+   R(12,27,9,2,p[1]);for(const r of[7,10.5,14])for(const s of[-1,1])ARC(16,6,r,s<0?Math.PI-0.5:-0.5,s<0?Math.PI+0.5:0.5,p[3],1-r/18);}},
+];
+/* ---------- Rareté (sim/loot.gd) et caractéristiques (infobulle) ---------- */
+const RARITY=[['normal','Normal','#e4e2da'],['uncommon','Peu commun','#6fcf5a'],['rare','Rare','#f2e14a'],['epic','Épique','#f07a28'],['unique','Unique','#b47af0'],['mythic','Mythique','#5fd8e8']];
+const RI=Object.fromEntries(RARITY.map((r,i)=>[r[0],i]));
+// rar : rareté proposée (les trois butins de boss passent de « peu commun » à « unique ») ; stats : lignes chiffrées de l'infobulle.
+const EXTRA={
+ veil:{rar:'unique',stats:[['Absorbe','1 coup entier'],['Recharge','20 s']]},
+ iris:{rar:'unique',stats:[['Révèle','ennemis derrière la roche'],['Ping','2 s minimum']]},
+ drill:{rar:'unique',stats:[['Vitesse de minage','×2'],['Billes du Sceau','3 → 5']]},
+ scale:{rar:'rare',stats:[['Esquive de justesse','0,2 s'],['Dégâts','+50 %, 1 attaque']]},
+ ember:{rar:'epic',stats:[['Seuil','30 % des PV'],['Cadence','+25 % pendant 6 s'],['Recharge','60 s']]},
+ magnet:{rar:'uncommon',stats:[['Soin par ennemi tué','3 % des PV max']]},
+ lens:{rar:'rare',stats:[['Perforation','+1 ennemi']]},
+ barrel:{rar:'epic',stats:[['Munitions chargées','2, en alternance']]},
+ frost:{rar:'uncommon',stats:[['Rechargement','−30 %'],['Condition','après changement de munition']]},
+ seal:{rar:'uncommon',stats:[['Portée','12 blocs'],['Filons','cuivre, fer, or']]},
+ wisp:{rar:'rare',stats:[['Brouillard dissipé','5 blocs autour']]},
+ anchor:{rar:'epic',stats:[['Recharge','3 min'],['Condition','hors combat']]},
+ chant:{rar:'rare',stats:[['Rayon','8 blocs'],['Travail des adeptes','+20 %']]},
+ sack:{rar:'epic',stats:[['Paquetage','+1 rangée (+10)'],['Butin des corps','ramassé en passant']]},
+ echo:{rar:'rare',stats:[['Préavis','+15 s'],['Annonce','vagues et meutes nocturnes']]},
+};
+MODS.forEach(m=>Object.assign(m,EXTRA[m.id]));
+let rmode=1;
+const RMODES=[
+ {k:'0',name:'Liseré de case (jeu actuel)',desc:'Rien sur l’icône : un liseré de 2 px dans la case, couleur de la rareté, absent pour un objet normal. Ce que fait le jeu aujourd’hui. Discret, et perdu dès que l’icône sort de sa case (infobulle, butin au sol).'},
+ {k:'1',name:'Cadre de rareté',desc:'Le bord du cartouche ou du médaillon prend la couleur de la rareté ; le motif garde seul la couleur du mod. En style B, un second cerne coloré. Le cerclage par famille du style C disparaît.'},
+ {k:'2',name:'Gemmes serties',desc:'De 0 (normal) à 5 (mythique) gemmes dans le coin bas gauche, à la couleur de la rareté : on lit le nombre et la couleur. Le cadre reste libre pour la famille ou la teinte du mod.'},
+ {k:'3',name:'Halo',desc:'Le motif baigne dans une lueur tramée de la couleur de la rareté, qui pulse pour unique et mythique. Se voit de loin, mais charge le fond et brouille un peu les silhouettes.'},
+];
+function rcol(r){return RARITY[RI[r]][2];}
+function mixc(a,b,t){const pa=parseInt(a.slice(1),16),pb=parseInt(b.slice(1),16);const c=[16,8,0].map(s=>Math.round(((pa>>s)&255)*(1-t)+((pb>>s)&255)*t));return '#'+c.map(v=>v.toString(16).padStart(2,'0')).join('');}
+// Halo tramé (damier sur la couronne extérieure, plein au centre), pulsé pour unique et mythique.
+function halo(g,col,rar,t){const pulse=RI[rar]>=4?0.75+0.25*Math.sin(t*3):1;const prev=X;X=g;
+ for(let y=0;y<32;y++)for(let x=0;x<32;x++){const d=Math.hypot(x+0.5-16,y+0.5-16);if(d>14)continue;const q=1-d/14;
+  if(d>9&&(x+y)%2)continue;P(x,y,col,(0.22+0.55*q)*pulse);}X=prev;}
+function gems(g,rar){const n=RI[rar];if(!n)return;const c=rcol(rar),hi=mixc(c,'#ffffff',0.6),lo=mixc(c,'#000000',0.45);const prev=X;X=g;
+ for(let k=0;k<n;k++){const x=2+k*4,y=26;for(const[dx,dy]of[[1,-1],[0,0],[2,0],[1,1],[-1,1],[3,1],[0,2],[2,2],[1,3]])P(x+dx,y+dy,'#020608');
+  P(x+1,y,c);P(x,y+1,c);P(x+2,y+1,lo);P(x+1,y+2,lo);P(x+1,y+1,c);P(x+1,y,hi);}X=prev;}
+let clockT=0;
+
+/* ---------- Trois styles de cadre ---------- */
+function motif(m){const c=document.createElement('canvas');c.width=32;c.height=32;const prev=X;X=c.getContext('2d');m.draw();X=prev;return c;}
+function outline(src,col){const c=document.createElement('canvas');c.width=32;c.height=32;const g=c.getContext('2d');const d=src.getContext('2d').getImageData(0,0,32,32).data;g.fillStyle=col;
+ const on=(x,y)=>x>=0&&y>=0&&x<32&&y<32&&d[(y*32+x)*4+3]>40;for(let y=0;y<32;y++)for(let x=0;x<32;x++)if(!on(x,y)&&(on(x-1,y)||on(x+1,y)||on(x,y-1)||on(x,y+1)))g.fillRect(x,y,1,1);return c;}
+function silhouette(src){const c=document.createElement('canvas');c.width=32;c.height=32;const g=c.getContext('2d');g.drawImage(src,0,0);g.globalCompositeOperation='source-in';g.fillStyle='#000';g.fillRect(0,0,32,32);return c;}
+const STYLES=[
+ {k:'A',name:'Cartouche',desc:'Une plaque octogonale sombre teintée de la couleur du mod, liseré clair, coin coupé comme les panneaux du HUD. Le motif déborde un peu de la plaque.',
+  draw(g,m,mc,o){const p=PAL[m.tint];const e1=o.frame||p[2],e2=o.frame?mixc(o.frame,'#ffffff',0.45):p[3];g.fillStyle=p[0];const oct=[[5,1],[26,1],[30,5],[30,26],[26,30],[5,30],[1,26],[1,5]];g.beginPath();oct.forEach(([x,y],i)=>i?g.lineTo(x,y):g.moveTo(x,y));g.closePath();g.fill();
+   X=g;for(let i=0;i<oct.length;i++){const a=oct[i],b=oct[(i+1)%8];LINE(a[0],a[1],b[0]-(b[0]>a[0]?1:b[0]<a[0]?0:0),b[1]-(b[1]>a[1]?1:0),e1);}
+   LINE(6,2,25,2,e2);LINE(2,6,2,25,e2);g.globalAlpha=1;if(o.halo)halo(g,o.halo,m.rar,clockT);g.drawImage(mc,0,0);}},
+ {k:'B',name:'Objet nu',desc:'Le motif seul, cerné de noir, sans fond. Un petit losange cyan en haut à droite signale que c’est un mod et pas un objet.',
+  draw(g,m,mc,o){if(o.halo)halo(g,o.halo,m.rar,clockT);const ol=outline(mc,'#020608');
+   if(o.frame){const b=document.createElement('canvas');b.width=b.height=32;const bg=b.getContext('2d');bg.drawImage(ol,0,0);bg.drawImage(mc,0,0);g.drawImage(outline(b,o.frame),0,0);}
+   g.drawImage(ol,0,0);g.drawImage(mc,0,0);X=g;for(const[x,y]of[[28,1],[27,2],[28,2],[29,2],[28,3]])P(x,y,'#5ce8ff');P(28,2,'#e0ffff');}},
+ {k:'C',name:'Médaillon',desc:'Un disque sombre cerclé de la couleur de la famille (or pour les butins de boss, rouge combat, laiton Arbalestrie, cyan exploration, vert gestion, violet défense).',
+  draw(g,m,mc,o){X=g;const fc=o.frame||FAM[m.fam].c;for(let y=0;y<32;y++)for(let x=0;x<32;x++){const d=Math.hypot(x+0.5-16,y+0.5-16);if(d<=15.5){P(x,y,d>13.6?fc:d>12.6?'#020608':'#0c2228');}}
+   ARC(16,16,14.5,Math.PI*1.05,Math.PI*1.55,'#ffffff',0.45);if(o.halo)halo(g,o.halo,m.rar,clockT);g.drawImage(mc,0,0);}},
+];
+const motifs=MODS.map(motif);
+// rm : façon de montrer la rareté (0 liseré de case, rien sur l'icône ; 1 cadre ; 2 gemmes ; 3 halo).
+function icon(si,mi,rm=rmode,rar=null){const m={...MODS[mi],rar:rar||MODS[mi].rar};const c=document.createElement('canvas');c.width=32;c.height=32;const g=c.getContext('2d');g.imageSmoothingEnabled=false;
+ const rc=RI[m.rar]?rcol(m.rar):null;STYLES[si].draw(g,m,motifs[mi],{frame:rm==1?(rc||'#7a8488'):null,halo:rm==3?rc:null});if(rm==2)gems(g,m.rar);return c;}
+// Case du jeu (fond, bord cyan, liseré de rareté intérieur en mode 0), icône ×k centrée.
+function slot(g,x,y,w,h,mi,rar,k){g.fillStyle='#0a2a33';g.fillRect(x,y,w,h);g.strokeStyle='#5ce8ff';g.lineWidth=1;g.strokeRect(x+0.5,y+0.5,w-1,h-1);
+ if(mi==null)return;const r=rar||MODS[mi].rar;g.imageSmoothingEnabled=false;g.drawImage(icon(style,mi,rmode,r),0,0,32,32,Math.round(x+w/2-16*k),Math.round(y+h/2-16*k),Math.round(32*k),Math.round(32*k));
+ if(rmode==0&&RI[r]){g.strokeStyle=rcol(r);g.lineWidth=2;g.strokeRect(x+2.5,y+2.5,w-5,h-5);}}
+let style=0;
+function blit(ctx,src,x,y,k){ctx.imageSmoothingEnabled=false;ctx.drawImage(src,0,0,32,32,x,y,32*k,32*k);}
+/* ---------- Rendu ---------- */
+const stylesEl=document.getElementById('styles');
+STYLES.forEach((s,si)=>{const card=document.createElement('div');card.className='card';card.dataset.id='style-'+s.k;
+ card.innerHTML=`<div class="sheet"><canvas class="px" width="${5*72+8}" height="${3*72+8}"></canvas></div><div class="cap"><b class="t">Style ${s.k} · ${s.name}</b><p>${s.desc}</p>
+ <div class="verdict"><button data-v="garder">Garder</button><button data-v="revoir">Revoir</button><button data-v="rejeter">Rejeter</button></div>
+ <label for="n-style-${s.k}" style="font-size:12px;color:var(--mut)">Note</label><textarea id="n-style-${s.k}" rows="1"></textarea></div>`;
+ const g=card.querySelector('canvas').getContext('2d');MODS.forEach((m,mi)=>blit(g,icon(si,mi),8+(mi%5)*72,8+Math.floor(mi/5)*72,2));stylesEl.appendChild(card);});
+// Fiche : cases du jeu (ui/inventory/engineer_inventory.gd, _slot : fond #0a2a33, bord cyan si pleine), icône ×1,8.
+function drawFiche(){const cv=document.getElementById('fiche'),g=cv.getContext('2d');g.imageSmoothingEnabled=false;g.fillStyle='#081920';g.fillRect(0,0,cv.width,cv.height);
+ const worn=[0,1,2,3,7,10];const font="11px 'DejaVu Sans Mono',monospace";
+ const hits=[];worn.forEach((mi,i)=>{const x=20+i*102,y=18;slot(g,x,y,68,64,mi,null,1.8);hits.push([x,y,68,64,mi]);g.font=font;g.fillStyle='#5aa6b4';g.fillText('MOD '+(i+1),x-2,y+80);g.fillStyle='#5ce8ff';
+  const nm=MODS[mi].name;g.fillText(nm.length>16?nm.slice(0,15)+'…':nm,x-2,y+94);});
+ g.fillStyle='#5aa6b4';g.font=font;g.fillText('// PAQUETAGE · 10',20,150);
+ const pack=['wood','copper',5,'ingot','arrows',8,'torch',null,12,null];
+ pack.forEach((it,i)=>{const x=20+i*61,y=160;g.fillStyle='#0a2a33';g.fillRect(x,y,56,56);g.strokeStyle=it!=null?'#5ce8ff':'#1f9fb855';g.lineWidth=1;g.strokeRect(x+0.5,y+0.5,55,55);
+  if(typeof it==='number'){slot(g,x,y,56,56,it,null,1.56);hits.push([x,y,56,56,it]);}
+  else if(it){X=g;g.save();g.translate(x+12,y+10);g.scale(1,1);
+   const col={wood:['#7a4c24','#a8743a'],copper:['#b8642c','#e09450'],ingot:['#9aa2ac','#e0e6ec'],arrows:['#7a4c24','#c8c4d4'],torch:['#7a4c24','#f8902a']}[it];
+   if(it==='wood'){g.fillStyle=col[0];g.fillRect(2,14,30,10);g.fillStyle=col[1];g.fillRect(2,14,30,3);}
+   if(it==='copper'){g.fillStyle=col[0];g.beginPath();g.arc(16,18,12,0,7);g.fill();g.fillStyle=col[1];g.fillRect(8,10,6,5);}
+   if(it==='ingot'){g.fillStyle=col[0];g.fillRect(2,16,30,12);g.fillStyle=col[1];g.fillRect(6,12,22,5);}
+   if(it==='arrows'){g.fillStyle=col[0];for(let k=0;k<3;k++)g.fillRect(4+k*9,6,2,26);g.fillStyle=col[1];for(let k=0;k<3;k++)g.fillRect(3+k*9,4,4,4);}
+   if(it==='torch'){g.fillStyle=col[0];g.fillRect(14,14,5,20);g.fillStyle=col[1];g.fillRect(12,4,9,11);}
+   g.restore();}});
+ g.fillStyle='#5aa6b4';g.fillText('Paquetage : Aimant d’ichor, Culasse froide et Voix du Chantre au milieu des objets.',20,236);
+ g.fillText('Fiche : Voile, Iris, Foreuse, Écaille, Lentille, Sceau sensible.',20,252);HITS.set(cv,hits);}
+function drawGlance(){const cv=document.getElementById('glance'),g=cv.getContext('2d');g.imageSmoothingEnabled=false;g.fillStyle='#081920';g.fillRect(0,0,cv.width,cv.height);
+ g.fillStyle='#c8c2ac';g.fillRect(0,48,cv.width,48);const hits=[];MODS.forEach((m,mi)=>{const x=8+mi*39;g.drawImage(icon(style,mi),x,8);if(rmode==0&&RI[m.rar]){g.strokeStyle=rcol(m.rar);g.lineWidth=1;g.strokeRect(x-1.5,6.5,35,35);}g.drawImage(silhouette(motifs[mi]),x,56);hits.push([x,8,32,32,mi]);});HITS.set(cv,hits);}
+const listEl=document.getElementById('list');
+MODS.forEach((m,mi)=>{const el=document.createElement('div');el.className='item';el.dataset.id='mod-'+m.id;
+ el.innerHTML=`<canvas class="px" width="32" height="32"></canvas><div class="txt"><span class="fam">${FAM[m.fam].n}${m.from?' · '+m.from:''}</span><b class="nm">${m.name}</b><p>${m.effect}</p><p>${m.worn}</p>
+ <label class="rr">Rareté <select data-rar="${m.id}" aria-label="Rareté de ${m.name}">${RARITY.map(r=>`<option value="${r[0]}">${r[1]}</option>`).join('')}</select></label></div>
+ <div class="verdict"><button data-v="garder">Garder</button><button data-v="revoir">Revoir</button></div><textarea id="n-mod-${m.id}" rows="1" aria-label="Note sur ${m.name}"></textarea>`;listEl.appendChild(el);});
+function drawList(){document.querySelectorAll('.item').forEach((el,mi)=>{const cv=el.querySelector('canvas');const g=cv.getContext('2d');g.clearRect(0,0,32,32);g.drawImage(icon(style,mi),0,0);
+ cv.style.boxShadow=rmode==0&&RI[MODS[mi].rar]?'inset 0 0 0 3px '+rcol(MODS[mi].rar):'none';el.querySelector('.nm').style.color=rcol(MODS[mi].rar);HITS.set(cv,[[0,0,32,32,mi]]);});}
+/* ---------- Rareté : quatre cartes ---------- */
+const RDEMO=['wisp','sack','frost'].map(id=>MODS.findIndex(m=>m.id===id));
+const rarEl=document.getElementById('rarity');
+RMODES.forEach(r=>{const card=document.createElement('div');card.className='card';card.dataset.id='rar-'+r.k;
+ card.innerHTML=`<div class="sheet"><canvas class="px" width="${6*74+10}" height="${3*74+26}"></canvas></div><div class="cap"><b class="t">${r.k==='0'?'0':r.k} · ${r.name}</b><p>${r.desc}</p>
+ <div class="verdict"><button data-v="garder">Garder</button><button data-v="revoir">Revoir</button><button data-v="rejeter">Rejeter</button></div>
+ <label for="n-rar-${r.k}" style="font-size:12px;color:var(--mut)">Note</label><textarea id="n-rar-${r.k}" rows="1"></textarea></div>`;rarEl.appendChild(card);});
+function drawRarity(){rarEl.querySelectorAll('canvas').forEach((cv,ri)=>{const g=cv.getContext('2d');g.fillStyle='#081920';g.fillRect(0,0,cv.width,cv.height);const keep=rmode;rmode=ri;const hits=[];
+ RARITY.forEach((r,c)=>{g.font="11px 'DejaVu Sans Mono',monospace";g.fillStyle=r[2];g.fillText(r[1].toUpperCase(),8+c*74,14);
+  RDEMO.forEach((mi,row)=>{const x=8+c*74,y=22+row*74;slot(g,x,y,68,68,mi,r[0],2);hits.push([x,y,68,68,mi,r[0]]);});});rmode=keep;HITS.set(cv,hits);});}
+/* ---------- Infobulle ---------- */
+function tipHTML(mi,rar){const m=MODS[mi];const r=rar||m.rar;const c=rcol(r);const fam=FAM[m.fam].n;const worn=m.worn.replace(/^(En jeu|Porté) : /,'');
+ return `<div class="tipw"><div class="tipo"><div class="tip"><div class="h"><canvas width="32" height="32" data-tipicon="${mi}" data-tiprar="${r}"></canvas><div><div class="n" style="color:${c}">${m.name}</div>
+ <div class="r"><i style="color:${c}">${RARITY[RI[r]][1]}</i> · Mod d’exo · ${fam}</div></div></div><hr>
+ <p class="e">${m.effect}</p><dl>${m.stats.map(([k,v])=>`<dt>${k}</dt><dd>${v}</dd>`).join('')}</dl>
+ <p class="w">Sur l’Ingénieur : ${worn}</p>${m.from?`<p class="o">Butin : ${m.from}</p>`:''}
+ <p class="k">CLIC DROIT : ÉQUIPER · GLISSER VERS UNE CASE MOD</p></div></div></div>`;}
+function fillTipIcons(root){root.querySelectorAll('[data-tipicon]').forEach(cv=>{const g=cv.getContext('2d');g.clearRect(0,0,32,32);g.drawImage(icon(style,+cv.dataset.tipicon,rmode,cv.dataset.tiprar),0,0);
+ cv.style.boxShadow=rmode==0&&RI[cv.dataset.tiprar]?'0 0 0 1px #5ce8ff, inset 0 0 0 3px '+rcol(cv.dataset.tiprar):'0 0 0 1px #5ce8ff';});}
+const tipsEl=document.getElementById('tips');
+function drawTips(){tipsEl.innerHTML=['veil','ember','seal'].map(id=>tipHTML(MODS.findIndex(m=>m.id===id))).join('');fillTipIcons(tipsEl);}
+const HITS=new Map();const tipEl=document.getElementById('tip');let tipKey='';
+function hitAt(cv,ev){const hs=HITS.get(cv);if(!hs)return null;const b=cv.getBoundingClientRect();const x=(ev.clientX-b.left)*cv.width/b.width,y=(ev.clientY-b.top)*cv.height/b.height;
+ return hs.find(h=>x>=h[0]&&y>=h[1]&&x<h[0]+h[2]&&y<h[1]+h[3])||null;}
+function showTip(ev){const cv=ev.target.closest?ev.target.closest('canvas'):null;const h=cv&&hitAt(cv,ev);if(!h){tipEl.style.display='none';tipKey='';return;}
+ const key=h[4]+'/'+(h[5]||'');if(key!==tipKey){tipKey=key;tipEl.innerHTML=tipHTML(h[4],h[5]);fillTipIcons(tipEl);}tipEl.style.display='block';
+ const w=tipEl.offsetWidth,hh=tipEl.offsetHeight;let x=ev.clientX+18,y=ev.clientY+14;if(x+w>innerWidth-8)x=Math.max(8,ev.clientX-w-14);if(y+hh>innerHeight-8)y=Math.max(8,innerHeight-hh-8);tipEl.style.left=x+'px';tipEl.style.top=y+'px';}
+document.addEventListener('pointermove',showTip);document.addEventListener('pointerdown',showTip);
+function redraw(){drawRarity();drawTips();drawFiche();drawGlance();drawList();tipKey='';}
+redraw();
+document.querySelectorAll('[data-style]').forEach(b=>b.addEventListener('click',()=>{style=+b.dataset.style;document.querySelectorAll('[data-style]').forEach(x=>x.setAttribute('aria-pressed',x===b));redraw();}));
+document.querySelectorAll('[data-rmode]').forEach(b=>b.addEventListener('click',()=>{rmode=+b.dataset.rmode;document.querySelectorAll('[data-rmode]').forEach(x=>x.setAttribute('aria-pressed',x===b));redraw();}));
+// Pulsation du halo (unique, mythique) : on ne redessine que s'il est montré quelque part.
+let lastT=0;function pulse(ts){clockT=ts/1000;if(ts-lastT>120){lastT=ts;if(rmode==3){drawFiche();drawGlance();drawList();}drawRarityHalo();}requestAnimationFrame(pulse);}
+function drawRarityHalo(){const cv=rarEl.querySelectorAll('canvas')[3];if(!cv)return;const keep=rmode;rmode=3;const g=cv.getContext('2d');
+ [4,5].forEach(c=>RDEMO.forEach((mi,row)=>slot(g,8+c*74,22+row*74,68,68,mi,RARITY[c][0],2)));rmode=keep;}
+requestAnimationFrame(pulse);
+/* ---------- Bilan ---------- */
+const KEY='mods-icones-bilan';let state={};try{state=JSON.parse(localStorage.getItem(KEY)||'{}')}catch(e){}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(state))}catch(e){}tally();}
+function tally(){const all=document.querySelectorAll('[data-id]');let n=0;all.forEach(c=>{if(state[c.dataset.id]?.v)n++;});document.getElementById('tally').textContent=n+' / '+all.length+' jugés';}
+document.querySelectorAll('[data-id]').forEach(c=>{const id=c.dataset.id;const s=state[id]||{};if(s.v){c.dataset.v=s.v;c.querySelector(`[data-v=${s.v}]`)?.classList.add('sel');}
+ const ta=c.querySelector('textarea');ta.value=s.n||'';ta.addEventListener('input',()=>{state[id]={...state[id],n:ta.value};save();});
+ c.querySelectorAll('.verdict button').forEach(b=>b.addEventListener('click',()=>{const v=b.dataset.v;const cur=state[id]?.v===v?'':v;state[id]={...state[id],v:cur};c.dataset.v=cur;
+  c.querySelectorAll('.verdict button').forEach(x=>x.classList.toggle('sel',x.dataset.v===cur));save();}));});
+document.querySelectorAll('[data-rar]').forEach(sel=>{const id=sel.dataset.rar;const m=MODS.find(x=>x.id===id);m.rar0=m.rar;if(state['rar-mod-'+id])m.rar=state['rar-mod-'+id];sel.value=m.rar;
+ sel.addEventListener('change',()=>{m.rar=sel.value;state['rar-mod-'+id]=sel.value;save();redraw();});});redraw();
+const gen=document.getElementById('general');gen.value=state._g||'';gen.addEventListener('input',()=>{state._g=gen.value;save();});
+function bilan(){const L=['Bilan · icônes des mods','','Styles'];STYLES.forEach(s=>{const v=state['style-'+s.k]||{};L.push(`  ${s.k} ${s.name} : ${v.v||'—'}${v.n?' · '+v.n:''}`);});
+ L.push('','Rareté');RMODES.forEach(r=>{const v=state['rar-'+r.k]||{};L.push(`  ${r.k} ${r.name} : ${v.v||'—'}${v.n?' · '+v.n:''}`);});
+ {const v=state['tip-panel']||{};L.push('','Infobulle : '+(v.v||'—')+(v.n?' · '+v.n:''));}
+ L.push('','Icônes');MODS.forEach(m=>{const v=state['mod-'+m.id]||{};const rr=RARITY[RI[m.rar]][1]+(m.rar!==m.rar0?' (proposé : '+RARITY[RI[m.rar0]][1]+')':'');L.push(`  ${m.name} [${rr}] : ${v.v||'—'}${v.n?' · '+v.n:''}`);});if(state._g)L.push('','Général : '+state._g);return L.join('\n');}
+document.getElementById('copy').addEventListener('click',()=>{const o=document.getElementById('out');o.value=bilan();navigator.clipboard?.writeText(o.value).catch(()=>{o.select();});o.select();});
+document.getElementById('clear').addEventListener('click',()=>{state={};save();location.reload();});
+tally();
+/* ---------- Export vers le jeu (tools/mods/export.py, ?export=1) ----------
+   assets/ardoise/ui/mods.png, 15 colonnes de 32 px dans l'ordre de MODS, 4 rangées du style A « Cartouche » :
+   0 plaque (teinte du mod), 1 bord (blanc, teinté rareté en jeu), 2 reflet haut/gauche (blanc, rareté éclaircie), 3 motif. */
+function exportAtlas(){const a=document.createElement('canvas');a.width=MODS.length*32;a.height=128;const g=a.getContext('2d');g.imageSmoothingEnabled=false;
+ const oct=[[5,1],[26,1],[30,5],[30,26],[26,30],[5,30],[1,26],[1,5]];const mk=()=>{const c=document.createElement('canvas');c.width=c.height=32;return c;};
+ MODS.forEach((m,mi)=>{const p=PAL[m.tint];const c0=mk(),c1=mk(),c2=mk();const g0=c0.getContext('2d');g0.fillStyle=p[0];g0.beginPath();oct.forEach(([x,y],i)=>i?g0.lineTo(x,y):g0.moveTo(x,y));g0.closePath();g0.fill();
+  const prev=X;X=c1.getContext('2d');for(let i=0;i<8;i++){const q=oct[i],b=oct[(i+1)%8];LINE(q[0],q[1],b[0]-(b[0]>q[0]?1:0),b[1]-(b[1]>q[1]?1:0),'#ffffff');}
+  X=c2.getContext('2d');LINE(6,2,25,2,'#ffffff');LINE(2,6,2,25,'#ffffff');X=prev;
+  // Le reflet recouvre le bord : on l'efface du calque bord pour que l'ordre de dessin n'importe pas.
+  const g1=c1.getContext('2d');g1.globalCompositeOperation='destination-out';g1.drawImage(c2,0,0);
+  [c0,c1,c2,motifs[mi]].forEach((c,row)=>g.drawImage(c,mi*32,row*32));});return a;}
+if(new URLSearchParams(location.search).get('export')){const x=new XMLHttpRequest();x.open('POST','/out/mods.png',false);x.send(exportAtlas().toDataURL('image/png'));
+ document.body.insertAdjacentHTML('afterbegin','<p id="exported">Exporté : '+MODS.map(m=>m.id).join(', ')+'</p>');}
+</script>

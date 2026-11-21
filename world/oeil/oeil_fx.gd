@@ -54,9 +54,7 @@ func _draw() -> void:
 					_mark(f, now)
 		for b: Dictionary in GameState.oeil_bullets:
 			var p := Proj.nat(b["x"], 0.0, b["z"]).round()
-			draw_rect(Rect2(p + Vector2(-2, 0), Vector2(5, 1)), SHADOW)
-			if b["big"]:
-				draw_rect(Rect2(p + Vector2(-3, 1), Vector2(7, 1)), SHADOW)
+			_bullet_shadow(p, b["big"] and b.get("style", "oeil") == "oeil")
 		for e: Enemy in GameState.enemies:
 			if e.kind == OeilMatrice.PUPIL_KIND:
 				var p := Proj.nat(e.x, 0.0, e.z).round()
@@ -292,45 +290,84 @@ func _hitbox(now: float) -> void:
 	draw_rect(Rect2(c - Vector2(1, 1), Vector2(3, 3)), Color.WHITE)
 
 
-## Texture d'une balle (mise en cache) : style "oeil", "larme" ou "cil", grosse ou non, orientée selon rot/ROT tour.
+## Texture d'une balle (mise en cache) : style "oeil", "larme" ou "cil", grosse ou non (œil seul), orientée selon rot/ROT
+## tour. Piste D « Œil cerné » de planches/oeil-projectiles.html : disque plein de BALL_R px (BALL_R_BIG gros) dont le
+## dernier pixel est un anneau de la couleur de la famille (carmin, rose, os), puis bord noir et bord noir à moitié
+## transparent. L'œil garde iris et pupille presque centrés (léger regard vers l'avant) ; la larme est une bulle de chair
+## à reflet ; le cil une perle d'os à cœur de sang.
+const BALL_R := 3.0
+const BALL_R_BIG := 5.0
+const RING := {"oeil": Color("#b41c20"), "larme": Color("#9a4a44"), "cil": Color("#625644")}
+const RIM2 := Color(0.043, 0.035, 0.043, 0.47)
+
+
 static func bullet(style: String, big: bool, rot: int) -> Texture2D:
-	var key := "%s_%d_%d" % [style, 1 if big and style == "oeil" else 0, rot]
+	big = big and style == "oeil"
+	if style != "oeil":
+		rot = 0
+	var key := "%s_%d_%d" % [style, 1 if big else 0, rot]
 	if _tex.has(key):
 		return _tex[key]
 	var a := rot * TAU / ROT
 	var ca := cos(a)
 	var sa := sin(a)
-	var n := 11 if big and style == "oeil" else 7 if style == "oeil" else 9 if style == "larme" else 11
+	var r := BALL_R_BIG if big else BALL_R
+	var s := r / 3.0
+	var n := 2 * (int(r) + 2) + 1
 	var hh := (n - 1) / 2.0
 	var img := Image.create(n, n, false, Image.FORMAT_RGBA8)
 	var fill := {}
+	var ring: Color = RING.get(style, RING["cil"])
 	for y in n:
 		for x in n:
 			var dx := x - hh
 			var dy := y - hh
-			var u := dx * ca + dy * sa
-			var v := -dx * sa + dy * ca
-			var c := Color(0, 0, 0, 0)
-			match style:
-				"oeil":
-					var s := 1.6 if big else 1.0
-					if Vector2(dx, dy).length() / s > 2.9:
-						continue
-					var di := Vector2(u / s - 0.9, v / s).length()
-					c = PUPIL if di < 0.6 else IRIS if di < 1.4 else (SCLERA[1] if dy > 0.9 * s else SCLERA[2])
-				"larme":
-					var q := (pow(u / 3.8, 2.0) if u < 0.0 else pow(u / 2.2, 2.0)) + pow(v / (1.9 * (1.0 + u / 9.0 if u < 0.0 else 1.0)), 2.0)
-					if q > 1.0:
-						continue
-					c = SCLERA[3] if q < 0.2 and u > 0.2 else MEMB[4] if q < 0.55 else BLOOD[2] if u < -1.5 else MEMB[3]
-				_:
-					var w := (4.6 - u) * 0.32 if u > 2.0 else 0.35 if u < -3.6 else 0.62
-					if u < -4.6 or u > 4.6 or absf(v) > w:
-						continue
-					c = BLOOD[2] if u < -2.8 else BONE[4] if u > 2.6 else BONE[1] if v > 0.0 else BONE[3]
+			var d := Vector2(dx, dy).length()
+			if d > r:
+				continue
+			var c: Color
+			var shine := Vector2(dx + s, dy + s).length()
+			if d > r - 0.95:
+				c = ring
+			else:
+				match style:
+					"oeil":
+						var di := Vector2(dx - ca * 0.55 * s, dy - sa * 0.55 * s).length()
+						c = PUPIL if di < 0.65 * s else IRIS if di < 1.45 * s else SCLERA[3] if dx + dy < -1.1 * r \
+							else SCLERA[1] if dy > 0.45 * r else SCLERA[2]
+					"larme":
+						c = SCLERA[3] if shine < 0.9 * s else MEMB[3] if dy > 0.3 * r else MEMB[4]
+					_:
+						c = BLOOD[2] if d < 0.75 * s else SCLERA[3] if shine < 0.8 * s else BONE[3] if dy > 0.35 * r else BONE[4]
 			img.set_pixel(x, y, c)
 			fill[Vector2i(x, y)] = true
 	_outline(img, fill)
+	_outline(img, fill, RIM2)
+	var tex := ImageTexture.create_from_image(img)
+	_tex[key] = tex
+	return tex
+
+
+## Ombre d'une balle (piste B « tramée à point central ») : ellipse 7 × 3 px (11 × 5 grosse) en damier à 70 %, point
+## à 85 % au centre exact, qui donne la position réelle de la balle.
+func _bullet_shadow(p: Vector2, big: bool) -> void:
+	var rx := 5 if big else 3
+	var ry := 2 if big else 1
+	draw_texture(shadow_tex(big), p - Vector2(rx, ry))
+
+
+static func shadow_tex(big: bool) -> Texture2D:
+	var key := "shadow_%d" % (1 if big else 0)
+	if _tex.has(key):
+		return _tex[key]
+	var rx := 5 if big else 3
+	var ry := 2 if big else 1
+	var img := Image.create(2 * rx + 1, 2 * ry + 1, false, Image.FORMAT_RGBA8)
+	for j in range(-ry, ry + 1):
+		for i in range(-rx, rx + 1):
+			if (i + j) & 1 == 0 and pow(i / (rx + 0.5), 2.0) + pow(j / (ry + 0.5), 2.0) <= 1.0:
+				img.set_pixel(i + rx, j + ry, Color(SHADOW, 0.7))
+	img.set_pixel(rx, ry, Color(SHADOW, 0.85))
 	var tex := ImageTexture.create_from_image(img)
 	_tex[key] = tex
 	return tex
@@ -370,15 +407,20 @@ static func pupil(rot: int) -> Texture2D:
 	return tex
 
 
-static func _outline(img: Image, fill: Dictionary) -> void:
+## Bord d'un pixel (voisins en croix) autour de fill ; les pixels du bord rejoignent fill, pour un second bord.
+static func _outline(img: Image, fill: Dictionary, col: Color = OUT) -> void:
+	var add: Array[Vector2i] = []
 	for y in img.get_height():
 		for x in img.get_width():
 			if fill.has(Vector2i(x, y)):
 				continue
 			for o: Vector2i in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
 				if fill.has(Vector2i(x, y) + o):
-					img.set_pixel(x, y, OUT)
+					add.append(Vector2i(x, y))
 					break
+	for q in add:
+		img.set_pixel(q.x, q.y, col)
+		fill[q] = true
 
 
 ## Compatibilité : balle « œil » (utilisée ailleurs sous ce nom).

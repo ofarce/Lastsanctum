@@ -75,6 +75,9 @@ var unarmored := false
 ## Voile de la Martyre (module d'exo) : instant où il sera reformé ; dernier coup absorbé (éclair).
 var veil_ready_at := -INF
 var veil_hit_at := -INF
+## Mods portés (sim/mods.gd) : instants de leurs déclenchements et petits états, par clé (« graze », « ember »,
+## « kill », « recall »…). Absent = jamais.
+var mods: Dictionary = {}
 ## Dernière ration mangée par l'Exilé (sim/loot.gd).
 var ate_at := -INF
 var winded_at := INF

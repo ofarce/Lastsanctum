@@ -32,4 +32,7 @@ signal sound_at(name: String, x: float, z: float, delay: float)
 ## Objets remis au joueur (ui/banner/item_banner.gd) : une bannière « Reçu : … » par objet, enchaînées à chaque action.
 signal items_received(items: Array)
 
+## Objets ramassés par l'Exilé (corps, caches, sol) : une ligne « icône Nom ×N » en haut à gauche (ui/hud/loot_feed.gd).
+signal loot_picked(item: String, count: int)
+
 signal production_chest_requested(building: Building, kind: String, engineer: Unit)

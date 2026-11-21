@@ -133,7 +133,7 @@ static func can_revive(b: Building, u: Unit) -> bool:
 ## ivoire sur plaque d'émail ; c = construction (ambre), a = Ancre et culte (cyan), f = combat (rouge), n = navigation.
 const COMMAND_GLYPH := {"menu-build": ["build", "c"], "menu-place": ["place", "c"], "repair": ["repair", "c"],
 	"orb": ["orb", "a"], "offering": ["offering", "a"], "pray": ["pray", "a"], "ability": ["ability", "f"],
-	"hold": ["hold", "f"], "move": ["move", "f"], "warehouse-page": ["page", "n"], "back": ["back", "n"]}
+	"hold": ["hold", "f"], "move": ["move", "f"], "warehouse-page": ["page", "n"], "back": ["back", "n"], "recall": ["back", "a"]}
 ## Recharge des compétences par rôle (Simulation.run_ability), pour le voile de recharge.
 const ABILITY_TIME := {"paladin": 16.0, "healer": 12.0, "engineer": 18.0, "shooter": 10.0}
 
@@ -154,7 +154,12 @@ static func _command_glyph(a: Dictionary, u: Unit) -> void:
 	var label: String = a["label"]
 	var name := label.get_slice(" · ", 0).trim_suffix(" ›")
 	var why := ""
-	if a["id"] == "ability" and u and u.ability > 0.0:
+	var recall_left := maxf(0.0, Mods.at(u, "recall_ready") - GameState.sim_time) if u else 0.0
+	if a["id"] == "recall" and recall_left > 0.0:
+		a["cd_frac"] = clampf(recall_left / Mods.RECALL_CD, 0.0, 1.0)
+		a["cd_text"] = str(ceili(recall_left))
+		why = "Recharge · %s s" % a["cd_text"]
+	elif a["id"] == "ability" and u and u.ability > 0.0:
 		a["cd_frac"] = clampf(u.ability / float(ABILITY_TIME.get(u.role, 18.0)), 0.0, 1.0)
 		a["cd_text"] = str(ceili(u.ability))
 		why = "Recharge · %s s" % a["cd_text"]
@@ -197,28 +202,17 @@ static func _panel_actions(sim: Simulation) -> Array[Dictionary]:
 	if u == null and B:
 		if not B.complete:
 			return A
-		for id: String in Catalog.RESEARCH:
+		# Recherches du bâtiment : touches 1, 2, 3… (les fabrications et résurrections prennent les chiffres suivants).
+		var rk := 0
+		for id: String in building_research(B):
 			var research: Dictionary = Catalog.RESEARCH[id]
-			if research["building"] != B.type:
-				continue
-			var done := GameState.research_done.has(id)
-			# Achevée : plus de bouton au bâtiment, la recherche passe dans la rangée du haut à gauche (ResearchShelf).
-			if done:
-				continue
-			var pending := GameState.research_jobs.has(id)
-			var title: String = research["name"] + " · 10 s · " + Catalog.research_cost_text(id) + " · +20 menace à l’achèvement"
-			if research.has("desc"):
-				title += " · " + research["desc"]
-			if not research["requires"].is_empty():
-				var names: PackedStringArray = []
-				for required: String in research["requires"]:
-					names.append(Catalog.RESEARCH[required]["name"])
-				title += " · Prérequis : " + ", ".join(names)
-			var action := _act("research-" + id, String(research.get("icon", "mining_seal")), research["name"], "r", title,
+			rk += 1
+			var pos := Simulation.research_queue_pos(id)
+			var key := str(rk) if rk <= 9 else ""
+			var action := _act("research-" + id, String(research.get("icon", "mining_seal")), research["name"], key, research["name"],
 				func() -> void: sim.start_research(B, id), not Simulation.can_research(B, id))
-			action["status"] = "Déjà achevée" if done else ("En cours · %d %%" % int(GameState.research_jobs[id]["progress"] / Catalog.RESEARCH_TIME * 100.0) if pending else "")
-			action["completed"] = done
-			_research_glyph(action, id, done, pending)
+			action["status"] = "En cours" if pos == 0 else ("En file" if pos > 0 else "")
+			_research_glyph(action, id, false, pos >= 0)
 			A.append(action)
 		var D := B.def()
 		var deity: String = D["deity"]
@@ -249,7 +243,8 @@ static func _panel_actions(sim: Simulation) -> Array[Dictionary]:
 			last.reverse()
 			for i in last.size():
 				var f: Unit = last[i]
-				A.append(_act("revive-%d" % f.id, "heart", "%s ★%d" % [_adept_prefix.sub(f.name, ""), Catalog.lvl(f)], str(i + 1),
+				var rkey := research_keys(B) + i + 1
+				A.append(_act("revive-%d" % f.id, "heart", "%s ★%d" % [_adept_prefix.sub(f.name, ""), Catalog.lvl(f)], str(rkey) if rkey <= 9 else "",
 					"Ressusciter %s (niveau %d) · %s" % [f.name, Catalog.lvl(f), Catalog.cost_text(Catalog.revive_cost(f))],
 					func() -> void: sim.revive_unit(B, f), not can_revive(B, f)))
 				var rc := Catalog.revive_cost(f)
@@ -301,6 +296,11 @@ static func _panel_actions(sim: Simulation) -> Array[Dictionary]:
 		else:
 			A.append(_act("orb", "rune", "Réactiver", "r", "Réactiver l’Ancre · %s s" % num(ORB_TIME), func() -> void: sim.order_orb(u),
 				false, u.orb_job))
+		# Ancre de rappel (sim/mods.gd) : retour à la capsule, hors combat.
+		if Mods.worn(u, "anchor"):
+			var left := maxf(0.0, Mods.at(u, "recall_ready") - GameState.sim_time)
+			A.append(_act("recall", "restart", "Rappel", "g", "Ancre de rappel · retour à la capsule, hors combat · toutes les %d min" % int(Mods.RECALL_CD / 60.0),
+				func() -> void: Mods.recall(sim, u), left > 0.0, false, "%d s" % ceili(left) if left > 0.0 else ""))
 	elif Catalog.prays(u):
 		var any_temple := alive.any(func(o: Unit) -> bool: return Catalog.prays(o) and not prayable_temples(o).is_empty())
 		A.append(_act("pray", "rune", "Prier", "y", "Prier au temple de son dieu", sim.pray_selected, not any_temple))
@@ -374,7 +374,7 @@ static func _craft_actions(A: Array[Dictionary], sim: Simulation, B: Building) -
 		if R.ITEMS.get(item, {}).get("pending", false):
 			title += " · Effet pas encore en jeu : l’objet est stocké."
 		title += " · Fabriqué en boucle par les adeptes au poste ; cliquer de nouveau pour arrêter."
-		var action := _act("craft-" + item, CRAFT_ICON.get(item, "hammer"), R.name_of(item), CRAFT_KEYS[i] if i < CRAFT_KEYS.length() else "", title,
+		var action := _act("craft-" + item, CRAFT_ICON.get(item, "hammer"), R.name_of(item), CRAFT_KEYS[i + research_keys(B)] if i + research_keys(B) < CRAFT_KEYS.length() else "", title,
 			func() -> void: sim.craft(B, item), not Simulation.can_craft(B, item), B.recipe == item)
 		# Bouton « Laiton et objet franc » (planches/boutons-fabrication-propositions.html, piste 1) :
 		# l'objet seul, la touche et le compteur ; nom et coût dans la bulle au survol.
@@ -390,33 +390,104 @@ static func _craft_actions(A: Array[Dictionary], sim: Simulation, B: Building) -
 		i += 1
 
 
-## Bouton de recherche « Laiton, trait d'or et cachet » (planches/boutons-recherche-unites-propositions.html, piste 1) :
-## l'objet au trait d'or tant que la recherche n'est pas faite, la couleur qui monte pendant la recherche, le cachet
-## vert une fois achevée ; nom, coût, effet et état dans la bulle au survol.
-static func _research_glyph(action: Dictionary, id: String, done: bool, pending: bool) -> void:
-	var research: Dictionary = Catalog.RESEARCH[id]
+## Recherches non achevées d'un bâtiment, dans l'ordre du catalogue (les achevées passent dans la ResearchShelf).
+static func building_research(B: Building) -> Array[String]:
+	var out: Array[String] = []
+	if B == null:
+		return out
+	for id: String in Catalog.RESEARCH:
+		if Catalog.RESEARCH[id]["building"] == B.type and not GameState.research_done.has(id):
+			out.append(id)
+	return out
+
+
+## Nombre de chiffres pris par les recherches du bâtiment (au plus 9).
+static func research_keys(B: Building) -> int:
+	return mini(9, building_research(B).size())
+
+
+## Coût d'une recherche en pastilles : ressources puis objets, avec le stock.
+static func research_cost_lines(id: String) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
 	var cost := Catalog.research_cost(id)
-	action["research_icon"] = id
-	action["research_done"] = done
-	action["active"] = pending
-	action["craft_progress"] = GameState.research_jobs[id]["progress"] / Catalog.RESEARCH_TIME if pending else 0.0
-	action["locked"] = not done and not pending and not Simulation.research_requirements_met(id)
-	action["poor"] = not done and not pending and not action["locked"] and not Catalog.can_pay_research(id)
-	var why := ""
-	if done:
-		why = "Déjà achevée"
-	elif pending:
-		why = "En cours · %d %%" % int(action["craft_progress"] * 100.0)
-	elif action["locked"]:
+	for k: String in Catalog.RES_ORDER:
+		if cost.has(k):
+			out.append({"res": k, "need": int(cost[k]), "have": int(GameState.res[k])})
+	var items := Catalog.research_items(id)
+	for k: String in items:
+		out.append({"item": k, "need": int(items[k]), "have": Catalog.ItemStorage.count(k)})
+	return out
+
+
+## État d'une recherche, pour la fiche et le grimoire : « done », « run », « stopped » (en tête de file sans
+## personnel), « queue », « locked », « poor », « ready », avec sa phrase.
+static func research_state(id: String) -> Dictionary:
+	if GameState.research_done.has(id):
+		return {"kind": "done", "text": "Achevée"}
+	var pos := Simulation.research_queue_pos(id)
+	if pos == 0:
+		var job: Dictionary = GameState.research_jobs[id]
+		var p: float = job["progress"] / Catalog.RESEARCH_TIME
+		var b: Building = job["building"]
+		var speed := Production.speed(b)
+		if speed <= 0.0:
+			return {"kind": "stopped", "progress": p, "text": "À l’arrêt · personnel requis au bâtiment"}
+		return {"kind": "run", "progress": p, "text": "En cours · encore %s s" % num(ceilf((Catalog.RESEARCH_TIME - job["progress"]) / speed))}
+	if pos > 0:
+		var ahead: String = Catalog.RESEARCH[Simulation.research_queue(GameState.research_jobs[id]["building"])[0]]["name"]
+		return {"kind": "queue", "pos": pos, "text": "En file · n° %d, après %s" % [pos, ahead] if pos == 1 else "En file · n° %d" % pos}
+	if not Simulation.research_requirements_met(id):
 		var names: PackedStringArray = []
-		for required: String in research["requires"]:
+		for required: String in Catalog.RESEARCH[id]["requires"]:
 			if not GameState.research_done.has(required):
 				names.append(Catalog.RESEARCH[required]["name"])
-		why = "Prérequis : " + ", ".join(names)
-	var items := Catalog.research_items(id)
-	var price := _mana_text(cost) + (" · " + _stock_text(items) if not items.is_empty() else "")
-	action["bubble"] = [research["name"], ("%s · %s s · +%d menace" % [price, num(Catalog.RESEARCH_TIME), Catalog.RESEARCH_MENACE]) if Catalog.RESEARCH_MENACE > 0 else "%s · %s s" % [price, num(Catalog.RESEARCH_TIME)],
-		done or pending or Catalog.can_pay_research(id), why, research.get("desc", "")]
+		return {"kind": "locked", "text": "Prérequis : " + ", ".join(names)}
+	var missing: PackedStringArray = []
+	for line: Dictionary in research_cost_lines(id):
+		if line["have"] < line["need"]:
+			var nm: String = Catalog.RES_INFO[line["res"]]["name"] if line.has("res") else Simulation.Recipes.name_of(line["item"])
+			missing.append("%d %s" % [line["need"] - line["have"], nm])
+	if not missing.is_empty():
+		return {"kind": "poor", "text": "Il manque " + ", ".join(missing)}
+	var host := _research_host(id)
+	if host != null and not Simulation.research_queue(host).is_empty():
+		return {"kind": "ready", "text": "Prête · ira en file d’attente"}
+	return {"kind": "ready", "text": "Prête · %s s" % num(Catalog.RESEARCH_TIME)}
+
+
+## Bâtiment où une recherche se lance : celui qui est ouvert s'il est du bon type, sinon le premier achevé.
+static func _research_host(id: String) -> Building:
+	var type: String = Catalog.RESEARCH[id]["building"]
+	var b := selected_building()
+	if b != null and b.type == type and b.complete:
+		return b
+	for o: Building in GameState.buildings:
+		if o.type == type and o.complete:
+			return o
+	return null
+
+
+## Bouton de recherche « Laiton, trait d'or et cachet » (planches/boutons-recherche-unites-propositions.html, piste 1) :
+## l'objet au trait d'or, la couleur qui monte pendant la recherche ; nom, coût, effet et état dans la fiche du panneau
+## central (planches/recherches-interface-propositions.html, piste A).
+static func _research_glyph(action: Dictionary, id: String, done: bool, _pending: bool) -> void:
+	var st := research_state(id)
+	action["research_icon"] = id
+	action["research_done"] = done
+	action["active"] = st["kind"] in ["run", "stopped"]
+	action["craft_progress"] = st.get("progress", 0.0)
+	action["research_queue"] = st.get("pos", 0)
+	action["locked"] = st["kind"] == "locked"
+	action["poor"] = st["kind"] == "poor"
+	action["research_state"] = st
+	action["research_name_below"] = true
+	var parts: PackedStringArray = []
+	for line: Dictionary in research_cost_lines(id):
+		var nm: String = Catalog.RES_INFO[line["res"]]["name"] if line.has("res") else Simulation.Recipes.name_of(line["item"])
+		parts.append("%d %s (%d)" % [line["need"], nm, line["have"]])
+	# Bulle de secours, quand la fiche du panneau central n'est pas affichée.
+	action["bubble"] = [Catalog.RESEARCH[id]["name"], " + ".join(parts) + " · %s s" % num(Catalog.RESEARCH_TIME),
+		st["kind"] not in ["poor", "locked"], st["text"], Catalog.RESEARCH[id].get("desc", "")]
 
 
 ## Bouton d'escouade de la Caserne : sprite de l'unité, file d'attente en pastille grenat, jauge de l'escouade en cours.

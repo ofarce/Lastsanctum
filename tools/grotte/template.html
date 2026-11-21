@@ -1,0 +1,440 @@
+<title>Grotte de départ vivante</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Silkscreen&display=swap" rel="stylesheet">
+<style>
+/* Planche sombre du projet (même charte que les autres planches) : une grande scène où tout s'empile, puis une fiche par idée retenue. */
+:root {
+  --bg: #0e1214; --panel: #161c1f; --line: #2a3438; --ink: #e4e2da; --mute: #8e9a9c;
+  --accent: #5fd8e8; --rec: #4f9a9e; --violet: #b48cf0;
+  --display: "Silkscreen", ui-monospace, monospace;
+  --text: "Share Tech Mono", ui-monospace, monospace;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font: 15px/1.5 var(--text); margin: 0;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.wrap { max-width: 1180px; margin: 0 auto; }
+header { padding-block: 28px 8px; }
+h1 { font: 400 26px var(--display); margin: 0 0 6px; letter-spacing: .5px; text-wrap: balance; }
+header p { color: var(--mute); margin: 4px 0; max-width: 72ch; }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--bg); }
+.bar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--bg); border-bottom: 1px solid var(--line); padding-block: 10px; }
+.bar .wrap { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+button { font: inherit; font-size: 13px; color: var(--ink); background: var(--panel); border: 1px solid var(--line); padding: 5px 10px; cursor: pointer; }
+button.on { border-color: var(--accent); color: var(--accent); }
+button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.note { color: var(--mute); font-size: 13px; }
+main { padding-block: 8px 60px; }
+.hero { background: var(--panel); border: 1px solid var(--line); padding: 16px; margin: 18px 0; display: grid; gap: 12px; }
+.chips { display: flex; gap: 6px; flex-wrap: wrap; }
+canvas { width: 100%; height: auto; image-rendering: pixelated; display: block; background: #000; max-width: 100%; }
+.card { display: grid; grid-template-columns: minmax(0, 600px) minmax(0, 1fr); gap: 22px; background: var(--panel); border: 1px solid var(--line); padding: 16px; margin: 18px 0; }
+.card > div { min-width: 0; }
+h2 { font: 400 18px var(--display); margin: 0 0 4px; text-wrap: balance; }
+h3 { font: 400 13px var(--display); color: var(--mute); margin: 12px 0 2px; letter-spacing: .6px; }
+.tag { display: inline-block; font-size: 12px; padding: 1px 7px; border: 1px solid var(--line); color: var(--mute); margin-right: 6px; }
+.tag.s { border-color: var(--rec); color: #9fdde0; }
+ul { padding-left: 18px; margin: 6px 0; }
+li { margin: 3px 0; }
+p { margin: 6px 0; }
+code { font-size: 13px; color: #bcd; overflow-wrap: anywhere; }
+.now { background: var(--panel); border: 1px solid var(--line); padding: 14px 16px; margin: 14px 0; }
+.ask { border-left: 2px solid var(--violet); padding-left: 10px; color: var(--ink); }
+@media (max-width: 960px) { .card { grid-template-columns: 1fr; } }
+@media (prefers-reduced-motion: reduce) { canvas { animation: none; } }
+</style>
+
+<div class="wrap">
+<header>
+  <h1>Faire vivre la grotte de départ</h1>
+  <p>Les dix idées retenues sur la liste du 21 novembre, animées sur une vraie capture du jeu : vue ×3, paroi nord, capsule et Ancre. Braseros, colonne, gravats, quartz et flaques sont les sprites du jeu, posés à la main sur la capture. Les effets sont dessinés en pixels du jeu (3 × 3 px écran).</p>
+  <p>Les numéros sont ceux de la liste. Rien n'est codé.</p>
+</header>
+</div>
+<div class="bar"><div class="wrap">
+  <button id="night" type="button">Nuit</button>
+  <button id="slow" type="button">Ralenti ×0,3</button>
+  <button id="shot" type="button">L'Exilé tire</button>
+  <span class="note">Le tir fait fuir les chauves-souris (5).</span>
+</div></div>
+<div class="wrap">
+<main>
+  <div class="now">
+    <h2>Aujourd'hui en jeu</h2>
+    <p>Au pied de la paroi nord : colonnes, stalagmites, gravats, deux braseros à flamme animée et lumière vacillante, quatre dalles gravées. La capsule a déjà son trait de lumière avec un peu de poussière, de vapeur et quelques lucioles. Pas d'autre mouvement dans la grotte : ni bête, ni eau, ni air. Le sol ne garde aucune trace du passage.</p>
+  </div>
+
+  <section class="hero">
+    <h2>Tout ensemble</h2>
+    <div class="chips" id="chips"></div>
+    <canvas id="c_all" width="960" height="600"></canvas>
+    <p class="note">Cliquer une idée pour l'ôter de la scène et voir ce qu'elle apporte.</p>
+  </section>
+
+  <section id="cards"></section>
+
+  <div class="now">
+    <h2>Ordre conseillé</h2>
+    <p>D'abord <b>17 · Courant d'air</b>, qui ne se voit pas seul mais donne une direction commune à la flamme, aux braises, à la fumée et à la poussière de la capsule. Ensuite <b>2</b>, <b>3</b> et <b>4</b>, qui travaillent la lumière. Puis la petite vie : <b>6</b>, <b>7</b>, <b>8</b>, <b>5</b>. <b>9 · Mousse</b> et <b>12 · Usure</b> en dernier : ce sont les seules à garder un état dans la partie (le temps, les trajets, les bâtiments). Il faut donc décider d'abord ce qu'elles retiennent.</p>
+  </div>
+</main>
+</div>
+
+<script>
+const BG = "__BG__";
+const ATLAS = "__ATLAS__";
+const RECTS = __RECTS__;
+
+const G = 3, W = 320, H = 200;
+const FEATS = [
+  { id: "braseros", n: 2, name: "Braseros vivants", size: "petit",
+    see: ["Des braises montent de la flamme, dérivent et s'éteignent en deux ou trois paliers de couleur.",
+          "La colonne voisine projette au sol une ombre tramée qui bouge avec la flamme.",
+          "Le halo chaud du brasero vacille un peu plus fort."],
+    when: "Tant que le brasero est allumé. Un brasero éteint ne fait rien.",
+    code: "<code>world/sanctum/flame_view.gd</code> pour les braises ; l'ombre en sprite au sol dans <code>sanctum_view.gd</code>, orientée depuis le brasero le plus proche.",
+    ask: "L'ombre portée aussi pour les unités qui passent près du feu, ou seulement pour le décor ?" },
+  { id: "puits", n: 3, name: "Puits de lumière", size: "petit",
+    see: ["Une colonne de lumière tombe de la voûte sur la capsule, plus large que le trait actuel, avec une flaque de lumière au sol.",
+          "Des grains de poussière y flottent et ne s'allument que dans le faisceau.",
+          "Doré le jour, bleu pâle la nuit (bouton Nuit)."],
+    when: "Toujours. La couleur suit l'heure du jeu.",
+    code: "<code>world/capsule/capsule_view.gd</code> (le trait et la poussière y sont déjà) ; la teinte vient de l'heure dans <code>lighting.gd</code>.",
+    ask: "" },
+  { id: "ancre", n: 4, name: "Lueur de l'Ancre", size: "petit",
+    see: ["Un halo violet tramé respire autour de la Sphère enchaînée.",
+          "Toutes les 2,5 s, une onde part du socle et s'élargit sur les dalles en s'effaçant."],
+    when: "Ancre allumée. On peut accélérer les ondes quand l'Ancre est attaquée ou en surcharge.",
+    code: "<code>world/anchor/anchor_view.gd</code>, au sol sous la sphère.",
+    ask: "Les ondes plus rapides quand l'Ancre perd des PV : oui ou non ?" },
+  { id: "chauves", n: 5, name: "Chauves-souris", size: "moyen",
+    see: ["Six petites chauves-souris pendues sous la voûte, entre les stalactites, qui bougent de temps en temps.",
+          "Au tir (bouton « L'Exilé tire », ou toutes les 9 s ici), elles se décrochent et tournent en nuée.",
+          "Elles reviennent se pendre une à une quand le calme revient."],
+    when: "Un tir, une explosion ou une unité qui passe juste dessous.",
+    code: "Nouvelle vue dans <code>world/ambience/</code> sur le modèle de <code>fauna_view.gd</code>, à l'écoute des tirs de la simulation.",
+    ask: "Inoffensives et purement décoratives, ou un jour une proie ou une source de guano ?" },
+  { id: "gouttes", n: 6, name: "Gouttes et flaques", size: "petit",
+    see: ["Une goutte se forme au bout de chaque stalactite, tombe et touche une flaque au pied de la paroi.",
+          "Une petite éclaboussure, puis un rond qui s'élargit dans la flaque.",
+          "Chaque stalactite a son propre rythme, donc jamais deux gouttes en même temps."],
+    when: "Toujours. Peut s'arrêter pendant la Brume ou la sécheresse si la météo s'en mêle.",
+    code: "Pointes des stalactites tirées du dessin de la paroi (<code>terrain_painter.gd</code>) ; flaques posées par <code>sanctum_layout.gd</code> (le sprite existe déjà).",
+    ask: "" },
+  { id: "spores", n: 7, name: "Spores de quartz", size: "moyen",
+    see: ["Des grains de quartz laiteux flottent lentement autour des grappes de quartz.",
+          "Quand l'Exilé passe (l'anneau cyan qui tourne ici), ils s'écartent puis reviennent.",
+          "Dans les coins sombres, ce sont les seules lumières."],
+    when: "Toujours. Ils s'écartent devant toute unité, pas seulement l'Exilé.",
+    code: "Nouvelle vue dans <code>world/ambience/</code> ; points d'ancrage sur les grappes de quartz déjà posées.",
+    ask: "" },
+  { id: "insectes", n: 8, name: "Petits insectes", size: "petit",
+    see: ["Des cloportes filent le long du pied de la paroi, s'arrêtent, repartent.",
+          "Ils vont se cacher sous les gravats et en ressortent plus tard."],
+    when: "Ils fuient une unité qui approche, comme les spores.",
+    code: "<code>world/ambience/fauna_view.gd</code> (même logique que la petite faune de la jungle).",
+    ask: "" },
+  { id: "mousse", n: 9, name: "Mousse et champignons", size: "moyen",
+    see: ["Dans les coins où rien ne passe, la mousse gagne peu à peu, puis de petits champignons poussent.",
+          "Quand un bâtiment se pose dessus, la mousse recule autour de lui.",
+          "La scène fait défiler douze jours en douze secondes."],
+    when: "Avec les jours de jeu. Seulement dans la grotte, pas dans les galeries.",
+    code: "Taches tirées dans <code>sanctum_layout.gd</code>, croissance lue sur le jour de jeu, effacées sous les emprises des bâtiments. Les sprites de mousse et de champignons existent.",
+    ask: "Vitesse de pousse : toute la grotte couverte vers le jour 10, ou plus lent ?" },
+  { id: "usure", n: 12, name: "Usure des chemins", size: "moyen",
+    see: ["Les trajets les plus fréquentés se dessinent au sol : poussière tassée sur les bords, dalles polies au milieu.",
+          "Ici : capsule → Ancre → sortie, et Ancre → réserve à l'est.",
+          "La trace se creuse au fil des passages (de 0 à 100 % sur la scène)."],
+    when: "Chaque unité qui marche ajoute un peu d'usure à sa case.",
+    code: "Compteur basse résolution par case côté simulation, peint en calque de sol par <code>terrain_painter.gd</code>. Doit être sauvegardé avec la partie.",
+    ask: "L'usure s'efface-t-elle quand un chemin n'est plus emprunté ?" },
+  { id: "air", n: 17, name: "Courant d'air", size: "petit",
+    see: ["Un souffle va de la paroi nord vers la sortie sud.",
+          "Les flammes et la fumée des braseros penchent de ce côté ; de fins traits de poussière filent au ras du sol.",
+          "Il vient en rafales lentes, rien de constant."],
+    when: "Toujours. Plus fort pendant la Brume ou la tempête si la météo de la jungle s'en mêle.",
+    code: "Un vecteur de vent unique (vers la porte de <code>CaveShape</code>) lu par la flamme, les braises, la fumée et la poussière de la capsule.",
+    ask: "Rafales régulières, ou liées à la météo du dehors ?" },
+];
+
+// -------------------------------------------------------------- Repères (pixels du jeu sur la capture ×3)
+const TIPS = [[118, 25], [143, 38], [208, 37], [237, 27], [282, 28]];
+const FOOT = 61;
+const BRAZ = [[92, 74], [272, 74]];
+const COLUMN = [116, 70];
+const QUARTZ = [["quartz_m", 52, 112], ["quartz_s", 300, 128], ["quartz_s", 60, 96]];
+const RUBBLE = [["rubble_a", 150, 66], ["rubble_b", 246, 66]];
+const ANCHOR = [192, 143], ANCHOR_BASE = [192, 173];
+const CAPS = [192, 80];
+const EXIT = [192, 240];
+const PERCH = [[128, 16], [152, 14], [184, 15], [218, 16], [246, 14], [270, 15]];
+const PATHS = [
+  [[192, 84], [192, 120], [184, 160], [190, 200]],
+  [[200, 162], [240, 150], [280, 146], [320, 144]],
+  [[186, 86], [140, 82], [96, 80]],
+];
+const MOSS = [[52, 70, 18, 8], [44, 150, 22, 12], [276, 182, 22, 10], [110, 186, 16, 8]];
+const BUILD = [40, 142, 30, 18]; // emprise posée sur la deuxième tache
+
+// -------------------------------------------------------------- Outils de dessin
+const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5].map(v => (v + .5) / 16);
+function hash(a, b) { let h = (a * 374761393 + b * 668265263) | 0; h = (h ^ (h >>> 13)) * 1274126177; return ((h ^ (h >>> 16)) >>> 0) / 4294967296; }
+function px(c, x, y, col, a = 1) { c.globalAlpha = a; c.fillStyle = col; c.fillRect(Math.round(x) * G, Math.round(y) * G, G, G); c.globalAlpha = 1; }
+function dither(c, cx, cy, rx, ry, col, a) { // halo en paliers tramés
+  c.fillStyle = col;
+  for (let y = Math.floor(cy - ry); y <= cy + ry; y++) for (let x = Math.floor(cx - rx); x <= cx + rx; x++) {
+    const d = Math.hypot((x - cx) / rx, (y - cy) / ry); if (d >= 1) continue;
+    const v = a * Math.ceil((1 - d) * 3) / 3;
+    if (v > BAYER[(y & 3) * 4 + (x & 3)]) c.fillRect(x * G, y * G, G, G);
+  }
+}
+function ringE(c, cx, cy, rx, ry, col, a) {
+  const n = Math.max(12, Math.round((rx + ry) * 3));
+  for (let i = 0; i < n; i++) { const t = i / n * Math.PI * 2, x = Math.round(cx + Math.cos(t) * rx), y = Math.round(cy + Math.sin(t) * ry);
+    if (a > BAYER[(y & 3) * 4 + (x & 3)] * .9) px(c, x, y, col); }
+}
+function sprite(c, k, x, y, flip = false) {
+  const r = RECTS[k]; if (!r) return; const [sx, sy, w, h, ax, ay] = r;
+  c.save(); c.translate(Math.round(x) * G, Math.round(y) * G); if (flip) c.scale(-1, 1);
+  c.drawImage(atlas, sx, sy, w, h, -ax * G, -ay * G, w * G, h * G); c.restore();
+}
+function wind(t) { return .55 + .45 * Math.sin(t * .7) * Math.sin(t * .23 + 1); }
+function toward(x, y) { const dx = EXIT[0] - x, dy = EXIT[1] - y, l = Math.hypot(dx, dy); return [dx / l, dy / l]; }
+
+// -------------------------------------------------------------- État des scènes
+function makeState(seed) {
+  const s = { bats: PERCH.map((p, i) => ({ p, x: p[0], y: p[1], ph: hash(i, seed) * 6 })), shotAt: -99, lastAuto: 0,
+    spores: [], bugs: [], embers: [], smoke: [], streaks: [], dust: [] };
+  QUARTZ.forEach((q, qi) => { for (let i = 0; i < 14; i++) { const a = hash(i, qi) * 6.28, r = 4 + hash(qi, i + 9) * 14;
+    const hx = q[1] + Math.cos(a) * r, hy = q[2] - 8 + Math.sin(a) * r * .6; s.spores.push({ hx, hy, x: hx, y: hy, ph: hash(i * 3, qi) * 9 }); } });
+  for (let i = 0; i < 6; i++) s.bugs.push({ x: 70 + i * 36, y: FOOT + (i % 3), tx: 70 + i * 36, ty: FOOT, wait: hash(i, 4) * 2, hid: false, hide: i % 2 ? RUBBLE[0] : RUBBLE[1] });
+  for (let i = 0; i < 26; i++) s.streaks.push({ x: hash(i, 1) * W, y: 70 + hash(i, 2) * 130, life: hash(i, 3) });
+  for (let i = 0; i < 18; i++) s.dust.push({ x: 176 + hash(i, 7) * 32, y: hash(i, 8) * 90, ph: hash(i, 9) * 6 });
+  return s;
+}
+function walker(t) { // l'Exilé qui passe : boucle sur le sol, près des quartz
+  const a = t * .45; return [150 + Math.cos(a) * 100, 128 + Math.sin(a * 2) * 26 + Math.sin(a) * 6];
+}
+
+// -------------------------------------------------------------- Une image
+function frame(c, on, s, t, dt) {
+  c.imageSmoothingEnabled = false;
+  c.clearRect(0, 0, 960, 600);
+  c.drawImage(bg, 0, 0);
+  const night = ui.night, w = on.air ? wind(t) : 0;
+
+  // Sol : usure, mousse, flaques, ondes
+  if (on.usure) {
+    const k = Math.min(1, (t % 12) / 10);
+    for (const path of PATHS) for (let i = 0; i < path.length - 1; i++) {
+      const [x0, y0] = path[i], [x1, y1] = path[i + 1], n = Math.ceil(Math.hypot(x1 - x0, y1 - y0));
+      for (let j = 0; j <= n; j++) { const x = x0 + (x1 - x0) * j / n, y = y0 + (y1 - y0) * j / n;
+        for (let o = -6; o <= 6; o++) { const ox = Math.round(x + o * (y1 - y0) / n), oy = Math.round(y - o * (x1 - x0) / n * .6), e = Math.abs(o) / 6.5;
+          const bay = BAYER[(oy & 3) * 4 + (ox & 3)];
+          if (e < .45 && k * .9 * (1 - e) > bay) px(c, ox, oy, "#9aa4b0", .7);
+          else if (e >= .45 && k * (1.3 - e) > bay * 1.2) px(c, ox, oy, "#4a3e30", .75); } }
+    }
+    // adeptes de passage
+    for (let i = 0; i < 3; i++) { const path = PATHS[i % PATHS.length], u = ((t * .08 + i * .37) % 1), seg = u * (path.length - 1), j = Math.floor(seg), f = seg - j;
+      const x = path[j][0] + (path[j + 1][0] - path[j][0]) * f, y = path[j][1] + (path[j + 1][1] - path[j][1]) * f;
+      px(c, x, y - 2, "#c98b5a"); px(c, x, y - 1, "#6a4a36"); px(c, x, y, "#2a2220"); }
+  }
+  if (on.mousse) {
+    const day = t % 12, grow = Math.min(1, day / 7), recede = day > 8.5 ? Math.min(1, (day - 8.5) / 2.5) : 0;
+    MOSS.forEach((m, mi) => {
+      const [cx, cy, rx, ry] = m;
+      for (let y = cy - ry; y <= cy + ry; y++) for (let x = cx - rx; x <= cx + rx; x++) {
+        const d = Math.hypot((x - cx) / rx, (y - cy) / ry) + (hash(x, y) - .5) * .5; if (d > grow) continue;
+        if (mi === 1 && recede > 0) { const [bx, by, bw, bh] = BUILD; const inB = x > bx - bw / 2 - 3 && x < bx + bw / 2 + 3 && y > by - bh / 2 - 3 && y < by + bh / 2 + 3;
+          if (inB && hash(y, x) < recede) continue; }
+        const v = hash(x * 7, y * 3); if (v < .35) continue;
+        px(c, x, y, v > .85 ? "#618f84" : v > .6 ? "#48726a" : "#294643", .9);
+      }
+      if (grow > .7 && !(mi === 1 && recede > .3)) for (let j = 0; j < 3; j++) { // petits champignons
+        const mx = Math.round(cx + rx * (.2 + j * .22) - j * 3), my = Math.round(cy - ry * .3 + j * 3), up = Math.min(1, (grow - .7) / .3 * 3 - j);
+        if (up <= 0) continue; px(c, mx, my, "#d8d0c0"); if (up > .5) { px(c, mx, my - 1, "#b0703c"); px(c, mx - 1, my - 1, "#8a5030"); px(c, mx + 1, my - 1, "#c8864a"); } }
+      if (grow > .9 && mi !== 1) sprite(c, "tuft_a", cx - rx * .5, cy + 1);
+    });
+    if (day > 7.5) { const [bx, by, bw, bh] = BUILD; c.strokeStyle = "#d8b45a"; c.lineWidth = G; c.setLineDash([G * 2, G * 2]);
+      c.strokeRect((bx - bw / 2) * G, (by - bh / 2) * G, bw * G, bh * G); c.setLineDash([]);
+      c.fillStyle = "#d8b45a"; c.font = "18px 'Share Tech Mono', monospace"; c.textAlign = "center"; c.fillText("bâtiment posé", bx * G, (by + 2) * G); }
+    c.fillStyle = "#e4e2da"; c.font = "18px 'Share Tech Mono', monospace"; c.textAlign = "left";
+    c.fillText("Jour " + (1 + Math.floor(day)), 10, 590);
+  }
+  if (on.gouttes) for (const [x] of TIPS) sprite(c, "puddle", x, FOOT + 3);
+  if (on.ancre) {
+    const per = 2.5;
+    for (let k = 0; k < 2; k++) { const u = ((t + k * per / 2) % per) / per;
+      ringE(c, ANCHOR_BASE[0], ANCHOR_BASE[1], 30 + u * 60, 10 + u * 20, "#9b6ae8", (1 - u) * .9); }
+  }
+  if (on.puits) {
+    const col = night ? "#9fc3e8" : "#f0d58a";
+    dither(c, CAPS[0], CAPS[1] + 4, 30, 10, col, .35);
+  }
+
+  // Décor (sprites du jeu)
+  if (on.braseros) { // ombre portée de la colonne, de l'autre côté du feu
+    const [bx, by] = BRAZ[0], [cx, cy] = COLUMN, fl = .85 + .15 * Math.sin(t * 13) * Math.sin(t * 7.3);
+    const dx = cx - bx, dy = cy - by, l = Math.hypot(dx, dy), ux = dx / l, uy = dy / l, len = 26 * fl;
+    for (let i = 2; i < len; i++) for (let o = -3; o <= 3; o++) {
+      const x = Math.round(cx + ux * i - uy * o), y = Math.round(cy + uy * i * .5 + ux * o * .5 + 1);
+      if ((1 - i / len) * .8 > BAYER[(y & 3) * 4 + (x & 3)]) px(c, x, y, "#0b0e14", .55); }
+  }
+  sprite(c, "column", COLUMN[0], COLUMN[1]);
+  for (const r of RUBBLE) sprite(c, r[0], r[1], r[2]);
+  for (const q of QUARTZ) sprite(c, q[0], q[1], q[2]);
+  for (const b of BRAZ) sprite(c, "brazier", b[0], b[1]);
+
+  // Insectes (au sol, sous les lumières)
+  if (on.insectes) {
+    const [wx, wy] = walker(t);
+    for (const b of s.bugs) {
+      const dW = Math.hypot(b.x - wx, b.y - wy);
+      if (b.hid) { b.wait -= dt; if (b.wait < 0 && dW > 30) { b.hid = false; b.tx = b.x + (hash(b.x | 0, t | 0) - .5) * 50; b.ty = FOOT + Math.floor(hash(t | 0, b.y) * 3); } continue; }
+      const d = Math.hypot(b.tx - b.x, b.ty - b.y);
+      if (d < 1) { b.wait -= dt; if (b.wait < 0) {
+          if (hash(t * 10 | 0, b.x | 0) < .3) { b.tx = b.hide[1]; b.ty = b.hide[2]; }
+          else { b.tx = Math.max(60, Math.min(300, b.x + (hash(t * 7 | 0, b.y | 0) - .5) * 70)); b.ty = FOOT + Math.floor(hash(b.x | 0, t * 3 | 0) * 3); }
+          b.wait = .4 + hash(b.y | 0, t * 5 | 0) * 1.8; } }
+      else { const sp = (dW < 22 ? 60 : 26) * dt; b.x += (b.tx - b.x) / d * Math.min(sp, d); b.y += (b.ty - b.y) / d * Math.min(sp, d);
+        if (Math.abs(b.x - b.hide[1]) < 2 && Math.abs(b.y - b.hide[2]) < 2) { b.hid = true; b.wait = 2 + hash(b.x | 0, 3) * 3; } }
+      if (dW < 22 && !b.hid) { b.tx = b.hide[1]; b.ty = b.hide[2]; }
+      const leg = Math.floor(t * 16) % 2;
+      px(c, b.x, b.y, "#3a2a1e"); px(c, b.x + 1, b.y, "#5a4230"); if (leg) px(c, b.x, b.y + 1, "#2a1e16", .8);
+    }
+  }
+
+  // Nuit
+  if (night) { c.fillStyle = "rgba(6,10,26,0.58)"; c.fillRect(0, 0, 960, 600); }
+
+  // Lumières et particules
+  for (const [bx, by] of BRAZ) { // flamme (comme en jeu), penchée par le vent si 17
+    const fl = Math.sin(t * 11 + bx) * .5 + Math.sin(t * 17.3 + bx) * .5, lean = w * 1.6 * Math.sign(EXIT[0] - bx);
+    dither(c, bx, by - 6, 16 + (on.braseros ? fl * 2.5 : fl), 9 + (on.braseros ? fl : 0), "#f0a23a", on.braseros ? .3 : .22);
+    const hgt = 5 + Math.round(fl);
+    for (let i = 0; i < hgt; i++) { const f = i / hgt, wdt = Math.round((1 - f) * 2.2), x0 = bx + Math.round(lean * f * f + Math.sin(t * 9 + i) * f * .8);
+      for (let o = -wdt; o <= wdt; o++) px(c, x0 + o, by - 9 - i, f > .6 ? "#d8651c" : Math.abs(o) > wdt - 1 ? "#f0a23a" : "#ffe08a"); }
+  }
+  if (on.braseros || on.air) {
+    for (const [bx, by] of BRAZ) {
+      if (on.braseros && Math.random() < dt * 9) s.embers.push({ x: bx + (Math.random() - .5) * 3, y: by - 12, vx: (Math.random() - .5) * 6, vy: -10 - Math.random() * 10, life: 1.4 + Math.random() });
+      if (on.air && Math.random() < dt * 3) s.smoke.push({ x: bx, y: by - 14, life: 3 });
+    }
+  }
+  s.embers = s.embers.filter(e => (e.life -= dt) > 0);
+  for (const e of s.embers) { const [ux, uy] = toward(e.x, e.y); e.x += (e.vx + ux * w * 14 + Math.sin(t * 3 + e.y) * 3) * dt; e.y += (e.vy + uy * w * 4) * dt; e.vy *= .995;
+    px(c, e.x, e.y, e.life > 1 ? "#ffe08a" : e.life > .5 ? "#f0a23a" : "#a04a1c"); }
+  s.smoke = s.smoke.filter(p => (p.life -= dt) > 0);
+  for (const p of s.smoke) { const [ux, uy] = toward(p.x, p.y); p.x += ux * w * 10 * dt + Math.sin(t + p.life) * 2 * dt; p.y += (-5 + uy * w * 5) * dt;
+    const a = p.life / 3 * .45, r = 1.5 + (3 - p.life) * 1.2; dither(c, p.x, p.y, r, r * .8, "#9aa3ad", a); }
+  if (on.air) for (const st of s.streaks) {
+    st.life += dt * (.25 + w * .4); if (st.life > 1) { st.life = 0; st.x = 40 + Math.random() * 270; st.y = 66 + Math.random() * 130; }
+    const [ux, uy] = toward(st.x, st.y), a = Math.sin(st.life * Math.PI) * w * .5;
+    st.x += ux * 28 * w * dt; st.y += uy * 28 * w * dt;
+    for (let i = 0; i < 5; i++) px(c, st.x - ux * i * 1.4, st.y - uy * i * 1.4, "#c8ced6", a * (1 - i / 5));
+  }
+  if (on.puits) {
+    const col = night ? "#9fc3e8" : "#f0d58a";
+    for (let y = 0; y < CAPS[1]; y++) { const hw = 6 + y * .22;
+      for (let x = Math.floor(CAPS[0] - hw); x <= CAPS[0] + hw; x++) { const e = Math.abs(x - CAPS[0]) / hw;
+        if ((1 - e) * .32 > BAYER[(y & 3) * 4 + (x & 3)]) px(c, x, y, col, .5); } }
+    for (const d of s.dust) { d.y += 3 * dt; d.x += (Math.sin(t * .8 + d.ph) * 2 + (on.air ? w * 3 : 0)) * dt;
+      if (d.y > CAPS[1] + 4) { d.y = 0; d.x = CAPS[0] - 8 + Math.random() * 16; }
+      const hw = 6 + d.y * .22, inside = Math.abs(d.x - CAPS[0]) < hw;
+      if (inside) px(c, d.x, d.y, night ? "#e0eeff" : "#fff3c8", .5 + .5 * Math.sin(t * 2 + d.ph)); }
+  }
+  if (on.ancre) {
+    const br = .5 + .5 * Math.sin(t * 1.6);
+    dither(c, ANCHOR[0], ANCHOR[1], 18 + br * 4, 16 + br * 3, "#8a4fd8", .22 + br * .14);
+  }
+  if (on.gouttes) for (let i = 0; i < TIPS.length; i++) {
+    const [x, y0] = TIPS[i], per = 2.6 + hash(i, 5) * 2.4, u = ((t + hash(i, 6) * per) % per);
+    const fall = Math.sqrt(2 * (FOOT - y0) / 120);
+    if (u < .8) { const k = u / .8; px(c, x, y0 + 1, "#a9c4d6", k); }
+    else if (u < .8 + fall) { const tt = u - .8, y = y0 + 1 + 60 * tt * tt; px(c, x, y, "#c8dce8"); px(c, x, y - 1, "#a9c4d6", .6); }
+    else { const k = (u - .8 - fall); if (k < .25) { px(c, x - 2, FOOT + 1 - k * 8, "#c8dce8"); px(c, x + 2, FOOT + 1 - k * 8, "#c8dce8"); }
+      if (k < 1) ringE(c, x, FOOT + 3, 1 + k * 7, .6 + k * 2.4, "#c8dce8", (1 - k) * .9); }
+  }
+  if (on.spores) {
+    const [wx, wy] = walker(t);
+    ringE(c, wx, wy + 2, 5, 2, "#5fd8e8", .9);
+    for (const p of s.spores) {
+      const nx = p.hx + Math.sin(t * .5 + p.ph) * 3, ny = p.hy + Math.cos(t * .37 + p.ph * 1.3) * 2.5;
+      let fx = (nx - p.x) * 1.5, fy = (ny - p.y) * 1.5; const dx = p.x - wx, dy = p.y - wy, d = Math.hypot(dx, dy);
+      if (d < 18) { fx += dx / d * (18 - d) * 9; fy += dy / d * (18 - d) * 9; }
+      p.x += fx * dt; p.y += fy * dt;
+      const a = .55 + .45 * Math.sin(t * 2.2 + p.ph); px(c, p.x, p.y, "#eef2f4", a);
+      if (night) dither(c, p.x, p.y, 2.2, 2.2, "#d8e4ea", .25 * a);
+    }
+  }
+  if (on.chauves) {
+    if (t - s.lastAuto > 9) { s.lastAuto = t; s.shotAt = t; }
+    if (ui.shot > s.seenShot || s.seenShot === undefined) { if (s.seenShot !== undefined) s.shotAt = t; s.seenShot = ui.shot; }
+    const since = t - s.shotAt;
+    if (since < .18) { px(c, 300, 178, "#ffe08a"); px(c, 301, 177, "#fff"); px(c, 299, 177, "#f0a23a"); px(c, 300, 176, "#fff"); }
+    s.bats.forEach((b, i) => {
+      let x = b.p[0], y = b.p[1], fly = false;
+      const back = 4 + i * .45;
+      if (since < back) { fly = true; const a = since * (2.4 + i * .2) + i, r = 16 + i * 3;
+        x = 200 + Math.cos(a) * r * 2.2 + Math.sin(since * 1.3 + i) * 8; y = 30 + Math.sin(a * 1.4) * r * .7;
+        const k = Math.min(1, since / .4); x = b.p[0] + (x - b.p[0]) * k; y = b.p[1] + (y - b.p[1]) * k; }
+      else if (since < back + 1.2) { fly = true; const k = (since - back) / 1.2, a = back * (2.4 + i * .2) + i, r = 16 + i * 3;
+        const fx = 200 + Math.cos(a) * r * 2.2 + Math.sin(back * 1.3 + i) * 8, fy = 30 + Math.sin(a * 1.4) * r * .7;
+        x = fx + (b.p[0] - fx) * k; y = fy + (b.p[1] - fy) * k - Math.sin(k * Math.PI) * 6; }
+      const col = "#0d1016";
+      if (fly) { const flap = Math.floor(t * 14 + i) % 2;
+        px(c, x, y, col); px(c, x - 1, y - flap, col); px(c, x + 1, y - flap, col); px(c, x - 2, y + flap - 1, col); px(c, x + 2, y + flap - 1, col); }
+      else { const sw = Math.sin(t * 1.5 + b.ph) > .97 ? 1 : 0;
+        px(c, x, y, col); px(c, x, y + 1, col); px(c, x - sw, y + 2, col); px(c, x, y + 2, "#1a1f28"); if (Math.sin(t * .7 + b.ph) > .9) px(c, x, y + 2, "#c84a4a"); }
+    });
+  }
+  if (on.air) { c.fillStyle = "#c8ced6"; c.globalAlpha = .7; c.font = "18px 'Share Tech Mono', monospace"; c.textAlign = "center"; c.fillText("sortie ↓", EXIT[0] * G, 592); c.globalAlpha = 1; }
+}
+
+// -------------------------------------------------------------- Montage de la page
+const ui = { night: false, slow: false, shot: 0 };
+const bg = new Image(), atlas = new Image();
+let pending = 2;
+bg.onload = atlas.onload = () => { if (--pending === 0) start(); };
+bg.src = BG; atlas.src = ATLAS;
+
+const scenes = [];
+function start() {
+  const allOn = Object.fromEntries(FEATS.map(f => [f.id, true]));
+  const chips = document.getElementById("chips");
+  for (const f of FEATS) {
+    const b = document.createElement("button"); b.type = "button"; b.id = "chip_" + f.id; b.className = "on"; b.textContent = f.n + " · " + f.name;
+    b.onclick = () => { allOn[f.id] = !allOn[f.id]; b.classList.toggle("on", allOn[f.id]); };
+    chips.appendChild(b);
+  }
+  scenes.push({ c: document.getElementById("c_all").getContext("2d"), on: allOn, s: makeState(1), el: document.getElementById("c_all") });
+  const host = document.getElementById("cards");
+  FEATS.forEach((f, i) => {
+    const card = document.createElement("article"); card.className = "card";
+    card.innerHTML = `<div><canvas width="960" height="600" id="c_${f.id}"></canvas></div><div>
+      <h2>${f.n} · ${f.name}</h2><span class="tag s">effort ${f.size}</span>
+      <h3>CE QU'ON VOIT</h3><ul>${f.see.map(x => `<li>${x}</li>`).join("")}</ul>
+      <h3>QUAND</h3><p>${f.when}</p>
+      <h3>OÙ ÇA SE BRANCHE</h3><p>${f.code}</p>
+      ${f.ask ? `<h3>À TRANCHER</h3><p class="ask">${f.ask}</p>` : ""}</div>`;
+    host.appendChild(card);
+    const el = card.querySelector("canvas");
+    scenes.push({ c: el.getContext("2d"), on: { [f.id]: true }, s: makeState(i + 2), el });
+  });
+  const io = new IntersectionObserver(es => es.forEach(e => { const sc = scenes.find(x => x.el === e.target); if (sc) sc.vis = e.isIntersecting; }));
+  scenes.forEach(sc => { sc.vis = true; io.observe(sc.el); });
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  let t = 3, last = performance.now();
+  for (const sc of scenes) frame(sc.c, sc.on, sc.s, t, 0);
+  if (reduce) return;
+  (function loop(now) {
+    const dt = Math.min(.05, (now - last) / 1000) * (ui.slow ? .3 : 1); last = now; t += dt;
+    for (const sc of scenes) if (sc.vis) frame(sc.c, sc.on, sc.s, t, dt);
+    requestAnimationFrame(loop);
+  })(last);
+}
+document.getElementById("night").onclick = e => { ui.night = !ui.night; e.target.classList.toggle("on", ui.night); };
+document.getElementById("slow").onclick = e => { ui.slow = !ui.slow; e.target.classList.toggle("on", ui.slow); };
+document.getElementById("shot").onclick = () => { ui.shot++; };
+</script>

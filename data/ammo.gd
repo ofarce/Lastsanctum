@@ -3,8 +3,8 @@ extends RefCounted
 ## (planche planches/arbalestrie-modulaire-planche.html, validée le 2026-11-19). Sans la recherche, seules les
 ## balles spirituelles existent. `cost` : mana prélevée à chaque tir (null = `mana` de l'arme, de chaque type) ;
 ## `cd_mult` : facteur de recharge (balles spirituelles : 6 tirs par seconde au lieu de 4) ; `mult` : facteur
-## de dégâts par balle ; `count` / `spread` : balles par tir et demi-écart en degrés ; `heal` : l'Ingénieur
-## regagne les dégâts réellement faits ; `splash` : rayon (unités) et `splash_mult` des dégâts autour de la cible ;
+## de dégâts par balle ; `count` / `spread` : balles par tir et demi-écart en degrés ; `heal` : PV que l'Ingénieur
+## regagne par balle qui fait des dégâts (2026-11-21 : 1 PV, au lieu des dégâts faits) ; `splash` : rayon (unités) et `splash_mult` des dégâts autour de la cible ;
 ## `sfx` : son de tir propre à la munition (sinon « arbalestrie »).
 
 const RESEARCH := "modular_crossbow"
@@ -13,13 +13,13 @@ const AMMO := {
 	"spirit": {"name": "Balles spirituelles", "cost": null, "mult": 1.0, "cd_mult": 2.0 / 3.0,
 		"desc": "Mode normal, cadence rapide : 6 balles par seconde", "cost_text": "0,5 de chaque mana par tir"},
 	"indra": {"name": "Balles d’Indra", "cost": {"discipline": 2}, "mult": 1.5, "sfx": "arbalestrie_indra",
-		"desc": "+50 % de dégâts", "cost_text": "2 Discipline par tir"},
-	"medeina": {"name": "Balles de Medeina", "cost": {"vie": 2}, "mult": 0.5, "heal": true, "sfx": "arbalestrie_medeina",
-		"desc": "−50 % de dégâts, soigne de la valeur des dégâts faits", "cost_text": "2 Vie par tir"},
+		"desc": "Balle lourde, +50 % de dégâts par balle mais 4 tirs par seconde : perce mieux l’armure", "cost_text": "2 Discipline par tir"},
+	"medeina": {"name": "Balles de Medeina", "cost": {"vie": 2}, "mult": 0.5, "heal": 1.0, "sfx": "arbalestrie_medeina",
+		"desc": "−50 % de dégâts, chaque balle qui touche rend 1 PV", "cost_text": "2 Vie par tir"},
 	"sigil": {"name": "Balles de Sigil", "cost": {"savoir": 2}, "mult": 0.7, "count": 2, "spread": 4.5, "sfx": "arbalestrie_sigil",
 		"desc": "Deux balles par tir, −30 % chacune", "cost_text": "2 Savoir par tir"},
-	"aether": {"name": "Balles d’Aether", "cost": {"forge": 2}, "mult": 1.0, "splash": 4.0, "splash_mult": 0.25, "sfx": "arbalestrie_aether",
-		"desc": "Onde d’un bloc : un quart des dégâts autour de la cible", "cost_text": "2 Forge par tir"},
+	"aether": {"name": "Balles d’Aether", "cost": {"forge": 2}, "mult": 1.0, "splash": 4.0, "splash_mult": 1.0 / 3.0, "sfx": "arbalestrie_aether",
+		"desc": "Onde d’un bloc : un tiers des dégâts autour de la cible", "cost_text": "2 Forge par tir"},
 }
 
 
@@ -65,4 +65,14 @@ static func pay(id: String, base: float) -> void:
 ## Molette : munition suivante (`step` = ±1), en boucle.
 static func cycle(step: int) -> void:
 	var i := ORDER.find(current())
-	GameState.ammo = ORDER[posmod(i + step, ORDER.size())]
+	select(ORDER[posmod(i + step, ORDER.size())])
+
+
+## Change de munition en retenant la précédente (Barillet double) et l'instant (Culasse froide).
+static func select(id: String) -> void:
+	if id == current():
+		return
+	GameState.ammo_prev = current()
+	GameState.ammo = id
+	GameState.ammo_changed_at = GameState.sim_time
+	GameState.barrel_flip = false

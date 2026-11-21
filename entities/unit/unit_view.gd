@@ -60,6 +60,13 @@ var _sword: Array = []
 var _xbow: Array[AtlasTexture] = []
 var _body := Sprite2D.new()
 var _mining_seal: Node2D
+## Iris de la Matrice porté (entities/unit/iris_fx.gd) : orbe-satellite et ping de sonar.
+var _iris: Node2D
+## Voile de la Martyre porté (entities/unit/veil_fx.gd) : liseré, pendentif, coup absorbé.
+var _veil: Node2D
+## Les douze mods du 2026-11-21 (entities/unit/mods_worn_fx.gd) : derrière et devant le corps.
+var _mods_back: Node2D
+var _mods_front: Node2D
 var _under := _UnitDecal.new()
 ## Méditation de l'Ingénieur (Meditation) : halo et lueurs derrière le sprite, puis devant.
 var _med_back := _MedFx.new()
@@ -179,6 +186,14 @@ func setup(u: Unit, meta: Dictionary, sim: Simulation, w: World = null) -> void:
 		_mining_seal.view = self
 		_mining_seal.use_parent_material = true
 		add_child(_mining_seal)
+		_iris = preload("res://entities/unit/iris_fx.gd").new()
+		_iris.view = self
+		_iris.use_parent_material = true
+		add_child(_iris)
+		_mods_back = preload("res://entities/unit/mods_worn_fx.gd").new()
+		_mods_back.view = self
+		_mods_back.use_parent_material = true
+		add_child(_mods_back)
 	_body.centered = false
 	_body.use_parent_material = true
 	add_child(_body)
@@ -187,6 +202,15 @@ func setup(u: Unit, meta: Dictionary, sim: Simulation, w: World = null) -> void:
 		_med_front.front = true
 		_med_front.use_parent_material = true
 		add_child(_med_front)
+		_veil = preload("res://entities/unit/veil_fx.gd").new()
+		_veil.view = self
+		_veil.use_parent_material = true
+		add_child(_veil)
+		_mods_front = preload("res://entities/unit/mods_worn_fx.gd").new()
+		_mods_front.view = self
+		_mods_front.front = true
+		_mods_front.use_parent_material = true
+		add_child(_mods_front)
 	if not enemy:
 		_revive = ReviveFx.new()
 		_revive.view = self
@@ -559,6 +583,13 @@ func _update() -> void:
 	_body.scale = Vector2(kx, 1)
 	if _mining_seal:
 		_mining_seal.tick(_face, _body.position, ReviveFx.body_shown(u))
+	if _iris:
+		_iris.tick(_face, _body.position, ReviveFx.body_shown(u))
+	if _veil:
+		_veil.tick(_body, _vdir, ReviveFx.body_shown(u))
+	if _mods_back:
+		_mods_back.tick(_face, _body.position, _vdir, ReviveFx.body_shown(u))
+		_mods_front.tick(_face, _body.position, _vdir, ReviveFx.body_shown(u))
 	if _revive:
 		# Rappel : sprite, ombre et barre de vie masqués tant que la bulle n'a pas pris la forme de l'unité.
 		var shown := ReviveFx.body_shown(u)

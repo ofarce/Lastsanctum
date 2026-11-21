@@ -1,0 +1,290 @@
+<meta charset="utf-8">
+<meta name="claude:viewport-fit-sides" content="cover">
+<title>Roches minables</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;600&display=swap">
+<style>
+/* Planche de propositions, même gabarit que les autres planches du dépôt : une colonne de cartes,
+   chaque carte = une scène de jeu à 1 px natif + les quatre paliers + verdict. Un seul habillage, sombre. */
+:root{--bg:#0c0d10;--panel:#14161b;--line:#2c3038;--txt:#e2dccb;--mut:#9a9ca2;--acc:#5ce8ff;--gold:#d0a038;
+ --ok:#5fbf7a;--redo:#e0b04a;--no:#e0583a;--btn:#1c1f26;--btn-on:#12303a;--field:#101217;--code:#c8bfa6;
+ --display:'Pixelify Sans',system-ui,sans-serif;--mono:ui-monospace,Menlo,monospace;color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--txt);font:15px/1.45 var(--display)}
+.wrap{max-width:1320px;margin:auto;padding-block:18px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+main.wrap{padding-bottom:80px}
+h1{margin:0;font-weight:600;letter-spacing:.08em;font-size:26px;color:var(--acc);text-wrap:balance}
+h2{font-weight:600;font-size:20px;color:var(--gold);margin:36px 0 6px;letter-spacing:.05em;text-wrap:balance}
+p.lead{color:var(--mut);margin:6px 0 0;max-width:68ch}p.lead b{color:var(--txt);font-weight:600}
+code{font:13px var(--mono);color:var(--code)}
+.rules{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr));gap:10px;margin-top:14px}
+.rules div{background:var(--panel);border:1px solid var(--line);padding:10px 12px;font-size:14px;color:var(--mut)}
+.rules b{color:var(--gold);display:block;font-weight:600}
+button{font:inherit;color:var(--txt);background:var(--btn);border:1px solid var(--line);padding:5px 11px;cursor:pointer}
+button:hover{border-color:var(--acc)}button[aria-pressed=true]{border-color:var(--acc);background:var(--btn-on)}
+button:focus-visible,textarea:focus-visible{outline:2px solid var(--gold);outline-offset:1px}
+.bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);border-bottom:1px solid var(--line)}
+.bar .wrap{display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding-block:8px}
+.bar .lab{color:var(--mut);font-size:13px;margin-left:6px}#tally{margin-left:auto;color:var(--mut);font-size:13px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,560px),1fr));gap:14px;margin-top:12px}
+.card{background:var(--panel);border:1px solid var(--line);display:flex;flex-direction:column;min-width:0}
+.card[data-v=garder]{border-color:var(--ok)}.card[data-v=revoir]{border-color:var(--redo)}.card[data-v=rejeter]{border-color:var(--no);opacity:.72}
+canvas{image-rendering:pixelated;display:block;width:100%;height:auto;background:#07080a}
+body.bw canvas{filter:grayscale(1)}
+.tiers{display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--line)}
+.tiers span{font-size:12px;line-height:1.25;color:var(--mut);padding:5px 6px 6px;min-width:0}
+.tiers span b{display:block;color:var(--txt);font-weight:600}.tiers span.off{opacity:.55}
+.cap{padding:10px 14px 12px;display:flex;flex-direction:column;gap:6px}
+.cap b.t{color:var(--acc);font-weight:600;font-size:18px}.cap b.t.cur{color:var(--mut)}
+.cap p{margin:0;color:var(--mut);font-size:14px}.cap p b{color:var(--txt);font-weight:600}
+.spec{font:12px/1.5 var(--mono);color:var(--code)}
+.verdict{display:flex;gap:6px}.verdict button{flex:1 1 0;min-width:0;font-size:13px}
+.verdict button.sel[data-v=garder]{border-color:var(--ok);color:var(--ok)}
+.verdict button.sel[data-v=revoir]{border-color:var(--redo);color:var(--redo)}
+.verdict button.sel[data-v=rejeter]{border-color:var(--no);color:var(--no)}
+textarea{background:var(--field);color:var(--txt);border:1px solid var(--line);font:13px system-ui,sans-serif;padding:6px 8px;resize:vertical;min-height:32px;width:100%}
+.tablewrap{overflow-x:auto;background:var(--panel);border:1px solid var(--line);margin-top:12px}
+table{border-collapse:collapse;width:100%;font-size:14px;min-width:640px}
+td,th{border-bottom:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}
+th{color:var(--gold);font-weight:600}td{color:var(--mut)}td b{color:var(--txt);font-weight:600}
+#out{margin-top:10px;min-height:150px;font-family:var(--mono)}
+</style>
+
+<header class="wrap">
+<h1>ROCHES MINABLES</h1>
+<p class="lead">Aujourd’hui la roche est une nappe d’ardoise uniforme : on ne voit ni où commence un bloc, ni quelle roche demande quel sceau. La roche de vert-de-gris (8 coups, <b>Sceau de cuivre</b>) n’est qu’un filtre vert posé sur la même texture, par blocs de 128 unités, qui commence 62 unités trop au nord. Cinq pistes ci-dessous, peintes sur les vraies textures du jeu, à 1 px natif.</p>
+<p class="lead">La scène est la même partout : la salle en bas, un boyau creusé qui bute sur la frontière, une galerie naturelle du biome 2 en haut à droite. Les quatre rangées du haut sont en roche de vert-de-gris. Sous chaque scène, la même piste déclinée sur les quatre paliers (fer et or sont en réserve, dessinés pour vérifier que le système tient).</p>
+<div class="rules">
+ <div><b>Mon conseil</b>Piste 2 pour les dessus et piste 5 pour les parois, ensemble. La 2 sépare les roches par leur dessin et pas seulement par leur couleur, la 5 met l’information là où l’on clique.</div>
+ <div><b>Le test du noir et blanc</b>Une séparation qui ne tient que par la teinte se perd de nuit, sous la brume et sous la teinte du biome. Le bouton du bandeau le vérifie.</div>
+ <div><b>Ce qui ne change pas</b>Les minerais, les filons, les bosquets, le cadre de survol et son texte. Seuls le dessus de roche et la paroi sont touchés.</div>
+</div>
+</header>
+
+<div class="bar"><div class="wrap">
+ <button id="bw" aria-pressed="false">Noir et blanc</button>
+ <span class="lab">Sceau de cuivre</span>
+ <button id="s0" aria-pressed="true">manquant</button><button id="s1" aria-pressed="false">acquis</button>
+ <button id="fr" aria-pressed="false">Montrer la vraie frontière</button>
+ <span id="tally"></span>
+</div></div>
+
+<main class="wrap">
+<h2>Les pistes</h2>
+<div class="grid" id="grid"></div>
+
+<h2>Ce que chaque piste demande</h2>
+<div class="tablewrap"><table>
+<tr><th>Piste</th><th>Images à produire</th><th>Code</th><th>Risque</th></tr>
+<tr><td><b>1 Teinte juste</b></td><td>Une texture <code>rock2.png</code> et six parois, par <code>tools/ardoise/ardoise.py</code></td><td><code>TerrainPainter</code> et <code>Terrain</code> lisent la texture du biome de la case ; <code>BIOME_TINT</code> ne teinte plus la roche</td><td>Reste une affaire de couleur seule</td></tr>
+<tr><td><b>2 Grain de la roche</b></td><td>Une texture périodique par palier, et ses parois</td><td>Comme la 1</td><td>Les veines claires peuvent concurrencer les filets de minerai : à garder plus ternes qu’eux</td></tr>
+<tr><td><b>3 Blocs de carrière</b></td><td>Aucune : joints et agrafes peints à la volée</td><td><code>TerrainPainter</code> repeint les deux rangs de cases autour d’une case creusée (il repeint déjà les voisines)</td><td>Peut se confondre avec le dallage ; coût de peinture à mesurer</td></tr>
+<tr><td><b>4 Sceau gravé</b></td><td>Un glyphe par sceau, une frise de frontière</td><td>Glyphes posés par <code>World</code> sur les parois scellées, retirés quand la recherche aboutit</td><td>Charge l’écran dans une grande galerie du biome 2</td></tr>
+<tr><td><b>5 Parois parlantes</b></td><td>Six parois par palier</td><td><code>DecorLoader</code> choisit <code>face5</code> selon la roche de la case</td><td>Seule, elle ne dit rien d’une roche vue de dessus sans galerie voisine</td></tr>
+</table></div>
+
+<h2>Mes choix</h2>
+<p class="lead">Les verdicts et les notes de chaque carte se rassemblent ici, à copier dans la conversation.</p>
+<button id="copy" style="margin-top:10px">Copier mes choix</button>
+<textarea id="out" readonly aria-label="Récapitulatif des choix"></textarea>
+</main>
+
+<script>
+"use strict";
+const SRC={rock:"@@ROCK@@",floor:"@@FLOOR@@",dug:"@@DUG@@",faces:"@@FACES@@",nod:"@@NOD@@"};
+const T=32,hx=s=>[1,3,5].map(i=>parseInt(s.substr(i,2),16));
+const RAMPS=[
+ ['#141922','#1c222d','#262e3b','#323c4b','#424e5f','#556274','#6c7a8c','#8a98a8'],
+ ['#101a1b','#172526','#1f3433','#294643','#365a55','#48726a','#618f84','#86b0a1'],
+ ['#15100e','#201814','#2d211b','#3c2c25','#4d3a31','#624b40','#7b6052','#9a7c6b'],
+ ['#2a282b','#39363a','#4b4849','#615d5b','#7a756e','#958f84','#b2ab9b','#d2cab6']].map(r=>r.map(hx));
+const LUM=RAMPS[0].map(c=>.3*c[0]+.59*c[1]+.11*c[2]);
+// Métal du sceau de chaque palier, veine propre à la roche, et teinte terne des joints.
+const METAL=[null,hx('#c47b58'),hx('#aab6c0'),hx('#ddb457')];
+const VEIN=[null,hx('#4a9480'),hx('#a2502c'),hx('#c9a24e')];
+const TIERS=[['Temple','Sceau de minage, 4 coups'],['Vert-de-gris','Sceau de cuivre, 8 coups'],['Forges mortes','en réserve'],['Cryptes de l’Aube','en réserve']];
+const OUTL=[11,10,14];
+
+function hash(x,y,s){let n=Math.imul(x|0,374761393)+Math.imul(y|0,668265263)+Math.imul(s|0,982451653);n=Math.imul(n^(n>>>13),1274126177);return((n^(n>>>16))>>>0)/4294967296}
+function vn(x,y,s){const xi=Math.floor(x),yi=Math.floor(y),xf=x-xi,yf=y-yi,a=xf*xf*(3-2*xf),b=yf*yf*(3-2*yf);
+ const p=hash(xi,yi,s),q=hash(xi+1,yi,s),r=hash(xi,yi+1,s),t=hash(xi+1,yi+1,s);return p+(q-p)*a+(r-p)*b+(p-q-r+t)*a*b}
+function idx(r,g,b){const l=.3*r+.59*g+.11*b;let k=0,d=1e9;for(let i=0;i<8;i++){const e=Math.abs(LUM[i]-l);if(e<d){d=e;k=i}}return k}
+const moss=(r,g,b)=>g>r*1.3&&g>b*1.2;
+const cl=k=>k<0?0:k>7?7:k;
+
+// ---------- scènes ----------
+// open : 0 roche, 1 sol de galerie (dalles), 2 case creusée.
+const MAIN={cw:12,ch:9,front:4,
+ open(i,j){if(j<0||i<0||i>=12)return 0;if(j>=8)return 1;if(j==7&&i>=2&&i<=9)return 1;
+  if(i==4&&j>=4&&j<=6)return 2;if(j==5&&i>=5&&i<=7)return 2;
+  if(j==1&&i>=8&&i<=10)return 1;if(j==2&&i>=9&&i<=10)return 1;return 0},
+ tier(i,j){return j<4?1:0},
+ ores:[[1,5,0],[2,6,0],[6,1,0],[2,2,0],[3,1,2],[10,5,0]]};
+const STRIP={cw:12,ch:4,front:-1,open(i,j){return j==3?2:0},tier(i,j){return Math.min(3,Math.max(0,Math.floor(i/3)))},ores:[]};
+
+function dist(sc){const d=[];for(let j=0;j<sc.ch;j++)for(let i=0;i<sc.cw;i++){let m=9;
+  for(let b=-2;b<=2;b++)for(let a=-2;a<=2;a++)if(sc.open(i+a,j+b))m=Math.min(m,Math.max(Math.abs(a),Math.abs(b)));d.push(m)}return d}
+
+// ---------- dessus de roche : une fonction par piste ----------
+// p : pixel source [r,g,b] ; t : palier ; renvoie [r,g,b].
+function remap(p,t){if(t==0)return p;const R=RAMPS[t];return moss(p[0],p[1],p[2])?R[3]:R[idx(p[0],p[1],p[2])]}
+
+function grain(p,t,x,y){
+ const R=RAMPS[t];let k=idx(p[0],p[1],p[2]);
+ if(t==0){ // feuillets d'ardoise : lits horizontaux serrés, légèrement ondulés
+  if(moss(p[0],p[1],p[2]))return p;
+  const w=(y+Math.floor(vn(x/26,y/40,3)*5))%7,br=hash(Math.floor(x/9),Math.floor(y/7),5)<.22;
+  if(!br){if(w==0)k-=2;else if(w==1)k+=1}
+  return R[cl(k)]}
+ if(t==1){ // masse sombre, veines de vert-de-gris en biais, paillettes de cuivre
+  k=cl(k-1);
+  const v=(x*.55+y+vn(x/22,y/22,7)*22)%37,gap=vn(x/13,y/13,9)<.42;
+  if(!gap&&v<1.1)return VEIN[1];if(!gap&&v<2.1)return R[cl(k+1)];
+  if(hash(x>>1,y>>1,11)<.003)return METAL[1];
+  return R[k]}
+ if(t==2){ // basalte en prismes : cellules à bord sombre, piqûres de rouille
+  const g=13,cx=Math.floor(x/g),cy=Math.floor(y/g);let d1=1e9,d2=1e9,id=0;
+  for(let b=-1;b<=1;b++)for(let a=-1;a<=1;a++){const px=(cx+a+hash(cx+a,cy+b,13)*.8+.1)*g,py=(cy+b+hash(cx+a,cy+b,17)*.8+.1)*g,d=Math.hypot(px-x,py-y);
+   if(d<d1){d2=d1;d1=d;id=hash(cx+a,cy+b,19)}else if(d<d2)d2=d}
+  if(d2-d1<1.3)return R[0];if(d2-d1<2.4)return R[cl(k-1)];
+  if(hash(x>>1,y>>1,23)<.008)return VEIN[2];
+  return R[cl(k+(id<.33?-1:id>.7?1:0))]}
+ // marbre des cryptes : fond clair, filets d'or le long des lignes de niveau
+ const n=vn(x/34,y/34,29)+vn(x/11,y/11,31)*.25;
+ if(Math.abs(n-.62)<.012)return VEIN[3];if(Math.abs(n-.36)<.014)return R[cl(k-2)];
+ return R[k]}
+
+// Joints de carrière : seulement à deux cases d'une galerie, pleins à une case.
+function quarry(p,t,x,y,d){
+ const c=remap(p,t);if(d>2)return c;
+ const R=RAMPS[t],k=idx(p[0],p[1],p[2]),u=x%T,v=y%T;
+ const ju=hash(Math.floor(y/5),Math.floor(x/T),37)<.3?1:0,jv=hash(Math.floor(x/5),Math.floor(y/T),41)<.3?1:0;
+ const wide=t>0?1:0;
+ if(u==ju||v==jv||(wide&&(u==ju+1||v==jv+1))){
+  if(d==2)return hash(x>>2,y>>2,43)<.45?R[cl(k-2)]:c;
+  return t>0&&(u==ju+1||v==jv+1)?VEIN[t].map((a,n)=>(a+R[2][n])>>1):R[0]}
+ if(d==1){if(u==ju+1+wide||v==jv+1+wide)return R[cl(k+1)];if(u==T-1||v==T-1)return R[cl(k-1)]}
+ return c}
+
+const VARIANTS=[
+ {id:'actuel',name:'Actuel',cur:true,tiers:2,
+  pitch:'La même ardoise partout, multipliée par un vert pâle au nord. Dans le jeu le filtre commence 15 cases après la vraie frontière (ici 2, pour tenir dans la vignette) : on bute sur une roche qui ressemble à celle d’avant.',
+  spec:'Terrain.BIOME_TINT = (0.72, 0.96, 0.86), par bloc de 128 u',
+  top(p,t,x,y,c){return (c.strip?t==1:c.j<2)?[p[0]*.72|0,p[1]*.96|0,p[2]*.86|0]:p},
+  face(p,t,c){return (c.strip?t==1:c.j<2)?[p[0]*.72|0,p[1]*.96|0,p[2]*.86|0]:p}},
+ {id:'teinte',name:'1 Teinte juste',
+  pitch:'Le minimum : chaque palier a sa propre gamme de huit tons, appliquée <b>case par case</b> à la vraie frontière, avec un trait de couture. La mousse reste au Temple.',
+  spec:'rock2.png + palette par palier ; même dessin de roche',
+  top(p,t,x,y,c){if(c.seam==0)return RAMPS[0][0];if(c.seam==1)return RAMPS[0][6];return remap(p,t)},
+  face(p,t){return remap(p,t)}},
+ {id:'grain',name:'2 Grain de la roche',
+  pitch:'Chaque roche a son <b>dessin</b> : ardoise en feuillets au Temple, masse sombre à veines de vert-de-gris et paillettes de cuivre au biome 2, basalte en prismes pour le fer, marbre à filets pour l’or. Elle se reconnaît sans couleur et de loin.',
+  spec:'une texture périodique 504 px par palier',
+  top(p,t,x,y){return grain(p,t,x,y)},
+  face(p,t){return remap(p,t)}},
+ {id:'carriere',name:'3 Blocs de carrière',
+  pitch:'La roche se <b>découpe en blocs</b> à deux cases d’une galerie : on voit ce qui peut être attaqué, le cœur de la montagne reste massif. Joint simple pour la roche tendre, joint double patiné et <b>agrafes de métal</b> pour une roche scellée.',
+  spec:'joints peints par TerrainPainter autour des galeries',
+  top(p,t,x,y,c){return quarry(p,t,x,y,c.d)},
+  face(p,t){return remap(p,t)},cramps:true},
+ {id:'sceau',name:'4 Sceau gravé',
+  pitch:'Le verrou se dessine : une <b>frise</b> court sur la frontière, et chaque paroi scellée porte le <b>glyphe du sceau</b> qui manque, dans son métal. Sceau acquis : la frise s’éteint, les glyphes des parois disparaissent (essayez le bouton du bandeau).',
+  spec:'glyphe 9 × 9 par sceau, frise de 5 px',
+  top(p,t,x,y,c){return remap(p,t)},
+  face(p,t){return remap(p,t)},glyphs:true},
+ {id:'parois',name:'5 Parois parlantes',
+  pitch:'On mine par la paroi : c’est elle qui parle. Paroi d’ardoise inchangée au Temple ; paroi de vert-de-gris à <b>bancs clairs et coulures de cuivre</b>. Le bord du dessus qui longe une galerie prend la teinte claire du palier.',
+  spec:'six parois face5 par palier, liseré de 2 px',
+  top(p,t,x,y,c){const R=RAMPS[t];if(c.rim)return R[c.rim==1?6:5];return remap(p,t)},
+  face(p,t,c){const R=RAMPS[t];if(t==0)return p;const k=idx(p[0],p[1],p[2]);if(c.fy<15||k==0)return remap(p,t);
+   const w=(c.fy+((c.fx>>3)&1))%11,col=hash(c.fx,c.fv*7+t,53),len=2+Math.floor(hash(c.fx,t,59)*5);
+   if(w==2)return R[6];if(w==3)return R[cl(k+1)];
+   if(col<.11&&w>3&&w<=3+len)return w==3+len?VEIN[t]:(t==1?METAL[1]:VEIN[t]);
+   return remap(p,t)}},
+];
+
+const GLYPH=["..XXXXX..",".X.....X.","X...X...X","X..XXX..X","X.XXXXX.X","X..XXX..X","X...X...X",".X.....X.","..XXXXX.."];
+function glyph(g,x,y,col,dark){for(let b=0;b<9;b++)for(let a=0;a<9;a++)if(GLYPH[b][a]=='X'){
+  if(dark){g.fillStyle=dark;g.fillRect(x+a+1,y+b+1,1,1)}}
+ g.fillStyle=col;for(let b=0;b<9;b++)for(let a=0;a<9;a++)if(GLYPH[b][a]=='X')g.fillRect(x+a,y+b,1,1)}
+const css=c=>`rgb(${c[0]},${c[1]},${c[2]})`;
+
+const IMG={};let sealed=true,showFront=false;
+
+function render(cv,V,sc){
+ const W=sc.cw*T,H=sc.ch*T,g=cv.getContext('2d'),strip=sc===STRIP,out=g.createImageData(W,H),o=out.data,D=dist(sc);
+ const rock=IMG.rock,fl=IMG.floor,dg=IMG.dug;
+ const c={strip,i:0,j:0,d:9,seam:-1,rim:0};
+ for(let y=0;y<H;y++)for(let x=0;x<W;x++){
+  const i=Math.floor(x/T),j=Math.floor(y/T),q=(y*W+x)*4,s=(y*384+x)*4,op=sc.open(i,j);let px;
+  if(op){const src=op==1?fl:dg;px=[src[s],src[s+1],src[s+2]];
+   if(op==2){const u=x%T,v=y%T;if((u<2&&!sc.open(i-1,j))||(u>=30&&!sc.open(i+1,j))||(v>=30&&!sc.open(i,j+1)))px=px.map(a=>a*.47|0)}}
+  else{const t=sc.tier(i,j);if(strip&&V.tiers&&t>=V.tiers)px=[7,8,10];else{
+   c.i=i;c.j=j;c.d=D[j*sc.cw+i];c.seam=sc.front>0?y-sc.front*T:-1;
+   const u=x%T,v=y%T;c.rim=(u>=30&&sc.open(i+1,j))||(u<2&&sc.open(i-1,j))||(v<2&&sc.open(i,j-1))?((u==30||u==1||v==1)?2:1):0;
+   px=V.top([rock[s],rock[s+1],rock[s+2]],t,x,y,c)}}
+  o[q]=px[0];o[q+1]=px[1];o[q+2]=px[2];o[q+3]=255}
+ g.putImageData(out,0,0);
+ const isRock=(i,j)=>i>=0&&i<sc.cw&&j>=0&&j<sc.ch&&!sc.open(i,j);
+ // Agrafes de métal (piste 3) : à cheval sur le joint sud et le joint est des blocs scellés proches d'une galerie.
+ if(V.cramps)for(let j=0;j<sc.ch;j++)for(let i=0;i<sc.cw;i++){const t=sc.tier(i,j);if(!t||!isRock(i,j)||D[j*sc.cw+i]>1)continue;
+  if(isRock(i,j+1)&&sc.tier(i,j+1)==t){g.fillStyle=css(OUTL);g.fillRect(i*T+13,j*T+28,5,9);g.fillStyle=css(METAL[t]);g.fillRect(i*T+14,j*T+29,3,7);g.fillStyle=css(RAMPS[t][1]);g.fillRect(i*T+15,j*T+31,1,3)}
+  if(isRock(i+1,j)&&sc.tier(i+1,j)==t){g.fillStyle=css(OUTL);g.fillRect(i*T+28,j*T+13,9,5);g.fillStyle=css(METAL[t]);g.fillRect(i*T+29,j*T+14,7,3);g.fillStyle=css(RAMPS[t][1]);g.fillRect(i*T+31,j*T+15,3,1)}}
+ // Frise de frontière et glyphes de dessus (piste 4).
+ if(V.glyphs){
+  if(sc.front>0){const y=sc.front*T-2;for(let x=0;x<W;x++){const i=Math.floor(x/T);if(!isRock(i,sc.front)&&!isRock(i,sc.front-1))continue;
+    g.fillStyle=css(OUTL);g.fillRect(x,y,1,5);if(x%8<6){g.fillStyle=css(sealed?METAL[1]:RAMPS[1][4]);g.fillRect(x,y+1,1,3);if(x%8>0&&x%8<5){g.fillStyle=css(sealed?RAMPS[1][1]:RAMPS[1][2]);g.fillRect(x,y+2,1,1)}}}}
+  for(let j=0;j<sc.ch;j++)for(let i=0;i<sc.cw;i++){const t=sc.tier(i,j);if(!t||!isRock(i,j)||hash(i,j,61)>.2)continue;
+   const lock=sealed||t>1;glyph(g,i*T+11,j*T+11,css(lock?METAL[t].map((a,n)=>(a*2+RAMPS[t][3][n])/3|0):RAMPS[t][1]),lock?css(RAMPS[t][0]):null)}}
+ // Parois : au-dessus de chaque case ouverte dont la voisine nord est en roche (face5, 32 × 49, ancre 45).
+ for(let j=0;j<=sc.ch;j++)for(let i=0;i<sc.cw;i++){if(!sc.open(i,j)||!isRock(i,j-1))continue;
+  const t=sc.tier(i,j-1);if(strip&&V.tiers&&t>=V.tiers)continue;
+  const fv=Math.floor(hash(i,j,67)*6),key=V.id+t+fv;let f=render.cache[key];
+  if(!f){f=document.createElement('canvas');f.width=32;f.height=49;const fg=f.getContext('2d'),im=fg.createImageData(32,49),sd=IMG.faces;
+   for(let fy=0;fy<49;fy++)for(let fx=0;fx<32;fx++){const s=(fy*192+fv*32+fx)*4,q=(fy*32+fx)*4,a=sd[s+3];if(!a)continue;
+    const px=V.face([sd[s],sd[s+1],sd[s+2]],t,{strip,j:99,fx,fy,fv});im.data[q]=px[0];im.data[q+1]=px[1];im.data[q+2]=px[2];im.data[q+3]=a}
+   fg.putImageData(im,0,0);render.cache[key]=f}
+  // « Actuel » : la paroi prend la teinte du bloc, en retard de deux rangées comme le dessus.
+  if(V.cur&&!strip){const late=j-1<2,k2=V.id+(late?'L':'N')+fv;let f2=render.cache[k2];
+   if(!f2){f2=document.createElement('canvas');f2.width=32;f2.height=49;const fg=f2.getContext('2d');fg.drawImage(IMG.facesCv,fv*32,0,32,49,0,0,32,49);
+    if(late){const im=fg.getImageData(0,0,32,49);for(let q=0;q<im.data.length;q+=4){im.data[q]=im.data[q]*.72|0;im.data[q+1]=im.data[q+1]*.96|0;im.data[q+2]=im.data[q+2]*.86|0}fg.putImageData(im,0,0)}
+    render.cache[k2]=f2}f=f2}
+  g.drawImage(f,i*T,j*T-45);
+  if(V.glyphs&&t>0&&(sealed||t>1))glyph(g,i*T+11,j*T-24,css(METAL[t]),css(OUTL))}
+ // Nodules de minerai du jeu, sur les blocs restés en roche et non couverts par une paroi.
+ for(const [i,j,col] of sc.ores)if(isRock(i,j))g.drawImage(IMG.nodCv,col*32,0,32,32,i*T,j*T,32,32);
+ if(showFront&&sc.front>0){g.fillStyle='#5ce8ff';for(let x=0;x<W;x+=6)g.fillRect(x,sc.front*T,3,1)}
+}
+render.cache={};
+
+// ---------- page ----------
+const grid=document.getElementById('grid'),votes={},notes={};
+function build(){
+ for(const V of VARIANTS){
+  const card=document.createElement('article');card.className='card';card.id='c-'+V.id;
+  const a=document.createElement('canvas');a.width=384;a.height=288;a.setAttribute('role','img');a.setAttribute('aria-label','Scène de jeu, piste '+V.name);
+  const b=document.createElement('canvas');b.width=384;b.height=128;b.setAttribute('role','img');b.setAttribute('aria-label','Les quatre paliers, piste '+V.name);
+  const tiers=document.createElement('div');tiers.className='tiers';
+  TIERS.forEach((t,n)=>{const s=document.createElement('span');if(n>1)s.className='off';s.innerHTML='<b>'+t[0]+'</b>'+(V.tiers&&n>=V.tiers?'n’existe pas':t[1]);tiers.append(s)});
+  const cap=document.createElement('div');cap.className='cap';
+  cap.innerHTML='<b class="t'+(V.cur?' cur':'')+'">'+V.name+'</b><p>'+V.pitch+'</p><div class="spec">'+V.spec+'</div>';
+  if(!V.cur){const vd=document.createElement('div');vd.className='verdict';
+   for(const k of ['garder','revoir','rejeter']){const bt=document.createElement('button');bt.dataset.v=k;bt.textContent=k[0].toUpperCase()+k.slice(1);
+    bt.onclick=()=>{votes[V.id]=votes[V.id]==k?'':k;vd.querySelectorAll('button').forEach(x=>x.classList.toggle('sel',x.dataset.v==votes[V.id]));card.dataset.v=votes[V.id]||'';recap()};vd.append(bt)}
+   const ta=document.createElement('textarea');ta.id='n-'+V.id;ta.placeholder='Note sur cette piste';ta.setAttribute('aria-label','Note, piste '+V.name);ta.oninput=()=>{notes[V.id]=ta.value;recap()};
+   cap.append(vd,ta)}
+  card.append(a,b,tiers,cap);grid.append(card);V.cv=[a,b]}
+ paint();recap()}
+function paint(){for(const V of VARIANTS){render(V.cv[0],V,MAIN);render(V.cv[1],V,STRIP)}}
+function recap(){const L=[];let n=0;for(const V of VARIANTS){if(V.cur)continue;const v=votes[V.id],t=(notes[V.id]||'').trim();if(v)n++;if(v||t)L.push(V.name+' : '+(v||'sans verdict')+(t?' — '+t:''))}
+ document.getElementById('out').value=L.length?'Roches minables\n'+L.join('\n'):'Aucun choix pour l’instant.';
+ document.getElementById('tally').textContent=n+' / '+(VARIANTS.length-1)+' pistes jugées'}
+const press=(id,on)=>document.getElementById(id).setAttribute('aria-pressed',on);
+document.getElementById('bw').onclick=e=>{const on=document.body.classList.toggle('bw');press('bw',on)};
+function seal(v){sealed=v;press('s0',v);press('s1',!v);paint()}
+document.getElementById('s0').onclick=()=>seal(true);document.getElementById('s1').onclick=()=>seal(false);
+document.getElementById('fr').onclick=()=>{showFront=!showFront;press('fr',showFront);paint()};
+document.getElementById('copy').onclick=async e=>{const o=document.getElementById('out');try{await navigator.clipboard.writeText(o.value);e.target.textContent='Copié'}catch(_){o.focus();o.select();e.target.textContent='Sélectionné : Ctrl+C'}};
+
+let left=0;for(const k in SRC){left++;const im=new Image();im.onload=()=>{const c=document.createElement('canvas');c.width=im.width;c.height=im.height;const g=c.getContext('2d');g.drawImage(im,0,0);
+  IMG[k]=g.getImageData(0,0,im.width,im.height).data;IMG[k+'Cv']=c;if(--left==0)build()};im.src=SRC[k]}
+</script>

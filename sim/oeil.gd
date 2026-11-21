@@ -707,12 +707,18 @@ static func _ring(p: Vector2, n: int, v: float, off: float, opts: Dictionary) ->
 		shoot(p, a, v, opts.get("big", false), opts)
 
 
+## Vitesse des petites balles (tout sauf les grosses) : ×1,5 depuis le 2026-11-21, accélération et vitesse max comprises.
+const SMALL_SPEED := 1.5
+
+
 ## Balle : style ("oeil", "larme", "cil"), accélération (acc, vitesse max), mur des mille yeux (wall : arrêtée par la
 ## masse), durée de vie (life). Une larme en cloche (arc) ne touche qu'à l'atterrissage.
 static func shoot(p: Vector2, a: float, v: float, big: bool, opts: Dictionary = {}) -> Dictionary:
+	var m := 1.0 if big else SMALL_SPEED
+	v *= m
 	var b := {"x": p.x, "z": p.y, "vx": cos(a) * v, "vz": sin(a) * v, "big": big, "home_until": -INF,
 		"until": GameState.sim_time + float(opts.get("life", BULLET["life"])), "style": opts.get("style", "oeil"),
-		"acc": opts.get("acc", 0.0), "max": opts.get("max", INF), "wall": opts.get("wall", false), "h": 0.0}
+		"acc": float(opts.get("acc", 0.0)) * m, "max": float(opts.get("max", INF)) * m, "wall": opts.get("wall", false), "h": 0.0}
 	GameState.oeil_bullets.append(b)
 	return b
 

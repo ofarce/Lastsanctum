@@ -113,6 +113,8 @@ func damage(t: Unit, amount: float, src: Unit = null, delay := 0.0) -> void:
 	t.hp = maxf(0.0, t.hp - amount)
 	if amount > 0.0 and t == GameState.incarnated:
 		GameState.incarnated_hurt_at = GameState.sim_time
+	if amount > 0.0 and not t.is_enemy():
+		Mods.hurt(t)
 	if amount > 0.0 and was > 0.0:
 		Loot.note_hit(t, src)
 	# Squelettes de la nuit : éclats du collier, bubon qui éclate.
@@ -127,6 +129,7 @@ func damage(t: Unit, amount: float, src: Unit = null, delay := 0.0) -> void:
 			Sfx.at("exile_blesse", t.x, t.z, delay)
 	if src and t.is_enemy() and was > 0.0 and t.hp <= 0.0:
 		_log("%s achève %s" % [src.name, (t as Enemy).kind])
+		Mods.killed(src, t as Enemy)
 		gain_xp(src, Catalog.KILL_XP.get((t as Enemy).kind, 10))
 
 
@@ -426,7 +429,7 @@ func gear_attack(u: Unit, point: Vector2) -> void:
 	# `mana` de chaque type) ; sans assez de mana, pas de tir.
 	var ammo := "spirit"
 	if w.has("mana"):
-		ammo = Ammo.current()
+		ammo = Mods.shot_ammo(u, float(w["mana"]))
 		if not Ammo.can_pay(ammo, float(w["mana"])):
 			return
 		Ammo.pay(ammo, float(w["mana"]))
@@ -435,7 +438,9 @@ func gear_attack(u: Unit, point: Vector2) -> void:
 	u.attack = float(w.get("cd", Catalog.FIGHT["engineer"]["cd"]))
 	if w.has("mana"):
 		u.attack *= float(Ammo.AMMO[ammo].get("cd_mult", 1.0))
-	var dmg: float = (Catalog.attack_damage(u) + Catalog.lvl_bonus(u)) * (1.5 if u.buff > 0.0 else 1.0)
+	# Cœur de braise, Culasse froide (sim/mods.gd) : recharge raccourcie ; Écaille d'esquive : coup renforcé.
+	u.attack *= Mods.cd_mult(u)
+	var dmg: float = (Catalog.attack_damage(u) + Catalog.lvl_bonus(u)) * (1.5 if u.buff > 0.0 else 1.0) * Mods.attack_mult(u)
 	if w.has("melee"):
 		var reach := float(w["melee"])
 		for e: Enemy in GameState.enemies.duplicate():
@@ -489,8 +494,22 @@ func _ball(u: Unit, d: Vector2, dmg: float, ammo: String) -> void:
 		return
 	var before := target.hp
 	damage(target, dmg, u, dur)
+	# Lentille de souffle (sim/mods.gd) : le carreau traverse et touche le suivant sur sa ligne.
+	var pierced: Array[Enemy] = [target]
+	for k in Mods.pierce(u):
+		var nxt := ball_target(u, d, pierced)
+		var tgt: Enemy = nxt["enemy"]
+		var from := Vector2(pierced[-1].x, pierced[-1].z)
+		var e2: Vector2 = nxt["end"]
+		var dur2 := dur + maxf(0.02, from.distance_to(e2) / BALL_SPEED)
+		_fx({"type": "cball", "x": from.x, "z": from.y, "tx": e2.x, "tz": e2.y, "age": -dur, "duration": dur2 - dur, "seed": _seed(), "ammo": ammo})
+		_fx({"type": "cballhit", "x": e2.x, "z": e2.y, "age": -dur2, "duration": 0.3, "seed": _seed(), "ammo": ammo})
+		if tgt == null:
+			break
+		damage(tgt, dmg, u, dur2)
+		pierced.append(tgt)
 	var dealt := before - target.hp
-	# Aether : onde d'un bloc autour de la cible, un quart des dégâts à chaque autre ennemi visible dedans.
+	# Aether : onde d'un bloc autour de la cible, un tiers des dégâts à chaque autre ennemi visible dedans.
 	if A.has("splash"):
 		var r := float(A["splash"])
 		_fx({"type": "aether_wave", "x": target.x, "z": target.z, "r": r, "age": -dur, "duration": 0.55})
@@ -501,9 +520,9 @@ func _ball(u: Unit, d: Vector2, dmg: float, ammo: String) -> void:
 			var reach := dur + Vector2(e.x - target.x, e.z - target.z).length() / r * 0.3
 			damage(e, dmg * float(A["splash_mult"]), u, reach)
 			_fx({"type": "cballhit", "x": e.x, "z": e.z, "age": -reach, "duration": 0.25, "seed": _seed(), "ammo": "aether_spark"})
-	# Medeina : l'Ingénieur regagne les dégâts réellement faits (armure déduite), sans dépasser ses PV max.
-	if A.get("heal", false) and dealt > 0.0 and u.alive():
-		var healed := minf(dealt, u.max_hp - u.hp)
+	# Medeina : chaque balle qui fait des dégâts rend `heal` PV (1) à l'Ingénieur, sans dépasser ses PV max.
+	if A.has("heal") and dealt > 0.0 and u.alive():
+		var healed := minf(float(A["heal"]), u.max_hp - u.hp)
 		u.hp += healed
 		_fx({"type": "heal_motes", "x": end.x, "z": end.y, "unit": u, "age": -dur - 0.08, "duration": 0.6, "seed": _seed()})
 		if healed > 0.0:
@@ -516,12 +535,12 @@ func _can_hit(e: Enemy) -> bool:
 
 ## Trajectoire d'une balle de canon tirée par `u` dans la direction `d` : premier ennemi touché (ou null) et point
 ## d'arrêt (ennemi, roche ou bord du terrain praticable ; BALL_RANGE au plus).
-func ball_target(u: Unit, d: Vector2) -> Dictionary:
+func ball_target(u: Unit, d: Vector2, skip: Array[Enemy] = []) -> Dictionary:
 	var from := Vector2(u.x, u.z)
 	var best := BALL_RANGE
 	var target: Enemy = null
 	for e: Enemy in GameState.enemies:
-		if not _can_hit(e):
+		if not _can_hit(e) or skip.has(e):
 			continue
 		# La balle touche l'ennemi si elle passe sur sa silhouette dessinée (Enemy.body_rect).
 		var th := e.ray_hit(from, d)

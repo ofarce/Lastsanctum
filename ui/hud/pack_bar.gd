@@ -63,7 +63,14 @@ func _slot(i: int) -> Rect2:
 			x0 = roundf((screen.x - tools - row_extra()) / 2.0) + tools + SEP
 	else:
 		y = float(get_parent().get("hud_bottom")) - ABOVE - SLOT
-	return Rect2(x0 + i * (SLOT + GAP), y, SLOT, SLOT)
+	# Sac sans fond : la seconde rangée (cases 11 à 20) au-dessus de la première.
+	return Rect2(x0 + (i % COUNT) * (SLOT + GAP), y - (i / COUNT) * (SLOT + GAP), SLOT, SLOT)
+
+
+## Cases montrées : 10, ou 20 avec le Sac sans fond (Unit.inventory_capacity, data/gear_items.gd).
+func _count() -> int:
+	var u := engineer()
+	return clampi(u.inventory_capacity, COUNT, COUNT * 2) if u else COUNT
 
 
 func _stack(i: int) -> Dictionary:
@@ -74,7 +81,7 @@ func _stack(i: int) -> Dictionary:
 func _pick(p: Vector2) -> int:
 	if not available():
 		return -1
-	for i in COUNT:
+	for i in _count():
 		if _slot(i).has_point(p):
 			return i
 	return -1
@@ -106,14 +113,14 @@ func _process(_delta: float) -> void:
 func _draw() -> void:
 	if not available():
 		return
-	for i in COUNT:
+	for i in _count():
 		var r := _slot(i)
 		var stack := _stack(i)
 		ItemBar.paint_case(self, r, not stack.is_empty(), _hover == i)
 		if stack.is_empty():
 			continue
 		var item: String = stack["item"]
-		if Loot.rarity_of(item) != "normal":
+		if Loot.rarity_of(item) != "normal" and not ItemIcon.Gear.ITEMS.get(item, {}).has("module"):
 			draw_rect(r.grow(-2.5), Loot.rarity_color(item), false, 1.5)
 		ItemIcon.draw_item(self, item, r.get_center() - Vector2(0, 2), 1.0)
 		if int(stack["quantity"]) > 1:

@@ -145,7 +145,7 @@ func _update() -> void:
 	# Redessin seulement si l'image, l'orientation, la sélection, les PV, le niveau ou PX changent.
 	var mode := _mode()
 	var key := [mode, _frame_index(mode), _kx, _jolt, _flash, GameState.selected.has(u), u.hp, u.max_hp, Catalog.lvl(u),
-		world.camera.px if world else 1, u.carrying.get("item", ""), visible, preload("res://sim/placeables.gd").posted(u)]
+		world.camera.px if world else 1, u.carrying.get("item", ""), visible, preload("res://sim/placeables.gd").posted(u), _load_key(u)]
 	if key != _key:
 		_key = key
 		queue_redraw()
@@ -199,6 +199,7 @@ func _draw() -> void:
 		draw_rect(Rect2(-12, 0, 24, 3), Color("#000000aa"))
 		draw_rect(Rect2(-12, 0, 24.0 * u.hp / u.max_hp, 3), UnitView.HP_ALLY)
 	var lvl := Catalog.lvl(u)
+	_draw_load_pips(u, px, lvl)
 	if lvl >= 2:
 		var text := "★%d" % lvl
 		var w := _bold.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, 10).x
@@ -211,6 +212,48 @@ func _draw() -> void:
 		draw_arc(at, 9.0, 0.0, TAU, 20, Color("#f4ecd6"), 1.0, true)
 		preload("res://ui/inventory/item_icon.gd").draw_item(self, "firing_post", at, 0.5)
 	draw_set_transform(Vector2.ZERO)
+
+
+## Charge d'un esprit qui récolte (planche « Effets de récolte », piste 3) : [portés, capacité, part livrer], ou []
+## s'il ne récolte pas (ordre de creusement, ou mineur d'un bâtiment au filon ou en livraison).
+func _harvest_load(u: Unit) -> Array:
+	if not (u.job is Dictionary):
+		return []
+	var j: Dictionary = u.job
+	var n := int(u.carrying.get("quantity", 0))
+	if j.get("type") == "dig":
+		return [n, Production.CARRY_CAPACITY, j.get("delivering", false) or n >= Production.CARRY_CAPACITY]
+	if j.get("type") == "staff" and j.get("post") == "miner" and j.get("step") in ["mine", "deliver"]:
+		return [n, Catalog.MINE_BATCH, j.get("step") == "deliver"]
+	return []
+
+
+## Clé de redessin des crans : charge, et phase du clignotement pendant la livraison.
+func _load_key(u: Unit) -> Array:
+	var L := _harvest_load(u)
+	if L.is_empty():
+		return L
+	return [L[0], L[1], L[2] and fmod(GameState.sim_time * 4.0, 1.0) < 0.5]
+
+
+## Cinq crans au-dessus de la tête (sous le badge ★), un par objet porté ; blancs et clignotants quand il part livrer.
+## Repère : pixels d'écran depuis la barre de vie.
+func _draw_load_pips(u: Unit, px: float, lvl: int) -> void:
+	var L := _load_key(u)
+	if L.is_empty():
+		return
+	var s := minf(px, 2.0)
+	var cap := int(L[1])
+	var c: Color = _ITEMS_A.get(u.carrying.get("item", ""), {}).get("color", Color("#9da2a9"))
+	var w := cap * 4.0 * s - s
+	# Au-dessus du sommet du sprite (plus haut que la tête projetée pour Aether et Medeina).
+	var rise := maxf(0.0, _ay * _scale - 3.9 * Proj.KH) * px
+	var y := -rise - 4.0 * s - (14.0 if lvl >= 2 else 3.0)
+	for i in cap:
+		var x := -w / 2.0 + i * 4.0 * s
+		draw_rect(Rect2(x - s, y - s, 5.0 * s, 5.0 * s), Color("#0b0d10e0"))
+		var fill: Color = (Color.WHITE if L[2] else c.lightened(0.15)) if i < int(L[0]) else Color("#2a3036")
+		draw_rect(Rect2(x, y, 3.0 * s, 3.0 * s), fill)
 
 
 ## Port 2 retenu (planches/coffres-production-propositions.html) : caisse tenue à deux mains devant le ventre, le lot

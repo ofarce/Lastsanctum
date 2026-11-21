@@ -2,7 +2,10 @@ class_name ResearchShelf
 extends Control
 ## Recherches achevées (2026-11-20) : une rangée de plaques en haut à gauche, sous la carte de vague, qui remplace
 ## les boutons « Déjà achevée » des bâtiments. Chaque plaque porte l'icône pleine de la recherche (celle du bouton
-## achevé) ; le survol ouvre une bulle sous la plaque : nom et effet.
+## achevé) ; le survol ouvre une bulle sous la plaque : nom et effet. En tête, la plaque au livre ouvre le grimoire
+## des recherches (ResearchGrimoire, touche X), dès qu'un bâtiment à recherches est achevé.
+
+signal open_grimoire
 
 const CELL := 40.0
 const GAP := 6.0
@@ -24,9 +27,14 @@ func _init() -> void:
 	mouse_exited.connect(func() -> void: _set_hover(-1))
 
 
-## Recherches achevées, dans l'ordre du catalogue. Vrai si la liste a changé (la taille suit).
+## Plaque au livre (grimoire) en tête, puis les recherches achevées, dans l'ordre du catalogue. Vrai si la liste a
+## changé (la taille suit).
 func update_ids() -> bool:
 	var next: Array[String] = []
+	for t: String in ResearchGrimoire.building_types():
+		if ResearchGrimoire.host(t) != null or not GameState.research_done.is_empty():
+			next.append("")
+			break
 	for id: String in Catalog.RESEARCH:
 		if GameState.research_done.has(id):
 			next.append(id)
@@ -41,6 +49,10 @@ func update_ids() -> bool:
 
 
 func _gui_input(event: InputEvent) -> void:
+	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT and _hover >= 0 and ids[_hover] == "":
+		accept_event()
+		open_grimoire.emit()
+		return
 	if event is InputEventMouseMotion:
 		var px: float = (event as InputEventMouseMotion).position.x
 		var i := int(floorf(px / (CELL + GAP)))
@@ -56,8 +68,11 @@ func _set_hover(i: int) -> void:
 	if i < 0:
 		_bubble.visible = false
 		return
-	var R: Dictionary = Catalog.RESEARCH[ids[i]]
-	_bubble.set_text(R["name"], String(R.get("desc", "")))
+	if ids[i] == "":
+		_bubble.set_text("Grimoire des recherches", "Toutes les recherches, par bâtiment · touche %s" % ResearchGrimoire.KEY, "")
+	else:
+		var R: Dictionary = Catalog.RESEARCH[ids[i]]
+		_bubble.set_text(R["name"], String(R.get("desc", "")))
 	var cx := i * (CELL + GAP) + CELL / 2.0
 	var screen_w := get_viewport_rect().size.x
 	var x := clampf(cx - _bubble.size.x / 2.0, 8.0 - global_position.x, screen_w - 8.0 - global_position.x - _bubble.size.x)
@@ -74,6 +89,17 @@ func _draw() -> void:
 		HudStyle.ring(self, r, 1.0, HudStyle.GOLD_LIGHT if i == _hover else HudStyle.GOLD)
 		var inner := r.grow(-3.0)
 		HudStyle.ring(self, inner, 1.0, Color("#3a2f1c"))
+		if ids[i] == "":
+			# Grimoire : livre au trait d'or et sa touche en pied.
+			var book := HudStyle.icon("book", 22)
+			draw_texture_rect(book, Rect2(r.position + Vector2(9, 4), Vector2(22, 22)), false, HudStyle.GOLD_LIGHT if i == _hover else Color("#e9ce9e"))
+			var f := HudStyle.font()
+			var kw := HudStyle.text_width(ResearchGrimoire.KEY, 9) + 6.0
+			var kr := Rect2(r.position.x + (CELL - kw) / 2.0, r.end.y - 13.0, kw, 10.0)
+			draw_rect(kr, Color("#10140d"))
+			HudStyle.ring(self, kr, 1.0, Color("#8c744b"))
+			draw_string(f, kr.position + Vector2(3.0, 8.5), ResearchGrimoire.KEY, HORIZONTAL_ALIGNMENT_LEFT, -1, 9, HudStyle.MUTED)
+			continue
 		var tex := ActionButton._Glyph._full_tex(ids[i])
 		var pos := r.position + Vector2((CELL - ICON) / 2.0, (CELL - ICON) / 2.0)
 		draw_texture_rect(tex, Rect2(pos, Vector2(ICON, ICON)), false, Color.WHITE if i == _hover else Color(0.92, 0.92, 0.9))
@@ -87,11 +113,14 @@ class _Bubble extends Control:
 	var _desc := ""
 	var _desc_h := 0.0
 
-	func set_text(name: String, desc: String) -> void:
+	var _status := "Recherche achevée"
+
+	func set_text(name: String, desc: String, status := "Recherche achevée") -> void:
 		_name = name
 		_desc = desc
+		_status = status
 		var f := HudStyle.font()
-		var head := HudStyle.text_width(name, 15) + HudStyle.text_width("  ·  Recherche achevée", 13)
+		var head := HudStyle.text_width(name, 15) + (HudStyle.text_width("  ·  " + status, 13) if status else 0.0)
 		var w := clampf(maxf(head, HudStyle.text_width(desc, 13)), head, BUBBLE_W)
 		_desc_h = 0.0
 		if desc:
@@ -108,8 +137,9 @@ class _Bubble extends Control:
 		var f := HudStyle.font()
 		draw_string(f, Vector2(14.0, 21.0), _name, HORIZONTAL_ALIGNMENT_LEFT, -1, 15, HudStyle.IVORY)
 		var x := 14.0 + HudStyle.text_width(_name, 15)
-		draw_string(f, Vector2(x, 21.0), "  ·  ", HORIZONTAL_ALIGNMENT_LEFT, -1, 13, HudStyle.MUTED)
-		x += HudStyle.text_width("  ·  ", 13)
-		draw_string(f, Vector2(x, 21.0), "Recherche achevée", HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("#a8d890"))
+		if _status:
+			draw_string(f, Vector2(x, 21.0), "  ·  ", HORIZONTAL_ALIGNMENT_LEFT, -1, 13, HudStyle.MUTED)
+			x += HudStyle.text_width("  ·  ", 13)
+			draw_string(f, Vector2(x, 21.0), _status, HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("#a8d890"))
 		if _desc:
 			draw_multiline_string(f, Vector2(14.0, 32.0 + f.get_ascent(13)), _desc, HORIZONTAL_ALIGNMENT_LEFT, size.x - 28.0, 13, -1, HudStyle.MUTED)

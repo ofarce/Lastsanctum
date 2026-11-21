@@ -5,6 +5,7 @@ const ItemStorage := preload("res://sim/item_storage.gd")
 const Recipes := preload("res://data/recipes.gd")
 const Placeables := preload("res://sim/placeables.gd")
 const Blocks := preload("res://data/mineable_blocks.gd")
+const HarvestFx := preload("res://sim/harvest_fx.gd")
 ## Boucle de simulation (frame() et update(), Index.html, 73b410f) et ordres du joueur.
 ## Ordre des systèmes identique au prototype (R14) : portail, bâtiments et Ancre, tâches des adeptes,
 ## portails maléfiques, unités, tourelles, ennemis, fin de partie. Les étapes 7 et 8 complèteront
@@ -180,6 +181,7 @@ func tick(dt: float) -> void:
 	Pylons.tick(self, dt)
 	Roamers.tick(self, dt)
 	Night.tick(self, dt)
+	Mods.tick(self)
 	Skeletons.tick(self, dt)
 	Sanctum.tick(self, dt)
 	Oublieux.tick(self, dt)
@@ -363,7 +365,7 @@ func update_buildings(dt: float) -> void:
 			# Chantier bâti par un adepte en prière (builder_for) ; sans aucun adepte en jeu, il avance seul.
 			if not _builder_at_work(b):
 				continue
-			b.progress = minf(D["time"], b.progress + dt * (2.0 if GameState.fast_construction else 1.0))
+			b.progress = minf(D["time"], b.progress + dt * (2.0 if GameState.fast_construction else 1.0) * Mods.work_mult(Vector2(b.x, b.z)))
 			if b.progress < D["time"]:
 				Sfx.at("bat_chantier", b.x, b.z)  # boucle espacée (MIN_GAP) tant que le chantier avance
 				continue
@@ -606,12 +608,16 @@ func cancel_build(u: Unit) -> void:
 	u.build_job = null
 
 
-func _collect_mined_item(item: String, miner: Unit, drop_position: Vector2) -> void:
+## `hit` (HarvestFx.target) : point frappé par un esprit ; l'objet en saute jusqu'à sa charge au lieu du texte « +1 ».
+func _collect_mined_item(item: String, miner: Unit, drop_position: Vector2, hit: Dictionary = {}) -> void:
 	if miner.role == "engineer":
 		ItemStorage.deposit(item, miner, drop_position)
 	else:
 		miner.carrying = {"item": item, "quantity": int(miner.carrying.get("quantity", 0)) + 1}
-	GameState.effects.append({"type": "mining_gain", "miner": miner, "item": item, "age": 0.0, "duration": 1.0})
+	var gain := {"type": "mining_gain", "miner": miner, "item": item, "age": 0.0, "duration": 1.0}
+	if not hit.is_empty():
+		gain["from"] = hit
+	GameState.effects.append(gain)
 	if not GameState.collected_items.has(item):
 		GameState.collected_items[item] = true
 		GameState.effects.append({"type": "new_resource", "miner": miner, "item": item, "age": 0.0, "duration": 2.6})
@@ -728,10 +734,12 @@ func update_adepts(_dt: float) -> void:
 			Sfx.at("minage", u.x, u.z)  # coups espacés par MIN_GAP
 			if not eng:
 				var interval := adept_mining_seconds(u)
-				j["work"] += dt
+				var gained := dt * Mods.work_mult(u.pos())
+				var hit := HarvestFx.work(u, st, key, block["drop_item"], j["work"], j["work"] + gained, interval)
+				j["work"] += gained
 				if j["work"] >= interval:
 					j["work"] -= interval
-					_collect_mined_item(block["drop_item"], u, u.pos())
+					_collect_mined_item(block["drop_item"], u, u.pos(), hit)
 					j["at"] = next_lode_spot(key, at)
 					if int(u.carrying["quantity"]) >= Production.CARRY_CAPACITY:
 						j["delivering"] = true
@@ -1102,6 +1110,11 @@ func order_mining_cells(cells: Array) -> bool:
 			engineer_spoke.emit(u, "Impossible. Je n'ai pas mon sceau de minage.")
 			continue
 		var queue := mining_order(ordered, u.pos())
+		if u.role != "engineer":
+			queue = queue.filter(func(c: Dictionary) -> bool: return not node_full(c, u))
+			if queue.is_empty():
+				say("Déjà %d adeptes sur ce gisement." % Catalog.NODE_ADEPTS_MAX, 2.0)
+				continue
 		set_job(u, {"type": "dig", "cells": queue, "index": 0, "cell": queue[0], "at": queue[0]["at"]})
 		if u.role == "engineer":
 			engineer_digging = true
@@ -1110,6 +1123,41 @@ func order_mining_cells(cells: Array) -> bool:
 	if adept_mining and not engineer_digging:
 		say("Les adeptes récoltent le matériau du bloc.", 2.0)
 	return handled
+
+
+## Nœud de minage de la case : origine du bosquet ou du filon illimité (2 × 2), case gauche d'une paire de
+## minerai inépuisable, sinon la case elle-même.
+func mining_node(i: int, j: int) -> Vector2i:
+	var st := state()
+	var c := Vector2i(i, j)
+	if st.grove_cells.has(c):
+		return st.grove_cells[c]
+	if st.lode_cells.has(c):
+		return st.lode_cells[c]
+	if not st.permanent_ores.has(c) and st.permanent_ores.has(c + Vector2i.LEFT) \
+			and st.block_types.get(c + Vector2i.LEFT) == st.block_types.get(c):
+		return c + Vector2i.LEFT
+	return c
+
+
+## Adeptes (vivants, hors Ingénieur et hors `except`) qui creusent ou minent pour un bâtiment sur le nœud.
+func node_adepts(node: Vector2i, except: Unit = null) -> int:
+	var n := 0
+	for o: Unit in GameState.units:
+		if o == except or not o.alive() or o.role == "engineer" or not Catalog.is_adept(o) or o.job == null:
+			continue
+		var t: Variant = o.job.get("type")
+		if t != "dig" and not (t == "staff" and o.job.get("post") == "miner"):
+			continue
+		var c: Variant = o.job.get("cell")
+		if c is Dictionary and mining_node(c["i"], c["j"]) == node:
+			n += 1
+	return n
+
+
+## Le nœud de la case a déjà NODE_ADEPTS_MAX adeptes (sans compter `u`).
+func node_full(cell: Dictionary, u: Unit = null) -> bool:
+	return node_adepts(mining_node(cell["i"], cell["j"]), u) >= Catalog.NODE_ADEPTS_MAX
 
 
 ## Passe à la case suivante de la sélection, ou termine la tâche.
@@ -1128,7 +1176,7 @@ func _advance_dig(u: Unit) -> bool:
 	while int(j["index"]) < cells.size():
 		var cell: Dictionary = cells[j["index"]]
 		if not state().block_definition(cell["i"], cell["j"]).is_empty() and not state().dug.has(Vector2i(cell["i"], cell["j"])) \
-				and state().seal_needed(cell["i"], cell["j"]) == "":
+				and state().seal_needed(cell["i"], cell["j"]) == "" and (u.role == "engineer" or not node_full(cell, u)):
 			j["cell"] = cell
 			j["at"] = _dig_spot(u, cell)
 			j["work"] = 0.0
@@ -1883,10 +1931,39 @@ func start_research(b: Building, id: String) -> void:
 	GameState.research_jobs[id] = {"building": b, "progress": 0.0}
 
 
+## Recherches lancées dans ce bâtiment, dans l'ordre de la file (la première avance).
+static func research_queue(b: Building) -> Array[String]:
+	var out: Array[String] = []
+	for id: String in GameState.research_jobs:
+		if GameState.research_jobs[id]["building"] == b:
+			out.append(id)
+	return out
+
+
+## Rang d'une recherche dans la file de son bâtiment (0 = celle qui avance, -1 = ni lancée ni en file).
+static func research_queue_pos(id: String) -> int:
+	if not GameState.research_jobs.has(id):
+		return -1
+	return research_queue(GameState.research_jobs[id]["building"]).find(id)
+
+
+## Une seule recherche par bâtiment (2026-11-21) : `research_jobs` garde l'ordre de lancement, seule la première de
+## chaque bâtiment progresse, les suivantes attendent leur tour (déjà payées). Bâtiment détruit : ses recherches sortent
+## de la file, remboursées.
 func update_research(dt: float) -> void:
 	for id: String in GameState.research_jobs.keys():
+		var b: Building = GameState.research_jobs[id]["building"]
+		if not GameState.buildings.has(b):
+			GameState.research_jobs.erase(id)
+			Catalog.refund(Catalog.research_cost(id))
+			ItemStorage.give(Catalog.research_items(id), Vector2(b.x, b.z))
+	var busy: Array[Building] = []
+	for id: String in GameState.research_jobs.keys():
 		var job: Dictionary = GameState.research_jobs[id]
-		if not GameState.buildings.has(job["building"]) or not job["building"].complete:
+		if busy.has(job["building"]):
+			continue
+		busy.append(job["building"])
+		if not job["building"].complete:
 			continue
 		# Recherche à la vitesse du personnel au poste (à l'arrêt sans personne).
 		job["progress"] = minf(Catalog.RESEARCH_TIME, job["progress"] + dt * Production.speed(job["building"]))

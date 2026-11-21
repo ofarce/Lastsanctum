@@ -23,6 +23,9 @@ var _textures := {}
 var _sprites := {}
 ## Planche commune du décor (tools/baker/decor_atlas.py) : une texture pour tous les sprites.
 var _atlas: Texture2D
+## Planche du décor en roche de vert-de-gris (mêmes régions) et ses AtlasTexture.
+var _atlas_r2: Texture2D
+var _atlas_tex_r2 := {}
 var _regions := {}
 var _atlas_tex := {}
 var _count := 0
@@ -35,9 +38,12 @@ func _init() -> void:
 	var runtime: Dictionary = read_json("res://assets/baked/manifest.json")["world"]["runtime_decor"]
 	for f: Dictionary in runtime["faces"]:
 		_sprites["face5_%d" % f["v"]] = {"ax": f["ax"], "ay": f["ay"], "path": ArtStyle.RUNTIME + "face5_%d.png" % f["v"]}
+		# Même paroi en roche de vert-de-gris (TerrainOps.face_id).
+		_sprites["face5_%d_r2" % f["v"]] = {"ax": f["ax"], "ay": f["ay"], "path": ArtStyle.RUNTIME + "face5_%d_r2.png" % f["v"]}
 	for s: Dictionary in runtime["spires"]:
 		_sprites["gallery_spire_%d" % s["v"]] = {"ax": s["ax"], "ay": s["ay"], "path": ArtStyle.RUNTIME + "gallery_spire_%d.png" % s["v"]}
 	_atlas = load(ArtStyle.ATLAS)
+	_atlas_r2 = load(ArtStyle.ATLAS_R2)
 	_regions = read_json(BAKED + "decor_atlas.json")["sprites"]
 
 
@@ -95,7 +101,7 @@ func make_node(e: Dictionary) -> Node2D:
 			special["evil"].append(slot)
 		return slot
 	var orb: bool = e.get("orb", false)
-	var spr := _sprite(e["s"])
+	var spr := _sprite(e["s"], Biomes.rock_tier(z) if rocky(e["s"]) else 0)
 	var draw_at := Proj.nat(e["bx"], 0, e["bz"]) if e.has("bx") else Proj.nat(x, 0, z)
 	if orb:
 		# Position continue (non arrondie) : pas de shader d'alignement ; orbe éteinte au départ.
@@ -126,10 +132,19 @@ func make_node(e: Dictionary) -> Node2D:
 	return holder
 
 
-func _sprite(id: String) -> Sprite2D:
+## Sprites de roche (les mêmes que is_rocky de tools/ardoise/ardoise.py, parois à part : elles ont leur
+## identifiant « _r2 ») : au nord du Temple ils prennent les teintes de la roche de vert-de-gris.
+static func rocky(id: String) -> bool:
+	return id.get_slice("_", 0) in ["rock", "mountain", "spire", "crystal"] or id.begins_with("gallery_spire")
+
+
+func _sprite(id: String, tier := 0) -> Sprite2D:
 	var info: Dictionary = _sprites[id]
 	var s := Sprite2D.new()
-	s.texture = _atlas_texture(id) if _regions.has(id) else texture(info["path"])
+	if _regions.has(id):
+		s.texture = _atlas_texture(id, tier)
+	else:
+		s.texture = texture(String(info["path"]).replace(".png", "_r2.png") if tier == 1 else info["path"])
 	s.centered = false
 	s.offset = -Vector2(info["ax"], info["ay"])
 	s.use_parent_material = true
@@ -137,11 +152,12 @@ func _sprite(id: String) -> Sprite2D:
 
 
 ## Région de la planche commune pour un sprite (une AtlasTexture partagée par identifiant).
-func _atlas_texture(id: String) -> AtlasTexture:
-	if not _atlas_tex.has(id):
+func _atlas_texture(id: String, tier := 0) -> AtlasTexture:
+	var cache: Dictionary = _atlas_tex_r2 if tier == 1 else _atlas_tex
+	if not cache.has(id):
 		var r: Array = _regions[id]
 		var a := AtlasTexture.new()
-		a.atlas = _atlas
+		a.atlas = _atlas_r2 if tier == 1 else _atlas
 		a.region = Rect2(r[0], r[1], r[2], r[3])
-		_atlas_tex[id] = a
-	return _atlas_tex[id]
+		cache[id] = a
+	return cache[id]

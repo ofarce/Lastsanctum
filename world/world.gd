@@ -226,6 +226,7 @@ func _ready() -> void:
 	lighting.providers.append(anchor_overload.lights)
 	lighting.providers.append(_vault_lights)
 	lighting.providers.append(_grove_lights)
+	lighting.providers.append(_loot_lights)
 	lighting.providers.append(_ambience_lights)
 	lighting.providers.append(sanctum_view.lights)
 	add_child(lighting)
@@ -238,6 +239,14 @@ func _ready() -> void:
 	veil.material = _fog_material
 	fog_layer.add_child(veil)
 	veil.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	# Sceau sensible : reflets des filons par-dessus le brouillard.
+	var seal_layer := CanvasLayer.new()
+	seal_layer.name = "SealGlintsLayer"
+	seal_layer.layer = 3
+	add_child(seal_layer)
+	var seal_view := SealGlintsView.new()
+	seal_view.world = self
+	seal_layer.add_child(seal_view)
 	# Pas de reset_world ici : la partie (Simulation.new_game) ou l'outil qui instancie le monde seul le
 	# fait aussitôt avec sa graine ; le générer ici doublait le coût (~25 s) pour rien.
 
@@ -499,7 +508,7 @@ func _attach_rock_cap(e: Dictionary, slot: Node2D) -> void:
 	var bz := float(e["bz"])
 	var cap := Sprite2D.new()
 	cap.name = "RockCap"
-	cap.texture = ROCK_TOP
+	cap.texture = terrain.rock_texture(Biomes.rock_tier(floorf(bz / 4.0) * 4.0 - 2.0))
 	cap.texture_repeat = CanvasItem.TEXTURE_REPEAT_ENABLED
 	cap.region_enabled = true
 	var gx := posmod(int(bx * 8.0) + terrain.origin.x, ROCK_TOP.get_width())
@@ -877,6 +886,28 @@ func _vault_lights() -> Array[Dictionary]:
 		var opened := GameState.sim_time >= GameState.chest_opened_at
 		out.append({"x": CaveShape.CHEST.x, "z": CaveShape.CHEST.y - 1.0, "r": 9.0 if opened else 5.5,
 			"rgb": Color8(92, 232, 255), "glow": 0.22 if opened else 0.12})
+	return out
+
+
+## Lueur du phare de butin (planches/butin-propositions.html, piste 1) : un corps, une cache ou un objet au sol qui
+## porte mieux que du normal éclaire le sol à la couleur de sa rareté, en pulsant comme le disque du phare.
+func _loot_lights() -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	var t := GameState.sim_time
+	var add := func(x: float, z: float, rarity: String) -> void:
+		if rarity == "normal" or not fog.visible_at(Vector2(x, z)):
+			return
+		var k := 0.5 + 0.5 * sin(t * 3.0 + x * 0.3)
+		out.append({"x": x, "z": z, "r": 4.5 + 1.0 * k, "rgb": Loot.RARITY[rarity]["color"], "glow": 0.16 + 0.06 * k})
+	for corpse: Enemy in GameState.enemy_corpses:
+		if not corpse.loot.is_empty() and t - corpse.died_at >= 1.0:
+			add.call(corpse.x, corpse.z, Loot.best_rarity(corpse.loot))
+	for cache: Dictionary in GameState.caches:
+		if not (cache["loot"] as Array).is_empty():
+			add.call(float(cache["x"]), float(cache["z"]), Loot.best_rarity(cache["loot"]))
+	for drop: Dictionary in GameState.ground_items:
+		var at: Vector2 = drop["position"]
+		add.call(at.x, at.y, Loot.rarity_of(drop["item"]))
 	return out
 
 

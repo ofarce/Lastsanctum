@@ -11,6 +11,8 @@ const GROUND := ROOT + "ground/ground_r%d_c%d.png"
 const TILES := ROOT + "tiles/"
 const PERIOD := 504
 const ATLAS := ROOT + "decor_atlas.png"
+## Même planche, sprites rocheux en roche de vert-de-gris (décor du biome 2).
+const ATLAS_R2 := ROOT + "decor_atlas_r2.png"
 const RUNTIME := ROOT + "runtime/"
 const PALETTE := "res://assets/ardoise/palette.json"
 ## Lumière des grappes de quartz laiteux : blanc froid (le cyan reste réservé aux Exilés).

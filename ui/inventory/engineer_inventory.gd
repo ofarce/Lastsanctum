@@ -6,6 +6,7 @@ extends Control
 
 const Storage := preload("res://sim/item_storage.gd")
 const ItemIcon := preload("res://ui/inventory/item_icon.gd")
+const ItemTooltip := preload("res://ui/inventory/item_tooltip.gd")
 const Blocks := preload("res://data/mineable_blocks.gd")
 const Gear := preload("res://data/gear_items.gd")
 const Recipes := preload("res://data/recipes.gd")
@@ -13,7 +14,8 @@ const CYAN := Color("#5ce8ff")
 const MUTED := Color("#5aa6b4")
 const QTY_SIZE := 17
 const QTY_COLOR := Color("#fff4c8")
-const SLOTS := ["Tête", "Torse", "Gants", "Main droite", "Bottes", "Capteur oculaire", "Dos", "Anneau", "Main gauche", "Minage", "Module 1", "Module 2"]
+## Cases de la fiche : uniquement les 6 mods (data/gear_items.gd, MODULE_SLOTS), trois de chaque côté de la silhouette.
+const SLOTS := Gear.MODULE_SLOTS
 const SIL := [".........aaaaaa.........","........abbbbbba........",".......abccccccba.......",".......abcffffcba.......",".......abccccccba.......","........abbbbbba........",".........aabbaa.........",
 "....aaaaabbbbbbaaaaa....","...abbbbaccccccabbbba...","..abccbbacffffcabbccba..","..abcba.acccccca.abcba..","..abcba.abcffcba.abcba..","..abcba.abccccba.abcba..","..abcba.aabbbbaa.abcba..","..abcba.abbbbbba.abcba..",
 ".abccba..abbbba..abccba.",".abffba..aaaaaa..abffba.",".abccba.aabbbbaa.abccba.","..aaaa..abbbbbba..aaaa..","........abbaabba........",".......abba..abba.......",".......abca..acba.......",".......abca..acba.......",".......abfa..afba.......",
@@ -34,6 +36,9 @@ var _font: Font = SystemFont.new()
 var _bold: Font = SystemFont.new()
 var _scale := 1.0
 var _origin := Vector2.ZERO
+## Pile survolée pour l'infobulle dessinée (_make_custom_tooltip), et vrai si elle est dans une case de la fiche.
+var _tip_stack := {}
+var _tip_equipped := false
 
 
 static func engineer() -> Unit:
@@ -60,6 +65,10 @@ func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	visible = false
 	texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	# Infobulle dessinée (ui/inventory/item_tooltip.gd) : pas de fond de panneau natif autour.
+	var tip_theme := Theme.new()
+	tip_theme.set_stylebox("panel", "TooltipPanel", StyleBoxEmpty.new())
+	theme = tip_theme
 	# Un coffre de bâtiment ouvre le même réseau que le coffre antique.
 	Events.production_chest_requested.connect(func(_b: Building, _kind: String, u: Unit) -> void:
 		if Storage.character_available(u) and not GameState.ended:
@@ -156,7 +165,7 @@ func _equip_slot(slot: Dictionary) -> void:
 	var destination := Gear.slot_of(stack["item"])
 	if destination.is_empty():
 		return
-	# Module d'exo : la première des deux cases libres (sinon la première).
+	# Mod : la première case libre (sinon la première).
 	if destination == Gear.MODULE:
 		var wearer := _owner if _owner else engineer()
 		destination = Gear.MODULE_SLOTS[0]
@@ -170,7 +179,10 @@ func _equip_slot(slot: Dictionary) -> void:
 func _get_tooltip(at_position: Vector2) -> String:
 	if not opened or not _drag_slot.is_empty():
 		return ""
-	var stack := _slot_content(slot_at((at_position - _origin) / _scale))
+	var hovered := slot_at((at_position - _origin) / _scale)
+	var stack := _slot_content(hovered)
+	_tip_stack = stack
+	_tip_equipped = hovered.has("equip")
 	if stack.is_empty():
 		return ""
 	var item: String = stack["item"]
@@ -197,6 +209,10 @@ func _get_tooltip(at_position: Vector2) -> String:
 	return "\n".join(lines)
 
 
+func _make_custom_tooltip(_for_text: String) -> Object:
+	return null if _tip_stack.is_empty() else ItemTooltip.make(_tip_stack, _tip_equipped)
+
+
 ## Glisser-déposer entre réseau des coffres, paquetage et emplacements d'équipement (data/gear_items.gd).
 func _drop(from: Dictionary, to: Dictionary) -> void:
 	Sfx.play("coffre")
@@ -209,11 +225,19 @@ func _drop(from: Dictionary, to: Dictionary) -> void:
 		Storage.move_stack(from["items"], from["index"], to["items"], to["index"], to["capacity"])
 
 
+func _pack_count(u: Unit) -> int:
+	return clampi(u.inventory_capacity, Gear.PACK, Gear.PACK * 2) if u else Gear.PACK
+
+
+## Case i du paquetage : une rangée de 10 grandes cases, ou deux rangées resserrées avec le Sac sans fond.
+static func pack_rect(i: int, count: int) -> Rect2:
+	if count <= Gear.PACK:
+		return Rect2(268 + i * 65, 727, 58, 58)
+	return Rect2(274 + (i % Gear.PACK) * 65, 714 + (i / Gear.PACK) * 48, 46, 44)
+
+
 static func equip_rect(i: int) -> Rect2:
-	# Modules d'exo : deux petites cases sous la silhouette.
-	if i >= 10:
-		return Rect2(846.0 + (i - 10) * 58.0, 574.0, 48, 48)
-	return Rect2(1060.0 if i >= 5 else 664.0, 156.0 + (i % 5) * 87, 68, 64)
+	return Rect2(1060.0 if i >= 3 else 664.0, 176.0 + (i % 3) * 130, 68, 64)
 
 
 func _process(_delta: float) -> void:
@@ -266,38 +290,32 @@ func _draw() -> void:
 				edge = SIL[y][x-1] == "." or SIL[y][x+1] == "." or SIL[y-1][x] == "." or SIL[y+1][x] == "."
 			draw_rect(Rect2(792 + x * 9, 172 + y * 12, 9, 12), CYAN if edge else (Color("#12596b") if (x + y) % 2 else Color("#0a2a33")))
 	var u_eq := _owner if _owner else engineer()
-	for i in range(10):
-		var right := i >= 5
-		var row := i % 5
-		var x := 1060.0 if right else 664.0
-		var y := 156.0 + row * 87
+	for i in range(SLOTS.size()):
+		var right := i >= 3
+		var row := i % 3
+		var r := equip_rect(i)
 		var worn: String = u_eq.equipment.get(SLOTS[i], "") if u_eq else ""
-		var filled := (i == 9 and not mining_item().is_empty()) or worn != ""
-		var target := Vector2(932 if right else 868, 192 + row * 75)
-		draw_line(Vector2(x + (0 if right else 68), y + 34), target, CYAN if filled else Color("#1f9fb8"), 1, true)
-		_slot(Rect2(x, y, 68, 64), filled)
-		_text(Vector2(x - 4, y + 80), SLOTS[i], MUTED, 11)
+		var filled := worn != ""
+		var target := Vector2(932 if right else 868, 214 + row * 120)
+		draw_line(Vector2(r.position.x + (0.0 if right else r.size.x), r.position.y + 32), target, CYAN if filled else Color("#1f9fb8"), 1, true)
+		_slot(r, filled)
+		# Numéro et nom du mod sous la case, alignés sur le bord extérieur de la fiche.
+		var lines := ["MOD %d" % (i + 1), Gear.name_of(worn) if filled else "Libre"]
+		for k in range(2):
+			var fs := 11 if k == 0 else 10
+			var lx := r.position.x - 4.0
+			if right:
+				lx = r.end.x + 4.0 - _font.get_string_size(lines[k], HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+			_text(Vector2(lx, r.position.y + 80 + k * 14), lines[k], CYAN if filled and k == 1 else MUTED, fs)
 		if filled:
-			# Même prisme de forage que dans les quatre recherches.
-			if i == 9:
-				draw_texture_rect(HudStyle.icon("mining_seal", 64), Rect2(x + 2, y, 64, 64), false)
-			else:
-				ItemIcon.draw_item(self, worn, Vector2(x + 34, y + 32), 1.8)
-				_rarity_edge(Rect2(x, y, 68, 64), worn)
-	for i in [10, 11]:
-		var mr := equip_rect(i)
-		var mod: String = u_eq.equipment.get(SLOTS[i], "") if u_eq else ""
-		_slot(mr, mod != "")
-		if mod != "":
-			ItemIcon.draw_item(self, mod, mr.get_center(), 1.4)
-			_rarity_edge(mr, mod)
-	_text(Vector2(772, 603), "MODULES", MUTED, 11)
+			ItemIcon.draw_item(self, worn, r.get_center(), 1.8)
+	_text(Vector2(812, 584), "6 CASES · MODS SEULEMENT", MUTED, 11)
 	_text(Vector2(662, 637), "MINAGE · " + ("SCEAU DE MINAGE ÉQUIPÉ" if not mining_item().is_empty() else "AUCUN SCEAU"), CYAN if not mining_item().is_empty() else MUTED, 13)
 	_panel(Rect2(250, 688, 680, 120))
-	_text(Vector2(268, 708), "// PAQUETAGE · 10", MUTED, 11)
 	var u := _owner if _owner else engineer()
-	for i in range(10):
-		var rect := Rect2(268 + i * 65, 727, 58, 58)
+	_text(Vector2(268, 708), "// PAQUETAGE · %d" % _pack_count(u), MUTED, 11)
+	for i in range(_pack_count(u)):
+		var rect := pack_rect(i, _pack_count(u))
 		var filled := u != null and i < u.inventory.size() and not u.inventory[i].is_empty()
 		_slot(rect, filled)
 		if filled:
@@ -326,7 +344,7 @@ func _slot_rect(slot: Dictionary) -> Rect2:
 		if is_same(slot["items"], GameState.base_inventory):
 			# Case d'une autre page : rien à dessiner.
 			return base_rect(i - _page * Storage.PAGE) if i / Storage.PAGE == _page else Rect2()
-		return Rect2(268 + i * 65, 727, 58, 58)
+		return pack_rect(i, _pack_count(_owner if _owner else engineer()))
 	return Rect2()
 
 
@@ -422,16 +440,19 @@ func _arrow(r: Rect2, dir: int, enabled: bool, hover: bool) -> void:
 	draw_colored_polygon(PackedVector2Array([c + tip, c - tip + Vector2(0, -8), c - tip + Vector2(0, 8)]), col)
 
 
-## Liseré de rareté (sim/loot.gd) : rien pour un objet normal, la couleur de la rareté au-delà.
+## Liseré de rareté (sim/loot.gd) : rien pour un objet normal, la couleur de la rareté au-delà. Pas pour un mod :
+## sa rareté est la couleur du cadre de son icône (ui/inventory/item_icon.gd, draw_mod).
 func _rarity_edge(rect: Rect2, item: String) -> void:
-	if Loot.rarity_of(item) != "normal":
+	if Loot.rarity_of(item) != "normal" and not Gear.ITEMS.get(item, {}).has("module"):
 		draw_rect(rect.grow(-1.5), Loot.rarity_color(item), false, 2.0)
 
 
 func _draw_item(rect: Rect2, stack: Dictionary) -> void:
 	_rarity_edge(rect, stack["item"])
 	var item: String = stack["item"]
-	ItemIcon.draw_item(self, item, rect.get_center() - Vector2(0, 5), 1.8)
+	# Un mod remplit sa case (cartouche 32 × 32) : un peu plus petit, pour laisser son nom lisible dessous.
+	var k := rect.size.x / 58.0
+	ItemIcon.draw_item(self, item, rect.get_center() - Vector2(0, 5) * k, (1.35 if Gear.ITEMS.get(item, {}).has("module") else 1.8) * k)
 	_text(rect.position + Vector2(4, rect.size.y - 5), preload("res://data/recipes.gd").name_of(item), CYAN, 10)
 
 	_quantity(rect.position + Vector2(rect.size.x - 3, 15), stack["quantity"])
@@ -455,10 +476,10 @@ func slot_at(p: Vector2) -> Dictionary:
 				return {"items": GameState.base_inventory, "index": _page * Storage.PAGE + i, "capacity": Storage.BASE_CAPACITY}
 	var u := _owner if _owner else engineer()
 	if u:
-		for i in [0, 1, 2, 3, 4, 5, 6, 7, 8, 10, 11]:
+		for i in range(SLOTS.size()):
 			if equip_rect(i).has_point(p):
 				return {"equip": SLOTS[i]}
-		for i in range(10):
-			if Rect2(268 + i * 65, 727, 58, 58).has_point(p):
+		for i in range(_pack_count(u)):
+			if pack_rect(i, _pack_count(u)).has_point(p):
 				return {"items": u.inventory, "index": i, "capacity": u.inventory_capacity}
 	return {}

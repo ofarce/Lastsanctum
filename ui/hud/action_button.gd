@@ -71,7 +71,7 @@ func set_action(a: Dictionary) -> void:
 	_glyph.visible = craft
 	_over.visible = craft
 	_icon.visible = not craft
-	_label_clip.visible = not craft
+	_label_clip.visible = not craft or _named()
 	_cd.visible = not craft
 	if craft:
 		_glyph.button = self
@@ -160,6 +160,7 @@ func _relayout() -> void:
 
 ## Piste 1 « Laiton et objet franc » : objet centré à 32 px (pixels entiers), touche en cartouche en haut à gauche.
 func _relayout_craft() -> void:
+	_label_clip.visible = _named()
 	var kbd_w := maxf(13.0, HudStyle.text_width(_kbd.text, 9) + 6.0)
 	_kbd.position = Vector2(3.0, 3.0)
 	_kbd.size = Vector2(kbd_w, 12.0)
@@ -170,6 +171,18 @@ func _relayout_craft() -> void:
 	if action.has("unit_sprite") or action.has("command_icon"):
 		_glyph.position = Vector2(2, 2)
 		_glyph.size = size - Vector2(4, 4)
+	elif _named():
+		# Recherche dans un bouton haut (une seule rangée) : l'objet en haut, le nom dessous sur deux lignes au plus.
+		_glyph.position = Vector2(floorf((size.x - 32.0) / 2.0), 12.0)
+		_glyph.size = Vector2(32, 32)
+		var lines := mini(2, int((size.y - 50.0) / 11.0))
+		_label.max_lines_visible = maxi(lines, 1)
+		_label_clip.visible = lines > 0
+		_label_clip.position = Vector2(2.0, 47.0)
+		_label_clip.size = Vector2(size.x - 4.0, 11.0 * lines + 2.0)
+		_label.position = Vector2(0.0, -2.0)
+		_label.size = Vector2(size.x - 4.0, 26.0)
+		_label.add_theme_color_override("font_color", Color("#7c7c6c") if _dim() else (Color("#ffe5ac") if _lit() else HudStyle.MUTED))
 	else:
 		_glyph.position = Vector2(floorf((size.x - 32.0) / 2.0), floorf((size.y - 32.0) / 2.0) - 1.0)
 		_glyph.size = Vector2(32, 32)
@@ -177,6 +190,11 @@ func _relayout_craft() -> void:
 	_over.size = size
 	_over.queue_redraw()
 	_glyph.queue_redraw()
+
+
+## Bouton de recherche assez haut pour porter son nom sous l'objet (piste A de planches/recherches-interface-propositions.html).
+func _named() -> bool:
+	return action.get("research_name_below", false) and size.y >= 62.0
 
 
 func _notification(what: int) -> void:
@@ -463,6 +481,15 @@ class _Over extends Control:
 			draw_circle(c, 6.5, Color("#2e5a2a"))
 			draw_circle(c - Vector2(0.5, 0.5), 5.0, Color("#3e7a36"))
 			draw_polyline(PackedVector2Array([c + Vector2(-3, 0), c + Vector2(-1, 2), c + Vector2(3, -2)]), Color("#d4f4b0"), 1.5)
+		var q: int = a.get("research_queue", 0)
+		if q > 0:
+			# Recherche en file d'attente : son rang, en cartouche sarcelle en haut à droite.
+			var qt := "n° %d" % q
+			var qw := HudStyle.text_width(qt, 9) + 8.0
+			var qr := Rect2(w - 3.0 - qw, 3.0, qw, 12.0)
+			draw_rect(qr, Color("#0e2a30"))
+			HudStyle.ring(self, qr, 1.0, Color("#5fa9b8"))
+			draw_string(HudStyle.font(), Vector2(qr.position.x + 4.0, qr.position.y + 9.5), qt, HORIZONTAL_ALIGNMENT_LEFT, -1, 9, Color("#d6f6fb"))
 		var n: int = a.get("craft_count", 0)
 		if n <= 0:
 			return

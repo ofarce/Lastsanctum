@@ -43,6 +43,11 @@ var _grass: Image
 var _rock_tex: Texture2D
 var _grass_tex: Texture2D
 var _rock_c: Array[Color] = []
+## Dessus de roche par palier (Biomes.rock_tier) : ardoise du Temple, roche de vert-de-gris.
+var _rocks: Array[Image] = []
+var _rock_texs: Array[Texture2D] = []
+## Rangée de pixels du sol où la roche change : au-dessus (py plus petit), le palier 1.
+var _front := -(1 << 30)
 var materialized := 0
 
 
@@ -53,6 +58,10 @@ func build() -> void:
 	_rock_tex = load(ArtStyle.TILES + "rock.png")
 	_grass_tex = load(ArtStyle.TILES + "grass.png")
 	_rock = _rgba(_rock_tex)
+	_rock_texs = [_rock_tex, load(ArtStyle.TILES + "rock2.png")]
+	_rocks = [_rock, _rgba(_rock_texs[1])]
+	var north := Biomes.north_z(0)
+	_front = origin.y + roundi(north * 8.0) if north != -INF and Biomes.rock_tier(north - 2.0) == 1 else -(1 << 30)
 	_grass = _rgba(_grass_tex)
 	_rock_c.clear()
 	var palette: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(ArtStyle.PALETTE))
@@ -118,13 +127,22 @@ func _block_kind(key: Vector2i) -> String:
 	return ""
 
 
-## Teinte du sol et de la roche d'un bloc selon son biome : vert-de-gris au nord du Temple (biome 2).
-const BIOME_TINT: Array[Color] = [Color.WHITE, Color(0.72, 0.96, 0.86)]
+## Palier de la roche à la rangée de pixels `py` du sol (la frontière suit les cases, pas les blocs).
+func rock_tier_px(py: int) -> int:
+	return 1 if py < _front else 0
 
 
-func _biome_tint(key: Vector2i) -> Color:
-	var z := (float(key.y * chunk - origin.y) + chunk * 0.5) / 8.0
-	return BIOME_TINT[mini(Biomes.index_at(z), BIOME_TINT.size() - 1)]
+func rock_texture(tier: int) -> Texture2D:
+	return _rock_texs[clampi(tier, 0, _rock_texs.size() - 1)]
+
+
+## Dessus de roche sur `local` (pixels de l'image posée en `at`), chaque palier de son côté de la frontière.
+func _tile_rock(image: Image, at: Vector2i, local: Rect2i) -> void:
+	var cut := clampi(_front - at.y, local.position.y, local.end.y)
+	if cut > local.position.y:
+		_tile(image, _rocks[1], ArtStyle.PERIOD, at, Rect2i(local.position.x, local.position.y, local.size.x, cut - local.position.y))
+	if cut < local.end.y:
+		_tile(image, _rocks[0], ArtStyle.PERIOD, at, Rect2i(local.position.x, cut, local.size.x, local.end.y - cut))
 
 
 func _add_block(key: Vector2i, image: Image) -> void:
@@ -135,26 +153,35 @@ func _add_block(key: Vector2i, image: Image) -> void:
 	s.centered = false
 	s.position = Vector2(key * chunk - origin)
 	s.use_parent_material = true
-	s.modulate = _biome_tint(key)
 	add_child(s)
 	_blocks[key] = {"image": image, "texture": texture, "sprite": s}
 
 
 func _add_plain(key: Vector2i, kind: String) -> void:
-	var s := Sprite2D.new()
+	# Un bloc de roche à cheval sur la frontière des paliers : deux bandes, la seconde enfant de la première.
+	var cut := clampi(_front - key.y * chunk, 0, chunk) if kind == "rock" else 0
+	var s := _plain_band(key, kind, 0 if cut == 0 else 1, 0, chunk if cut == 0 else cut)
 	s.name = "Plain_r%d_c%d" % [key.y, key.x]
-	var period := ArtStyle.PERIOD if kind == "rock" else GRASS_PERIOD
-	s.texture = _rock_tex if kind == "rock" else _grass_tex
-	s.texture_repeat = CanvasItem.TEXTURE_REPEAT_ENABLED
-	s.region_enabled = true
-	s.region_rect = Rect2(posmod(key.x * chunk, period), posmod(key.y * chunk, period), chunk, chunk)
-	s.centered = false
-	s.position = Vector2(key * chunk - origin)
-	s.use_parent_material = true
-	s.modulate = _biome_tint(key)
 	add_child(s)
+	if cut > 0 and cut < chunk:
+		var low := _plain_band(key, kind, 0, cut, chunk - cut)
+		low.position = Vector2(0, cut)
+		s.add_child(low)
 	_plain[key] = kind
 	_plain_sprites[key] = s
+
+
+func _plain_band(key: Vector2i, kind: String, tier: int, y0: int, h: int) -> Sprite2D:
+	var s := Sprite2D.new()
+	var period := ArtStyle.PERIOD if kind == "rock" else GRASS_PERIOD
+	s.texture = _rock_texs[tier] if kind == "rock" else _grass_tex
+	s.texture_repeat = CanvasItem.TEXTURE_REPEAT_ENABLED
+	s.region_enabled = true
+	s.region_rect = Rect2(posmod(key.x * chunk, period), posmod(key.y * chunk + y0, period), chunk, h)
+	s.centered = false
+	s.position = Vector2(key * chunk - origin) + Vector2(0, y0)
+	s.use_parent_material = true
+	return s
 
 
 ## Bloc vierge → image modifiable (sol généré), à la place de son sprite répété.
@@ -162,8 +189,10 @@ func _materialize(key: Vector2i) -> void:
 	var image := Image.create(chunk, chunk, false, Image.FORMAT_RGBA8)
 	var at := key * chunk
 	var kind: String = _plain.get(key, "")
-	if kind == "rock" or kind == "grass":
-		_tile(image, _rock if kind == "rock" else _grass, ArtStyle.PERIOD if kind == "rock" else GRASS_PERIOD, at, Rect2i(Vector2i.ZERO, image.get_size()))
+	if kind == "rock":
+		_tile_rock(image, at, Rect2i(Vector2i.ZERO, image.get_size()))
+	elif kind == "grass":
+		_tile(image, _grass, GRASS_PERIOD, at, Rect2i(Vector2i.ZERO, image.get_size()))
 	if _plain_sprites.has(key):
 		(_plain_sprites[key] as Sprite2D).free()
 		_plain_sprites.erase(key)
@@ -320,7 +349,7 @@ func get_ground_pixel(px: int, py: int) -> Color:
 		return (_blocks[key]["image"] as Image).get_pixel(px - key.x * chunk, py - key.y * chunk)
 	match _plain.get(key, ""):
 		"rock":
-			return _rock.get_pixel(posmod(px, ArtStyle.PERIOD), posmod(py, ArtStyle.PERIOD))
+			return _rocks[rock_tier_px(py)].get_pixel(posmod(px, ArtStyle.PERIOD), posmod(py, ArtStyle.PERIOD))
 		"grass":
 			return _grass.get_pixel(posmod(px, GRASS_PERIOD), posmod(py, GRASS_PERIOD))
 	return Color(0, 0, 0, 0)

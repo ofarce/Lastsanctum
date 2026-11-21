@@ -104,7 +104,7 @@ const PER_TRAINING := ["archer", "guerisseuse", "chantre", "envouteur"]
 
 
 static func output_quantity(item: String) -> int:
-	return 15 if item == "arrows" else 1
+	return 5 if item == "arrows" else 1
 
 
 static func craft_time(building_type: String) -> float:

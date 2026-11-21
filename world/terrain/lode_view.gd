@@ -20,8 +20,9 @@ func _process(_delta: float) -> void:
 	if not state.lodes.has(origin):
 		queue_free()
 		return
+	_update_shake()
 	_redraw_light()
 
 
 func _draw() -> void:
-	draw_texture_rect_region(LODE_SPRITES, Rect2(Vector2(-48, -104), FRAME), Rect2(Vector2(_frame * FRAME.x, 0), FRAME))
+	draw_texture_rect_region(LODE_SPRITES, Rect2(Vector2(-48 + _shake, -104), FRAME), Rect2(Vector2(_frame * FRAME.x, 0), FRAME))

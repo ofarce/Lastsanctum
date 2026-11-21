@@ -47,14 +47,16 @@ const TABLE := {
 	"soldier": [{"item": "ration", "chance": 0.2}],
 	"archer": [{"item": "arrows", "chance": 0.3, "n": 5}],
 	"shield": [{"item": "ration", "chance": 0.2}, {"item": "copper_shield", "chance": 0.08}],
-	"brute": [{"pick": ["gear_gloves", "gear_boots", "gear_hood"], "chance": 0.25}],
+	"brute": [{"pick": ["gear_gloves", "gear_boots", "gear_hood"], "chance": 0.25},
+		{"pick": ["module_scale", "module_ember", "module_magnet"], "chance": 0.06}],
 	# Biome 2 : la tique rend toujours le cuivre qu'elle a mangé (2 à 4), la chauve-souris parfois du guano.
 	"tick": [{"item": "copper", "chance": 1.0, "n": [2, 4]}],
 	"bat": [{"item": "guano", "chance": 0.2}],
 	"eel": [{"item": "volt_organ", "chance": 0.4}],
 	# Plus de fer dans le Temple (2026-11-20) : le champion porte du cuivre, mais ses pièces sont les seules
 	# peu communes et rares du biome.
-	"strazhar": [{"item": "copper_greatsword", "chance": 1.0}, {"item": "copper_armor", "chance": 0.1}],
+	"strazhar": [{"item": "copper_greatsword", "chance": 1.0}, {"item": "copper_armor", "chance": 0.1},
+		{"pick": ["module_scale", "module_ember", "module_lens", "module_barrel"], "chance": 0.2}],
 	# Boss du Temple : leur module d'exo, toujours.
 	"martyre": [{"item": "module_veil", "chance": 1.0}],
 	"oeil": [{"item": "module_iris", "chance": 1.0}],
@@ -175,11 +177,14 @@ static func roll(e: Enemy) -> void:
 ## bout des ponts écartés (RoadProps, clé « cache »). L'Exilé à pied les fouille en marchant dessus, comme
 ## un corps ; une cache vidée reste du décor. Chiffres proposés, à régler : les ponts lointains paient mieux.
 const CACHES := {
-	"cart": [{"item": "ration", "chance": 1.0, "n": [1, 2]}, {"item": "arrows", "chance": 0.6, "n": 5}, {"item": "copper", "chance": 0.5, "n": [2, 4]}],
+	"cart": [{"item": "ration", "chance": 1.0, "n": [1, 2]}, {"item": "arrows", "chance": 0.6, "n": 5}, {"item": "copper", "chance": 0.5, "n": [2, 4]},
+		{"pick": ["module_magnet", "module_frost", "module_seal"], "chance": 0.1}],
 	"outpost": [{"item": "ration", "chance": 1.0, "n": 2}, {"item": "arrows", "chance": 1.0, "n": 5},
-		{"pick": ["gear_gloves", "gear_boots", "gear_hood"], "chance": 1.0}],
+		{"pick": ["gear_gloves", "gear_boots", "gear_hood"], "chance": 1.0},
+		{"pick": ["module_seal", "module_wisp", "module_chant", "module_sack"], "chance": 0.5}],
 	"bridge": [{"item": "copper", "chance": 1.0, "n": [6, 10]}, {"pick": ["gear_gloves", "gear_boots", "gear_hood"], "chance": 0.6},
-		{"item": "copper_shield", "chance": 0.25}],
+		{"item": "copper_shield", "chance": 0.25},
+		{"pick": ["module_lens", "module_barrel", "module_frost", "module_anchor", "module_echo"], "chance": 0.4}],
 }
 
 
@@ -323,17 +328,24 @@ const CACHE_REACH := 1.2
 
 
 ## L'Exilé à pied fouille les corps sur lesquels il marche (même condition que le ramassage au sol).
+## Signale un objet ramassé par l'Exilé (ligne du coin haut gauche) ; les mods ont déjà leur propre annonce.
+static func picked(item: String) -> void:
+	if not Gear.ITEMS.get(item, {}).has("module"):
+		Events.loot_picked.emit(item, 1)
+
+
 static func collect(u: Unit) -> void:
 	if u.hidden or not ItemStorage.character_available(u):
 		return
 	var p := u.pos()
-	var r2 := ItemStorage.PICKUP_RADIUS * ItemStorage.PICKUP_RADIUS
+	# Sac sans fond (sim/mods.gd) : les corps se fouillent de plus loin, en passant.
+	var r2 := Mods.pickup_reach(u) * Mods.pickup_reach(u)
 	for e: Enemy in GameState.enemy_corpses:
 		if e.loot.is_empty() or p.distance_squared_to(e.pos()) > r2:
 			continue
 		var got := 0
 		while not e.loot.is_empty() and ItemStorage.store(u.inventory, u.inventory_capacity, e.loot[0], owner_of(e, e.loot[0])):
-			e.loot.pop_front()
+			picked(e.loot.pop_front())
 			got += 1
 		if got > 0:
 			Sfx.at("coffre", e.x, e.z)
@@ -347,7 +359,7 @@ static func collect(u: Unit) -> void:
 			continue
 		var got := 0
 		while not loot.is_empty() and ItemStorage.store(u.inventory, u.inventory_capacity, loot[0], ""):
-			loot.pop_front()
+			picked(loot.pop_front())
 			got += 1
 		if got > 0:
 			Sfx.at("coffre", c["x"], c["z"])

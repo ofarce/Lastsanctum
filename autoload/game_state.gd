@@ -186,6 +186,14 @@ var incarnated_hurt_at := -INF
 var engineer_respawn_at: float = INF
 ## Munition choisie pour l'Arbalestrie (data/ammo.gd), gardée d'une incarnation à l'autre.
 var ammo := "spirit"
+## Munition d'avant le dernier changement et instant du changement (Barillet double, Culasse froide : sim/mods.gd) ;
+## Barillet double : vrai si le prochain tir part de la seconde chambre.
+var ammo_prev := "spirit"
+var ammo_changed_at := -INF
+var barrel_flip := false
+## Écho du pylône : assaut et nuit de meutes déjà annoncés (sim/mods.gd).
+var echo_wave := -1.0
+var echo_raid_day := -1
 
 
 func reset() -> void:
@@ -197,6 +205,11 @@ func reset() -> void:
 	incarnated_hurt_at = -INF
 	engineer_respawn_at = INF
 	ammo = "spirit"
+	ammo_prev = "spirit"
+	ammo_changed_at = -INF
+	barrel_flip = false
+	echo_wave = -1.0
+	echo_raid_day = -1
 	sim_time = 0.0
 	fast_construction = false
 	ended = false

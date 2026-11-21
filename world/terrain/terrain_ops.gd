@@ -17,6 +17,11 @@ func _init(terrain_state: TerrainState, decor: DecorRegistry, terrain_painter: T
 
 
 ## digCell(i, j).
+## Sprite de la paroi (variante v) dont le pied est en z : la roche qu'elle habille est la case juste au nord.
+static func face_id(v: int, z: float) -> String:
+	return "face5_%d" % v + ("_r2" if Biomes.rock_tier(z - 2.0) == 1 else "")
+
+
 func dig_cell(i: int, j: int) -> void:
 	var key := Vector2i(i, j)
 	if state.dug.has(key) or state.permanent_ores.has(key):
@@ -33,7 +38,7 @@ func dig_cell(i: int, j: int) -> void:
 		return not DecorRegistry.is_fixed(e) and e["x"] >= x - 0.01 and e["x"] < x + 4.0 and e["z"] >= z - 0.01 and e["z"] <= z + 4.01)
 	if not state.ground(x + 2.0, z - 2.0):
 		var v := ((i * 7 + j * 3) & 7) % 6
-		registry.add({"s": "face5_%d" % v, "runtime": true, "x": x, "z": z, "d": z, "bx": x, "bz": z})
+		registry.add({"s": face_id(v, z), "runtime": true, "x": x, "z": z, "d": z, "bx": x, "bz": z})
 	state.version += 1
 	Combat.zone(x + 2.0, z + 2.0, 2.0, Color("#a89c86"))
 	# La case touche la réserve scellée du coffre antique : elle s'ouvre.
@@ -71,7 +76,7 @@ func reshape_cave() -> void:
 			var cx := x + 2.0
 			if not state.ground(cx, z + 2.0) and CaveShape.in_cave(cx, z + 6.0):
 				var v := ((floori(x / 4.0) * 7 + floori(z / 4.0) * 3) & 7) % 6
-				registry.add({"s": "face5_%d" % v, "runtime": true, "x": x, "z": z + 4.0, "d": z + 4.0, "bx": x, "bz": z + 4.0})
+				registry.add({"s": face_id(v, z + 4.0), "runtime": true, "x": x, "z": z + 4.0, "d": z + 4.0, "bx": x, "bz": z + 4.0})
 			x += 4.0
 		z += 4.0
 	state.version += 1
@@ -199,7 +204,7 @@ func reveal_gallery(sx: float, sz: float) -> void:
 						break
 					t += 0.5
 				var v := floori(r.next() * 6.0)
-				registry.add({"s": "face5_%d" % v, "runtime": true, "x": x, "z": bz, "d": bz, "bx": x, "bz": bz})
+				registry.add({"s": face_id(v, z + 4.0), "runtime": true, "x": x, "z": bz, "d": bz, "bx": x, "bz": bz})
 			z += 4.0
 		x += 4.0
 	# for (k = 0; k < max(2, n/90); k++) : 40 essais au plus pour placer chaque stalagmite.

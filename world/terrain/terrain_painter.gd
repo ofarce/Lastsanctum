@@ -15,21 +15,26 @@ const M := 38
 var terrain: Terrain
 var state: TerrainState
 var stats := {"full": 0, "mixed": 0, "skip": 0}
-var _floor_tex := PackedByteArray()
-var _rock_tex := PackedByteArray()
-var _dug_tex := PackedByteArray()
-var _rock_c: Array[PackedByteArray] = []
+## Textures et teintes de bord par palier de roche (Biomes.rock_tier) : [Temple, vert-de-gris].
+## Le sol du biome 2 porte sa teinte dans floor2 / dug2 (elle suit la frontière à la case près).
+var _floor_tex: Array[PackedByteArray] = []
+var _rock_tex: Array[PackedByteArray] = []
+var _dug_tex: Array[PackedByteArray] = []
+var _rock_c: Array = []
 
 
 func _init(ground: Terrain, terrain_state: TerrainState) -> void:
 	terrain = ground
 	state = terrain_state
-	_floor_tex = _rgba(load(ArtStyle.TILES + "floor.png")).get_data()
-	_rock_tex = _rgba(load(ArtStyle.TILES + "rock.png")).get_data()
-	_dug_tex = _rgba(load(ArtStyle.TILES + "dug.png")).get_data()
 	var palette: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(ArtStyle.PALETTE))
-	for hex: String in palette["rock"]:
-		_rock_c.append(_bytes(hex))
+	for suffix: String in ["", "2"]:
+		_floor_tex.append(_rgba(load(ArtStyle.TILES + "floor%s.png" % suffix)).get_data())
+		_rock_tex.append(_rgba(load(ArtStyle.TILES + "rock%s.png" % suffix)).get_data())
+		_dug_tex.append(_rgba(load(ArtStyle.TILES + "dug%s.png" % suffix)).get_data())
+		var edge: Array[PackedByteArray] = []
+		for hex: String in palette["rock" + suffix]:
+			edge.append(_bytes(hex))
+		_rock_c.append(edge)
 
 
 static func _rgba(tex: Texture2D) -> Image:
@@ -84,7 +89,7 @@ func _blit_dug_cell(i: int, j: int) -> void:
 	var x := i * 4.0
 	var z := j * 4.0
 	var p := ground_px(x, z)
-	var out := _sample(_dug_tex, p)
+	var out := _sample(_dug_tex[Biomes.rock_tier(z + 2.0)], p)
 	terrain.blit(_image(out), p.x, p.y)
 	if not state.ground(x - 2.0, z + 2.0):
 		terrain.darken(Rect2i(p.x, p.y, 2, TILE))
@@ -145,13 +150,15 @@ func _paint_region_cell(x: float, z: float) -> bool:
 		return false
 	stats["full" if all else "mixed"] += 1
 	var p := ground_px(x, z)
-	var cave := _sample(_floor_tex, p)
+	var tier := Biomes.rock_tier(z + 2.0)
+	var rock_c: Array[PackedByteArray] = _rock_c[tier]
+	var cave := _sample(_floor_tex[tier], p)
 	var out: PackedByteArray
 	if all:
 		out = cave
 	else:
 		var mask := _hollow_mask(x, z)
-		out = _sample(_rock_tex, p)
+		out = _sample(_rock_tex[tier], p)
 		for py in TILE:
 			for px in TILE:
 				if mask[(py + 3) * M + px + 3] == 1:
@@ -172,9 +179,9 @@ func _paint_region_cell(x: float, z: float) -> bool:
 					out[o + 1] = _clamp8(out[o + 1] * 0.55)
 					out[o + 2] = _clamp8(out[o + 2] * 0.55)
 				elif mask[m - 2 * M] == 1:
-					_copy(out, o, _rock_c[7 if mask[m - M] == 1 else 5])
+					_copy(out, o, rock_c[7 if mask[m - M] == 1 else 5])
 				elif mask[m - 2] == 1 or mask[m + 2] == 1:
-					_copy(out, o, _rock_c[0] if mask[m - 1] == 1 or mask[m + 1] == 1 else _rock_c[6])
+					_copy(out, o, rock_c[0] if mask[m - 1] == 1 or mask[m + 1] == 1 else rock_c[6])
 	terrain.blit(_image(out), p.x, p.y)
 	return true
 
@@ -189,7 +196,7 @@ func repaint_cave(x0: float, z0: float, x1: float, z1: float) -> void:
 		while x < x1:
 			if not _paint_region_cell(x, z) and _prototype_floor(x, z):
 				var p := ground_px(x, z)
-				terrain.blit(_image(_sample(_rock_tex, p)), p.x, p.y)
+				terrain.blit(_image(_sample(_rock_tex[0], p)), p.x, p.y)
 			x += 4.0
 		z += 4.0
 	terrain.flush()

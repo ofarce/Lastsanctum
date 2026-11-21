@@ -53,6 +53,7 @@ var _oeil_go := Button.new()
 var _minimap_unlock := Button.new()
 var _wave_trigger := Button.new()
 var _archer_spawn := Button.new()
+var _mods_give := Button.new()
 ## Seul bouton de debug visible au départ : il déplie les autres, qu'un clic ailleurs replie.
 var _debug_toggle := Button.new()
 var _debug_open := false
@@ -130,6 +131,11 @@ var help_panel := HelpPanel.new()
 var _help_button := HelpButton.new()
 ## Recherches achevées : icônes en haut à gauche, sous la carte de vague ; effet au survol.
 var research_shelf := ResearchShelf.new()
+## Objets ramassés, en haut à gauche sous les recherches achevées.
+var loot_feed := preload("res://ui/hud/loot_feed.gd").new()
+## Fiche de la recherche survolée, à la place des statistiques quand un bâtiment a des recherches (piste A).
+var research_card := ResearchCard.new()
+var grimoire := ResearchGrimoire.new()
 var sfx_player: Node = preload("res://ui/audio/sfx_player.gd").new()
 var music_player: Node = preload("res://ui/audio/music_player.gd").new()
 
@@ -141,6 +147,7 @@ func _ready() -> void:
 	add_child(_root)
 	_build_top()
 	_root.add_child(research_shelf)
+	_root.add_child(loot_feed)
 	_build_bar()
 	minimap_overlay.minimap = minimap
 	_root.add_child(minimap_overlay)
@@ -150,6 +157,10 @@ func _ready() -> void:
 	_root.add_child(_zoom)
 	var inventory := preload("res://ui/inventory/engineer_inventory.gd").new()
 	_root.add_child(inventory)
+	_root.add_child(grimoire)
+	research_shelf.open_grimoire.connect(func() -> void:
+		grimoire.toggle()
+		refresh(true))
 	_root.add_child(help_panel)
 	_help_button.pressed.connect(help_panel.toggle)
 	_root.add_child(_help_button)
@@ -161,6 +172,7 @@ func _ready() -> void:
 	Events.game_reset.connect(_on_reset)
 	Events.game_over.connect(show_banner)
 	Events.items_received.connect(item_banner.show_items)
+	Events.loot_picked.connect(loot_feed.add)
 	_layout()
 
 
@@ -172,6 +184,7 @@ func setup(s: Simulation, w: World) -> void:
 	_zoom.world = w
 	minimap_overlay.world = w
 	help_panel.sim = s
+	grimoire.sim = s
 	help_panel.world = w
 	exile_gallery.world = w
 	dialogue.camera = w.camera
@@ -332,6 +345,8 @@ func _build_top() -> void:
 		"Lance tout de suite l’assaut suivant par le sud, sans attendre le matin", _trigger_wave)
 	_debug_button(_archer_spawn, "ArcherSpawn", "Faire venir un archer",
 		"Fait apparaître gratuitement un archer allié à côté de l’Ancre, sans Caserne", _spawn_archer)
+	_debug_button(_mods_give, "ModsGive", "Donner les 15 mods",
+		"Met un exemplaire de chaque mod dans le paquetage de l’Ingénieur, le reste dans le réseau des coffres", _give_mods)
 	_debug_button(_debug_toggle, "DebugToggle", "DEBUG", "Affiche les boutons de debug", func() -> void:
 		_set_debug_open(not _debug_open))
 	_set_debug_open(false)
@@ -384,7 +399,7 @@ func _debug_button(b: Button, node_name: String, label: String, tip: String, act
 
 func _debug_buttons() -> Array[Button]:
 	return [_resource_boost, _fast_construction, _crafted_item_boost, _martyre_spawn, _oeil_go,
-		_minimap_unlock, _wave_trigger, _archer_spawn]
+		_minimap_unlock, _wave_trigger, _archer_spawn, _mods_give]
 
 
 func _set_debug_open(open: bool) -> void:
@@ -545,6 +560,8 @@ func _build_bar() -> void:
 	_anchor_lore.vertical_alignment = VERTICAL_ALIGNMENT_TOP
 	_anchor_lore.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_anchor_details.add_child(_anchor_lore)
+	_modules[2].add_child(research_card)
+	research_card.visible = false
 	# Panneau d'ordres.
 	_actions_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_modules[3].add_child(_actions_box)
@@ -660,6 +677,7 @@ func _layout() -> void:
 	_layout_build_row()
 	research_shelf.position = Vector2(TOP_INSET.x, TOP_INSET.y + 56.0 + 10.0)
 	objective.position = Vector2(TOP_INSET.x, research_shelf.position.y + (ResearchShelf.CELL + 10.0 if research_shelf.visible else 0.0))
+	loot_feed.position = objective.position
 	_layout_debug()
 	_fast_construction.size = Vector2(230, 38)
 	_layout_ammo(s)
@@ -690,6 +708,31 @@ func _layout_debug() -> void:
 	_wave_trigger.size = Vector2(230, 38)
 	_archer_spawn.position = Vector2(16, dbg_y + 308.0)
 	_archer_spawn.size = Vector2(230, 38)
+	# À droite du dernier bouton : en 720 de haut, une rangée de plus passerait sous le portrait.
+	_mods_give.position = Vector2(254, dbg_y + 308.0)
+	_mods_give.size = Vector2(230, 38)
+
+
+## Debug : un exemplaire de chaque mod (data/gear_items.gd, champ « module ») au paquetage de l'Ingénieur, puis au
+## réseau des coffres quand il est plein.
+func _give_mods() -> void:
+	var Gear := preload("res://data/gear_items.gd")
+	var Store := preload("res://sim/item_storage.gd")
+	var eng: Unit = null
+	for u: Unit in GameState.units:
+		if u.role == "engineer":
+			eng = u
+	var packed := 0
+	var stored := 0
+	for item: String in Gear.ITEMS:
+		if not Gear.ITEMS[item].has("module"):
+			continue
+		if eng != null and Store.store(eng.inventory, eng.inventory_capacity, item):
+			packed += 1
+		elif Store.store(GameState.base_inventory, Store.BASE_CAPACITY, item):
+			stored += 1
+	say("Mods donnés · %d au paquetage, %d au réseau des coffres." % [packed, stored])
+	refresh(true)
 
 
 func _layout_top(s: Vector2) -> void:
@@ -899,6 +942,8 @@ func _layout_details(m: Vector2) -> void:
 	_assault_time.size = Vector2(HudStyle.text_width(_assault_time.text, 19) + 4.0, 27.0)
 	_anchor_lore.position = Vector2(0, 65.0 - 1.0)
 	_anchor_lore.size = Vector2(w, a_lore_h + 4.0)
+	research_card.position = Vector2(12.0, 9.0)
+	research_card.size = Vector2(m.x - 24.0, m.y - 18.0)
 
 
 func _layout_actions(m: Vector2) -> void:
@@ -906,7 +951,9 @@ func _layout_actions(m: Vector2) -> void:
 	_actions_box.position = Vector2(6, 6)
 	_actions_box.size = m - Vector2(12, 12)
 	var cw := (_actions_box.size.x - 15.0) / 6.0
-	var rh := (_actions_box.size.y - 3.0) / 2.0
+	# Bâtiment à recherches et au plus 6 boutons : une seule rangée, assez haute pour le nom sous l'objet.
+	var one_row := _buttons.size() <= 6 and _buttons.any(func(b: ActionButton) -> bool: return b.action.has("research_icon"))
+	var rh := _actions_box.size.y if one_row else (_actions_box.size.y - 3.0) / 2.0
 	for i in _buttons.size():
 		var b := _buttons[i]
 		b.position = Vector2((i % 6) * (cw + 3.0), (i / 6) * (rh + 3.0))
@@ -1016,6 +1063,8 @@ func _update_bubble() -> void:
 		_build_bubble.visible = false
 		# Boutons de fabrication : nom · coût (stock) · prérequis, au survol seulement.
 		for ab in _buttons:
+			if research_card.visible and ab.action.has("research_icon"):
+				continue
 			if ab.visible and ab.is_hovered() and ab.action.has("bubble"):
 				var info: Array = ab.action["bubble"]
 				_build_bubble.set_text(info[0], info[1], info[2], info[3], info[4] if info.size() > 4 else "")
@@ -1029,6 +1078,30 @@ func _update_bubble() -> void:
 	var build_cost := Catalog.building_cost(target.action["build_type"])
 	_build_bubble.set_text(D["name"], Catalog.cost_text(build_cost), Catalog.can_pay(build_cost), why, String(D.get("lore", "")))
 	_show_bubble(target.global_position + Vector2(BuildButton.SIZE / 2.0, 0.0))
+
+
+## Fiche de recherche : la recherche survolée, sinon celle qui avance, sinon la première du bâtiment.
+func _update_research_card() -> void:
+	var pick: ActionButton = null
+	var first: ActionButton = null
+	var running: ActionButton = null
+	for b in _buttons:
+		if not b.action.has("research_icon"):
+			continue
+		if first == null:
+			first = b
+		if b.is_hovered():
+			pick = b
+		if running == null and b.action.get("active", false):
+			running = b
+	var show := first != null and HudModel.selected_building() != null
+	research_card.visible = show
+	_unit_details.visible = not show and not _view.get("anchor_details", false)
+	if not show:
+		return
+	if pick == null:
+		pick = running if running else first
+	research_card.show_research(pick.action["research_icon"], pick.action["key"])
 
 
 ## Bulle dont la pointe touche `c` (milieu du bord haut du bouton), gardée dans l'écran.
@@ -1164,11 +1237,14 @@ func refresh(force_map := false) -> void:
 		_buttons.clear()
 		for a in actions:
 			var b := ActionButton.new()
+			b.mouse_entered.connect(_update_research_card)
+			b.mouse_exited.connect(_update_research_card)
 			_actions_box.add_child(b)
 			_buttons.append(b)
 		relayout = true
 	for i in actions.size():
 		_buttons[i].set_action(actions[i])
+	_update_research_card()
 	_refresh_incarnated_menu(actions)
 	if relayout:
 		_layout()
@@ -1326,6 +1402,7 @@ func _on_reset() -> void:
 	_fast_construction.text = "Construction rapide : ON" if GameState.fast_construction else "Construction rapide : OFF"
 	dialogue.close()
 	item_banner.close()
+	grimoire.visible = false
 	quests.reset()
 	objective.reset()
 	_banner.visible = false
@@ -1390,6 +1467,15 @@ func _input(event: InputEvent) -> void:
 	if help_panel.handle_input(event):
 		get_viewport().set_input_as_handled()
 		return
+	# Grimoire des recherches : X l'ouvre et le ferme ; ouvert, Échap le ferme.
+	var gkey: Key = (event.key_label if event.key_label != KEY_NONE else event.keycode) if event is InputEventKey else KEY_NONE
+	if event is InputEventKey and event.pressed and not event.echo and not event.ctrl_pressed and not event.alt_pressed and not event.meta_pressed \
+			and (gkey == KEY_X or grimoire.visible and gkey == KEY_ESCAPE) and not (get_viewport().gui_get_focus_owner() is LineEdit):
+		if grimoire.visible or research_shelf.ids.has(""):
+			grimoire.toggle()
+			refresh(true)
+			get_viewport().set_input_as_handled()
+			return
 	# Minicarte plein écran : TAB ou M (recherche « Minicarte » achevée). TAB ne change plus le focus.
 	var map_key: Key = (event.key_label if event.key_label != KEY_NONE else event.keycode) if event is InputEventKey else KEY_NONE
 	if event is InputEventKey and event.pressed and not event.echo and map_key in [KEY_TAB, KEY_M] \

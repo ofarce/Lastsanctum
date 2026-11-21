@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Projectiles de l’Œil</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;600&display=swap" rel="stylesheet">
+<style>
+/* Planche : projectiles de l'Œil de la Matrice plus ronds et plus lisibles.
+   Servie depuis la racine du dépôt (config launch « planches-balles », port 8197) : /planches/oeil-projectiles.html.
+   Actuel porté pixel pour pixel depuis OeilFx.bullet (world/oeil/oeil_fx.gd). Fond : capture du jeu (planches/assets/balles/fond_oeil.png,
+   270 × 150, 1 px natif, Ingénieur aux pieds (143, 57)). Zones touchées : OeilMatrice.BULLET r 0,40 u / big_r 0,68 u × 8 px. */
+:root{--bg:#0c0d10;--panel:#14161b;--line:#2c3038;--txt:#e2dccb;--mut:#9a9ca2;--acc:#5ce8ff;--gold:#d0a038;--ok:#5fbf7a;--redo:#e0b04a;--no:#e0583a;color-scheme:dark}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--txt);font:15px/1.45 'Pixelify Sans',system-ui,sans-serif}
+header,main{max-width:1320px;margin:auto;padding:18px 16px}main{padding-bottom:80px}
+h1{margin:0;font-weight:600;letter-spacing:.08em;font-size:26px;color:var(--acc)}
+h2{font-weight:600;font-size:20px;color:var(--gold);margin:36px 0 6px;letter-spacing:.05em}
+p.lead{color:var(--mut);margin:6px 0 0;max-width:1040px}p.lead b{color:var(--txt);font-weight:600}
+code{font:13px ui-monospace,Menlo,monospace;color:#c8bfa6}
+.rules{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr));gap:10px;margin-top:14px}
+.rules div{background:var(--panel);border:1px solid var(--line);padding:10px 12px;font-size:14px;color:var(--mut)}.rules b{color:var(--gold);display:block;font-weight:600}
+button{font:inherit;color:var(--txt);background:#1c1f26;border:1px solid var(--line);padding:5px 11px;cursor:pointer}
+button:hover{border-color:#3a6470}button[aria-pressed=true]{border-color:var(--acc);background:#12303a}
+button:focus-visible,textarea:focus-visible{outline:2px solid var(--gold);outline-offset:1px}
+.bar{position:sticky;top:0;z-index:5;background:var(--bg);border-bottom:1px solid var(--line);display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding:8px 16px;max-width:1320px;margin:auto}
+#tally{margin-left:auto;color:var(--mut);font-size:13px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,560px),1fr));gap:14px;margin-top:12px}
+.card{background:var(--panel);border:1px solid var(--line);display:flex;flex-direction:column;min-width:0}
+.card[data-v=garder]{border-color:#2f6a40}.card[data-v=revoir]{border-color:#7a6226}.card[data-v=rejeter]{border-color:#7a3a2a;opacity:.72}
+canvas.px{image-rendering:pixelated;display:block;width:100%;height:auto;background:#07080a}
+canvas.strip{image-rendering:pixelated;display:block;width:100%;height:auto;background:#07080a;border-top:1px solid var(--line)}
+body.bw canvas{filter:grayscale(1)}
+.cap{padding:10px 14px 12px;display:flex;flex-direction:column;gap:6px}
+.cap b.t{color:var(--acc);font-weight:600;font-size:18px}.cap b.t.cur{color:var(--mut)}.cap p{margin:0;color:var(--mut);font-size:14px}
+.spec{font:12px/1.5 ui-monospace,Menlo,monospace;color:#b8ad92}
+.legend{display:flex;gap:4px 14px;flex-wrap:wrap;font-size:12px;color:var(--mut);padding:4px 14px 0}
+.verdict{display:flex;gap:6px}.verdict button{flex:1 1 0;min-width:0;font-size:13px}
+.verdict button.sel[data-v=garder]{background:#1f3a28;border-color:var(--ok)}.verdict button.sel[data-v=revoir]{background:#3a321b;border-color:var(--redo)}.verdict button.sel[data-v=rejeter]{background:#3a2019;border-color:var(--no)}
+textarea{background:#101217;color:var(--txt);border:1px solid var(--line);font:13px system-ui,sans-serif;padding:6px 8px;resize:vertical;min-height:32px;width:100%}
+#out{display:none;margin-top:10px;min-height:180px;font-family:ui-monospace,monospace}
+</style></head><body>
+<header><h1>PROJECTILES DE L’ŒIL</h1>
+<p class="lead">Les balles de l’Œil de la Matrice, plus rondes et plus lisibles. La première carte montre <b>l’état actuel</b> (porté pixel pour pixel depuis <code>OeilFx.bullet</code>), les suivantes les pistes. Chaque carte rejoue un même mélange d’attaques sur un fond tiré du jeu (1 px natif, ×2) : anneaux d’yeux, bras de cils, couloir de grosses balles du Regard, larmes en cloche qui éclatent. Sous la scène, la planche des sprites à ×6 : petit œil (3 directions), gros œil, larme (2 directions), cil (2 directions). <b>Zones touchées</b> trace le vrai rayon de chaque balle : 3,2 px, 5,4 px pour les grosses.</p>
+<div class="rules">
+ <div><b>Ce qui gêne aujourd’hui</b>Le cil est une aiguille de 1 à 2 px de large alors qu’il touche dans un rond de 3,2 px. La larme est pointue. Le petit œil met trois couleurs dans 7 px et son iris décalé brouille sa forme.</div>
+ <div><b>Ce que gardent toutes les pistes</b>Un disque plein dont le bord touche presque la zone touchée, un bord sombre net, un cœur clair. Les trois familles (œil, larme, cil) se distinguent par la teinte, plus par la forme.</div>
+ <div><b>Ce qui ne change pas</b>Tailles de collision, vitesses, motifs et calque des balles (bilan « Visibilité des balles », 1·C). Seule la texture de <code>OeilFx.bullet</code> change, et l’ombre en section 2.</div>
+</div></header>
+<div class="bar"><button id="hit" aria-pressed="false">Zones touchées</button><button id="dense" aria-pressed="false">Densité ×2</button><button id="bw" aria-pressed="false">Noir et blanc</button><button id="slow" aria-pressed="false">Ralenti ×0,4</button><button id="pause" aria-pressed="false">Pause</button><span id="tally"></span></div>
+<main>
+<h2>1 · Forme et couleur des balles</h2>
+<p class="lead">Même scène, mêmes instants d’une carte à l’autre. Les pistes A à D prennent le même rayon que l’actuel pour le petit œil (2,9 px de plein + bord), et le donnent aussi à la larme et au cil.</p>
+<div class="grid" id="s1"></div>
+<h2>2 · Ombre au sol</h2>
+<p class="lead">Les balles flottent à 17 px au-dessus de leur ombre (<code>BULLET.lift</code>), et c’est l’ombre qui donne leur position réelle. Aujourd’hui c’est un trait de 5 × 1 px, qui disparaît sur les dalles. Les cartes de cette section utilisent les sprites de la piste choisie ci-dessous.</p>
+<div class="bar" style="position:static;padding:8px 0;border:0" id="pick"></div>
+<div class="grid" id="s2"></div>
+<h2>Bilan</h2><p class="lead">Les choix restent dans ce navigateur. « Copier le bilan » produit le texte à me renvoyer.</p>
+<div style="margin-top:10px;display:flex;gap:8px"><button id="copy">Copier le bilan</button><button id="clear">Tout effacer</button></div>
+<textarea id="out" aria-label="Bilan"></textarea>
+</main>
+<script>
+// ------------------------------------------------------------------ Palette (OeilFx)
+const C=s=>{const n=parseInt(s.slice(1),16);return[n>>16&255,n>>8&255,n&255,255]};
+const OUT=C('#0b090b'),SCL=['#a8988e','#d6c8bc','#efe4da','#fff6ee'].map(C),IRIS=C('#e2382e'),PUP=C('#060606');
+const BLOOD=['#4a0a0e','#7e1216','#b41c20','#e2382e','#ff8a6a'].map(C);
+const MEMB=['#3a1416','#6a2a2a','#9a4a44','#c47a6a','#e0a894','#f2cdb8'].map(C);
+const BONE=['#3a3228','#625644','#8e8068','#b8ac90','#e0d8c4'].map(C);
+const HALF=[11,9,11,120],WHITE=C('#fff6ee');
+const BAY=[[0,8,2,10],[12,4,14,6],[3,11,1,9],[15,7,13,5]];const bay=(x,y)=>(BAY[(y%4+4)%4][(x%4+4)%4]+.5)/16;
+const ROT=16,K=8,HIT=.40*K,BIG_HIT=.68*K;
+const IMG={};function img(k,s){const i=new Image();i.src=s;IMG[k]=i}img('fond','assets/balles/fond_oeil.png');
+const len=(x,y)=>Math.hypot(x,y);
+
+// ------------------------------------------------------------------ Générateurs de sprites
+// Chaque piste : size(style,big) -> {R (rayon du plein), pad (marge), rims [couleurs]}, px(style,big,dx,dy,u,v,s,ca,sa) -> couleur ou null.
+const PISTES={
+ actuel:{title:'Actuel',cur:true,
+  desc:'Œil de 7 px (11 px gros) à iris décalé vers l’avant ; larme pointue de 9 px ; cil en aiguille de 11 px de long sur 1 à 2 px de large. Bord sombre simple.',
+  spec:'OeilFx.bullet · œil 2,9 px · larme 3,8 × 1,9 · cil 9,2 × 1,2',
+  n:(st,big)=>big&&st==='oeil'?11:st==='oeil'?7:st==='larme'?9:11,rims:[OUT],
+  px(st,big,dx,dy,u,v){
+   if(st==='oeil'){const s=big?1.6:1;if(len(dx,dy)/s>2.9)return null;const di=len(u/s-.9,v/s);return di<.6?PUP:di<1.4?IRIS:(dy>.9*s?SCL[1]:SCL[2])}
+   if(st==='larme'){const q=(u<0?(u/3.8)**2:(u/2.2)**2)+(v/(1.9*(u<0?1+u/9:1)))**2;if(q>1)return null;return q<.2&&u>.2?SCL[3]:q<.55?MEMB[4]:u<-1.5?BLOOD[2]:MEMB[3]}
+   const w=u>2?(4.6-u)*.32:u<-3.6?.35:.62;if(u<-4.6||u>4.6||Math.abs(v)>w)return null;return u<-2.8?BLOOD[2]:u>2.6?BONE[4]:v>0?BONE[1]:BONE[3]}},
+ A:{title:'A · Bille-œil, double bord',
+  desc:'Trois disques pleins de même taille. L’œil garde sclère, iris et pupille, mais l’iris est presque centré (léger regard vers l’avant). La larme a une courte queue de 2 px qui montre où elle va. Le cil devient une perle d’os à cœur de sang. Double bord : noir, puis noir à moitié transparent, comme les éclats de la Martyre (3·C).',
+  spec:'plein 3,0 px (5,0 gros) + 2 bords · iris 1,6 · queue de larme 2 px',
+  R:big=>big?5:3,rims:[OUT,HALF],
+  px(st,big,dx,dy,u,v,s){const R=big?5:3,d=len(dx,dy);
+   if(st==='larme'){const tail=u<-R+.6&&u>-R-2.2&&Math.abs(v)<(u+R+2.2)*.5;if(d>R&&!tail)return null;if(d>R)return MEMB[2];
+    if(len(dx+1.1*s,dy+1.1*s)<.95*s)return SCL[3];return dy>.45*R?MEMB[3]:MEMB[4]}
+   if(d>R)return null;
+   if(st==='cil'){if(len(dx-.4*u/(d||1),dy)<.85*s&&d<1.2*s)return BLOOD[2];if(len(dx+1.1*s,dy+1.1*s)<.8*s)return WHITE;return dy>.5*R?BONE[3]:BONE[4]}
+   const di=len(dx-dirx*.6*s,dy-diry*.6*s);
+   if(di<.7*s)return PUP;if(di<1.6*s)return IRIS;if(dx+dy<-1.15*R)return SCL[3];return dy>.6*R?SCL[1]:SCL[2]}},
+ B:{title:'B · Orbe carmin à cœur blanc',
+  desc:'La balle classique du genre : cœur blanc, couronne de couleur, bord sombre. Plus d’œil dessiné. Œil = couronne carmin, larme = couronne rose, cil = couronne d’os. Le cœur blanc reste le point le plus clair de l’écran, la couronne dit la famille.',
+  spec:'plein 3,0 px (5,0 gros) · cœur 45 % · 2 bords',
+  R:big=>big?5:3,rims:[OUT,HALF],
+  px(st,big,dx,dy){const R=big?5:3,d=len(dx,dy)/R;if(d>1)return null;
+   const P=st==='oeil'?[BLOOD[4],BLOOD[3],BLOOD[2]]:st==='larme'?[MEMB[5],MEMB[3],MEMB[2]]:[BONE[4],BONE[2],BONE[1]];
+   return d<.45?WHITE:d<.64?P[0]:d<.9?P[1]:P[2]}},
+ C:{title:'C · Globe ombré',
+  desc:'Chaque balle est une petite sphère éclairée d’en haut à gauche, ombrée en trame, avec un reflet blanc. L’œil garde son iris, posé sur le globe dans le sens du vol : il regarde où il va. Larme en bulle de chair, cil en dent d’os à peine ovale (×1,15 dans le sens du vol). Bord sombre simple.',
+  spec:'plein 3,0 px (5,0 gros) · 4 tons tramés · reflet 1 px · 1 bord',
+  R:big=>big?5:3,rims:[OUT],
+  px(st,big,dx,dy,u,v,s){const R=big?5:3;let d;
+   if(st==='cil')d=len(u/1.15,v)/R;else d=len(dx,dy)/R;if(d>1)return null;
+   const nz=Math.sqrt(Math.max(0,1-d*d)),I=(-.5*dx/R-.6*dy/R+.62*nz)*1.05;
+   const sp=len(dx+.42*R,dy+.45*R)<.62*s;
+   const T=st==='oeil'?SCL:st==='larme'?[MEMB[2],MEMB[3],MEMB[4],MEMB[5]]:[BONE[2],BONE[3],BONE[4],WHITE];
+   if(st==='oeil'){const di=len(dx-dirx*.48*R,dy-diry*.48*R);if(di<.22*R+.2)return PUP;if(di<.48*R)return I<.35?BLOOD[2]:IRIS}
+   if(sp)return WHITE;
+   const k=Math.max(0,Math.min(3,Math.floor(I*3.2+bay(Math.round(dx+9),Math.round(dy+9))-.2)));return T[k]}},
+ D:{title:'D · Œil cerné de carmin',
+  desc:'L’œil de A, entouré d’un anneau de 1 px de la couleur de sa famille avant le bord noir : carmin pour l’œil, rose pour la larme, brun d’os pour le cil. La forme reste un œil, l’anneau donne une teinte unique et sépare deux balles qui se touchent.',
+  spec:'plein 3,0 px (5,0 gros) dont anneau 1 px · 2 bords',
+  R:big=>big?5:3,rims:[OUT,HALF],
+  px(st,big,dx,dy,u,v,s){const R=big?5:3,d=len(dx,dy);if(d>R)return null;
+   const ring=st==='oeil'?BLOOD[2]:st==='larme'?MEMB[2]:BONE[1];if(d>R-.95)return ring;
+   if(st==='larme'){if(len(dx+1*s,dy+1*s)<.9*s)return SCL[3];return dy>.3*R?MEMB[3]:MEMB[4]}
+   if(st==='cil'){if(d<.75*s)return BLOOD[2];if(len(dx+1*s,dy+1*s)<.8*s)return WHITE;return dy>.35*R?BONE[3]:BONE[4]}
+   const di=len(dx-dirx*.55*s,dy-diry*.55*s);if(di<.65*s)return PUP;if(di<1.45*s)return IRIS;if(dx+dy<-1.1*R)return SCL[3];return dy>.45*R?SCL[1]:SCL[2]}},
+};
+let dirx=1,diry=0;
+const CACHE={};
+function sprite(pk,st,big,rot){big=big&&st==='oeil';const key=pk+st+(big?1:0)+'_'+rot;if(CACHE[key])return CACHE[key];
+ const P=PISTES[pk],a=rot*2*Math.PI/ROT,ca=Math.cos(a),sa=Math.sin(a);dirx=ca;diry=sa;
+ let n,pad=P.rims.length;if(P.n)n=P.n(st,big);else{const ext=st==='larme'&&pk==='A'?2.4:st==='cil'&&pk==='C'?.6:0;n=2*(Math.ceil(P.R(big)+ext)+pad)+1}
+ const hh=(n-1)/2,s=P.R?P.R(big)/3:1,cv=document.createElement('canvas');cv.width=cv.height=n;const c=cv.getContext('2d'),im=c.createImageData(n,n),fill=new Uint8Array(n*n);
+ for(let y=0;y<n;y++)for(let x=0;x<n;x++){const dx=x-hh,dy=y-hh,u=dx*ca+dy*sa,v=-dx*sa+dy*ca;const col=P.px(st,big,dx,dy,u,v,s,ca,sa);if(!col)continue;im.data.set(col,(y*n+x)*4);fill[y*n+x]=1}
+ for(const rc of P.rims){const add=[];for(let y=0;y<n;y++)for(let x=0;x<n;x++){if(fill[y*n+x])continue;
+   if((x>0&&fill[y*n+x-1])||(x<n-1&&fill[y*n+x+1])||(y>0&&fill[(y-1)*n+x])||(y<n-1&&fill[(y+1)*n+x]))add.push(y*n+x)}
+  for(const i of add){im.data.set(rc,i*4);fill[i]=1}}
+ c.putImageData(im,0,0);return CACHE[key]=cv}
+
+// ------------------------------------------------------------------ Scène : même mélange d'attaques pour toutes les cartes
+const W=270,H=150,FEET=[143,57],O=[143,-40];
+const hash=k=>{let x=Math.sin(k*127.1+311.7)*43758.5453;return x-Math.floor(x)};
+let dense=false;
+function bullets(t){const L=[],D=dense?2:1;
+ // Anneaux d'yeux (Fixation / Clignement) : 20 balles toutes les 1,6 s
+ for(let k=Math.floor((t-5)/1.6);k<=Math.floor(t/1.6);k++){const te=k*1.6;if(te>t)continue;const n=16*D,off=k*.37;
+  for(let i=0;i<n;i++){const a=off+i*2*Math.PI/n,r=(t-te)*36;L.push({x:O[0]+Math.cos(a)*r,y:O[1]+40+Math.sin(a)*r*.8,a,st:'oeil'})}}
+ // Bras de cils (Cils) : 4 bras, un tir toutes les 0,11 s, accélération
+ const ev=.11/D;for(let k=Math.floor((t-3.2)/ev);k<=Math.floor(t/ev);k++){const te=k*ev;if(te>t)continue;const dt=t-te;
+  for(let j=0;j<4;j++){const a=j*2*Math.PI/4+k*ev*1.7,r=dt*30+dt*dt*14;L.push({x:O[0]+Math.cos(a)*r,y:O[1]+40+Math.sin(a)*r*.8,a,st:'cil'})}}
+ // Couloir du Regard : 6 grosses balles visées sur l'Ingénieur toutes les 2,4 s
+ for(let k=Math.floor((t-2)/2.4);k<=Math.floor(t/2.4);k++){for(let i=0;i<6;i++){const te=k*2.4+i*.09;if(te>t)continue;const sx=O[0]+(hash(k)-.5)*160,sy=O[1]+40;
+  const a=Math.atan2(FEET[1]-sy,FEET[0]-sx),r=(t-te)*120;L.push({x:sx+Math.cos(a)*r,y:sy+Math.sin(a)*r,a,st:'oeil',big:true})}}
+ // Larmes en cloche puis éclatement en 8 larmes
+ const le=.6/D;for(let k=Math.floor((t-2.8)/le);k<=Math.floor(t/le);k++){const te=k*le;if(te>t)continue;const dt=t-te;
+  const tx=22+hash(k*3.1)*226,ty=24+hash(k*7.7)*110,sx=O[0]+(hash(k*1.3)-.5)*30,sy=O[1]+40;
+  if(dt<1.05){const q=dt/1.05;L.push({x:sx+(tx-sx)*q,y:sy+(ty-sy)*q,h:40*4*q*(1-q),a:Math.atan2(ty-sy,tx-sx),st:'larme'})}
+  else{const r=(dt-1.05)*30;for(let i=0;i<8;i++){const a=i*Math.PI/4+k;L.push({x:tx+Math.cos(a)*r,y:ty+Math.sin(a)*r*.8,a,st:'larme'})}}}
+ return L.filter(b=>b.x>-10&&b.x<W+10&&b.y>-30&&b.y<H+30)}
+const SH=[8,3,1,.45*255|0];
+function shadow(c,b,mode){const x=Math.round(b.x),y=Math.round(b.y);c.fillStyle='rgba(8,3,1,.45)';
+ if(mode==='actuel'){c.fillRect(x-2,y,5,1);if(b.big)c.fillRect(x-3,y+1,7,1);return}
+ const rx=b.big?5:3,ry=b.big?2:1;c.fillStyle=mode==='trame'?'rgba(8,3,1,.7)':'rgba(8,3,1,.5)';
+ for(let j=-ry;j<=ry;j++)for(let i=-rx;i<=rx;i++){if((i/(rx+.5))**2+(j/(ry+.5))**2>1)continue;if(mode==='trame'&&((i+j)&1))continue;c.fillRect(x+i,y+j,1,1)}
+ if(mode==='trame'){c.fillStyle='rgba(8,3,1,.85)';c.fillRect(x,y,1,1)}}
+let showHit=false;
+function render(c,t,pk,sh,lift){c.drawImage(IMG.fond,0,0);const L=bullets(t);
+ for(const b of L)shadow(c,b,sh);
+ for(const b of L){const rot=((Math.round(b.a/(2*Math.PI)*ROT)%ROT)+ROT)%ROT,s=sprite(pk,b.st,b.big,rot),h=(s.width-1)/2;
+  c.drawImage(s,Math.round(b.x)-h,Math.round(b.y)-h-lift-Math.round(b.h||0))}
+ if(showHit){c.strokeStyle='rgba(92,232,255,.9)';c.lineWidth=1;for(const b of L){if((b.h||0)>4)continue;c.beginPath();c.arc(Math.round(b.x)+.5,Math.round(b.y)-lift+.5,b.big?BIG_HIT:HIT,0,7);c.stroke()}}
+ const hx=FEET[0],hy=FEET[1]-lift;c.fillStyle='#10123a';c.fillRect(hx-2,hy-2,5,5);c.fillStyle='#fff';c.fillRect(hx-1,hy-1,3,3)}
+
+// Planche des sprites à ×6 sur un carré de dalle
+const SZ=6,CELL=19,LIST=[['oeil',0,4],['oeil',0,0],['oeil',0,10],['oeil',1,4],['larme',0,4],['larme',0,0],['cil',0,4],['cil',0,0]];
+function strip(cv,pk){const c=cv.getContext('2d');c.imageSmoothingEnabled=false;c.fillStyle='#07080a';c.fillRect(0,0,cv.width,cv.height);
+ LIST.forEach(([st,big,rot],i)=>{const x0=i*(CELL+1)*SZ;c.drawImage(IMG.fond,60+i*CELL,100,CELL,CELL,x0,0,CELL*SZ,CELL*SZ);
+  const s=sprite(pk,st,big,rot),o=(CELL-s.width)/2|0;c.drawImage(s,0,0,s.width,s.height,x0+o*SZ,o*SZ,s.width*SZ,s.height*SZ);
+  if(showHit){c.strokeStyle='rgba(92,232,255,.95)';c.lineWidth=2;c.beginPath();const ctr=(o+(s.width-1)/2+.5)*SZ;c.arc(x0+ctr,ctr,(big?BIG_HIT:HIT)*SZ,0,7);c.stroke()}})}
+
+// ------------------------------------------------------------------ Cartes, verdicts, boucle
+const KEY='planche-oeil-projectiles';let state={};try{state=JSON.parse(localStorage.getItem(KEY)||'{}')}catch(e){}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(state))}catch(e){}tally()}
+const CARDS=[],LIVE=[];
+function verdict(id,host,el){const box=document.createElement('div');box.className='verdict';
+ for(const[v,l]of[['garder','Garder'],['revoir','À revoir'],['rejeter','Rejeter']]){const b=document.createElement('button');b.dataset.v=v;b.textContent=l;
+  b.onclick=()=>{const s=state[id]||(state[id]={});s.v=s.v===v?'':v;save();paint()};box.appendChild(b)}
+ const ta=document.createElement('textarea');ta.placeholder='Remarque…';ta.value=(state[id]||{}).n||'';ta.oninput=()=>{(state[id]||(state[id]={})).n=ta.value;save()};
+ function paint(){const v=(state[id]||{}).v||'';for(const b of box.children)b.classList.toggle('sel',b.dataset.v===v);if(el)el.dataset.v=v}
+ host.appendChild(box);host.appendChild(ta);paint()}
+function card(sec,id,title,desc,spec,cur,opts){const el=document.createElement('div');el.className='card';
+ const cv=document.createElement('canvas');cv.className='px';cv.width=W;cv.height=H;el.appendChild(cv);
+ let st=null;if(opts.strip){st=document.createElement('canvas');st.className='strip';st.width=LIST.length*(CELL+1)*SZ-SZ;st.height=CELL*SZ;el.appendChild(st);
+  const lg=document.createElement('div');lg.className='legend';lg.innerHTML='<span>petit œil ↓ → ↖</span><span>gros œil</span><span>larme ↓ →</span><span>cil ↓ →</span>';el.appendChild(lg)}
+ const cap=document.createElement('div');cap.className='cap';cap.innerHTML=`<b class="t${cur?' cur':''}">${title}</b><p>${desc}</p><div class="spec">${spec}</div>`;el.appendChild(cap);
+ verdict(id,cap,el);document.getElementById(sec).appendChild(el);const cd={id,sec,title,cv,ctx:cv.getContext('2d'),st,vis:false,...opts};CARDS.push(cd);LIVE.push(cd);return cd}
+for(const pk of Object.keys(PISTES)){const P=PISTES[pk];card('s1','f_'+pk,P.title,P.desc,P.spec,P.cur,{pk:()=>pk,sh:'actuel',lift:17,strip:pk})}
+const SHADOWS=[['actuel','Actuel · trait 5 × 1','Trait de 5 × 1 px (7 × 1 en plus pour les grosses). Sur les dalles grises il se lit mal, surtout quand la balle est loin de l’Ingénieur.','ombre 5 × 1 · lift 17'],
+ ['ronde','A · Ombre ronde','Ellipse pleine de 7 × 3 px (11 × 5 grosses), à 50 % : la forme de la zone touchée vue au sol, en plus sombre.','ombre 7 × 3 · lift 17'],
+ ['trame','B · Ombre tramée à point central','Ellipse tramée à 70 % avec un point plus sombre au centre exact : la position réelle se lit au pixel, et la trame laisse voir les dalles.','ombre 7 × 3 tramée + point · lift 17'],
+ ['ronde11','C · Ombre ronde, balles plus basses','Comme A, mais les balles volent à 11 px au lieu de 17 : la balle et son ombre se lisent comme un seul objet. Le repère de l’Ingénieur descend d’autant (il reste à la hauteur des balles).','ombre 7 × 3 · lift 11']];
+let pickPk='A';const pick=document.getElementById('pick');pick.insertAdjacentHTML('beforeend','<span style="color:var(--mut);font-size:13px">Sprites :</span>');
+for(const pk of Object.keys(PISTES)){const b=document.createElement('button');b.textContent=pk==='actuel'?'Actuel':pk;b.setAttribute('aria-pressed',pk===pickPk);b.onclick=()=>{pickPk=pk;for(const x of pick.querySelectorAll('button'))x.setAttribute('aria-pressed',x===b)};pick.appendChild(b)}
+for(const[m,t,d,s]of SHADOWS)card('s2','o_'+m,t,d,s,m==='actuel',{pk:()=>pickPk,sh:m==='ronde11'?'ronde':m,lift:m==='ronde11'?11:17});
+const io=new IntersectionObserver(es=>{for(const e of es){const cd=LIVE.find(c=>c.cv===e.target);if(cd)cd.vis=e.isIntersecting}},{rootMargin:'100px'});for(const cd of LIVE)io.observe(cd.cv);
+function tally(){const n=CARDS.filter(c=>state[c.id]&&state[c.id].v).length;document.getElementById('tally').textContent=`${n} / ${CARDS.length} verdicts`}tally();
+let speed=1,paused=false,simT=20,last=performance.now(),stripsDone=false;const qs=new URLSearchParams(location.search);if(qs.has('t'))simT=+qs.get('t');if(qs.has('pause'))paused=true;
+function frame(now){const dt=Math.min(.1,(now-last)/1000);last=now;if(!paused)simT+=dt*speed;
+ if(IMG.fond.complete&&IMG.fond.naturalWidth){if(!stripsDone){for(const cd of CARDS)if(cd.st)strip(cd.st,cd.strip);stripsDone=true}
+  for(const cd of LIVE){if(!cd.vis&&!qs.has('all'))continue;const c=cd.ctx;c.imageSmoothingEnabled=false;try{render(c,simT,cd.pk(),cd.sh,cd.lift)}catch(e){if(!cd.err){cd.err=1;console.error(cd.id,e)}}}}
+ requestAnimationFrame(frame)}requestAnimationFrame(frame);
+const tog=(id,f)=>{const b=document.getElementById(id);b.onclick=()=>{const on=b.getAttribute('aria-pressed')!=='true';b.setAttribute('aria-pressed',on);f(on)}};
+tog('hit',on=>{showHit=on;stripsDone=false});tog('dense',on=>dense=on);tog('bw',on=>document.body.classList.toggle('bw',on));tog('slow',on=>speed=on?.4:1);tog('pause',on=>paused=on);
+if(paused)document.getElementById('pause').setAttribute('aria-pressed','true');
+document.getElementById('copy').onclick=()=>{const L=['Planche « Projectiles de l’Œil » — bilan'];let sec='';
+ for(const cd of CARDS){const h=document.querySelector('#'+cd.sec).parentNode.querySelectorAll('h2')[cd.sec==='s1'?0:1].textContent;if(h!==sec){sec=h;L.push('',h)}const s=state[cd.id]||{};L.push(`- ${cd.title} : ${s.v||'—'}${s.n?' — '+s.n:''}`)}
+ const out=document.getElementById('out');out.style.display='block';out.value=L.join('\n');out.select();try{navigator.clipboard.writeText(out.value)}catch(e){}};
+document.getElementById('clear').onclick=()=>{if(!confirm('Effacer tous les verdicts et remarques ?'))return;state={};save();location.reload()};
+</script>
+</body></html>

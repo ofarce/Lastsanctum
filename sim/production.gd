@@ -14,6 +14,7 @@ extends RefCounted
 
 const ItemStorage := preload("res://sim/item_storage.gd")
 const Recipes := preload("res://data/recipes.gd")
+const HarvestFx := preload("res://sim/harvest_fx.gd")
 
 ## Distance d'arrivée à un point de travail, à un coffre.
 const REACH := 0.7
@@ -289,7 +290,7 @@ func _craft(b: Building, dt: float) -> void:
 	if n == 0:
 		return
 	var cost: Dictionary = Recipes.RECIPES[b.type][b.recipe]
-	b.craft += dt * n
+	b.craft += dt * n * Mods.work_mult(Vector2(b.x, b.z))
 	if b.craft < Recipes.craft_time(b.type):
 		return
 	b.craft = 0.0
@@ -308,7 +309,7 @@ func _train(b: Building, dt: float) -> void:
 	var n := at_post(b)
 	if n == 0 or not has_items(b.input_box, items):
 		return
-	b.train += dt * n
+	b.train += dt * n * Mods.work_mult(Vector2(b.x, b.z))
 	if b.train < Catalog.CASERNE_TIME:
 		return
 	b.train = 0.0
@@ -441,13 +442,15 @@ func _mine(u: Unit, j: Dictionary, dt: float) -> void:
 	var item: String = block["drop_item"]
 	u.working = true
 	Sfx.at("minage", u.x, u.z)  # coups de pioche espacés par MIN_GAP
-	j["work"] = float(j.get("work", 0.0)) + dt
 	var interval := Simulation.adept_mining_seconds(u)
+	var before := float(j.get("work", 0.0))
+	j["work"] = before + dt * Mods.work_mult(u.pos())
+	var hit := HarvestFx.work(u, st, key, item, before, j["work"], interval)
 	while j["work"] >= interval:
 		j["work"] -= interval
 		j["mined"] = int(j.get("mined", 0)) + 1
 		u.carrying = {"item": item, "quantity": j["mined"]}
-		GameState.effects.append({"type": "mining_gain", "miner": u, "item": item, "age": 0.0, "duration": 1.0})
+		GameState.effects.append({"type": "mining_gain", "miner": u, "item": item, "age": 0.0, "duration": 1.0, "from": hit})
 		c["at"] = sim.next_lode_spot(key, c["at"])
 		if j["mined"] >= Catalog.MINE_BATCH:
 			j["step"] = "deliver"
@@ -504,6 +507,9 @@ func try_miner(u: Unit, cells: Array) -> bool:
 		return false
 	if not is_member(u, b, "miner") and members(b, "miner").size() >= Catalog.MINERS_MAX:
 		sim.say("%s : déjà %d mineurs." % [b.def()["name"], Catalog.MINERS_MAX], 2.0)
+		return true
+	if sim.node_full(c, u):
+		sim.say("Déjà %d adeptes sur ce gisement." % Catalog.NODE_ADEPTS_MAX, 2.0)
 		return true
 	sim.set_job(u, {"type": "staff", "building": b, "post": "miner", "step": "mine", "cell": c.duplicate(), "mined": 0})
 	sim.say("L’adepte mine pour le %s et rapportera des lots de %d." % [b.def()["name"], Catalog.MINE_BATCH], 2.0)

@@ -17,7 +17,8 @@ extends RefCounted
 ## chacun annoncé par un geste, suivis d'une fenêtre de souffle où elle marche vers l'Ingénieur :
 ## - fissure ardente : la faille court vers la position visée en crachant des braises de part et d'autre ;
 ##   l'éruption au bout (dégâts et étourdissement) projette un anneau d'éclats ;
-## - larmes d'or : cinq grosses balles en éventail qui freinent puis éclatent chacune en éclats ;
+## - larmes d'or : cinq grosses balles en éventail qui freinent puis éclatent chacune en un éventail d'éclats
+##   qui poursuit leur direction de départ ;
 ## - rosace des sceaux : les trois sceaux sous l'Ingénieur et de part et d'autre ; à l'impact, chacun fleurit
 ##   en deux anneaux décalés ;
 ## - litanie du dôme : un pan du bouclier s'embrase et trois murs d'éclats traversent l'arène, la brèche
@@ -98,9 +99,10 @@ const ROTATION := [
 ## vitesse, freinage, vitesse plancher, durée ; anneau à l'éruption.
 const EMBER := {"step": 1.5, "speed": 5.6, "acc": -5.0, "min": 1.5, "life": 4.0, "ring": 16, "ring_speed": 7.5}
 ## Larmes d'or : nombre, écart angulaire, vitesse, freinage, plancher, éclatement (après le tir, + rang × stagger),
-## éclats, vitesse des éclats, délai du tir après le début du geste, durée du motif.
+## éclats, vitesse des éclats, ouverture de l'éventail des éclats (centré sur la direction de départ de la larme),
+## délai du tir après le début du geste, durée du motif.
 const LARMES := {"count": 5, "spread": 0.5, "speed": 18.75, "acc": -20.0, "min": 1.0, "fuse": 1.0, "stagger": 0.12,
-	"shards": 10, "shard_speed": 6.875, "delay": 0.5, "time": 2.4}
+	"shards": 10, "shard_speed": 6.875, "shard_fan": deg_to_rad(72.0), "delay": 0.5, "time": 2.4}
 ## Rosace : glyphes par anneau, vitesse du premier et du second anneau, délai du second.
 const ROSACE := {"count": 12, "speed": 6.875, "speed2": 5.625, "second": 0.3, "time": 0.5}
 ## Litanie : murs, couloir d'annonce, écart entre deux murs, pas entre deux balles, demi-largeur de la brèche,
@@ -487,8 +489,10 @@ static func _run_events(sim: Simulation, e: Enemy, u: Unit, now: float) -> void:
 					continue
 				var a := (u.pos() - e.pos()).angle()
 				for j in LARMES["count"]:
-					var b := shoot(e.x, e.z, a + (j - (LARMES["count"] - 1) / 2.0) * LARMES["spread"], LARMES["speed"] * k,
+					var aj: float = a + (j - (LARMES["count"] - 1) / 2.0) * LARMES["spread"]
+					var b := shoot(e.x, e.z, aj, LARMES["speed"] * k,
 						{"big": true, "acc": LARMES["acc"], "min": LARMES["min"], "r0": 1.5})
+					b["dir"] = aj
 					b["fuse"] = now + LARMES["fuse"] + j * LARMES["stagger"]
 			"wall_warn":
 				if u == null:
@@ -593,7 +597,11 @@ static func update_bullets(sim: Simulation, u: Unit, now: float, dt: float) -> v
 	GameState.martyre_bullets = keep
 	for b: Dictionary in bursts:
 		Combat.flash(b["x"], b["z"], Color("#f0cc66"))
-		ring(b["x"], b["z"], LARMES["shards"], LARMES["shard_speed"] * k, sim.rng.randf() * TAU)
+		# Éventail d'éclats dans la direction de départ de la larme.
+		var n: int = LARMES["shards"]
+		var fan: float = LARMES["shard_fan"]
+		for i in n:
+			shoot(b["x"], b["z"], b["dir"] + fan * (i / float(n - 1) - 0.5), LARMES["shard_speed"] * k)
 
 
 ## Braises de la faille, éruptions, colonnes et rosaces : dégâts au moment où elles jaillissent, puis retrait

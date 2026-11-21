@@ -65,6 +65,7 @@ static func collect_nearby(u: Unit) -> void:
 		if position.distance_squared_to(drop["position"]) <= PICKUP_RADIUS * PICKUP_RADIUS:
 			if store(u.inventory, u.inventory_capacity, drop["item"], String(drop.get("owner", ""))):
 				GameState.ground_items.remove_at(i)
+				Loot.picked(drop["item"])
 
 
 ## Objet posé au sol (GameState.ground_items).

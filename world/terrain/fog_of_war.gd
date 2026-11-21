@@ -173,9 +173,11 @@ static func vision_radius(u: Unit) -> int:
 		detect = float(Catalog.MAGE.get(u.role, {}).get("reach", 0.0))
 	elif u.role != "engineer":
 		detect = Catalog.unit_reach(u) + Combat.ENGAGE_MARGIN
+	# Lanterne de Medeina (sim/mods.gd) : quelques cases de plus.
+	var bonus := Mods.vision_bonus(u)
 	if detect <= RADIUS:
-		return RADIUS
-	return mini(MAX_RADIUS, ceili(detect / CELL_SIZE) * CELL_SIZE)
+		return RADIUS + bonus
+	return mini(MAX_RADIUS, ceili(detect / CELL_SIZE) * CELL_SIZE + bonus)
 
 
 ## Ajoute par maximum le champ de vision de la source `key`, limité au rectangle `clip` de la carte.

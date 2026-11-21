@@ -10,9 +10,13 @@ extends RefCounted
 const ItemStorage := preload("res://sim/item_storage.gd")
 
 const RIGHT := "Main droite"
-## Emplacements de module de la fiche d'inventaire : tout objet d'emplacement « Module » va dans l'un ou l'autre.
+## Emplacements de module de la fiche d'inventaire : tout objet d'emplacement « Module » va dans n'importe lequel.
+## L'Exilé (rôle « engineer ») n'équipe plus que des mods (2026-11-21) : l'Arbalestrie et la Combinaison lui sont
+## remises d'office par la capsule (sim/capsule.gd) et n'ont pas de case ; épées, armures et boucliers restent pour les adeptes.
 const MODULE := "Module"
-const MODULE_SLOTS: Array[String] = ["Module 1", "Module 2"]
+## Cases du paquetage de l'Exilé ; le Sac sans fond (mod « sack ») en ajoute autant.
+const PACK := 10
+const MODULE_SLOTS: Array[String] = ["Module 1", "Module 2", "Module 3", "Module 4", "Module 5", "Module 6"]
 const LEFT := "Main gauche"
 
 const ITEMS := {
@@ -50,14 +54,72 @@ const ITEMS := {
 		"desc": "Occupe une seule main, défense très faible."},
 	"cannon": {"name": "Arbalestrie", "slot": "Main droite", "piece": "cannon", "damage": 12, "reach": 12.0, "cd": 0.25, "anim": "shoot", "mana": 0.5,
 		"desc": "Balles spirituelles : 6 par seconde, 0,5 de chaque mana par tir ; elles filent jusqu’au premier obstacle. Dégâts 12."},
-	# Modules d'exo (2026-11-20) : lâchés par les boss, deux emplacements « Module » sous la silhouette. Pas de
-	# calque dessiné sur l'Exilé ; l'effet est dans le champ « module » (sim/loot.gd, Combat.damage, Minimap).
+	# Mods (modules d'exo) : lâchés par les boss, seuls objets que l'Exilé équipe (6 cases MODULE_SLOTS). Chacun est
+	# dessiné sur l'Ingénieur (entities/unit/veil_fx.gd, iris_fx.gd, mining_seal_fx.gd) ; effet dans le champ « module »
+	# (sim/loot.gd, Combat.damage, Minimap). Icône : ui/inventory/item_icon.gd (MOD_ORDER). Infobulle (ui/inventory/
+	# item_tooltip.gd) : family, stats (lignes chiffrées), worn (ce qu'on voit porté), from (boss d'origine).
+	# Raretés choisies le 2026-11-21 (planches/mods-icones-propositions.html).
 	"module_veil": {"name": "Voile de la Martyre", "slot": "Module", "rarity": "uncommon", "module": "veil",
+		"family": "Butin de boss", "from": "la Martyre", "stats": [["Absorbe", "1 coup entier"], ["Recharge", "20 s"]],
+		"worn": "un pendentif d’améthyste qui rayonne et un liseré violet autour de la silhouette ; il éclate quand le coup est absorbé.",
 		"desc": "Module d’exo. Un voile absorbe entièrement un coup, puis se reforme en 20 s."},
-	"module_drill": {"name": "Foreuse de Gorge-Cuivre", "slot": "Module", "rarity": "uncommon", "module": "drill",
+	"module_drill": {"name": "Foreuse de Gorge-Cuivre", "slot": "Module", "rarity": "unique", "module": "drill",
+		"family": "Butin de boss", "from": "Gorge-Cuivre", "stats": [["Vitesse de minage", "×2"], ["Billes du Sceau", "3 → 5"]],
+		"worn": "les cinq billes cuivre et argent du Sceau, qui se mettent en mèche quand il creuse.",
 		"desc": "Module d’exo. L’Exilé creuse la roche deux fois plus vite."},
-	"module_iris": {"name": "Iris de la Matrice", "slot": "Module", "rarity": "uncommon", "module": "iris",
+	"module_iris": {"name": "Iris de la Matrice", "slot": "Module", "rarity": "rare", "module": "iris",
+		"family": "Butin de boss", "from": "l’Œil de la Matrice", "stats": [["Révèle", "ennemis derrière la roche"], ["Ping", "2 s minimum"]],
+		"worn": "un orbe à pupille carmin au-dessus de l’épaule ; il lance des arcs de sonar vers chaque ennemi repéré.",
 		"desc": "Module d’exo. Les ennemis apparaissent sur la minicarte à travers la roche."},
+	# Les douze mods du 2026-11-21 (règles : sim/mods.gd ; butin : sim/loot.gd, TABLE et CACHES).
+	"module_scale": {"name": "Écaille d’esquive", "slot": "Module", "rarity": "rare", "module": "scale",
+		"family": "Combat", "from": "brutes, Strazhar", "stats": [["Frôlement", "tir passé à 0,6 de la touche"], ["Coup suivant", "+50 % de dégâts"]],
+		"worn": "une écaille d’acier sur l’épaule avant ; elle s’allume en cyan quand elle est chargée.",
+		"desc": "Module d’exo. Après un tir ennemi frôlé de justesse, la prochaine attaque fait +50 % de dégâts."},
+	"module_ember": {"name": "Cœur de braise", "slot": "Module", "rarity": "epic", "module": "ember",
+		"family": "Combat", "from": "brutes, Strazhar", "stats": [["Seuil", "30 % des PV"], ["Cadence", "+25 % pendant 6 s"], ["Recharge", "60 s"]],
+		"worn": "un cœur de braise incrusté dans la poitrine ; il flambe quand l’effet se déclenche.",
+		"desc": "Module d’exo. Sous 30 % de PV, cadence +25 % pendant 6 s (une fois par minute)."},
+	"module_magnet": {"name": "Aimant d’ichor", "slot": "Module", "rarity": "uncommon", "module": "magnet",
+		"family": "Combat", "from": "brutes, chariots", "stats": [["Soin par ennemi abattu", "3 % des PV max"]],
+		"worn": "un aimant en fer à cheval à la ceinture ; une goutte d’ichor file vers lui à chaque ennemi abattu.",
+		"desc": "Module d’exo. Chaque ennemi abattu par l’Exilé lui rend 3 % de ses PV max."},
+	"module_lens": {"name": "Lentille de souffle", "slot": "Module", "rarity": "rare", "module": "lens",
+		"family": "Arbalestrie", "from": "Strazhar, dépôts des ponts", "stats": [["Perforation", "+1 ennemi"]],
+		"worn": "une lentille de verre vert d’eau vissée à la bouche de l’Arbalestrie.",
+		"desc": "Module d’exo. Les balles de l’Arbalestrie traversent un ennemi de plus."},
+	"module_barrel": {"name": "Barillet double", "slot": "Module", "rarity": "epic", "module": "barrel",
+		"family": "Arbalestrie", "from": "Strazhar, dépôts des ponts", "stats": [["Chambres", "munition choisie + la précédente"], ["Tir", "en alternance"]],
+		"worn": "un second barillet à deux chambres sur l’Arbalestrie, l’une cyan, l’autre carmin.",
+		"desc": "Module d’exo. Deux munitions chargées : la choisie et la précédente, qui alternent à chaque tir."},
+	"module_frost": {"name": "Culasse froide", "slot": "Module", "rarity": "uncommon", "module": "frost",
+		"family": "Arbalestrie", "from": "dépôts des ponts, chariots", "stats": [["Recharge", "−30 %"], ["Durée", "3 s après un changement de munition"]],
+		"worn": "la culasse de l’Arbalestrie couverte de givre ; petite fumée froide au changement de munition.",
+		"desc": "Module d’exo. La recharge est 30 % plus courte pendant 3 s après un changement de munition."},
+	"module_seal": {"name": "Sceau sensible", "slot": "Module", "rarity": "uncommon", "module": "seal",
+		"family": "Exploration", "from": "poste abandonné, chariots", "stats": [["Portée", "12 cases"], ["Filons", "cuivre, fer, quartz, or"]],
+		"worn": "un prisme d’argent au centre de l’orbite du Sceau, qui pulse vers le filon le plus proche.",
+		"desc": "Module d’exo. Les filons de minerai à moins de 12 cases brillent à travers la roche."},
+	"module_wisp": {"name": "Lanterne de Medeina", "slot": "Module", "rarity": "rare", "module": "wisp",
+		"family": "Exploration", "from": "poste abandonné", "stats": [["Vision", "+3 cases (5 → 8)"]],
+		"worn": "le feu follet vert de Medeina, qui flotte derrière la tête et laisse une traîne.",
+		"desc": "Module d’exo. Un feu follet suit l’Exilé et repousse le brouillard plus loin autour de lui."},
+	"module_anchor": {"name": "Ancre de rappel", "slot": "Module", "rarity": "epic", "module": "anchor",
+		"family": "Exploration", "from": "dépôts des ponts", "stats": [["Rappel", "touche G, hors combat"], ["Recharge", "3 min"]],
+		"worn": "une petite sphère enchaînée à la hanche, comme l’Ancre en réduction.",
+		"desc": "Module d’exo. Un retour à la capsule toutes les 3 minutes, hors combat."},
+	"module_chant": {"name": "Voix du Chantre", "slot": "Module", "rarity": "rare", "module": "chant",
+		"family": "Gestion", "from": "poste abandonné", "stats": [["Rayon", "8 cases"], ["Travail", "+20 % (chantiers, ateliers, minage)"]],
+		"worn": "un diapason d’or dans le dos ; des ondes dorées passent sur les adeptes proches.",
+		"desc": "Module d’exo. Les adeptes et les bâtiments à moins de 8 cases travaillent 20 % plus vite."},
+	"module_sack": {"name": "Sac sans fond", "slot": "Module", "rarity": "epic", "module": "sack",
+		"family": "Gestion", "from": "poste abandonné", "stats": [["Paquetage", "+10 cases"], ["Fouille des corps", "3 fois plus loin"]],
+		"worn": "un sac de toile à la ceinture, dont l’ouverture montre un tourbillon violet.",
+		"desc": "Module d’exo. Le paquetage gagne une rangée ; le butin des corps se ramasse en passant."},
+	"module_echo": {"name": "Écho du pylône", "slot": "Module", "rarity": "rare", "module": "echo",
+		"family": "Défense", "from": "dépôts des ponts", "stats": [["Préavis", "15 s"], ["Annonce", "assauts et meutes nocturnes"]],
+		"worn": "un éclat de pylône en pendentif dorsal, qui bourdonne et luit avant une vague.",
+		"desc": "Module d’exo. Les assauts et les meutes nocturnes s’annoncent 15 s avant leur départ."},
 	"combinaison": {"name": "Combinaison", "slot": "Torse", "piece": "combinaison", "armor": 1,
 		"desc": "Combinaison d’Exilé remise par la capsule. Défense très faible."},
 }
@@ -95,6 +157,11 @@ static func has_module(u: Unit, effect: String) -> bool:
 	return false
 
 
+## Vrai si `u` n'équipe que des mods : l'Exilé, seul à avoir une fiche d'inventaire.
+static func mods_only(u: Unit) -> bool:
+	return u != null and u.role == "engineer"
+
+
 ## Arme de la main droite (dictionnaire de ITEMS), ou vide.
 static func weapon(u: Unit) -> Dictionary:
 	if u == null:
@@ -124,6 +191,8 @@ static func equip(u: Unit, source: Array[Dictionary], from: int, slot: String) -
 	var item: String = source[from]["item"]
 	if slot_of(item) != slot and not (slot_of(item) == MODULE and MODULE_SLOTS.has(slot)):
 		return false
+	if mods_only(u) and not MODULE_SLOTS.has(slot):
+		return false
 	# Une arme à deux mains libère la main gauche ; on ne tient rien de la main gauche avec elle.
 	if slot == LEFT and two_handed(u):
 		return false
@@ -134,6 +203,8 @@ static func equip(u: Unit, source: Array[Dictionary], from: int, slot: String) -
 		u.equipment_owner.erase(LEFT)
 	var previous: String = u.equipment.get(slot, "")
 	var previous_owner := String(u.equipment_owner.get(slot, ""))
+	if previous != "" and _sack_holds(u, previous):
+		return false
 	var owner := String(source[from].get("owner", ""))
 	source[from]["quantity"] -= 1
 	if source[from]["quantity"] <= 0:
@@ -148,6 +219,7 @@ static func equip(u: Unit, source: Array[Dictionary], from: int, slot: String) -
 			source[from] = ItemStorage.stack_of(previous, previous_owner)
 		else:
 			_store(source, previous, 1 << 30, previous_owner)
+	sync_pack(u)
 	return true
 
 
@@ -157,6 +229,10 @@ static func unequip(u: Unit, slot: String, target: Array[Dictionary], to: int, c
 	if item == "":
 		return false
 	var owner := String(u.equipment_owner.get(slot, ""))
+	if _sack_holds(u, item):
+		return false
+	if String(ITEMS.get(item, {}).get("module", "")) == "sack" and target == u.inventory:
+		capacity = mini(capacity, PACK)
 	if to >= 0:
 		if to >= capacity:
 			return false
@@ -172,7 +248,24 @@ static func unequip(u: Unit, slot: String, target: Array[Dictionary], to: int, c
 		return false
 	u.equipment.erase(slot)
 	u.equipment_owner.erase(slot)
+	sync_pack(u)
 	return true
+
+
+## Vrai si retirer `item` (le Sac sans fond) laisserait des objets dans la rangée qu'il ajoute.
+static func _sack_holds(u: Unit, item: String) -> bool:
+	if String(ITEMS.get(item, {}).get("module", "")) != "sack":
+		return false
+	for i in range(PACK, u.inventory.size()):
+		if not u.inventory[i].is_empty():
+			return true
+	return false
+
+
+## Taille du paquetage de l'Exilé selon le Sac sans fond.
+static func sync_pack(u: Unit) -> void:
+	if u != null and u.role == "engineer":
+		u.inventory_capacity = PACK * (2 if has_module(u, "sack") else 1)
 
 
 static func _store(items: Array[Dictionary], item: String, capacity: int = 1 << 30, owner := "") -> bool:

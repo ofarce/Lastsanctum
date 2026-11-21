@@ -3,6 +3,8 @@ extends Node2D
 var world: World
 var cell: Variant = null
 var selected_cells: Array[Dictionary] = []
+const SEALED_LINE := Color("#ff5548")
+const SEALED_FILL := Color("#e03a2e30")
 
 
 func _draw() -> void:
@@ -13,9 +15,16 @@ func _draw() -> void:
 		var g: Vector2i = GameState.hud_grove
 		_draw_cell({"i": g.x, "j": g.y}, Color("#f3c96b"), Color("#f3c96b18"), false, 2)
 	for selected: Dictionary in selected_cells:
-		_draw_cell(selected, Color("#f3c96b"), Color("#f3c96b22"))
+		if world.terrain_state.seal_needed(selected["i"], selected["j"]) != "":
+			_draw_cell(selected, SEALED_LINE, SEALED_FILL)
+		else:
+			_draw_cell(selected, Color("#f3c96b"), Color("#f3c96b22"))
 	if cell != null:
-		_draw_cell(cell, Color("#75eef5"), Color("#46ddec2e"), true)
+		# Roche scellée (le sceau qu'il faut n'est pas acquis) : cadre rouge, elle ne se mine pas.
+		if world.terrain_state.seal_needed(cell["i"], cell["j"]) != "":
+			_draw_cell(cell, SEALED_LINE, SEALED_FILL, true)
+		else:
+			_draw_cell(cell, Color("#75eef5"), Color("#46ddec2e"), true)
 
 
 func _draw_cell(target: Dictionary, line_color: Color, fill_color: Color, show_info := false, cells := 1) -> void:
@@ -40,7 +49,8 @@ func _draw_cell(target: Dictionary, line_color: Color, fill_color: Color, show_i
 		return
 	var block := world.terrain_state.block_definition(target["i"], target["j"])
 	var font := ThemeDB.fallback_font
-	var title := "Miner : " + str(block.get("material_name", ""))
+	var sealed := line_color == SEALED_LINE
+	var title := ("Scellé : " if sealed else "Miner : ") + str(block.get("material_name", ""))
 	var detail := "Clic droit · Case 4 × 4"
 	var seal: String = world.terrain_state.seal_needed(target["i"], target["j"])
 	if seal != "":
@@ -58,12 +68,12 @@ func _draw_cell(target: Dictionary, line_color: Color, fill_color: Color, show_i
 	pos.x = clampf(pos.x, 12, maxf(12, screen.x - width - 12))
 	pos.y = clampf(pos.y, 12, maxf(12, screen.y - 77))
 	var box := StyleBoxFlat.new()
-	box.bg_color = Color("#0b191ef5")
-	box.border_color = Color("#3b7983")
+	box.bg_color = Color("#1e0d0bf5") if sealed else Color("#0b191ef5")
+	box.border_color = Color("#a8443a") if sealed else Color("#3b7983")
 	box.set_border_width_all(1)
 	draw_style_box(box, Rect2(pos, Vector2(width, 65)))
-	draw_string(font, pos + Vector2(13, 25), title, HORIZONTAL_ALIGNMENT_LEFT, -1, 17, Color("#d9fcff"))
-	draw_string(font, pos + Vector2(13, 49), detail, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color("#a5bfc1"))
+	draw_string(font, pos + Vector2(13, 25), title, HORIZONTAL_ALIGNMENT_LEFT, -1, 17, Color("#ffd9d4") if sealed else Color("#d9fcff"))
+	draw_string(font, pos + Vector2(13, 49), detail, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color("#d9a39c") if sealed else Color("#a5bfc1"))
 
 
 ## Lumière qui court sur le pourtour (sens horaire) : `waves` traînées continues par tour, dégradé lisse

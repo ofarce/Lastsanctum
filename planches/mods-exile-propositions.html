@@ -1,0 +1,332 @@
+<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Mods de l’Exilé</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;600&display=swap" rel="stylesheet">
+<style>
+/* Planche des mods de l'Exilé : 3 pistes × Voile, Iris, Foreuse, portées et déclenchées, sur le Templier
+   au repos Arbalestrie baissée (c_idle de assets/imported/engineer/templier, embarqué). Une seule ambiance sombre, comme les autres planches. */
+:root{--bg:#0c0d10;--panel:#14161b;--line:#2c3038;--txt:#e2dccb;--mut:#9a9ca2;--acc:#b98ae6;--gold:#d0a038;--ok:#5fbf7a;--redo:#e0b04a;--no:#e0583a;--ground:#2a2620;color-scheme:dark}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--txt);font:15px/1.45 'Pixelify Sans',system-ui,sans-serif}
+header,main{max-width:1280px;margin:auto;padding-block:18px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}main{padding-bottom:80px}
+h1{margin:0;font-weight:600;letter-spacing:.08em;font-size:26px;color:var(--acc);text-wrap:balance}
+h2{font-weight:600;font-size:20px;color:var(--gold);margin:34px 0 6px;letter-spacing:.05em;text-wrap:balance}
+p.lead{color:var(--mut);margin:6px 0 0;max-width:70ch}p.lead b{color:var(--txt);font-weight:600}
+.rules{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,270px),1fr));gap:10px;margin-top:14px}
+.rules div{background:var(--panel);border:1px solid var(--line);padding:10px 12px;font-size:14px;color:var(--mut)}.rules b{color:var(--gold);display:block;font-weight:600}
+button{font:inherit;color:var(--txt);background:#1c1f26;border:1px solid var(--line);padding:5px 11px;cursor:pointer}
+button:hover{border-color:#5a4a70}button[aria-pressed=true]{border-color:var(--acc);background:#22192e}
+button:focus-visible,textarea:focus-visible{outline:2px solid var(--gold);outline-offset:1px}
+.bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);border-bottom:1px solid var(--line);display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding-block:8px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+.bar .lab{color:var(--mut);font-size:13px}#tally{margin-left:auto;color:var(--mut);font-size:13px}
+.g3{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,360px),1fr));gap:14px;margin-top:12px}
+.card{background:var(--panel);border:1px solid var(--line);display:flex;flex-direction:column;min-width:0}
+.card[data-v=garder]{border-color:#2f6a40}.card[data-v=revoir]{border-color:#7a6226}.card[data-v=rejeter]{border-color:#7a3a2a;opacity:.72}
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:2px;background:var(--line)}
+.pair figure{margin:0;background:var(--ground);position:relative}
+.pair figcaption{position:absolute;left:6px;top:4px;font-size:12px;color:#c8bfa8;letter-spacing:.06em;text-transform:uppercase}
+canvas.px{image-rendering:pixelated;display:block;width:100%;height:auto;max-width:100%}
+.cap{padding:10px 14px 12px;display:flex;flex-direction:column;gap:6px}
+.cap b.t{color:var(--acc);font-weight:600;font-size:18px}.cap p{margin:0;color:var(--mut);font-size:14px}
+.cap p.trig b{color:var(--txt);font-weight:600}
+.verdict{display:flex;gap:6px}.verdict button{flex:1 1 0;min-width:0;font-size:13px}
+.verdict button.sel[data-v=garder]{background:#1f3a28;border-color:var(--ok)}.verdict button.sel[data-v=revoir]{background:#3a321b;border-color:var(--redo)}.verdict button.sel[data-v=rejeter]{background:#3a2019;border-color:var(--no)}
+textarea{background:#101217;color:var(--txt);border:1px solid var(--line);font:13px system-ui,sans-serif;padding:6px 8px;resize:vertical;min-height:32px;width:100%}
+.wide{margin-top:12px;overflow-x:auto}
+.mod-h{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}.mod-h span{color:var(--mut);font-size:14px}
+#out{margin-top:10px;min-height:140px;font-family:ui-monospace,monospace}
+</style>
+<header><h1>MODS DE L’EXILÉ · TOUR 2</h1>
+<p class="lead">L’Exilé n’équipe plus que des mods : <b>6 cases</b> dans sa fiche. L’Arbalestrie et la Combinaison sont intégrées d’office. Chaque mod se voit sur l’Ingénieur tant qu’il est porté, et a un effet au moment où il agit. Tour 2 après ton bilan : l’Œil-satellite est retenu (déjà en jeu) ; le Linceul revient en trois versions plus visibles ; la Foreuse reprend les trois boules flottantes du Sceau de minage, en jouant sur la couleur, la taille et le nombre. Dessiné sur le vrai Templier au repos, ×6.</p>
+<div class="rules">
+ <div><b>Porté</b>Toujours à l’écran, discret : un ou deux tons de la matière du boss d’origine, aucun clignotement fort.</div>
+ <div><b>Déclenché</b>Un temps fort court et lisible, puis une trace de recharge quand le mod en a une (Voile : 20 s en jeu, accéléré ici).</div>
+ <div><b>Matières</b>Améthyste de la Martyre, carmin et laiton de la Matrice, cuivre de Gorge-Cuivre. Paliers francs, sans trame.</div>
+ <div><b>Cumul</b>Les pistes d’un même mod occupent des endroits différents du corps, pour que 6 mods portés restent lisibles ensemble.</div>
+</div></header>
+<div class="bar"><span class="lab">Animation :</span><button id="pause" aria-pressed="false">Pause</button><button id="slow" aria-pressed="false">Ralenti ×0,5</button><span id="tally"></span></div>
+<main>
+<h2>Tour 2 · les pistes, portées</h2><p class="lead">×3, côte à côte : Œil-satellite retenu, Linceul C1 C2 C3, puis le Sceau seul et la Foreuse A B C D.</p>
+<div class="card wide"><canvas class="px" id="lineup" width="384" height="56"></canvas></div>
+<div id="mods"></div>
+<h2>Bilan</h2><p class="lead">Les choix restent dans ce navigateur. « Copier le bilan » donne le texte à me renvoyer : une piste par mod suffit, ou un mélange (« Voile A mais avec l’éclatement de C »).</p>
+<div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap"><button id="copy">Copier le bilan</button><button id="clear">Tout effacer</button></div>
+<label for="general" class="lab" style="display:block;margin-top:10px;color:var(--mut);font-size:13px">Remarque générale</label>
+<textarea id="general" rows="2"></textarea>
+<textarea id="out" readonly rows="8"></textarea>
+</main>
+<script>
+const ATLAS='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAkAAAADACAYAAADstdzHAAAU7ElEQVR42u3df2hT9/7H8Vdq0VLFVVddXF3X6x9dCd4SXKfSla50l3s77yV4L2OgXC5yESnDC0NGufeug7Fb2EXEP4qML8WN2j/8sjJY6YVdJnfSq11Zy6GGGrKsFIlpqrFNNQQJ/cOZ+0fNSZp2U+89aX6c5xNk6Uksj885KXt7cpJKRERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERHLk6htvraxIZm+LJ5YcxbJj8OPHjx+/Pf3EAPQ/PfkPt+0zvw5HopIkIxAqih8C/Pjx48dvTz8DqH38jlw/+bMbGpks6AOBHz9+/Pjt6WcAtZffsR5P/tQCorG4JCkYiRXkgcCPHz9+/Pb0M4Daz1+e6wWlnvypYveXVEzhx48fP/7S9z/JAFfnrFIwEksW6wCKP8cDUPYTPlU0Fi+KH178+PHjx29PPwOovfw5PwMUjcU19ul7kiRX59e6+d0X2rbtRSkRKooDgB8/fvz47eFnALWXPycXQTc11Jrgqi0V+n2tUx7PPn07EZAkXfKFdNEXLtjXgPHjx48fv738KfuTDHCxWAh/CfjLcjX1Z56y2umslCQd3N9QNP9qwY8fP3789vHHE0sOIxAy1zATnpckffzBJwpPXtOH7nldOPKqDu1+iL9E/Ja9BNbsqjPft+8LRtTr2ac3O48oPHnNfEzqXwCFGH78+PHjt7ffF4z85ABXqGvAn8cBqNlVl/xm4ksthib1bG36Ku7v+84UzZMfP378+PHjl6QLx48XzQCH/7/PYQV++POeFU98SRof7teV0Sm1tjSu+fdO9QxqzB90FMLOx48fP378+DP9VRkX5Gb+z7fB04K/RPyWnAGa8U6tWsABzzEd8EiLockVj5OkK6NTOtzWIEnJQjgI+PHjx48ff6ZfSvt/09GOvwT9liw+NcU9bpEpvCQNjQQ0fVeqfHBXifLtkqRoJD8HAz9+/Pjx48dvL7/DykWc7X5rzft6v3pg3m59vX3FfVX+PsVcJyRJ3V0nJS0vSpJC0bhjPQ8Cfvz48ePHj98efsveBeaLSaO16QU8vNht3g7PVmQ8sl2tzU3L09yYIUkyjOX/9pw+Zy5KkrrO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Nkurw48fP378+PHby2/pr8K4fHl01ba5gF/PPLo9NR2Vu65K73oaVeNs1kDG45qamlZMc70TZZp7qVyfaf3Cjx8/fvz48dvDb9lprbWmuMxFSNK94A1zWyw4o40ZH+jYc/qcDMOQ3+dVW9Utze8+JL/Pa94/7ffm9DQcfvz48ePHj98+fksHoJ+1/VI1Da5V8FTZC4jfSoOqnXXJepdb036veWV3vcu9LjsfP378+PHjx28vvyUvgVXv2JV0Nbh1tMOjgf7z5vbNWY/bXLHFvJ3I+nUej4DJNDQuScmM+3IWfvz48ePHj99efkuvATIMQ669bvPrzFNQT1I2dL0/lwA/fvz48ePHbw+/pQPQ1X/9w7z98iuvqVzS7hf2KDy7fOrKf31c2rApLzsXP378+PHjx48/JwPQc84XdCcyq8WFW1IWPl9TJX78+PHjx48ff3ZlIiIiIrJZDEBERETEAGRl3e93mbf918cVXbjtKKadgx8/fvz48eMvTb9l37B6x670R01v2GT+Xo7Mj6YeGuwv2Ncg8ePHjx8/fvz28Vt2Bii6cNuR+pPa9tEP6Wusn/Ytbesdfvz48ePHj98+/vJcLcgwDNX4vNJed8HvfPz48ePHjx+/vfw5Ox221m9fLeS34OHHjx8/fvz48RMREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREVEJ5WAXEBERpdtaWZHM3hZPLDnwl5bfwQHAjx8/fvz40/bDbfvMr8ORqCTJCISKYg348zwAcQDw48ePH3+x+bPt2Q2NTBb0GvDneQDiAODHjx8//mLz/5g9NcBFY3FJUjASK8g14H/6ytd7AXXOKgUjsWSxHgD8+PHjx196/rVK2VPF7i+pmMK/jgMQBwA/fvz48RerP9ubKhqLF8W+x5/nAYgDgB8/fvz4i9G/lnvs0/ckSa7Or3Xzuy+0bduLUiKEvwT8ZeuxgOGzf1pexPY23bxzT2UbdxbVDwB+/Pjx4y9tfzyx5DACIdM9E56XJH38wScKT17Th+55XTjyqg7tfoi/RPxlHAD8+PHjx293f+bQlip2f0k7nZWSpIP7G4pm6MSfxzNAHAD8+PHjx19s/nhiyRGMxHRq/x75B/+mS3/+nen+diKAv8T8ll0D1OyqMz/4yheMqNezT292HlF48pr5mEI+APjx48ePH78kXfKFdLBI7PjzPAA1u+qS30x8qcXQpJ6tTb8N8vu+M0Xz5MePHz9+/PjXqrpjUpI0451S39Qg/hLxO6zAD3/eswo+PtyvK6NTam1pXPPvneoZ1Jg/6CiEnY8fP378+PFn+n8q/KXht+QM0Ix3atUCDniO6YBHWgxNrnicJF0ZndLhtgZJShbCQcCPHz9+/Pgz/RL+UvdbsvjUFPe4RabwkjQ0EtD0XanywV0lyrcrGsnfgcCPHz9+/Pjx28vvsHIRZ7vfWvO+3q8emLdbX29fcV+Vv08x1wl1d51csX29Dwh+/Pjx48eP3z5+y94F5otJo7XpBTy82G3eDs9WZDyyXa3NTcvT3JghSTIMQz2nz634ft1dJ5OSlNjToMobgZwfEPz48ePHjx+/ffyWLGrr83XJls531N7esmL75cujkqT7IyOSpLcb5zVwaUZnhqf0xlWv/rLhgQb6z8u1173i7/2icvl1v5jrhNxHfq1Tv/qtpv3enB0E/Pjx48ePH7+9/Jb+LrAUOLO5gF/PPLo9NR2Vu65K73oaVeNs1oBk4puamsxpTpJ6J8o091K5PlvH03D48ePHjx8/fnv4LZvoUlPcWs0F/JKke8Eb5rZYcEYbH30ier3LrT8cOy5JGug/r7aqW5rffUh+n9d8fC4nUPz48ePHjx+/vfyWngGaC/hV0+BaBf+xMkDJgf7z5va+sXnVu9Zv5+PHjx8/fvz47eW3ZACq3rEr6Wpw62iHR5mQzVmP21yxxbydeLhqIcnHfJ2z8OPHjx8/fvz28lt6BsgwjBUXJGWegnpc2ch8fC4Bfvz48ePHj98efksWWb1jV9L18wO6E5k1t738ymuSpPBs+nU7//VxacOmvO1g/Pjx48ePHz9+y88APed8QXcis1pcuPXEk1ohhR8/fvz48eO3h79MRERERDYrpwNQ9/td5m3/9XFFF247imnn4MePHz9+/PhL02/ZN6zescu86lobNpkfTZ36YCJJGhrsL9hTcPjx48ePHz9++/gtOwMUXbjtSP1Jbfvoh/QlRk9zRXc+wo8fP378+PHbx1+eqwUZhqEan1fa6y74nY8fP378+PHjt5c/Z6fDqp11yVVTXgFfgY4fP378+PHjx09ERERERERERKXSfwAJxNZ2txze0AAAAABJRU5ErkJggg==';
+const FW=48,FH=48,COLS=12,N=48,FPS=12;
+const W=64,H=56,OX=8,OY=4;
+// Matières
+const V=['#2a1640','#5a2d82','#8a4fc0','#b98ae6','#e6d2ff'];
+const I=['#3a0c10','#8a1a20','#d8402a','#f0a040','#fff0b0'],G='#d0a038',G2='#8a6420',MET='#2a2430';
+const K=['#3a1e10','#7a3e1c','#b8642c','#e09450','#ffd4a0'],SP=['#ffd060','#fff4c8'];
+const R=['#221e1a','#3e3832','#5a5148','#766a5c'];
+const img=new Image();img.src=ATLAS;
+let masks=[],contours=[],halos=[],tips=[],ready=false;
+img.onload=()=>{const c=document.createElement('canvas');c.width=img.width;c.height=img.height;const x=c.getContext('2d');x.drawImage(img,0,0);
+ for(let f=0;f<N;f++){const fx=(f%COLS)*FW,fy=Math.floor(f/COLS)*FH;const d=x.getImageData(fx,fy,FW,FH).data;const m=new Uint8Array(FW*FH);
+  for(let i=0;i<FW*FH;i++)m[i]=d[i*4+3]>40?1:0;masks.push(m);
+  const at=(a,b)=>a>=0&&b>=0&&a<FW&&b<FH&&m[b*FW+a];
+  const ct=[],hl=[];for(let b=0;b<FH;b++)for(let a=0;a<FW;a++){if(m[b*FW+a])continue;
+   if(at(a-1,b)||at(a+1,b)||at(a,b-1)||at(a,b+1))ct.push([a,b]);
+   else if(at(a-2,b)||at(a+2,b)||at(a,b-2)||at(a,b+2)||at(a-1,b-1)||at(a+1,b+1)||at(a-1,b+1)||at(a+1,b-1))hl.push([a,b]);}
+  contours.push(ct);halos.push(hl);
+  let mx=0;for(let b=0;b<FH;b++)for(let a=0;a<FW;a++)if(m[b*FW+a]&&a>mx)mx=a;
+  let ys=[];for(let b=0;b<FH;b++)if(m[b*FW+mx])ys.push(b);
+  // le bout du canon : colonne la plus à droite ; on prend aussi l'épaisseur 4 px avant
+  let top=99,bot=0;for(let b=0;b<FH;b++)if(m[b*FW+mx-5]){if(b<top)top=b;if(b>bot)bot=b;}
+  tips.push({x:mx,y:Math.round(ys.reduce((s,v)=>s+v,0)/ys.length),top,bot});}
+ ready=true;};
+// petits outils de dessin au pixel
+let X;
+function P(x,y,c,a=1){if(a<=0)return;X.globalAlpha=Math.min(1,a);X.fillStyle=c;X.fillRect(Math.round(x)+OX,Math.round(y)+OY,1,1);}
+function RECT(x,y,w,h,c,a=1){X.globalAlpha=a;X.fillStyle=c;X.fillRect(Math.round(x)+OX,Math.round(y)+OY,w,h);}
+function LINE(x0,y0,x1,y1,c,a=1){x0=Math.round(x0);y0=Math.round(y0);x1=Math.round(x1);y1=Math.round(y1);const dx=Math.abs(x1-x0),dy=-Math.abs(y1-y0),sx=x0<x1?1:-1,sy=y0<y1?1:-1;let e=dx+dy;
+ for(let k=0;k<200;k++){P(x0,y0,c,a);if(x0===x1&&y0===y1)break;const e2=2*e;if(e2>=dy){e+=dy;x0+=sx}if(e2<=dx){e+=dx;y0+=sy}}}
+function RING(cx,cy,r,c,a=1,from=0,to=Math.PI*2){const n=Math.max(8,Math.round(r*7));const seen=new Set();for(let i=0;i<=n;i++){const t=from+(to-from)*i/n;const x=Math.round(cx+Math.cos(t)*r),y=Math.round(cy+Math.sin(t)*r);const k=x+','+y;if(seen.has(k))continue;seen.add(k);P(x,y,c,a);}}
+function hash(n){n=Math.sin(n*127.1+311.7)*43758.5453;return n-Math.floor(n);}
+function body(f){X.globalAlpha=1;X.drawImage(img,(f%COLS)*FW,Math.floor(f/COLS)*FH,FW,FH,OX,OY,FW,FH);}
+function headDy(f){const k=f%24;return k>=9&&k<=20?1:0;}
+const clamp=(v,a=0,b=1)=>Math.max(a,Math.min(b,v));
+// Décors des déclenchements
+function wall(crack,cx,cy){for(let y=6;y<52;y++)for(let x=47;x<56;x++){let c=R[1];if((y%6===0)||((x+(Math.floor(y/6)%2)*3)%7===0))c=R[0];else if(y%6===1||(x+(Math.floor(y/6)%2)*3)%7===1)c=R[2];P(x,y,c);}
+ for(let x=47;x<56;x++)P(x,5,R[3]);
+ if(crack>0){for(let k=0;k<6;k++){const a=(k/6)*Math.PI*2+0.4,len=crack*(3+hash(k)*4);for(let s=0;s<len;s++){const x=cx+Math.cos(a)*s,y=cy+Math.sin(a)*s;if(x>=47)P(x,y,'#141210');}}
+  for(let y=-1;y<=1;y++)for(let x=0;x<=1;x++)P(cx+x,cy+y,'#141210');}}
+function rockband(){for(let y=6;y<52;y++)for(let x=46;x<56;x++){let c=R[1];if((x*3+y*5)%11===0)c=R[2];if((x+y*2)%13===0)c=R[0];P(x,y,c);}for(let y=6;y<52;y++)P(46,y,R[3]);}
+function enemyDot(a){if(a<=0)return;// marqueur rouge, comme sur la minicarte
+ for(const[x,y]of[[51,22],[52,22],[50,23],[51,23],[52,23],[53,23],[51,24],[52,24]])P(x,y,I[2],a);P(51,22,I[4],a);
+ for(const[x,y]of[[50,21],[53,21],[49,23],[54,23],[50,25],[53,25]])P(x,y,I[0],a*0.8);}
+function sparks(tx,ty,p,from,to,dir=-1){for(let k=0;k<60;k++){const b=from+k*0.04;if(b>to)break;const age=p-b;if(age<0||age>0.45)continue;
+ const vx=(hash(k)*-26-6)*(dir<0?1:-1)*-1*(dir),vy=-(hash(k+9)*30+6),x=tx+vx*age*-1,y=ty+vy*age+60*age*age;P(x,y,age<0.15?SP[1]:SP[0],1-age/0.45);}}
+function chips(tx,ty,p,from,to){for(let k=0;k<30;k++){const b=from+k*0.08;if(b>to)break;const age=p-b;if(age<0||age>0.8)continue;
+ const vx=-(hash(k+3)*14+4),vy=-(hash(k+5)*14+2),x=tx+vx*age,y=ty+vy*age+70*age*age;P(x,y,R[k%2?2:3],1-age/0.8);}}
+function drillCone(bx,by,len,rot,cols,glow){// cône horizontal pointé vers la droite, base en (bx,by)
+ for(let i=0;i<len;i++){const h=Math.max(0,Math.round((len-i)*3/len)-0);const x=bx+i;for(let y=-h;y<=h;y++){const edge=Math.abs(y)===h;const s=((i+y+rot)%3+3)%3;P(x,by+y,edge?cols[1]:(s===0?cols[4]:s===1?cols[3]:cols[2]));}}
+ P(bx+len,by,cols[4]);if(glow)for(let y=-2;y<=2;y++)P(bx+len+1,by+y,SP[0],0.35*glow);}
+
+/* ---------------- Pistes ---------------- */
+// Chaque piste : back(f,hd,t,p) dessiné derrière le corps, front(...) devant. p = secondes depuis le début du cycle de
+// déclenchement (null quand le mod est seulement porté). Le cycle dure T secondes ; le temps fort arrive à 0,6 s.
+const T=4;
+const OLD=[
+{id:'veil',name:'Voile de la Martyre',from:'Martyre',effect:'Absorbe entièrement un coup, puis se reforme en 20 s.',
+ trig:'Un coup touche l’Exilé',pistes:[
+ {k:'A',name:'Mantille',desc:'Un voile d’améthyste posé sur la tête, qui tombe dans le dos et flotte un peu.',
+  fx:'Le voile se gonfle en bulle autour du corps, prend la balle, éclate en éclats violets, puis se retisse de la tête vers le bas.',
+  draw(f,hd,t,p,front){const re=p==null?1:p<0.6?1:p<1.6?0:clamp((p-1.6)/2.2);const m=masks[f];const bot=15+Math.round(re*19);
+   if(!front){for(let y=19;y<=Math.min(33,bot);y++){let lx=0;while(lx<FW&&!m[y*FW+lx])lx++;const fl=y>25?Math.round(Math.sin(t*3+y*0.6)*0.8):0;const w=y>26?3:2;
+     for(let k=1;k<=w;k++)P(lx-k+fl,y,k===w?V[3]:V[2],k===w?0.9:0.6);}
+    if(bot>=33){let lx=0;while(lx<FW&&!m[33*FW+lx])lx++;for(let k=0;k<=3;k++)P(lx-k+Math.round(Math.sin(t*3+20)*0.8),34,V[3],0.85);}}
+   else{if(re>0){const lim=Math.min(bot,19+hd);for(let y=12;y<=lim;y++)for(let x=14;x<=26;x++){if(m[y*FW+x])P(x,y,V[2],0.42);}
+     for(const[x,y]of contours[f])if(y<=Math.min(bot,20+hd)&&x<=26&&y>=12)P(x,y,V[3],0.9);}
+    if(p!=null)veilBubble(p);}}},
+ {k:'B',name:'Couronne',desc:'Trois gouttes d’améthyste tournent autour de la tête, passant derrière puis devant.',
+  fx:'Les gouttes filent en triangle autour du corps, le triangle s’allume et prend le coup, puis il casse ; les gouttes s’éteignent et se rallument une à une.',
+  draw(f,hd,t,p,front){for(let i=0;i<3;i++){const a=t*2.2+i*Math.PI*2/3;let x=24+Math.cos(a)*8,y=16+hd+Math.sin(a)*2.5;const behind=Math.sin(a)<0;
+    let lit=1;if(p!=null){if(p>=0.6&&p<1.5)continue;if(p>=1.5)lit=p>1.7+i*0.7?1:0;}
+    if(p!=null&&p>=0.45&&p<0.6){const q=(p-0.45)/0.15,pt=[[24,10],[11,42],[37,42]][i];x+= (pt[0]-x)*q;y+=(pt[1]-y)*q;}
+    if(behind!==!front||(p!=null&&p>=0.45&&p<0.6&&front)){const c=lit?V[3]:'#4a4458',c2=lit?V[4]:'#5a5468';P(x,y,c);P(x+1,y,c);P(x,y+1,V[lit?2:0]);P(x+1,y+1,c);P(x,y,c2);}}
+   if(front&&p!=null&&p>=0.6&&p<1.5){const tri=[[24,10],[11,42],[37,42]];const br=p<0.75?1:p<0.9?0.8:0;
+    if(p<0.9){triFill(tri,p<0.72?V[4]:V[3],p<0.72?0.35:0.2);for(let i=0;i<3;i++)LINE(...tri[i],...tri[(i+1)%3],p<0.72?'#ffffff':V[4],1);
+     for(const pt of tri){P(pt[0],pt[1],V[4]);P(pt[0]+1,pt[1],V[4]);}}
+    else{const q=(p-0.9)/0.6;for(let i=0;i<3;i++){const a=tri[i],b=tri[(i+1)%3];for(let s=0;s<12;s++){const u=s/12;const x=a[0]+(b[0]-a[0])*u,y=a[1]+(b[1]-a[1])*u;const dx=(x-24)*0.6*q,dy=(y-28)*0.4*q+20*q*q;P(x+dx,y+dy,V[3],1-q);}}}}
+   if(front&&p!=null)bullet(p,30);}},
+ {k:'C',name:'Linceul',desc:'Un cristal d’améthyste sur la poitrine et un liseré violet qui suit toute la silhouette, en battant doucement.',
+  fx:'Le liseré double d’épaisseur et blanchit sous le coup, puis tombe en miettes ; le cristal s’éteint et le liseré repousse depuis lui.',
+  draw(f,hd,t,p,front){if(!front)return;const cx=21,cy=30;const ct=contours[f],hl=halos[f];
+   if(p==null||p<0.6){const a=0.45+0.2*Math.sin(t*3);for(const[x,y]of ct)P(x,y,V[3],a);}
+   else if(p<0.9){for(const[x,y]of ct)P(x,y,p<0.72?'#ffffff':V[4]);for(const[x,y]of hl)P(x,y,V[3],0.7);}
+   else if(p<1.6){const q=(p-0.9)/0.7;ct.forEach(([x,y],i)=>{const fall=q*q*(10+hash(i)*30);P(x+(hash(i+7)-0.5)*q*6,y+fall,V[hash(i)<0.5?3:2],1-q);});}
+   else{const r=clamp((p-1.6)/2.2)*34;for(const[x,y]of ct)if(Math.hypot(x-cx,y-cy)<r)P(x,y,V[3],0.5);}
+   const dark=p!=null&&p>=0.75&&p<3.8;const ccol=dark?['#3a3448','#4a4458']:[V[3],V[4]];
+   P(cx,cy,ccol[0]);P(cx+1,cy,ccol[1]);P(cx,cy+1,V[dark?0:2]);P(cx+1,cy+1,ccol[0]);P(cx,cy-1,V[1]);P(cx+1,cy+2,V[1]);
+   if(p!=null)bullet(p,40);}}]},
+{id:'iris',name:'Iris de la Matrice',from:'Œil de la Matrice',effect:'Les ennemis apparaissent sur la minicarte à travers la roche.',
+ trig:'Un ennemi est repéré derrière la roche',pistes:[
+ {k:'A',name:'Monocle',desc:'Un cerclage de laiton sur l’œil droit, iris carmin qui bat lentement, sangle passée dans les cheveux.',
+  fx:'L’iris se dilate et s’allume, une onde carmin part de l’œil et traverse la roche ; l’ennemi caché apparaît en rouge.',
+  draw(f,hd,t,p,front){if(p!=null&&!front)rockband();if(!front){if(p!=null)enemyDot(revealA(p));return;}
+   const ex=27,ey=21+hd;for(const[dx,dy]of[[-1,-1],[0,-1],[1,-1],[-1,0],[1,0],[-1,1],[0,1],[1,1]])P(ex+dx,ey+dy,dy<0?G:G2);
+   for(let x=22;x<=25;x++)P(x,19+hd,G2);
+   const on=p!=null&&p>=0.6&&p<1.0;P(ex,ey,on?I[4]:(Math.sin(t*2)>0?I[3]:I[2]));if(on){P(ex+2,ey,I[3],0.7);P(ex,ey-2,I[3],0.5);}
+   if(p!=null&&p>=0.6&&p<1.6){const q=(p-0.6)/1.0;RING(ex,ey,2+q*30,I[2],1-q);RING(ex,ey,1+q*24,I[1],(1-q)*0.7);}}},
+ {k:'B',name:'Troisième œil',desc:'Un œil carmin serti de laiton sur le front, qui cligne de temps en temps.',
+  fx:'L’œil s’ouvre grand, une ligne de balayage carmin part de lui et passe la roche ; l’ennemi caché apparaît au passage.',
+  draw(f,hd,t,p,front){if(p!=null&&!front)rockband();if(!front){if(p!=null)enemyDot(p>0.95&&p<3.6?(p<1.1?1:0.6+0.4*Math.sin(p*12)):0);return;}
+   const y0=17+hd,wide=p!=null&&p>=0.6&&p<1.4;const blink=p==null&&(t%3.2)<0.14;
+   P(25,y0-1,G);P(26,y0-1,G);P(24,y0,G);P(27,y0,G);P(25,y0+1,G2);P(26,y0+1,G2);
+   if(blink){P(25,y0,G2);P(26,y0,G2);}else{P(25,y0,wide?I[4]:I[2]);P(26,y0,wide?I[4]:I[3]);}
+   if(wide){P(24,y0-1,G);P(27,y0-1,G);P(25,y0-2,G2);P(26,y0-2,G2);P(23,y0,I[3],0.6);P(28,y0,I[3],0.6);
+    const q=clamp((p-0.7)/0.5);const sx=28+q*28;if(p>0.7){for(let y=6;y<52;y++){P(sx,y,I[2],0.45);P(sx-1,y,I[1],0.25);}P(sx,y0,I[4]);}}}},
+ {k:'C',name:'Œil-satellite',desc:'Un petit orbe de métal flotte au-dessus de l’épaule arrière, pupille carmin qui regarde autour de lui.',
+  fx:'La pupille se fige vers la cible, l’orbe flashe et lance deux arcs de sonar vers la droite ; l’ennemi caché apparaît.',
+  draw(f,hd,t,p,front){if(p!=null&&!front)rockband();if(!front){if(p!=null)enemyDot(revealA(p));return;}
+   const cx=12,cy=12+Math.round(Math.sin(t*2)*1.2);const look=p!=null&&p>=0.5&&p<2?1:Math.round(Math.sin(t*0.9)*1.2);const fl=p!=null&&p>=0.6&&p<0.75;
+   for(let y=-2;y<=2;y++)for(let x=-2;x<=2;x++){const d=x*x+y*y;if(d>5)continue;P(cx+x,cy+y,d>=4?G2:MET);}
+   P(cx-1,cy-2,G);P(cx,cy-2,G);P(cx+look,cy,fl?I[4]:I[3]);P(cx+look,cy+1,I[1]);if(fl)RING(cx,cy,3,I[4],0.8);
+   P(cx,cy+4,I[2],0.25+0.15*Math.sin(t*4));
+   if(p!=null)for(let k=0;k<2;k++){const b=0.65+k*0.22,q=(p-b)/0.9;if(q>0&&q<1)RING(cx,cy,4+q*40,I[2],1-q,-0.5,0.5);}}}]},
+{id:'drill',name:'Foreuse de Gorge-Cuivre',from:'Gorge-Cuivre',effect:'L’Exilé creuse la roche deux fois plus vite.',
+ trig:'L’Exilé creuse',pistes:[
+ {k:'A',name:'Mèche sous canon',desc:'Une mèche de cuivre fixée sous le canon de l’Arbalestrie, qui tourne au ralenti.',
+  fx:'La mèche avance et tourne à pleine vitesse contre la paroi ; étincelles, éclats de roche, fissure qui s’étend.',
+  draw(f,hd,t,p,front){const tp=tips[f];const dig=p!=null&&p>=0.6&&p<3.2;if(!front){if(p!=null)wall(dig?clamp((p-0.6)/2):0,48,tp.bot+2);return;}
+   const ext=dig?2:0;const rot=dig?Math.floor(t*24):Math.floor(t*3);
+   RECT(tp.x-6,tp.bot+1,4,1,K[1]);drillCone(tp.x-3+ext,tp.bot+2,5,rot,K,dig?1:0);
+   if(dig){sparks(47,tp.bot+2,p,0.65,3.1,1);chips(47,tp.bot+3,p,0.7,3.1);}}},
+ {k:'B',name:'Bras dorsal',desc:'Un caisson de cuivre sur le dos, d’où sort un bras articulé replié au-dessus de la tête, mèche pointée vers l’avant.',
+  fx:'Le bras se déplie par-dessus l’épaule et plante la mèche dans la paroi ; étincelles et éclats, puis il se replie.',
+  draw(f,hd,t,p,front){const dig=p!=null&&p>=0.6&&p<3.2;let q=0;if(p!=null){q=p<0.6?0:p<0.8?(p-0.6)/0.2:p<3.2?1:p<3.4?1-(p-3.2)/0.2:0;}
+   const j0=[16,25],j1=[16+q*6,13-q*1+hd],j2=[25+q*14,10+q*12+hd];const touch=q>=1;
+   if(!front){if(p!=null)wall(dig&&touch?clamp((p-0.8)/2):0,48,j2[1]);
+    RECT(13,24,5,9,K[0]);RECT(14,25,3,7,K[2]);RECT(14,25,3,1,K[3]);P(15,28,K[4]);P(15,30,K[4]);
+    LINE(...j0,...j1,K[0]);LINE(j0[0]+1,j0[1],j1[0]+1,j1[1],K[2]);P(j1[0],j1[1],K[4]);P(j1[0]+1,j1[1],K[3]);return;}
+   LINE(...j1,j2[0]-1,j2[1],K[1]);LINE(j1[0],j1[1]-1,j2[0]-1,j2[1]-1,K[3]);
+   drillCone(j2[0],j2[1],5+(touch?2:0),Math.floor(t*(dig?24:3)),K,dig&&touch?1:0);
+   if(dig&&touch){sparks(47,j2[1],p,0.85,3.1,1);chips(47,j2[1]+1,p,0.9,3.1);}}},
+ {k:'C',name:'Couronne-trépan',desc:'Une couronne dentée de cuivre sertie autour de la bouche du canon ; les dents avancent d’un cran de temps en temps.',
+  fx:'La couronne chauffe à blanc et tourne vite contre la paroi, halo de chaleur ; étincelles, éclats, fissure.',
+  draw(f,hd,t,p,front){const tp=tips[f];const dig=p!=null&&p>=0.6&&p<3.2;if(!front){if(p!=null)wall(dig?clamp((p-0.6)/2):0,47,tp.y);return;}
+   const rot=dig?Math.floor(t*20):Math.floor(t*1.5);const hot=dig?clamp((p-0.6)/0.4):0;
+   const cols=hot>0.5?['#ffb040',K[4],'#fff4c8']:[K[1],K[3],K[4]];const x0=tp.x+1-(dig?0:1);
+   for(let y=tp.y-3;y<=tp.y+3;y++){P(x0,y,cols[0]);if(((y+rot)%2+2)%2===0)P(x0+1,y,cols[1]);}
+   P(x0,tp.y-3,cols[2]);P(x0,tp.y+3,cols[1]);P(x0-1,tp.y-3,K[1]);P(x0-1,tp.y+3,K[1]);
+   if(hot>0){for(let y=tp.y-4;y<=tp.y+4;y++)P(x0+2,y,'#ff9040',0.25*hot);RING(x0,tp.y,5,'#ff9040',0.18*hot);}
+   if(dig){sparks(47,tp.y,p,0.7,3.1,1);chips(47,tp.y+1,p,0.75,3.1);}}}]}];
+/* ---------------- Tour 2 (2026-11-21) ---------------- */
+// Contour trié par angle autour du centre du corps (reflet qui fait le tour du liseré).
+function sortedCt(f){if(!sortedCt.c)sortedCt.c=[];if(!sortedCt.c[f])sortedCt.c[f]=contours[f].map(([x,y])=>[x,y,Math.atan2(y-30,x-24)]);return sortedCt.c[f];}
+const CRY=[20,28];
+function crystal(dark,big,t){const[cx,cy]=CRY;const c=dark?['#2a2438','#3a3448','#4a4458']:[V[1],V[3],V[4]];
+ // losange 3 × 5, facette claire en haut à gauche, chaînette vers le cou
+ P(cx+1,cy-1,c[1]);P(cx,cy,c[1]);P(cx+1,cy,c[2]);P(cx+2,cy,c[1]);P(cx,cy+1,c[0]);P(cx+1,cy+1,c[1]);P(cx+2,cy+1,c[0]);P(cx+1,cy+2,c[0]);if(big)P(cx+1,cy+3,c[0]);
+ P(cx+2,cy-2,V[1],0.8);P(cx+3,cy-3,V[1],0.6);
+ if(big&&!dark){const k=(t%1.6)/1.6;if(k<0.35){const a=1-k/0.35,l=1+Math.round(k*8);for(const[dx,dy]of[[-1,-1],[1,-1],[-1,1],[1,1]])for(let s=1;s<=l;s++)P(cx+1+dx*(s+1),cy+0.5+dy*(s+1),V[4],a*(1-s/(l+1)));}}}
+function linceul(style,f,hd,t,p,front){if(!front)return;const ct=contours[f],hl=halos[f],m=masks[f];
+ const worn=p==null||p<0.6;
+ if(worn){
+  if(style===1){for(const[x,y]of hl)P(x,y,V[1],0.7);for(const[x,y]of ct)P(x,y,V[4],0.85);const g=((t*2.2)%(Math.PI*2))-Math.PI;
+   for(const[x,y,a]of sortedCt(f)){let d=Math.abs(a-g);d=Math.min(d,Math.PI*2-d);if(d<0.28)P(x,y,'#ffffff',0.95*(1-d/0.28));}}
+  if(style===2){for(const[x,y]of hl)P(x,y,V[2],0.4);for(const[x,y]of ct)P(x,y,V[3],0.85);
+   for(let k=0;k<10;k++){const b=ct[Math.floor(hash(k)*ct.length)];const life=(t*0.8+hash(k+3))%1;P(b[0]+Math.round(Math.sin(t*2+k)*0.6),b[1]-life*12,life<0.3?V[4]:V[3],1-life);}}
+  if(style===3){for(const[x,y]of ct)P(x,y,V[4],0.8+0.15*Math.sin(t*3));}}
+ else if(p<0.66){for(let y=0;y<FH;y++)for(let x=0;x<FW;x++)if(m[y*FW+x])P(x,y,'#ffffff',0.55);for(const[x,y]of ct)P(x,y,'#ffffff');for(const[x,y]of hl)P(x,y,V[4],0.9);}
+ else if(p<0.9){for(const[x,y]of ct)P(x,y,V[4]);for(const[x,y]of hl)P(x,y,V[3],0.85);}
+ else if(p<1.7){const q=(p-0.9)/0.8;ct.forEach(([x,y],i)=>{if(i%2)return;const fall=q*q*(10+hash(i)*30),dx=(x-24)*0.25*q+(hash(i+7)-0.5)*q*8;P(x+dx,y+fall,V[4],1-q);P(x+dx+1,y+fall,V[2],1-q);});}
+ else{const r=clamp((p-1.7)/2.1)*34;for(const[x,y]of ct)if(Math.hypot(x-CRY[0],y-CRY[1])<r)P(x,y,V[3],0.75);}
+ if(p!=null&&p>=0.6&&p<1.0){const q=(p-0.6)/0.4;RING(24,30,14+q*12,V[4],1-q);RING(24,30,12+q*9,V[3],(1-q)*0.6);}
+ crystal(p!=null&&p>=0.66&&p<3.8,style===3,t);
+ if(p!=null)bullet(p,40);}
+
+// Sceau de minage du jeu (entities/unit/mining_seal_fx.gd) : 3 sphères en orbite derrière le dos, relais électrique.
+// Repère du jeu depuis les pieds (24, 45) : (-15,5 + cos·4,5 ; -17,5 + sin·9,5), un tour en 5 s.
+const SIL=['#202832','#465461','#6d7b88','#b5c1ca','#eff4f5'];
+function orbitPos(i,n,t,speed=1){const a=-Math.PI/2+t*Math.PI*2/5*speed+i*Math.PI*2/n;return[8.5+Math.cos(a)*4.5,27.5+Math.sin(a)*9.5];}
+function sphere(x,y,r,pal){x=Math.round(x);y=Math.round(y);const R2=(r+0.4)*(r+0.4);
+ for(let dy=-Math.ceil(r);dy<=Math.ceil(r);dy++)for(let dx=-Math.ceil(r);dx<=Math.ceil(r);dx++){const d=dx*dx+dy*dy;if(d>R2)continue;const rim=d>(r-0.8)*(r-0.8);
+  P(x+dx,y+dy,rim?pal[0]:(dx+dy<-r*0.6?pal[3]:dx+dy>r*0.5?pal[1]:pal[2]));}
+ P(x-1,y-1,pal[4]);}
+function relay(pts,t,col,always){const ph=t%2.4,pair=Math.floor(ph/0.24);if(!always&&(pair>=3||(ph%0.24)>0.13))return;const n=pts.length;const i=always?Math.floor(t*14)%n:pair%n;
+ const a=pts[i],b=pts[(i+1)%n];for(let k=0;k<=5;k++){const u=k/5,w=k>0&&k<5?Math.sin(i*17+k*23+Math.floor(t*14)*7)*0.8:0;P(a[0]+(b[0]-a[0])*u,a[1]+(b[1]-a[1])*u+w,col);}}
+const CU=[K[0],K[1],K[2],K[3],K[4]],HOT=['#7a2a10','#c85a18','#ff9040','#ffd060','#fff4c8'];
+function sealDig(p){return p!=null&&p>=0.6&&p<3.2;}
+function sealWall(f,p){const tp=tips[f];wall(sealDig(p)?clamp((p-0.6)/2):0,47,tp.y);}
+const FOREUSE=[
+ {k:'0',name:'Sceau seul (référence)',desc:'Le Sceau de minage tel qu’il est en jeu : trois sphères d’argent en orbite derrière le dos, un arc électrique de temps en temps.',
+  fx:'Aujourd’hui rien ne change quand l’Exilé creuse. Les pistes ci-dessous transforment ces trois boules quand la Foreuse est portée.',
+  draw(f,hd,t,p,front){if(front)return;if(p!=null)sealWall(f,p);const pts=[0,1,2].map(i=>orbitPos(i,3,t));relay(pts,t,'#cce7f4');for(const q of pts)sphere(q[0],q[1],2.2,SIL);}},
+ {k:'A',name:'Billes de cuivre',desc:'Les trois sphères passent au cuivre, même taille ; l’arc devient une étincelle orangée.',
+  fx:'Quand il creuse, l’orbite s’emballe (×4), l’arc ne s’arrête plus et la paroi crache étincelles et éclats.',
+  draw(f,hd,t,p,front){if(front){if(sealDig(p)){const tp=tips[f];sparks(47,tp.y,p,0.65,3.1,1);chips(47,tp.y+1,p,0.7,3.1);}return;}
+   if(p!=null)sealWall(f,p);const dig=sealDig(p);const tt=dig?t*4:t;const pts=[0,1,2].map(i=>orbitPos(i,3,tt));relay(pts,t,dig?SP[1]:SP[0],dig);for(const q of pts)sphere(q[0],q[1],2.2,CU);}},
+ {k:'B',name:'Grosses billes dentées',desc:'Trois sphères de cuivre plus grosses, cerclées de dents qui tournent lentement.',
+  fx:'Quand il creuse, les dents tournent vite, les billes chauffent au rouge puis au blanc ; étincelles à la paroi.',
+  draw(f,hd,t,p,front){if(front){if(sealDig(p)){const tp=tips[f];sparks(47,tp.y,p,0.65,3.1,1);chips(47,tp.y+1,p,0.7,3.1);}return;}
+   if(p!=null)sealWall(f,p);const dig=sealDig(p);const heat=dig?clamp((p-0.6)/0.6):0;const pal=heat>0.5?HOT:CU;const pts=[0,1,2].map(i=>orbitPos(i,3,t*(dig?2:1)));
+   for(const[x,y]of pts){sphere(x,y,3.2,pal);const rot=t*(dig?14:1.5);for(let k=0;k<8;k++){const a=rot+k*Math.PI/4;P(x+Math.cos(a)*4.6,y+Math.sin(a)*4.6,k%2?pal[1]:pal[3]);}
+    if(heat>0)RING(x,y,6,'#ff9040',0.25*heat);}}},
+ {k:'C',name:'Cinq billes en mèche',desc:'Cinq petites sphères, cuivre et argent en alternance, sur la même orbite derrière le dos.',
+  fx:'Quand il creuse, elles filent devant le canon et s’alignent en cône (de la plus grosse à la plus petite) qui tourne contre la paroi, puis reviennent.',
+  draw(f,hd,t,p,front){const dig=sealDig(p);const tp=tips[f];let q=0;if(p!=null)q=p<0.6?0:p<0.8?(p-0.6)/0.2:p<3.2?1:p<3.5?1-(p-3.2)/0.3:0;
+   if(!front&&p!=null)sealWall(f,p);
+   const pts=[0,1,2,3,4].map(i=>{const o=orbitPos(i,5,t);const slot=[tp.x-1+i*1.3,tp.y+Math.sin(t*20+i*1.7)*(2.2-i*0.4)];return[o[0]+(slot[0]-o[0])*q,o[1]+(slot[1]-o[1])*q];});
+   // derrière le corps tant qu'elles sont en orbite, devant une fois en mèche
+   if((q<0.5)===!front){pts.forEach((pt,i)=>sphere(pt[0],pt[1],q>0.5?2.2-i*0.35:1.6,i%2?SIL:CU));if(q<0.5&&!dig)relay(pts,t,SP[0]);}
+   if(front&&dig&&q>=1){sparks(47,tp.y,p,0.85,3.1,1);chips(47,tp.y+1,p,0.9,3.1);}}},
+ {k:'D',name:'Trois billes en mèche',desc:'Les trois sphères en cuivre, de tailles décroissantes, toujours derrière le dos.',
+  fx:'Quand il creuse, elles passent devant le canon, se collent en mèche pointue (grosse, moyenne, petite) et tournent ; l’arc les relie en continu.',
+  draw(f,hd,t,p,front){const dig=sealDig(p);const tp=tips[f];let q=0;if(p!=null)q=p<0.6?0:p<0.8?(p-0.6)/0.2:p<3.2?1:p<3.5?1-(p-3.2)/0.3:0;
+   if(!front&&p!=null)sealWall(f,p);const R=[2.8,2.0,1.3];
+   const pts=[0,1,2].map(i=>{const o=orbitPos(i,3,t);const slot=[tp.x+i*2.2,tp.y];return[o[0]+(slot[0]-o[0])*q,o[1]+(slot[1]-o[1])*q];});
+   if((q<0.5)===!front){if(q>0.5)relay(pts,t,SP[1],true);else relay(pts,t,SP[0]);pts.forEach((pt,i)=>sphere(pt[0],pt[1],R[i],CU));
+    if(q>0.5){const r=Math.floor(t*24)%3;for(let i=0;i<3;i++)P(pts[i][0]+(r-1),pts[i][1]-1+((i+r)%2),K[4]);}}
+   if(front&&dig&&q>=1){sparks(47,tp.y,p,0.85,3.1,1);chips(47,tp.y+1,p,0.9,3.1);}}}];
+const MODS=[
+ {id:'iris2',name:'Iris de la Matrice',from:'Œil de la Matrice',effect:'Retenu au tour 1 et intégré en jeu.',trig:'Un ennemi est repéré derrière la roche',
+  pistes:[{...OLD[1].pistes[2],k:'C',name:'Œil-satellite (retenu)'}]},
+ {id:'veil2',name:'Voile de la Martyre',from:'Martyre',effect:'Absorbe entièrement un coup, puis se reforme en 20 s. Tour 2 du Linceul : plus visible porté, plus fort déclenché.',trig:'Un coup touche l’Exilé',pistes:[
+  {k:'C1',name:'Liseré double',desc:'Liseré clair de 1 px doublé d’un liseré sombre à l’extérieur, et un reflet blanc qui fait le tour de la silhouette. Cristal plus gros.',
+   fx:'Toute la silhouette blanchit d’un coup, onde violette autour du corps, puis le liseré éclate en éclats de 2 px qui tombent ; il repousse depuis le cristal.',draw:(f,hd,t,p,fr)=>linceul(1,f,hd,t,p,fr)},
+  {k:'C2',name:'Aura montante',desc:'Liseré violet plein et halo pâle, avec des braises d’améthyste qui montent des épaules et de la tête.',
+   fx:'Même temps fort que C1 ; les braises s’éteignent avec le voile et reviennent avec lui.',draw:(f,hd,t,p,fr)=>linceul(2,f,hd,t,p,fr)},
+  {k:'C3',name:'Pendentif rayonnant',desc:'Liseré clair qui bat, et un cristal en pendentif qui lance quatre petits rayons toutes les 1,6 s.',
+   fx:'Même temps fort que C1 ; le cristal reste noir tant que le voile se reforme.',draw:(f,hd,t,p,fr)=>linceul(3,f,hd,t,p,fr)}]},
+ {id:'drill2',name:'Foreuse de Gorge-Cuivre',from:'Gorge-Cuivre',effect:'L’Exilé creuse la roche deux fois plus vite. Tour 2 : la Foreuse transforme les trois boules du Sceau de minage, derrière le dos.',trig:'L’Exilé creuse',pistes:FOREUSE}];
+
+function revealA(p){return p>1.0&&p<3.6?(p<1.15?1:0.6+0.4*Math.sin(p*12)):0;}
+function triFill(tri,c,a){const[A,B,C]=tri;const minx=Math.min(A[0],B[0],C[0]),maxx=Math.max(A[0],B[0],C[0]),miny=Math.min(A[1],B[1],C[1]),maxy=Math.max(A[1],B[1],C[1]);
+ const s=(p,q,r)=>(p[0]-r[0])*(q[1]-r[1])-(q[0]-r[0])*(p[1]-r[1]);
+ for(let y=miny;y<=maxy;y++)for(let x=minx;x<=maxx;x++){const pt=[x,y];const d1=s(pt,A,B),d2=s(pt,B,C),d3=s(pt,C,A);if(!((d1<0||d2<0||d3<0)&&(d1>0||d2>0||d3>0)))P(x,y,c,a);}}
+function bullet(p,hitX){// balle carmin venue de la droite, arrêtée à hitX
+ if(p<0.6){const x=60-(60-hitX)*(p/0.6);P(x,30,I[4]);P(x+1,30,I[2]);P(x,29,I[2]);P(x,31,I[2]);P(x+2,30,I[1],0.6);}
+ else if(p<0.85){const q=(p-0.6)/0.25;for(let k=0;k<6;k++){const a=k*Math.PI/3;P(hitX+Math.cos(a)*q*4,30+Math.sin(a)*q*4,I[3],1-q);}P(hitX,30,'#ffffff',1-q);}}
+function veilBubble(p){if(p<0.45||p>=1.6)return;const cx=24,cy=30,rx=13,ry=17;
+ if(p<0.9){const s=clamp((p-0.45)/0.15);const flash=p>=0.6&&p<0.72;
+  for(let y=-ry;y<=ry;y++)for(let x=-rx;x<=rx;x++){const d=Math.hypot(x/(rx*s+0.01),y/(ry*s+0.01));if(d<=1){const rim=d>0.86;P(cx+x,cy+y,rim?(flash?'#ffffff':V[4]):V[3],rim?0.95:(flash?0.32:0.16));}}}
+ else{const q=(p-0.9)/0.7;for(let k=0;k<16;k++){const a=k*Math.PI*2/16+hash(k)*0.3;const x=cx+Math.cos(a)*(rx+q*10*(0.6+hash(k))),y=cy+Math.sin(a)*(ry+q*8)+30*q*q;P(x,y,V[4],1-q);P(x+1,y,V[2],1-q);}}}
+
+/* ---------------- Rendu ---------------- */
+const views=[];let paused=matchMedia('(prefers-reduced-motion: reduce)').matches,slow=false,clock=0,last=performance.now();
+function render(cv,mod,pi,trig,ofs=0){X=cv.getContext('2d');X.imageSmoothingEnabled=false;X.clearRect(0,0,cv.width,cv.height);
+ const t=clock+ofs,f=Math.floor(t*FPS)%N,hd=headDy(f),p=trig?(t%T):null;const pst=MODS[mod].pistes[pi];
+ pst.draw(f,hd,t,p,false);body(f);pst.draw(f,hd,t,p,true);X.globalAlpha=1;}
+function build(){const root=document.getElementById('mods');
+ MODS.forEach((m,mi)=>{const sec=document.createElement('section');
+  sec.innerHTML=`<h2 class="mod-h">${mi+1} · ${m.name} <span>butin de ${m.from} · ${m.effect} Déclenché quand : ${m.trig.toLowerCase()}.</span></h2><div class="g3"></div>`;
+  const g=sec.querySelector('.g3');
+  m.pistes.forEach((pst,pi)=>{const id=m.id+'-'+pst.k;const card=document.createElement('div');card.className='card';card.dataset.id=id;
+   card.innerHTML=`<div class="pair"><figure><figcaption>Porté</figcaption><canvas class="px" width="${W}" height="${H}"></canvas></figure><figure><figcaption>Déclenché</figcaption><canvas class="px" width="${W}" height="${H}"></canvas></figure></div>
+   <div class="cap"><b class="t">${m.name.split(' ')[0]} ${pst.k} · ${pst.name}</b><p>${pst.desc}</p><p class="trig"><b>Déclenché :</b> ${pst.fx}</p>
+   <div class="verdict"><button data-v="garder">Garder</button><button data-v="revoir">Revoir</button><button data-v="rejeter">Rejeter</button></div>
+   <label class="lab" for="n-${id}" style="font-size:12px;color:var(--mut)">Note</label><textarea id="n-${id}" rows="1"></textarea></div>`;
+   const cvs=card.querySelectorAll('canvas');views.push({cv:cvs[0],mi,pi,trig:false},{cv:cvs[1],mi,pi,trig:true});g.appendChild(card);});
+  root.appendChild(sec);});}
+build();
+const lineup=document.getElementById('lineup');
+function frame(now){const dt=Math.min(0.1,(now-last)/1000);last=now;if(!paused)clock+=dt*(slow?0.5:1);
+ if(ready){for(const v of views)render(v.cv,v.mi,v.pi,v.trig);
+  const L=lineup.getContext('2d');L.imageSmoothingEnabled=false;L.fillStyle='#2a2620';L.fillRect(0,0,lineup.width,lineup.height);
+  const tmp=document.createElement('canvas');tmp.width=W;tmp.height=H;let k=0;
+  MODS.forEach((m,mi)=>m.pistes.forEach((_,pi)=>{render(tmp,mi,pi,false,k*0.37);L.drawImage(tmp,k*48-8,0);k++;}));}
+ requestAnimationFrame(frame);}
+requestAnimationFrame(frame);
+/* ---------------- Bilan ---------------- */
+const KEY='mods-exile-bilan-v2';let state={};try{state=JSON.parse(localStorage.getItem(KEY)||'{}')}catch(e){}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(state))}catch(e){}tally();}
+function tally(){let n=0;document.querySelectorAll('.card[data-id]').forEach(c=>{if(state[c.dataset.id]?.v)n++;});document.getElementById('tally').textContent=n+' / '+document.querySelectorAll('.card[data-id]').length+' pistes jugées';}
+document.querySelectorAll('.card[data-id]').forEach(c=>{const id=c.dataset.id;const s=state[id]||{};if(s.v){c.dataset.v=s.v;c.querySelector(`[data-v=${s.v}]`).classList.add('sel');}
+ const ta=c.querySelector('textarea');ta.value=s.n||'';ta.addEventListener('input',()=>{state[id]={...state[id],n:ta.value};save();});
+ c.querySelectorAll('.verdict button').forEach(b=>b.addEventListener('click',()=>{const v=b.dataset.v;const cur=state[id]?.v===v?'':v;state[id]={...state[id],v:cur};c.dataset.v=cur;
+  c.querySelectorAll('.verdict button').forEach(x=>x.classList.toggle('sel',x.dataset.v===cur));save();}));});
+const gen=document.getElementById('general');gen.value=state._g||'';gen.addEventListener('input',()=>{state._g=gen.value;save();});
+function bilan(){const L=['Bilan · mods de l’Exilé · tour 2'];MODS.forEach(m=>{L.push('');L.push(m.name);m.pistes.forEach(p=>{const s=state[m.id+'-'+p.k]||{};L.push(`  ${p.k} ${p.name} : ${s.v||'—'}${s.n?' · '+s.n:''}`);});});if(state._g)L.push('','Général : '+state._g);return L.join('\n');}
+document.getElementById('copy').addEventListener('click',()=>{const o=document.getElementById('out');o.value=bilan();navigator.clipboard?.writeText(o.value).catch(()=>{o.select();});o.select();});
+document.getElementById('clear').addEventListener('click',()=>{state={};save();location.reload();});
+const pb=document.getElementById('pause');pb.setAttribute('aria-pressed',paused);pb.addEventListener('click',()=>{paused=!paused;pb.setAttribute('aria-pressed',paused);});
+const sb=document.getElementById('slow');sb.addEventListener('click',()=>{slow=!slow;sb.setAttribute('aria-pressed',slow);});
+tally();
+window.__at=(c)=>{clock=c;paused=true;pb.setAttribute('aria-pressed',true);};
+</script>

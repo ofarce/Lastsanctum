@@ -25,6 +25,8 @@ var origin: Vector2i
 var _pool := Node2D.new()
 var _beam := Node2D.new()
 var _stage := -1
+## Tressaillement d'un pixel quand un esprit frappe (sim/harvest_fx.gd).
+var _shake := 0.0
 ## sim_time du dernier dessin de la flaque et du rai (NAN : à redessiner).
 var _drawn_at := NAN
 
@@ -59,7 +61,21 @@ func _process(_delta: float) -> void:
 	if s != _stage:
 		_stage = s
 		queue_redraw()
+	_update_shake()
 	_redraw_light()
+
+
+## Un coup d'esprit sur ce nœud depuis moins de 0,12 s : un pixel vers l'esprit puis un pixel à l'opposé.
+func _update_shake() -> void:
+	var k := 0.0
+	if on_screen():
+		for e: Dictionary in GameState.effects:
+			if e["type"] == "harvest_hit" and e["origin"] == origin and e["node"] != "block" and e["age"] < 0.12:
+				k = (-1.0 if e["age"] < 0.06 else 1.0) * float(e["dir"])
+				break
+	if k != _shake:
+		_shake = k
+		queue_redraw()
 
 
 ## Flaque et rai animés par sim_time : redessinés seulement à l'écran, et quand le temps a avancé (hors écran,
@@ -80,7 +96,7 @@ func on_screen() -> bool:
 
 
 func _draw() -> void:
-	draw_texture_rect_region(SPRITES, Rect2(Vector2(-48, -104), FRAME), Rect2(Vector2(_stage * FRAME.x, 0), FRAME))
+	draw_texture_rect_region(SPRITES, Rect2(Vector2(-48 + _shake, -104), FRAME), Rect2(Vector2(_stage * FRAME.x, 0), FRAME))
 
 
 func _pulse() -> float:

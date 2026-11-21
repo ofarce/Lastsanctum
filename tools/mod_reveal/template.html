@@ -1,0 +1,498 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Révélation des mods</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Silkscreen&display=swap" rel="stylesheet">
+<style>
+@font-face { font-family: "HudSerif"; src: url(data:font/ttf;base64,@@FONT@@) format("truetype"); }
+:root {
+  --bg: #0e1214; --panel: #161c1f; --line: #2a3438; --ink: #e4e2da; --mute: #8e9a9c;
+  --accent: #5fd8e8; --rec: #4f9a9e; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.5 "Share Tech Mono", ui-monospace, monospace; }
+header { max-width: 1180px; margin: 0 auto; padding: 28px 16px 8px; }
+h1 { font: 400 26px "Silkscreen", monospace; margin: 0 0 6px; letter-spacing: .5px; }
+header p { color: var(--mute); margin: 4px 0; max-width: 920px; }
+.bar { position: sticky; top: 0; z-index: 5; background: #0e1214ee; border-bottom: 1px solid var(--line); }
+.bar > div { max-width: 1180px; margin: 0 auto; padding: 10px 16px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+button, select { font: inherit; color: var(--ink); background: var(--panel); border: 1px solid var(--line); padding: 6px 12px; cursor: pointer; }
+button.on { border-color: var(--accent); color: var(--accent); }
+main { max-width: 1180px; margin: 0 auto; padding: 8px 16px 60px; }
+.card { background: var(--panel); border: 1px solid var(--line); padding: 16px; margin: 18px 0; }
+.card.rec { border-color: var(--rec); }
+canvas { width: 100%; height: auto; image-rendering: pixelated; display: block; background: #000; }
+.phases { display: flex; gap: 0; margin: 6px 0 12px; font-size: 12px; color: var(--mute); }
+.phases span { flex: 1; text-align: center; border-top: 3px solid var(--line); padding-top: 2px; }
+.phases span.on { border-color: var(--accent); color: var(--accent); }
+h2 { font: 400 18px "Silkscreen", monospace; margin: 0 0 6px; }
+.tag { display: inline-block; font-size: 12px; padding: 1px 7px; border: 1px solid var(--line); color: var(--mute); margin-right: 6px; }
+.tag.r { border-color: var(--rec); color: #9fdde0; }
+.cols { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+.cols h3 { font: 400 13px "Silkscreen", monospace; color: var(--accent); margin: 0 0 2px; }
+.cols p { margin: 0; font-size: 14px; }
+.now { background: var(--panel); border: 1px solid var(--line); padding: 14px 16px; margin: 14px 0; }
+.legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 13px; color: var(--mute); }
+.legend i { display: inline-block; width: 10px; height: 10px; margin-right: 5px; vertical-align: -1px; }
+table { border-collapse: collapse; width: 100%; font-size: 14px; }
+td, th { border-bottom: 1px solid var(--line); padding: 5px 8px; text-align: left; }
+th { color: var(--mute); font-weight: 400; }
+.status { color: var(--mute); font-size: 14px; }
+.status b { color: var(--accent); font-weight: 400; }
+@media (max-width: 860px) { .cols { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>Premier ramassage d’un mod</h1>
+  <p>Tour 2. Bilan du tour 1 : <b>piste 4 · Le grand écrin</b> gardée, mais sans le vol de l’icône vers le portrait. Voici cinq façons de la faire disparaître ; l’apparition et la mise en valeur sont les mêmes partout. Vraie capture du jeu (1280 × 720, HUD Sarcelle, police du HUD, icônes Cartouche de l’atlas).</p>
+  <p>Par défaut, les scènes passent d’un mod à l’autre : Aimant d’ichor (peu commun), Écaille d’esquive (rare), Ancre de rappel (épique), Foreuse de Gorge-Cuivre (unique).</p>
+  <div class="legend" id="legend"></div>
+</header>
+<div class="bar"><div>
+  <select id="pick"></select>
+  <button id="slow">Ralenti ×0,3</button>
+  <button id="zoom">Gros plan du haut</button>
+  <span class="status">Tout se règle ici ; rien n’est codé.</span>
+</div></div>
+<main>
+  <div class="now">
+    <h2>Commun aux cinq</h2>
+    <div class="cols">
+      <div><h3>Apparition · 1 s</h3><p>L’écran s’assombrit (voile Sarcelle à 45 %), l’icône jaillit au centre à quatre fois sa taille avec un éclair blanc et une onde en gros pixels ; un soleil de seize rayons à la rareté se déploie derrière.</p></div>
+      <div><h3>Mise en valeur · 3,6 s</h3><p>L’icône se range en haut (×2) pendant que la plaque Sarcelle s’ouvre sous elle, liseré teinté à la rareté ; le soleil tourne, un reflet balaie l’icône toutes les 1,5 s, trois étincelles orbitent.</p></div>
+      <div><h3>Disparition</h3><p>Ce qui change d’une carte à l’autre. Plus de vol vers le portrait : tout se termine sur place, en haut de l’écran.</p></div>
+    </div>
+  </div>
+  <section id="cards"></section>
+
+  <div class="card" id="combat">
+    <h2>En combat : on attend</h2>
+    <p class="status">Ramassez un ou plusieurs mods pendant le combat, puis terminez-le. La piste jouée est celle choisie ici.</p>
+    <div class="bar" style="position:static;border:0;background:none"><div style="padding:8px 0">
+      <button id="cb-fight" class="on">Combat : oui</button>
+      <button id="cb-pick">Ramasser un mod</button>
+      <select id="cb-track"></select>
+      <span class="status" id="cb-status"></span>
+    </div></div>
+    <canvas id="cb-canvas" width="1280" height="720"></canvas>
+    <div class="cols" style="margin-top:12px">
+      <div><h3>Pendant le combat</h3><p>Rien au centre de l’écran : l’icône file droit dans sa case du paquetage avec un éclat bref, et une pastille « +1 » à la rareté la plus haute s’allume sur le portrait. On sait qu’il y a quelque chose sans perdre le fil.</p></div>
+      <div><h3>Quand ça se calme</h3><p>Fin du combat = <code>Simulation.in_combat()</code> faux pendant 1,5 s de suite (aucun ennemi hostile à 4 blocs, aucun coup reçu depuis 4 s). Si la bannière bleue parle à ce moment-là, on attend aussi qu’elle se taise.</p></div>
+      <div><h3>Plusieurs mods</h3><p>Ils passent un par un, du plus rare au moins rare, 0,4 s d’écart ; la pastille décompte. Un mod déjà vu une fois (même ramassé ailleurs) ne rejoue rien. Un combat qui reprend coupe l’affichage en cours par sa disparition et remet le reste en file.</p></div>
+    </div>
+  </div>
+
+  <div class="now">
+    <h2>Selon la rareté</h2>
+    <table>
+      <tr><th>Rareté</th><th>Tenue à l’écran</th><th>Mise en valeur</th><th>Son (Sfx)</th></tr>
+      <tr><td>Normal, peu commun</td><td>3 s</td><td>reflet seul, soleil réduit de moitié</td><td>un tintement</td></tr>
+      <tr><td>Rare, épique</td><td>4 s</td><td>reflet + étincelles</td><td>tintement + accord</td></tr>
+      <tr><td>Unique, mythique</td><td>5 s</td><td>tout ; sortie 4E si on la garde pour eux</td><td>accord long</td></tr>
+    </table>
+    <p class="status">Les scènes ci-dessus gardent une tenue fixe pour qu’on puisse les comparer. Un clic sur l’affichage le renvoie tout de suite (disparition jouée en entier).</p>
+  </div>
+
+  <div class="now">
+    <h2>Mon conseil</h2>
+    <p><b>4A · L’éclat</b> : la sortie finit par un geste aussi franc que l’entrée, et les éclats gardent la couleur de l’objet, donc on lit encore la rareté en partant. Pour l’unique et le mythique, <b>4E · L’éblouissement</b> à la place. 4C est la sortie la plus calme, si 4A distrait trop au moment où le jeu reprend.</p>
+  </div>
+</main>
+<script>
+const D = @@DATA@@;
+const RAR = { normal: ["Normal", "#e4e2da"], uncommon: ["Peu commun", "#6fcf5a"], rare: ["Rare", "#f2e14a"],
+  epic: ["Épique", "#f07a28"], unique: ["Unique", "#b47af0"], mythic: ["Mythique", "#5fd8e8"] };
+const RAR_ORDER = ["normal", "uncommon", "rare", "epic", "unique", "mythic"];
+document.getElementById("legend").innerHTML = Object.values(RAR).map(([n, c]) => `<span><i style="background:${c}"></i>${n}</span>`).join("");
+const CYCLE = ["magnet", "scale", "anchor", "drill"];
+const INFO = ["#1f4f5c", "#0a1d24", "#d6f6fb", "#5fa9b8", "#04141a"];
+const DIALOGUE = ["#5a6ad0", "#141c6a", "#e6e8f4", "#8a90b8", "#0a0c26"];
+const PORTRAIT = [41, 577];          // portrait de l'Exilé (ouvre la fiche)
+const SLOT0 = [433, 537];            // première case du paquetage
+let slow = false, zoom = false, pinned = "";
+
+// ---------- outils ----------
+const clamp = (v, a = 0, b = 1) => Math.max(a, Math.min(b, v));
+const lerp = (a, b, t) => a + (b - a) * t;
+const eOut = t => 1 - (1 - t) ** 3;
+const eIn = t => t * t * t;
+const eBack = t => { const s = 1.7; t -= 1; return t * t * ((s + 1) * t + s) + 1; };
+const seg = (k, a, b) => clamp((k - a) / (b - a));
+const hex = h => { const n = parseInt(h.slice(1), 16); return [n >> 16, (n >> 8) & 255, n & 255]; };
+const rgba = (h, a) => { const [r, g, b] = hex(h); return `rgba(${r},${g},${b},${a})`; };
+const mix = (h1, h2, t) => { const a = hex(h1), b = hex(h2); return `rgb(${a.map((v, i) => Math.round(lerp(v, b[i], t))).join(",")})`; };
+const lighten = (h, k) => mix(h, "#ffffff", k);
+function cv(w, h) { const c = document.createElement("canvas"); c.width = w; c.height = h; const x = c.getContext("2d"); x.imageSmoothingEnabled = false; return [c, x]; }
+
+function chamfer(c, x, y, w, h, k, col) {
+  c.fillStyle = col; c.beginPath();
+  c.moveTo(x + k, y); c.lineTo(x + w - k, y); c.lineTo(x + w, y + k); c.lineTo(x + w, y + h - k);
+  c.lineTo(x + w - k, y + h); c.lineTo(x + k, y + h); c.lineTo(x, y + h - k); c.lineTo(x, y + k); c.closePath(); c.fill();
+}
+// SnesBanner.paint (ui/banner/snes_banner.gd) : ombre, contour à coins cassés, liserés, dégradé en 12 bandes, reflet.
+function panel(c, x, y, w, h, tone, rim = null) {
+  x = Math.round(x); y = Math.round(y); w = Math.round(w); h = Math.round(h);
+  if (w < 4 || h < 4) { c.fillStyle = rim || tone[2]; c.fillRect(x, y, Math.max(w, 1), Math.max(h, 1)); return; }
+  c.fillStyle = "rgba(0,0,0,.35)"; c.fillRect(x + 3, y + 4, w, h);
+  chamfer(c, x, y, w, h, 3, tone[4]);
+  chamfer(c, x + 1, y + 1, w - 2, h - 2, 3, rim || tone[2]);
+  if (w < 10 || h < 10) return;
+  chamfer(c, x + 3, y + 3, w - 6, h - 6, 2, tone[3]);
+  const ix = x + 4, iy = y + 4, iw = w - 8, ih = h - 8;
+  for (let i = 0; i < 12; i++) {
+    const y0 = Math.floor(iy + ih * i / 12), y1 = Math.ceil(iy + ih * (i + 1) / 12);
+    c.fillStyle = mix(tone[0], tone[1], i / 11); c.fillRect(ix, y0, iw, y1 - y0);
+  }
+  c.fillStyle = "rgba(255,255,255,.25)"; c.fillRect(ix + 1, iy + 1, iw - 2, 1);
+}
+function txt(c, s, x, y, size, col, { bold = false, align = "left", alpha = 1, shadow = "#04141a" } = {}) {
+  c.save(); c.globalAlpha = alpha; c.font = `${bold ? "bold " : ""}${size}px HudSerif`; c.textAlign = align; c.textBaseline = "alphabetic";
+  if (shadow) { c.fillStyle = shadow; c.fillText(s, x + 1, y + 1); }
+  c.fillStyle = col; c.fillText(s, x, y); c.restore();
+}
+function wrap(c, s, size, maxW) {
+  c.font = `${size}px HudSerif`; const out = []; let line = "";
+  for (const w of s.split(" ")) { const t = line ? line + " " + w : w; if (c.measureText(t).width > maxW && line) { out.push(line); line = w; } else line = t; }
+  if (line) out.push(line); return out;
+}
+// Lignes coupées au nombre de caractères révélés (machine à écrire).
+function typed(lines, n) { const out = []; for (const l of lines) { if (n <= 0) break; out.push(l.slice(0, n)); n -= l.length + 1; } return out; }
+function px(c, x, y, s, col) { c.fillStyle = col; c.fillRect(Math.round(x), Math.round(y), s, s); }
+function star(c, x, y, r, col) { // étincelle en croix, pixels de 2
+  px(c, x - 1, y - 1, 2, "#ffffff");
+  for (let i = 1; i <= r; i++) { const a = i === r ? col : lighten(col, .5); px(c, x - 1 + i * 2, y - 1, 2, a); px(c, x - 1 - i * 2, y - 1, 2, a); px(c, x - 1, y - 1 + i * 2, 2, a); px(c, x - 1, y - 1 - i * 2, 2, a); }
+}
+
+// ---------- icônes (atlas Cartouche, teinte de rareté comme ItemIcon.draw_mod) ----------
+const atlas = new Image(), back = new Image();
+const ICON = {}, WHITE = {};
+function bakeIcons() {
+  for (const [k, m] of Object.entries(D.mods)) {
+    const edge = m.rarity === "normal" ? "#7a8488" : RAR[m.rarity][1];
+    const tints = [null, edge, lighten(edge, .45), null];
+    const [o, oc] = cv(32, 32);
+    for (let r = 0; r < 4; r++) {
+      const [t, tc] = cv(32, 32);
+      tc.drawImage(atlas, m.col * 32, r * 32, 32, 32, 0, 0, 32, 32);
+      if (tints[r]) { tc.globalCompositeOperation = "multiply"; tc.fillStyle = tints[r]; tc.fillRect(0, 0, 32, 32);
+        tc.globalCompositeOperation = "destination-in"; tc.drawImage(atlas, m.col * 32, r * 32, 32, 32, 0, 0, 32, 32); }
+      oc.drawImage(t, 0, 0);
+    }
+    ICON[k] = o;
+    const [w, wc] = cv(32, 32); wc.drawImage(o, 0, 0); wc.globalCompositeOperation = "source-atop"; wc.fillStyle = "#fff"; wc.fillRect(0, 0, 32, 32);
+    WHITE[k] = w;
+  }
+}
+// Icône à l'échelle s (en multiples de 32 px), centrée ; sx/sy pour écraser/étirer ; flash 0..1 vers le blanc.
+function icon(c, k, cx, cy, s, { sx = 1, sy = 1, flash = 0, alpha = 1 } = {}) {
+  const w = Math.round(32 * s * sx), h = Math.round(32 * s * sy);
+  if (w < 1 || h < 1) return;
+  c.save(); c.globalAlpha = alpha;
+  c.drawImage(ICON[k], Math.round(cx - w / 2), Math.round(cy - h / 2), w, h);
+  if (flash > 0) { c.globalAlpha = alpha * flash; c.drawImage(WHITE[k], Math.round(cx - w / 2), Math.round(cy - h / 2), w, h); }
+  c.restore();
+}
+// Reflet qui balaie l'icône en diagonale (u de 0 à 1).
+const [shineC, shineX] = cv(128, 128);
+function shine(c, k, cx, cy, s, u) {
+  const d = 32 * s; shineX.clearRect(0, 0, 128, 128);
+  shineX.drawImage(ICON[k], 0, 0, d, d); shineX.globalCompositeOperation = "source-atop";
+  const p = lerp(-d, d * 2, u); shineX.fillStyle = "rgba(255,255,255,.75)";
+  shineX.beginPath(); shineX.moveTo(p, 0); shineX.lineTo(p + s * 5, 0); shineX.lineTo(p + s * 5 - d, d); shineX.lineTo(p - d, d); shineX.fill();
+  shineX.fillStyle = "rgba(255,255,255,.35)";
+  shineX.beginPath(); shineX.moveTo(p + s * 8, 0); shineX.lineTo(p + s * 10, 0); shineX.lineTo(p + s * 10 - d, d); shineX.lineTo(p + s * 8 - d, d); shineX.fill();
+  shineX.globalCompositeOperation = "source-over";
+  c.drawImage(shineC, 0, 0, d, d, Math.round(cx - d / 2), Math.round(cy - d / 2), d, d);
+}
+// Trame de Bayer 4×4 en cellules de 3 px : niveau 0 (rien) à 16 (tout).
+const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
+const PAT = [];
+function bakeBayer(c) {
+  for (let L = 0; L <= 16; L++) {
+    const [p, pc] = cv(12, 12);
+    for (let i = 0; i < 16; i++) if (BAYER[i] < L) { pc.fillStyle = "#000"; pc.fillRect((i % 4) * 3, Math.floor(i / 4) * 3, 3, 3); }
+    PAT.push(c.createPattern(p, "repeat"));
+  }
+}
+function dissolve(ctx, level) { ctx.globalCompositeOperation = "destination-in"; ctx.fillStyle = PAT[clamp(Math.round(level), 0, 16)];
+  ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height); ctx.globalCompositeOperation = "source-over"; }
+// Petit calque basse résolution (÷3) pour des rayons et anneaux en gros pixels.
+const [lowC, lowX] = cv(427, 240);
+function low(c, draw) { lowX.clearRect(0, 0, 427, 240); draw(lowX); c.drawImage(lowC, 0, 0, 427, 240, 0, 0, 1281, 720); }
+
+// Bloc commun : icône à gauche, en-tête, titre, effet (plaque horizontale).
+function content(c, k, x, y, w, h, { reveal = 1, header = true, iconDraw = true, iconS = 2, alpha = 1 } = {}) {
+  const m = D.mods[k], rc = RAR[m.rarity][1];
+  const ix = x + 16 + 16 * iconS, iy = y + h / 2;
+  if (iconDraw) icon(c, k, ix, iy, iconS, { alpha });
+  const tx = x + 32 + 32 * iconS, tw = w - (48 + 32 * iconS);
+  const head = `NOUVEAU MOD · ${RAR[m.rarity][0].toUpperCase()}`;
+  const lines = wrap(c, m.desc, 13, tw);
+  const all = m.name.length + 1 + m.desc.length;
+  let n = Math.round(all * reveal);
+  if (header) txt(c, head, tx, y + 22, 10, rc, { bold: true, alpha: alpha * clamp(reveal * 4) });
+  txt(c, m.name.slice(0, n), tx, y + 42, 18, rc, { bold: true, alpha });
+  n -= m.name.length + 1;
+  typed(lines, n).forEach((l, i) => txt(c, l, tx, y + 62 + i * 17, 13, "#d6f6fb", { alpha }));
+}
+function plateSize(c, k, iconS = 2) {
+  const m = D.mods[k]; const lines = wrap(c, m.desc, 13, 480 - (48 + 32 * iconS));
+  return [480, Math.max(32 * iconS + 24, 56 + lines.length * 17 + 14)];
+}
+
+// ---------- pistes ----------
+// Le grand écrin (piste 4 du tour 1, retenue le 2026-11-21) : apparition et mise en valeur communes, cinq disparitions.
+// scene() dessine l'état d'une image à partir de réglages ; chaque variante ne décrit que sa sortie.
+const ECRIN = { cx: 640, bigY: 250, topY: 160 };
+function ecrinScene(c, k, o) {
+  const m = D.mods[k], rc = RAR[m.rarity][1], { cx } = ECRIN;
+  const iy = o.iy, is = o.is;
+  if (o.veil > 0) {
+    if (o.veilDither != null) { const [v, vc] = ecrinScene._v || (ecrinScene._v = cv(1280, 720)); vc.clearRect(0, 0, 1280, 720);
+      vc.fillStyle = "rgba(4,20,26,.45)"; vc.fillRect(0, 0, 1280, 720); dissolve(vc, o.veilDither * 16); c.drawImage(v, 0, 0); }
+    else { c.fillStyle = `rgba(4,20,26,${.45 * o.veil})`; c.fillRect(0, 0, 1280, 720); }
+  }
+  if (o.rays > 0) low(c, x => {
+    const R = o.rayR * o.rays;
+    for (let i = 0; i < 16; i++) { const a = o.rot + i * Math.PI / 8, w = o.rayW ?? .1;
+      x.fillStyle = rgba(i % 2 ? lighten(rc, .5) : rc, o.rayA ?? .3); x.beginPath(); x.moveTo(cx / 3, iy / 3);
+      x.lineTo(cx / 3 + Math.cos(a - w) * R, iy / 3 + Math.sin(a - w) * R); x.lineTo(cx / 3 + Math.cos(a + w) * R, iy / 3 + Math.sin(a + w) * R); x.fill(); }
+    if (o.wave > 0 && o.wave < 1) { x.strokeStyle = rgba(o.waveCol || "#ffffff", 1 - o.wave); x.lineWidth = 2;
+      x.beginPath(); x.ellipse(cx / 3, iy / 3, 10 + o.wave * 70, 6 + o.wave * 42, 0, 0, Math.PI * 2); x.stroke(); }
+  });
+  const [W, H0] = plateSize(c, k, 0), H = H0 - 6, py = ECRIN.topY + 42 + (o.plateDy || 0);
+  if (o.plate > 0) { const pw = Math.max(6, Math.round(W * (o.plateW ?? 1))), h = Math.max(4, Math.round(H * o.plate));
+    c.save(); c.globalAlpha = o.plateA ?? 1;
+    panel(c, cx - pw / 2, py + (o.plateFold ? (H - h) / 2 : 0), pw, h, INFO, o.glow ? mix(INFO[2], rc, .35) : null);
+    if (o.plate > .95 && (o.plateW ?? 1) > .95) { txt(c, m.name, cx, py + 26, 18, rc, { bold: true, align: "center" });
+      wrap(c, m.desc, 13, W - 40).forEach((l, i) => txt(c, l, cx, py + 46 + i * 17, 13, "#d6f6fb", { align: "center" })); }
+    c.restore(); }
+  if (o.icon !== false && is > 0) icon(c, k, cx, iy, is, { flash: o.flash || 0, alpha: o.iconA ?? 1 });
+  if (o.shine != null) shine(c, k, cx, iy, is, o.shine);
+  if (o.orbit != null) for (let i = 0; i < 3; i++) { const a = o.orbit * 2.2 + i * Math.PI * 2 / 3;
+    star(c, cx + Math.cos(a) * 46 * (o.orbitR ?? 1), iy + Math.sin(a) * 30 * (o.orbitR ?? 1), i === Math.floor(o.orbit * 3) % 3 ? 3 : 2, rc); }
+  return { W, H, py };
+}
+// État de repos en fin de mise en valeur (point de départ de chaque sortie).
+const ECRIN_REST = s => ({ veil: 1, rays: 1, rayR: 44, rot: s * .4, iy: ECRIN.topY, is: 2, plate: 1, glow: true });
+function ecrinIn(c, k, ph, u, s) {
+  const { cx, bigY, topY } = ECRIN, rc = RAR[D.mods[k].rarity][1];
+  if (ph === "in") return ecrinScene(c, k, { veil: seg(u, 0, .3), rays: eOut(seg(u, .4, 1)), rayR: 70, rot: 0, iy: bigY,
+    is: 4 * eBack(seg(u, .15, .6)), plate: 0, wave: seg(u, .45, 1), flash: clamp(1 - (u - .3) / .25) * (u > .15 ? 1 : 0) });
+  const settle = eOut(clamp(s / .6)), sw = (s % 1.5) / .5;
+  return ecrinScene(c, k, { veil: 1, rays: 1, rayR: lerp(70, 44, settle), rot: s * .4, iy: lerp(bigY, topY, settle), is: lerp(4, 2, settle),
+    plate: eOut(clamp((s - .35) / .45)), glow: true, shine: sw < 1 ? sw : null, orbit: s });
+}
+const HOLD = 3.6;
+function ecrinTrack(def) {
+  return Object.assign({ t: [1.0, HOLD, def.out], heads: ["Disparition"],
+    draw(c, k, ph, u, s) {
+      if (ph === "rest") { if (def.rest) def.rest(c, k, s); return; }
+      if (ph !== "out") return ecrinIn(c, k, ph, u, s);
+      def.exit.call(this, c, k, u, ECRIN_REST(HOLD));
+    } }, def);
+}
+const TRACKS = [
+  ecrinTrack({ id: "4A", name: "L’éclat", rec: true, out: 0.9, tags: ["recommandée", "éclats de pixels"],
+    txt: ["L’icône blanchit d’un coup, puis l’icône et la plaque éclatent en éclats : l’icône part en étoile en petits éclats de 6 px teintés à la rareté, la plaque se défait depuis son centre en carreaux de 16 px qui tombent ; tout s’éteint en 0,7 s ; les rayons se rétractent en 0,2 s et le voile se lève pendant la chute."],
+    exit(c, k, u, base) {
+      const rc = RAR[D.mods[k].rarity][1];
+      const [b, bc] = this._b || (this._b = cv(1280, 400));
+      if (u < .14) { ecrinScene(c, k, { ...base, rays: 1 - u / .14, flash: u / .14 }); return; }
+      if (!this._shards || this._sk !== k) { // on fige la composition une fois, puis on la découpe
+        bc.clearRect(0, 0, 1280, 400); ecrinScene(bc, k, { ...base, veil: 0, rays: 0, flash: 1, glow: true });
+        const sh = [], img = bc.getImageData(0, 0, 1280, 400).data; let n = 0;
+        const hash = (x, y, a, b) => ((x * a + y * b) % 997) / 997;
+        // plaque : gros carreaux de 16 px qui tombent ; icône : éclats de 6 px qui partent en étoile.
+        for (let y = 196; y < 400; y += 16) for (let x = 380; x < 900; x += 16) {
+          if (img[((y + 8) * 1280 + x + 8) * 4 + 3] < 40) continue;
+          const r = hash(x, y, 73, 151), r2 = hash(x, y, 31, 17);
+          sh.push({ x, y, z: 16, vx: (x - 640) * .5 + (r2 - .5) * 160, vy: -40 - 120 * r, g: 900, delay: Math.abs(x - 640) / 260 * .12 + r * .05, life: .55 + r * .2 }); }
+        for (let y = 124; y < 196; y += 6) for (let x = 604; x < 676; x += 6) {
+          if (img[((y + 3) * 1280 + x + 3) * 4 + 3] < 40) continue;
+          const dx = x + 3 - 640, dy = y + 3 - 160, d = Math.hypot(dx, dy) + 1, r = hash(x, y, 53, 97), r2 = hash(x, y, 19, 211);
+          sh.push({ x, y, z: 6, vx: dx / d * (220 + r * 320) + (r2 - .5) * 90, vy: dy / d * (180 + r * 260) - 80 * r2, g: 500, delay: 0, life: .45 + r * .3 }); }
+        this._shards = sh; this._sk = k; ecrinScene(bc, k, { ...base, veil: 0, rays: 0, glow: true });
+      }
+      const t = (u - .14) / .86 * .9;
+      c.fillStyle = `rgba(4,20,26,${.45 * (1 - seg(u, .2, .8))})`; c.fillRect(0, 0, 1280, 720);
+      for (const p of this._shards) {
+        const tt = Math.max(0, t - p.delay), a = 1 - clamp(tt / p.life); if (a <= 0) continue;
+        const x = p.x + p.vx * tt, y = p.y + p.vy * tt + p.g * tt * tt;
+        c.globalAlpha = a > .5 ? 1 : a * 2; c.drawImage(b, p.x, p.y, p.z, p.z, Math.round(x), Math.round(y), p.z, p.z);
+        if (tt < .06) { c.fillStyle = rgba("#ffffff", .8 * (1 - tt / .06)); c.fillRect(Math.round(x), Math.round(y), p.z, p.z); }
+        else if (p.z === 6) { c.fillStyle = rgba(rc, .5); c.fillRect(Math.round(x), Math.round(y), p.z, p.z); }
+      }
+      c.globalAlpha = 1;
+      if (t < .25) star(c, 640, 160, 4, rc);
+    } }),
+  ecrinTrack({ id: "4B", name: "L’étoile", out: 0.75, tags: ["implosion", "scintillement final"],
+    txt: ["La plaque se plie vers son centre et remonte dans l’icône ; les rayons accélèrent et se referment sur elle ; l’icône se contracte en un point blanc, qui s’ouvre en une étoile à quatre branches à la rareté avant de s’éteindre. Le voile se lève avec l’étoile."],
+    exit(c, k, u, base) {
+      const rc = RAR[D.mods[k].rarity][1], fold = eIn(seg(u, 0, .35)), shrink = eIn(seg(u, .3, .6)), st = seg(u, .6, 1);
+      ecrinScene(c, k, { ...base, veil: 1 - seg(u, .55, 1), rays: 1 - eIn(seg(u, .15, .6)), rot: base.rot + eIn(seg(u, 0, .6)) * 2.5, rayW: .1 + .2 * seg(u, .2, .6),
+        plate: 1 - fold, plateW: 1 - fold, plateFold: true, plateDy: -fold * 40, glow: true,
+        is: 2 * (1 - shrink), flash: shrink, orbit: u < .45 ? HOLD + u * 3 : null, orbitR: 1 - seg(u, 0, .45) });
+      if (st > 0 && st < 1) { const L = Math.round(Math.sin(st * Math.PI) * 11), cx = 640, cy = ECRIN.topY;
+        px(c, cx - 4, cy - 4, 8, "#ffffff");
+        for (let i = 1; i <= L; i++) { const col = i > L - 3 ? rc : lighten(rc, .6), z = i < 3 ? 4 : 3, o = -Math.floor(z / 2);
+          px(c, cx + o + i * 4, cy + o, z, col); px(c, cx + o - i * 4, cy + o, z, col); px(c, cx + o, cy + o + i * 4, z, col); px(c, cx + o, cy + o - i * 4, z, col); }
+        for (let i = 1; i <= L / 3; i++) { px(c, cx - 1 + i * 4, cy - 1 + i * 4, 2, rc); px(c, cx - 1 - i * 4, cy - 1 + i * 4, 2, rc); px(c, cx - 1 + i * 4, cy - 1 - i * 4, 2, rc); px(c, cx - 1 - i * 4, cy - 1 - i * 4, 2, rc); }
+        if (st < .35) { const w = st / .35; c.strokeStyle = rgba("#ffffff", 1 - w); c.lineWidth = 2; c.strokeRect(Math.round(cx - 6 - w * 30), Math.round(cy - 6 - w * 30), Math.round(12 + w * 60), Math.round(12 + w * 60)); }
+      }
+    } }),
+  ecrinTrack({ id: "4C", name: "La trame", out: 0.8, tags: ["trame de Bayer", "le plus discret"],
+    txt: ["Tout part dans la trame de la lumière et du brouillard : la plaque d’abord, l’icône ensuite, et le voile en dernier, lui aussi tramé plutôt que fondu. Les rayons raccourcissent pendant ce temps."],
+    exit(c, k, u, base) {
+      const [b, bc] = this._b || (this._b = cv(1280, 720));
+      ecrinScene(c, k, { ...base, plate: 0, icon: false, veilDither: 1 - seg(u, .45, 1), rays: 1 - seg(u, 0, .6), rayR: 44 });
+      bc.clearRect(0, 0, 1280, 720); ecrinScene(bc, k, { ...base, veil: 0, rays: 0, icon: false, glow: true });
+      dissolve(bc, 16 * (1 - seg(u, 0, .45))); c.drawImage(b, 0, 0);
+      bc.clearRect(0, 0, 1280, 720); icon(bc, k, ECRIN.cx, base.iy, 2, { flash: seg(u, .15, .3) * .6 });
+      dissolve(bc, 16 * (1 - seg(u, .2, .7))); c.drawImage(b, 0, 0);
+    } }),
+  ecrinTrack({ id: "4D", name: "L’envol", out: 0.85, tags: ["monte et sort par le haut", "traînée"],
+    txt: ["La plaque glisse de 16 px vers le bas en s’éteignant par paliers ; l’icône prend son élan (elle descend de 6 px), puis jaillit vers le haut et passe derrière l’horloge et la barre des ressources en laissant une traînée à la rareté ; les rayons la suivent un instant, le voile se lève."],
+    exit(c, k, u, base) {
+      const rc = RAR[D.mods[k].rarity][1], pl = seg(u, 0, .35), crouch = Math.sin(seg(u, .1, .3) * Math.PI) * 6, up = eIn(seg(u, .3, .75));
+      const iy = base.iy + crouch - up * 220;
+      ecrinScene(c, k, { ...base, veil: 1 - seg(u, .4, 1), rays: 1 - seg(u, .25, .55), plate: 1 - Math.floor(pl * 4) / 4, plateA: 1 - pl, plateDy: pl * 16, icon: false });
+      if (up > 0) { // traînée : colonne de pixels qui s'affine et s'éteint vers le bas, et qui se résorbe après le départ
+        const tail = Math.min(base.iy + 34, iy + 20 + 260 * (1 - seg(u, .6, 1)));
+        for (let yy = iy + 18; yy < tail; yy += 4) { const q = (yy - iy) / Math.max(1, tail - iy), w = Math.round(lerp(22, 2, q) / 2) * 2;
+          c.fillStyle = rgba(q < .25 ? lighten(rc, .55) : rc, .9 * (1 - q)); c.fillRect(640 - w / 2, Math.round(yy), w, 4);
+          if (((yy / 4) | 0) % 5 === 0) px(c, 640 + (((yy * 7) % 13) - 6) * 2, yy, 2, lighten(rc, .7)); }
+      }
+      icon(c, k, 640, iy, 2 * (1 - up * .25), { sy: 1 + up * .35, sx: 1 - up * .15, flash: up * .4 });
+      c.drawImage(back, 140, 10, 1080, 60, 140, 10, 1080, 60); // la barre des ressources et l'horloge repassent devant
+      c.drawImage(back, 560, 72, 236, 44, 560, 72, 236, 44);
+      c.fillStyle = `rgba(4,20,26,${.45 * (1 - seg(u, .4, 1))})`; c.fillRect(140, 10, 1080, 60); c.fillRect(560, 72, 236, 44);
+    } }),
+  ecrinTrack({ id: "4E", name: "L’éblouissement", out: 0.8, tags: ["éclair final", "fort"],
+    txt: ["Le soleil s’étend d’un coup sur tout le haut de l’écran pendant que l’icône et la plaque blanchissent ; un éclair à la teinte de la rareté couvre l’écran 0,1 s, puis retombe en paliers tramés et laisse voir le jeu tel quel. Le plus spectaculaire ; à réserver peut-être à l’unique et au mythique."],
+    exit(c, k, u, base) {
+      const rc = RAR[D.mods[k].rarity][1], grow = eIn(seg(u, 0, .3)), white = seg(u, .1, .3);
+      if (u < .3) ecrinScene(c, k, { ...base, rays: 1, rayR: lerp(44, 260, grow), rayA: .3 + .3 * grow, rayW: .1 + .08 * grow, rot: base.rot + grow,
+        flash: white, glow: true });
+      const fl = u < .3 ? seg(u, .22, .3) : 1 - seg(u, .38, 1);
+      if (fl > 0) { const [b, bc] = this._b || (this._b = cv(1280, 720)); bc.clearRect(0, 0, 1280, 720);
+        bc.fillStyle = lighten(rc, .7); bc.fillRect(0, 0, 1280, 720); dissolve(bc, 16 * fl); c.globalAlpha = .85; c.drawImage(b, 0, 0); c.globalAlpha = 1; }
+    } }),
+];
+
+// ---------- horloge des scènes ----------
+function phaseAt(T, t) { // T = [in, hold, out] ; repos 0,9 s avant et après
+  const pre = .6, post = .9;
+  if (t < pre) return ["rest", 0, t + post];
+  t -= pre; if (t < T[0]) return ["in", t / T[0], t];
+  t -= T[0]; if (t < T[1]) return ["hold", t / T[1], t];
+  t -= T[1]; if (t < T[2]) return ["out", t / T[2], t];
+  return ["rest", 1, t - T[2]];
+}
+const cycleLen = T => .6 + T[0] + T[1] + T[2] + .9;
+const PH_NAMES = { in: "Apparition", hold: "Mise en valeur", out: "Disparition" };
+
+function frame(c, view) {
+  if (view.zoom) { c.canvas.width = 800; c.canvas.height = 340; c.setTransform(1, 0, 0, 1, -240, 0); }
+  else if (c.canvas.width !== 1280) { c.canvas.width = 1280; c.canvas.height = 720; }
+  if (!view.zoom) c.setTransform(1, 0, 0, 1, 0, 0);
+  c.imageSmoothingEnabled = false;
+  c.drawImage(back, 0, 0);
+}
+
+const cards = document.getElementById("cards");
+const views = [];
+for (const tr of TRACKS) {
+  const el = document.createElement("div"); el.className = "card" + (tr.rec ? " rec" : "");
+  el.innerHTML = `<h2>${tr.id} · ${tr.name}</h2><p>${tr.tags.map((t, i) => `<span class="tag${tr.rec && i === 0 ? " r" : ""}">${t}</span>`).join("")}</p>
+    <canvas width="1280" height="720"></canvas>
+    <div class="phases"><span data-p="in">Apparition · ${tr.t[0]} s</span><span data-p="hold">Mise en valeur · ${tr.t[1]} s</span><span data-p="out">Disparition · ${tr.t[2]} s</span></div>
+    <div class="cols">${tr.txt.map((t, i) => `<div style="grid-column:1/-1"><h3>${(tr.heads || ["Apparition", "Mise en valeur", "Disparition"])[i]}</h3><p>${t}</p></div>`).join("")}</div>`;
+  cards.appendChild(el);
+  const cnv = el.querySelector("canvas");
+  views.push({ tr, c: cnv.getContext("2d"), spans: el.querySelectorAll(".phases span"), t: 0, n: 0 });
+}
+
+// ---------- démonstration du combat ----------
+const cb = { c: document.getElementById("cb-canvas").getContext("2d"), fight: true, queue: [], held: [], calm: 0, play: null, t: 0, flyers: [], next: 0, packed: [] };
+const cbTrack = document.getElementById("cb-track");
+TRACKS.forEach((t, i) => cbTrack.add(new Option(`Piste ${t.id} · ${t.name}`, i)));
+const cbPool = ["lens", "ember", "veil", "frost", "chant", "wisp", "echo", "sack"];
+document.getElementById("cb-fight").onclick = e => { cb.fight = !cb.fight; e.target.textContent = cb.fight ? "Combat : oui" : "Combat : non (fin)";
+  e.target.classList.toggle("on", cb.fight); cb.calm = 0;
+  if (cb.fight && cb.play && cb.play.ph !== "out") { cb.play.cut = true; } };
+document.getElementById("cb-pick").onclick = () => {
+  const k = cbPool[cb.next++ % cbPool.length];
+  cb.packed.push(k); if (cb.packed.length > 10) cb.packed.shift();
+  if (cb.fight) { cb.flyers.push({ k, t: 0 }); cb.held.push(k); }
+  else { cb.queue.push(k); }
+};
+function cbStep(dt) {
+  if (!cb.fight) cb.calm += dt;
+  if (!cb.fight && cb.calm >= 1.5 && cb.held.length) { cb.held.sort((a, b) => RAR_ORDER.indexOf(D.mods[b].rarity) - RAR_ORDER.indexOf(D.mods[a].rarity)); cb.queue.push(...cb.held); cb.held = []; }
+  if (!cb.play && cb.queue.length && !cb.fight && (cb.gap = (cb.gap || 0) + dt) > .4) { cb.play = { k: cb.queue.shift(), t: .6, tr: TRACKS[+cbTrack.value] }; cb.gap = 0; }
+  if (cb.play) {
+    cb.play.t += dt; const T = cb.play.tr.t;
+    if (cb.play.cut) { const outStart = .6 + T[0] + T[1]; if (cb.play.t < outStart) { cb.held.unshift(cb.play.k); cb.play.t = outStart; } cb.play.cut = false; }
+    if (cb.play.t >= cycleLen(T) - .5) cb.play = null;
+  }
+  const st = document.getElementById("cb-status");
+  st.innerHTML = cb.fight ? `En combat · <b>${cb.held.length}</b> mod(s) en attente`
+    : cb.held.length ? `Calme depuis ${cb.calm.toFixed(1)} s / 1,5 s` : cb.play || cb.queue.length ? `Affichage · ${cb.queue.length} encore en file` : "Calme";
+}
+function cbDraw() {
+  const c = cb.c; frame(c, { zoom: false });
+  if (cb.fight) { // liseré rouge discret = « en combat » pour la démo seulement
+    c.fillStyle = "rgba(140,30,40,.18)"; c.fillRect(0, 0, 1280, 6); c.fillRect(0, 714, 1280, 6); c.fillRect(0, 0, 6, 720); c.fillRect(1274, 0, 6, 720);
+    txt(c, "démo : en combat", 1260, 150, 12, "#f0a0a0", { align: "right" });
+  }
+  // mods entrés au paquetage
+  cb.packed.forEach((k, i) => { if (!cb.flyers.some(f => f.k === k && f.t < .45)) icon(c, k, SLOT0[0] + i * 46, SLOT0[1], 1); });
+  for (const f of cb.flyers) { const p = clamp(f.t / .45), i = cb.packed.indexOf(f.k), tx = SLOT0[0] + Math.max(0, i) * 46;
+    if (p < 1) { c.fillStyle = "rgba(0,0,0,0)"; icon(c, f.k, lerp(640, tx, eOut(p)), lerp(280, SLOT0[1], eOut(p)), lerp(1.4, 1, p)); }
+    else if (p < 1.6) star(c, tx + 14, SLOT0[1] - 14, 2, RAR[D.mods[f.k].rarity][1]); }
+  if (cb.held.length) { const best = cb.held.reduce((a, k) => Math.max(a, RAR_ORDER.indexOf(D.mods[k].rarity)), 0), col = RAR[RAR_ORDER[best]][1];
+    c.fillStyle = "#04141a"; c.beginPath(); c.arc(66, 553, 11, 0, 7); c.fill(); c.fillStyle = col; c.beginPath(); c.arc(66, 553, 9, 0, 7); c.fill();
+    txt(c, "+" + cb.held.length, 66, 558, 12, "#04141a", { bold: true, align: "center", shadow: null }); }
+  if (cb.play) { const [ph, u, s] = phaseAt(cb.play.tr.t, cb.play.t); cb.play.ph = ph; cb.play.tr.draw(c, cb.play.k, ph, u, s); }
+}
+
+// ---------- boucle ----------
+let last = 0;
+function tick(now) {
+  const dt = Math.min(.05, (now - (last || now)) / 1000) * (slow ? .3 : 1); last = now;
+  for (const v of views) {
+    v.t += dt; const L = cycleLen(v.tr.t);
+    if (v.t >= L) { v.t -= L; v.n++; }
+    const k = pinned || CYCLE[v.n % CYCLE.length];
+    frame(v.c, { zoom });
+    const [ph, u, s] = phaseAt(v.tr.t, v.t);
+    v.tr.draw(v.c, k, ph, u, s);
+    v.spans.forEach(sp => sp.classList.toggle("on", sp.dataset.p === ph));
+  }
+  for (const f of cb.flyers) f.t += dt;
+  cb.flyers = cb.flyers.filter(f => f.t < 2);
+  cbStep(dt); cbDraw();
+  if (!window.FROZEN) requestAnimationFrame(tick);
+}
+// Inspection : REVEAL.at(piste, mod, phase, u, s) dessine une image figée dans la scène de la piste.
+window.REVEAL = { at(i, k, ph, u, s) { window.FROZEN = true; const v = views[i]; frame(v.c, { zoom }); v.tr.draw(v.c, k, ph, u, s); } };
+
+const pick = document.getElementById("pick");
+pick.add(new Option("Mods en alternance", ""));
+for (const [k, m] of Object.entries(D.mods)) pick.add(new Option(`${m.name} · ${RAR[m.rarity][0]}`, k));
+pick.onchange = () => { pinned = pick.value; };
+document.getElementById("slow").onclick = e => { slow = !slow; e.target.classList.toggle("on", slow); };
+document.getElementById("zoom").onclick = e => { zoom = !zoom; e.target.classList.toggle("on", zoom); };
+
+let pending = 3;
+const go = () => { if (--pending) return; bakeIcons(); bakeBayer(views[0].c); requestAnimationFrame(tick); };
+atlas.onload = go; back.onload = go; atlas.src = D.atlas; back.src = D.backdrop;
+document.fonts.load("bold 18px HudSerif").then(go, go);
+</script>
+</body>
+</html>

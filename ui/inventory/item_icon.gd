@@ -7,6 +7,30 @@ const ITEM_ORDER := ["wood", "rock", "torch", "pickaxe", "arrows", "bow", "sword
 		"firing_post", "barricade", "fishing_rod", "caltrops", "copper_ingot", "iron_ingot", "gold_ingot"]
 
 
+## Mods de l'Exilé (planches/mods-icones-propositions.html, style A « Cartouche », bilan du 2026-11-21) : une colonne
+## de 32 px par mod dans assets/ardoise/ui/mods.png (tools/mods/export.py), clé = champ « module » de data/gear_items.gd.
+## Rangées : plaque teintée du mod, bord et reflet en blanc (teintés ici à la rareté), motif = ce qu'on voit porté.
+const MOD_ORDER := ["veil", "iris", "drill", "scale", "ember", "magnet", "lens", "barrel", "frost", "seal", "wisp", "anchor",
+		"chant", "sack", "echo"]
+const MODS_TEX := preload("res://assets/ardoise/ui/mods.png")
+## Bord d'un mod normal : gris neutre, pour ne pas reprendre la teinte d'une rareté.
+const MOD_NORMAL_EDGE := Color("#7a8488")
+
+
+## Icône d'un mod (32 × 32 natifs × scale_factor) : plaque, bord couleur de rareté, reflet éclairci, motif.
+static func draw_mod(canvas: CanvasItem, item: String, center: Vector2, scale_factor: float) -> bool:
+	var col := MOD_ORDER.find(String(Gear.ITEMS.get(item, {}).get("module", "")))
+	if col < 0:
+		return false
+	var size := Vector2.ONE * 32 * scale_factor
+	var r := Rect2((center - size * 0.5).round(), size)
+	var edge := Loot.rarity_color(item) if Loot.rarity_of(item) != "normal" else MOD_NORMAL_EDGE
+	var tints: Array[Color] = [Color.WHITE, edge, edge.lerp(Color.WHITE, 0.45), Color.WHITE]
+	for row in 4:
+		canvas.draw_texture_rect_region(MODS_TEX, r, Rect2(col * 32, row * 32, 32, 32), tints[row])
+	return true
+
+
 ## Butins courants (sim/loot.gd), dessinés en aplats sur une grille 16 × 16 : [x, y, largeur, hauteur, couleur].
 const LOOT_ICONS := {
 	"ichor": [[6, 2, 4, 2, "#1a0608"], [5, 4, 6, 2, "#1a0608"], [4, 6, 8, 6, "#1a0608"], [5, 12, 6, 1, "#1a0608"],
@@ -20,12 +44,6 @@ const LOOT_ICONS := {
 		[12, 8, 1, 2, "#c0dcff"], [7, 1, 2, 2, "#061014"], [7, 14, 2, 1, "#061014"]],
 	"guano": [[3, 9, 11, 5, "#2a2620"], [5, 5, 7, 5, "#2a2620"], [7, 2, 4, 4, "#2a2620"], [4, 10, 9, 3, "#c8c2ac"], [6, 6, 5, 4, "#c8c2ac"], [8, 3, 2, 3, "#eee8d4"],
 		[6, 6, 2, 1, "#eee8d4"], [5, 10, 3, 1, "#eee8d4"], [9, 12, 4, 1, "#8a8474"]],
-	"module_veil": [[2, 2, 12, 12, "#0a3a48"], [3, 3, 10, 10, "#12596b"], [5, 4, 6, 1, "#c8fbff"], [4, 5, 8, 1, "#5ce8ff"], [4, 6, 8, 5, "#1f9fb8"],
-		[5, 6, 1, 6, "#c8fbff"], [8, 6, 1, 7, "#5ce8ff"], [11, 6, 1, 5, "#c8fbff"], [6, 11, 2, 2, "#1f9fb8"], [9, 11, 2, 1, "#1f9fb8"]],
-	"module_drill": [[2, 2, 12, 12, "#0a3a48"], [3, 3, 10, 10, "#12596b"], [5, 4, 6, 2, "#c8fbff"], [5, 6, 6, 2, "#5ce8ff"], [6, 8, 4, 2, "#c8fbff"], [6, 10, 4, 1, "#5ce8ff"],
-		[7, 11, 2, 2, "#c8fbff"], [5, 5, 6, 1, "#1f9fb8"], [6, 7, 4, 1, "#1f9fb8"], [7, 9, 2, 1, "#1f9fb8"]],
-	"module_iris": [[2, 2, 12, 12, "#0a3a48"], [3, 3, 10, 10, "#12596b"], [4, 6, 8, 4, "#c8fbff"], [5, 5, 6, 6, "#c8fbff"], [6, 6, 4, 4, "#1f9fb8"],
-		[7, 7, 2, 2, "#0a1a20"], [7, 6, 1, 1, "#ffffff"], [3, 7, 1, 2, "#5ce8ff"], [12, 7, 1, 2, "#5ce8ff"]],
 	"ration": [[2, 5, 12, 9, "#2a1a0e"], [3, 7, 10, 5, "#c8a676"], [4, 6, 8, 1, "#ecd6a4"], [4, 12, 8, 1, "#7a5a38"],
 		[5, 8, 1, 3, "#8a6a48"], [8, 8, 1, 3, "#8a6a48"], [11, 8, 1, 3, "#8a6a48"]],
 }
@@ -33,6 +51,8 @@ const LOOT_ICONS := {
 
 static func draw_item(canvas: CanvasItem, item: String, center: Vector2, scale_factor: float) -> void:
 	var gear: Dictionary = Gear.ITEMS.get(item, {})
+	if gear.has("module") and draw_mod(canvas, item, center, scale_factor):
+		return
 	if not gear.is_empty() and not LOOT_ICONS.has(item):
 		# Arme du Creuset : son icône 32 × 32 dessinée (planches/armes-creuset.html).
 		var wi := TyrienArt.weapon_icon(item)

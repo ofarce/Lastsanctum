@@ -495,14 +495,14 @@ func _biome2_restes(sim: Simulation, eng: Unit) -> void:
 	var terrain: Node = _world.get_node_or_null("Terrain")
 	if terrain == null:
 		for c: Node in _world.get_children():
-			if c.has_method("_biome_tint"):
+			if c.has_method("rock_tier_px"):
 				terrain = c
 	if terrain:
 		var rows := {}
 		for ky in range(-8, 4):
 			var z: float = (float(ky * int(terrain.chunk) - int(terrain.origin.y)) + float(terrain.chunk) * 0.5) / 8.0
-			rows[ky] = "z %.0f %s" % [z, "teinté" if terrain._biome_tint(Vector2i(0, ky)) != Color.WHITE else "neutre"]
-		print("teinte par rangée de blocs (frontière en z ", north, ") · ", rows)
+			rows[ky] = "z %.0f %s" % [z, "vert-de-gris" if terrain.rock_tier_px(ky * int(terrain.chunk) + int(terrain.chunk) / 2) == 1 else "ardoise"]
+		print("roche par rangée de blocs (frontière en z ", north, ") · ", rows)
 	# Archer : dégâts avec et sans Pointes de cuivre ; Puits : soin avec et sans Baume.
 	var archer := sim.spawn("Archer", eng.x + 300.0, eng.z, "archer")
 	var dummy := Enemy.make("creep", eng.x + 300.0, eng.z + 2.0, 99.0)

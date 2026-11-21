@@ -77,6 +77,8 @@ const STAFF_MAX := 5
 const MINER_ROLE := "aether"
 const MINERS_MAX := 5
 const MINE_BATCH := 5
+## Adeptes au plus sur un même nœud de minage (bloc, filon, paire de minerai) ou bosquet pétrifié ; l'Ingénieur n'y compte pas.
+const NODE_ADEPTS_MAX := 3
 
 ## Population (2026-11-19) : POP_BASE places, +POP_PER_BEDROOM par Chambre achevée (sans personnel depuis le 2026-11-20) ; ancien texte : tenue par un adepte de
 ## Medeina. Un combattant de caserne occupe POP_WEIGHT places, toute autre unité une seule. Le plafond ne
