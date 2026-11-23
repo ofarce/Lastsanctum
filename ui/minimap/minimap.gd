@@ -33,6 +33,8 @@ var _bg_seed := -1
 var _meta: Dictionary
 var _view := PackedVector2Array()
 const WIN_STEP := 32.0
+## Fenêtre imposée (carte des portails, MinimapOverlay) : tout le réseau ; vide = fenêtre qui suit la caméra.
+static var focus := Rect2()
 ## Fenêtre affichée (unités du monde).
 static var win := Rect2(CaveShape.START_X0, CaveShape.START_Z0, CaveShape.START_X1 - CaveShape.START_X0, CaveShape.START_Z1 - CaveShape.START_Z0)
 var _bg_win := Rect2()
@@ -230,7 +232,7 @@ func refresh() -> void:
 	var st := world.terrain_state
 	# Fenêtre figée pendant un clic-glisser sur la minicarte (elle ne bouge pas sous le curseur).
 	if not _dragging:
-		win = window_for(world.camera.cam)
+		win = focus if focus.has_area() else window_for(world.camera.cam)
 	# Fond et brouillard ne changent qu'avec le terrain, la fenêtre ou la vue des unités : leur fondu (toute la
 	# carte) est gardé en cache. À chaque rafraîchissement, seuls les rectangles des points sont refondus, à
 	# partir de l'image « fond + points » : pixel pour pixel le même résultat qu'un fondu de toute la carte.
@@ -310,6 +312,43 @@ func frame_image() -> Image:
 	return _frame
 
 
+## Alertes situées (Events.map_alert) : anneaux rouges qui pulsent PING_TIME secondes (temps réel).
+const PING_TIME := 5.0
+const PING_COLOR := Color("#ff4a3d")
+var pings: Array[Dictionary] = []
+
+
+func ping(x: float, z: float) -> void:
+	pings.append({"p": Vector2(x, z), "at": Time.get_ticks_msec() / 1000.0})
+	if pings.size() > 6:
+		pings.pop_front()
+	queue_redraw()
+
+
+func _process(_delta: float) -> void:
+	if pings.is_empty():
+		return
+	var now := Time.get_ticks_msec() / 1000.0
+	pings = pings.filter(func(g: Dictionary) -> bool: return now - float(g["at"]) < PING_TIME)
+	queue_redraw()
+
+
+## Anneaux d'alerte dans le rectangle r (minicarte ou carte plein écran) ; `k` : échelle des rayons.
+func draw_pings(ci: CanvasItem, r: Rect2, k := 1.0) -> void:
+	var now := Time.get_ticks_msec() / 1000.0
+	for g: Dictionary in pings:
+		var age := now - float(g["at"])
+		if age >= PING_TIME:
+			continue
+		var q: Vector2 = r.position + map_pt(g["p"].x, g["p"].y) / Vector2(W, H) * r.size
+		q = q.clamp(r.position + Vector2(3, 3), r.end - Vector2(3, 3))
+		var fade := 1.0 - age / PING_TIME
+		for n in 2:
+			var t := fmod(age + n * 0.45, 0.9) / 0.9
+			ci.draw_arc(q, (3.0 + 11.0 * t) * k, 0.0, TAU, 24, Color(PING_COLOR, 0.9 * (1.0 - t) * fade), 1.5 * k)
+		ci.draw_circle(q, 2.5 * k, Color(PING_COLOR, fade))
+
+
 func _draw() -> void:
 	# Bordure de 1 px (#minimap), puis le canvas étiré à l'intérieur.
 	var r := Rect2(Vector2.ZERO, size)
@@ -332,6 +371,7 @@ func _draw() -> void:
 				PackedVector2Array([inner.position, Vector2(inner.end.x, inner.position.y), inner.end, Vector2(inner.position.x, inner.end.y)]))
 			for s in seg:
 				draw_polyline(s, Color("#f4e0a6cc"), 1.0)
+	draw_pings(self, inner)
 
 
 # ---------------------------------------------------------------- Navigation

@@ -1,0 +1,447 @@
+<meta charset="utf-8">
+<title>Portails de Merenor</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* Planche sombre comme les autres planches du projet : une seule ambiance, la caverne. */
+:root{--bg:#14161b;--panel:#1d2028;--line:#2c313c;--ink:#e6e8ee;--mute:#9aa1b0;--body:#c9cdd6;--warm:#ffb48a;--red:#e0583a;--teal:#5fa9b8;color-scheme:dark}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,sans-serif}
+main{max-width:1400px;margin:0 auto;padding-block:24px 60px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+h1{font-size:26px;margin:0 0 4px;text-wrap:balance}
+h2{font-size:19px;margin:34px 0 6px;text-wrap:balance}
+.sub{color:var(--mute);margin:0 0 14px;max-width:70ch}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,430px),1fr));gap:16px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:8px;overflow:hidden;min-width:0}
+canvas{display:block;width:100%;height:auto;max-width:100%;image-rendering:pixelated;background:#000}
+.txt{padding:10px 14px 14px;border-top:1px solid var(--line)}
+.txt h3{margin:0 0 4px;font-size:16px}
+.txt h3 span{color:var(--mute);font-weight:400;margin-right:6px;font-variant-numeric:tabular-nums}
+.txt p{margin:4px 0;color:var(--body);font-size:14px}
+.bar{position:sticky;top:env(safe-area-inset-top,0px);background:var(--bg);padding:8px 0;z-index:2;display:flex;gap:6px;flex-wrap:wrap;align-items:center;border-bottom:1px solid var(--line);margin-bottom:6px}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+button{background:#2a2f3a;color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:5px 10px;cursor:pointer;font:inherit;font-size:13px}
+button.on{background:#4a3236;border-color:#7a3a3a}
+button:focus-visible{outline:2px solid var(--warm);outline-offset:2px}
+.phase{color:var(--warm);font-size:14px;min-height:21px;margin:0 0 10px}
+.rules{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr));gap:10px;margin:6px 0 0}
+.rules div{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px 14px;font-size:14px;color:var(--body);min-width:0}
+.rules b{color:var(--ink)}
+.rules .k{display:block;color:var(--mute);font-size:12px;letter-spacing:.06em;text-transform:uppercase;margin-bottom:2px}
+.schemes{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,430px),1fr));gap:16px}
+.schemes svg{display:block;width:100%;height:auto;background:#0d0f14}
+.err{color:#ff8a7a}
+</style>
+
+<main>
+<h1>Portails de Merenor</h1>
+<p class="sub">Un pylône canalisé par les quatre esprits devient un portail vers tout autre pylône canalisé, et vers l’Ancre. De temps en temps, Merenor reprend un pylône le temps d’un reflux, annoncé à l’avance : une meute sort par le portail, puis tout redevient normal. La planche propose l’allure du portail, l’annonce du reflux et la façon de choisir la destination. Les sprites du pylône, des esprits, de l’Exilé, du mineur et des chiens sont ceux du jeu.</p>
+<div class="bar">
+ <button id="pause">Pause</button>
+ <button id="dark">Caverne sombre</button>
+ <button id="slow">Ralenti ×½</button>
+</div>
+
+<h2>1 · Le portail ouvert</h2>
+<p class="sub">Chaque modèle joue le même cycle : l’Exilé part vers le pylône des Veines, puis un mineur d’Aether en revient avec sa caisse. Le seuil est au pied de la face sud du socle, là où l’Exilé bénit déjà le pylône.</p>
+<p class="phase" id="ph-a"></p>
+<div class="grid" id="root-a"></div>
+
+<h2>2 · L’annonce du reflux</h2>
+<p class="sub">Même déroulé pour les quatre : calme, annonce de 60 s (jouée ici ×10 plus vite) avec la bannière et le minuteur rouge, sortie de la meute par le seuil, retour du pylône à la normale pendant que la meute attaque les esprits, puis meute abattue. Ce qui change, c’est la façon dont le pylône prévient.</p>
+<p class="phase" id="ph-b"></p>
+<div class="grid" id="root-b"></div>
+
+<h2>3 · Choisir la destination</h2>
+<p class="sub">Trois façons de dire où l’on va. Les noms des pylônes sont des exemples.</p>
+<div class="grid" id="root-c"></div>
+
+<h2>4 · Où sort le reflux</h2>
+<p class="sub">Deux règles possibles pour l’endroit où la meute apparaît. Ma recommandation : la première au biome 1 et 2, la seconde gardée pour un biome plus profond.</p>
+<div class="schemes">
+ <div class="card">
+  <svg viewBox="0 0 440 250" role="img" aria-label="Sortie sur place : la meute sort du pylône corrompu">
+   <g font-family="system-ui,sans-serif" font-size="12" fill="#c9cdd6">
+    <line x1="220" y1="210" x2="90" y2="70" stroke="#5fa9b8" stroke-width="2" stroke-dasharray="5 5"/>
+    <line x1="220" y1="210" x2="350" y2="70" stroke="#5fa9b8" stroke-width="2" stroke-dasharray="5 5"/>
+    <line x1="90" y1="70" x2="350" y2="70" stroke="#5fa9b8" stroke-width="2" stroke-dasharray="5 5" opacity=".5"/>
+    <circle cx="220" cy="210" r="13" fill="#e8c35a"/><text x="220" y="240" text-anchor="middle">Ancre</text>
+    <circle cx="90" cy="70" r="12" fill="#2a2f3a" stroke="#d8d4ca" stroke-width="3"/><text x="90" y="40" text-anchor="middle">Temple</text>
+    <circle cx="350" cy="70" r="12" fill="#3a1216" stroke="#e0583a" stroke-width="3"/><text x="350" y="40" text-anchor="middle" fill="#ffb48a">Veines · reflux</text>
+    <g fill="#e0583a"><circle cx="330" cy="100" r="5"/><circle cx="352" cy="108" r="5"/><circle cx="372" cy="96" r="5"/><circle cx="345" cy="124" r="5"/></g>
+    <text x="22" y="140" fill="#9aa1b0">La meute sort au pylône repris.</text>
+    <text x="22" y="158" fill="#9aa1b0">On y court par un autre portail.</text>
+   </g>
+  </svg>
+  <div class="txt"><h3><span>A</span>Sortie sur place</h3><p>Le pylône repris lâche sa meute chez lui. Le joueur prend le portail le plus proche pour aller défendre les esprits. Lisible, et le réseau sert à porter secours. Le portail repris est fermé pendant le reflux.</p></div>
+ </div>
+ <div class="card">
+  <svg viewBox="0 0 440 250" role="img" aria-label="Sortie à travers le réseau : la meute sort à un autre pylône relié">
+   <g font-family="system-ui,sans-serif" font-size="12" fill="#c9cdd6">
+    <line x1="220" y1="210" x2="90" y2="70" stroke="#e0583a" stroke-width="2" stroke-dasharray="5 5"/>
+    <line x1="220" y1="210" x2="350" y2="70" stroke="#5fa9b8" stroke-width="2" stroke-dasharray="5 5"/>
+    <line x1="90" y1="70" x2="350" y2="70" stroke="#e0583a" stroke-width="2" stroke-dasharray="5 5"/>
+    <circle cx="220" cy="210" r="13" fill="#e8c35a"/><text x="220" y="240" text-anchor="middle">Ancre</text>
+    <circle cx="90" cy="70" r="12" fill="#2a2f3a" stroke="#d8d4ca" stroke-width="3"/><text x="90" y="40" text-anchor="middle">Temple</text>
+    <circle cx="350" cy="70" r="12" fill="#3a1216" stroke="#e0583a" stroke-width="3"/><text x="350" y="40" text-anchor="middle" fill="#ffb48a">Veines · repris</text>
+    <g fill="#e0583a"><circle cx="196" cy="190" r="5"/><circle cx="208" cy="174" r="5"/><circle cx="74" cy="96" r="5"/><circle cx="100" cy="102" r="5"/></g>
+    <text x="250" y="150" fill="#9aa1b0">La corruption remonte les liens :</text>
+    <text x="250" y="168" fill="#9aa1b0">la meute sort ailleurs,</text>
+    <text x="250" y="186" fill="#9aa1b0">l’annonce dit où.</text>
+   </g>
+  </svg>
+  <div class="txt"><h3><span>B</span>Sortie à travers le réseau</h3><p>Le pylône repris reste calme, mais sa meute sort par un autre portail relié, tiré au hasard et annoncé, parfois celui de l’Ancre. Chaque pylône ajouté au réseau est une porte de plus. Plus riche, plus punitif.</p></div>
+ </div>
+</div>
+
+<h2>Règles proposées</h2>
+<div class="rules">
+ <div><span class="k">Nœud de base</span><b>L’Ancre est un portail toujours ouvert.</b> Sans elle, le premier pylône canalisé ne mène nulle part.</div>
+ <div><span class="k">Qui voyage</span><b>L’Exilé incarné, les adeptes et les unités.</b> Les mineurs passent par les portails dans leurs trajets, c’est le vrai gain pour les ressources lointaines.</div>
+ <div><span class="k">Fermetures</span><b>Pas de voyage en combat ni vers un pylône en reflux.</b> On ne fuit pas un combat par le portail.</div>
+ <div><span class="k">Enjeu</span><b>La meute vise les quatre esprits.</b> Si l’un d’eux tombe, la canalisation casse : la nappe et la meute de garde reviennent.</div>
+ <div><span class="k">Cadence</span><b>Un seul reflux à la fois dans tout le réseau.</b> Environ un tous les deux jours par pylône canalisé, jamais pendant la vague de jour.</div>
+ <div><span class="k">Meute</span><b>La faune du pylône, pas de squelettes.</b> Taille indexée sur la menace et sur le biome, comme les meutes de nuit.</div>
+</div>
+<p id="err" class="err"></p>
+<div hidden>
+ <img id="im-floor" alt="" src="@@planches/assets/pylone/floor.png@@">
+ <img id="im-pch" alt="" src="@@assets/imported/pylon/pylon_channel.png@@">
+ <img id="im-pco" alt="" src="@@assets/imported/pylon/pylon_corrupt.png@@">
+ <img id="im-psd" alt="" src="@@assets/imported/pylon/pylon_sides.png@@">
+ <img id="im-medeina" alt="" src="@@planches/assets/pylone/medeina_pray.png@@">
+ <img id="im-indra" alt="" src="@@planches/assets/pylone/indra_pray.png@@">
+ <img id="im-aether" alt="" src="@@planches/assets/pylone/aether_pray.png@@">
+ <img id="im-sigil" alt="" src="@@planches/assets/pylone/sigil_pray.png@@">
+ <img id="im-exil" alt="" src="@@assets/imported/engineer/exil/exil_base.png@@">
+ <img id="im-carry" alt="" src="@@assets/baked/adepts/aether_carry.png@@">
+ <img id="im-bwalk" alt="" src="@@assets/imported/enemies/beast_walk.png@@">
+ <img id="im-batk" alt="" src="@@assets/imported/enemies/beast_attack.png@@">
+</div>
+</main>
+<script>
+const W=320,H=320,Z=2,AX=160,AY=172,PI2=Math.PI*2,P=[160,228],FOC=[AX,AY-89];
+const STONE=[[21,19,26],[31,28,38],[43,39,51],[56,51,66],[74,68,85],[97,90,110]];
+const RED=[[58,12,16],[110,26,28],[168,48,42],[224,88,58],[255,180,138],[255,240,216]];
+const SLIME=[14,11,18],SLIME2=[22,18,28],SH1=[60,64,80],WHITE=[255,255,250];
+const CULT={aether:[122,134,255],indra:[255,154,58],medeina:[111,224,122],sigil:[216,212,202]};
+const ORDER=['aether','indra','medeina','sigil'];
+const SPOT={aether:[34,62],indra:[286,62],medeina:[286,306],sigil:[34,306]};
+const clamp=(v,a=0,b=1)=>v<a?a:v>b?b:v,frac=v=>v-Math.floor(v),lerp=(a,b,k)=>a+(b-a)*k,ease=k=>k*k*(3-2*k);
+const mix=(a,b,k)=>[a[0]+(b[0]-a[0])*k,a[1]+(b[1]-a[1])*k,a[2]+(b[2]-a[2])*k];
+function hash2(i,j,s){let h=(Math.imul(i,374761393)+Math.imul(j,668265263)+Math.imul(s,1442695041))|0;h=Math.imul(h^(h>>>13),1274126177);h^=h>>>16;return (h>>>0)/4294967296}
+function vn(x,y,s){const i=Math.floor(x),j=Math.floor(y),fx=x-i,fy=y-j,u=fx*fx*(3-2*fx),v=fy*fy*(3-2*fy),a=hash2(i,j,s),b=hash2(i+1,j,s),c=hash2(i,j+1,s),d=hash2(i+1,j+1,s);return a+(b-a)*u+(c-a)*v+(a-b-c+d)*u*v}
+const fbm=(x,y,s)=>vn(x,y,s)*.57+vn(x*2.1,y*2.1,s+1)*.29+vn(x*4.3,y*4.3,s+2)*.14;
+const BAY=[0,8,2,10,12,4,14,6,3,11,1,9,15,7,13,5],bay=(x,y)=>(BAY[(y&3)*4+(x&3)]+.5)/16;
+const quad=(dx,dy)=>dy<0?(dx<0?'aether':'indra'):(dx<0?'sigil':'medeina');
+
+/* ───── champs fixes de la nappe (forme « Nappe débordante » de la v2) ───── */
+const RCX=160,RCY=176,NB=new Float32Array(W*H),NM=new Float32Array(W*H),NV=new Float32Array(W*H),FC=new Float32Array(W*H),DR=new Float32Array(W*H),ZE=new Float32Array(W*H);
+(function(){const sat=[];for(let k=0;k<9;k++)sat.push({a:hash2(k,1,81)*PI2,r:hash2(k,2,81),s:hash2(k,3,81)});
+ for(let y=0;y<H;y++)for(let x=0;x<W;x++){const i=y*W+x;NB[i]=fbm(x*.11,y*.11,1);NM[i]=fbm(x*.3,y*.3,5);NV[i]=fbm(x*.05,y*.05,9);
+  let d=9;const gx=Math.floor(x/5),gy=Math.floor(y/5);for(let a=-1;a<=1;a++)for(let b=-1;b<=1;b++){const cx=(gx+a)*5+hash2(gx+a,gy+b,3)*5,cy=(gy+b)*5+hash2(gx+a,gy+b,4)*5;d=Math.min(d,Math.hypot(x-cx,y-cy))}FC[i]=d;
+  const dx=x+.5-RCX,dy=(y+.5-RCY)*1.12,dd=Math.hypot(dx,dy),th=Math.atan2(dy,dx),ca=Math.cos(th),sa=Math.sin(th),loc=NB[i]-.5;DR[i]=dd+loc*18;
+  const L1=(fbm(ca*1.6+3,sa*1.6+3,71)-.5)*2.6,L1b=(fbm(ca*3.2+1,sa*3.2+1,74)-.5)*2;let e=88+L1*58+L1b*20+loc*26-dd;
+  for(const q of sat){const R0=88+(fbm(Math.cos(q.a)*1.6+3,Math.sin(q.a)*1.6+3,71)-.5)*2.6*58,cx=RCX+Math.cos(q.a)*(R0+14+q.r*28),cy=RCY+Math.sin(q.a)*(R0+14+q.r*28)/1.12;e=Math.max(e,4+q.s*7+loc*6-Math.hypot(x-cx,y-cy))}
+  ZE[i]=e}})();
+
+/* ───── atlas ───── */
+const ATL={};let FLOOR=null;
+function atlas(key,id,fw,fh,cols,ax,ay,y0=0){const img=document.getElementById('im-'+id),c=document.createElement('canvas');c.width=img.naturalWidth;c.height=img.naturalHeight;const g=c.getContext('2d');g.drawImage(img,0,0);
+ ATL[key]={img,w:img.naturalWidth,d:g.getImageData(0,0,img.naturalWidth,img.naturalHeight).data,fw,fh,cols,ax,ay,y0}}
+
+/* ───── tampon courant ───── */
+let B,EM,GL,dark=false,paused=false,slow=false;
+function put(x,y,c,emit){x|=0;y|=0;if(x<0||y<0||x>=W||y>=H)return;const o=(y*W+x)*4;B[o]=c[0];B[o+1]=c[1];B[o+2]=c[2];if(emit)EM[y*W+x]=1}
+function blend(x,y,c,a,emit){x|=0;y|=0;if(x<0||y<0||x>=W||y>=H)return;const o=(y*W+x)*4;B[o]+=(c[0]-B[o])*a;B[o+1]+=(c[1]-B[o+1])*a;B[o+2]+=(c[2]-B[o+2])*a;if(emit)EM[y*W+x]=1}
+function glow(cx,cy,r,col,a){if(a<=0)return;for(let y=Math.max(0,Math.floor(cy-r));y<=Math.min(H-1,cy+r);y++)for(let x=Math.max(0,Math.floor(cx-r));x<=Math.min(W-1,cx+r);x++){const d=Math.hypot(x-cx,y-cy);if(d>=r)continue;const f=Math.ceil((1-d/r)*3)/3*a,i=(y*W+x)*3;GL[i]+=col[0]/255*f;GL[i+1]+=col[1]/255*f;GL[i+2]+=col[2]/255*f}}
+function shadow(fx,fy,rx,ry){for(let y=Math.floor(fy-ry);y<=fy+ry;y++)for(let x=Math.floor(fx-rx);x<=fx+rx;x++){if(x<0||y<0||x>=W||y>=H)continue;if(((x-fx)/rx)**2+((y-fy)/ry)**2>1)continue;const o=(y*W+x)*4;B[o]*=.6;B[o+1]*=.6;B[o+2]*=.62}}
+/* o : sc (échelle), flip, vis (fondu tramé), sil (silhouette de slime), top/bot (lignes d'écran coupées), rows(Y,rel) → visible, tint + tk, emit */
+function blit(A,f,fx,fy,o={}){
+ const sc=o.sc||1,vis=o.vis??1,sil=o.sil||0,col=f%A.cols,row=(f/A.cols)|0,sx0=col*A.fw,sy0=A.y0+row*A.fh;
+ const dw=Math.round(A.fw*sc),dh=Math.round(A.fh*sc),X0=Math.round(fx-A.ax*sc),Y0=Math.round(fy-A.ay*sc),top=o.top??-1e9,bot=o.bot??1e9;
+ for(let dy=0;dy<dh;dy++){const Y=Y0+dy;if(Y<0||Y>=H||Y<top||Y>=bot)continue;const yy=Math.min(A.fh-1,(dy/sc)|0);if(o.rows&&!o.rows(Y,dy/dh))continue;
+  for(let dx=0;dx<dw;dx++){const X=X0+dx;if(X<0||X>=W)continue;const x0=Math.min(A.fw-1,(dx/sc)|0),xx=o.flip?A.fw-1-x0:x0;
+   const si=((sy0+yy)*A.w+sx0+xx)*4,a=A.d[si+3];if(a<10)continue;if(vis<1&&bay(X,Y)>=vis)continue;
+   let c=[A.d[si],A.d[si+1],A.d[si+2]];
+   if(sil>0&&bay(X+1,Y+2)<sil){const up=yy>0?A.d[si-A.w*4+3]:0;c=up<10?SH1:SLIME}
+   if(o.tint)c=mix(c,o.tint,o.tk);
+   blend(X,Y,c,a/255,o.emit)}}}
+
+/* ───── décor commun ───── */
+function floor(){for(let y=0;y<H;y++)for(let x=0;x<W;x++){const o=(y*W+x)*4,fo=(((y+11)%504)*504+((x+37)%504))*4;B[o]=FLOOR[fo];B[o+1]=FLOOR[fo+1];B[o+2]=FLOOR[fo+2];B[o+3]=255}}
+/* pylône depuis les atlas du jeu ; k = part corrompue, mode 'dither' ou 'top' (la corruption descend du sommet) */
+function pylon(t,k=0,mode='dither'){
+ const f=Math.floor(t*12)%48,C=ATL.pch,R=ATL.pco,col=f%12,row=(f/12)|0,X0=AX-36,Y0=AY-98;
+ for(let yy=0;yy<138;yy++)for(let xx=0;xx<72;xx++){const X=X0+xx,Y=Y0+yy;let useR=k>=1;
+  if(k>0&&k<1)useR=mode==='top'?yy<k*112+(hash2(xx,0,5)-.5)*6:bay(X,Y)<k;
+  const A=useR?R:C,si=((row*138+yy)*A.w+col*72+xx)*4,a=A.d[si+3];if(a<10)continue;
+  const c=[A.d[si],A.d[si+1],A.d[si+2]],em=Math.max(c[0],c[1],c[2])>150&&(Math.max(c[0],c[1],c[2])-Math.min(c[0],c[1],c[2])>60||c[0]>200);
+  blend(X,Y,c,1,em)}
+ if(k>0){const S=ATL.psd;for(let s=0;s<4;s++)for(let yy=0;yy<138;yy++)for(let xx=0;xx<72;xx++){const si=(yy*S.w+s*72+xx)*4;if(S.d[si+3]<10)continue;put(X0+xx,Y0+yy,[S.d[si],S.d[si+1],S.d[si+2]],1)}}
+ glow(AX,AY-89,22,k>.5?RED[3]:[235,232,222],.18+.08*Math.sin(t*Math.PI));}
+function spirit(cu,t,i,o={}){const p=SPOT[cu];shadow(p[0],p[1],6,2);blit(ATL[cu],Math.floor(t*12+i*6)%24,p[0]+(o.jit||0),p[1],{flip:p[0]>AX,vis:o.vis??1});glow(p[0],p[1]-14,12,CULT[cu],.2)}
+/* rayons de prière ; wave = ondulation, red = virage au rouge, gap = trous */
+function beams(t,o={}){const wave=o.wave||0,red=o.red||0,gap=o.gap||0,fy=FOC[1];
+ ORDER.forEach((cu,i)=>{const p=SPOT[cu],sx=p[0],sy=p[1]-15,n=Math.hypot(AX-sx,fy-sy)|0;
+  for(let k=0;k<n;k++){const q=k/n;if(gap>0&&frac(q*7-t*1.3+i*.3)<gap)continue;const w=wave*Math.sin(q*18-t*9+i)*Math.sin(q*Math.PI),nx=-(fy-sy)/n,ny=(AX-sx)/n;
+   const x=lerp(sx,AX,q)+nx*w,y=lerp(sy,fy,q)+ny*w,c=mix(mix(CULT[cu],WHITE,.35),RED[3],clamp(red*1.4-q*.4));put(x,y,c,1);if(k%3===0)glow(x,y,4,c,.12)}
+  if(!gap)for(let j=0;j<3;j++){const q=frac(t*.8+j/3+i*.1);glow(lerp(sx,AX,q),lerp(sy,fy,q),3,WHITE,.5)}})}
+function lighting(){for(let i=0;i<W*H;i++){const o=i*4,gi=i*3,gr=GL[gi],gg=GL[gi+1],gb=GL[gi+2];
+  if(dark&&!EM[i]){let L=.3+Math.min(1.1,(gr+gg+gb)/3*2.6);L=Math.round(L*6)/6;B[o]=B[o]*L+gr*120;B[o+1]=B[o+1]*L+gg*120;B[o+2]=B[o+2]*L+gb*120}
+  else{B[o]+=gr*120;B[o+1]+=gg*120;B[o+2]+=gb*120}}}
+function corruption(t,cov){if(cov<=0)return;
+ for(let y=0;y<H;y++)for(let x=0;x<W;x++){const i=y*W+x,e=Math.min(ZE[i],cov*175-DR[i]);if(e<-1.5)continue;const o=i*4;
+  if(e<0){B[o]*=.72;B[o+1]*=.72;B[o+2]*=.75;continue}
+  const d=FC[i];let c=d<.9?[6,5,8]:d<1.6?[30,26,36]:[19,16,24];if(NM[i]>.68&&d>1.6)c=[38,34,44];
+  const v=Math.abs(NV[i]-.5);if(v<.011){const rr=Math.hypot(x-RCX,y-RCY),lv=.2+.6*Math.max(0,Math.sin(rr*.18-t*3.2));c=RED[Math.round(lv*4)];if(v<.006)EM[i]=1;else c=mix(c,[30,10,14],.45)}else if(v<.02&&d<1.6)c=[46,14,18];
+  if(e<1.2)c=mix([B[o],B[o+1],B[o+2]],c,.6);B[o]=c[0];B[o+1]=c[1];B[o+2]=c[2]}
+ for(let k=0;k<40;k++){const per=1.6,q=frac((t+k*.17)/per),cyc=Math.floor((t+k*.17)/per),bx=8+(hash2(k,cyc,41)*304|0),by0=8+(hash2(k,cyc,42)*304|0);
+  if(Math.min(ZE[by0*W+bx],cov*175-DR[by0*W+bx])<2)continue;const by=Math.round(by0-q*14);if(bay(bx,by)>(1-q)*1.2)continue;const red=hash2(k,cyc,43)<.25;put(bx,by,red?RED[2]:[78,72,86],red)}}
+
+/* acteurs */
+const EX={walk:t=>({A:ATL.exwalk,f:Math.floor(t*14)%12}),idle:t=>({A:ATL.exidle,f:Math.floor(t*12)%72})};
+const AD={walk:t=>({A:ATL.carry,f:Math.floor(t*24)%24})};
+
+/* ───── 1 · les cinq portails ─────
+   under(s)  : dessiné au sol avant les acteurs ; over(s) : après ;
+   actor(q,dir,base) → options de blit (null = caché), q de 0 à 1, dir 'out' (départ) ou 'in' (arrivée) ; fx(q,dir,s) : effets */
+const PORTALS=[
+{name:'Seuil des quatre',
+ desc:'Un anneau au sol, découpé en quatre arcs aux couleurs des cultes, autour d’un creux d’étoiles qui tournent. On y descend comme dans l’eau, on en remonte de même. Très lisible de loin, et l’anneau peut virer au rouge par quartiers pendant le reflux.',
+ under(s){const rx=23,ry=8,[cx,cy]=P,fl=s.flash||0;
+  for(let y=cy-ry-1;y<=cy+ry+1;y++)for(let x=cx-rx-1;x<=cx+rx+1;x++){const dx=x+.5-cx,dy=y+.5-cy,e=(dx/rx)**2+(dy/ry)**2;if(e>1)continue;
+   const th=Math.atan2(dy*rx/ry,dx),rr=Math.sqrt(e);
+   if(rr>.8){const c=CULT[quad(dx,dy)],notch=frac((th+s.t*.9)/PI2*12)<.12;put(x,y,notch?WHITE:mix(c,WHITE,.15+.5*fl),1);continue}
+   const sw=frac(th/PI2*3+rr*1.6-s.t*.5);let c=[10,10,24];if(sw<.09&&bay(x,y)<.6)c=mix(CULT[quad(dx,dy)],WHITE,.4+fl*.4);else if(hash2(x,y,9)>.985)c=WHITE;
+   if(rr>.66&&bay(x,y)<.5)c=[22,20,40];put(x,y,mix(c,WHITE,fl*.3),sw<.09)}
+  glow(cx,cy,26,[220,225,255],.12+.2*fl)},
+ actor(q,dir){const k=dir==='out'?ease(q):1-ease(q);return {dy:k*36,bot:P[1]+5}},
+ fx(q,dir,s){const k=dir==='out'?q:1-q;s.flash=Math.sin(q*Math.PI);for(let i=0;i<16;i++){const a=hash2(i,1,3)*PI2,r=hash2(i,2,3)*18,u=frac(q*1.5+i/16);if(u>.9)continue;
+   put(P[0]+Math.cos(a)*r,P[1]+Math.sin(a)*r*.35-u*34*(dir==='out'?1:.6),mix(CULT[quad(Math.cos(a),Math.sin(a))],WHITE,.5),1)}}},
+
+{name:'Voile tissé',
+ desc:'Un ovale dressé devant le socle, tissé de lignes aux quatre couleurs qui défilent vers le bas. Le voyageur y entre et s’efface ligne par ligne ; à l’arrivée il est retissé du haut vers le bas. Le plus « porte » des cinq, et le seul qui se voit de profil.',
+ under(s){shadow(P[0],P[1]+1,14,3)},
+ mid(s){const cx=P[0],cy=P[1]-22,rx=12,ry=22,rip=s.rip||0;
+  for(let y=cy-ry;y<=cy+ry;y++)for(let x=cx-rx-3;x<=cx+rx+3;x++){const off=Math.sin(y*.45+s.t*5)*1.6*rip,dx=x+.5-cx-off,dy=y+.5-cy,e=(dx/rx)**2+(dy/ry)**2;if(e>1)continue;
+   if(e>.8){put(x,y,e>.92?[232,236,250]:mix(CULT[quad(dx,dy)],WHITE,.3),1);continue}
+   const band=Math.floor((y+s.t*14)/2)&3,c=mix([30,24,60],CULT[ORDER[band]],.55);
+   if(bay(x,y)<.12+.25*e)continue;blend(x,y,bay(x+1,y)<.5?c:mix(c,[12,10,30],.5),.85,1)}
+  glow(cx,cy,24,[200,205,255],.14+.1*rip)},
+ actor(q,dir){const k=dir==='out'?q:1-q;return {rows:(Y,rel)=>dir==='out'?rel>k*1.15+(hash2(Y,0,7)-.5)*.18:rel<(1-k)*1.15+(hash2(Y,0,7)-.5)*.18,front:false}},
+ fx(q,dir,s){s.rip=Math.sin(q*Math.PI);const k=dir==='out'?q:1-q,y=P[1]-31+k*31*1.1;for(let i=-9;i<=9;i++)if(hash2(i,Math.floor(q*20),4)>.4)put(P[0]+i,y+(hash2(i,2,4)*3|0),mix(CULT[ORDER[(i+20)&3]],WHITE,.5),1)}},
+
+{name:'Étoile de l’obélisque',
+ desc:'Le pylône lui-même sert de portail. Une colonne de lumière tombe du pyramidion sur le voyageur, qui blanchit puis se défait en étincelles remontant vers la pointe ; une étoile file vers la destination. À l’arrivée, l’étoile tombe et le recompose. Rien à ajouter au sol.',
+ under(s){const [cx,cy]=P;for(let y=cy-5;y<=cy+5;y++)for(let x=cx-15;x<=cx+15;x++){const e=((x-cx)/15)**2+((y-cy)/5)**2;if(e>1)continue;if(bay(x,y)<.28*(1-e)+.06)put(x,y,[230,236,255],1)}glow(AX,AY-92,16,WHITE,.18+.12*Math.sin(s.t*3))},
+ actor(q,dir){const k=dir==='out'?q:1-q;if(k>.62)return null;return {tint:WHITE,tk:clamp((k-.28)/.3),emit:k>.4}},
+ fx(q,dir,s){const k=dir==='out'?q:1-q,tip=AY-92,col=k<.3?lerp(tip,P[1],k/.3):P[1];
+  if(k<.7)for(let y=tip;y<=col;y++){put(AX,y,WHITE,1);if(bay(AX+1,y)<.6)put(AX+1,y,[200,215,255],1);if(bay(AX-1,y)<.4)put(AX-1,y,[200,215,255],1);if(y%6===0)glow(AX,y,6,[210,220,255],.12)}
+  if(k>.5&&k<.95){const u=(k-.5)/.45;for(let i=0;i<26;i++){const x0=P[0]+(hash2(i,1,6)-.5)*14,y0=P[1]-hash2(i,2,6)*30,uu=clamp(u*1.4-hash2(i,3,6)*.4);put(lerp(x0,AX,uu)+Math.sin(uu*9+i)*2,lerp(y0,tip,uu),mix(CULT[ORDER[i&3]],WHITE,.5),1)}}
+  if(k>.85){const u=(k-.85)/.15,ex=dir==='out'?[318,4]:[2,4],x=lerp(AX,ex[0],u),y=lerp(tip,ex[1],u);for(let j=0;j<10;j++)put(lerp(x,AX,j*.03),lerp(y,tip,j*.03),j<2?WHITE:[200,215,255],1);glow(x,y,10,WHITE,.4)}}},
+
+{name:'Fenêtre au sol',
+ desc:'Une dalle descellée devant le socle, qui montre le sol du pylône d’arrivée : ici le vert-de-gris des Veines, avec ses filons de cuivre. On voit où l’on va avant de sauter. Quatre gemmes aux couleurs des cultes tiennent les coins. À l’arrivée, on sort d’un bond.',
+ under(s){const x0=P[0]-17,x1=P[0]+17,y0=P[1]-8,y1=P[1]+7,fl=s.flash||0;
+  for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){const ex=x===x0||x===x1||y===y0||y===y1,ex2=x===x0+1||x===x1-1||y===y0+1||y===y1-1;
+   if(ex){put(x,y,y===y0?STONE[5]:STONE[1]);continue}if(ex2){put(x,y,STONE[3]);continue}
+   const n=fbm((x+s.t*2)*.18,(y+s.t*1.2)*.3,31),vein=Math.abs(fbm(x*.09,y*.2,33)-.5)<.03;
+   let c=n<.42?[34,62,60]:n<.55?[52,92,84]:n<.68?[70,122,104]:[98,152,128];if(vein)c=[196,118,62];
+   const edge=Math.min(x-x0,x1-x,(y-y0)*1.6,(y1-y)*1.6);if(edge<5&&bay(x,y)>edge/5)c=mix(c,[10,14,16],.6);
+   put(x,y,mix(c,WHITE,fl*.5),1)}
+  for(const [gx,gy,cu] of [[x0,y0,'aether'],[x1,y0,'indra'],[x1,y1,'medeina'],[x0,y1,'sigil']]){for(const [a,b] of [[0,0],[1,0],[0,1],[-1,0],[0,-1]])put(gx+a,gy+b,a||b?CULT[cu]:WHITE,1);glow(gx,gy,6,CULT[cu],.25)}
+  glow(P[0],P[1],20,[110,200,170],.1+.2*fl)},
+ actor(q,dir){if(dir==='out'){if(q<.25)return {};const u=(q-.25)/.75;return {dy:u*u*42,bot:P[1]+7,vis:1-u*.5}}
+  if(q<.6){const u=q/.6;return {dy:(1-u)*42,bot:P[1]+7}}const u=(q-.6)/.4;return {dy:-Math.sin(u*Math.PI)*7}},
+ fx(q,dir,s){s.flash=dir==='out'?clamp(q*3)*(1-q):clamp(1-q*1.6);const r=(q*3%1)*16;for(let a=0;a<20;a++){const x=P[0]+Math.cos(a/20*PI2)*r,y=P[1]+Math.sin(a/20*PI2)*r*.35;if(Math.abs(x-P[0])<15&&Math.abs(y-P[1])<6)put(x,y,[200,250,230],1)}}},
+
+{name:'Orbe suspendu',
+ desc:'Les quatre rayons de prière se prolongent sous le foyer jusqu’à un orbe tenu au-dessus du seuil, ses quartiers aux couleurs des cultes. Au contact, il gonfle en bulle autour du voyageur, la referme sur lui et remonte le rayon. Le plus lié aux esprits qui prient.',
+ under(s){shadow(P[0],P[1]+1,9,2.5)},
+ over(s){const [ox,oy0]=[P[0],P[1]-18],oy=s.orbY??oy0,r=s.orbR??6;
+  for(let i=0;i<4;i++)for(let y=FOC[1]+4;y<oy-r;y+=2){const x=lerp(AX,ox,(y-FOC[1])/(oy-FOC[1]))+(i-1.5)*.8*(1-(y-FOC[1])/(oy-FOC[1]));if(frac((y-s.t*30)/10+i*.25)<.5)put(x,y,mix(CULT[ORDER[i]],WHITE,.3),1)}
+  for(let y=oy-r-1;y<=oy+r+1;y++)for(let x=ox-r-1;x<=ox+r+1;x++){const dx=x+.5-ox,dy=y+.5-oy,d=Math.hypot(dx,dy);if(d>r)continue;
+   if(s.bubble&&d<r-1.6){if(bay(x,y)<.12)put(x,y,[220,230,255],1);continue}
+   const a=Math.atan2(dy,dx)+s.t*2,qd=ORDER[((a/PI2*4%4)+4|0)%4];let c=mix(CULT[qd],WHITE,d<r*.35?.8:.15);if(d>r-1.2)c=s.bubble?mix(CULT[qd],WHITE,.5):STONE[5];if(dx<-r*.2&&dy<-r*.2&&d<r*.55&&d>r*.3)c=WHITE;put(x,y,c,1)}
+  glow(ox,oy,r+14,[220,225,255],.2)},
+ actor(q,dir){const k=dir==='out'?q:1-q;if(k<.35)return {tint:[200,215,255],tk:k};if(k<.6){const u=(k-.35)/.25;return {sc:1-u*.92,dyTo:-18*u,tint:[220,230,255],tk:.4+u*.5,emit:true}}return null},
+ fx(q,dir,s){const k=dir==='out'?q:1-q,oy0=P[1]-18;
+  if(k<.35){s.orbR=6+k/.35*14;s.orbY=lerp(oy0,P[1]-14,k/.35);s.bubble=k>.12}
+  else if(k<.6){const u=(k-.35)/.25;s.orbR=20-u*16;s.orbY=lerp(P[1]-14,oy0,u);s.bubble=u<.8}
+  else if(k<.92){const u=(k-.6)/.32;s.orbR=3;s.orbY=lerp(oy0,FOC[1]+6,u);if(u>.85)glow(FOC[0],FOC[1],20,WHITE,.4)}
+  else{s.orbR=3+(k-.92)/.08*3;s.orbY=oy0}}},
+];
+
+function phaseA(t){
+ const s={t,name:'',ex:null,ad:null};
+ if(t<1.5){s.name='Pylône canalisé : le portail est ouvert';s.ex={x:70,y:336}}
+ else if(t<4){const q=(t-1.5)/2.5;s.ex={x:lerp(70,P[0],q),y:lerp(336,P[1],q),walk:1};s.name='L’Exilé s’approche du seuil'}
+ else if(t<5.6){s.dep=(t-4)/1.6;s.ex={x:P[0],y:P[1]};s.name='Départ vers le pylône des Veines (biome 2)'}
+ else if(t<7){s.name='Le portail reste ouvert'}
+ else if(t<8.6){s.arr=(t-7)/1.6;s.ad={x:P[0],y:P[1]};s.name='Arrivée : un mineur d’Aether revient avec sa caisse de cuivre'}
+ else if(t<11){const q=(t-8.6)/2.4;s.ad={x:lerp(P[0],262,q),y:lerp(P[1],336,q),walk:1};s.name='Le mineur repart vers les coffres'}
+ else s.name='Pylône canalisé : le portail est ouvert';
+ return s}
+
+function drawPortal(M,t){
+ const s=phaseA(t);floor();
+ const items=[];
+ ORDER.forEach((cu,i)=>items.push({y:SPOT[cu][1],f:()=>spirit(cu,t,i)}));
+ items.push({y:AY+32,f:()=>pylon(t)});
+ const actor=(a,base,q,dir)=>{let o={};if(q!=null){o=M.actor(q,dir);if(!o)return}
+  const fy=a.y+(o.dy||0)+(o.dyTo||0)*(o.sc?1:0);shadow(a.x,a.y,7*(o.sc??1),2);blit(base.A,base.f,a.x,fy,{flip:base.flip,bot:o.bot,rows:o.rows,tint:o.tint,tk:o.tk,sc:o.sc,vis:o.vis,emit:o.emit})};
+ if(s.dep!=null)M.fx&&M.fx(s.dep,'out',s);if(s.arr!=null)M.fx&&M.fx(s.arr,'in',s);
+ if(s.ex){const base=s.ex.walk?EX.walk(t):EX.idle(t);items.push({y:s.ex.y+.5,f:()=>actor(s.ex,base,s.dep,'out')})}
+ if(s.ad){const base={...AD.walk(t),flip:false};if(!s.ad.walk)base.f=0;items.push({y:s.ad.y+.5,f:()=>actor(s.ad,base,s.arr,'in')})}
+ items.push({y:P[1]-.1,f:()=>M.under&&M.under(s)});
+ if(M.mid)items.push({y:P[1]-.05,f:()=>M.mid(s)});
+ items.sort((a,b)=>a.y-b.y).forEach(it=>it.f());
+ beams(t);
+ if(M.over)M.over(s);
+ if(s.dep!=null)M.fx&&M.fx(s.dep,'out',s);if(s.arr!=null)M.fx&&M.fx(s.arr,'in',s);
+ lighting();return {s}}
+
+/* ───── 2 · l'annonce du reflux ───── */
+const PACKB=[[70,284],[252,286],[64,92],[256,96],[150,300]];
+function phaseB(t){
+ const s={t,k:0,cov:0,beasts:[],timer:null,banner:0,name:''};
+ if(t<2){s.name='Pylône canalisé, portail ouvert'}
+ else if(t<9){s.k=(t-2)/7;s.timer=60*(1-s.k);s.banner=t<5.5?1:0;s.name='Annonce : reflux dans 1:00 (joué ×10) — le portail se ferme'}
+ else if(t<11.5){s.k=1;s.name='Reflux : la meute sort par le seuil'}
+ else if(t<13.5){s.k=1-(t-11.5)/2;s.name='Le pylône revient à la normale ; la meute, elle, reste et vise les esprits'}
+ else{s.k=0;s.name='Meute abattue : le portail rouvre'}
+ if(t>=9){PACKB.forEach((p,i)=>{const t0=9+i*.3;if(t<t0)return;const u=t-t0;
+  if(u<.7)s.beasts.push({x:P[0],y:P[1],rise:u/.7,f:0,flip:p[0]<P[0]});
+  else if(u<2){const q=(u-.7)/1.3;s.beasts.push({x:lerp(P[0],p[0],ease(q)),y:lerp(P[1],p[1],ease(q)),walk:1,flip:p[0]<P[0]})}
+  else if(t<13.5)s.beasts.push({x:p[0],y:p[1],atk:1,flip:p[0]>AX})
+  else{const m=(t-13.5)/1.6;if(m<1)s.beasts.push({x:p[0],y:p[1],melt:m,flip:p[0]>AX})}})}
+ return s}
+function threshold(s){/* repère neutre du seuil, qui vire au rouge */const [cx,cy]=P,r=s.k;
+ for(let y=cy-5;y<=cy+5;y++)for(let x=cx-15;x<=cx+15;x++){const e=((x-cx)/15)**2+((y-cy)/5)**2;if(e>1)continue;if(bay(x,y)<.3*(1-e)+.06)put(x,y,mix([230,236,255],RED[3],r),1)}glow(cx,cy,18,mix([220,225,255],RED[3],r),.12)}
+const REFLUX=[
+{name:'Glyphes qui virent',
+ desc:'La corruption redescend l’obélisque depuis la pointe : les glyphes repassent au rouge bande après bande, et le compte à rebours se lit sur le monument. Quand elle touche le socle, la meute sort. Aucun effet ajouté, le pylône du jeu suffit.',
+ draw(s){pylon(s.t,s.k,'top')}},
+{name:'La nappe ressort',
+ desc:'La mousse veinée ressort du socle et regagne la salle pendant l’annonce. La zone qui blesse l’Ingénieur revient avec elle : on voit le danger grandir, et on sait jusqu’où la meute va se répandre. Elle se retire quand le pylône revient à la normale.',
+ draw(s){corruption(s.t,s.k*.85);pylon(s.t,s.k,'dither')},ground:true},
+{name:'Rayons qui faiblissent',
+ desc:'Les quatre rayons de prière se mettent à onduler, se trouent puis virent au rouge vers le foyer ; les esprits tremblent. L’annonce passe par ceux qui seront attaqués, ce qui dit tout de suite quoi protéger.',
+ draw(s){pylon(s.t,s.k>.75?(s.k-.75)/.25:0,'dither')},beam(s){return {wave:s.k*6,red:s.k,gap:s.k*.35}},jit:s=>s.k>.3&&s.k<1&&frac(s.t*7)<.3*s.k?1:0},
+{name:'Fêlure au seuil',
+ desc:'Une fêlure rouge s’ouvre dans l’air au-dessus du seuil et s’élargit au rythme d’un cœur qui accélère. Un cercle tramé au sol marque d’où la meute va sortir. La plus directe, et la seule qui montre le point de sortie exact.',
+ draw(s){pylon(s.t,s.k>.7?(s.k-.7)/.3:0,'dither');const k=s.k;if(k<=0)return;
+  const beat=frac(s.t*(1+k*2.5)),pul=beat<.12?1:beat<.24?.4:0,R=34;
+  for(let a=0;a<120;a++){const th=a/120*PI2,x=P[0]+Math.cos(th)*R,y=P[1]+Math.sin(th)*R*.4;if((a+Math.floor(s.t*8))%4<2&&k>.15)put(x,y,RED[2+(pul>0)],1)}
+  const h=4+k*30,cy=P[1]-14;for(let y=cy-h/2;y<=cy+h/2;y++){const u=(y-cy)/(h/2),w=(1-u*u)*(1.2+k*3+pul*1.5),off=Math.sin(y*.7)*1.5;
+   for(let x=-w;x<=w;x++)put(P[0]+off+x,y,Math.abs(x)<w*.4?RED[5]:RED[3],1)}
+  glow(P[0],cy,16+k*14,RED[3],.25+.25*pul);
+  for(let i=0;i<10;i++){const u=frac(s.t*1.4+i/10),a=hash2(i,Math.floor(s.t*1.4+i/10),2)*PI2;put(P[0]+Math.cos(a)*u*20,cy+Math.sin(a)*u*14,RED[4],1)}}},
+];
+function drawReflux(M,t){
+ const s=phaseB(t);floor();
+ const items=[];
+ ORDER.forEach((cu,i)=>items.push({y:SPOT[cu][1],f:()=>spirit(cu,t,i,{jit:M.jit?M.jit(s):0})}));
+ if(M.ground)M.draw(s);else items.push({y:AY+32,f:()=>M.draw(s)});
+ items.push({y:P[1]-.2,f:()=>threshold(s)});
+ for(const b of s.beasts){items.push({y:b.y,f:()=>{
+  const sc=.62;
+  if(b.rise!=null){const r=b.rise;blit(ATL.bwalk,0,b.x,b.y+(1-r)*20,{sc,flip:b.flip,bot:P[1]+4,sil:1-r});glow(b.x,b.y-8,12,RED[3],.2)}
+  else if(b.walk){shadow(b.x,b.y,10,3);blit(ATL.bwalk,Math.floor(t*24)%12,b.x,b.y,{sc,flip:b.flip})}
+  else if(b.atk){shadow(b.x,b.y,10,3);blit(ATL.batk,Math.floor(t*24)%18,b.x,b.y,{sc,flip:b.flip})}
+  else if(b.melt!=null){const m=b.melt;blit(ATL.batk,0,b.x,b.y+m*10,{sc,flip:b.flip,sil:clamp(m*3),vis:1-m,bot:b.y+3})}}})}
+ items.sort((a,b)=>a.y-b.y).forEach(it=>it.f());
+ beams(t,M.beam?M.beam(s):{red:s.k>=1?.6:0});
+ lighting();return {s}}
+
+/* ───── surcouches à la résolution de l'écran ───── */
+function banner(g,text,a){if(a<=0)return;const x=18,y=14,w=W*Z-36,h=52;g.save();g.globalAlpha=a;
+ const gr=g.createLinearGradient(0,y,0,y+h);gr.addColorStop(0,'#5a6ad0');gr.addColorStop(1,'#141c6a');
+ g.fillStyle='#0a0c26';g.fillRect(x-2,y-2,w+4,h+4);g.fillStyle=gr;g.fillRect(x,y,w,h);
+ g.strokeStyle='#e6e8f4';g.lineWidth=2;g.strokeRect(x+3,y+3,w-6,h-6);g.strokeStyle='#8a90b8';g.lineWidth=1;g.strokeRect(x+7.5,y+7.5,w-15,h-15);
+ g.font='bold 15px system-ui,sans-serif';g.textBaseline='middle';g.fillStyle='#10123a';g.fillText(text,x+20,y+h/2+2);g.fillStyle='#fff';g.fillText(text,x+18,y+h/2);g.restore()}
+function timer(g,rem,p){const w=150,h=50,x=AX*Z-w/2,y=(AY-112)*Z-h;
+ g.save();g.fillStyle='rgba(16,9,12,.92)';g.strokeStyle='#6e1a1c';g.lineWidth=2;g.beginPath();g.roundRect(x,y,w,h,6);g.fill();g.stroke();
+ g.fillStyle='#e0583a';g.font='bold 11px system-ui,sans-serif';g.textBaseline='middle';g.fillText('REFLUX',x+10,y+15);
+ const sec=Math.ceil(rem);g.fillStyle='#ffb48a';g.font='bold 18px system-ui,sans-serif';g.fillText(sec>=60?'1:00':`0:${String(sec).padStart(2,'0')}`,x+70,y+17);
+ g.fillStyle='#2a0c10';g.fillRect(x+8,y+35,w-16,6);g.fillStyle='#e0583a';g.fillRect(x+8,y+35,(w-16)*p,6);g.restore()}
+function tag(g,x,y,lines,tone='info'){/* étiquette Sarcelle (INFO) ou bleue (DIALOGUE) */g.save();g.font='bold 13px system-ui,sans-serif';
+ const w=Math.max(...lines.map(l=>g.measureText(l.t).width))+24,h=lines.length*19+14;x=Math.min(Math.max(6,x),W*Z-w-6);
+ const gr=g.createLinearGradient(0,y,0,y+h);gr.addColorStop(0,tone==='info'?'#1f4f5c':'#5a6ad0');gr.addColorStop(1,tone==='info'?'#0a1d24':'#141c6a');
+ g.fillStyle=tone==='info'?'#04141a':'#0a0c26';g.fillRect(x-2,y-2,w+4,h+4);g.fillStyle=gr;g.fillRect(x,y,w,h);g.strokeStyle=tone==='info'?'#d6f6fb':'#e6e8f4';g.lineWidth=1.5;g.strokeRect(x+2.5,y+2.5,w-5,h-5);
+ g.textBaseline='middle';lines.forEach((l,i)=>{g.font=(l.b?'bold ':'')+'13px system-ui,sans-serif';g.fillStyle=l.c||'#fff';g.fillText(l.t,x+12,y+16+i*19)});g.restore();return w}
+
+/* ───── 3 · choisir la destination ───── */
+const NET=[{n:'Ancre',x:.5,y:.86,k:'base'},{n:'Pylône du Temple',x:.2,y:.5,k:'on',b:'Biome 1 · Bois'},{n:'Pylône des Veines',x:.74,y:.3,k:'on',b:'Biome 2 · Cuivre'},{n:'Pylône noyé',x:.88,y:.62,k:'reflux',b:'Biome 2 · Cuivre'},{n:'Pylône du nord',x:.34,y:.14,k:'off',b:'Biome 2 · non canalisé'}];
+let MAPBUF=null;
+function cavemap(){const w=160,h=110,d=new Uint8ClampedArray(w*h*4);
+ for(let y=0;y<h;y++)for(let x=0;x<w;x++){let open=fbm(x*.07,y*.07,17)>.5;for(const p of NET){if(Math.hypot(x-p.x*w,(y-p.y*h)*1.3)<7)open=true}
+  const o=(y*w+x)*4,c=open?[92,98,112]:[22,24,30];d[o]=c[0];d[o+1]=c[1];d[o+2]=c[2];d[o+3]=255}
+ const cv=document.createElement('canvas');cv.width=w;cv.height=h;cv.getContext('2d').putImageData(new ImageData(d,w,h),0,0);return cv}
+function drawMapCard(g,t){const CW=W*Z,CH=H*Z;g.fillStyle='#05070c';g.fillRect(0,0,CW,CH);
+ if(!MAPBUF)MAPBUF=cavemap();g.save();g.globalAlpha=.4;g.imageSmoothingEnabled=false;g.drawImage(MAPBUF,20,60,CW-40,CH-80);g.restore();
+ const X=p=>20+p.x*(CW-40),Y=p=>60+p.y*(CH-80),hov=NET[2],net=NET.filter(p=>p.k==='on'||p.k==='base'||p.k==='reflux');
+ g.save();g.setLineDash([6,6]);g.lineWidth=2;for(let i=0;i<net.length;i++)for(let j=i+1;j<net.length;j++){const a=net[i],b=net[j],hot=(a===hov&&b.k==='base')||(b===hov&&a.k==='base'),red=a.k==='reflux'||b.k==='reflux';
+  g.strokeStyle=red?'rgba(224,88,58,.35)':hot?'#d6f6fb':'rgba(95,169,184,.45)';g.lineWidth=hot?3:2;g.lineDashOffset=hot?-t*20:0;g.beginPath();g.moveTo(X(a),Y(a));g.lineTo(X(b),Y(b));g.stroke()}g.restore();
+ for(const p of NET){const x=X(p),y=Y(p);g.save();
+  if(p.k==='base'){g.fillStyle='#e8c35a';g.beginPath();g.arc(x,y,8+Math.sin(t*3),0,PI2);g.fill();}
+  else{const cols=p.k==='on'?ORDER.map(c=>`rgb(${CULT[c]})`):p.k==='reflux'?Array(4).fill(frac(t*1.5)<.5?'#e0583a':'#6e1a1c'):Array(4).fill('#5a2024');
+   for(let i=0;i<4;i++){g.strokeStyle=cols[i];g.lineWidth=4;g.beginPath();g.arc(x,y,11,-Math.PI+i*Math.PI/2,-Math.PI/2+i*Math.PI/2);g.stroke()}
+   g.fillStyle=p.k==='on'?'#fff':'#2a0c10';g.beginPath();g.moveTo(x,y-7);g.lineTo(x+3,y+5);g.lineTo(x-3,y+5);g.fill()}
+  g.font='12px system-ui,sans-serif';g.fillStyle=p.k==='off'?'#7a6a70':'#c9cdd6';g.textAlign='center';g.fillText(p.n,x,y+26);if(p.k==='reflux'){g.fillStyle='#ffb48a';g.fillText('reflux 0:42 · fermé',x,y+41)}g.restore()}
+ const hx=X(hov),hy=Y(hov);tag(g,hx-60,hy+50,[{t:'Pylône des Veines',b:1},{t:'Biome 2 · Cuivre · 4 esprits',c:'#d6f6fb'},{t:'Clic : y aller',c:'#ffb48a'}]);
+ g.fillStyle='#fff';g.strokeStyle='#000';g.lineWidth=1.5;g.beginPath();g.moveTo(hx+4,hy+4);g.lineTo(hx+4,hy+22);g.lineTo(hx+9,hy+17);g.lineTo(hx+16,hy+18);g.closePath();g.fill();g.stroke();
+ g.font='bold 13px system-ui,sans-serif';g.fillStyle='#9aa1b0';g.fillText('Carte des portails  ·  E sur le seuil, ou TAB',22,34)}
+function drawMenuCard(g,t){const CW=W*Z;banner(g,'',0);
+ const items=[['Ancre','la base','#fff'],['Pylône du Temple','biome 1, à l’ouest','#fff'],['Pylône des Veines','biome 2, au nord-est','#fff'],['Pylône noyé','reflux dans 0:42 — fermé','#8a90b8']],sel=Math.floor(t/1.6)%3,x=40,y=150,w=CW-80,h=items.length*30+92;
+ const gr=g.createLinearGradient(0,y,0,y+h);gr.addColorStop(0,'#5a6ad0');gr.addColorStop(1,'#141c6a');g.fillStyle='#0a0c26';g.fillRect(x-2,y-2,w+4,h+4);g.fillStyle=gr;g.fillRect(x,y,w,h);
+ g.strokeStyle='#e6e8f4';g.lineWidth=2;g.strokeRect(x+3,y+3,w-6,h-6);g.strokeStyle='#8a90b8';g.lineWidth=1;g.strokeRect(x+7.5,y+7.5,w-15,h-15);
+ g.textBaseline='middle';g.font='bold 15px system-ui,sans-serif';g.fillStyle='#fff';g.fillText('Où aller ?',x+22,y+26);
+ items.forEach((it,i)=>{const yy=y+58+i*30;g.font='bold 15px system-ui,sans-serif';g.fillStyle=it[2];if(i===sel){g.fillStyle='#fff';g.fillText('▶',x+22,yy)}g.fillStyle=it[2];g.fillText(it[0],x+44,yy);g.font='13px system-ui,sans-serif';g.fillStyle=i===3?'#8a90b8':'#c9d0ff';g.fillText(it[1],x+230,yy)});
+ g.font='12px system-ui,sans-serif';g.fillStyle='#c9d0ff';g.fillText('Z / S : choisir    E : partir',x+22,y+h-18)}
+const STONES=[{n:'Ancre',x:160,y:312,k:'base'},{n:'Temple',x:14,y:178,k:'on'},{n:'Veines',x:306,y:132,k:'on'},{n:'Noyé',x:300,y:238,k:'reflux'}];
+function stonesWorld(t,sel){for(const st of STONES){const c=st.k==='base'?[232,195,90]:st.k==='reflux'?RED[frac(t*1.5)<.5?3:1]:[200,230,240];
+  shadow(st.x,st.y,7,2.5);for(let y=-22;y<=0;y++){const hw=y<-18?1+(y+22)*.8:4;for(let x=-hw;x<=hw;x++)put(st.x+x,st.y+y,x===-Math.ceil(hw)?STONE[0]:x<0?STONE[4]:STONE[2])}
+  for(let y=-16;y<=-5;y+=3){put(st.x,st.y+y,c,1);put(st.x-1,st.y+y,c,1)}glow(st.x,st.y-10,13,c,.3);
+  const on=STONES.indexOf(st)===sel,dx=st.x-P[0],dy=st.y-P[1],n=Math.hypot(dx,dy);
+  for(let k=24;k<n-10;k+=on?5:8){const x=P[0]+dx/n*k,y=P[1]+dy/n*k,lit=on&&frac(k/30-t*1.5)<.6;if(!on&&k>44)break;const cc=on?mix(c,WHITE,lit?.6:.1):mix(c,[40,40,50],.55);put(x,y,cc,on);if(on){put(x+1,y,cc,1);put(x,y+1,cc,1);put(x+1,y+1,cc,1)}}}}
+
+/* ───── cartes ───── */
+const CARDS=[];let io=null;
+function makeCard(root,idx,name,desc,draw,overlay){
+ const el=document.createElement('div');el.className='card';el.innerHTML=`<canvas width="${W*Z}" height="${H*Z}"></canvas><div class="txt"><h3><span>${idx}</span>${name}</h3><p>${desc}</p></div>`;
+ document.getElementById(root).append(el);const cv=el.querySelector('canvas'),g=cv.getContext('2d');g.imageSmoothingEnabled=false;
+ const off=document.createElement('canvas');off.width=W;off.height=H;const og=off.getContext('2d'),img=og.createImageData(W,H);
+ const C={el,g,off,og,img,draw,overlay,vis:true,GL:new Float32Array(W*H*3),EM:new Uint8Array(W*H)};CARDS.push(C);if(io)io.observe(el);return C}
+function render(C,t){if(C.draw){B=C.img.data;EM=C.EM;GL=C.GL;EM.fill(0);GL.fill(0);const r=C.draw(t);C.og.putImageData(C.img,0,0);C.g.imageSmoothingEnabled=false;C.g.drawImage(C.off,0,0,W*Z,H*Z);if(C.overlay)C.overlay(C.g,t,r)}else if(C.overlay)C.overlay(C.g,t)}
+
+const LOOPA=12,LOOPB=16;let TA=0,TB=0,TC=0,last=performance.now(),acc=0;
+function tick(now){const real=Math.min(.25,(now-last)/1000)*(slow?.5:1);last=now;if(!paused){TA=(TA+real)%LOOPA;TB=(TB+real)%LOOPB;TC+=real}acc+=real;
+ if(acc>=1/12){acc=0;const ta=Math.floor(TA*12)/12,tb=Math.floor(TB*12)/12;
+  for(const C of CARDS){if(!C.vis)continue;render(C,C.sec==='a'?ta:C.sec==='b'?tb:TC)}
+  document.getElementById('ph-a').textContent=phaseA(ta).name;document.getElementById('ph-b').textContent=phaseB(tb).name}
+ requestAnimationFrame(tick)}
+
+const tg=(id,fn)=>{const b=document.getElementById(id);b.onclick=()=>b.classList.toggle('on',fn())};
+tg('pause',()=>paused=!paused);tg('dark',()=>dark=!dark);tg('slow',()=>slow=!slow);
+window.PORT={set(a,b){TA=a;TB=b??a},pause(v){paused=v},dark(v){dark=v}};
+
+window.addEventListener('load',()=>{
+ try{const fl=document.getElementById('im-floor'),c=document.createElement('canvas');c.width=504;c.height=504;const g=c.getContext('2d');g.drawImage(fl,0,0);FLOOR=g.getImageData(0,0,504,504).data;
+  atlas('pch','pch',72,138,12,36,102);atlas('pco','pco',72,138,12,36,102);atlas('psd','psd',72,138,4,36,102);
+  atlas('medeina','medeina',47,49,24,21,40);atlas('indra','indra',34,38,24,11,36);atlas('aether','aether',43,37,24,14,35);atlas('sigil','sigil',34,37,24,12,35);
+  atlas('exidle','exil',48,48,12,24,45,0);atlas('exwalk','exil',48,48,12,24,45,288);atlas('carry','carry',43,37,24,14,35);
+  atlas('bwalk','bwalk',84,48,12,36,44);atlas('batk','batk',84,48,12,36,44);
+ }catch(e){document.getElementById('err').textContent='Sprites illisibles. '+e;return}
+ const Q=new URLSearchParams(location.search);if(Q.has('dark'))dark=true;
+ if('IntersectionObserver' in window&&!Q.has('shot'))io=new IntersectionObserver(es=>{for(const e of es){const C=CARDS.find(c=>c.el===e.target);if(C)C.vis=e.isIntersecting}},{rootMargin:'200px'});
+ PORTALS.forEach((M,i)=>{const C=makeCard('root-a',i+1,M.name,M.desc,t=>drawPortal(M,t));C.sec='a'});
+ REFLUX.forEach((M,i)=>{const C=makeCard('root-b',String.fromCharCode(65+i),M.name,M.desc,t=>drawReflux(M,t),(g,t,r)=>{const s=r.s;if(s.timer!=null)timer(g,s.timer,s.k);banner(g,'Merenor reprend le pylône des Veines. Reflux dans 1:00.',s.banner)});C.sec='b'});
+ const c1=makeCard('root-c',1,'Carte des portails','Sur le seuil, E ouvre la minicarte plein écran (celle de TAB) avec les pylônes canalisés reliés à l’Ancre. Survol : nom, biome, esprits présents ; clic : départ. Un pylône en reflux clignote en rouge, fermé, avec son minuteur. Le plus complet, et la carte existe déjà.',null,(g,t)=>drawMapCard(g,t));c1.sec='c';
+ const c2=makeCard('root-c',2,'Bannière de voyage','Sur le seuil, E ouvre une liste dans la bannière bleue, à la manière d’un menu de RPG 16 bits : Z/S pour choisir, E pour partir. Rapide, rien de nouveau à dessiner, mais on ne voit pas où se trouvent les pylônes.',
+  t=>{floor();ORDER.forEach((cu,i)=>spirit(cu,t,i));pylon(t);const b=EX.idle(t);shadow(P[0],P[1],7,2);blit(b.A,b.f,P[0],P[1]);beams(t);lighting();for(let i=0;i<W*H*4;i+=4){B[i]*=.55;B[i+1]*=.55;B[i+2]*=.6}return {}},(g,t)=>drawMenuCard(g,t));c2.sec='c';
+ const c3=makeCard('root-c',3,'Pierres d’orientation','Une petite pierre par destination, plantée au bord de la salle dans la direction réelle du pylône qu’elle désigne. Sur le seuil, Q/D allume tour à tour un chemin de lumière vers une pierre, E part. Diégétique et sans menu ; au-delà de cinq ou six pylônes, la salle s’encombre.',
+  t=>{const sel=[0,1,2][Math.floor(t/1.6)%3];floor();ORDER.forEach((cu,i)=>spirit(cu,t,i));pylon(t);stonesWorld(t,sel);const b=EX.idle(t);shadow(P[0],P[1],7,2);blit(b.A,b.f,P[0],P[1],{flip:STONES[sel].x<P[0]});beams(t);lighting();return {sel}},
+  (g,t,r)=>{const st=STONES[r.sel];tag(g,st.x*Z-80,st.y>250?st.y*Z-110:st.y*Z+12,[{t:st.n==='Ancre'?'Ancre · la base':st.n==='Temple'?'Pylône du Temple':'Pylône des Veines',b:1},{t:'E : partir',c:'#ffb48a'}])});c3.sec='c';
+ if(Q.has('shot')){/* ?shot=1&t=4.5 : image figée de toute la planche */const t=+(Q.get('t')||4.5);TA=t%LOOPA;TB=+(Q.get('tb')||t)%LOOPB;for(const C of CARDS)render(C,C.sec==='a'?TA:C.sec==='b'?TB:t);document.getElementById('ph-a').textContent=phaseA(TA).name;document.getElementById('ph-b').textContent=phaseB(TB).name;document.body.dataset.done='1';return}
+ requestAnimationFrame(tick)});
+</script>

@@ -2,7 +2,7 @@ extends Control
 ## Barillet des munitions de l'Arbalestrie (planches/arbalestrie-modulaire-planche.html, HUD · C, validé le
 ## 2026-11-19) : une case ronde à gauche de la barre PV de l'Exilé incarné montre la munition active ; un clic
 ## l'ouvre en éventail de cinq cases au-dessus, un clic sur une case la choisit et referme. Survol : bulle
-## 16 bits nom · effet · coût ; mana insuffisante → case grisée. La molette (sans Ctrl) fait défiler les
+## 16 bits nom · effet (les munitions ne coûtent plus de mana). La molette (sans Ctrl) fait défiler les
 ## munitions tant que le barillet est affiché ; Ctrl + molette garde le zoom de la caméra.
 
 const Ammo := preload("res://data/ammo.gd")
@@ -110,17 +110,14 @@ func _draw() -> void:
 	if not available():
 		return
 	var cur := Ammo.current()
-	_disc(_center(), R_MAIN, true, Ammo.can_pay(cur, 1.0), _hover == -2)
+	_disc(_center(), R_MAIN, true, true, _hover == -2)
 	_icon(_center(), cur)
 	if not _open:
 		return
 	for i in Ammo.ORDER.size():
 		var id: String = Ammo.ORDER[i]
-		var ok := Ammo.can_pay(id, 1.0)
-		_disc(_slot_center(i), R_SLOT, id == cur, ok, _hover == i)
+		_disc(_slot_center(i), R_SLOT, id == cur, true, _hover == i)
 		_icon(_slot_center(i), id)
-		if not ok:
-			draw_circle(_slot_center(i), R_SLOT - 2.0, Color(0.04, 0.05, 0.12, 0.55))
 	if _hover >= 0:
 		_tip(Ammo.ORDER[_hover])
 
@@ -155,20 +152,15 @@ func _icon(c: Vector2, id: String) -> void:
 		"aether": _drawer._ball_aether(n.x, n.y, Vector2.RIGHT, 0.04)
 
 
-## Bulle 16 bits au-dessus de l'éventail : nom · effet, puis coût (rouge si la mana manque).
+## Bulle 16 bits au-dessus de l'éventail : nom · effet.
 func _tip(id: String) -> void:
 	var A: Dictionary = Ammo.AMMO[id]
 	var f := HudStyle.font()
-	var l1 := "%s · %s" % [A["name"], A["desc"]]
-	var ok := Ammo.can_pay(id, 1.0)
-	var l2: String = A["cost_text"] + ("" if ok else " · mana insuffisante")
-	var w := maxf(f.get_string_size(l1, HORIZONTAL_ALIGNMENT_LEFT, -1, 13).x, f.get_string_size(l2, HORIZONTAL_ALIGNMENT_LEFT, -1, 13).x) + 24.0
-	var r := Rect2(Vector2(_center().x - 30.0, _center().y - FAN_R - R_SLOT - 58.0), Vector2(w, 46.0))
+	var txt := "%s · %s" % [A["name"], A["desc"]]
+	var w := f.get_string_size(txt, HORIZONTAL_ALIGNMENT_LEFT, -1, 13).x + 24.0
+	var r := Rect2(Vector2(_center().x - 30.0, _center().y - FAN_R - R_SLOT - 41.0), Vector2(w, 29.0))
 	r.position.x = clampf(r.position.x, 8.0, get_viewport_rect().size.x - 8.0 - w)
 	SnesBanner.paint(self, r)
-	for k in 2:
-		var y := r.position.y + 19.0 + k * 17.0
-		var col := Color.WHITE if k == 0 else (Color("#c8fbff") if ok else Color("#ff9a8a"))
-		var txt := l1 if k == 0 else l2
-		draw_string(f, Vector2(r.position.x + 13.0, y + 1.0), txt, HORIZONTAL_ALIGNMENT_LEFT, -1, 13, SnesBanner.SHADOW)
-		draw_string(f, Vector2(r.position.x + 12.0, y), txt, HORIZONTAL_ALIGNMENT_LEFT, -1, 13, col)
+	var y := r.position.y + 19.0
+	draw_string(f, Vector2(r.position.x + 13.0, y + 1.0), txt, HORIZONTAL_ALIGNMENT_LEFT, -1, 13, SnesBanner.SHADOW)
+	draw_string(f, Vector2(r.position.x + 12.0, y), txt, HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color.WHITE)

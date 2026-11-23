@@ -11,7 +11,8 @@
  "rows": {
   "closed": 0,
   "opening": 1,
-  "open": 2
+  "open": 2,
+  "off": 3
  },
  "loop_fps": 5.602253996834716,
  "open_time": 1.2

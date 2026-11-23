@@ -3,7 +3,8 @@ extends RefCounted
 ## Errants des galeries : petits groupes d'ennemis (meutes de chiens de la Bête, fanatiques du Credo, automates,
 ## patrouilles de Byrsa dans le biome 2) qui rôdent dans les galeries, loin des Pylônes de Merenor.
 ##
-## - Les tanières sont tirées de la graine (dens) ; un groupe apparaît quand sa galerie est découverte.
+## - Les tanières sont tirées de la graine (dens) ; un groupe apparaît quand un allié le voit (Awaken.seen) : les
+##   galeries sont toutes ouvertes dès le départ (galeries reliées, 2026-11-22).
 ## - Sans proie, le groupe marche d'un point à l'autre de sa galerie (ROAM unités autour de la tanière), au pas
 ##   (STROLL), avec une halte entre deux étapes.
 ## - Une unité repérée (AGGRO, ou la portée de tir) est attaquée par tout le groupe, avec les attaques normales
@@ -31,6 +32,8 @@ const MAX_DENS := 40
 const DEN_GAP := 44.0
 const PYLON_GAP := 36.0
 const SAFE := 70.0
+## Distance de chemin minimale à l'Ancre (unités, TerrainState.path_at).
+const SAFE_PATH := 100.0
 ## Rayon de la ronde autour de la tanière, distance de repérage, laisse (distance de la proie à la tanière).
 const ROAM := 26.0
 const AGGRO := 16.0
@@ -51,9 +54,17 @@ static func dens(st: TerrainState, map_seed: int) -> Array[Dictionary]:
 		var z := CaveShape.WORLD_Z0 + 10.0 + rng.next() * (CaveShape.WORLD_Z1 - CaveShape.WORLD_Z0 - 20.0)
 		if not _roomy(st, x, z) or Vector2(x, z).distance_to(CaveShape.CORE) < SAFE:
 			continue
+		# Galeries reliées : loin de l'Ancre en chemin, jamais sur un raccord.
+		if not st.path_d.is_empty() and st.path_at(x, z) < SAFE_PATH:
+			continue
+		if st.link_cells.has(Vector2i(floori(x / 4.0), floori(z / 4.0))):
+			continue
 		if st.frontier and (TerrainState.in_eye_room(x, z, 12.0) or st._in_eye_corridor(x, z)):
 			continue
 		if _near_pylon(st, x, z) or _crowded(out, x, z):
+			continue
+		# Temple en salles : seulement dans une salle de combat, en attendant les rencontres de salle.
+		if not st.den_allowed(x, z):
 			continue
 		var threat := int(Biomes.at(z)["threat"])
 		out.append({"x": x, "z": z, "threat": threat, "kinds": _draw(rng, threat)})
@@ -114,12 +125,20 @@ static func tick(sim: Simulation, _dt: float) -> void:
 		R["state"] = st
 		R["seed"] = st.seed
 		R["dens"] = dens(st, st.seed)
+		# Rencontres de salle (sim/rooms.gd) : une tanière par salle de combat du plan, à la suite des errants.
+		(R["dens"] as Array[Dictionary]).append_array(RoomEncounters.dens(st))
+		# Groupes des couloirs (3 au plus) : tanières ordinaires, levées à la vue.
+		(R["dens"] as Array[Dictionary]).append_array(RoomEncounters.corridor_dens(st))
 	var now := GameState.sim_time
 	var list: Array[Dictionary] = R["dens"]
 	for i in list.size():
 		var d := list[i]
+		# Salle : levée à l'entrée d'un allié, nettoyée puis repeuplée (RoomEncounters) ; debout, elle se bat et
+		# fait sa ronde comme un groupe errant.
+		if d.has("room") and RoomEncounters.tick(sim, d, i):
+			continue
 		if not d.has("members"):
-			if st.is_gallery_open(d["x"], d["z"]):
+			if st.is_gallery_open(d["x"], d["z"]) and Awaken.seen(Vector2(d["x"], d["z"])):
 				_spawn(sim, d, i)
 			continue
 		var members: Array = d["members"]
@@ -150,16 +169,24 @@ static func _spawn(sim: Simulation, d: Dictionary, index: int) -> void:
 	var kinds: Array = d["kinds"]
 	var rng := Rng.new(st.seed + index * 53 + 11)
 	var members: Array = []
+	# Groupe de salle : réparti dans toute la salle plutôt qu'en tas au centre (2026-11-22).
+	var places: Array[Vector2] = []
+	if d.has("room"):
+		places.assign(RoomEncounters.spread(st, d, kinds.size(), rng))
 	for k in kinds.size():
 		var off := Vector2.ZERO if kinds.size() == 1 else Vector2.from_angle(float(k) / kinds.size() * TAU) * 2.4
 		var at := home + off
-		if not st.walkable(at.x, at.y):
+		if k < places.size() and places[k] != Vector2.INF:
+			at = places[k]
+		elif not st.walkable(at.x, at.y):
 			at = home
 		var e := Enemy.make(kinds[k], at.x, at.y, 0.6 + 0.2 * k, stats)
 		e.beast = true
 		e.roam = d
 		e.home = home
 		e.memo["roam_off"] = off
+		if k < places.size() and places[k] != Vector2.INF:
+			e.memo["roam_post"] = at
 		members.append(e)
 		GameState.enemies.append(e)
 	d["members"] = members
@@ -176,14 +203,22 @@ static func _waypoint(st: TerrainState, d: Dictionary) -> Vector2:
 	for t in 30:
 		var q := home + Vector2.from_angle(rng.next() * TAU) * (8.0 + rng.next() * (ROAM - 8.0))
 		if st.is_gallery_open(q.x, q.y) and st.walkable(q.x, q.y) and not _near_pylon(st, q.x, q.y):
+			# Groupe de salle : sa ronde reste dans la salle.
+			if d.has("room") and st.temple_room(q.x, q.y).get("id", -1) != d["room"]:
+				continue
 			return q
 	return st.push_out_of_rock(home)
 
 
 ## Cible d'un errant : l'unité visible la plus proche sur son territoire, sinon son agresseur ou la proie du groupe.
-static func target(e: Enemy, alive: Array[Unit]) -> Unit:
+## Jamais une unité réfugiée dans une salle sûre (TerrainState.safe_at : l'antichambre du boss).
+static func target(e: Enemy, alive: Array[Unit], st: TerrainState = null) -> Unit:
 	var d: Dictionary = e.roam
 	var home := Vector2(d["x"], d["z"])
+	var safe := func(u: Unit) -> bool: return st != null and st.safe_at(u.x, u.z)
+	var prey: Unit = d.get("prey")
+	if prey != null and safe.call(prey):
+		d["prey"] = null
 	var sight := maxf(AGGRO, e.reach + 2.0)
 	if e.kind == "beast":
 		sight = Catalog.BEAST_SIGHT
@@ -200,13 +235,13 @@ static func target(e: Enemy, alive: Array[Unit]) -> Unit:
 		if dz >= bd or dz <= -bd or u.hidden:
 			continue
 		var nd := Combat.hyp(dx, dz)
-		if nd < bd and u.pos().distance_to(home) < LEASH:
+		if nd < bd and u.pos().distance_to(home) < LEASH and not safe.call(u):
 			best = u
 			bd = nd
 	# Frappé de loin : il riposte tant que le tireur reste près de son territoire.
 	if best == null and e.memo.has("hurt_by"):
 		var src: Unit = e.memo["hurt_by"]
-		if src != null and src.alive() and not src.hidden and not src.is_enemy() and src.pos().distance_to(home) < LEASH:
+		if src != null and src.alive() and not src.hidden and not src.is_enemy() and src.pos().distance_to(home) < LEASH and not safe.call(src):
 			best = src
 		else:
 			e.memo.erase("hurt_by")
@@ -222,6 +257,9 @@ static func wander(sim: Simulation, e: Enemy, speed: float, dt: float) -> void:
 	if d["goal"] == null:
 		return
 	var goal: Vector2 = d["goal"] + (e.memo.get("roam_off", Vector2.ZERO) as Vector2)
+	# Groupe de salle : chacun garde son coin de la salle et n'en bouge que de 3 au plus.
+	if e.memo.has("roam_post"):
+		goal = (e.memo["roam_post"] as Vector2) + ((d["goal"] as Vector2) - Vector2(d["x"], d["z"])).limit_length(3.0)
 	if not sim.state().walkable(goal.x, goal.y):
 		goal = d["goal"]
 	if e.pos().distance_to(goal) <= 0.4:

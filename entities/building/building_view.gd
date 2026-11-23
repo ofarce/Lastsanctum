@@ -3,12 +3,16 @@ extends Node2D
 ## Rendu d'un bâtiment (drawBuilding, buildings.js, 73b410f), dans le tri en profondeur du monde.
 ##  - Achevé : image de la boucle animée précalculée (PixelBuildings.draw), à l’échelle « scale » du manifeste
 ##    (1 : tous les arts sont dessinés ou réduits en 2×2 natif, tools/batiments_2x2) ou size/3 à défaut.
+##  - Visée (planches/pose-rendu-propositions.html, piste B « Liseré ») : Ghost dessine le vrai sprite à 65 %,
+##    cerné d'un liseré d'un pixel vert d'eau ; pose impossible, teinte et liseré rouges.
+##  - Pose (planches/pose-batiment-propositions.html, piste 4 « Le plan se défait », sortie « couleurs ») :
+##    pendant POSE secondes, le rendu de visée s'écroule de la base au sommet ; chaque pierre roule jusqu'à
+##    son tas, sa couleur s'éteignant en ardoise. Le hissage occupe le reste de la durée du chantier.
 ##  - Chantier (planches/chantier-debut-propositions.html, piste C « Échafaudage ») : empreinte animée
 ##    (TempleKit.footprint) et deux tas de moellons d'ardoise neutres de part et d'autre ; les perches de bois
 ##    sortent du sol, puis les traverses se posent. Le sprite est découpé en pierres de 6 px : chacune quitte
 ##    le sommet de son tas, est hissée à la verticale, glisse à sa place en prenant la couleur du bâtiment et
-##    s'y tasse avec une bouffée de poussière, assise par assise. À la fin, l'échafaudage tombe. Rien du
-##    bâtiment n'est visible à la pose.
+##    s'y tasse avec une bouffée de poussière, assise par assise. À la fin, l'échafaudage tombe.
 ## Origine du nœud : point au sol du bâtiment, en pixels natifs, sans arrondi (comme drawImage au
 ## pixel près de l'écran dans le prototype).
 
@@ -42,7 +46,8 @@ var stones: Array[Vector2] = []
 
 func setup(b: Building) -> void:
 	building = b
-	if _meta.is_empty():
+	# Chargés séparément : l'aperçu de visée (Ghost → site()) peut remplir _meta avant le premier chantier.
+	if _meta.is_empty() or _footprint_meta.is_empty():
 		var m: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://assets/baked/manifest.json"))
 		_meta = m["buildings"]
 		_footprint_meta = m["overlay"]["footprints"]["build"]
@@ -196,6 +201,7 @@ static func site(art: String) -> Dictionary:
 	for p in tiles:
 		var id: int = p["id"]
 		var h := float(bot - p["y"]) / float(bot - top if bot != top else 1)
+		p["h"] = h
 		p["s"] = h * 0.78 + hs(id * 3.1) * 0.12
 		sm = maxf(sm, p["s"])
 	for p in tiles:
@@ -218,7 +224,17 @@ static func site(art: String) -> Dictionary:
 	var heap := tiles.duplicate()
 	heap.sort_custom(func(a, b): return a["n"] > b["n"])
 	var w := x1 - x0
-	var out := {"full": ImageTexture.create_from_image(full), "tiles": tiles, "heap": heap, "ay": ay,
+	# Liseré d'un pixel autour de la silhouette (blanc, teinté au dessin).
+	var line := Image.create(SW, SH, false, Image.FORMAT_RGBA8)
+	for y in SH:
+		for x in SW:
+			if fdata[(y * SW + x) * 4 + 3] > 24:
+				continue
+			if (x > 0 and fdata[(y * SW + x - 1) * 4 + 3] > 24) or (x < SW - 1 and fdata[(y * SW + x + 1) * 4 + 3] > 24) \
+					or (y > 0 and fdata[((y - 1) * SW + x) * 4 + 3] > 24) or (y < SH - 1 and fdata[((y + 1) * SW + x) * 4 + 3] > 24):
+				line.set_pixel(x, y, Color.WHITE)
+	var out := {"full": ImageTexture.create_from_image(full), "outline": ImageTexture.create_from_image(line),
+		"tiles": tiles, "heap": heap, "ay": ay, "ax": ax,
 		"poles": [x0 - 3, x0 + roundi(w / 3.0), x1 - roundi(w / 3.0) - 2, x1 + 1], "height": ay + 2.0 - (top - 6)}
 	_sites[art] = out
 	return out
@@ -266,25 +282,31 @@ const WOOD_DARK := Color("#2e2016")
 const WOOD := Color("#9c7048")
 const WOOD_MID := Color("#6e4830")
 const WOOD_LIGHT := Color("#c49a68")
-## Part du chantier consacrée au montage de l'échafaudage, et début de son démontage.
-const SCAFF_UP := 0.12
+## Part du hissage à laquelle l'échafaudage commence à tomber.
 const SCAFF_DOWN := 0.9
+## Durée de la pose (écroulement du rendu de visée), prise sur le début du chantier.
+const POSE := 0.65
+## Rendu de visée : opacité du sprite, liseré possible / impossible, teinte de la pose impossible.
+const GHOST_ALPHA := 0.65
+const GHOST_OK := Color("#a4f2ca")
+const GHOST_BAD := Color("#ff7a68")
+const GHOST_RED := Color(1.0, 0.41, 0.35)
 
 
 ## Échafaudage : perches extérieures et traverses derrière le bâtiment (front = false), perches
-## intérieures devant (front = true).
-static func _scaffold(ci: CanvasItem, S: Dictionary, progress: float, front: bool) -> void:
+## intérieures devant (front = true). Montage en secondes depuis la pose (`tau`), chute en part du hissage (`q`).
+static func _scaffold(ci: CanvasItem, S: Dictionary, tau: float, q: float, front: bool) -> void:
 	var xs: Array = S["poles"]
 	var H: float = S["height"]
 	var ay: float = S["ay"]
-	var end := _cl((progress - SCAFF_DOWN) / (1.0 - SCAFF_DOWN))
+	var end := _cl((q - SCAFF_DOWN) / (1.0 - SCAFF_DOWN))
 	for i in 4:
 		if (i == 1 or i == 2) != front:
 			continue
 		var fall := _cl(end * 4.0 - i)
 		if fall >= 1.0:
 			continue
-		var h := roundf(H * _sst(i * 0.02, SCAFF_UP * 0.6 + i * 0.02, progress) * (1.0 - fall))
+		var h := roundf(H * _sst(0.35 + i * 0.04, 0.65 + i * 0.04, tau) * (1.0 - fall))
 		if h <= 0.0:
 			continue
 		var x: float = xs[i]
@@ -295,7 +317,7 @@ static func _scaffold(ci: CanvasItem, S: Dictionary, progress: float, front: boo
 	if front:
 		return
 	for j in 4:
-		var k := _sst(SCAFF_UP * 0.6 + j * 0.012, SCAFF_UP + j * 0.012, progress)
+		var k := _sst(0.58 + j * 0.04, 0.76 + j * 0.04, tau)
 		var fall := _cl(end * 4.0 - j * 0.7)
 		if k <= 0.0 or fall >= 1.0:
 			continue
@@ -319,39 +341,110 @@ static func _puff(ci: CanvasItem, x: float, y: float, age: float, seed: int) -> 
 			Color("#8d8770") if k < 0.4 else Color("#6c6856"))
 
 
-## drawSite : chantier à `progress` ∈ [0, 1[, sur une durée `dur`. Dessine dans le repère 320×240 du
-## bâtiment et renvoie les pierres en vol (dans ce repère).
+## Rendu de visée : vrai sprite en transparence et liseré, rouges si la pose est impossible. Repère 320×240.
+static func draw_ghost(ci: CanvasItem, S: Dictionary, ok: bool) -> void:
+	ci.draw_texture(S["full"], Vector2.ZERO, Color(1, 1, 1, GHOST_ALPHA) if ok else Color(GHOST_RED, GHOST_ALPHA))
+	ci.draw_texture(S["outline"], Vector2.ZERO, GHOST_OK if ok else GHOST_BAD)
+
+
+## Écroulement à la pose : la pierre attend à sa place dans le rendu de visée (les assises du bas partent les
+## premières), puis roule jusqu'à son tas ; sa couleur s'éteint en ardoise pendant la chute.
+static func _crumble(ci: CanvasItem, S: Dictionary, p: Dictionary, tau: float) -> void:
+	var tw := float(mini(TS, SW - int(p["x"])))
+	var src := Rect2(p["x"], p["y"], tw, TS)
+	var t0: float = 0.08 + hs(p["id"] * 9.1) * 0.1 + p["h"] * 0.18
+	if tau < t0:
+		ci.draw_texture_rect_region(S["full"], src, src, Color(1, 1, 1, GHOST_ALPHA))
+		return
+	var g := _cl((tau - t0) / 0.25)
+	if g >= 1.0:
+		_rock(ci, jr(p["hx"]), jr(p["hy"]), p["id"], 1.0)
+		return
+	var x := jr(lerpf(p["x"], p["hx"], g))
+	var y := jr(lerpf(p["y"], p["hy"], g * g) - 5.0 * sin(PI * g) * (1.0 - g))
+	_rock(ci, x, y, p["id"], _cl(g * 2.5))
+	ci.draw_texture_rect_region(S["full"], Rect2(x, y, tw, TS), src, Color(1, 1, 1, (1.0 - g) * GHOST_ALPHA))
+
+
+## drawSite : chantier à `progress` ∈ [0, 1[, sur une durée `dur`. Les POSE premières secondes, le rendu de
+## visée s'écroule en deux tas ; le hissage occupe le reste. Dessine dans le repère 320×240 du bâtiment et
+## renvoie les pierres en vol (dans ce repère).
 static func draw_site(ci: CanvasItem, S: Dictionary, progress: float, dur: float) -> Array[Vector2]:
 	var full: Texture2D = S["full"]
 	var moving: Array[Vector2] = []
 	var fx: Array[Array] = []
-	var t := D * dur
-	_scaffold(ci, S, progress, false)
+	var pose := minf(POSE, dur * 0.5)
+	var tau := progress * dur
+	var hoist := tau >= pose
+	var q := _cl((tau - pose) / (dur - pose))
+	var t := D * (dur - pose)
+	if tau < 1.4:
+		# Poussière au pied des deux tas quand les pierres y arrivent.
+		for sg: int in [-1, 1]:
+			for i in 4:
+				fx.append([S["ax"] + sg * 46.0 + (hs(i * 3.7 + sg) - 0.5) * 24.0, S["ay"] + 8.0, tau - 0.3 - i * 0.08, i * 13 + sg + 70])
+	_scaffold(ci, S, tau, q, false)
 	for p: Dictionary in S["heap"]:
-		if (progress - p["n"] * (1.0 - D)) / D <= 0.0:
+		if hoist and (q - p["n"] * (1.0 - D)) / D > 0.0:
+			continue
+		if hoist:
 			_rock(ci, jr(p["hx"]), jr(p["hy"]), p["id"], 1.0)
-	for p: Dictionary in S["tiles"]:
-		var raw: float = (progress - p["n"] * (1.0 - D)) / D
-		if raw <= 0.0:
-			continue
-		var u := _cl(raw)
-		# Pierre de la dernière colonne : rognée au bord de l'image (drawImage hors source).
-		var tw := float(mini(TS, SW - int(p["x"])))
-		var src := Rect2(p["x"], p["y"], tw, TS)
-		if u >= 1.0:
-			ci.draw_texture_rect_region(full, Rect2(p["x"], p["y"], tw, TS), src)
-			var age := (raw - 1.0) * t
-			if age < 0.7:
-				fx.append([p["x"] + 3.0, p["y"] + TS, age, p["id"]])
-			continue
-		var q := _path(p, u)
-		var k := _sst(0.2, 0.7, u)
-		_rock(ci, jr(q.x), jr(q.y), p["id"], 1.0 - k)
-		ci.draw_texture_rect_region(full, Rect2(jr(q.x), jr(q.y), tw, TS), src, Color(1, 1, 1, k))
-		moving.append(q + Vector2(3, 3))
-		if u * t < 0.4:
-			fx.append([p["hx"] + 3.0, p["hy"] + TS, u * t, p["id"] + 7])
-	_scaffold(ci, S, progress, true)
+		else:
+			_crumble(ci, S, p, tau)
+	if hoist:
+		for p: Dictionary in S["tiles"]:
+			var raw: float = (q - p["n"] * (1.0 - D)) / D
+			if raw <= 0.0:
+				continue
+			var u := _cl(raw)
+			# Pierre de la dernière colonne : rognée au bord de l'image (drawImage hors source).
+			var tw := float(mini(TS, SW - int(p["x"])))
+			var src := Rect2(p["x"], p["y"], tw, TS)
+			if u >= 1.0:
+				ci.draw_texture_rect_region(full, Rect2(p["x"], p["y"], tw, TS), src)
+				var age := (raw - 1.0) * t
+				if age < 0.7:
+					fx.append([p["x"] + 3.0, p["y"] + TS, age, p["id"]])
+				continue
+			var at := _path(p, u)
+			var k := _sst(0.2, 0.7, u)
+			_rock(ci, jr(at.x), jr(at.y), p["id"], 1.0 - k)
+			ci.draw_texture_rect_region(full, Rect2(jr(at.x), jr(at.y), tw, TS), src, Color(1, 1, 1, k))
+			moving.append(at + Vector2(3, 3))
+			if u * t < 0.4:
+				fx.append([p["hx"] + 3.0, p["hy"] + TS, u * t, p["id"] + 7])
+	_scaffold(ci, S, tau, q, true)
+	# Le liseré de visée claque en blanc au clic.
+	if tau < 0.1:
+		ci.draw_texture(S["outline"], Vector2.ZERO, Color(1, 1, 1, 1.0 - tau / 0.1))
 	for f in fx:
 		_puff(ci, f[0], f[1], f[2], f[3])
 	return moving
+
+
+## Aperçu de pose en mode construction : suit la case visée, dans le tri en profondeur du monde.
+class Ghost extends Node2D:
+	var world: Node
+	var _type := ""
+	var _ok := false
+
+	func _process(_delta: float) -> void:
+		var p: Variant = GameState.build_pointer
+		visible = GameState.hud_mode == "build" and p != null and not GameState.hud_build_type.is_empty() and world.simulation != null
+		if not visible:
+			return
+		_type = GameState.hud_build_type
+		var at := Simulation.snap_for(_type, p)
+		_ok = world.simulation.site_visible(_type, at) and world.simulation.valid_site(_type, at)
+		position = Proj.nat(at.x, 0.0, at.y)
+		queue_redraw()
+
+	func _draw() -> void:
+		if _type.is_empty():
+			return
+		var def: Dictionary = Catalog.BUILDINGS[_type]
+		var S := BuildingView.site(def["art"])
+		var A: Dictionary = BuildingView._meta["arts"][def["art"]]
+		var f := float(A.get("scale", int(def["size"]) / 3.0))
+		draw_set_transform(-Vector2(A["anchor"][0], A["anchor"][1]) * f, 0.0, Vector2(f, f))
+		BuildingView.draw_ghost(self, S, _ok)

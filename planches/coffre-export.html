@@ -2,17 +2,20 @@
 <html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Coffre · export</title>
 <style>body{margin:0;background:#0b120e;color:#dcd8bc;font:14px/1.4 system-ui,sans-serif;padding:16px}canvas{image-rendering:pixelated;background:#4a3a2a;display:block;margin-top:8px;max-width:100%}p{color:#93a08a}</style></head><body>
 <h1>Coffre antique · export de la planche de sprites</h1>
-<p>Trois rangées de 16 images de 56 × 72 px : fermé (boucle des glyphes), ouverture (1,2 s), ouvert (boucle). Repère : milieu du bas de la face avant en (28, 64).
+<p>Quatre rangées de 16 images de 56 × 72 px : fermé (boucle des glyphes), ouverture (1,2 s), ouvert (boucle), éteint (glyphes cyan remplacés par l’ardoise sombre, sans animation : coffre désactivé tant que l’Ancre est éteinte, planche intro-capsule-planche.html, V1). Repère : milieu du bas de la face avant en (28, 64).
 Avec <code>?save=1</code> (servi par <code>tools/coffre/serve.py</code>), écrit <code>assets/baked/world/chest_ardoise.png</code> et son fichier de métadonnées.</p>
 <canvas id="sheet"></canvas><p id="st"></p>
 <script src="assets/coffre-ardoise.js?v=1"></script>
 <script>
 'use strict';
-const N=16,LOOP=2*Math.PI/2.2,OPEN=1.2,K=ChestKit,cv=document.querySelector('#sheet'),g=cv.getContext('2d');cv.width=K.W*N;cv.height=K.H*3;cv.style.width=cv.width*3+'px';
+const N=16,LOOP=2*Math.PI/2.2,OPEN=1.2,K=ChestKit,cv=document.querySelector('#sheet'),g=cv.getContext('2d');cv.width=K.W*N;cv.height=K.H*4;cv.style.width=cv.width*3+'px';
 const tmp=document.createElement('canvas');tmp.width=K.W;tmp.height=K.H;const tg=tmp.getContext('2d');
 const put=(img,i,row)=>{tg.putImageData(img,0,0);g.drawImage(tmp,i*K.W,row*K.H)};
-for(let i=0;i<N;i++){put(K.image(0,i/N*LOOP,tg),i,0);put(K.image(K.eio(i/(N-1)),i/(N-1)*OPEN,tg),i,1);put(K.image(1,i/N*LOOP,tg),i,2)}
-const meta={frame:[K.W,K.H],anchor:[K.AX,K.AY],count:N,rows:{closed:0,opening:1,open:2},loop_fps:N/LOOP,open_time:OPEN};
+// Éteint : image 0 de la boucle fermée, glyphes cyan ramenés sur les tons d'ardoise (V1 de la planche intro-capsule).
+const OFF={'c8fbff':[0x3a,0x44,0x54],'5ce8ff':[0x3a,0x44,0x54],'1f9fb8':[0x2a,0x32,0x40],'12596b':[0x1e,0x24,0x30],'0a2a33':[0x1e,0x24,0x30]};
+const off=img=>{const d=img.data;for(let i=0;i<d.length;i+=4){if(!d[i+3])continue;const h=((1<<24)|(d[i]<<16)|(d[i+1]<<8)|d[i+2]).toString(16).slice(1),c=OFF[h];if(c){d[i]=c[0];d[i+1]=c[1];d[i+2]=c[2]}}return img};
+for(let i=0;i<N;i++){put(K.image(0,i/N*LOOP,tg),i,0);put(K.image(K.eio(i/(N-1)),i/(N-1)*OPEN,tg),i,1);put(K.image(1,i/N*LOOP,tg),i,2);put(off(K.image(0,0,tg)),i,3)}
+const meta={frame:[K.W,K.H],anchor:[K.AX,K.AY],count:N,rows:{closed:0,opening:1,open:2,off:3},loop_fps:N/LOOP,open_time:OPEN};
 document.querySelector('#st').textContent=JSON.stringify(meta);
 if(new URLSearchParams(location.search).has('save')){
  fetch('/out/chest_ardoise.png',{method:'POST',body:cv.toDataURL('image/png')}).then(r=>fetch('/out/chest_ardoise.json',{method:'POST',body:JSON.stringify(meta)}))

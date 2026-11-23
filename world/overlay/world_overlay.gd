@@ -24,7 +24,7 @@ const FORMULAS := {
 }
 ## Vers de chaque bâtiment (BUILDINGS[].verse, buildings.js).
 const VERSE_OF := {"sigil": "templeJob", "aether": "foundryJob", "medeina": "sawmillJob", "indra": "barracksJob",
-	"warehouse": "templeJob", "library": "templeJob", "forge": "foundryJob", "workshop": "foundryJob", "creuset": "foundryJob", "scierie": "foundryJob", "archerie": "foundryJob", "bedroom": "sawmillJob", "soulwell": "sawmillJob",
+	"warehouse": "templeJob", "library": "templeJob", "forge": "foundryJob", "workshop": "foundryJob", "creuset": "foundryJob", "scierie": "foundryJob", "archerie": "foundryJob", "etabli": "foundryJob", "bedroom": "sawmillJob", "soulwell": "sawmillJob",
 	"caserne": "barracksJob", "eglise": "sawmillJob", "ecole": "sawmillJob"}
 
 var world: World
@@ -90,6 +90,7 @@ func _draw() -> void:
 		return
 	_draw_building_labels()
 	_draw_pylons()
+	_draw_portals()
 	_effects.ci = self
 	_effects.world = world
 	_effects.draw_all(GameState.sim_time)
@@ -103,6 +104,7 @@ func _draw() -> void:
 	var b := HudModel.selected_building()
 	if b and b.rally_point != null:
 		_draw_rally(b)
+	_draw_move_orders()
 
 
 # ---------------------------------------------------------------- Point de ralliement
@@ -123,6 +125,25 @@ func _draw_rally(b: Building) -> void:
 	draw_set_transform(to, 0.0, Vector2(k, k))
 	_draw_rally_flag(Vector2.ZERO, t)
 	draw_set_transform(Vector2.ZERO)
+
+
+## Ordre de déplacement des unités amies sélectionnées : même ligne que le point de ralliement, de l'unité à
+## sa destination, marquée d'un petit cercle. Disparaît à l'arrivée (force_move retombe, Combat).
+func _draw_move_orders() -> void:
+	var t := Time.get_ticks_msec() / 1000.0
+	var k := clampf(float(_cam().px) * 0.6, 1.0, 3.0)
+	for u: Unit in GameState.selected:
+		if not u.alive() or u.hidden or u.is_enemy() or not u.force_move or u.direct_move:
+			continue
+		if Vector2(u.tx - u.x, u.tz - u.z).length() < 0.6:
+			continue
+		var from := _project(u.x, 0.0, u.z)
+		var to := _project(u.tx, 0.0, u.tz)
+		var r := 3.5 * k
+		_draw_marching_dashes(from, to - (to - from).limit_length(r), t)
+		draw_arc(to, r, 0.0, TAU, 20, Color(RALLY_OUTLINE, 0.55), 4.0, true)
+		draw_arc(to, r, 0.0, TAU, 20, RALLY_GOLD, 2.0, true)
+		draw_circle(to, 1.2 * k, RALLY_GOLD)
 
 
 func _draw_marching_dashes(from: Vector2, to: Vector2, t: float) -> void:
@@ -274,11 +295,17 @@ func _draw_pylons() -> void:
 		var base := _project(p["x"], 0.0, p["z"])
 		var praying: Array = p.get("praying", [])
 		_draw_prayer_beams(p, base, kk)
-		if p["channeled"]:
+		if p.has("reflux"):
+			_text_c(_bold, base + Vector2(0, 7.0 * kk), "REFLUX DE MERENOR", 10, Color("#ffb48a"))
+		elif p["channeled"]:
 			_text_c(_bold, base + Vector2(0, 7.0 * kk), "PYLÔNE CANALISÉ", 10, Color("#ece8dc"))
+		elif float(p.get("bless_run", 0.0)) > 0.0:
+			_text_c(_bold, base + Vector2(0, 7.0 * kk), "CANALISATION · %d / %d s" % [floori(p["bless_run"]), int(Pylons.BLESS_CHANNEL)], 10, Color("#5ce8ff"))
 		elif not praying.is_empty():
 			_text_c(_bold, base + Vector2(0, 7.0 * kk), "CANALISATION · %d / 4" % praying.size(), 10, Color("#ffb48a"))
 		var top := base - Vector2(0, 100.0 * kk)
+		# Jamais sous le bandeau du jour (haut de l'écran, ~115 px) : la pile des panneaux monte depuis là.
+		top.y = maxf(top.y, 160.0)
 		# Bénédiction de l'Ingénieur : répit restant (il grandit pendant la prière, s'écoule ensuite).
 		var blessing := float(p.get("blessing", 0.0))
 		if blessing > 0.0:
@@ -289,6 +316,33 @@ func _draw_pylons() -> void:
 			var label := "BÉNÉDICTION %d:%02d" % [bs / 60, bs % 60]
 			draw_string(_bold, bp.position + Vector2(0, 16), label, HORIZONTAL_ALIGNMENT_CENTER, bw, 11, Color("#5ce8ff") if p.get("blessing_now", false) else Color("#b8f6ff"))
 			top.y -= 30.0
+		# Reflux annoncé (PortalNet) : minuteur rouge jusqu'à la sortie de la meute.
+		var rem := PortalNet.reflux_remaining(p)
+		if rem >= 0.0:
+			var rw := 132.0
+			var rp := Rect2(top - Vector2(rw / 2.0, 40.0), Vector2(rw, 38.0))
+			draw_style_box(_pylon_style, rp)
+			draw_string(_bold, rp.position + Vector2(8, 19), "REFLUX", HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color("#e0583a"))
+			var rs := ceili(rem)
+			draw_string(_bold, rp.position + Vector2(58, 21), "%d:%02d" % [rs / 60, rs % 60], HORIZONTAL_ALIGNMENT_LEFT, -1, 15, Color("#ffb48a"))
+			var rb := Rect2(rp.position + Vector2(6, 28), Vector2(rw - 12, 5))
+			draw_rect(rb, Color("#2a0c10"))
+			draw_rect(Rect2(rb.position, Vector2(rb.size.x * PortalNet.reflux_k(p), rb.size.y)), Color("#e0583a"))
+			top.y -= 44.0
+		# Pylône scellé par l'Ingénieur : la meute du reflux doit tomber avant la fin, sinon il redevient sauvage.
+		var orem := PortalNet.reflux_out_remaining(p)
+		var alive := PortalNet.pack_alive(p)
+		if orem >= 0.0 and p.get("sealed", false) and alive > 0:
+			var mw := 132.0
+			var mp := Rect2(top - Vector2(mw / 2.0, 40.0), Vector2(mw, 38.0))
+			draw_style_box(_pylon_style, mp)
+			draw_string(_bold, mp.position + Vector2(8, 19), "MEUTE · %d" % alive, HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color("#e0583a"))
+			var ms := ceili(orem)
+			draw_string(_bold, mp.position + Vector2(76, 21), "%d:%02d" % [ms / 60, ms % 60], HORIZONTAL_ALIGNMENT_LEFT, -1, 15, Color("#ffb48a"))
+			var mb := Rect2(mp.position + Vector2(6, 28), Vector2(mw - 12, 5))
+			draw_rect(mb, Color("#2a0c10"))
+			draw_rect(Rect2(mb.position, Vector2(mb.size.x * orem / PortalNet.OUT, mb.size.y)), Color("#e0583a"))
+			top.y -= 44.0
 		var tm := Pylons.timer(p)
 		if tm.is_empty():
 			continue
@@ -322,6 +376,11 @@ func _draw_prayer_beams(p: Dictionary, base: Vector2, kk: float) -> void:
 		var c: Color = BEAM_CULT.get(u.role, Color.WHITE)
 		var from := _project(u.x, 0.0, u.z) - Vector2(0, Pylons.BEAM_FROM * kk)
 		var i := Pylons.CULTS.find(u.role)
+		var rk := PortalNet.reflux_k(p)
+		if rk > 0.0:
+			# Reflux annoncé : le rayon ondule, se troue et vire au rouge vers le foyer.
+			_draw_weak_beam(from, focus, c, rk, i, t, kk)
+			continue
 		draw_line(from, focus, Color(c, 0.18), 3.0 * kk)
 		draw_line(from, focus, c.lerp(Color.WHITE, 0.35), kk)
 		draw_circle(from, 6.0 * kk, Color(c, 0.12))
@@ -329,6 +388,167 @@ func _draw_prayer_beams(p: Dictionary, base: Vector2, kk: float) -> void:
 			var q := fposmod(t * 0.8 + k / 3.0 + i * 0.1, 1.0)
 			draw_rect(Rect2(from.lerp(focus, q) - Vector2(kk, kk) * 0.5, Vector2(kk, kk) * 1.5), Color(1, 1, 1, 0.85))
 	draw_circle(focus, 10.0 * kk, Color(0.92, 0.91, 0.87, 0.10 * float(p.get("praying", []).size()) / 4.0))
+
+
+const REFLUX_RED := Color8(224, 88, 58)
+const REFLUX_CORE := Color8(255, 240, 216)
+
+
+func _draw_weak_beam(from: Vector2, focus: Vector2, c: Color, rk: float, i: int, t: float, kk: float) -> void:
+	var n := 28
+	var nrm := (focus - from).normalized().orthogonal()
+	var prev := from
+	for k in range(1, n + 1):
+		var q := float(k) / n
+		var w := rk * 6.0 * kk * sin(q * 18.0 - t * 9.0 + i) * sin(q * PI)
+		var pt := from.lerp(focus, q) + nrm * w
+		var hole := fposmod(q * 7.0 - t * 1.3 + i * 0.3, 1.0) < rk * 0.35
+		if not hole:
+			var col := c.lerp(Color.WHITE, 0.35).lerp(REFLUX_RED, clampf(rk * 1.4 - q * 0.4, 0.0, 1.0))
+			draw_line(prev, pt, Color(col, 0.18), 3.0 * kk)
+			draw_line(prev, pt, col, kk)
+		prev = pt
+
+
+# ---------------------------------------------------------------- Portails (PortalNet, Orbe suspendu)
+
+## Hauteur de l'orbe au-dessus du seuil (px natifs), rayon (px natifs), montée de l'orbe qui emporte un voyageur.
+const ORB_H := 18.0
+const ORB_R := 6.0
+const ORB_RISE := 70.0
+
+
+func _draw_portals() -> void:
+	var kk := float(_cam().px)
+	var t := GameState.sim_time
+	var st := world.terrain_state
+	var eng: Unit = GameState.incarnated
+	var travellers: Array[Unit] = []
+	for u in GameState.units:
+		if u.alive() and PortalNet.warping(u):
+			travellers.append(u)
+	for n: Dictionary in PortalNet.nodes(st):
+		var at: Vector2 = n["pos"]
+		if not world.fog.visible_at(at):
+			continue
+		var base := _project(at.x, 0.0, at.y)
+		var orb := base - Vector2(0, ORB_H * kk)
+		var p: Dictionary = n["pylon"]
+		if not n["open"]:
+			if not p.is_empty():
+				_draw_rift(base, kk, t, PortalNet.reflux_k(p))
+			continue
+		if not p.is_empty():
+			# Fils des quatre rayons : du foyer de l'obélisque jusqu'à l'orbe, en pointillés qui descendent.
+			var focus := _project(p["x"], 0.0, p["z"]) - Vector2(0, Pylons.FOCUS * kk)
+			for k in 4:
+				var c: Color = BEAM_CULT[Pylons.CULTS[k]]
+				var off := Vector2((k - 1.5) * 0.8 * kk, 0)
+				var seg := 14
+				for j in seg:
+					if fposmod(float(j) / seg * 4.0 - t * 1.6 + k * 0.25, 1.0) < 0.5:
+						draw_line(focus.lerp(orb, float(j) / seg) + off * (1.0 - float(j) / seg), focus.lerp(orb, float(j + 1) / seg) + off * (1.0 - float(j + 1) / seg), c.lerp(Color.WHITE, 0.3), kk)
+		var busy := false
+		for u in travellers:
+			if u.pos().distance_to(at) < 1.5:
+				busy = true
+		draw_set_transform(base, 0.0, Vector2(1.0, 0.3))
+		draw_circle(Vector2.ZERO, 9.0 * kk, Color(0, 0, 0, 0.28))
+		draw_set_transform(Vector2.ZERO)
+		if not busy:
+			_draw_orb(orb, ORB_R * kk, t, false)
+		if eng != null and eng.alive() and not PortalNet.warping(eng) and eng.pos().distance_to(at) <= PortalNet.REACH:
+			_prompt_at(base + Vector2(0, 6.0 * kk), "E : Voyager", kk)
+	for u in travellers:
+		_draw_bubble(u, kk, t)
+
+
+## Orbe aux quatre quartiers (couleurs des cultes) qui tournent, cœur blanc ; `bubble` : bulle transparente.
+func _draw_orb(c: Vector2, r: float, t: float, bubble: bool) -> void:
+	draw_circle(c, r + 10.0 * float(_cam().px), Color(0.86, 0.88, 1.0, 0.10))
+	if bubble:
+		draw_circle(c, r, Color(0.86, 0.9, 1.0, 0.10))
+		for k in 4:
+			var a0 := t * 2.0 + k * PI / 2.0
+			draw_arc(c, r, a0, a0 + PI / 2.0, 10, BEAM_CULT[Pylons.CULTS[k]].lerp(Color.WHITE, 0.5), maxf(1.0, r * 0.08))
+		return
+	for k in 4:
+		var a0 := t * 2.0 + k * PI / 2.0
+		var pts := PackedVector2Array([c])
+		for j in 7:
+			pts.append(c + Vector2.from_angle(a0 + PI / 2.0 * j / 6.0) * r)
+		draw_colored_polygon(pts, BEAM_CULT[Pylons.CULTS[k]].lerp(Color.WHITE, 0.15))
+	draw_arc(c, r, 0.0, TAU, 20, Color8(97, 90, 110), maxf(1.0, r * 0.18))
+	draw_circle(c, r * 0.35, Color(1, 1, 1, 0.9))
+	draw_circle(c + Vector2(-r * 0.4, -r * 0.4), r * 0.16, Color.WHITE)
+
+
+## Voyageur dans la bulle (planche, modèle 5) : elle gonfle autour de lui, se referme, puis l'orbe remonte.
+func _draw_bubble(u: Unit, kk: float, t: float) -> void:
+	var wv := PortalNet.warp_view(u)
+	var k := float(wv["k"])
+	var base := _project(u.x, 0.0, u.z)
+	var orb := base - Vector2(0, ORB_H * kk)
+	var body := base - Vector2(0, 14.0 * kk)
+	if k < 0.35:
+		var q := k / 0.35
+		_draw_orb(orb.lerp(body, q), (ORB_R + q * 14.0) * kk, t, q > 0.3)
+	elif k < 0.6:
+		var q := (k - 0.35) / 0.25
+		_draw_orb(body.lerp(orb, q), (20.0 - q * 16.0) * kk, t, q < 0.8)
+	else:
+		var q := (k - 0.6) / 0.4
+		var c := orb - Vector2(0, q * ORB_RISE * kk)
+		_draw_orb(c, 3.0 * kk, t, false)
+		draw_circle(c, 8.0 * kk, Color(1, 1, 1, 0.25 * (1.0 - q)))
+
+
+## Fêlure au seuil (reflux) : une déchirure rouge qui s'ouvre au rythme d'un cœur qui accélère, et un cercle
+## tramé au sol qui marque d'où sortira la meute.
+func _draw_rift(base: Vector2, kk: float, t: float, rk: float) -> void:
+	if rk <= 0.0:
+		return
+	var beat := fposmod(t * (1.0 + rk * 2.5), 1.0)
+	var pul := 1.0 if beat < 0.12 else 0.4 if beat < 0.24 else 0.0
+	if rk > 0.15:
+		var R := 34.0 * kk
+		for a in 60:
+			if (a + floori(t * 8.0)) % 4 < 2:
+				var a0 := float(a) / 60.0 * TAU
+				draw_line(base + Vector2(cos(a0) * R, sin(a0) * R * 0.4), base + Vector2(cos(a0 + TAU / 60.0) * R, sin(a0 + TAU / 60.0) * R * 0.4), REFLUX_RED.lerp(REFLUX_CORE, pul * 0.4), 1.5 * kk)
+	var h := (4.0 + rk * 30.0) * kk
+	var cy := base.y - 14.0 * kk
+	var left := PackedVector2Array()
+	var right := PackedVector2Array()
+	var core_l := PackedVector2Array()
+	var core_r := PackedVector2Array()
+	for j in 13:
+		var v := float(j) / 12.0 * 2.0 - 1.0
+		var y := cy + v * h / 2.0
+		var w := (1.0 - v * v) * (1.2 + rk * 3.0 + pul * 1.5) * kk
+		var off := sin(y / kk * 0.7) * 1.5 * kk
+		left.append(Vector2(base.x + off - w, y))
+		right.append(Vector2(base.x + off + w, y))
+		core_l.append(Vector2(base.x + off - w * 0.4, y))
+		core_r.append(Vector2(base.x + off + w * 0.4, y))
+	right.reverse()
+	core_r.reverse()
+	draw_circle(Vector2(base.x, cy), (16.0 + rk * 14.0) * kk, Color(REFLUX_RED, 0.12 + 0.12 * pul))
+	draw_colored_polygon(left + right, REFLUX_RED)
+	draw_colored_polygon(core_l + core_r, REFLUX_CORE)
+	for i in 10:
+		var u := fposmod(t * 1.4 + i / 10.0, 1.0)
+		var a := float((i * 7919 + floori(t * 1.4 + i / 10.0) * 104729) % 628) / 100.0
+		draw_rect(Rect2(Vector2(base.x + cos(a) * u * 20.0 * kk, cy + sin(a) * u * 14.0 * kk), Vector2(kk, kk)), Color8(255, 180, 138))
+
+
+## Invite « E : … » dans la petite bannière bleue (comme la capsule), à l'échelle du monde.
+func _prompt_at(top: Vector2, label: String, kk: float) -> void:
+	var size := 12
+	var w := _bold.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x
+	var box := Rect2((top + Vector2(-w / 2.0 - 9.0, 0.0)).round(), Vector2(roundf(w + 18.0), 20.0))
+	SnesBanner.paint(self, box, SnesBanner.DIALOGUE, true)
+	draw_string(_bold, box.position + Vector2(9, 14), label, HORIZONTAL_ALIGNMENT_LEFT, -1, size, SnesBanner.INK)
 
 
 ## drawPrayFeedback : « +5 Savoir » qui monte et s'efface au-dessus du temple.

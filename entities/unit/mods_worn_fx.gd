@@ -24,6 +24,13 @@ const XBOW := {"": [Vector2(18, -15), Vector2(13, -16), Vector2(9, -17)],
 	"d": [Vector2(-11, -24), Vector2(-9, -18), Vector2(-7, -12)],
 	"u": [Vector2(-9, -26), Vector2(-8, -21), Vector2(-6, -16)]}
 const SEAL_CENTER := Vector2(-15.5, -17.5)
+## Œil avant (profil) et entre les yeux (de face), où se lève la loupe d'Analyse.
+const EYE := Vector2(5, -27)
+const EYE_FRONT := Vector2(1, -27)
+## Loupe d'Analyse levée (0 : à la ceinture, 1 : devant l'œil), lissée d'une image à l'autre (ANALYSE_LIFT s).
+const ANALYSE_LIFT := 0.3
+var _lift := 0.0
+var _lift_t := -INF
 ## Couche de chaque mod : derrière le corps ou devant (inversé de dos).
 const BEHIND := ["wisp", "chant", "echo"]
 
@@ -109,10 +116,16 @@ func _draw() -> void:
 		_anchor(u, t)
 	if _on("chant"):
 		_chant(u, t)
+	elif front and Gear.has_module(u, "chant"):
+		_chant_wave(u, t)
 	if _on("sack"):
 		_sack(t)
+	if _on("analyse"):
+		_analyse(u, t)
 	if _on("echo"):
 		_echo(u, t)
+	elif front and Gear.has_module(u, "echo"):
+		_echo_ring(u, t)
 
 
 ## Écaille d'acier sur l'épaule avant ; chargée (frôlement) : cœur cyan qui pulse et étincelle.
@@ -287,9 +300,14 @@ func _chant(u: Unit, t: float) -> void:
 	_px(c + Vector2(0, 2), GOLD[1])
 	_px(c + Vector2(0, 3), GOLD[1])
 	_px(c + Vector2(-1, -4), GOLD[4], 0.6)
+	_chant_wave(u, t)
+
+
+## Onde du diapason, aussi dessinée devant le corps : elle doit se voir quel que soit le côté où il est tourné.
+func _chant_wave(u: Unit, t: float) -> void:
 	var k := fposmod(t, 2.0) / 2.0
 	if _adepts_near(u):
-		_ring(c + Vector2(0, -2), 2.0 + k * 22.0, GOLD[3], (1.0 - k) * 0.7, -PI * 0.75, -PI * 0.25)
+		_ring(BACK + Vector2(0, -2), 2.0 + k * 22.0, GOLD[3], (1.0 - k) * 0.7, -PI * 0.75, -PI * 0.25)
 
 
 func _adepts_near(u: Unit) -> bool:
@@ -315,6 +333,35 @@ func _sack(t: float) -> void:
 	_px(c + Vector2(roundf(cos(a + PI)), -1), SHADOW[2])
 
 
+## Analyse (planches/etabli-propositions.html, piste B « Barre sous la loupe ») : petite loupe cerclée d'argent pendue
+## à la ceinture ; un ennemi à l'écran (Mods.analysis_seen), elle se lève devant l'œil et sa lentille cyan balaie.
+func _analyse(u: Unit, t: float) -> void:
+	var dt := clampf(t - _lift_t, 0.0, 0.1) if not is_inf(_lift_t) else 0.0
+	_lift_t = t
+	var target := 1.0 if Mods.analysis_seen(u) else 0.0
+	_lift = move_toward(_lift, target, dt / ANALYSE_LIFT)
+	var k := _lift * _lift * (3.0 - 2.0 * _lift)
+	var rest := BELT + Vector2(-1, 2)
+	var eye := EYE_FRONT if _vdir == "d" else EYE
+	var c := rest.lerp(eye + Vector2(1, 0), k).round()
+	if k < 0.5:
+		# Cordon de la ceinture à la loupe.
+		_px(BELT + Vector2(-1, 0), SILVER[1])
+		_px(BELT + Vector2(-1, 1), SILVER[2])
+	for p: Vector2 in [Vector2(-1, -2), Vector2(0, -2), Vector2(1, -2), Vector2(-2, -1), Vector2(2, -1), Vector2(-2, 0), Vector2(2, 0), Vector2(-2, 1), Vector2(2, 1), Vector2(-1, 2), Vector2(0, 2), Vector2(1, 2)]:
+		_px(c + p, SILVER[3] if p.y < 0 or p.x < 0 else SILVER[1])
+	var lit := k > 0.9
+	for p: Vector2 in [Vector2(-1, -1), Vector2(0, -1), Vector2(1, -1), Vector2(-1, 0), Vector2(0, 0), Vector2(1, 0), Vector2(-1, 1), Vector2(0, 1), Vector2(1, 1)]:
+		_px(c + p, CYAN if lit and p == Vector2(-1, -1) else Color("#1f9fb8") if lit else Color("#12596b"))
+	_px(c + Vector2(-1, -1), Color.WHITE if lit else Color("#5ce8ff"), 0.9)
+	# Manche, en bas à droite (vers la ceinture quand la loupe est levée).
+	_px(c + Vector2(3, 3), SILVER[2])
+	_px(c + Vector2(4, 4), SILVER[1])
+	if lit:
+		var q := fposmod(t, 1.2) / 1.2
+		_px(c + Vector2(roundf(lerpf(-1.0, 1.0, q)), 0), Color("#c8fbff"), 0.8)
+
+
 ## Éclat de pylône en pendentif dorsal ; il bourdonne (tremble et lance des ondes) quand il annonce une vague.
 func _echo(u: Unit, t: float) -> void:
 	var k := t - Mods.at(u, "echo")
@@ -328,6 +375,12 @@ func _echo(u: Unit, t: float) -> void:
 	_px(c, PYLON[2])
 	_px(c + Vector2(0, 1), PYLON[1])
 	_px(c + Vector2(0, -1), PYLON[4], 0.3 + 0.4 * sin(t * (12.0 if buzz else 2.0)))
-	if buzz:
+	_echo_ring(u, t)
+
+
+## Ondes de l'éclat pendant l'annonce, aussi dessinées devant le corps.
+func _echo_ring(u: Unit, t: float) -> void:
+	var k := t - Mods.at(u, "echo")
+	if k >= 0.0 and k < Mods.ECHO_LEAD:
 		var q := fposmod(t, 0.8) / 0.8
-		_ring(c + Vector2(0, -1), 2.0 + q * 10.0, PYLON[3], (1.0 - q) * 0.8)
+		_ring(BACK_LOW + Vector2(0, -1), 2.0 + q * 12.0, PYLON[3], (1.0 - q) * 0.8)

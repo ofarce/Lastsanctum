@@ -1,6 +1,12 @@
 class_name Opening
 extends RefCounted
-## Séquence d'ouverture (planches/sequence-ouverture-v2.html, choix du 2026-11-18) :
+## Séquence d'ouverture. Depuis le 2026-11-22 (planches/intro-capsule-planche.html), la partie s'ouvre dans la capsule :
+##   « boot »     J1, cinématique : l'Ingénieur est dans la capsule éteinte, carton « Jour 1 » ; à BOOT_WAKE l'Ancre
+##                s'allume seule (orb_active) et le Coffre Antique se rallume avec elle (world/vault/chest_view.gd).
+##   « recharge » cinématique : l'Ancre se recharge seule, sa jauge (core_hp) monte de 0 à 100 % en RECHARGE_LEN s.
+##   « link »     cinématique : le trait d'énergie court de l'Ancre à la capsule, qui s'allume (capsule_on).
+##   « awake »    jeu : « E : Sortir » ; dehors, le Coffre Antique remet l'équipement (Simulation.open_chest).
+## Étapes plus jouées, gardées pour mémoire (planches/sequence-ouverture-v2.html, choix du 2026-11-18) :
 ##   « arrival »  J1, cinématique : portail d'argent aux arcs au sol (1.2), l'Ingénieur sans armure en est
 ##                expulsé, tombe à genoux, halète, se relève. Porte sud (2.1) fermée.
 ##   « day1 »     jeu : réveiller l'Ancre. Le réveil enchaîne la surcharge (sim/overload.gd) sous barres de
@@ -21,6 +27,11 @@ extends RefCounted
 const ANCHOR_SEQUENCE := false
 ## Durée de la course du trait jusqu'à la capsule.
 const LINK_LEN := 2.2
+## Capsule éteinte : l'Ancre s'allume à BOOT_WAKE s, puis se recharge en RECHARGE_LEN s.
+const BOOT_WAKE := 1.5
+const RECHARGE_LEN := 7.5
+## Cadrage des cinématiques de la capsule : entre la capsule et l'Ancre, px 3.
+const BOOT_CAM := Capsule.VIEW
 ## Une fois arrivé, le trait reste allumé LINK_HOLD s puis s'éteint en LINK_FADE s.
 const LINK_HOLD := 3.0
 const LINK_FADE := 1.2
@@ -102,15 +113,17 @@ static func _cannon_sounds() -> void:
 		_fire[i] = p
 
 
-## Nouvelle partie avec séquence : l'Ingénieur attend dans le portail, la porte est fermée.
+## Nouvelle partie avec séquence : l'Ingénieur est dans la capsule éteinte, la porte est fermée.
 static func start(sim: Simulation, eng: Unit) -> void:
-	_go("arrival")
+	_go("boot")
 	eng.hidden = true
-	eng.x = LAND.x
-	eng.z = LAND.y
-	eng.tx = LAND.x
-	eng.tz = LAND.y
+	eng.x = Capsule.EXIT.x
+	eng.z = Capsule.EXIT.y
+	eng.tx = eng.x
+	eng.tz = eng.z
 	eng.unarmored = true
+	GameState.in_capsule = true
+	GameState.next_wave = INF
 	# Le portail des Exilés ne joue plus son ouverture : l'arrivée a sa propre sphère.
 	GameState.portal_start = -1000.0
 	set_door(sim.state(), true)
@@ -119,7 +132,7 @@ static func start(sim: Simulation, eng: Unit) -> void:
 ## Une cinématique est en cours : barres, HUD masqué, commandes coupées.
 static func cinematic() -> bool:
 	match GameState.opening_stage:
-		"arrival", "siege_intro", "blast", "shield_form":
+		"boot", "recharge", "link", "arrival", "siege_intro", "blast", "shield_form":
 			return true
 		"day1":
 			# Du réveil de l'Ancre à la fin de la surcharge : on reste dans la grotte, sous barres.
@@ -157,6 +170,28 @@ static func tick(sim: Simulation) -> void:
 					GameState.shield_at = GameState.sim_time
 					set_shield(sim.state(), true)
 					Combat.zone(CaveShape.CORE.x, CaveShape.CORE.y, 14.0, Color("#f4bfd6"))
+		"boot":
+			GameState.next_wave = INF
+			if t >= BOOT_WAKE:
+				# L'Ancre s'allume seule : elle part d'un souffle de vie (0 PV terminerait la partie).
+				GameState.orb_active = true
+				GameState.orb_finished_at = GameState.sim_time
+				GameState.orb_owner = null
+				GameState.core_hp = 1.0
+				Sfx.play("sort_lumiere")  # l'Ancre et le Coffre Antique se rallument
+				Combat.zone(CaveShape.CORE.x, CaveShape.CORE.y, 7.0, Color("#bba7ff"))
+				_go("recharge")
+		"recharge":
+			GameState.next_wave = INF
+			GameState.core_hp = maxf(1.0, recharge() * Simulation.CORE_MAX)
+			# Fin du rallumage des glyphes du Coffre Antique (ChestView.WAKE_SWEEP) : petit anneau cyan au sol.
+			if t >= ChestView.WAKE_SWEEP.y and not _cues.has("coffre_anneau"):
+				_cues["coffre_anneau"] = true
+				Combat.zone(CaveShape.CHEST.x, CaveShape.CHEST.y - 1.0, 3.5, Color("#5ce8ff"))
+			if t >= RECHARGE_LEN:
+				GameState.core_hp = Simulation.CORE_MAX
+				Combat.zone(CaveShape.CORE.x, CaveShape.CORE.y, 12.0, Color("#8777ac"))
+				_go("link")
 		"link":
 			_cue("ancre_trait", 0.0, t)
 			GameState.next_wave = INF
@@ -281,10 +316,23 @@ static func set_shield(st: TerrainState, up: bool) -> void:
 
 # ---------------------------------------------------------------- Lecture pour le rendu
 
+## Recharge de l'Ancre pendant l'ouverture (0 → 1), lue par la jauge au-dessus de l'Ancre ; −1 hors de l'étape.
+static func recharge() -> float:
+	if GameState.opening_stage != "recharge":
+		return -1.0
+	return clampf(elapsed() / RECHARGE_LEN, 0.0, 1.0)
+
+
 ## Barres de cinéma (0 → 1).
 static func bars() -> float:
 	var t := elapsed()
 	match GameState.opening_stage:
+		"boot":
+			return clampf(t / 0.5, 0.0, 1.0)
+		"recharge":
+			return 1.0
+		"link":
+			return 1.0 - clampf((t - (LINK_LEN - 0.6)) / 0.6, 0.0, 1.0)
 		"arrival":
 			return clampf(t / 0.5, 0.0, 1.0) * (1.0 - clampf((t - (ARR_END - 0.6)) / 0.6, 0.0, 1.0))
 		"siege_intro":
@@ -300,6 +348,11 @@ static func bars() -> float:
 
 ## Carton de jour : [texte, opacité] ou [].
 static func card() -> Array:
+	if GameState.opening_stage in ["boot", "recharge"]:
+		# « Jour 1 » sur la capsule éteinte, effacé au début de la recharge.
+		var b := elapsed() + (BOOT_WAKE if GameState.opening_stage == "recharge" else 0.0)
+		var k := clampf(minf((b - 0.3) * 2.0, (2.4 - b) * 2.0), 0.0, 1.0)
+		return ["Jour 1", k] if k > 0.0 else []
 	if GameState.opening_stage != "siege_intro":
 		return []
 	var t := elapsed()
@@ -345,6 +398,8 @@ static func camera() -> Dictionary:
 				return {"cam": SIEGE_CAM, "px": 2}
 		"arrival":
 			return {"cam": LAND + Vector2(0.0, -1.0), "px": 3}
+		"boot", "recharge", "link":
+			return {"cam": BOOT_CAM, "px": 3}
 	return {}
 
 

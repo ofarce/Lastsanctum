@@ -12,13 +12,17 @@ func test_chest_opens_when_close() -> void:
 	var sim := game()
 	var u := engineer()
 	_incarnate(u)
-	sim.state().vault_open = true
+	GameState.orb_active = true
 	u.x = CaveShape.CHEST_SPOT.x + 20.0
 	u.z = CaveShape.CHEST_SPOT.y
 	sim.open_chest_incarnated(u)
 	check(not GameState.base_inventory_unlocked, "trop loin : reste fermé")
+	u.job = null
 	u.x = CaveShape.CHEST_SPOT.x
+	u.tx = u.x
+	u.tz = u.z
 	sim.open_chest_incarnated(u)
+	run(sim, 0.2)
 	check(GameState.base_inventory_unlocked, "devant le coffre : ouvert")
 	var asked := [false]
 	var cb := func() -> void: asked[0] = true

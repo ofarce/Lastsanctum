@@ -56,7 +56,8 @@ func test_move_speed_and_wall_sliding() -> void:
 	u.tx = 15.2
 	u.tz = -130.0
 	_run(sim, 0.5)
-	check_near(u.x, 7.6, 0.05, "15,2 u/s")
+	# Ingénieur : 15,2 u/s + 20 % (demande du 2026-11-22), Simulation.SPEED_ENGINEER.
+	check_near(u.x, Simulation.SPEED_ENGINEER * 0.5, 0.05, "18,24 u/s")
 	# Vers la roche à l'est de la salle : l'unité reste sur un sol praticable.
 	u.tx = 120.0
 	u.memo.clear()

@@ -53,8 +53,6 @@ var research_done: Dictionary = {}
 var research_jobs: Dictionary = {}
 ## Coffre antique : le système qui le débloque positionne ce drapeau.
 var base_inventory_unlocked := false
-## L'Ingénieur a déjà remarqué le glyphe de la paroi est (réplique dite une seule fois par partie).
-var vault_hint_said := false
 ## Instant où l'Ingénieur a ouvert le coffre antique (animation du couvercle), INF avant.
 var chest_opened_at: float = INF
 ## Une pile {item, quantity} par case, limitée à 9 999 objets.
@@ -95,8 +93,14 @@ var wave: int = 0
 var wildlife_lairs: Array[Dictionary] = []
 ## Errants des galeries (sim/roamers.gd) : {state, seed, dens} ; vide = à tirer.
 var roamers: Dictionary = {}
+## Portails fixes des salles allumés (sim/portal_net.gd, biomes en salles) : id de salle du plan → vrai.
+var room_portals: Dictionary = {}
+## Vague dont le rappel d'assaut gratuit a déjà servi (PortalNet.assault_recall) ; 0 = aucune.
+var assault_recall_wave: int = 0
 ## Flot nocturne (sim/night.gd) : instant du prochain squelette (0 = à tirer), nuit déjà annoncée (numéro du jour).
 var night_next: float = 0.0
+## Prochain reflux d'un Pylône de Merenor canalisé (sim/portal_net.gd) ; 0 = à tirer.
+var reflux_next: float = 0.0
 var night_day: int = 0
 ## Décor et salles à thème du Temple (sim/sanctum.gd) : {state, seed, layout, lit, done, next} ; vide = à tirer.
 var sanctum: Dictionary = {}
@@ -116,6 +120,11 @@ var enemy_corpses: Array[Enemy] = []
 ## "duel" Ingénieur sous le bouclier, "defeated" tombée. Centre du bouclier, apparition, chute, impact attendu.
 var martyre: Enemy = null
 var martyre_state := ""
+## Martyre levée dans son arène du quartier B (Temple en salles) : hors vague, les assauts continuent ; sa mort
+## ouvre la porte mb2 de la route du boss.
+var martyre_arena := false
+## L'Archiprêtre aux racines, mini-boss 1 du Temple (sim/archipretre.gd) ; vide = à poser.
+var archipretre: Dictionary = {}
 var martyre_center := Vector2.ZERO
 var martyre_at: float = INF
 var martyre_down_at: float = INF
@@ -160,6 +169,8 @@ var effects: Array[Dictionary] = []
 var damage_numbers: Array[Dictionary] = []
 ## Objets déjà récoltés au moins une fois dans la partie (« Nouvelle ressource : … ! »).
 var collected_items: Dictionary = {}
+## Âges des métaux ouverts (sim/ages.gd) : âge → true.
+var ages_open: Dictionary = {}
 var fire_walls: Array[Dictionary] = []
 ## Balistes de l'entrée (turrets : {id, x, z, complete, cycle_age, firing, target, aim, …}) et carreaux en vol.
 var turrets: Array[Dictionary] = []
@@ -176,10 +187,15 @@ var incarnated: Unit = null
 var in_capsule := false
 ## Capsule alimentée par l'Ancre (trait d'énergie arrivé) : allumée et utilisable.
 var capsule_on := false
-## Première entrée dans la capsule faite (soin complet et canon remis).
+## Équipement de départ remis (Arbalestrie, Combinaison, Sceau de minage, plan « Analyse ») : depuis le 2026-11-22, par
+## le Coffre Antique à sa première ouverture (Simulation.open_chest), et non plus par la capsule. Nom gardé pour les sauvegardes.
 var capsule_gift := false
-## Sceau de minage remis par la capsule à la première entrée : l'Ingénieur peut creuser la roche.
+## Sceau de minage remis par le Coffre Antique : l'Ingénieur peut creuser la roche.
 var mining_seal := false
+## Plans de fabrication appris (« analyse » : mod Analyse à l'Établi d'exo, data/recipes.gd PLANS).
+var plans: Array[String] = []
+## Mods déjà fabriqués (2026-11-22) : un mod ne se fabrique qu’une fois.
+var mods_crafted: Array[String] = []
 ## Dernier coup reçu par l'Exilé incarné (Combat.damage) : il compte comme « en combat » COMBAT_CALM secondes.
 var incarnated_hurt_at := -INF
 ## Retour de l'Ingénieur tombé : instant où il réapparaît dans la capsule (INF s'il est en vie).
@@ -189,6 +205,8 @@ var ammo := "spirit"
 ## Munition d'avant le dernier changement et instant du changement (Barillet double, Culasse froide : sim/mods.gd) ;
 ## Barillet double : vrai si le prochain tir part de la seconde chambre.
 var ammo_prev := "spirit"
+## Mods déjà annoncés par le grand écrin (ui/hud/mod_reveal.gd) : clé = objet ; un mod ne s'annonce qu'une fois.
+var mods_seen: Dictionary = {}
 var ammo_changed_at := -INF
 var barrel_flip := false
 ## Écho du pylône : assaut et nuit de meutes déjà annoncés (sim/mods.gd).
@@ -202,10 +220,13 @@ func reset() -> void:
 	capsule_on = false
 	capsule_gift = false
 	mining_seal = false
+	plans.clear()
+	mods_crafted.clear()
 	incarnated_hurt_at = -INF
 	engineer_respawn_at = INF
 	ammo = "spirit"
 	ammo_prev = "spirit"
+	mods_seen = {}
 	ammo_changed_at = -INF
 	barrel_flip = false
 	echo_wave = -1.0
@@ -238,7 +259,6 @@ func reset() -> void:
 	research_jobs.clear()
 	base_inventory_unlocked = false
 	chest_opened_at = INF
-	vault_hint_said = false
 	base_inventory.clear()
 	ground_items.clear()
 	caches.clear()
@@ -259,7 +279,10 @@ func reset() -> void:
 	wave = 0
 	wildlife_lairs.clear()
 	roamers = {}
+	room_portals = {}
+	assault_recall_wave = 0
 	night_next = 0.0
+	reflux_next = 0.0
 	night_day = 0
 	sanctum = {}
 	gorge = {}
@@ -272,6 +295,8 @@ func reset() -> void:
 	enemies = []
 	martyre = null
 	martyre_state = ""
+	martyre_arena = false
+	archipretre = {}
 	martyre_center = Vector2.ZERO
 	martyre_at = INF
 	martyre_down_at = INF
@@ -303,6 +328,7 @@ func reset() -> void:
 	pray_popups.clear()
 	effects.clear()
 	collected_items.clear()
+	ages_open.clear()
 	damage_numbers.clear()
 	fire_walls.clear()
 	turrets.clear()

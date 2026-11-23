@@ -46,8 +46,10 @@ var _next := 0
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
+	GameOptions.ensure()
 	for i in VOICES:
 		var p := AudioStreamPlayer.new()
+		p.bus = GameOptions.SFX_BUS
 		add_child(p)
 		_players.append(p)
 	Events.sfx.connect(play)

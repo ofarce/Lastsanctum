@@ -24,7 +24,8 @@ func _init() -> void:
 			elif st.mask[j * w + i] == 1:
 				c = Color("#8a8f96") if CaveShape.in_start(x, z) else Color("#b9c0c8")
 			img.set_pixel(i, j, c)
-	var colors := {"copper": Color("#c47b58"), "iron": Color("#5fa8d6"), "quartz": Color("#e0c8ff"), "gold": Color("#ffd24a"), "wood": Color("#3fbf5a")}
+	var colors := {"copper": Color("#c47b58"), "iron": Color("#5fa8d6"), "quartz": Color("#e0c8ff"), "gold": Color("#ffd24a"), "wood": Color("#3fbf5a"),
+		"silver": Color("#f0f4fa"), "tear": Color("#7af0c8"), "amber": Color("#ff8a2a"), "orichalcum": Color("#ff9ad0")}
 	for key: Vector2i in st.block_types:
 		var item: String = st.block_types[key]
 		img.fill_rect(Rect2i(key.x * 4 - int(CaveShape.WORLD_X0), key.y * 4 - int(CaveShape.WORLD_Z0), 4, 4), colors.get(item, Color.WHITE))
@@ -40,8 +41,25 @@ func _init() -> void:
 	var bz := int(Biomes.north_z(0) - CaveShape.WORLD_Z0)
 	for i in range(0, w, 3):
 		img.set_pixel(i, bz, Color("#ff5050"))
+	# Temple en salles : murs de quartier (noir), portes (or), salles à thème (cadre cyan).
+	for key: Vector2i in st.room_walls:
+		img.fill_rect(Rect2i(key.x * 4 - int(CaveShape.WORLD_X0), key.y * 4 - int(CaveShape.WORLD_Z0), 4, 4), Color.BLACK)
+	for key: Vector2i in st.door_cells:
+		img.fill_rect(Rect2i(key.x * 4 - int(CaveShape.WORLD_X0), key.y * 4 - int(CaveShape.WORLD_Z0), 4, 4), Color("#ddb457"))
+	for t: Dictionary in st.theme_rooms:
+		var half: Vector2i = t["half"]
+		var r := Rect2i(int(t["x"] - CaveShape.WORLD_X0) - half.x * 4 - 2, int(t["z"] - CaveShape.WORLD_Z0) - half.y * 4 - 2, half.x * 8 + 4, half.y * 8 + 4)
+		for i in range(r.position.x, r.end.x):
+			img.set_pixel(i, r.position.y, Color("#5fd8e8"))
+			img.set_pixel(i, r.end.y - 1, Color("#5fd8e8"))
+		for j in range(r.position.y, r.end.y):
+			img.set_pixel(r.position.x, j, Color("#5fd8e8"))
+			img.set_pixel(r.end.x - 1, j, Color("#5fd8e8"))
 	for p: Dictionary in st.portals:
 		img.fill_rect(Rect2i(int(p["x"] - CaveShape.WORLD_X0) - 2, int(p["z"] - CaveShape.WORLD_Z0) - 2, 5, 5), Color("#d040ff") if p["threat"] == 1 else Color("#ff2020"))
+	print("Temple : %d salles, %d cases de mur, %d de porte, %d salles à thème, %d pylônes au Temple" % [
+		(st.temple_layout.get("rooms", []) as Array).size(), st.room_walls.size(), st.door_cells.size(), st.theme_rooms.size(),
+		st.portals.filter(func(p: Dictionary) -> bool: return p["z"] > TerrainState.frontier_z()).size()])
 	img.save_png(out)
 	print("aperçu : ", out)
 	quit()

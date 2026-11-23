@@ -48,17 +48,13 @@ func test_steer_goes_straight_when_clear() -> void:
 	check(absf(next.x) < CaveShape.CAVE_GATE + 2.0, "le premier point vise le couloir : %s" % next)
 
 
-## Réserve du coffre ouverte : l'entrée (couloir creusé d'une case, raccord en biais avec la paroi est de
-## la salle) a des coins de roche où la ligne droite passe entre deux échantillons et où le glissement axe
-## par axe de Simulation.move se coinçait (vers (57, −143,5)). Aller et retour depuis plusieurs points.
+## Coffre antique contre la paroi nord, à côté de la capsule (planches/intro-capsule-planche.html) : sa place devant
+## la face avant s'atteint depuis toute la salle, entre les socles de la capsule, du coffre et de l'Ancre. Aller et retour.
 func test_reaches_chest_reserve() -> void:
 	var sim: Simulation = preload("res://tests/econ_case.gd").new().game()
-	sim.world.dig_cell(14, -37)
-	sim.world.dig_cell(15, -37)
-	check(sim.state().vault_open, "réserve ouverte")
 	var u: Unit = GameState.units[0]
 	var dt := 1.0 / 60.0
-	for start: Vector2 in [Vector2(24, -104), Vector2(50, -120), Vector2(54, -135), Vector2(4, -99), Vector2(-32, -99)]:
+	for start: Vector2 in [Vector2(24, -104), Vector2(50, -120), Capsule.EXIT, Vector2(-6, -150), Vector2(4, -99), Vector2(-32, -99)]:
 		for leg in 2:
 			var from := start if leg == 0 else CaveShape.CHEST_SPOT
 			var to := CaveShape.CHEST_SPOT if leg == 0 else start

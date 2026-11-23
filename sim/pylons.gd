@@ -1,8 +1,9 @@
 class_name Pylons
 extends RefCounted
 ## Pylônes de Merenor (planches/pylone-merenor-v2-propositions.html : Obélisque suintant, Nappe débordante,
-## Mousse veinée). Ils remplacent les portails maléfiques des galeries : un par réseau, éveillé quand la galerie
-## est découverte (TerrainOps), posé sur 2 × 2 cases infranchissables (TerrainState.pylon_cells).
+## Mousse veinée). Ils remplacent les portails maléfiques des galeries : placés par anneaux de chemin depuis
+## l'Ancre (TerrainState._place_pylons, galeries reliées du 2026-11-22), éveillés quand un allié les voit
+## (Awaken), posés sur 2 × 2 cases infranchissables (TerrainState.pylon_cells).
 ##
 ## - Indestructible. Une meute de 4 à 6 bêtes, dont un alpha (PV et dégâts × ALPHA), garde la nappe.
 ##   Sans intrus, elle patrouille : ronde en file autour du socle, alpha en tête, coupée de haltes (_patrol).
@@ -15,6 +16,8 @@ extends RefCounted
 ##   (job "bless_pylon") ; il y amasse BLESS_RATE seconde de
 ##   répit par seconde de prière. Quand il cesse, le répit s'écoule et gèle toutes les renaissances en cours
 ##   (chaque seconde de prière retarde d'autant l'apparition des monstres) ; minuteur au-dessus du pylône.
+##   BLESS_CHANNEL secondes de prière d'affilée canalisent aussi le pylône, pour de bon (p["sealed"]) : il reste
+##   canalisé sans prière ni esprits ; la prière cesse d'elle-même.
 ##
 ## Les pylônes sont les dictionnaires de TerrainState.portals (id, x, z, active, threat) ; l'état de jeu y est
 ## ajouté au premier tick (slots, cover, praying…) et disparaît avec eux à la nouvelle partie.
@@ -26,6 +29,8 @@ const ALPHA := 2.0
 const CORRUPTION_DPS := 1.0
 ## Secondes de répit gagnées par seconde de prière de l'Ingénieur.
 const BLESS_RATE := 1.0
+## Secondes de prière d'affilée de l'Ingénieur qui canalisent le pylône pour de bon.
+const BLESS_CHANNEL := 10.0
 ## Place de l'Ingénieur qui bénit sans place donnée : devant le socle, au sud.
 const BLESS_SPOT := Vector2(0.0, 6.5)
 ## Distance au socle (unités) à laquelle l'Ingénieur le touche et peut le bénir avec E.
@@ -154,7 +159,19 @@ static func tick(sim: Simulation, dt: float) -> void:
 			_wake(sim, p)
 		var cults := praying_cults(p)
 		var was: bool = p["channeled"]
-		p["channeled"] = cults.size() == CULTS.size()
+		# Prière de l'Ingénieur : BLESS_CHANNEL secondes d'affilée scellent la canalisation.
+		var now_blessed := blessed(p)
+		if now_blessed and not was and not p.get("sealed", false):
+			p["bless_run"] = float(p.get("bless_run", 0.0)) + dt
+			if p["bless_run"] >= BLESS_CHANNEL:
+				p["sealed"] = true
+				for u in GameState.units:
+					if u.role == "engineer" and u.job != null and u.job.get("type") == "bless_pylon" and u.job.get("pylon") == p:
+						sim.cancel_work(u)
+				now_blessed = false
+		else:
+			p["bless_run"] = 0.0
+		p["channeled"] = p.get("sealed", false) or cults.size() == CULTS.size()
 		p["praying"] = cults
 		if was and not p["channeled"]:
 			# Le cycle d'invocation reprend : chaque place vide repart pour une minute.
@@ -167,7 +184,7 @@ static func tick(sim: Simulation, dt: float) -> void:
 			Combat.zone(p["x"], p["z"], 6.0, Color("#ece8dc"))
 		# Bénédiction : amassée pendant la prière, elle s'écoule ensuite et gèle les renaissances.
 		var blessing := float(p.get("blessing", 0.0))
-		p["blessing_now"] = blessed(p)
+		p["blessing_now"] = now_blessed
 		if p["blessing_now"]:
 			blessing += dt * BLESS_RATE
 		elif blessing > 0.0:
@@ -177,7 +194,8 @@ static func tick(sim: Simulation, dt: float) -> void:
 				if s["enemy"] == null:
 					s["dead_at"] = float(s["dead_at"]) + used
 		p["blessing"] = blessing
-		var target := 0.0 if p["channeled"] else 1.0
+		# Reflux (PortalNet) : la nappe ressort pendant l'annonce et couvre la salle pendant la sortie.
+		var target := PortalNet.reflux_k(p) if p["channeled"] else 1.0
 		p["cover"] = move_toward(float(p["cover"]), target, dt / COVER_TIME)
 		_patrol(p, dt)
 		for s: Dictionary in p["slots"]:
@@ -323,6 +341,9 @@ static func act(sim: Simulation, e: Enemy, dt: float, alive: Array[Unit]) -> voi
 	if e.stun > 0.0:
 		e.stun -= dt
 		return
+	# Chien du reflux : il sort du seuil en silhouette (UnitView, 1,4 s) avant d'agir.
+	if e.memo.get("reflux", false) and GameState.sim_time < e.risen_at + 1.4:
+		return
 	var p: Dictionary = e.pylon
 	var center := Vector2(p["x"], p["z"])
 	var target: Unit = null
@@ -345,6 +366,11 @@ static func act(sim: Simulation, e: Enemy, dt: float, alive: Array[Unit]) -> voi
 		if d < sight and d < bd and u.pos().distance_to(center) < leash:
 			target = u
 			bd = d
+	# Chien du reflux (PortalNet) : il vise d'abord les esprits qui prient au pylône.
+	if e.memo.get("reflux", false):
+		var sp := PortalNet.spirit_target(p, e)
+		if sp != null and (target == null or Pylons.CULTS.has(sp.role)):
+			target = sp
 	# Frappé de loin (tireur hors de la laisse) : il riposte quand même s'il le voit.
 	if target == null and e.hp < e.max_hp and e.memo.has("hurt_by"):
 		var src: Unit = e.memo["hurt_by"]
@@ -423,7 +449,7 @@ static func toggle_bless(sim: Simulation) -> bool:
 	if p.is_empty():
 		return false
 	sim.set_job(eng, {"type": "bless_pylon", "pylon": p, "spot": eng.pos()})
-	sim.say("L’Ingénieur bénit le Pylône de Merenor : chaque seconde de prière retarde d’autant le retour des monstres. E pour arrêter.", 3.5)
+	sim.say("L’Ingénieur bénit le Pylône de Merenor : chaque seconde de prière retarde d’autant le retour des monstres, dix d’affilée le canalisent. E pour arrêter.", 3.5)
 	return true
 
 

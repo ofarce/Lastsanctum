@@ -1,0 +1,273 @@
+<meta charset="utf-8">
+<meta name="claude:viewport-fit-sides" content="cover">
+<title>Mort des ennemis</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;600&display=swap">
+<style>
+/* Même gabarit que les autres planches du dépôt : une carte par piste, chaque carte = la même mort jouée sur trois
+   ennemis (vrais sprites du jeu, chaque pixel du corps devient un grain), puis verdict. Habillage sombre. */
+:root{--bg:#0c0d10;--panel:#14161b;--line:#2c3038;--txt:#e2dccb;--mut:#9a9ca2;--acc:#5ce8ff;--gold:#d0a038;
+ --ok:#5fbf7a;--redo:#e0b04a;--no:#e0583a;--btn:#1c1f26;--btn-on:#12303a;--field:#101217;--stage:#07080a;
+ --display:'Pixelify Sans',system-ui,sans-serif;--mono:ui-monospace,Menlo,monospace;color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--txt);font:15px/1.45 var(--display)}
+.wrap{max-width:1320px;margin:auto;padding-block:18px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+main.wrap{padding-bottom:80px}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+h1{margin:0;font-weight:600;letter-spacing:.08em;font-size:26px;color:var(--acc);text-wrap:balance}
+h2{font-weight:600;font-size:20px;color:var(--gold);margin:36px 0 6px;letter-spacing:.05em;text-wrap:balance}
+p.lead{color:var(--mut);margin:6px 0 0;max-width:72ch}p.lead b{color:var(--txt);font-weight:600}
+.rules{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr));gap:10px;margin-top:14px}
+.rules div{background:var(--panel);border:1px solid var(--line);padding:10px 12px;font-size:14px;color:var(--mut)}
+.rules b{color:var(--gold);display:block;font-weight:600}
+button{font:inherit;color:var(--txt);background:var(--btn);border:1px solid var(--line);padding:5px 11px;cursor:pointer}
+button:hover{border-color:var(--acc)}button[aria-pressed=true]{border-color:var(--acc);background:var(--btn-on)}
+button:focus-visible,textarea:focus-visible,canvas:focus-visible{outline:2px solid var(--gold);outline-offset:1px}
+.bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);border-bottom:1px solid var(--line)}
+.bar .wrap{display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding-block:8px}
+.bar .lab{color:var(--mut);font-size:13px;margin-left:10px}
+#tally{margin-left:auto;color:var(--mut);font-size:13px}
+.list{display:flex;flex-direction:column;gap:14px;margin-top:12px}
+.card{background:var(--panel);border:1px solid var(--line);min-width:0}
+.card[data-v=garder]{border-color:var(--ok)}.card[data-v=revoir]{border-color:var(--redo)}.card[data-v=rejeter]{border-color:var(--no)}
+.card[data-v=rejeter] .scenes{opacity:.6}
+.scenes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1px;background:var(--line);border-bottom:1px solid var(--line)}
+@media (max-width:760px){.scenes{grid-template-columns:minmax(0,1fr)}}
+.scene{background:var(--stage);display:flex;flex-direction:column;align-items:center;min-width:0}
+canvas{display:block;cursor:pointer;max-width:100%}
+.scene span{align-self:stretch;background:var(--panel);font-size:12.5px;color:var(--mut);padding:5px 8px 6px}
+.cap{padding:12px 14px;display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr);gap:8px 22px}
+@media (max-width:760px){.cap{grid-template-columns:minmax(0,1fr)}}
+.cap h3{margin:0;font-weight:600;font-size:19px;color:var(--acc);letter-spacing:.03em}
+.cap h3 small{font-size:13px;color:var(--gold);font-weight:400;margin-left:8px;letter-spacing:0}
+.cap p{margin:4px 0 0;color:var(--mut);font-size:14px;max-width:72ch}.cap p b{color:var(--txt);font-weight:600}
+.facts{display:flex;flex-wrap:wrap;gap:4px 16px;margin-top:8px;font:12.5px var(--mono);color:var(--mut)}
+.facts b{color:var(--txt);font-weight:400}
+.side{display:flex;flex-direction:column;gap:8px;min-width:0}
+.verdict{display:flex;gap:6px}.verdict button{flex:1 1 0;min-width:0;font-size:13px}
+.verdict button.sel[data-v=garder]{border-color:var(--ok);color:var(--ok)}
+.verdict button.sel[data-v=revoir]{border-color:var(--redo);color:var(--redo)}
+.verdict button.sel[data-v=rejeter]{border-color:var(--no);color:var(--no)}
+textarea{font:13px var(--mono);color:var(--txt);background:var(--field);border:1px solid var(--line);padding:7px 8px;width:100%;resize:vertical;min-height:52px}
+#out{min-height:150px;margin-top:10px}
+</style>
+
+<header class="wrap">
+ <h1>MORT DES ENNEMIS</h1>
+ <p class="lead">Six façons de faire partir un ennemi en cendres, dans la lignée de l'explosion des chiens. Chaque scène joue la même mort sur un <b>Chien de la Bête</b>, un <b>Soldat du Credo</b> et une <b>Brute</b>, avec leurs vrais sprites. Le coup vient de la droite. Cliquer une scène la rejoue.</p>
+ <div class="rules">
+  <div><b>Le corps est la matière</b>Chaque pixel du sprite devient un grain qui garde sa place de départ. La silhouette reste reconnaissable jusqu'au moment où elle part.</div>
+  <div><b>Net, sans flou ni trame</b>Aucun fondu : la chaleur descend par paliers de couleur francs, du blanc à la cendre. Le réglage Grain compare des grains d'un demi-pixel et des grains d'un pixel.</div>
+  <div><b>Braise par camp</b>Rouge pour la Bête, or pour le Credo. La cendre refroidie est la même pour tous.</div>
+  <div><b>Le tas reste</b>Les grains retombent là où ils atterrissent. Le tas de cendres peut tenir lieu de corps à fouiller.</div>
+ </div>
+</header>
+
+<div class="bar"><div class="wrap">
+ <button id="replay">Rejouer tout</button>
+ <span class="lab">Vitesse</span>
+ <button data-sp="1" aria-pressed="true">×1</button><button data-sp="0.5" aria-pressed="false">×½</button><button data-sp="0.2" aria-pressed="false">×⅕</button>
+ <span class="lab">Grain</span>
+ <button data-gr="1" aria-pressed="true">Fin</button><button data-gr="0" aria-pressed="false">Natif</button>
+ <span id="tally"></span>
+</div></div>
+
+<main class="wrap">
+ <div class="list" id="list"></div>
+ <h2>Récapitulatif</h2>
+ <p class="lead">Les verdicts et les notes de chaque carte se rassemblent ici, à copier dans la conversation.</p>
+ <textarea id="out" readonly></textarea>
+ <p><button id="copy">Copier</button></p>
+</main>
+
+<script>
+const SPR={"beast": {"w": 84, "h": 48, "ax": 36, "ay": 44, "src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAFQAAAAwCAYAAACPDl2NAAAEfklEQVR42u2aQUgjVxjH/7OGgbo9hJBdQhghWGl12gYPulukFGlByh6C7KEHEVla3cNsyUmKhEXSUhZZpAUJc3CltBBCoeAhyCJ7KLYHcbuhLIEO0oZ0qFYEQwiypaKur4fsG2cmb1arO5PRfX8IM35v8jL88n3/772JABcXFxcXFxcXFxcXFxcXFxcXFxcXFxdX8yWchZuMBkQSjIWglTaFaEAkG/u7xpFeIwdDxP4+rVYV+FfMgDkrSaRUXCByR4TMShKhsWhAJBTmX4s5y2vp7m0iB0OEBdpNXfAzTLkjYsCYfHcE+fk5y3g6chnRgEgWv880vLc9LkNNKVBTCryEGvATPK20KZj/zs/PQdzYBgB8CKCtqwe/pm9gRZJRLmoAgJW43DCX/sXHOBgcR3v88Do5GCJeWIDgF5j5+Tkkro+CQo0GRNLf+mrDtTdvKwaodgbMtveiWPt5A23BDNZqnxrxclGDckd13VsFv2SlGWpNryIduYyxPwu4erETD/9ZBQD89HXGUtJmqDQrs7k8Rlp/R2zyG+ZnUrBuQb3QLE+kAM0xqpWFbwEAVy92Gsex3oEGMPRYLmo4GBzH6mMNw0MJHAyOG3Enb3XLV1/4t0S9yskTE9dHgcpuPRgWQWPqzVFkc3nce/QAtz4ZQfePhzBeT95o+JzVx/Xxzm6ZGWeN2eVGpgovGqaaUqDcUfHbloY3u7rrnlXaFORgiFCAtNEAQNsH7+OH7zJ4RzosYZpZ5nMWsOepoJWM8x65o2FsWV93pexd6fJqSqmXaGWXgiWLma9QLmp4rasHt6ZHMDFUz7qx3gFMTk1YSnj2S9XShOwgC1oJPXKHBZqTKEyardlc3jWYrpW8mlKQzeUxPJSwdOJyUTPiz9Pd9AwA4LN0siE7j4K4rK83xPpiEgDg3qMHGOsdOFtAKdS+mITJqQlmI3HyPzM4ljceByYLlNGAwiJQ2XV12eRKyWu1qgAdxMkLzeVn9zen5nPq+wGA2jnZeprBsvzN7I30ZYd/0uz0Wp5uPc0L8XKxXtbmDLQ3kNOW+rkDyvJKuw1QqKysPKrcaQPy02M6V2+ENidW5rHgF7RSwwogm8s7dm8/Pu90NUNpczLHzFCdFu7FwBN89NYVAMDwUMKAehYeGHtyg+Z9M81Yu3/afZKVqX4s8aYBTV7rN3Y4doBXKlX8Eg4Zpe1kE9QW/NSE7GrxAqaaUlDZ3EL0UggFrYSNrarlmr9bXzHO12rbWKtt4+EfOlr29hF/+w1jLBy5BPHpU7Ts7WNnZy+9tfPv5y+Vh9q9k3rhsZc/OgieLf7tDa0vJgE6iN8yVfAiQ/tikuGJ5rI9Ttem/pu81m/ZYflt/elZhtJOP+ywQzoKCh2bub9Eks8y3bLD0kEQFmF+9tpMebL11GpVgf6eYy/d9LTCfGrPmmPm/hJ7jonRY81x7raedJlEO/yyvo6BU86RnlaQnprzTYZ6KjkYIqPdcSIHQ6RUXDD+eeGkc9B5/JKdTYMK1H9jOikI80bhpYbJxfW/9R/PQqfF1iwbUgAAAABJRU5ErkJggg=="}, "soldier": {"w": 40, "h": 42, "ax": 15, "ay": 40, "src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACgAAAAqCAYAAADBNhlmAAAC5ElEQVR42u2XQWjTYBTH/6kxG2XUrQwpMmuQIlLGGLWUMrvgwZOIeBjCQESk4JAd9OJxYA8ePE0QGR6kjupBBD2MMYv0UIqUUNJslDhGqLULo4xSaiiljNl42BLsOtm6Zf0m9n/Jl/cl8Mv7v/eSAB111FFH/5b6Hax2rOFmZuc0MyHpw9zsZHoaQKoAuBGvqQ9NHwYq4uGMeGotj+lCznRX6FbhIh4Obo8bkiAZ8dF4GKzMQ5pJgQv4cfPWXXx6H9aKhRzV9gym1vIYjYcxusvemJ/GHd6NhWwE3bWCKRm0tJK9hw4Wj+RY096qzBvrBQ9jqsX7Bux19uwJdxSytHLxqsw3AZ11+Yy1e3gYE5NBMk2yJBeo6zeC2rPQpBGLhZ4a6ynxNH58+4i+vnN4EGDIdPFgN43AmVPA+nck1n5ibGIcipAGAISwjDfjl3FtoE7OYgBQhDQUIb0F+of8vovka/BdRqFCr6NI8ssGrC49RnRQ65AANH8b4A4EOORyaG8FoSFmlXlIoojHUy9QKpbBsgNkLB5yObR2z0G6FbhFaWlXKEkUEU+kjofF+nD+/OEVABhgXMCLuWjSdMATrWZPl8t9CV3ML3h9HliZrUrpOmnB8/tepDN5LOZVqLXNJ22rwZ226ueSKBqZvDfSS9bivRpiRZLJDuqd0rOnK1HuRyQqtx9w+0PBAJJEsQFOb5S5aBJfsyoZizerRbjt80B+HjU527DncwCxZAVXLgBfxA1yNSjw2aZYLFkhP6idTI8WpFnY5514uZyBz2YDr6rw2WxYVxnjHAAq1RLZJvHZbA3Ho5YFx1z7sji/UaGmCzkN2z/mt4NXwQW8iCdSOA8gHE2iXN2qxbp1k0yT5DcqlP7a4wLev+4PWLs1Yl0MAGpJRT2zgMxKEfqLbbAXUO1WLVeqUkq5Rs0mFE0p1yhiNZhZKRprMVdu/m8xCe7QTbIbnNk60JOydmtTneVKVQr/o34DJ9Uy8F4cHrsAAAAASUVORK5CYII="}, "brute": {"w": 48, "h": 46, "ax": 24, "ay": 43, "src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAuCAYAAABu3ppsAAAFVUlEQVR42u1ZX0hbVxj/Ge5CKCEVCSJBZdgRmBQRsSE6N4aIyGjpGCPUFlYQKVJCLCMMGX0YpRt56MOUPIj40AnV4VO3pVsnIjLcCHclyFjLCBrUFHeRS7CXEEII9+4hnrNz/ybRaCfzA4nn3HPv/X3n/L7f951zgTM7szM7s/+FtdqdyqkE3u7hlFa7UxFvh5VT5US7h1PaPZyi7D9UlP2Hyi/+D5Sdp70K6a/Ve+qOC/zzF7OG19LxGST4FD6fFvFit3jk99tOclXS8ZmaP9N2UrOvBT/Q6UAtqGSrNXgjsD3do+ibCiAQ5LHS/CsicyJeSwy4nTbTGWt02cDOvNaJB1N/oN/vxEo8CwBYXs+bvkcbG+x7xaysusZVA3zqTqvh9diqgEexaVVfgk+p2ix4ALCi2dAIrwDAniSDvDe5mQEARH/IKqwjdZWANwMOAPGECFEq6hwgNn49qGpPzkcrCvQEn0Ku4KD9xIFkuoCUUMSGIEPMynXcYSlDwE/OR3Hj8pjpGAK4EgUqNyaZLuj6OCvAg512XH6/yRJ8Ndbiv1XV+HhChL/LjeRmhoJPCUVjB9xOmxK84rT09rDgFx58AQAY9lc2+2z8EOoYgacOaMEDgLfFXpYWlYKPrQpYc0XQF5/RrYKWNtrgN5pMwv+KVUg7+8NVzjwAbD8ZR/rnRUues+CJYpGgNQKvSmTJdMGQNsnNjGoZw6EO3ZhHsWn0dI8agppI3KH/B4J8VeDDoQ64XdZzzLH8amviLKK/5ERfn8dwjPbenu5RhK41Y/vJOG68O0HHsEC1GZl9BgHe73eCT+YNZ586IGblOghQgKJhDBAliq0KFVNt6NI5AMA3z6H63f/ob0x/+AZ8Xgd8XofhvdpV9nkdWF7P68CrKCRm5boNQcbSeolzhFLeCw06R8rpdTo+g5GbF1XUI7a4vI22Jg6PcR+iVEQ41IHJ+Sgm56O0TahmRTnDPEA9PFgNLS1iqwKlULoCRQGArS/PU+D1ZSQ0crerNDbqQ4JPwed1qMqPiqtRdjVY0ya1dHyG/hnZyM2LVBj+XHqs+vUkw2UDut/vrG4FtE6UKyUqscjdLkzcT6BPmvgXOLOypErVGjvzy+t5092bpUaJWbku9PWOKsmZqZCVBQbrVarjdnEIDNZTkCvxLFUan9cBPpmnv2xVWrUDrIySZNL5dgpXQxEVbUqxMGap7QAw8YnbcIYn56OqqpWok5QrgTdSn6o2NIRKg512w3qEBF4gyGMx6kOL/xa+m5qg166GIrr2+PUgRKmoqnE2BBmNLpvpxqZmO7K3mmymyUzrIOlra+KoCEx9+xJDl87h6e850xqnUquqFmJldvazRv0qLO3r+ohDrIKRJNfWxNGMa5aoju1cqN3DKV+NlTidmnWDlyQAwLVPC2j4sQvPdnfASxIaezP4OPMeXg680NdY6QLcLs5SZY7tVGJPkrG4tE+D0edy0WvPdncqfg6fzFuqzLEeq3hb7Gg4bzPVb9Yho7KiFsYd5WaSZbsBSiFRKuJNNm4O2mxNBdrOHARv4b97tLjGc7qtoVH7tVFIu/UkqkNWxMwyr2RkXsm6U70TpRClxYUsFsL3DraQzRDm9GP/+qkemV6RZt5hpgoN8KmD2Mkr1arRoaSr3GGXMOekK/BbrkSVte87LKtP9sixGicOTSEjDpP9s/TODha27mHLvYucPQenO2942pDgUyrwx364q12F4BVnadfGxAF7AMWWBiTxReZEWtRpgR8moR3pCwm7XyD10YYgw+wkud3DKXtSqWAb6HToTqlr8cXmSM5UswGq9beyU2v/AJRjCS4KAC5dAAAAAElFTkSuQmCC"}};
+const ENEMIES=[
+ {id:'beast',name:'Chien de la Bête',ramp:'bete'},
+ {id:'soldier',name:'Soldat du Credo',ramp:'credo'},
+ {id:'brute',name:'Brute du Credo',ramp:'credo'}];
+const RAMP={bete:['#fff3d0','#ffd04a','#ff8a1e','#e2401a','#a81c16','#5e1414','#3a2a2e'],
+ credo:['#fffbe6','#ffe98a','#f2c038','#cc8a1c','#8a5a14','#4e3a18','#38302a'],
+ ash:['#c9c5cc','#a5a1ab','#8c8892','#6e6a74','#55525c','#454149','#3a3740']};
+const ASH=['#8c8892','#6e6a74','#55525c','#3f3c46'];
+const W=140,H=96,FX=84,FY=74,ALIVE=0.75,TAIL=1.25,TAU=Math.PI*2;
+let SPEED=1,FINE=1;
+function rng(s){return()=>{s|=0;s=s+0x6D2B79F5|0;let t=Math.imul(s^s>>>15,1|s);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+const G=R=>(R()+R()+R()-1.5)*.67;
+const hot=(ramp,h)=>ramp[Math.min(ramp.length-1,Math.max(0,Math.floor((1-h)*ramp.length)))];
+
+/* ---------- les six pistes ----------
+   setup(S,p,R)  : instant de départ p.t0 du grain (s après le coup)
+   pre(S,p,T,o)  : grain encore attaché → déplacement o.dx/o.dz et couleur o.c (null = couleur du sprite)
+   go(S,p,R)     : vitesse et physique au départ
+   fx(S,R)       : étincelles, fumées, anneaux, éclairs ; draw(S,T,px) : tracés propres à la piste */
+const WHITE='#fff6dc';
+const VARIANTS=[
+{id:'eclat',name:'1 · Éclat de cendres',tag:'la piste des chiens, poussée',dur:.7,
+ desc:'Une image de blanc, puis <b>tout le corps part d\'un coup</b> en étoile depuis son centre. Les grains refroidissent en vol et retombent en couronne autour d\'un tas. Un anneau rase le sol, des étincelles filent plus loin que la cendre.',
+ facts:[['Départ','0,05 s'],['Lisible à','0,15 s'],['Posé à',''],['Signature','étoile + anneau']],
+ setup(S,p,R){p.t0=.05+R()*.02},
+ pre(S,p,T,o){o.c=WHITE},
+ go(S,p,R){const a=Math.atan2(p.oz-S.cz,p.ox-S.cx)+(R()-.5)*.9,sp=35+R()*R()*175;
+  p.vx=Math.cos(a)*sp*1.15;p.vz=Math.sin(a)*sp+60;p.vg=G(R)*95;p.drag=4.2;p.grav=620;p.hk=1.6+R()*1.6},
+ fx(S,R){S.ring(.05,190,46);S.star(.05,.1,16);S.sparks(46,R,(q)=>{const a=R()*TAU,sp=220+R()*200;q.vx=Math.cos(a)*sp;q.vz=Math.abs(Math.sin(a))*sp*.8+40;q.vg=(R()-.5)*120;q.t0=.05});S.smoke(10,R,.07,40)}},
+{id:'ronge',shadow:.2,name:'2 · Braise qui ronge',tag:'le corps se consume d\'un bord à l\'autre',dur:.85,
+ desc:'Un front de braise <b>traverse la silhouette</b> depuis le côté du coup. Ce qu\'il touche blanchit, se détache et monte en flammèches qui ondulent avant de s\'éteindre. Peu de cendres au sol : la mort la plus légère, la plus longue aussi.',
+ facts:[['Départ','0,03 s'],['Front','0,26 s'],['Posé à',''],['Signature','front blanc']],
+ setup(S,p,R){p.t0=.03+(S.maxx-p.ox)/S.bw*.26+R()*.05},
+ pre(S,p,T,o){const d=p.t0-T;if(d<.07)o.c=hot(S.ramp,.58+d*6)},
+ go(S,p,R){p.vx=-(15+R()*55);p.vz=40+R()*90;p.vg=(R()-.5)*30;p.drag=2.2;p.grav=60;p.lift=170;p.hk=1.5+R();p.turb=30+R()*40;p.ph=R()*TAU;if(R()<.62)p.life=.3+R()*.35},
+ fx(S,R){S.sparks(34,R,(q,src)=>{q.t0=src.t0;q.x=src.ox;q.z=src.oz;q.vx=-(60+R()*200);q.vz=60+R()*180;q.vg=(R()-.5)*60});S.smoke(6,R,.2,25)}},
+{id:'souffle',name:'3 · Souffle',tag:'la mort dit d\'où vient le coup',dur:.6,
+ desc:'Le corps est <b>emporté dans le sens du coup</b> : un cône de grains étirés en traits, une traînée de cendres au sol. La plus rapide des six, et la seule qui renseigne sur l\'attaquant.',
+ facts:[['Départ','0,03 s'],['Lisible à','0,1 s'],['Posé à',''],['Signature','cône + traînée']],
+ setup(S,p,R){p.t0=.03+(S.maxx-p.ox)/S.bw*.04+R()*.03},
+ pre(S,p,T,o){o.c=WHITE},
+ go(S,p,R){const a=(R()-.5)*.8,sp=(120+R()*250)*(.75+.3*p.oz/S.bh);p.vx=-Math.cos(a)*sp;p.vz=Math.sin(a)*sp*.8+45;p.vg=G(R)*90;p.drag=5;p.grav=600;p.hk=2+R()*1.5;p.trail=1},
+ fx(S,R){S.star(0,.06,12,S.maxx+2-S.cx);S.ring(.04,230,50,1);S.sparks(50,R,(q)=>{const a=(R()-.5)*.7,sp=350+R()*260;q.vx=-Math.cos(a)*sp;q.vz=Math.sin(a)*sp*.7+50;q.vg=(R()-.5)*80;q.t0=.03});S.smoke(8,R,.06,30,-60)}},
+{id:'nova',shadow:.12,name:'4 · Implosion, puis nova',tag:'un temps d\'arrêt, puis l\'anneau',dur:.75,
+ desc:'La silhouette est <b>aspirée vers son centre</b> en chauffant à blanc, se réduit à un point, puis repart en un anneau de braises bien rond, à plat sur le sol. Le creux avant l\'éclat donne du poids à la mort.',
+ facts:[['Aspiration','0,14 s'],['Nova','0,15 s'],['Posé à',''],['Signature','anneau de braises']],
+ setup(S,p,R){p.t0=.15+R()*.012},
+ pre(S,p,T,o){const k=Math.min(1,T/.14),e=k*k*.92;o.dx=(S.cx-p.ox)*e;o.dz=(S.cz-p.oz)*e;if(k>.3)o.c=hot(S.ramp,.2+k*.8)},
+ go(S,p,R){const a=R()*TAU;if(R()<.74){const sp=215+R()*34;p.vx=Math.cos(a)*sp;p.vg=Math.sin(a)*sp*.5;p.vz=18+R()*40;p.drag=4.5}
+  else{p.vx=(R()-.5)*130;p.vg=(R()-.5)*50;p.vz=150+R()*150;p.drag=2.6;p.grav=560}p.grav=p.grav||420;p.hk=1.7+R()},
+ fx(S,R){S.disc(.13,.19,9);S.ring(.15,270,60);S.ring(.22,180,40);S.sparks(40,R,(q)=>{const a=R()*TAU,sp=300+R()*160;q.vx=Math.cos(a)*sp;q.vg=Math.sin(a)*sp*.5;q.vz=30+R()*60;q.t0=.15});S.smoke(8,R,.18,30)}},
+{id:'statue',shadow:.4,name:'5 · Statue de cendre',tag:'figé, fissuré, effondré',dur:.85,
+ desc:'L\'ennemi <b>se fige en cendre grise</b>, parcouru de fissures de braise, puis s\'affaisse sur lui-même comme une colonne qu\'on dynamite : la poussière chasse sur les côtés au ras du sol. Froide et silencieuse, elle contraste avec les cinq autres.',
+ facts:[['Figé','0,16 s'],['Effondré à','0,5 s'],['Posé à',''],['Signature','silhouette grise']],
+ setup(S,p,R){p.crack=Math.abs(Math.sin(p.ox*.9+Math.sin(p.oz*.7)*2.1)+Math.cos(p.oz*1.1+p.ox*.35))<.17;p.t0=.16+Math.sqrt(2*Math.max(0,p.oz-2-R()*3)/900)},
+ pre(S,p,T,o){o.c=p.crack?hot(S.ramp,.75-T*1.6):ASH[3-Math.min(3,Math.floor(p.lum*4))];if(T>.16){const u=T-.16;o.dz=-450*u*u}},
+ go(S,p,R){p.vx=(R()-.5)*170;p.vg=(R()-.5)*70;p.vz=15+R()*55;p.drag=5;p.grav=300;p.h=p.crack?.55:0;p.hk=1.2},
+ fx(S,R){S.ring(.2,150,44,0,'ash');S.ring(.36,120,34,0,'ash');S.smoke(18,R,.22,95,0,1)}},
+{id:'fauchee',shadow:.13,name:'6 · Fauchée',tag:'tranché net, puis consumé',dur:.8,
+ desc:'Un trait blanc <b>coupe le corps en deux</b>. Les moitiés glissent le long de la coupe, le bord tranché rougeoie, puis la braise gagne chaque moitié depuis la coupe et la disperse. Faite pour les coups de lame.',
+ facts:[['Coupe','0,04 s'],['Glisse','0,13 s'],['Posé à',''],['Signature','trait + deux moitiés']],
+ setup(S,p,R){p.d=(p.ox-S.cx)*-.41+(p.oz-S.cz)*.91;p.t0=.13+Math.abs(p.d)*.011+R()*.03},
+ pre(S,p,T,o){const s=p.d<0?-1:1,k=Math.min(1,T/.13),e=1-(1-k)*(1-k);o.dx=-s*(.91*9+.41*2.5)*e;o.dz=s*(.41*9+.91*2.5)*e;
+  const d=p.t0-T;if(Math.abs(p.d)<1.7||d<.05)o.c=hot(S.ramp,T<.06?1:.62+Math.max(0,d)*3)},
+ go(S,p,R){const s=p.d<0?-1:1;p.vx=-s*60+(R()-.5)*130;p.vz=s*30+35+R()*110;p.vg=G(R)*70;p.drag=4;p.grav=600;p.hk=1.8+R()*1.4},
+ fx(S,R){S.ring(.14,150,34);S.sparks(30,R,(q)=>{const s=R()<.5?-1:1,sp=260+R()*260;q.vx=-s*.91*sp;q.vz=s*.41*sp+40;q.vg=(R()-.5)*40;q.t0=.01+R()*.03});S.smoke(8,R,.2,30)},
+ draw(S,T,px){if(T<0||T>.075)return;const L=T<.02?T/.02*34:34,c=T<.045?WHITE:S.ramp[1];for(let i=-L;i<=L;i+=.5)px(S.cx+.91*i,S.cz-.41*i,c,1)}}
+];
+
+/* ---------- sprites : chaque pixel opaque devient un grain ---------- */
+function loadSprites(){return Promise.all(ENEMIES.map(E=>new Promise(res=>{const d=SPR[E.id],im=new Image();im.onload=()=>{
+ const c=document.createElement('canvas');c.width=d.w;c.height=d.h;const x=c.getContext('2d');x.drawImage(im,0,0);
+ const D=x.getImageData(0,0,d.w,d.h).data;E.pix=[];
+ for(let y=0;y<d.h;y++)for(let X=0;X<d.w;X++){const i=(y*d.w+X)*4;if(D[i+3]<128)continue;
+  E.pix.push({ox:FX-d.ax+X,oz:d.ay-y,c:'rgb('+D[i]+','+D[i+1]+','+D[i+2]+')',lum:(D[i]*.3+D[i+1]*.59+D[i+2]*.11)/255})}
+ res()};im.src=d.src})))}
+
+/* ---------- dallage d'ardoise, dessiné une fois ---------- */
+const FLOOR=(()=>{const c=document.createElement('canvas');c.width=W;c.height=H;const x=c.getContext('2d'),R=rng(7);
+ x.fillStyle='#2a303a';x.fillRect(0,0,W,H);
+ for(let r=0;r*20<H+20;r++)for(let q=-1;q*32<W+32;q++){const X=q*32+(r%2)*16,Y=r*20-6;
+  x.fillStyle=R()<.3?'#2c323c':R()<.5?'#282e38':'#2a303a';x.fillRect(X+1,Y+1,31,19);
+  x.fillStyle='#232830';x.fillRect(X,Y,32,1);x.fillRect(X,Y,1,20);x.fillStyle='#2f3540';x.fillRect(X+1,Y+1,31,1);
+  for(let k=0;k<4;k++){x.fillStyle=R()<.5?'#262b34':'#2f3540';x.fillRect(X+2+(R()*27|0),Y+3+(R()*14|0),1+(R()*2|0),1)}}
+ return c})();
+
+/* ---------- une scène ---------- */
+class Scene{
+ constructor(cv,V,E,seed){this.cv=cv;this.x=cv.getContext('2d');this.V=V;this.E=E;this.seed=seed;this.ramp=RAMP[E.ramp];this.vis=false;this.K=0;
+  let a=1e9,b=-1e9,t=0,sx=0,sz=0;for(const p of E.pix){a=Math.min(a,p.ox);b=Math.max(b,p.ox);t=Math.max(t,p.oz);sx+=p.ox;sz+=p.oz}
+  this.minx=a;this.maxx=b;this.bw=b-a+1;this.bh=t;this.cx=sx/E.pix.length;this.cz=sz/E.pix.length;this.reset(0)}
+ reset(t){this.t=t;this.acc=0;const R=this.R=rng(this.seed);this.P=[];this.rings=[];this.stars=[];this.discs=[];
+  for(const s of this.E.pix){const n=FINE?2:1,q0=R()*4|0;for(let j=0;j<n;j++){const q=(q0+j*(1+(R()*2|0)*2))&3;
+   const p={ox:s.ox,oz:s.oz,c:s.c,lum:s.lum,qx:FINE?(q&1)*.5:0,qz:FINE?(q>>1)*.5:0,st:0,h:1,hk:2,drag:3,grav:0,lift:0,turb:0,life:9,vx:0,vg:0,vz:0,g:(R()-.5)*3,
+    ash:ASH[R()*R()*4|0],em:R()<.07?.25+R()*.8:0,first:j===0};this.V.setup(this,p,R);this.P.push(p)}}
+  this.V.fx(this,R)}
+ ring(t0,sp,max,half,ramp){this.rings.push({t0,sp,max,half,ramp:RAMP[ramp]||this.ramp})}
+ star(t0,t1,r,dx){this.stars.push({t0,t1,r,dx:dx||0})}
+ disc(t0,t1,r){this.discs.push({t0,t1,r})}
+ sparks(n,R,f){const body=this.P.length;for(let i=0;i<n;i++){const src=this.P[R()*body|0],q={kind:1,st:0,t0:0,x:this.cx,z:this.cz,g:0,vx:0,vg:0,vz:0,h:1,hk:2.6+R()*1.6,drag:5,grav:240,lift:0,turb:0,life:.22+R()*.3,trail:1,qx:0,qz:0};f(q,src);this.P.push(q)}}
+ smoke(n,R,t0,sp,vx,low){for(let i=0;i<n;i++){const a=R()*TAU;this.P.push({kind:2,st:0,t0:t0+R()*.08,x:this.cx+(R()-.5)*this.bw*.6,z:low?1+R()*3:2+R()*this.bh*.6,g:(R()-.5)*6,
+  vx:Math.cos(a)*sp*(.4+R()*.6)+(vx||0),vg:Math.sin(a)*sp*.25,vz:low?4+R()*10:18+R()*30,h:1,hk:0,drag:low?3.2:2,grav:0,lift:0,turb:0,life:.45+R()*.4,r0:2+R()*1.6,qx:0,qz:0})}}
+ step(dt){this.t+=dt;const T=this.t-ALIVE,o={};
+  for(const p of this.P){
+   if(p.st===0){if(T<p.t0)continue;
+    if(!p.kind){o.dx=o.dz=0;this.V.pre(this,p,p.t0,o);p.x=p.ox+o.dx+p.qx;p.z=p.oz+o.dz+p.qz;this.V.go(this,p,this.R)}
+    p.st=1;p.age=0}
+   if(p.st!==1){if(p.st===2)p.age+=dt;continue}
+   p.age+=dt;if(p.age>p.life){p.st=3;continue}
+   const d=Math.max(0,1-p.drag*dt);p.vx*=d;p.vg*=d;p.vz=p.vz*d+(p.lift?p.lift*p.h-(80+(1-p.h)*520):-p.grav)*dt;
+   if(p.turb)p.vx+=Math.sin(this.t*15+p.ph)*p.turb*dt*6;
+   p.x+=p.vx*dt;p.g+=p.vg*dt;p.z+=p.vz*dt;p.h=Math.max(0,p.h-p.hk*dt);
+   if(p.z<=0&&p.vz<0){if(p.kind){p.st=3}else if(p.vz<-90&&!p.b){p.b=1;p.z=0;p.vz*=-.22;p.vx*=.6}else{p.z=0;p.st=2;p.age=0}}}}
+ size(){const dpr=window.devicePixelRatio||1,avail=this.cv.parentNode.clientWidth,K=Math.max(2,Math.min(8,Math.floor(avail*dpr/W)));
+  if(K!==this.K){this.K=K;this.cv.width=W*K;this.cv.height=H*K;this.cv.style.width=(W*K/dpr)+'px';this.x.imageSmoothingEnabled=false}}
+ draw(){this.size();const x=this.x,K=this.K,f=FINE?Math.ceil(K/2):K,T=this.t-ALIVE,o={},ramp=this.ramp;
+  x.imageSmoothingEnabled=false;x.drawImage(FLOOR,0,0,W*K,H*K);
+  const R=(X,Y,w,h,c)=>{x.fillStyle=c;x.fillRect(Math.round(X*K),Math.round(Y*K),Math.ceil(w*K),Math.ceil(h*K))};
+  const ell=(cx,cy,rx,ry,c)=>{x.fillStyle=c;for(let y=-ry;y<=ry;y++){const w=Math.round(rx*Math.sqrt(Math.max(0,1-y*y/(ry*ry))));if(w>0)x.fillRect((Math.round(cx)-w)*K,(Math.round(cy)+y)*K,2*w*K,K)}};
+  /* sol : brûlure après la mort, ombre tant que le corps tient */
+  if(T>this.V.dur*.25){const k=Math.min(1,(T-this.V.dur*.25)/.12);ell(this.cx,FY,this.bw*.42*k+3,5*k+1,'#232830');ell(this.cx,FY,this.bw*.26*k+1,3*k,'#1c2027')}
+  else if(T<(this.V.shadow||.06))ell(this.cx,FY+1,this.bw*.36,3,'#1d2129');
+  /* anneaux au sol : ellipse d'un pixel, pointillée quand elle s'éteint */
+  for(const r of this.rings){const u=T-r.t0;if(u<0)continue;const rad=r.max*(1-Math.exp(-u*r.sp/r.max*1.6)),k=rad/r.max;if(k>.97)continue;
+   const col=r.ramp[Math.min(r.ramp.length-1,Math.floor(k*k*r.ramp.length))],n=Math.ceil(rad*7),skip=k>.75?2:1;x.fillStyle=col;
+   for(let i=0;i<n;i+=skip){const a=i/n*TAU;if(r.half&&Math.cos(a)>-.2)continue;x.fillRect(Math.round((this.cx+Math.cos(a)*rad)*K),Math.round((FY+Math.sin(a)*rad*.5)*K),K,K)}}
+  /* grains : au repos d'abord, puis corps attaché, puis en vol */
+  const snap=v=>FINE?Math.round(v*K):Math.round(v)*K;
+  for(const p of this.P){if(p.st!==2)continue;x.fillStyle=p.em&&p.age<p.em?ramp[2+Math.min(3,Math.floor(p.age/p.em*4))]:p.ash;x.fillRect(snap(p.x),snap(FY+p.g),f,f)}
+  for(const p of this.P){if(p.st!==0||p.kind||!p.first)continue;let c=p.c,dx=0,dz=0;
+   if(T>=0){o.dx=o.dz=0;o.c=null;this.V.pre(this,p,T,o);dx=o.dx;dz=o.dz;if(o.c)c=o.c}
+   else if(T>-.035)c='#ffffff';
+   x.fillStyle=c;x.fillRect(Math.round((p.ox+dx)*K),Math.round((FY-p.oz+dz*-1)*K),K,K)}
+  for(const p of this.P){if(p.st!==1||p.kind!==2)continue;const k=p.age/p.life,r=Math.max(.5,p.r0*(1-k*k));ell(p.x,FY+p.g-p.z,r,r*.8,k<.4?'#4a4750':k<.75?'#35333b':'#26252b')}
+  if(this.V.draw)this.V.draw(this,T,(X,Z,c,w)=>R(X,FY-Z,w,w,c));
+  for(const p of this.P){if(p.st!==1)continue;const sy=FY+p.g-p.z;
+   if(p.kind===2)continue;
+   const c=p.h>0?hot(p.kind?ramp:(p.crack||this.V.id!=='statue'?ramp:RAMP.ash),p.h):p.ash;
+   if(p.trail&&p.h>.3){const m=p.kind?.03:.016;x.fillStyle=ramp[Math.min(6,Math.floor((1-p.h)*7)+2)];x.fillRect(snap(p.x-p.vx*m),snap(sy+(p.vz-p.vg)*m),f,f);
+    x.fillStyle=ramp[Math.min(6,Math.floor((1-p.h)*7)+1)];x.fillRect(snap(p.x-p.vx*m*.5),snap(sy+(p.vz-p.vg)*m*.5),f,f)}
+   x.fillStyle=c;x.fillRect(snap(p.x),snap(sy),f,f)}
+  /* éclairs : étoile à quatre branches, disque blanc */
+  for(const s of this.stars){if(T<s.t0||T>s.t1)continue;const k=(T-s.t0)/(s.t1-s.t0),r=s.r*(.5+k*.5),cy=FY-this.cz,cx=this.cx+s.dx,c=k<.5?'#ffffff':ramp[1];
+   R(cx-r,cy-.5,2*r,1,c);R(cx-.5,cy-r,1,2*r,c);R(cx-r*.3,cy-r*.3,r*.6,r*.6,c)}
+  for(const d of this.discs){if(T<d.t0||T>d.t1)continue;const k=(T-d.t0)/(d.t1-d.t0);ell(this.cx,FY-this.cz,d.r*(.5+k*.5),d.r*(.5+k*.5),k<.6?'#ffffff':ramp[0])}}
+}
+
+/* ---------- page ---------- */
+const KEY='mort-ennemis-v1';let votes={},notes={};
+try{const s=JSON.parse(localStorage.getItem(KEY)||'{}');votes=s.votes||{};notes=s.notes||{}}catch(_){}
+const save=()=>{try{localStorage.setItem(KEY,JSON.stringify({votes,notes}))}catch(_){}};
+const SCENES=[],list=document.getElementById('list'),still=matchMedia('(prefers-reduced-motion: reduce)').matches;
+function recap(){const L=[];let n=0;for(const V of VARIANTS){const v=votes[V.id],t=(notes[V.id]||'').trim();if(v)n++;if(v||t)L.push(V.name+' : '+(v||'sans verdict')+(t?' — '+t:''))}
+ L.push('Grain : '+(FINE?'fin (demi-pixel)':'natif (un pixel)'));
+ document.getElementById('out').value=L.join('\n');document.getElementById('tally').textContent=n+' / '+VARIANTS.length+' verdicts'}
+function build(){
+ const io=new IntersectionObserver(es=>{for(const e of es)e.target._s.vis=e.isIntersecting},{rootMargin:'120px'});
+ VARIANTS.forEach((V,vi)=>{const card=document.createElement('section');card.className='card';if(votes[V.id])card.dataset.v=votes[V.id];
+  const sc=document.createElement('div');sc.className='scenes';
+  ENEMIES.forEach((E,ei)=>{const d=document.createElement('div');d.className='scene';const cv=document.createElement('canvas');cv.tabIndex=0;cv.setAttribute('role','img');cv.setAttribute('aria-label',V.name+', '+E.name+'. Cliquer pour rejouer.');
+   const sp=document.createElement('span');sp.textContent=E.name;d.append(cv,sp);sc.append(d);
+   const S=new Scene(cv,V,E,vi*31+ei*7+3);cv._s=S;SCENES.push(S);io.observe(cv);
+   const again=()=>{S.reset(ALIVE-.25);S.once=true};cv.onclick=again;cv.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();again()}}});
+  /* « Posé à » est mesuré : instant où 90 % des grains du corps sont au sol ou éteints, sur le plus lent des trois */
+  let slow=0;for(const S of SCENES.slice(-3)){const b=S.P.filter(p=>!p.kind);S.t=ALIVE;let n=0;while(n++<360&&b.filter(p=>p.st>=2).length<b.length*.9)S.step(1/120);slow=Math.max(slow,S.t-ALIVE);S.reset(0)}
+  V.dur=Math.ceil(slow*20)/20;
+  const cap=document.createElement('div');cap.className='cap';
+  cap.innerHTML='<div><h3>'+V.name+'<small>'+V.tag+'</small></h3><p>'+V.desc+'</p><div class="facts">'+V.facts.map(f=>'<span>'+f[0]+' <b>'+(f[0]==='Posé à'?V.dur.toFixed(2).replace('.',',')+' s':f[1])+'</b></span>').join('')+'</div></div>';
+  const side=document.createElement('div');side.className='side';const vd=document.createElement('div');vd.className='verdict';
+  for(const k of ['garder','revoir','rejeter']){const bt=document.createElement('button');bt.dataset.v=k;bt.textContent=k[0].toUpperCase()+k.slice(1);if(votes[V.id]===k)bt.className='sel';
+   bt.onclick=()=>{votes[V.id]=votes[V.id]===k?undefined:k;for(const b of vd.children)b.className=votes[V.id]===b.dataset.v?'sel':'';if(votes[V.id])card.dataset.v=votes[V.id];else delete card.dataset.v;save();recap()};vd.append(bt)}
+  const ta=document.createElement('textarea');ta.id='note-'+V.id;ta.placeholder='Notes sur cette piste';ta.setAttribute('aria-label','Notes sur '+V.name);ta.value=notes[V.id]||'';ta.oninput=()=>{notes[V.id]=ta.value;save();recap()};
+  side.append(vd,ta);cap.append(side);card.append(sc,cap);list.append(card)});
+ recap();
+ for(const S of SCENES){if(still){S.t=ALIVE+S.V.dur*.3;for(let i=0;i<40;i++)S.step(S.V.dur*.3/40);S.t=ALIVE+S.V.dur*.3}S.draw()}
+ let last=performance.now();
+ function frame(now){const dt=Math.min(.05,(now-last)/1000)*SPEED;last=now;
+  for(const S of SCENES){if(!S.vis)continue;if(still&&!S.once){continue}
+   S.acc+=dt;while(S.acc>=1/120){S.step(1/120);S.acc-=1/120}
+   if(S.t>ALIVE+S.V.dur+TAIL){if(still){S.once=false}else S.reset(0)}
+   S.draw()}
+  requestAnimationFrame(frame)}
+ requestAnimationFrame(frame);
+ addEventListener('resize',()=>{for(const S of SCENES)S.draw()})}
+document.getElementById('replay').onclick=()=>{for(const S of SCENES){S.reset(ALIVE-.25);S.once=true}};
+for(const b of document.querySelectorAll('[data-sp]'))b.onclick=()=>{SPEED=+b.dataset.sp;for(const o of document.querySelectorAll('[data-sp]'))o.setAttribute('aria-pressed',o===b)};
+for(const b of document.querySelectorAll('[data-gr]'))b.onclick=()=>{FINE=+b.dataset.gr;for(const o of document.querySelectorAll('[data-gr]'))o.setAttribute('aria-pressed',o===b);for(const S of SCENES){S.reset(ALIVE-.25);S.once=true;S.draw()}recap()};
+document.getElementById('copy').onclick=async e=>{const o=document.getElementById('out');try{await navigator.clipboard.writeText(o.value);e.target.textContent='Copié'}catch(_){o.focus();o.select();e.target.textContent='Sélectionné : Ctrl+C'}};
+loadSprites().then(build);
+</script>

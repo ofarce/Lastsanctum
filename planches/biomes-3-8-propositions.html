@@ -1,0 +1,652 @@
+<title>Six strates avant Byrsa</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=VT323&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Mise en page : coupe de la montagne en tête (sud → nord), règles communes, puis une section par biome
+   teintée par sa ressource ; chaque section suit le même ordre (règles, bestiaire, boss, quêtes, recherches, mods).
+   Thème sombre unique, comme les autres planches de jeu. */
+:root{
+  color-scheme:dark;
+  --bg:#12131a; --panel:#1a1c26; --panel2:#222533; --line:#32364a;
+  --fg:#e4e2da; --mute:#9a9cae; --soft:#c9c8c4; --ink:#0b0a0f;
+  --iron:#c0703f; --silver:#b8c2d0; --limbe:#a9cfc0; --sang:#d0404a; --ori:#e09a78; --gold:#ddb457;
+  --exile:#5fd8e8; --beast:#c2202a;
+  --r-common:#e4e2da; --r-uncommon:#6fc27a; --r-rare:#e6d35a; --r-epic:#e8923a; --r-unique:#b07ae0; --r-mythic:#5fd8e8;
+  --display:"VT323","Courier New",monospace; --body:"IBM Plex Sans",system-ui,sans-serif;
+  --acc:var(--fg);
+}
+body{background:var(--bg);color:var(--fg);font:15px/1.55 var(--body);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 72px}
+.wrap{max-width:1120px;margin:0 auto;display:flex;flex-direction:column;gap:48px}
+h1,h2,h3,h4{font-family:var(--display);text-wrap:balance;margin:0;line-height:1.12;font-weight:400}
+h1{font-size:clamp(38px,6vw,60px)}
+h2{font-size:clamp(32px,4.6vw,44px);color:var(--acc)}
+h3{font-size:26px}
+h4{font-size:21px;color:var(--acc)}
+p{margin:0;max-width:70ch}
+.lede{color:var(--mute);font-size:16px}
+.eyebrow{font-family:var(--display);font-size:18px;letter-spacing:.08em;text-transform:uppercase;color:var(--mute)}
+a{color:inherit}
+code{font:13px ui-monospace,Menlo,monospace;background:var(--panel2);padding:1px 5px;border-radius:3px}
+.stack{display:flex;flex-direction:column;gap:14px}
+
+/* coupe */
+.coupe{display:grid;grid-template-columns:.7fr repeat(8,1fr) .9fr;gap:3px;border:3px solid var(--ink);background:var(--ink)}
+.coupe a{display:flex;flex-direction:column;gap:2px;padding:12px 9px 13px;text-decoration:none;min-width:0;min-height:104px;justify-content:flex-end;position:relative}
+.coupe b{font-family:var(--display);font-size:19px;font-weight:400;line-height:1.05}
+.coupe span{font-size:11.5px;opacity:.85}
+.coupe a.old{opacity:.55}
+.coupe a.new::before{content:"NOUVEAU";position:absolute;top:7px;left:9px;font-family:var(--display);font-size:13px;letter-spacing:.08em;color:var(--fg);opacity:.75}
+.coupe a:focus-visible{outline:2px solid var(--exile);outline-offset:-4px}
+.sens{display:flex;justify-content:space-between;font-size:12px;color:var(--mute);margin-top:6px;gap:12px}
+@media(max-width:760px){.coupe{grid-template-columns:repeat(5,1fr)}.coupe a{min-height:84px}}
+@media(max-width:420px){.coupe{grid-template-columns:repeat(2,1fr)}}
+
+/* nav collante */
+.nav{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);border-bottom:2px solid var(--ink);
+  display:flex;gap:6px;flex-wrap:wrap;padding-block:8px}
+.nav a{font-family:var(--display);font-size:18px;text-decoration:none;padding:2px 10px;border:2px solid var(--line);color:var(--mute)}
+.nav a:hover,.nav a:focus-visible{color:var(--fg);border-color:var(--fg);outline:none}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+
+/* blocs communs */
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:22px 32px}
+.grid2>*{min-width:0}
+ul.l{margin:6px 0 0;padding-left:18px;display:flex;flex-direction:column;gap:7px}
+ul.l li{max-width:66ch}
+.verdict{border-left:4px solid var(--exile);padding:4px 0 4px 16px;font-size:16.5px;max-width:72ch}
+.note{font-size:13px;color:var(--mute)}
+
+.tw{overflow-x:auto;border:2px solid var(--ink);background:var(--panel)}
+table{border-collapse:collapse;width:100%;min-width:720px;font-size:13.5px}
+th,td{text-align:left;padding:8px 12px;vertical-align:top;border-bottom:1px solid var(--line)}
+th{font-family:var(--display);font-weight:400;font-size:16px;letter-spacing:.06em;text-transform:uppercase;color:var(--mute);background:var(--panel2);white-space:nowrap}
+tr:last-child td{border-bottom:0}
+td.n{font-weight:600;white-space:nowrap}
+td.num{font-variant-numeric:tabular-nums;white-space:nowrap}
+td.m{color:var(--mute)}
+.tag{display:inline-block;font-size:11px;padding:0 6px;border:1px solid var(--line);border-radius:3px;color:var(--mute);font-weight:400;white-space:nowrap}
+.tag.beast{border-color:#6a2a30;color:#e08a90}
+.tag.credo{border-color:#6a5a2a;color:var(--gold)}
+.tag.faune{border-color:#3a5a46;color:#8fc8a0}
+.tag.autre{border-color:#3a4a5a;color:#a8c0d8}
+
+/* biome */
+.biome{display:flex;flex-direction:column;gap:26px;border-top:4px solid var(--acc);padding-top:20px;scroll-margin-top:64px}
+.b3{--acc:var(--iron)}.b4{--acc:var(--silver)}.b5{--acc:var(--limbe)}.b6{--acc:var(--sang)}.b7{--acc:var(--ori)}.b8{--acc:var(--gold)}
+.bhead{display:flex;flex-direction:column;gap:8px}
+.facts{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:13px;color:var(--mute)}
+.facts b{color:var(--fg);font-weight:600}
+.pal{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12px;color:var(--mute)}
+.pal i{display:inline-block;width:14px;height:14px;border:2px solid var(--ink);vertical-align:-3px;margin-right:5px}
+.sub{display:flex;flex-direction:column;gap:10px}
+
+/* boss */
+.boss{display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:14px}
+.card{background:var(--panel);border:2px solid var(--ink);display:flex;flex-direction:column;gap:8px;padding:14px 16px 16px;min-width:0}
+.card .role{font-family:var(--display);font-size:16px;letter-spacing:.07em;text-transform:uppercase;color:var(--acc)}
+.card .nm{font-family:var(--display);font-size:25px;line-height:1.1}
+.card .stats{font-size:12.5px;color:var(--mute);font-variant-numeric:tabular-nums}
+.card p{font-size:13.5px;color:var(--soft)}
+.card ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:5px;font-size:13.5px;color:var(--soft)}
+.card .rule{border-left:3px solid var(--acc);padding-left:10px;font-size:13.5px}
+.card .loot{font-size:13px;color:var(--fg);margin-top:auto;padding-top:6px;border-top:1px solid var(--line)}
+.card.final{border-color:var(--acc)}
+
+/* quêtes */
+.quests{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}
+.q{background:var(--panel);border:2px solid var(--ink);padding:14px 16px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.q.main{grid-column:1/-1;border-color:var(--line)}
+.q .kind{font-family:var(--display);font-size:15px;letter-spacing:.07em;text-transform:uppercase;color:var(--mute)}
+.q .qt{font-family:var(--display);font-size:24px;line-height:1.1}
+.q ol{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:4px;font-size:13.5px}
+.q .line{font-size:13.5px;color:var(--soft);font-style:italic}
+.q .line::before{content:"Ingénieur · ";font-style:normal;color:var(--exile);font-size:12px;letter-spacing:.04em}
+.q .rw{font-size:13px;color:var(--fg)}
+.q .rw::before{content:"Récompense · ";color:var(--mute)}
+.q.main .cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px 28px}
+
+/* mods */
+.rar{display:inline-flex;align-items:center;gap:6px;white-space:nowrap;font-size:12.5px}
+.rar i{width:12px;height:12px;border:2px solid var(--ink);display:inline-block;background:var(--c)}
+.rar.common{--c:var(--r-common)}.rar.uncommon{--c:var(--r-uncommon)}.rar.rare{--c:var(--r-rare)}
+.rar.epic{--c:var(--r-epic)}.rar.unique{--c:var(--r-unique)}.rar.mythic{--c:var(--r-mythic)}
+td.mod{font-weight:600;white-space:nowrap;color:var(--c)}
+.count{display:flex;flex-wrap:wrap;gap:8px 18px;font-size:13px;color:var(--mute)}
+
+.qs{display:flex;flex-direction:column;gap:10px;counter-reset:q}
+.qs li{list-style:none;padding-left:34px;position:relative;max-width:76ch}
+.qs li::before{counter-increment:q;content:counter(q);position:absolute;left:0;top:-2px;font-family:var(--display);font-size:24px;color:var(--exile)}
+.qs{padding:0;margin:0}
+@media (prefers-reduced-motion:reduce){*{scroll-behavior:auto}}
+html{scroll-behavior:smooth}
+</style>
+
+<div class="wrap">
+
+<header class="stack">
+  <div class="eyebrow">Exiles Defense · planche de propositions · 21 novembre 2026</div>
+  <h1>Six strates avant Byrsa</h1>
+  <p class="lede">Six biomes entre les Veines de vert-de-gris et les rues de Byrsa. Pour chacun : ses règles, son bestiaire, deux mini-boss et un boss, ses quêtes, sa ressource, ses recherches et dix mods pour l’Exilé. Byrsa reste la fin du jeu et n’est pas traitée ici. Rien n’est codé ; tous les chiffres sont des points de départ de ma part.</p>
+</header>
+
+<section class="stack" aria-label="Coupe de la montagne">
+  <div class="coupe">
+    <a class="old" style="background:#24482e" href="#regles"><b>Jungle</b><span>la base</span></a>
+    <a class="old" style="background:#4a4234" href="#regles"><b>1 · Temple</b><span>bois</span></a>
+    <a class="old" style="background:#2a5a50" href="#regles"><b>2 · Vert-de-gris</b><span>cuivre</span></a>
+    <a class="new" style="background:#4a2c24" href="#b3"><b>3 · Forges mortes</b><span>fer · lave</span></a>
+    <a class="new" style="background:#262a34" href="#b4"><b>4 · Galeries muettes</b><span>argent · noir</span></a>
+    <a class="new" style="background:#2e4644" href="#b5"><b>5 · Rives des Limbes</b><span>larme · fleuve</span></a>
+    <a class="new" style="background:#4e1c24" href="#b6"><b>6 · Ventre de la Bête</b><span>ambre · chair</span></a>
+    <a class="new" style="background:#4a3430" href="#b7"><b>7 · Tyr enfouie</b><span>orichalque · machines</span></a>
+    <a class="new" style="background:#5e4a22" href="#b8"><b>8 · Cryptes de l’Aube</b><span>or · Credo</span></a>
+    <a class="old" style="background:#3a3440" href="#questions"><b>Byrsa</b><span>la fin</span></a>
+  </div>
+  <div class="sens"><span>◄ sud · l’Ancre</span><span>la Bête jusqu’au 6, le Credo ensuite</span><span>nord · Laetan ►</span></div>
+</section>
+
+<nav class="nav" aria-label="Biomes">
+  <a href="#regles">Règles</a><a href="#b3">3 Fer</a><a href="#b4">4 Argent</a><a href="#b5">5 Limbes</a><a href="#b6">6 Ambre</a><a href="#b7">7 Orichalque</a><a href="#b8">8 Or</a><a href="#questions">Questions</a>
+</nav>
+
+<section id="regles" class="stack" style="scroll-margin-top:64px">
+  <h2>Ce qui vaut pour les six</h2>
+  <p class="verdict">J’ai repris les deux strates que tu avais validées puis mises en réserve : les Forges mortes deviennent le biome 3 et les Cryptes de l’Aube le biome 8, juste sous Byrsa. Les quatre du milieu sont nouvelles. L’histoire de la Bête se termine au biome 6, quand on détruit le cœur des pylônes. Ensuite c’est le Credo qui tient la montagne, jusqu’à Laetan.</p>
+  <div class="grid2">
+    <div>
+      <h3>Verrous et progression</h3>
+      <ul class="l">
+        <li>Une roche par biome, plus dure à chaque fois : 12, 14, 16, 18, 20 puis 24 coups. Chacune a sa texture et son sceau, sur le modèle du Sceau de cuivre qui existe déjà.</li>
+        <li>Le boss de fin lâche son mod et une <b>clef</b>, un objet de quête que le sceau du biome suivant demande. Pour faire de même au biome 2, la Gorge-Cuivre devrait lâcher la Clef des Eaux, demandée par le Sceau de fer.</li>
+        <li>La menace monte d’un palier par biome, de 3 à 8, avec le <code>THREAT_STEP</code> actuel.</li>
+        <li>Chaque biome garde des traces de la ressource suivante dans son cinquième nord, comme le fer dans le biome 2.</li>
+      </ul>
+    </div>
+    <div>
+      <h3>Boss et ennemis</h3>
+      <ul class="l">
+        <li>Deux mini-boss par biome, comme dans les deux premiers : un <b>gardien du sanctum</b>, qu’on combat avec l’escouade dans une salle scellée, et une <b>Martyre</b>, en duel sous le dôme avec l’Exilé seul et des motifs de balles. Tu avais dit que leur design changerait plus tard : ce sont des pistes.</li>
+        <li>Biomes 3 à 6 : les pylônes de Merenor restent, de plus en plus rapprochés. Biomes 7 et 8 : plus de pylônes, mais des <b>postes de garde du Credo</b> dont la garnison revient au bout de 2 minutes tant qu’on n’a pas brisé l’autel du poste.</li>
+        <li>Chaque biome a au moins une créature neutre qu’on peut laisser tranquille ou exploiter.</li>
+        <li>Les escouades du Credo qui montent de Byrsa portent une variante du biome : hallebardiers en fer, lanterniers, templiers…</li>
+      </ul>
+    </div>
+  </div>
+  <div class="tw">
+    <table>
+      <thead><tr><th>Biome</th><th>Ressource</th><th>Où on la trouve</th><th>À quoi elle sert</th><th>Clef du boss</th></tr></thead>
+      <tbody id="res-table"></tbody>
+    </table>
+  </div>
+  <p class="note">Les recherches liées à une unité ont une colonne « Marque » : selon ta règle, l’unité doit montrer la recherche sur son dessin. Les mods suivent la règle de la fiche : chacun se voit sur l’Ingénieur et a un effet quand il se déclenche (colonne « Sur l’Ingénieur »).</p>
+  <div class="count" id="mod-count"></div>
+</section>
+
+<div id="biomes" class="stack" style="gap:64px"></div>
+
+<section id="questions" class="stack" style="scroll-margin-top:64px">
+  <h2>Tes réponses</h2>
+  <ol class="qs">
+    <li><b>Forges mortes en 3, Cryptes de l’Aube en 8.</b> Réponse : gardées.</li>
+    <li><b>L’ordre.</b> Réponse : validé tel quel (3 Forges, 4 Galeries, 5 Limbes, 6 Ventre, 7 Tyr, 8 Cryptes, puis Byrsa).</li>
+    <li><b>Un mystérieux compagnon.</b> Réponse : pas de quête pour le moment. Le protée reste une faune neutre ; la Mue de protée se trouve près des flaques.</li>
+    <li><b>La Vétérane au biome 7.</b> Réponse : rien pour le moment. La quête La dormeuse et la recherche Second Exilé sont retirées ; le Pas de l’Exilé se trouve dans les coffres de Tyr.</li>
+    <li><b>Après le Cœur-Racine.</b> Réponse : validé. Tous les pylônes de Merenor perdent leur alpha et renaissent en 3 minutes au lieu d’une.</li>
+    <li><b>Deux munitions de plus.</b> Réponse : non, en mods. Le barillet reste à 5. Les Balles de limbe deviennent un mod rare du Cristallisé brisé (à la place de l’Éclat cristallisé) et les Carreaux d’or terni un mod rare du Garde du Credo, « Carreaux profanés », sans or visible (à la place de la Dent de rat). Les deux recherches de munition sont retirées.</li>
+    <li><b>La mage pure.</b> Réponse : pas pour le moment. Ses deux mini-quêtes (La focale, Le registre des bannis) sont retirées.</li>
+  </ol>
+</section>
+
+</div>
+
+<script>
+const R = {common:"normal",uncommon:"peu commun",rare:"rare",epic:"épique",unique:"unique",mythic:"mythique"};
+const ORDER = ["common","uncommon","rare","epic","unique","mythic"];
+
+const B = [
+{ id:"b3", n:3, name:"Les Forges mortes", res:"Fer", rock:12, threat:3,
+  pitch:"Le cœur chaud de la montagne : les fonderies tyriennes abandonnées, où la Bête a fait son nid. Basalte noir, rouille, coulées de lave. Les pylônes y sont deux fois plus serrés que dans le Temple.",
+  pal:[["#1c1a1c","basalte"],["#7a3a22","rouille"],["#8796a2","fer"],["#e0602a","lave"],["#ffd27a","cœur de coulée"]],
+  rules:[
+    "<b>Lave</b> : infranchissable, 20 dégâts par seconde au contact. Un bloc de roche ou une barricade posés dessus font un gué.",
+    "<b>Coulées</b> : toutes les 4 minutes environ, une coulée avance dans une galerie (lueur annoncée 10 s avant), puis refroidit en basalte frais en 60 s. Il faut recreuser (4 coups) ou contourner.",
+    "<b>Chaleur</b> : à 3 cases de la lave, les adeptes travaillent 25 % moins vite, sauf les esprits d’Aether. Les lance-flammes y font 25 % de dégâts en plus.",
+    "<b>Fours tyriens</b> : des gueules de four éteintes dans les parois. Rallumé avec 20 bois, un four fond sur place le minerai de fer qu’on dépose devant lui. C’est un avant-poste de fonte, sans retour à la base."
+  ],
+  resWhere:"Filons et veines dans le basalte ; Scories vives et Broutefers en lâchent.",
+  resUse:"Lingots de fer, palier d’acier de l’Armurerie, baliste, Sceau d’argent. Sous-produits : braise vive, écaille de rouille.",
+  key:"Lingot-matrice",
+  foes:[
+    ["Scorie vive","beast","70 · 1,8 · 18","Rampe en laissant une traînée brûlante 3 s (8 par seconde). Plonge dans la lave et ressort plus loin.","1 à 3 fer · 15 % braise vive"],
+    ["Vouivre de rouille","beast","90 · 6,5 · 14","Volante. Crache une gerbe de rouille : −2 d’armure pendant 6 s, cumulable 3 fois. Recule après chaque crachat.","30 % écaille de rouille"],
+    ["Essaim de limaille","beast","30 · 5 · 4","Nuée magnétique : attire 1 projectile allié sur 3 et l’absorbe. Se colle aux armures.","1 fer"],
+    ["Broutefer","faune","260 · 1,2 · 30, armure 8","Neutre. Ronge un filon de fer par nuit. N’attaque que si on touche à son filon (dessin de la planche Broutefer).","rend le filon · 4 à 6 fer"],
+    ["Hallebardier trempé","credo","120 · 2,0 · 32, armure 6","La garde de Byrsa passée au fer. Frappe à 2,5 cases et repousse d’une case.","20 % ferraille (2 = 1 fer)"]
+  ],
+  boss:[
+    {role:"Gardien du sanctum", nm:"Maître-Forgeron enchaîné", stats:"3 200 PV · armure 6 · salle : Fonderie scellée",
+     atk:["Martèlement : 3 anneaux de choc partent de l’enclume ; on passe entre deux anneaux.","Gerbe d’étincelles : éventail de 9 balles.","Chaîne rompue : à chaque tiers de ses PV, une chaîne casse ; il frappe 4 cases plus loin et gagne une attaque."],
+     rule:"L’enclume rougit à chaque martèlement. Tirée quand elle est rouge, elle éclate et lui retire 12 % de ses PV.",
+     loot:"Marteau-pilon · 20 lingots de fer"},
+    {role:"Martyre", nm:"Martyre du Fer", stats:"2 800 PV · dôme, l’Exilé seul",
+     atk:["Croix de chaînes : quatre bras de maillons qui tournent autour d’elle.","Maillons semés : ils restent au sol 6 s et brûlent.","Pénitence : elle s’enchaîne à l’Exilé pendant 4 s ; il ne peut pas s’éloigner à plus de 8 cases."],
+     rule:"Pendant la Pénitence, la chaîne elle-même prend les coups : la briser l’étourdit 2 s.",
+     loot:"Chaîne de pénitence"},
+    {role:"Boss de fin", nm:"Le Grand Crassier", stats:"7 000 PV · armure 12 · salle : le Haut-Fourneau", final:true,
+     atk:["Phase I : Coulée (il renverse un creuset, ligne de fonte annoncée) et Pluie de scories.","Phase II : il avale les Scories vives (+1 d’armure chacune) et crache des boules de fonte qui deviennent des murs de basalte.","Phase III : il s’embrase ; l’arène se couvre de lave par quarts."],
+     rule:"Trempe : trois vannes au bord de la salle. L’Exilé en ouvre une (E, 2 s) : un jet de vapeur ramène son armure à 0 pendant 8 s. La vanne se referme 40 s.",
+     loot:"Cœur de crassier · Lingot-matrice · 15 à 20 fer"}
+  ],
+  quests:[
+    {main:true, t:"Le feu de Tyr", steps:["Trouver une gueule de four tyrienne.","Rallumer trois fours (20 bois chacun, E pendant 4 s).","Entrer dans le Haut-Fourneau.","Vaincre le Grand Crassier."],
+     lines:["Ces fours ont fondu le fer de Tyr. La Bête les a tous éteints.","Trois feux de nouveau. Quelque chose gronde au fond du haut-fourneau.","Le fer est à nous. Le Crassier ne mangera plus rien."], rw:"Lingot-matrice ; les trois fours restent allumés · Lingotière de ceinture au premier four"},
+    {t:"Les chaînes d’Aether", steps:["Briser les chaînes de quatre esprits d’Aether captifs (3 tirs par chaîne)."],
+     lines:["Des esprits d’Aether, enchaînés à des enclumes. Qui forge avec des prisonniers ?","Ils sont libres. Ils savent déjà où est la Fonderie."], rw:"4 esprits d’Aether à la base, sans coût"},
+    {t:"La Grande Veine", steps:["Chasser trois Broutefers de la Grande Veine, ou les nourrir de 10 ferraille chacun."],
+     lines:["Ces bêtes rongent le meilleur fer de la montagne."], rw:"un filon de fer illimité ; nourris, les Broutefers restent neutres"},
+    {t:"Le gué", steps:["Relier la base à la salle du Haut-Fourneau par un chemin sans lave (10 gués de basalte)."],
+     lines:["Si les adeptes doivent passer par là, il leur faut un chemin qui ne brûle pas."], rw:"Masque de fondeur"}
+  ],
+  research:[
+    ["Gués de basalte","Atelier","600 Forge + 40 roche","Les adeptes posent une dalle de basalte sur une case de lave : gué permanent.",""],
+    ["Fours rallumés","Fonderie","600 Forge + 40 bois","Débloque le rallumage des fours tyriens et la fonte sur place.",""],
+    ["Acier trempé","Armurerie","800 Forge + 30 lingots de fer","Palier d’acier : armure 9, épée 14, épée à deux mains 24.","lame et armure bleuies"],
+    ["Formation serrée","Caserne","800 Discipline + 20 lingots de fer","Épée et bouclier : −25 % de dégâts subis avec deux alliés adjacents.","bord de fer sur le bouclier"],
+    ["Feu grégeois","Caserne","800 Discipline + 20 lingots + 10 braises vives","Lance-flammes : le sol brûle 3 s après le jet.","buse noircie, braise à la bouche"],
+    ["Baliste","Bibliothèque","1 000 Savoir + 25 lingots de fer + 100 bois","Débloque la baliste à l’Atelier : poste de tir lourd servi par un archer, perce 3 ennemis.","l’archer servant porte un brassard"],
+    ["Sceau d’argent","Fonderie","4 × 300 + 20 lingots de fer + Lingot-matrice","Ouvre le biome 4 : la roche noire à 14 coups se mine.",""]
+  ],
+  mods:[
+    ["Marteau-pilon","unique","Maître-Forgeron enchaîné","Toutes les 6 balles, la septième frappe en onde de choc : 40 dégâts sur 2 cases.","piston de fer sous l’avant-bras ; anneau de choc couleur rouille"],
+    ["Chaîne de pénitence","unique","Martyre du Fer","Grappin (touche F, 8 s) : l’Exilé se tire jusqu’à une paroi à 10 cases, ou attire à lui un ennemi léger.","chaîne enroulée au bras ; maillons tendus pendant le tir"],
+    ["Cœur de crassier","unique","Grand Crassier","Immunité à la lave et aux brûlures. Chaque pas sur la lave la fige en basalte pendant 30 s.","plaque de scorie rougeoyante dans le dos ; pas noirs sur la lave"],
+    ["Soufflet de forge","epic","Scorie vive","Tir soutenu : +5 % de dégâts par seconde de tir continu, jusqu’à +40 %. Retombe 1 s après le dernier tir.","le canon rougit par paliers"],
+    ["Étincelle errante","epic","Broutefer","Un ennemi tué par l’Exilé projette 3 étincelles sur les ennemis proches (8 dégâts chacune).","braises qui tournent autour du poing"],
+    ["Écaille de rouille","rare","Vouivre de rouille","Immunité à la corrosion (perte d’armure) et −25 % de dégâts de feu.","écailles brunes sur l’épaule"],
+    ["Lingotière de ceinture","rare","quête Le feu de Tyr (four rallumé)","Le minerai du paquetage fond tout seul : 1 lingot toutes les 10 s.","petit creuset à la ceinture, lueur orange"],
+    ["Masque de fondeur","rare","quête Le gué","Les adeptes à 6 cases de l’Exilé ignorent la chaleur ; l’Exilé voit à travers fumée et vapeur.","visière de fer grillagée"],
+    ["Pôle de limaille","uncommon","Essaim de limaille","Minerais et lingots au sol viennent à l’Exilé à 8 cases.","barreau aimanté ; limaille qui file vers lui"],
+    ["Carreau de fonte","uncommon","Hallebardier trempé","Les balles ignorent 3 points d’armure.","carreaux noirs dans le barillet"]
+  ]
+},
+{ id:"b4", n:4, name:"Les Galeries muettes", res:"Argent", rock:14, threat:4,
+  pitch:"Les mines d’argent de Byrsa, creusées par des esclaves puis abandonnées. Il n’y a plus de quartz pour éclairer : le noir est total, et ce qui vit ici chasse au bruit. Chaque coup de pioche est un appel.",
+  pal:[["#0e0f14","noir de mine"],["#2a2e3a","roche noire"],["#b8c2d0","argent"],["#e8e4d0","lumière de lampe"],["#5a6478","toile"]],
+  rules:[
+    "<b>Noir total</b> : le brouillard ne se lève qu’autour des lumières. L’Exilé voit à 3 cases au lieu de 5 ; torches, lampes et miroirs font le reste.",
+    "<b>Bruit</b> : miner, tirer ou construire émet une onde (minage 6 cases, tir 10, explosion 20), affichée au sol. Les chasseurs aveugles accourent vers elle.",
+    "<b>Miroirs d’argent</b> (recherche) : posés à l’entrée d’une galerie, ils y renvoient la lumière en ligne droite sur 12 cases. Les créatures qui fuient la lumière ne passent plus.",
+    "<b>Cloches</b> : des cloches de mine pendent aux voûtes. Une balle ou un passage trop près les fait sonner, et toute la galerie entend."
+  ],
+  resWhere:"Veines fines dans la roche noire ; les fils des Araignées-lustres en contiennent.",
+  resUse:"Armes et munitions contre les squelettes et les revenants, miroirs, lampes, Sceau de limbe. Sous-produits : suif, tympan.",
+  key:"Diapason d’argent",
+  foes:[
+    ["Écouteur","beast","240 · 1,5 (charge 9) · 50","Aveugle, d’énormes pavillons à la place des yeux. Immobile dans le silence ; charge en ligne droite vers tout bruit à 14 cases et assomme 1 s.","25 % tympan (pour la cloche-leurre)"],
+    ["Souffle-mèche","beast","25 · 5 · 0","Volute de fumée. Éteint torches, lampes et halos à 3 cases. Fuit la lumière directe ; ne fait aucun dégât.","40 % suif"],
+    ["Araignée-lustre","beast","70 · 3 · 16","Pendue aux voûtes. Tend des fils d’argent invisibles hors de la lumière : qui les touche est immobilisé 2 s.","1 à 2 argent"],
+    ["Revenant de la mine","autre","60 · 2,6 · 18","Ancien esclave de Byrsa, en file de 4 à 6, lampe au front. Leur lumière éclaire la galerie, mais elle révèle aussi l’Exilé. Faible contre l’argent.","1 argent · 30 % plaque d’esclave"],
+    ["Protée pâle","faune","15 · 2 · 0","Petit amphibien aveugle des flaques. Fuit tout le monde.","rien"],
+    ["Lanternier","credo","80 · 2,2 · 24, armure 3","Escouades du Credo avec lanterne : elles éclairent et attirent les Écouteurs autant que l’Exilé.","20 % suif · 10 % argent"]
+  ],
+  boss:[
+    {role:"Gardien du sanctum", nm:"Le Contremaître à la lampe", stats:"3 600 PV · armure 5 · salle : Puits d’extraction",
+     atk:["Faisceau : sa lampe balaie la salle comme un phare ; pris dedans, on subit double dégât et il appelle 6 revenants.","Coup de pic en mêlée, très lourd.","Lampe brandie : cône d’éclats lumineux."],
+     rule:"Trois réservoirs d’huile sur son dos. Tous brisés, la lampe s’éteint 10 s : il est aveugle et vulnérable.",
+     loot:"Lampe du contremaître"},
+    {role:"Martyre", nm:"Martyre du Silence", stats:"3 200 PV · dôme sans lumière",
+     atk:["Balles sombres, visibles seulement à 4 cases de l’Exilé.","Toutes les 15 s, elle souffle les lumières : 2 s de noir complet.","Anneaux de murmures : ondes concentriques avec des trous où se placer."],
+     rule:"Elle a la bouche cousue. Chaque balle qui la touche pendant le noir fait sauter un point de la couture ; au troisième, elle crie et s’étourdit.",
+     loot:"Voile du silence"},
+    {role:"Boss de fin", nm:"La Mère des Échos", stats:"8 500 PV · armure 6 · salle : le Grand Dôme d’argent", final:true,
+     atk:["Cri : anneaux de son qui s’élargissent ; la pierre arrête le son, on s’abrite derrière les piliers.","Écho : elle rejoue sa dernière attaque 2 s plus tard, à l’endroit où l’Exilé se tenait.","Chute de lustres : stalactites d’argent.","Appel : 3 Écouteurs entrent par les galeries."],
+     rule:"Trois cloches d’argent dans la salle. Faire sonner une cloche (tir) pendant son cri la sature : elle tombe au sol 6 s.",
+     loot:"Cœur d’écho · Diapason d’argent · 15 argent"}
+  ],
+  quests:[
+    {main:true, t:"La lumière du jour", steps:["Trouver le premier miroir tyrien.","Orienter trois miroirs (E) pour amener le jour jusqu’au Grand Dôme.","Vaincre la Mère des Échos."],
+     lines:["Il fait plus noir ici qu’au fond de la capsule. Les Tyriens avaient des miroirs pour ça.","Le jour descend jusqu’au dôme. Ce qui vit là n’a jamais vu la lumière.","Le silence, enfin. Le vrai."], rw:"Diapason d’argent, et la galerie des miroirs reste éclairée"},
+    {t:"Les mineurs de Byrsa", steps:["Récupérer 5 plaques d’esclave sur les revenants.","Les porter à l’Église des Oublieux."],
+     lines:["Des noms puniques, gravés au fer. Byrsa a creusé cette mine avec des enchaînés."], rw:"300 Savoir et un récit à l’Église"},
+    {t:"La galerie des cloches", steps:["Traverser la galerie des cloches sans en faire sonner une seule (8 cloches)."],
+     lines:["Une seule note, et toute la mine se réveille."], rw:"Cloche de poche (mod)"}
+  ],
+  research:[
+    ["Lampes de mineur","Atelier","900 Forge + 15 lingots d’argent","Adeptes et soldats portent une lumière de 2 cases.","lampe frontale"],
+    ["Miroirs d’argent","Bibliothèque","1 200 Savoir + 20 lingots d’argent","Débloque le miroir posable : lumière en ligne droite sur 12 cases.",""],
+    ["Pas feutrés","Caserne","1 000 Discipline + 30 bois","Les unités font moitié moins de bruit.","pieds entourés de chiffons"],
+    ["Pointes d’argent","Archerie","1 000 Discipline + 15 lingots d’argent","Flèches : +50 % contre squelettes et revenants.","pointes blanches au carquois"],
+    ["Cloche-leurre","Atelier","900 Forge + 5 lingots d’argent + 3 tympans","Piège posable : attire les créatures aveugles pendant 20 s.",""],
+    ["Argenture","Armurerie","1 100 Forge + 20 lingots d’argent","Épées : +40 % contre les morts.","fil d’argent sur la lame"],
+    ["Sceau de limbe","Fonderie","4 × 400 + 20 lingots d’argent + Diapason d’argent","Ouvre le biome 5 : la roche des rives à 16 coups se mine.",""]
+  ],
+  mods:[
+    ["Voile du silence","unique","Martyre du Silence","Les tirs et les coups de minage de l’Exilé ne font plus de bruit.","bandeau cousu sur le bas du casque ; ondes de tir qui s’éteignent"],
+    ["Cœur d’écho","unique","Mère des Échos","Toutes les 10 s, une onde de sonar révèle les ennemis à 20 cases et étourdit 1 s les créatures aveugles.","cornet d’argent dans le dos ; onde blanche"],
+    ["Lampe du contremaître","epic","Contremaître à la lampe","Cône de lumière de 10 cases devant l’Exilé ; les ennemis pris dedans font −20 % de dégâts.","lampe frontale ; faisceau visible"],
+    ["Chambre d’argent","epic","coffres des galeries","Les balles spirituelles font +60 % aux squelettes et aux morts, et coupent les fils d’araignée.","une chambre blanche au barillet"],
+    ["Fil d’argent","rare","Araignée-lustre","Les balles ralentissent la cible de 30 % pendant 2 s.","fils tendus le long du canon"],
+    ["Tympan","rare","Écouteur","Immunité aux étourdissements par le son : cris, charges assommantes, cloches.","pavillon replié sur l’oreille du casque"],
+    ["Mue de protée","rare","mues près des flaques","Hors de toute lumière : vitesse +15 %, et les ennemis ne le voient qu’à 4 cases.","peau pâle translucide sur les épaules"],
+    ["Cloche de poche","rare","quête La galerie des cloches","Touche (60 s) : un leurre sonore au point visé attire aveugles et sonneurs pendant 8 s.","clochette d’argent à la ceinture ; ondes au point visé"],
+    ["Mèche de suif","uncommon","Souffle-mèche","L’Exilé sème de petites lumières : les galeries traversées restent éclairées 20 s.","mèche allumée sur l’épaule"],
+    ["Pic de mineur punique","uncommon","Revenant de la mine","Minage +30 % dans le noir ; chaque bloc d’argent miné en donne un de plus.","vieux pic en travers du dos"]
+  ]
+},
+{ id:"b5", n:5, name:"Les Rives des Limbes", res:"Larme de limbe", rock:16, threat:5,
+  pitch:"Le Fleuve des Limbes coule sous la montagne : les âmes y passent avant le Puits, et y oublient leur nom. Eau pâle et lumineuse, cristaux laiteux, barques sans rameur. C’est le pays d’origine de la magie cristallisée de l’École.",
+  pal:[["#1a2428","roche des rives"],["#4a6a66","eau des Limbes"],["#a9cfc0","âme"],["#e8eee6","cristal laiteux"],["#8a8e9a","gris lune"]],
+  rules:[
+    "<b>Le Fleuve</b> : son courant emporte tout ce qui y entre (2 cases par seconde vers l’aval). On traverse par les ponts, par le bac (recherche) ou avec le Nautonier.",
+    "<b>Les morts reviennent</b> : un ennemi tué ici laisse une âme qui dérive vers le fleuve. Si elle l’atteint, elle revient en spectre 20 s plus tard. Une balle de Medeina ou le Héron la dissipent.",
+    "<b>Âmes alliées</b> : un allié mort dans ce biome laisse son âme sur place. L’Exilé la relève (E, 3 s), sans passer par le Puits.",
+    "<b>Crue d’âmes</b> : toutes les 5 minutes, le fleuve déborde pendant 40 s. Dans la zone noyée, les dégâts physiques sont réduits de moitié et les sorts font +50 %. Des ponts d’âme n’existent que pendant la crue."
+  ],
+  resWhere:"Cristaux qui se condensent sur les rives après chaque crue (récoltés par les esprits de Medeina, pas minés) ; Noyés, Hérons et Cristallisés en lâchent.",
+  resUse:"École de magie cristallisée, résurrections, Sceau de sang.",
+  key:"Goutte-source",
+  foes:[
+    ["Noyé des Limbes","autre","80 · 2,4 · 12","Spectre qui sort de l’eau, agrippe et tire sa cible de 3 cases vers le fleuve. Les dégâts physiques ne lui font que moitié.","30 % larme"],
+    ["Cristallisé brisé","autre","120 · 2,0 · 20 (portée 18)","Mage cristallisé devenu fou. Tire des gerbes de 3 éclats. Tué, il laisse un cristal qui le reforme en 15 s si on ne le brise pas.","1 à 2 larmes"],
+    ["Feux voleurs","autre","15 · 6 · 3","Nuée d’esprits. Chaque touche vole 2 Vie aux temples et aux unités, puis ils filent vers le fleuve. Tués, ils rendent ce qu’ils portent.","la Vie volée"],
+    ["Passeur déchu","autre","320 · 3 (barque) · 40","Suit le fleuve sur sa barque et balaie les rives à la rame (arc de 4 cases). Ne quitte jamais l’eau.","50 % larme"],
+    ["Héron des Limbes","faune","40 · 4 · 8","Neutre. Pêche les âmes qui dérivent : les ennemis tués près de lui ne reviennent pas.","2 larmes (si on le tue, ce qui est une mauvaise affaire)"]
+  ],
+  boss:[
+    {role:"Gardien du sanctum", nm:"Le Nautonier sans visage", stats:"4 200 PV · armure 4 · salle : l’Embarcadère",
+     atk:["Ramée : une vague qui pousse tout vers le fleuve.","Péage : il prend 20 % des PV max de l’Exilé et s’en fait un bouclier ; briser le bouclier les rend.","Appel des noyés : 4 Noyés sortent de l’eau."],
+     rule:"On peut le payer (10 larmes) : il fait traverser sans combat, une seule fois, et ne lâche alors que l’Obole. Sinon il se bat sur sa barque, que le courant ramène contre la rive toutes les 12 s.",
+     loot:"Rame du nautonier (combat) ou Obole du passeur (payé)"},
+    {role:"Martyre", nm:"Martyre des Âmes", stats:"3 600 PV · dôme",
+     atk:["Balles d’âme qui traversent les murs du dôme : pas d’abri.","Division : trois reflets d’elle-même ; seule la vraie a une ombre.","Orbites : des âmes tournent autour de l’Exilé et se resserrent."],
+     rule:"Les reflets reprennent ses motifs avec 0,5 s de retard : on lit l’attaque sur la vraie, puis on la voit revenir.",
+     loot:"Larme de la Martyre"},
+    {role:"Boss de fin", nm:"L’Effaceuse", stats:"10 000 PV · salle : la Source du Fleuve", final:true,
+     atk:["Oubli : un rayon qui grise un mod ou une munition de l’Exilé pendant 10 s.","Marée : le fleuve monte d’une case à chaque phase.","Noms effacés : des stèles tombent ; chacune libère 2 Noyés.","Regard : une ligne lente qui fige ce qu’elle touche 2 s."],
+     rule:"Toutes les 25 s elle plonge et devient invulnérable. Graver un nom sur une stèle (E, 3 s) la fait remonter tout de suite, étourdie 4 s.",
+     loot:"Mémoire vive · Goutte-source · 15 larmes"}
+  ],
+  quests:[
+    {main:true, t:"Les noms perdus", steps:["Atteindre le fleuve.","Retrouver trois stèles des noms le long des rives.","Les porter à l’Église des Oublieux.","Vaincre l’Effaceuse à la source."],
+     lines:["Le Fleuve des Limbes. Tout ce qui meurt passe par ici, et y oublie son nom.","Les Oublieux savent lire ça. Moi, non.","Elle ne prendra plus de nom. Il en reste à rendre."], rw:"Goutte-source ; l’Oublieux rapporte désormais 16 objets par trajet au lieu de 12"},
+    {t:"Le péage", steps:["Payer le Nautonier 10 larmes, ou le vaincre."],
+     lines:["Il ne parle pas. Il tend la main."], rw:"le passage vers l’autre rive"},
+    {t:"Âmes errantes", steps:["Guider 5 âmes perdues jusqu’au Puits des Âmes. Elles avancent lentement et se dissipent hors de la lumière."],
+     lines:["Elles ne savent plus où aller. Le Puits saura."], rw:"Fil des âmes"}
+  ],
+  research:[
+    ["Puisage des larmes","Puits des Âmes","1 300 Vie","Les esprits de Medeina récoltent les larmes sur les rives.","goutte pâle dans la flamme"],
+    ["Bac du passeur","Atelier","1 200 Forge + 60 bois","Débloque le bac posable sur le fleuve : traversée sans courant.",""],
+    ["Cristallisation profonde","École","1 500 Vie + 15 larmes","Mages au niveau 2 : la Guérisseuse soigne 2 cibles, le Chantre donne +30 %, l’Envoûteur retire 4 d’armure.","éclats laiteux en plus sur chaque mage"],
+    ["Rappel des âmes","Puits des Âmes","1 500 Vie + 20 larmes","Dans tous les biomes, une unité morte loin de la base laisse son âme : l’Exilé la relève sur place.",""],
+    ["Sceau de sang","Fonderie","4 × 500 + 20 lingots d’argent + 10 larmes + Goutte-source","Ouvre le biome 6 : la chair pétrifiée à 18 coups se perce.",""]
+  ],
+  mods:[
+    ["Larme de la Martyre","unique","Martyre des Âmes","Quand un allié meurt à 10 cases, l’Exilé récupère 20 % de PV et +25 % de dégâts pendant 5 s.","larme de cristal au plastron ; l’âme de l’allié vient à lui"],
+    ["Mémoire vive","unique","L’Effaceuse","Toutes les recharges de mods −30 %. Les effets qui grisent un mod ne le touchent plus.","couronne de cristal laiteux"],
+    ["Rame du nautonier","epic","Nautonier (combattu)","Dans l’eau : pas emporté par le courant, +40 % de vitesse.","rame courte dans le dos ; sillage pâle"],
+    ["Fil des âmes","epic","quête Âmes errantes","Les adeptes et soldats morts à 12 cases de l’Exilé renaissent au Puits sans coût.","fil lumineux qui relie l’Exilé aux alliés proches"],
+    ["Main de noyé","rare","Noyé des Limbes","Les ennemis touchés à plus de 12 cases sont tirés de 2 cases vers l’Exilé.","main spectrale refermée sur le canon"],
+    ["Balles de limbe","rare","Cristallisé brisé","Les balles traversent 2 cases de roche, à 80 % de leurs dégâts. Sans coût de larme.","chambre laiteuse au barillet ; balles pâles qui passent les parois"],
+    ["Lanterne de passage","rare","coffres des rives","Pendant la crue d’âmes, l’Exilé passe dans les Limbes : il traverse les ennemis et subit −50 % de dégâts physiques.","lanterne pâle à la hanche ; silhouette translucide pendant la crue"],
+    ["Plume de héron","uncommon","Héron des Limbes","Les ennemis tués par l’Exilé ne reviennent pas en spectre, et lâchent toujours leur larme.","plume grise au casque"],
+    ["Obole du passeur","uncommon","Nautonier (payé)","La première résurrection de chaque vague au Puits est gratuite.","pièce percée au cou"],
+    ["Feu voleur","uncommon","Feux voleurs","Chaque balle qui touche vole 1 Vie, jusqu’à 30 par vague.","petites flammes pâles qui reviennent vers lui"]
+  ]
+},
+{ id:"b6", n:6, name:"Le Ventre de la Bête", res:"Ambre de sang", rock:18, threat:6,
+  pitch:"Plus haut, la montagne n’est plus de la pierre. C’est de la chair pétrifiée, des côtes, des veines qui battent. Les pylônes de Merenor ne sont pas posés sur la montagne : ce sont des racines, et elles se rejoignent ici. L’histoire de la Bête se termine dans ce biome.",
+  pal:[["#2a1418","chair pétrifiée"],["#5a2028","muscle"],["#c2202a","rouge de la Bête"],["#d07a2a","ambre de sang"],["#e8d8c8","os"]],
+  rules:[
+    "<b>La chair repousse</b> : 3 minutes après avoir été creusée, une case se referme en chair tendre (2 coups). Les étais et le feu l’en empêchent.",
+    "<b>Battement</b> : toutes les 30 s, une onde rouge traverse le biome. Les ennemis regagnent 5 % de leurs PV et chaque nappe de corruption gagne une case.",
+    "<b>Corruption vivante</b> : une nappe de pylône non canalisée grandit jusqu’à trois fois sa taille. Canaliser un pylône tranche sa racine, et la nappe recule pour de bon.",
+    "<b>Pas de Credo</b> : la Bête mange les escouades qui montent. On en trouve dans des cocons ; libérées, elles se battent contre la Bête pendant 30 s."
+  ],
+  resWhere:"Sève figée dans la chair, surtout autour des artères ; Phagocytes, Fouets-racines et Anticorps en lâchent.",
+  resUse:"Brute, elle sert à l’Atelier et à la Fonderie. Purifiée au Puits (2 pour 1), l’ambre clair paie les recherches de soin et la canalisation à trois.",
+  key:"Ambre-mère",
+  foes:[
+    ["Phagocyte","beast","120 · 2,2 · 10 par s","Englobe une unité : elle est immobilisée et perd 10 PV par seconde jusqu’à ce qu’on crève la bulle (60 PV).","30 % ambre de sang"],
+    ["Fouet-racine","beast","150 · 0 · 35","Jaillit du sol, frappe en ligne sur 5 cases (ligne annoncée), replonge, ressort 10 cases plus loin.","1 à 2 ambre"],
+    ["Larve de pylône","beast","12 · 6,5 · 8","Naît sans arrêt d’une nappe non canalisée (une toutes les 6 s). Éclate en flaque acide : −1 d’armure pendant 5 s.","rien"],
+    ["Anticorps","beast","420 · 3,4 · 38, armure 6","Hostile à tout ce qui vient de dehors, Credo compris. Accourt vers qui creuse la chair : chaque bloc miné l’appelle.","2 à 3 ambre"],
+    ["Chiens de la Bête","beast","comme au Temple, PV ×2","Meutes de 6 la nuit, sorties des nappes.","comme au Temple"]
+  ],
+  boss:[
+    {role:"Gardien du sanctum", nm:"Le Ganglion", stats:"5 000 PV · salle : l’Ossuaire nerveux",
+     atk:["Décharge nerveuse : un éclair relie les nerfs au Ganglion ; la ligne est annoncée.","Spasme : tout le sol tremble, vitesse −50 % pendant 2 s.","Ponte : 6 larves."],
+     rule:"Invulnérable tant que ses 4 nerfs vivent (300 PV chacun). Un nerf coupé repousse en 30 s : il faut les tenir coupés tous les quatre en même temps.",
+     loot:"Nerf greffé"},
+    {role:"Martyre", nm:"Martyre engloutie", stats:"4 000 PV · dôme",
+     atk:["Rais d’or du Credo : lignes droites, rapides.","Bulles de chair : lentes, elles suivent l’Exilé.","Les deux en même temps : les rais coupent les bulles en deux."],
+     rule:"Phase I, elle est prise à moitié dans la paroi. Phase II, elle s’en arrache. Phase III, la chair la reprend et le dôme rétrécit de 4 cases.",
+     loot:"Encens brûlé"},
+    {role:"Boss de fin", nm:"Le Cœur-Racine", stats:"14 000 PV · salle : la Nef des côtes", final:true,
+     atk:["Pouls : un anneau rouge à chaque battement ; le rythme s’accélère de 1,6 s à 0,9 s.","Artère : un jet qui balaie la salle.","Caillots : balles lentes qui deviennent des larves au sol.","Phase III, Hémorragie : l’ambre en fusion inonde l’arène par quarts."],
+     rule:"Quatre artères, comme quatre pylônes : un esprit de chaque culte en canalise une. Tant qu’une artère n’est pas canalisée, le Cœur régénère 1 % de ses PV par seconde.",
+     loot:"Cœur-Racine · Ambre-mère · 20 ambre"}
+  ],
+  quests:[
+    {main:true, t:"La racine", steps:["Suivre une racine de pylône jusqu’au tronc.","Canaliser les quatre artères du Cœur-Racine (un esprit de chaque culte).","Vaincre le Cœur-Racine."],
+     lines:["Les pylônes ne sont pas posés sur la montagne. Ils en sortent.","Elle bat. La montagne entière bat.","Le cœur s’est tu. Les pylônes vont le sentir."], rw:"Ambre-mère ; les pylônes de Merenor perdent leur alpha et renaissent en 3 min (à valider)"},
+    {t:"Cautériser", steps:["Fermer 5 plaies de repousse au lance-flammes."],
+     lines:["Si je ne brûle pas ça, le chemin sera refermé demain."], rw:"une galerie qui ne repousse plus jusqu’au tronc · Battement (mod)"},
+    {t:"Ce que la Bête a mangé", steps:["Crever 4 cocons d’estomac : un esprit d’Indra avalé, une escouade du Credo, une carte de Tyr, une côte cuirassée."],
+     lines:["Elle avale tout ce qui descend. Même eux."], rw:"l’esprit d’Indra rejoint la base · la carte révèle la Salle du Colosse au biome 7 · Côte cuirassée"}
+  ],
+  research:[
+    ["Purification de l’ambre","Puits des Âmes","1 500 Vie","Au Puits, 2 ambre de sang donnent 1 ambre clair.",""],
+    ["Cautérisation","Caserne","1 800 Discipline + 15 ambre clair","Lance-flammes : la chair brûlée ne repousse plus.","buse rougie, gaine d’ambre"],
+    ["Étais d’os","Atelier","1 600 Forge + 40 bois + 10 ambre","Un étai posé empêche la repousse sur 3 cases autour.",""],
+    ["Sérum","Puits des Âmes","1 800 Vie + 20 ambre clair","Les unités résistent de moitié à l’acide et à l’englobement.","flacon d’ambre à la ceinture des soldats"],
+    ["Canalisation à trois","Puits des Âmes","2 000 Vie + 20 ambre clair","Un pylône de Merenor se canalise avec 3 esprits au lieu de 4.",""],
+    ["Sceau d’orichalque","Fonderie","4 × 600 + 30 ambre clair + Ambre-mère","Ouvre le biome 7 : la pierre tyrienne à 20 coups se taille.",""]
+  ],
+  mods:[
+    ["Cœur-Racine","mythic","Cœur-Racine","2 PV/s de régénération. Toutes les 30 s, un battement repousse les ennemis à 4 cases et leur fait 30 dégâts.","cœur gris dans une cage de quartz au plastron ; anneau cyan à chaque battement"],
+    ["Encens brûlé","unique","Martyre engloutie","Les balles nettoient 1 case de corruption à l’impact et font +30 % aux créatures de la Bête.","encensoir éteint à la ceinture, filet de fumée"],
+    ["Nerf greffé","epic","Le Ganglion","Cadence +15 % en permanence, mais PV max −10 %.","nerfs le long du bras, qui se tendent à chaque tir"],
+    ["Anticorps","epic","Anticorps","Creuser n’attire plus les Anticorps. Un ennemi qui frappe l’Exilé au contact subit 10 dégâts.","plaques blanches sur les avant-bras"],
+    ["Battement","epic","quête Cautériser","Toutes les 30 s (au rythme du cœur dans ce biome) : +30 % de vitesse pendant 4 s.","pouls cyan qui court sur la combinaison"],
+    ["Ventouse de phagocyte","rare","Phagocyte","Trois balles de suite sur la même cible l’engluent 1,5 s.","bulle translucide au bout du canon"],
+    ["Suc digestif","rare","Larve de pylône","Chaque balle retire 1 d’armure à la cible (jusqu’à −5, pendant 6 s).","gouttes acides qui perlent du canon"],
+    ["Côte cuirassée","rare","quête Ce que la Bête a mangé","−25 % de dégâts de mêlée subis.","côte d’os en travers du flanc"],
+    ["Racine sectionnée","uncommon","premier pylône canalisé du biome","La corruption ne blesse plus l’Exilé.","bout de racine noire à la ceinture"],
+    ["Saignée","uncommon","cocons","Un ennemi tué par l’Exilé a 10 % de chances de lâcher 1 ambre de sang.","fiole vide à la hanche, qui se remplit"]
+  ]
+},
+{ id:"b7", n:7, name:"La Tyr enfouie", res:"Orichalque", rock:20, threat:7,
+  pitch:"Une colonie de Tyr, enterrée sous Byrsa : la ville des ancêtres des Exilés, ses glyphes cyan et ses machines d’Énonciation. Le Concile l’a trouvée avant nous. Ses inquisiteurs fouillent les salles et enchaînent les machines avec de l’or.",
+  pal:[["#2a2226","pierre tyrienne"],["#6a4a40","grès cuit"],["#e09a78","orichalque"],["#5fd8e8","glyphe libre"],["#ddb457","chaîne du Credo"]],
+  rules:[
+    "<b>Machines dormantes</b> : tourelles, portes et monte-charges tyriens. L’Exilé les réveille par l’Énonciation (E maintenu, comme pour bénir un pylône) : elles deviennent alliées et passent au cyan.",
+    "<b>Chaînes d’or</b> : les inquisiteurs du Credo enchaînent les machines (6 s de canalisation). Une machine enchaînée devient hostile et prend la couleur or.",
+    "<b>Énergie</b> : une machine ne marche que reliée à un noyau. On pose des conduits ou on ouvre des vannes pour la brancher.",
+    "<b>Portes à glyphes</b> : chaque salle scellée montre une suite de 3 glyphes quelque part dans la salle voisine. Les énoncer dans l’ordre ouvre la porte.",
+    "<b>Postes de garde du Credo</b> à la place des pylônes : garnison qui revient en 2 min tant que l’autel du poste tient."
+  ],
+  resWhere:"Machines démontées (automates, tourelles brisées) et rares filons rose-cuivre.",
+  resUse:"Tourelles tyriennes, conduits, Arc tyrien, Sceau d’or. Il est rose-cuivre, sans or, pour respecter la charte.",
+  key:"Sceau du Concile",
+  foes:[
+    ["Inquisiteur-archéologue","credo","90 · 2,6 · 14 (portée 12), armure 4","Enchaîne les machines tyriennes. Faible, il fuit au contact : c’est la cible à abattre en premier.","20 % orichalque · 10 % insigne"],
+    ["Automate asservi","autre","380 · 1,8 · 30 (portée 20)","Machine tyrienne enchaînée. Rayon lent qui balaie. Ses 2 chaînes brisées (60 PV chacune), il s’éteint et l’Exilé peut le réveiller.","2 à 4 orichalque"],
+    ["Scarabée de bronze","autre","20 · 7 · 4","Drone, toujours par 3. Répare automates et chaînes (10 PV par seconde).","1 orichalque"],
+    ["Templier de l’Aube","credo","280 · 1,9 · 42, armure 10","Bouclier béni : absorbe toutes les balles de face. Tourne lentement.","15 % pièce d’équipement"],
+    ["Gardien de glyphe","faune","200 · 0 · 25","Statue de porte, neutre. Frappe quiconque passe sans avoir énoncé son glyphe.","rien"]
+  ],
+  boss:[
+    {role:"Gardien du sanctum", nm:"Le Gardien du Seuil", stats:"6 000 PV · armure 8 · salle : la Porte de Tyr",
+     atk:["Poing de porte : onde au sol en croix.","Glyphes de garde : des cercles s’allument dans un ordre ; seul le dernier est sûr.","Rayon d’Énonciation : balayage lent sur un demi-cercle."],
+     rule:"Quatre chaînes d’or. Chacune brisée fait passer un de ses glyphes de l’or au cyan. À la quatrième, il s’agenouille : le combat s’arrête sans qu’on le tue.",
+     loot:"Glyphe du seuil"},
+    {role:"Martyre", nm:"Martyre archiviste", stats:"4 500 PV · dôme",
+     atk:["Feuilles d’or en spirale.","Lignes de texte lumineux qui se tracent en travers du dôme (rayon annoncé).","Index : elle recopie le dernier motif de l’Exilé et lui renvoie ses balles."],
+     rule:"Pendant l’Index, ne pas tirer : chaque balle renvoyée est doublée.",
+     loot:"Plume de l’archiviste"},
+    {role:"Boss de fin", nm:"Le Colosse d’Énonciation et l’Inquisiteur Bomilcar", stats:"9 000 PV (Colosse) + 4 000 PV (Bomilcar) · salle : la Salle du Colosse", final:true,
+     atk:["Phase I : le Colosse enchaîné frappe des bras et tire des rayons ; l’Exilé énonce les 3 glyphes de ses pieds (E, 3 s chacun, sous le feu).","Phase II : le Colosse passe au cyan et se bat pour l’Exilé. Bomilcar monte en chaire d’or et tire un motif du Credo, avec des Templiers.","Phase III : Bomilcar tente de réenchaîner le Colosse (6 s de canalisation). S’il y arrive, on revient à la phase I."],
+     rule:"Tuer Bomilcar termine le combat. Le Colosse survit et peut venir garder l’entrée de la base comme tourelle géante (à valider).",
+     loot:"Noyau d’Énonciation · Sceau du Concile · 20 orichalque"}
+  ],
+  quests:[
+    {main:true, t:"La cité des ancêtres", steps:["Entrer dans la Tyr enfouie.","Rallumer trois générateurs en posant leurs conduits.","Ouvrir la Salle du Colosse.","Libérer le Colosse et vaincre Bomilcar."],
+     lines:["Des glyphes de Tyr. Les nôtres. Je n’aurais jamais cru les revoir.","Le noyau répond. La cité se souvient de nous.","Il porte nos couleurs de nouveau. Le Concile a assez volé."], rw:"Sceau du Concile"},
+    {t:"Les archives", steps:["Lire 6 stèles d’archives (E, 3 s chacune)."],
+     lines:["Ils ont écrit pourquoi on nous a chassés. Je ne suis pas sûr de vouloir le savoir."], rw:"une recherche au choix gratuite, et le récit de l’Exil"},
+    {t:"Briser les chaînes", steps:["Libérer 5 automates asservis."],
+     lines:["Ce ne sont pas des ennemis. Ce sont des gardes qu’on a forcés."], rw:"chaque automate reste en tourelle alliée à sa place"}
+  ],
+  research:[
+    ["Énonciation tyrienne","Bibliothèque","2 000 Savoir + 10 orichalque","Réveil des machines deux fois plus rapide ; les esprits de Sigil peuvent aussi les réveiller.","glyphe cyan sur la couverture du Livre ailé"],
+    ["Conduits","Atelier","1 800 Forge + 20 orichalque","Débloque les conduits d’énergie posables.",""],
+    ["Tourelle tyrienne","Atelier","2 200 Forge + 30 orichalque","Tourelle posable à la base : rayon de 18 dégâts, portée 22.",""],
+    ["Arc tyrien","Armurerie","2 000 Forge + 25 orichalque","Les balles de l’Arbalestrie rebondissent sur 2 ennemis proches (×0,5).",""],
+    ["Sceau d’or","Fonderie","4 × 700 + 30 orichalque + Sceau du Concile","Ouvre le biome 8 : la maçonnerie de Byrsa à 24 coups se perce.",""]
+  ],
+  mods:[
+    ["Noyau d’Énonciation","mythic","Le Colosse","Touche (45 s) : l’Exilé énonce. Les ennemis à 8 cases sont figés 2 s, les machines alliées et l’Ancre tirent 50 % plus vite pendant 6 s.","noyau cyan au centre du plastron ; cercle de glyphes au sol"],
+    ["Plume de l’archiviste","unique","Martyre archiviste","Après 3 s sans tirer, la balle suivante devient un trait de lumière qui traverse tout sur 15 cases (×3 dégâts).","plume de lumière derrière l’oreille ; trait qui s’écrit"],
+    ["Glyphe du seuil","epic","Gardien du Seuil","Machines et portes tyriennes se réveillent tout de suite ; les tourelles alliées à 8 cases tirent 25 % plus vite.","glyphe gravé sur le dos de la main"],
+    ["Lentille tyrienne","epic","archives scellées","Les balles spirituelles deviennent un rayon continu : cadence ×3, dégâts ×0,4.","lentille cyan au bout du canon"],
+    ["Pas de l’Exilé","epic","coffres de Tyr","Ruée de 3 cases (Espace, 4 s de recharge).","propulseurs aux mollets ; traînée cyan"],
+    ["Scarabée réparateur","rare","Scarabée de bronze","Un scarabée suit l’Exilé et répare 4 PV par seconde aux barricades, tourelles et bâtiments à 4 cases.","scarabée posé sur l’épaule, qui s’envole"],
+    ["Maillon brisé","rare","quête Briser les chaînes","+50 % de dégâts contre les boucliers bénis et les ennemis enchaînés.","maillon d’or ouvert pendu au poignet"],
+    ["Écu de templier","rare","Templier de l’Aube","De face, −30 % de dégâts à distance subis.","petit écu sur l’avant-bras gauche"],
+    ["Brassard d’inquisiteur","uncommon","Inquisiteur-archéologue","Une balle interrompt n’importe quelle canalisation du Credo : chaînes, sceaux, bénédictions.","brassard noir à filet terni"],
+    ["Conduit d’appoint","uncommon","salles des générateurs","Mana de l’Arbalestrie +50 % à 8 cases d’une machine tyrienne ou de l’Ancre.","câble qui court du dos au canon"]
+  ]
+},
+{ id:"b8", n:8, name:"Les Cryptes de l’Aube", res:"Or", rock:24, threat:8,
+  pitch:"On ne creuse plus la montagne : on creuse sous Byrsa. Ossuaires, reliquaires et caveaux du Concile. L’or n’est pas en filons, il est pris dans le quartz blanc des murs et dans les offrandes. Strate que tu avais validée ; j’ai gardé ses règles et complété le reste.",
+  pal:[["#2a2620","pierre de taille"],["#8a8478","marbre veiné"],["#ddb457","or du Credo"],["#8a2030","cramoisi"],["#e8e0c8","cierges"]],
+  rules:[
+    "<b>Sol consacré</b> : les adeptes n’y prient pas, aucun temple ne s’y pose.",
+    "<b>Cloches</b> : un Sonneur qui atteint sa cloche appelle une escouade de la surface.",
+    "<b>Autels du Credo</b> : en briser un désacralise la salle et éteint le poste de garde qui y est attaché.",
+    "<b>Or et menace</b> : chaque bloc d’or miné fait monter la menace d’un point.",
+    "<b>Gisants</b> : certains sarcophages se lèvent quand on passe à côté."
+  ],
+  resWhere:"Quartz blanc des murs, offrandes des autels, Gisants.",
+  resUse:"Ne s’équipe jamais (l’or reste la couleur du Credo) : il se fond et se dépense en recherches et pour la Brèche de Byrsa.",
+  key:"Clef des remparts",
+  foes:[
+    ["Garde du Credo","credo","variantes dorées des soldats, ×2","Les escouades de Byrsa au complet, avec leurs boucliers bénis.","15 % or · 10 % insigne"],
+    ["Gisant","autre","180 · 1,4 · 34, armure 6","Dort sur son sarcophage ; se lève quand une unité passe à 3 cases.","2 à 3 or · 10 % masque fêlé"],
+    ["Encensoir veilleur","credo","60 · 0 · 0","Encensoir suspendu qui voit en cône. S’il voit une unité, il sonne l’alerte à la cloche la plus proche.","30 % encens noirci"],
+    ["Sonneur","credo","50 · 5,5 · 10","À l’alerte, il court vers sa cloche. S’il sonne, une escouade descend.","1 or"],
+    ["Rat des ossuaires","faune","14 · 6 · 4","Vole le butin au sol et dans les corps à fouiller. Tué, il rend ce qu’il porte.","le butin volé"]
+  ],
+  boss:[
+    {role:"Gardien du sanctum", nm:"Gardien des Reliques", stats:"7 000 PV · armure 10 · salle : le Trésor du Concile",
+     atk:["Reliques en orbite : 8 balles qui tournent et s’écartent.","Bénédiction : soigne les gardes de la salle.","Châsse : il se referme dans son reliquaire, invulnérable 5 s, puis ressort en onde."],
+     rule:"Quatre autels dans la salle. Chacun brisé réduit sa Bénédiction d’un quart.",
+     loot:"Reliquaire vide · 20 lingots d’or"},
+    {role:"Martyre", nm:"Martyre couronnée", stats:"5 000 PV · dôme",
+     atk:["Couronne de rayons d’or qui tournent.","Sacre : pluie de sceaux, version plus dense des sceaux de la Martyre de Byrsa.","Phase III : la couronne se brise en 12 éclats chercheurs."],
+     rule:"Chaque éclat chercheur détruit avant qu’il touche lui retire 2 % de ses PV.",
+     loot:"Auréole brisée"},
+    {role:"Boss de fin", nm:"Le Hiérophante de Byrsa", stats:"16 000 PV · salle : le Chœur souterrain", final:true,
+     atk:["Invoque sans cesse : lots de gardes, de Gisants et de Templiers.","Ostensoir : un rayon tournant quand le bouclier est tombé.","Phase III : il invoque deux Martyres mineures, une par côté."],
+     rule:"Modèle 1 et règle « Le lien », déjà choisis : son bouclier tombe quand toutes ses invocations sont mortes.",
+     loot:"Ostensoir éteint · Clef des remparts"}
+  ],
+  quests:[
+    {main:true, t:"Sous l’Église", steps:["Entrer dans les cryptes.","Trouver les trois repères des remparts enterrés.","Vaincre le Hiérophante.","Percer la Brèche de Byrsa."],
+     lines:["On ne creuse plus la montagne. On creuse sous leur ville.","Les remparts sont juste au-dessus. J’entends leurs cloches.","Byrsa est au-dessus. Laetan aussi."], rw:"la Brèche s’ouvre sur les rues de Byrsa"},
+    {t:"Les cloches", steps:["Couper les 6 cordes des cloches avant d’affronter le Hiérophante."],
+     lines:["Pas de cloche, pas de renfort."], rw:"aucun renfort pendant le combat contre le Hiérophante · Corde de cloche"},
+    {t:"Profanation", steps:["Briser 4 autels du Credo."],
+     lines:["Ils ont béni ces pierres. Je vais les débénir."], rw:"Désacralisation à moitié prix · Gant de profanateur"}
+  ],
+  research:[
+    ["Désacralisation","Bibliothèque","2 500 Savoir + 30 lingots d’or","Les adeptes prient sur le sol consacré ; les boucliers bénis n’absorbent plus que la moitié.",""],
+    ["Vétérans","Caserne","2 500 Discipline + 25 lingots d’or","Les unités sortent de la Caserne au niveau 2.","galon sur l’épaule"],
+    ["Riposte de l’Ancre","Fonderie","2 500 Forge + 30 lingots d’or","L’Ancre frappe d’un éclair noir-pourpre l’ennemi le plus proche : 40 dégâts toutes les 5 s.",""],
+    ["Sourdine","Atelier","2 300 Forge + 15 lingots d’or","Les cloches sabotées sonnent deux fois plus tard.",""],
+    ["Brèche de Byrsa","Fonderie","4 × 800 + 40 lingots d’or + Clef des remparts","Ouvre les rues de Byrsa.",""]
+  ],
+  mods:[
+    ["Ostensoir éteint","mythic","Hiérophante de Byrsa","Touche (2 min) : appelle 2 esprits mineurs qui se battent pendant 30 s.","ostensoir éteint dans le dos, sans or visible ; deux germes d’autel au sol"],
+    ["Reliquaire vide","unique","Gardien des Reliques","Une fois par vague, un coup mortel le relève sur place avec 30 % de ses PV.","reliquaire ouvert à la ceinture ; éclat au relèvement"],
+    ["Auréole brisée","unique","Martyre couronnée","Aura de 8 cases autour de l’Exilé incarné : +10 % de dégâts aux alliés.","auréole fendue au-dessus du casque, en cyan"],
+    ["Dîme détournée","epic","coffres d’offrandes","La menace due à l’or miné est divisée par deux.","bourse cousue sous le plastron"],
+    ["Gant de profanateur","epic","quête Profanation","Briser un autel du Credo prend 1 s au lieu de 5 et rend 30 % de PV.","gantelet noirci"],
+    ["Cierge noir","rare","Encensoir veilleur","Les encensoirs et les cloches ne voient pas l’Exilé tant qu’il ne tire pas.","cierge éteint à l’épaule, fumée noire"],
+    ["Masque fêlé","rare","Gisant","Les salles des cryptes et les Gisants dormants sont marqués sur la minicarte.","demi-masque de pierre à la hanche"],
+    ["Corde de cloche","rare","quête Les cloches","L’Exilé fait sonner une cloche du Credo (E) : les escouades à 15 cases restent figées 4 s.","corde tressée en bandoulière"],
+    ["Carreaux profanés","rare","Garde du Credo","Les balles percent les boucliers bénis : Templiers, gardes et Gisants n’absorbent plus les tirs de face.","carreaux noircis gravés d’un sceau brisé, sans or visible"],
+    ["Galon de sonneur","uncommon","Sonneur","+50 % de dégâts aux ennemis qui fuient ou qui courent vers une cloche.","galon rouge au bras"]
+  ]
+}
+];
+
+const TAG = {beast:["Bête","beast"],credo:["Credo","credo"],faune:["neutre","faune"],autre:["autre","autre"]};
+
+function render(){
+  const res = document.getElementById("res-table");
+  res.innerHTML = B.map(b => `<tr><td class="n">${b.n} · ${b.name}</td><td class="n" style="color:var(--${["","","","iron","silver","limbe","sang","ori","gold"][b.n]})">${b.res}</td><td>${b.resWhere}</td><td>${b.resUse}</td><td class="m">${b.key}</td></tr>`).join("");
+
+  const counts = {}; ORDER.forEach(r => counts[r] = 0);
+  B.forEach(b => b.mods.forEach(m => counts[m[1]]++));
+  const total = B.reduce((a,b) => a + b.mods.length, 0);
+  document.getElementById("mod-count").innerHTML = `<span><b style="color:var(--fg)">${total} mods</b> au total :</span>` +
+    ORDER.filter(r => counts[r]).map(r => `<span class="rar ${r}"><i></i>${counts[r]} ${R[r]}</span>`).join("");
+
+  document.getElementById("biomes").innerHTML = B.map(b => `
+  <section class="biome b${b.n}" id="${b.id}" aria-labelledby="${b.id}-t">
+    <div class="bhead">
+      <div class="eyebrow">Biome ${b.n} · ${b.res.toLowerCase()}</div>
+      <h2 id="${b.id}-t">${b.name}</h2>
+      <div class="facts"><span>Ressource <b>${b.res}</b></span><span>Roche <b>${b.rock} coups</b></span><span>Menace <b>${b.threat}</b></span><span>Clef du boss <b>${b.key}</b></span></div>
+      <p class="lede">${b.pitch}</p>
+      <div class="pal">${b.pal.map(p => `<span><i style="background:${p[0]}"></i>${p[1]}</span>`).join("")}</div>
+    </div>
+
+    <div class="grid2">
+      <div class="sub"><h3>Règles du biome</h3><ul class="l">${b.rules.map(r => `<li>${r}</li>`).join("")}</ul></div>
+      <div class="sub"><h3>Ressource · ${b.res}</h3>
+        <p><b>Où :</b> ${b.resWhere}</p><p><b>Pour :</b> ${b.resUse}</p>
+        <p class="note">Le boss lâche la ${b.key}, demandée par le sceau suivant.</p></div>
+    </div>
+
+    <div class="sub"><h3>Bestiaire</h3>
+      <div class="tw"><table><thead><tr><th>Ennemi</th><th>Camp</th><th>PV · vitesse · dégâts</th><th>Comportement</th><th>Butin</th></tr></thead><tbody>
+      ${b.foes.map(f => `<tr><td class="n">${f[0]}</td><td><span class="tag ${TAG[f[1]][1]}">${TAG[f[1]][0]}</span></td><td class="num">${f[2]}</td><td>${f[3]}</td><td class="m">${f[4]}</td></tr>`).join("")}
+      </tbody></table></div></div>
+
+    <div class="sub"><h3>Mini-boss et boss</h3><div class="boss">
+      ${b.boss.map(x => `<article class="card${x.final ? " final" : ""}">
+        <div class="role">${x.role}</div><div class="nm">${x.nm}</div><div class="stats">${x.stats}</div>
+        <ul>${x.atk.map(a => `<li>${a}</li>`).join("")}</ul>
+        <div class="rule">${x.rule}</div>
+        <div class="loot">Butin · ${x.loot}</div></article>`).join("")}
+    </div></div>
+
+    <div class="sub"><h3>Quêtes</h3><div class="quests">
+      ${b.quests.map(q => q.main ? `<article class="q main">
+        <div class="kind">Quête principale</div><div class="qt">${q.t}</div>
+        <div class="cols"><ol>${q.steps.map(s => `<li>${s}</li>`).join("")}</ol>
+        <div class="stack" style="gap:6px">${q.lines.map(l => `<div class="line">« ${l} »</div>`).join("")}</div></div>
+        <div class="rw">${q.rw}</div></article>` : `<article class="q">
+        <div class="kind">Mini-quête</div><div class="qt">${q.t}</div>
+        <ol>${q.steps.map(s => `<li>${s}</li>`).join("")}</ol>
+        ${q.lines.map(l => `<div class="line">« ${l} »</div>`).join("")}
+        <div class="rw">${q.rw}</div></article>`).join("")}
+    </div></div>
+
+    <div class="sub"><h3>Recherches</h3>
+      <div class="tw"><table><thead><tr><th>Recherche</th><th>Bâtiment</th><th>Coût</th><th>Effet</th><th>Marque</th></tr></thead><tbody>
+      ${b.research.map(r => `<tr><td class="n">${r[0]}</td><td>${r[1]}</td><td class="num">${r[2]}</td><td>${r[3]}</td><td class="m">${r[4] || "—"}</td></tr>`).join("")}
+      </tbody></table></div></div>
+
+    <div class="sub"><h3>Dix mods</h3>
+      <div class="tw"><table><thead><tr><th>Mod</th><th>Rareté</th><th>Source</th><th>Effet</th><th>Sur l’Ingénieur</th></tr></thead><tbody>
+      ${b.mods.map(m => `<tr style="--c:var(--r-${m[1]})"><td class="mod">${m[0]}</td><td><span class="rar ${m[1]}"><i></i>${R[m[1]]}</span></td><td class="m">${m[2]}</td><td>${m[3]}</td><td class="m">${m[4]}</td></tr>`).join("")}
+      </tbody></table></div></div>
+  </section>`).join("");
+}
+render();
+</script>

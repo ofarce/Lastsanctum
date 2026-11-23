@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mini-boss manquants</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=VT323&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Planche des trois mini-boss manquants (2026-11-22, suite de biomes-salles-structure.html) : gardien du Temple,
+   gardien et Martyre des Veines de vert-de-gris. Trois propositions par mini-boss, sur le modèle des fiches de
+   biomes-3-8-propositions.html (salle, stats, attaques, règle de contre-jeu, butin). Thème sombre unique. */
+:root{
+  color-scheme:dark;
+  --bg:#12131a; --panel:#1a1c26; --panel2:#222533; --line:#32364a;
+  --fg:#e4e2da; --mute:#9a9cae; --soft:#c9c8c4; --ink:#0b0a0f;
+  --exile:#5fd8e8; --gold:#ddb457; --temple:#8a98a8; --vdg:#6fc2a8; --sang:#d0404a;
+  --display:"VT323","Courier New",monospace; --body:"IBM Plex Sans",system-ui,sans-serif;
+  --acc:var(--fg);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.55 var(--body);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 72px}
+.wrap{max-width:1120px;margin:0 auto;display:flex;flex-direction:column;gap:52px}
+h1,h2,h3,h4{font-family:var(--display);text-wrap:balance;margin:0;line-height:1.12;font-weight:400}
+h1{font-size:clamp(38px,6vw,60px)}
+h2{font-size:clamp(30px,4.4vw,42px);color:var(--acc)}
+h3{font-size:25px}
+h4{font-size:19px;color:var(--mute);letter-spacing:.04em;text-transform:uppercase}
+p{margin:0;max-width:72ch}
+.lede{color:var(--mute);font-size:16px}
+.eyebrow{font-family:var(--display);font-size:18px;letter-spacing:.08em;text-transform:uppercase;color:var(--mute)}
+code{font:13px ui-monospace,Menlo,monospace;background:var(--panel2);padding:1px 5px;border-radius:3px}
+.stack{display:flex;flex-direction:column;gap:14px}
+.nav{position:sticky;top:0;z-index:5;background:var(--bg);border-bottom:2px solid var(--ink);display:flex;gap:6px;flex-wrap:wrap;padding-block:8px}
+.nav a{font-family:var(--display);font-size:18px;text-decoration:none;padding:2px 10px;border:2px solid var(--line);color:var(--mute)}
+.nav a:hover,.nav a:focus-visible{color:var(--fg);border-color:var(--fg);outline:none}
+.ctx{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px}
+.ctx div{background:var(--panel);border:2px solid var(--line);padding:8px 12px;font-size:13.5px;color:var(--soft)}
+.ctx b{display:block;font-family:var(--display);font-size:18px;font-weight:400;color:var(--acc)}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(310px,1fr));gap:18px}
+.card{background:var(--panel);border:2px solid var(--line);border-top:5px solid var(--acc);padding:16px 18px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.card.reco{border-color:var(--acc);box-shadow:0 0 0 1px var(--acc) inset}
+.card .tag{font-family:var(--display);font-size:16px;color:var(--mute)}
+.card.reco .tag::after{content:" · VALIDÉ";color:var(--acc)}
+.card:not(.reco){opacity:.62}
+.card h3{color:var(--fg)}
+.stats{font-family:var(--display);font-size:18px;color:var(--acc)}
+.pal{display:flex;gap:3px}
+.pal span{flex:1;height:16px;border:1px solid var(--ink)}
+.look{color:var(--soft);font-size:14px}
+ol.atk{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px;font-size:14px}
+.rule{border-left:3px solid var(--gold);padding:6px 10px;background:var(--panel2);font-size:14px}
+.rule b{color:var(--gold)}
+.teach{font-size:13.5px;color:var(--mute)}
+.teach b{color:var(--soft)}
+.loot{font-size:13.5px;display:flex;flex-wrap:wrap;gap:6px}
+.loot span{border:1px solid var(--line);padding:1px 8px;background:var(--bg)}
+.loot .key{border-color:var(--gold);color:var(--gold)}
+.loot .plan{border-color:var(--exile);color:var(--exile)}
+.q{background:var(--panel);border:2px solid var(--line);padding:14px 18px}
+.q ul{margin:6px 0 0;padding-left:18px;display:flex;flex-direction:column;gap:6px}
+section.temple{--acc:var(--temple)} section.vdg{--acc:var(--vdg)} section.mart{--acc:var(--sang)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="stack">
+  <span class="eyebrow">Planche · 22 novembre 2026 · validée le 22/11 (T1, V1, M1) · rien n’est codé</span>
+  <h1>Les trois mini-boss manquants</h1>
+  <p class="lede">Avec la structure en salles (<code>biomes-salles-structure.html</code>), chaque biome a deux mini-boss. Le mini-boss 1 est un gardien qu’on combat avec l’escouade, dans l’arène du quartier A. Il lâche la clef de B et un plan de mod. Le mini-boss 2 est une Martyre, en duel sous le dôme, dans l’arène du quartier B. Elle lâche un mod et la clef du boss. Il en manque trois : le gardien du Temple, le gardien des Veines et la Martyre des Veines.</p>
+  <div class="ctx">
+    <div><b>Durée visée</b>~2 minutes chacun, 2 phases (à la moitié de ses PV).</div>
+    <div><b>Calibrage</b>Martyre de Byrsa 2 000 PV ; Gorge-Cuivre 2 400 PV, armure 5. Un mini-boss des Veines reste sous la Gorge.</div>
+    <div><b>Plan de mod</b>Il débloque la fabrication d’un mod existant. C’est le mod « utile en exp. 2 » de la boucle.</div>
+    <div><b>Dessin</b>Les descriptions servent de piste ; le dessin se fera sur une planche de rendu, comme pour les autres boss.</div>
+  </div>
+</header>
+
+<nav class="nav" aria-label="Sections">
+  <a href="#temple">Gardien du Temple</a><a href="#veines">Gardien des Veines</a><a href="#martyre">Martyre des Veines</a><a href="#questions">Bilan</a>
+</nav>
+
+<section id="temple" class="temple stack">
+  <span class="eyebrow">Biome 1 · Temple · mini-boss 1 · quartier A « Les Cloîtres »</span>
+  <h2>Gardien du Temple</h2>
+  <p class="lede">C’est le premier mini-boss du jeu. Il doit apprendre à se battre avec l’escouade dans une salle fermée, et préparer à ce qui suit : les pylônes de Merenor et l’Œil.</p>
+  <div class="cards" id="c-temple"></div>
+</section>
+
+<section id="veines" class="vdg stack">
+  <span class="eyebrow">Biome 2 · Veines de vert-de-gris · mini-boss 1 · quartier A « Les Puits »</span>
+  <h2>Gardien des Veines</h2>
+  <p class="lede">Le biome du cuivre et de l’eau : salles noyées et pompes, tiques sur les filons, anguilles dans les bassins, patrouilles de Byrsa. Le gardien doit utiliser au moins une de ces mécaniques déjà validées.</p>
+  <div class="cards" id="c-veines"></div>
+</section>
+
+<section id="martyre" class="mart stack">
+  <span class="eyebrow">Biome 2 · Veines de vert-de-gris · mini-boss 2 · quartier B « Les Écluses »</span>
+  <h2>Martyre des Veines</h2>
+  <p class="lede">C’est la deuxième Martyre du jeu, après celle de Byrsa (Temple, quartier B). Même règle : dôme, l’Exilé seul, motifs de balles. Elle doit montrer un motif que la Martyre de Byrsa n’a pas, sans reprendre ceux des biomes 3 à 8 (chaînes, obscurité, âmes, eau engloutie, pages, couronne).</p>
+  <div class="cards" id="c-martyre"></div>
+</section>
+
+<section id="questions" class="stack">
+  <h2>Bilan du 22 novembre</h2>
+  <div class="q">
+    <ul>
+      <li><b>Gardien du Temple</b> : T1, <b>L’Archiprêtre aux racines</b>, dans l’Oratoire envahi des Cloîtres. Il lâche la Clef de la Nef dorée et le plan de la Lanterne de Medeina.</li>
+      <li><b>Gardien des Veines</b> : V1, <b>L’Éclusier de Byrsa</b>, dans la Grande Écluse des Puits. Il lâche la Clef des Écluses et le plan de la Culasse froide.</li>
+      <li><b>Martyre des Veines</b> : M1, <b>la Martyre de la Patine</b>, dans la Nef verte des Écluses. Elle lâche la Clef de la Gorge et le mod <b>Mines de patine</b> (rare) : un tir de l’Exilé qui ne touche rien laisse une mine verte 3 s, qui éclate au contact d’un ennemi. Quand il se déclenche, le canon de l’Exilé verdit.</li>
+      <li><b>Noms de quartier</b> : validés, ce sont ceux de la planche des repères d’entrée.</li>
+    </ul>
+    <p class="teach" style="margin-top:10px"><b>Plus tard</b> : la fabrication des mods à partir des plans passera par l’exo. Aucun bâtiment n’est prévu pour l’instant.</p>
+  </div>
+</section>
+
+</div>
+<script>
+const DATA = {
+  "c-temple": [
+    { tag:"T1", nm:"L’Archiprêtre aux racines", stats:"1 500 PV · armure 3 · escouade admise", room:"Salle : l’Oratoire envahi",
+      look:"Un prêtre du Temple, à genoux devant l’autel, que les racines de la Bête ont soudé au sol. Le dos ouvert sur un bulbe qui pulse. Mousse veinée et nappe des pylônes autour de lui.",
+      pal:["#2b2425","#5c4e48","#6e8a3a","#c2202a","#e4d8b0"],
+      atk:["Racines : trois lignes annoncées au sol filent vers les unités les plus proches et les immobilisent 1,5 s.","Nappe : la corruption s’étend depuis l’autel par anneaux et retire des PV à l’Exilé (comme la nappe d’un pylône).","Phase II, appel de la meute : 3 chiens de la Bête jaillissent du bulbe toutes les 25 s."],
+      rule:"<b>Canaliser</b> : quatre places de prière aux points cardinaux. Tant qu’un esprit de chaque culte y prie, la nappe recule et le bulbe s’ouvre : dégâts doublés.",
+      teach:"<b>Ce qu’il apprend</b> : la canalisation à quatre cultes, avant le premier pylône. C’est la même règle, dans une salle fermée.",
+      loot:[["key","Clef de la Nef dorée"],["plan","Plan : Lanterne de Medeina"],["","Racine-mère (quête)"]], reco:true },
+    { tag:"T2", nm:"La Sentinelle d’ardoise", stats:"1 600 PV · armure 5 · escouade admise", room:"Salle : la Salle d’armes scellée",
+      look:"Un automate tyrien en dalles d’ardoise, de la même pierre que le coffre antique. Glyphes cyan sur le torse, une épaule fendue d’où suinte de l’or de Byrsa.",
+      pal:["#141922","#424e5f","#8a98a8","#5fd8e8","#ddb457"],
+      atk:["Dallage : des cases du sol s’allument en motif (croix, damier, couronne) puis éclatent 1,2 s plus tard.","Poing-bélier : charge en ligne droite. S’il heurte la paroi, il reste sonné 2 s.","Phase II, éclats d’ardoise : éventail de 7 balles après chaque charge."],
+      rule:"<b>Glyphes</b> : un adepte de Sigil posté sur le glyphe de l’entrée lit le motif suivant, qui s’affiche une seconde plus tôt.",
+      teach:"<b>Ce qu’il apprend</b> : lire les annonces au sol et se placer pour qu’il heurte la paroi. L’Œil reprend ces deux gestes.",
+      loot:[["key","Clef de la Nef dorée"],["plan","Plan : Écaille d’esquive"],["","Dalle à glyphe (décor de base)"]] },
+    { tag:"T3", nm:"Le Lacertien de pierre", stats:"1 400 PV · armure 4 · escouade admise", room:"Salle : la Crypte aux braseros",
+      look:"La salamandre du Sanctum Lacertae, statue géante éveillée. Corps de pierre grise, écailles de quartz sur l’échine, gueule de braise.",
+      pal:["#262e3b","#6c7a8c","#b8c6d4","#e0602a","#ffd27a"],
+      atk:["Queue balayante : un arc de 3 cases devant lui, annoncé par la queue qui se lève.","Souffle de braise : un cône de feu, qui rallume les braseros qu’il touche.","Phase II, mue : la carapace tombe en 4 éclats qui roulent ; armure à 0 pendant 8 s."],
+      rule:"<b>Braseros</b> : quatre braseros des dieux dans la salle. Chacun encore allumé lui rend 1 % de PV par seconde. Un adepte de Medeina posté à côté l’éteint.",
+      teach:"<b>Ce qu’il apprend</b> : répartir l’escouade sur la carte pendant que l’Exilé occupe le boss. Il relie aussi la quête de la Salamandre.",
+      loot:[["key","Clef de la Nef dorée"],["plan","Plan : Cœur de braise"],["","Écaille de quartz"]] },
+  ],
+  "c-veines": [
+    { tag:"V1", nm:"L’Éclusier de Byrsa", stats:"2 000 PV · armure 5 · escouade admise", room:"Salle : la Grande Écluse (noyée)",
+      look:"Un ingénieur de Byrsa en scaphandre de cuivre, une clef d’écluse géante sur l’épaule. Tuyaux verts de patine, hublot embué.",
+      pal:["#172526","#365a55","#86b0a1","#c0703f","#ddb457"],
+      atk:["Ouverture des vannes : l’eau monte dans un quart de la salle, marche ralentie, et elle met l’Exilé à portée des anguilles.","Harpon à chaîne : il attire une unité jusqu’à lui ; la chaîne se brise en 3 tirs.","Phase II, court-circuit : il électrise l’eau ; 15 dégâts par seconde à tout ce qui s’y trouve."],
+      rule:"<b>Pompes</b> : trois pompes au bord de la salle. Un adepte posté à une pompe fait baisser l’eau. Salle sèche : son scaphandre se vide et son armure tombe à 0.",
+      teach:"<b>Ce qu’il apprend</b> : les salles noyées et la pompe, déjà validées pour le biome 2, avant d’en croiser dans B.",
+      loot:[["key","Clef des Écluses"],["plan","Plan : Culasse froide"],["","Hublot de scaphandre (quête)"]], reco:true },
+    { tag:"V2", nm:"La Reine des tiques", stats:"1 800 PV · armure 6 · escouade admise", room:"Salle : le Filon-mère",
+      look:"Une tique gonflée de cuivre, grosse comme un chariot, plantée dans le plus grand filon du biome. Abdomen translucide où le minerai brille.",
+      pal:["#1f3433","#48726a","#c0703f","#e09a78","#f2e3c0"],
+      atk:["Ponte : 4 œufs autour d’elle, qui éclosent en tiques au bout de 6 s si on ne les crève pas.","Rostre : elle se détache, fonce sur une ligne et se replante ailleurs dans le filon.","Phase II, gorgée : elle pompe le filon et se soigne de 2 % par seconde tant qu’elle y est plantée."],
+      rule:"<b>Miner pendant le combat</b> : chaque bloc du filon extrait par un esprit d’Aether lui retire une gorgée. Filon épuisé, plus de soin.",
+      teach:"<b>Ce qu’il apprend</b> : qu’un filon se dispute et que les mineurs servent en combat. La Gorge, mangeuse de filons, est annoncée.",
+      loot:[["key","Clef des Écluses"],["plan","Plan : Sceau sensible"],["","8 à 12 cuivre"]] },
+    { tag:"V3", nm:"Le Mineur de patine", stats:"2 000 PV · armure 2 → 10 · escouade admise", room:"Salle : la Taille verte",
+      look:"Un mineur tyrien figé par le vert-de-gris : statue qui marche, pioche soudée aux mains, croûte verte qui épaissit à vue d’œil.",
+      pal:["#101a1b","#294643","#618f84","#c0703f","#d6efe4"],
+      atk:["Croûte : +1 d’armure toutes les 6 s, jusqu’à 10.","Éclats de patine : un anneau de 12 balles chaque fois qu’il gagne un point d’armure.","Phase II, coulée verte : il laisse des flaques qui ralentissent et collent les munitions (recharge plus lente)."],
+      rule:"<b>Les bassins</b> : la salle a un bassin. Poussé dedans par la charge du Lac ou un bouclier, il perd toute sa croûte.",
+      teach:"<b>Ce qu’il apprend</b> : qu’un boss blindé se combat en le faisant bouger, pas en tirant plus.",
+      loot:[["key","Clef des Écluses"],["plan","Plan : Aimant d’ichor"],["","Patine vive"]] },
+  ],
+  "c-martyre": [
+    { tag:"M1", nm:"Martyre de la Patine", stats:"2 200 PV · dôme, l’Exilé seul", room:"Arène : la Nef verte",
+      look:"Armure d’automate de Byrsa qui a viré au vert-de-gris. L’or n’apparaît plus qu’aux arêtes polies par ses gestes. Cape de mousse de cuivre.",
+      pal:["#1f3433","#48726a","#86b0a1","#ddb457","#e4e2da"],
+      atk:["Pluie de cuivre : anneaux de balles cuivrées qui tournent en sens inverse.","Vert-de-gris : les balles qui n’ont rien touché s’arrêtent et restent 6 s, en mines vertes. L’arène se remplit.","Phase II, oxydation : elle fait éclater toutes les mines en même temps, chacune en croix."],
+      rule:"<b>Polir</b> : un tir de l’Exilé sur une mine la fait disparaître. Les mines nettoyées rechargent son Voile.",
+      teach:"<b>Ce qu’elle apprend</b> : à gérer un terrain qui se referme, et non plus seulement à esquiver.",
+      loot:[["key","Clef de la Gorge"],["","Mod : Mines de patine (rare)"]], reco:true },
+    { tag:"M2", nm:"Martyre des Puits", stats:"2 100 PV · dôme à demi noyé", room:"Arène : le Grand Puits",
+      look:"Une Martyre au casque-cloche de scaphandrier, l’armure dorée couverte de coquillages de cuivre. Elle sort de l’eau jusqu’à la taille.",
+      pal:["#101a1b","#1f3433","#365a55","#ddb457","#9fd8e0"],
+      atk:["Plongée : elle disparaît sous l’eau (invulnérable) et ressort sous l’Exilé ; un cercle de remous l’annonce.","Geyser : 5 colonnes d’eau en ligne, puis une gerbe de balles à chaque colonne.","Phase II, marée : l’eau monte d’un cran à chaque plongée et réduit le sol sec."],
+      rule:"<b>Les vannes</b> : quatre vannes au bord du dôme. L’Exilé en ferme une (E, 1 s) : la marée redescend d’un cran.",
+      teach:"<b>Ce qu’elle apprend</b> : à alterner esquive et action au sol, comme les vannes de la Trempe du Grand Crassier (biome 3).",
+      loot:[["key","Clef de la Gorge"],["","Mod : Bulle d’apnée (à concevoir)"]] },
+    { tag:"M3", nm:"Martyre au Gong", stats:"2 200 PV · dôme, l’Exilé seul", room:"Arène : la Salle des Cloches",
+      look:"Une Martyre qui porte sur le dos un gong de cuivre aussi large qu’elle. Elle le frappe avec un maillet d’or. Sa voix est un bourdonnement.",
+      pal:["#172526","#294643","#c0703f","#e09a78","#ddb457"],
+      atk:["Coup de gong : une onde en anneau avec une brèche, qu’il faut trouver et traverser.","Écho : la même onde repart 1,5 s plus tard depuis le point où se tenait l’Exilé.","Phase II, carillon : trois gongs plus petits se posent dans l’arène et sonnent à tour de rôle."],
+      rule:"<b>Faire taire</b> : un tir sur le gong au moment où il vibre (lueur) étouffe l’onde suivante.",
+      teach:"<b>Ce qu’elle apprend</b> : à lire un rythme. Attention, les anneaux de choc du Maître-Forgeron (biome 3) sont proches.",
+      loot:[["key","Clef de la Gorge"],["","Mod : Diapason (à concevoir)"]] },
+  ],
+};
+for (const [id, list] of Object.entries(DATA)) {
+  document.getElementById(id).innerHTML = list.map(b => `
+    <article class="card${b.reco ? " reco" : ""}">
+      <span class="tag">${b.tag} · ${b.room}</span>
+      <h3>${b.nm}</h3>
+      <span class="stats">${b.stats}</span>
+      <div class="pal">${b.pal.map(c => `<span style="background:${c}" title="${c}"></span>`).join("")}</div>
+      <p class="look">${b.look}</p>
+      <h4>Attaques</h4>
+      <ol class="atk">${b.atk.map(a => `<li>${a}</li>`).join("")}</ol>
+      <p class="rule">${b.rule}</p>
+      <p class="teach">${b.teach}</p>
+      <div class="loot">${b.loot.map(([k,t]) => `<span class="${k}">${t}</span>`).join("")}</div>
+    </article>`).join("");
+}
+</script>
+</body>
+</html>

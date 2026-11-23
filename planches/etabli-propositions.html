@@ -1,0 +1,836 @@
+<meta charset="utf-8">
+<title>Établi d’exo</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;600&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
+<style>
+/* Mise en page : bandeau de commandes collant, puis une section par bâtiment = grille de vignettes à échelle entière (×3). Planche à un seul aspect, sombre comme la caverne du jeu. */
+:root{color-scheme:dark;--bg:#0d1114;--panel:#141c21;--line:#27363d;--txt:#e2dcc2;--mut:#93a3a4;--acc:#e8c870;--hot:#cfd4e2;
+ --disp:'Pixelify Sans',ui-monospace,monospace;--body:'Atkinson Hyperlegible',system-ui,sans-serif;--s:3}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--txt);font:16px/1.5 var(--body)}
+.wrap{max-width:1260px;margin:auto;padding-block:20px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+h1{font:600 28px/1.15 var(--disp);letter-spacing:.06em;color:var(--acc);margin:0 0 8px;text-wrap:balance}
+h2{font:600 23px/1.2 var(--disp);letter-spacing:.05em;color:var(--acc);margin:0 0 4px}
+h3{font:600 17px/1.25 var(--disp);letter-spacing:.03em;color:var(--hot);margin:0}
+p{margin:0;max-width:68ch}.mut{color:var(--mut)}b{color:var(--txt)}
+.bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);border-block:1px solid var(--line)}
+.bar .wrap{padding-block:8px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.bar nav{display:flex;flex-wrap:wrap;gap:6px;margin-left:auto}
+button,.bar a{font:400 15px/1 var(--disp);color:var(--txt);background:var(--panel);border:1px solid var(--line);padding:8px 11px;cursor:pointer;text-decoration:none}
+button:hover,.bar a:hover,button[aria-pressed=true]{border-color:var(--acc);color:var(--acc)}
+button:focus-visible,a:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin-top:16px}
+.note{background:var(--panel);border:1px solid var(--line);padding:14px 16px;min-width:0}
+.note h3{margin-bottom:6px}.note ul{margin:0;padding-left:18px;color:var(--mut)}.note li+li{margin-top:4px}
+section{margin-top:40px;scroll-margin-top:70px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,calc(132px*var(--s)));gap:14px;margin-top:14px;justify-content:start}
+figure{margin:0;background:var(--panel);border:1px solid var(--line);display:flex;flex-direction:column;min-width:0}
+figure.cur{border-style:dashed}figure.cur h3{color:var(--mut)}
+canvas{display:block;width:calc(132px*var(--s));height:calc(136px*var(--s));max-width:100%;image-rendering:pixelated}
+figcaption{padding:10px 12px 12px;display:flex;flex-direction:column;gap:6px}
+figcaption p{color:var(--mut);font-size:14.5px;line-height:1.45}
+.chips{display:flex;flex-wrap:wrap;gap:4px;list-style:none;margin:0;padding:0}
+.chips li{font:400 13px/1.2 var(--disp);color:var(--hot);border:1px solid var(--line);padding:3px 6px}
+table{border-collapse:collapse;width:100%;font-size:15px}th,td{text-align:left;padding:7px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font:600 14px var(--disp);color:var(--hot);letter-spacing:.04em}td{color:var(--mut)}td:first-child{color:var(--txt);white-space:nowrap}
+.scroll{overflow-x:auto;margin-top:12px}
+@media(max-width:460px){:root{--s:2}}
+.pick{align-self:flex-start;margin-top:2px}
+figure.sel{border-color:var(--acc);box-shadow:inset 0 0 0 2px var(--acc)}figure.sel h3{color:var(--acc)}
+figure.sel .pick{background:var(--acc);color:var(--bg);border-color:var(--acc)}
+.none{margin-top:12px}
+.send{background:var(--panel);border:1px solid var(--line);padding:16px;display:flex;flex-direction:column;gap:12px;margin-top:14px;max-width:760px}
+.send ul{margin:0;padding-left:18px;color:var(--mut)}.send li b{color:var(--txt)}
+textarea{font:15px/1.4 var(--body);color:var(--txt);background:var(--bg);border:1px solid var(--line);padding:10px;min-height:76px;width:100%;resize:vertical}
+#bSend{align-self:flex-start;border-color:var(--acc);color:var(--acc);font-size:17px;padding:10px 16px}
+#status{color:var(--mut);font-size:14.5px;min-height:1.4em}#count{color:var(--acc);font:400 15px var(--disp)}
+</style>
+<div class="wrap">
+<h1>ÉTABLI D’EXO</h1>
+<p class="mut">Nouveau bâtiment de l’intro de la capsule (planche <b>intro-capsule-planche.html</b>) : on y fabrique les modules d’exo de l’Exilé d’après les plans retrouvés, à commencer par <b>Analyse</b>. En jeu, il porte aujourd’hui le dessin de l’Atelier (vignette « Actuel »). Cinq pistes au même rendu que la Scierie et l’Archerie : machines en plein air, finition 16 bits, emprise 2 × 2 cases agrandie trois fois, boucle « au travail » et « au repos » (bouton en haut). En bas, l’icône et le rendu porté du mod Analyse.</p>
+<p class="mut" style="margin-top:8px"><b>Pour choisir :</b> bouton « Choisir » sous la piste voulue, puis « Envoyer mon choix » en bas de page.</p>
+</div>
+<div class="bar"><div class="wrap">
+ <button id="bWork" aria-pressed="true">Au travail</button>
+ <button id="bNight" aria-pressed="false">Jour</button>
+ <button id="bPause" aria-pressed="false">Pause</button>
+ <span id="count"></span>
+ <nav id="nav" aria-label="Bâtiments"></nav>
+</div></div>
+<div class="wrap">
+<div id="groups"></div>
+<section id="analyse"><h2>Mod Analyse · icône et rendu porté</h2>
+<p class="mut">Aujourd’hui, Analyse emprunte l’icône de l’Iris de la Matrice. Trois motifs au style A « Cartouche » des autres mods (planche <b>mods-icones-propositions.html</b>) : plaque octogonale teintée, bord gris des mods normaux (le jeu le teinte à la rareté), motif de 32 × 32. Chaque piste dit aussi ce qu’on verrait sur l’Ingénieur. Indique la lettre retenue dans tes remarques en bas de page (« Analyse : B »).</p>
+<div class="grid" id="mods-grid" style="grid-template-columns:repeat(auto-fill,minmax(260px,1fr))"></div>
+</section>
+<script>
+'use strict';
+(()=>{
+ const CYAN=['#06303a','#12596b','#1f9fb8','#5ce8ff','#c8fbff'],ARG=['#202832','#465461','#6d7b88','#b5c1ca','#eff4f5'],
+  ROUGE=['#2a0808','#6a1414','#a82a2a','#e05a4a','#ffb0a0'],VERT=['#0a2a10','#1a6a2a','#3ab040','#9af070','#f0ffc0'],METAL=['#14121a','#2a2430','#4a4454','#7a7488','#c8c4d4'];
+ let X;
+ const P=(x,y,c,a=1)=>{if(c==null||a<=0)return;x=Math.round(x);y=Math.round(y);if(x<0||y<0||x>31||y>31)return;X.globalAlpha=Math.min(1,a);X.fillStyle=c;X.fillRect(x,y,1,1);X.globalAlpha=1};
+ const R=(x,y,w,h,c)=>{X.fillStyle=c;X.fillRect(x,y,w,h)};
+ function LINE(x0,y0,x1,y1,c,a=1){x0=Math.round(x0);y0=Math.round(y0);x1=Math.round(x1);y1=Math.round(y1);const dx=Math.abs(x1-x0),dy=-Math.abs(y1-y0),sx=x0<x1?1:-1,sy=y0<y1?1:-1;let e=dx+dy;for(let k=0;k<80;k++){P(x0,y0,c,a);if(x0===x1&&y0===y1)break;const e2=2*e;if(e2>=dy){e+=dy;x0+=sx}if(e2<=dx){e+=dx;y0+=sy}}}
+ function ARC(cx,cy,r,a0,a1,c,a=1){const n=Math.max(6,Math.round(r*(a1-a0)*1.3)),s=new Set();for(let i=0;i<=n;i++){const t=a0+(a1-a0)*i/n,x=Math.round(cx+Math.cos(t)*r),y=Math.round(cy+Math.sin(t)*r),k=x*99+y;if(s.has(k))continue;s.add(k);P(x,y,c,a)}}
+ function SHAPE(inside,pal,cx,cy,opt={}){const has=(x,y)=>x>=0&&y>=0&&x<32&&y<32&&inside(x+.5,y+.5);for(let y=0;y<32;y++)for(let x=0;x<32;x++){if(!has(x,y))continue;const edge=!has(x-1,y)||!has(x+1,y)||!has(x,y-1)||!has(x,y+1);
+  if(edge&&!opt.noEdge){P(x,y,pal[0]);continue}const s=(x-cx)*.7+(y-cy);P(x,y,s<-4?pal[4]:s<-1.5?pal[3]:s<2.5?pal[2]:pal[1])}}
+ const disc=(cx,cy,r)=>(x,y)=>(x-cx)**2+(y-cy)**2<=r*r,ell=(cx,cy,rx,ry)=>(x,y)=>((x-cx)/rx)**2+((y-cy)/ry)**2<=1;
+ // barre de PV miniature : w pixels, part pleine k
+ function hpBar(x,y,w,k,full=ROUGE){R(x-1,y-1,w+2,4,'#020608');R(x,y,w,2,'#2a1512');R(x,y,Math.round(w*k),2,full[3]);R(x,y,Math.round(w*k),1,full[4])}
+ const PISTES=[
+  {k:'A',name:'Visière-lentille',tint:CYAN,desc:'Une visière d’argent et sa grande lentille cyan ; dans la lentille, la barre de PV d’un ennemi, trois quarts pleine.',
+   worn:'Porté : la visière en travers de l’œil avant, lentille cyan ; elle s’allume et balaie quand un ennemi entre à l’écran.',
+   draw(){SHAPE((x,y)=>y>=10&&y<=14&&x>=3&&x<=28,ARG,10,11);R(4,10,24,1,ARG[4]);SHAPE(disc(19,17,8),CYAN,17,14);SHAPE(disc(19,17,6),['#0a2a33','#0a2a33','#12596b','#1f9fb8','#5ce8ff'],17,14,{noEdge:true});
+    hpBar(14,16,10,.72);P(15,12,'#ffffff');P(16,12,CYAN[4]);ARC(19,17,10,-2.4,-1.4,CYAN[3],.8);ARC(19,17,12.5,-2.2,-1.6,CYAN[2],.6)}},
+  {k:'B',name:'Barre sous la loupe',tint:CYAN,desc:'La barre de PV d’un ennemi, en grand, sous une loupe tyrienne cerclée d’argent. Le motif dit l’effet sans détour.',
+   worn:'Porté : une petite loupe cerclée d’argent pendue à la ceinture, qui se lève devant l’œil quand un ennemi entre à l’écran.',
+   draw(){hpBar(3,22,24,.62);for(let i=0;i<4;i++)P(4+i*6,25,ROUGE[1]);SHAPE(disc(13,12,8),ARG,11,9);SHAPE(disc(13,12,6),['#0a2a33','#0a2a33','#12596b','#1f9fb8','#5ce8ff'],11,9,{noEdge:true});
+    LINE(19,18,25,24,ARG[2]);LINE(20,18,26,24,ARG[1]);LINE(19,19,25,25,ARG[3]);P(10,8,'#ffffff');P(11,8,CYAN[4]);P(10,9,CYAN[4]);
+    for(let x=9;x<17;x++)P(x,13,CYAN[3],.8)}},
+  {k:'C',name:'Œil-réticule',tint:METAL,desc:'Un œil tyrien cyan pris dans un réticule de visée, et trois points de PV sous la pupille. Plus abstrait, dans la famille de l’Iris.',
+   worn:'Porté : un réticule cyan qui flotte devant le visage ; les ennemis à l’écran gagnent leur barre de PV quand il clignote.',
+   draw(){SHAPE(ell(16,14,10,6),['#0a2a33','#12596b','#1f9fb8','#5ce8ff','#c8fbff'],14,12);SHAPE(disc(16,14,3.2),['#06303a','#06303a','#0a2a33','#12596b','#1f9fb8'],16,14,{noEdge:true});P(15,13,'#ffffff');
+    for(const[a,b,c,d]of[[2,14,6,14],[26,14,30,14],[16,3,16,7],[16,21,16,23]])LINE(a,b,c,d,CYAN[3]);ARC(16,14,12,-.4,.4,CYAN[2],.8);ARC(16,14,12,Math.PI-.4,Math.PI+.4,CYAN[2],.8);
+    for(let k=0;k<3;k++){R(10+k*5,25,4,3,'#020608');R(11+k*5,26,2,1,k<2?ROUGE[3]:ROUGE[1])}}},
+ ];
+ const OCT=[[5,1],[26,1],[30,5],[30,26],[26,30],[5,30],[1,26],[1,5]],EDGE='#7a8488';
+ function icon(p){const c=document.createElement('canvas');c.width=c.height=32;const g=c.getContext('2d');X=g;g.fillStyle=p.tint[0];g.beginPath();OCT.forEach(([x,y],i)=>i?g.lineTo(x,y):g.moveTo(x,y));g.closePath();g.fill();
+  for(let i=0;i<8;i++){const a=OCT[i],b=OCT[(i+1)%8];LINE(a[0],a[1],b[0]-(b[0]>a[0]?1:0),b[1]-(b[1]>a[1]?1:0),EDGE)}LINE(6,2,25,2,'#b8c0c4');LINE(2,6,2,25,'#b8c0c4');p.draw();return c}
+ const grid=document.getElementById('mods-grid');
+ for(const p of PISTES){const f=document.createElement('figure');const big=document.createElement('canvas');big.width=big.height=32*6;
+  const slot=document.createElement('canvas');slot.width=72;slot.height=72;const ic=icon(p);
+  const g=big.getContext('2d');g.imageSmoothingEnabled=false;g.drawImage(ic,0,0,192,192);
+  const s=slot.getContext('2d');s.fillStyle='#0a2a33';s.fillRect(0,0,72,72);s.strokeStyle='#5ce8ff';s.strokeRect(.5,.5,71,71);s.imageSmoothingEnabled=false;s.drawImage(ic,0,0,32,32,7,7,58,58);
+  for(const cv of[big,slot])Object.assign(cv.style,{imageRendering:'pixelated',display:'inline-block',width:cv.width+'px',height:cv.height+'px',maxWidth:'100%'});
+  slot.style.margin='0 0 0 12px';slot.style.verticalAlign='bottom';
+  f.innerHTML=`<div style="padding:12px;display:flex;align-items:flex-end;flex-wrap:wrap"></div><figcaption><h3>${p.k} · ${p.name}</h3><p>${p.desc}</p><p><b>${p.worn}</b></p><p class="mut">À droite : la case du paquetage (×1,8), taille réelle en jeu.</p></figcaption>`;
+  f.firstChild.append(big,slot);grid.append(f)}
+})();
+</script>
+
+<section id="choix"><h2>Mon choix</h2>
+<div class="send"><ul id="recap"></ul>
+<label for="note" class="mut">Remarques, mélanges (« la roue du 1 avec le feu du 4 »), ce qui manque :</label>
+<textarea id="note"></textarea>
+<button id="bSend">Envoyer mon choix</button><div id="status" role="status"></div></div></section>
+</div>
+<script>
+'use strict';
+// Planche « Creuset des Exilés » : 5 propositions de bâtiment 2 × 2 cases.
+// Moteur repris de autels-planches.js (vue 3/4 du jeu, extrusions, jour/nuit) ; 1 case = 4 unités = 2,67 unités de dessin.
+const BAT=(()=>{
+// ---------- couleurs ----------
+const CM=new Map();
+function ci(c){if(typeof c==='number')return c;let v=CM.get(c);if(v===undefined){v=parseInt(c.slice(1),16);CM.set(c,v)}return v}
+const E=c=>ci(c)|0x1000000; // émissif : non assombri la nuit
+function sh(c,k){const n=ci(c),em=n&0x1000000,f=v=>Math.max(0,Math.min(255,Math.round(k<0?v*(1+k):v+(255-v)*k)));return em|f(n>>16&255)<<16|f(n>>8&255)<<8|f(n&255)}
+const R_=a=>a.map(ci);
+const OUTL=ci('#0b0a0e');
+function hash(x,y,s=0){let h=(Math.imul(x|0,374761393)+Math.imul(y|0,668265263)+Math.imul(s|0,982451653))|0;h=Math.imul(h^(h>>>13),1274126177);return((h^(h>>>16))>>>0)/4294967296}
+function vnoise(x,y,s){const xi=Math.floor(x),yi=Math.floor(y),xf=x-xi,yf=y-yi,u=xf*xf*(3-2*xf),v=yf*yf*(3-2*yf),a=hash(xi,yi,s),b=hash(xi+1,yi,s),c=hash(xi,yi+1,s),d=hash(xi+1,yi+1,s);return a+(b-a)*u+(c-a)*v+(a-b-c+d)*u*v}
+const BAY=[0,8,2,10,12,4,14,6,3,11,1,9,15,7,13,5].map(v=>(v+.5)/16),bay=(x,y)=>BAY[(y&3)*4+(x&3)];
+function rp(R,v,x,y){const n=R.length-1,i=Math.round(v*n);return R[i<0?0:i>n?n:i]}
+
+const GRASS=R_(['#1c3822','#244a29','#2d5d30','#387234','#47873b','#5c9e44','#7ab450']);
+const DIRT=R_(['#3a281a','#523620','#6a4a2a','#836034','#9a7642','#b08c54']);
+const MOSS=R_(['#22401f','#2f5528','#3e6c31','#52833a']);
+const LEAF=R_(['#10261a','#173a20','#1f4f27','#2a652e','#387b35','#4b923c','#66aa48','#8cc45c']);
+const BARK=R_(['#24160e','#3a2416','#52341f','#6b4629','#835a36']);
+const WOOD=R_(['#2a1a10','#40281a','#5a3a24','#74502f','#8e663c','#a87e4c']);
+const BASALT=R_(['#15131a','#1f1c25','#2a2631','#36313e','#443e4d','#554d5e','#6a6274']);
+const SILVER=R_(['#4a4e5a','#6e7482','#9aa0ae','#c4c8d2','#e4e6ee']);
+const MARBLE=R_(['#3c3c42','#535259','#6b6a72','#85848b','#9e9da3','#b4b2b6','#c6c4c6']);
+const SLATE=R_(['#1e2430','#2a3240','#3a4454','#4c5868','#5e6c7e']);
+const SAND=R_(['#3a2a1c','#54402a','#6e5638','#8a6e48','#a68a5c','#c2a674','#d8c08e']);
+const COPPER=R_(['#3a1c0c','#5e3016','#84461f','#a8602c','#c47c3e','#dc9c5c']);
+const ORNG=R_(['#5a1e06','#8a3410','#b8501a','#e07028','#f89a48']);
+const MSTONE=R_(['#1e2622','#2a342f','#3a463e','#4c5a50','#617064','#7a887a','#96a294']);
+const BONE=R_(['#6e6656','#948a74','#b8ad94','#d8cfb4','#ece6d2']);
+const WATER=R_(['#0e2a24','#14403a','#1c5a50']);
+// lumières de nuit
+const VIOBLUE=[.62,.64,1.35],ORANGE=[1.3,.62,.22],GREEN=[.5,1.2,.5],WHITEC=[1.08,1.1,1.2];
+
+// ---------- tampon de pixels ----------
+class Pix{constructor(w,h){this.w=w;this.h=h;this.c=new Int32Array(w*h).fill(-1);this.bx0=w;this.by0=h;this.bx1=-1;this.by1=-1}
+ set(x,y,c){x=Math.floor(x);y=Math.floor(y);if(x<0||y<0||x>=this.w||y>=this.h||c==null)return;if(typeof c!=='number')c=ci(c);if(c<0)return;this.c[y*this.w+x]=c;if(x<this.bx0)this.bx0=x;if(x>this.bx1)this.bx1=x;if(y<this.by0)this.by0=y;if(y>this.by1)this.by1=y}
+ get(x,y){return x<0||y<0||x>=this.w||y>=this.h?-1:this.c[y*this.w+x]}
+ rect(x,y,w,h,c){x=Math.round(x);y=Math.round(y);for(let j=y;j<y+Math.round(h);j++)for(let i=x;i<x+Math.round(w);i++)this.set(i,j,typeof c==='function'?c(i,j):c)}
+ ell(cx,cy,rx,ry,c){const f=typeof c==='function';for(let j=Math.floor(cy-ry);j<=Math.ceil(cy+ry);j++)for(let i=Math.floor(cx-rx);i<=Math.ceil(cx+rx);i++){const dx=(i+.5-cx)/rx,dy=(j+.5-cy)/ry;if(dx*dx+dy*dy<=1)this.set(i,j,f?c(i,j,dx,dy):c)}}
+ line(x0,y0,x1,y1,c){const n=Math.max(1,Math.ceil(Math.max(Math.abs(x1-x0),Math.abs(y1-y0))));for(let k=0;k<=n;k++)this.set(Math.round(x0+(x1-x0)*k/n),Math.round(y0+(y1-y0)*k/n),c)}
+ outline(col=OUTL){if(this.bx1<0)return;const w=this.w,h=this.h,s=this.c,n=new Int32Array(s);
+  for(let y=Math.max(0,this.by0-1);y<=Math.min(h-1,this.by1+1);y++)for(let x=Math.max(0,this.bx0-1);x<=Math.min(w-1,this.bx1+1);x++){const i=y*w+x;if(s[i]!==-1)continue;const nb=y<h-1&&s[i+w]!==-1?s[i+w]:x<w-1&&s[i+1]!==-1?s[i+1]:x>0&&s[i-1]!==-1?s[i-1]:y>0&&s[i-w]!==-1?s[i-w]:-1;if(nb!==-1)n[i]=sh(nb&0xffffff,-.68)}
+  this.c=n;this.bx0=Math.max(0,this.bx0-1);this.by0=Math.max(0,this.by0-1);this.bx1=Math.min(w-1,this.bx1+1);this.by1=Math.min(h-1,this.by1+1)}
+ blit(s,dx,dy,mask){dx=Math.round(dx);dy=Math.round(dy);for(let y=s.by0;y<=s.by1;y++)for(let x=s.bx0;x<=s.bx1;x++){const v=s.c[y*s.w+x];if(v===-1)continue;const X=x+dx,Y=y+dy;if(X<0||Y<0||X>=this.w||Y>=this.h)continue;this.c[Y*this.w+X]=v;if(mask)mask[Y*this.w+X]=1;if(X<this.bx0)this.bx0=X;if(X>this.bx1)this.bx1=X;if(Y<this.by0)this.by0=Y;if(Y>this.by1)this.by1=Y}}}
+
+// ---------- projection 3/4 (celle du jeu) ----------
+let T=20,W=208,H=168,OX=104,OY=118;
+function configure(t,w,h,ox,oy){T=t;W=w;H=h;OX=ox;OY=oy}
+const P3=(x,y,z)=>[OX+x*T,OY+(z-y)*T];
+
+// ---------- formes au sol (x, z) ----------
+function shapeOf(pts){let a=0;for(let i=0;i<pts.length;i++){const[p,q]=pts[i],[r,s]=pts[(i+1)%pts.length];a+=p*s-r*q}const sg=a>0?1:-1;
+ const edges=pts.map((p,i)=>{const q=pts[(i+1)%pts.length],dx=q[0]-p[0],dz=q[1]-p[1],l=Math.hypot(dx,dz);return{p,dx,dz,l,n:[sg*dz/l,-sg*dx/l]}});
+ const ext=Math.max(...pts.map(p=>Math.hypot(p[0],p[1])));
+ return{pts,ext,inside(x,z){let c=false;for(let i=0,j=pts.length-1;i<pts.length;j=i++){const[xi,zi]=pts[i],[xj,zj]=pts[j];if((zi>z)!==(zj>z)&&x<(xj-xi)*(z-zi)/(zj-zi)+xi)c=!c}return c},
+  normal(x,z){let best=1e9,n=[0,1];for(const e of edges){const t=Math.max(0,Math.min(1,((x-e.p[0])*e.dx+(z-e.p[1])*e.dz)/(e.l*e.l))),d=Math.hypot(x-e.p[0]-e.dx*t,z-e.p[1]-e.dz*t);if(d<best){best=d;n=e.n}}return n}}}
+const poly=(n,r,rot=0)=>shapeOf(Array.from({length:n},(_,i)=>{const a=rot+i*2*Math.PI/n;return[Math.cos(a)*r,Math.sin(a)*r]}));
+const circle=r=>poly(40,r);
+const square=h=>poly(4,h*Math.SQRT2,Math.PI/4);        // demi-côté h, aligné sur la grille
+const diamond=r=>poly(4,r,0);                           // carré posé sur la pointe
+const star=(n,r1,r2,rot=-Math.PI/2)=>shapeOf(Array.from({length:n*2},(_,i)=>{const a=rot+i*Math.PI/n,r=i&1?r2:r1;return[Math.cos(a)*r,Math.sin(a)*r]}));
+const tri=r=>poly(3,r,Math.PI/2);                       // pointe vers le spectateur
+
+// ---------- extrusion d'une forme : dessus éclairé, flancs ombrés selon la normale ----------
+// o: {x,z,y0,y1,mat,taper:[s0,s1]}
+function prism(L,shape,o){const cx=o.x||0,cz=o.z||0,y0=o.y0,y1=o.y1,m=o.mat,ta=o.taper||[1,1],hh=y1-y0||1,sc=y=>ta[0]+(ta[1]-ta[0])*(y-y0)/hh,ext=shape.ext*Math.max(ta[0],ta[1]);
+ const sx0=Math.floor(OX+(cx-ext)*T)-1,sx1=Math.ceil(OX+(cx+ext)*T)+1,sy0=Math.floor(OY+(cz-ext-y1)*T)-1,sy1=Math.ceil(OY+(cz+ext-y0)*T)+1,st=.5/T,e=.9/T,tp=ta[1]<ta[0]?.1:0;
+ for(let sy=sy0;sy<=sy1;sy++)for(let sx=sx0;sx<=sx1;sx++){const x=(sx+.5-OX)/T-cx,zb=(sy+.5-OY)/T-cz;let s=sc(y1);
+  if(s>.02){const z=zb+y1,X=x/s,Z=z/s;if(shape.inside(X,Z)){const rim=!shape.inside((x-e)/s,Z)||!shape.inside((x+e)/s,Z)||!shape.inside(X,(z-e)/s)||!shape.inside(X,(z+e)/s);
+   L.set(sx,sy,m({f:'top',x,z,y:y1,rim,sx,sy,X,Z,rad:Math.hypot(x,z),ang:Math.atan2(z,x)}));continue}}
+  for(let y=y1-st;y>=y0-1e-6;y-=st){s=sc(y);if(s<=.01)continue;const z=zb+y,X=x/s,Z=z/s;if(shape.inside(X,Z)){const n=shape.normal(X,Z),b=.4+.32*Math.max(0,-.55*n[0]+.83*n[1])+tp;
+   L.set(sx,sy,m({f:'side',x,z,y,v:(y-y0)/hh,b,lip:y>y1-1.2/T,foot:y<y0+1.2/T,n,sx,sy,X,Z,rad:Math.hypot(x,z),ang:Math.atan2(z,x)}));break}}}}
+
+// ---------- matériaux ----------
+// o: {courses, joint, trim:{R,v0,v1}, moss, veins, noise, seed, inlay(q), pave(q)}
+function stone(R,o={}){return q=>{if(o.inlay){const c=o.inlay(q);if(c!=null)return c}
+ let b=q.f==='top'?.84:q.b;
+ if(q.f==='top'){if(q.rim)b+=.14;else if(o.pave){const d=o.pave(q);if(d)b-=d}}
+ else{if(q.lip)b+=.16;if(q.foot)b-=.18;
+  if(o.trim&&q.v>=o.trim.v0&&q.v<=o.trim.v1)return rp(o.trim.R,b+(q.lip?.1:0),q.sx,q.sy);
+  if(o.courses&&!q.lip){const c=o.courses,row=Math.floor(q.y/c+1e-6),lv=q.y-row*c;if(lv<.9/T&&q.y>.05)b-=.2;else{const jw=o.joint||.6,u=q.ang*2.2+(row&1)*.5*jw/1.2;if(Math.abs(q.n[1])>.5){const ux=q.x+(row&1)*jw/2;if(((ux%jw)+jw)%jw<.9/T)b-=.16}else if(((u%jw)+jw)%jw<.9/T)b-=.16}}}
+ if(o.veins){const n=vnoise(q.x*4.5+q.y*3,q.z*4.5,77);if(Math.abs(n-.5)<.018)b-=.3;b+=(n-.5)*.14}
+ b+=(vnoise(q.x*7,(q.z+q.y)*7,o.seed||3)-.5)*(o.noise??.14);
+ if(o.moss){const n=vnoise(q.x*3.1,(q.z+q.y*.5)*3.1,51);if(n>1-o.moss&&(q.f==='top'||q.v<.55))return rp(MOSS,b*.9,q.sx,q.sy)}
+ return rp(R,b,q.sx,q.sy)}}
+// incrustations (dessus)
+const ringI=(r,w,c)=>q=>q.f==='top'&&Math.abs(q.rad-r)<w?c:null;
+const dotsI=(r,n,c,ph=0)=>q=>{if(q.f!=='top')return null;for(let k=0;k<n;k++){const a=ph+k*2*Math.PI/n;if(Math.hypot(q.x-Math.cos(a)*r,q.z-Math.sin(a)*r)<.07)return c}return null};
+function segD(x,z,a,b){const vx=b[0]-a[0],vz=b[1]-a[1],t=Math.max(0,Math.min(1,((x-a[0])*vx+(z-a[1])*vz)/(vx*vx+vz*vz)));return Math.hypot(x-a[0]-vx*t,z-a[1]-vz*t)}
+const linesI=(segs,w,c)=>q=>{if(q.f!=='top')return null;for(const[a,b]of segs)if(segD(q.x,q.z,a,b)<w)return c;return null};
+const spiralI=(r0,r1,turns,w,c)=>q=>{if(q.f!=='top'||q.rad<r0||q.rad>r1)return null;const t=(q.rad-r0)/(r1-r0);let a=q.ang-t*turns*2*Math.PI;a=((a%(2*Math.PI))+2*Math.PI)%(2*Math.PI);return a<w||a>2*Math.PI-w?c:null};
+// incrustations (flancs)
+const bandI=(v0,v1,c,step=.18,seed=1)=>q=>{if(q.f!=='side'||q.v<v0||q.v>v1||q.lip)return null;const u=Math.floor((q.x+5)/step),k=hash(u,0,seed);const lv=(q.v-v0)/(v1-v0),lu=((q.x+5)/step)-u;
+ if(k<.25)return null;if(k<.55?lu>.25&&lu<.75&&lv>.15&&lv<.85:(lv>.2&&lv<.4)||(lv>.6&&lv<.8)?lu>.15&&lu<.85:lu>.4&&lu<.6)return c;return null};
+const vlineI=(c,w=.05,v0=.1,v1=.9)=>q=>q.f==='side'&&Math.abs(q.x)<w&&q.n[1]>.5&&q.v>v0&&q.v<v1?c:null;
+const anyI=(...fs)=>q=>{for(const f of fs){const c=f(q);if(c!=null)return c}return null};
+
+// ---------- statues : grilles de pixels ----------
+// 1-6 : rampe du corps · p-t : drapé · A/B : accent émissif · 0 : creux sombre
+function legs(l,r,a='54',b='43'){return[[l,'s'+'r'.repeat(Math.max(0,7-l))+'qq'],[10,a],[12,'pp'],[14,b],[16,'qq'+'r'.repeat(Math.max(0,r-18))+'q']]}
+function rep(n,row){return Array.from({length:n},()=>row)}
+const ST={
+ aether:{ax:12.5,rows:[
+  [[2,'5.5.5'],[11,'A..A']],
+  [[2,'6.6.6'],[9,'A.AAAA.A']],
+  [[2,'4.4.4'],[10,'566554']],
+  [[2,'4.4.4'],[10,'655444']],
+  [[1,'34445'],[10,'665543']],
+  [[1,'34544'],[10,'605043']],
+  [[2,'444'],[10,'665543']],
+  [[3,'44'],[10,'556443']],
+  [[4,'44'],[11,'5543']],
+  [[5,'44'],[12,'54']],
+  [[6,'44'],[8,'r55544433r'],[18,'4']],
+  [[5,'srr4'],[9,'56554433'],[17,'r44']],
+  [[5,'srr'],[8,'4'],[9,'56654333'],[17,'r'],[18,'43'],[21,'5....5']],
+  [[4,'srrr'],[8,'r'],[9,'55654332'],[17,'r'],[18,'43'],[21,'6....6']],
+  [[4,'srrr'],[8,'r'],[9,'55543332'],[17,'rr'],[19,'43'],[21,'655556']],
+  [[4,'srrr'],[8,'r'],[9,'45543322'],[17,'rrr'],[22,'BB'],[26,'5'],[20,'45']],
+  [[3,'srrrr'],[8,'r'],[9,'44443322'],[17,'rrr'],[21,'5.BB.5']],
+  [[3,'srrrr'],[8,'pqqqqqqqqp'],[18,'rr'],[21,'5.BB.5']],
+  [[3,'srrrr'],[8,'tsqtsqtsqt'],[18,'rrr'],[22,'4BB4']],
+  [[3,'srrrr'],[8,'tsqtsqtsqt'],[18,'rrrr'],[23,'44']],
+  [[2,'srrrrr'],[8,'tsqtsqtsqt'],[18,'rrrrq']],
+  [[2,'srrrrr'],[8,'tsqtsqtsqt'],[18,'rrrrq']],
+  [[2,'srrrrr'],[8,'ts.ts.ts.t'],[18,'rrrrq']],
+  ...rep(5,legs(2,22)),...rep(6,legs(1,23,'55','44')),
+  [...legs(1,23),[9,'554'],[14,'433']],
+  [[1,'pqqqqqqq'],[9,'443'],[12,'pp'],[14,'332'],[17,'qqqqqqp']]],
+  lights:[{dx:0,dy:-34,r:34,i:.6},{dx:11,dy:-20,r:22,i:.5}]},
+ indra:{ax:12.5,rows:[
+  [[12,'ts']],
+  [[5,'6'],[11,'tssr']],
+  [[4,'565'],[11,'tssr']],
+  [[4,'454'],[10,'5'],[11,'tssr'],[15,'4']],
+  [[9,'56665544']],
+  [[9,'66655443']],
+  [[9,'65B55B43']],
+  [[9,'65055043']],
+  [[9,'55055043']],
+  [[10,'453343']],
+  [[11,'4433']],
+  [[6,'r'],[7,'566'],[10,'554433'],[16,'544'],[19,'q']],
+  [[6,'r'],[7,'65'],[9,'56654443'],[17,'54'],[19,'q']],
+  [[6,'r'],[7,'54'],[9,'56654433'],[17,'43'],[19,'q']],
+  [[6,'44'],[8,'r'],[9,'55654433'],[17,'4'],[18,'rq']],
+  [[4,'454'],[7,'rr'],[9,'55543332'],[17,'rrq']],
+  [[4,'444'],[7,'rr'],[9,'45543322'],[17,'rrq']],
+  [[6,'srr'],[9,'44443322'],[17,'rrq']],
+  [[6,'sr'],[8,'pqBqqqqBqp'],[18,'rq']],
+  ...rep(5,[[6,'sr'],[8,'tsqtsqtsqt'],[18,'rq']]),
+  [[6,'sr'],[8,'ts.ts.ts.t'],[18,'rq']],
+  ...rep(5,[[6,'srqq'],[10,'55'],[12,'pp'],[14,'44'],[16,'qqrq']]),
+  ...rep(5,[[6,'srqq'],[10,'65'],[12,'pp'],[14,'54'],[16,'qqrq']]),
+  [[6,'pqq'],[9,'554'],[12,'pp'],[14,'433'],[17,'qqp']]],
+  mid(P,c,o){for(let y=4;y<36;y++)if(y<15||y>16)P.set(5+o,y+1,c('3'))},
+  over(P,c,o){const cx=17+o,cy=24;P.ell(cx,cy,5.3,5.6,(x,y,dx,dy)=>{const d=dx*dx+dy*dy;if(d>.7)return c(d>.86?'3':'5');if(d<.09)return c('6');if(d<.16)return c('4');return c(dx+dy<-.2?'s':dx+dy>.5?'q':'r')});
+   P.line(19+o,21,22+o,17,c('5'));P.set(22+o,17,c('6'));P.set(21+o,17,c('s'));P.set(22+o,18,c('s'))},
+  lights:[{dx:0,dy:-31,r:20,i:.5},{dx:4,dy:-13,r:24,i:.4}]},
+ medeina:{ax:12.5,rows:[
+  [[9,'r'],[12,'s'],[15,'r'],[21,'6']],
+  [[8,'rq'],[11,'ts'],[14,'sr'],[17,'q'],[20,'565']],
+  [[1,'4.4.4'],[7,'q'],[8,'rstssr'],[14,'rsrq'],[20,'565']],
+  [[1,'54544'],[6,'qr'],[8,'stsssr'],[14,'srrq']],
+  [[1,'5544'],[5,'q'],[6,'rs'],[8,'t'],[9,'s'],[10,'555544'],[16,'sr'],[18,'q']],
+  [[2,'544'],[5,'rs'],[7,'s'],[8,'t'],[9,'s'],[10,'5B55B4'],[16,'srq']],
+  [[3,'44'],[5,'r'],[6,'s'],[7,'r'],[8,'s'],[9,'s'],[10,'665543'],[16,'sr'],[18,'rq']],
+  [[4,'44'],[6,'r'],[7,'s'],[8,'r'],[9,'s'],[10,'565543'],[16,'s'],[17,'rq']],
+  [[5,'44'],[7,'rs'],[9,'r'],[11,'5543'],[15,'rs'],[17,'rq']],
+  [[6,'44'],[8,'s'],[12,'54'],[16,'sr'],[18,'q']],
+  [[7,'44'],[9,'s'],[10,'555443'],[16,'r'],[17,'4']],
+  [[8,'4s'],[10,'5AAAA4'],[16,'r44']],
+  [[8,'ss'],[10,'665543'],[16,'r'],[17,'r4']],
+  [[8,'sr'],[10,'566543'],[16,'r'],[17,'r4']],
+  [[8,'rr'],[10,'556543'],[16,'q'],[17,'r'],[18,'4']],
+  [[8,'rq'],[10,'555443'],[16,'q'],[18,'44']],
+  [[9,'q'],[10,'455433'],[16,'q'],[19,'454']],
+  [[9,'q'],[10,'445433'],[16,'q'],[19,'444']],
+  [[9,'pqAqqAqp']],
+  [[11,'rssr']],[[11,'rssr']],[[11,'rAAr']],[[11,'rssr']],[[11,'rssr']],[[11,'rAAr']],[[11,'rssr']],[[11,'q..q']]],
+  mid(P,c,o){for(let y=3;y<37;y++)if(y<16||y>17)P.set(21+o,y+1,c('3'))},
+  under(P,c,o){const pts=[[12.5,19,3.4],[12.5,23,3.3],[13,27,3.1],[15.5,30,2.9],[17.5,33,2.7],[16,36,2.5],[12,37.4,2.3],[8,36.4,2.1],[5.8,33.6,1.9],[7.2,31,1.6],[9.6,30.4,1.3],[11,31.2,1]];
+   for(let k=0;k<pts.length-1;k++){const[a,b,r]=pts[k],[d,e,s]=pts[k+1];for(let t=0;t<1;t+=.08){const x=a+(d-a)*t+o,y=b+(e-b)*t+1,R=r+(s-r)*t;P.ell(x,y,R,R*.92,(px,py,dx,dy)=>{const q=dx*dx+dy*dy;if(q>.72)return c('2');return c((px+py*2)%4===0?'3':dx<-.2?'5':'4')})}}},
+  lights:[{dx:0,dy:-35,r:24,i:.55},{dx:0,dy:-28,r:16,i:.4}]},
+ sigil:{ax:12.5,rows:[
+  [[10,'tssssr']],
+  [[9,'tssssssr']],
+  [[4,'4.4'],[8,'t'],[9,'s'],[10,'433332'],[16,'r'],[17,'q'],[20,'4.4']],
+  [[4,'545'],[8,'t'],[9,'s'],[10,'3B33B2'],[16,'r'],[17,'q'],[20,'544']],
+  [[4,'44'],[8,'t'],[9,'s'],[10,'433332'],[16,'r'],[17,'q'],[20,'44']],
+  [[4,'AA'],[8,'ts'],[10,'s3322r'],[16,'rq'],[20,'AA']],
+  [[4,'ts'],[8,'tsss'],[12,'33'],[14,'ssrq'],[20,'rq']],
+  [[4,'tssssssssssssssrrq']],
+  [[4,'tsr'],[7,'tsssssssssrq'],[19,'rrq']],
+  [[4,'tr'],[8,'tsss'],[12,'BB'],[14,'ssrq'],[20,'rq']],
+  [[8,'tss'],[11,'B'],[12,'ss'],[14,'B'],[15,'srq']],
+  [[8,'tsss'],[12,'BB'],[14,'ssrq']],
+  [[8,'ts'],[10,'BBBBBB'],[16,'rq']],
+  [[8,'tsss'],[12,'BB'],[14,'ssrq']],
+  [[8,'tsss'],[12,'BB'],[14,'ssrq']],
+  [[8,'pqqqAAqqqp']],
+  [[8,'tsss'],[12,'AA'],[14,'ssrq']],
+  [[8,'tsss'],[12,'AA'],[14,'ssrq']],
+  ...Array.from({length:12},(_,k)=>{const l=k<6?8:7,r=k<6?17:18;let s='t';for(let x=l+1;x<r-1;x++)s+=(x-l)%3===0?'r':'s';return[[l,s+'rq']]}),
+  [[7,'pqqqqqqqqqqp']],
+  [[9,'554'],[14,'433']]],
+  lights:[{dx:0,dy:-24,r:30,i:.55},{dx:-8,dy:-30,r:16,i:.5},{dx:8,dy:-30,r:16,i:.5}]}};
+
+const SMAT={
+ aether:{body:['#2e3248','#4c5270','#6e7494','#959bb8','#bcc0d6','#e0e2ee'],drape:['#1c1840','#28245c','#38347e','#4c4aa0','#6866be'],A:'#8a8eff',B:'#d0d4ff',dark:'#14121c'},
+ aetherB:{body:['#121018','#1c1824','#2a2534','#3a3446','#4c455a','#605870'],drape:['#141024','#1e1838','#2a2450','#383068','#484082'],A:'#7a80ff',B:'#c8ccff',dark:'#08070c'},
+ indra:{body:['#3a1c0c','#5e3016','#84461f','#a8602c','#c47c3e','#dc9c5c'],drape:['#5a1e06','#8a3410','#b8501a','#e07028','#f89a48'],A:'#ff8a2a',B:'#ffc890',dark:'#1a0c06'},
+ indraS:{body:['#3a2a1c','#54402a','#6e5638','#8a6e48','#a68a5c','#c2a674'],drape:['#5a1e06','#8a3410','#b8501a','#e07028','#f89a48'],A:'#ff8a2a',B:'#ffc890',dark:'#1a0c06'},
+ medeina:{body:['#2a3a32','#40564a','#5a7466','#7a9484','#9cb4a2','#c0d2c2'],drape:['#13301a','#1c4524','#265c2c','#337434','#468c3c'],A:'#7ae070',B:'#d0ffb8',dark:'#0a140e'},
+ medeinaB:{body:['#3a3428','#5a5040','#7a6e58','#9a8e74','#bcb094','#dcd2b6'],drape:['#13301a','#1c4524','#265c2c','#337434','#468c3c'],A:'#7ae070',B:'#d0ffb8',dark:'#14100a'},
+ sigil:{body:['#2c2c32','#535259','#6b6a72','#85848b','#a3a2a8','#c6c4c6'],drape:['#4a4a52','#64646c','#828189','#a2a1a7','#c0bfc2'],A:'#c4c8d4',B:'#f4f6ff',dark:'#141418'},
+ sigilS:{body:['#161a22','#1e2430','#2a3240','#3a4454','#4c5868','#5e6c7e'],drape:['#1e2430','#2a3240','#3a4454','#4c5868','#5e6c7e'],A:'#c4c8d4',B:'#f4f6ff',dark:'#0c0e12'}};
+
+const SPR=new Map();
+function statue(god,matKey){const k=god+'/'+matKey;if(SPR.has(k))return SPR.get(k);const d=ST[god],M=SMAT[matKey||god],o=3,P=new Pix(36,d.rows.length+6);
+ const col=ch=>{if(ch>='1'&&ch<='6')return ci(M.body[ch-1]);const i='pqrst'.indexOf(ch);if(i>=0)return ci(M.drape[i]);if(ch==='A')return E(M.A);if(ch==='B')return E(M.B);if(ch==='0')return ci(M.dark);return -1};
+ if(d.under)d.under(P,col,o);
+ d.rows.forEach((row,r)=>{for(const[c0,s]of row)for(let k=0;k<s.length;k++){const ch=s[k];if(ch!=='.')P.set(c0+k+o,r+1,col(ch))}});
+ if(d.mid)d.mid(P,col,o);if(d.over)d.over(P,col,o);
+ // la Gorgone : quelques têtes de serpent dans la chevelure
+ if(god==='medeina')for(const[x,y]of[[9,0],[12,0],[15,0],[7,2],[18,3]]){P.set(x+o,y+1,col('s'));P.set(x+o,y,col('r'))}
+ P.outline();let bot=0;for(let y=P.h-1;y>=0&&!bot;y--)for(let x=0;x<P.w;x++)if(P.get(x,y)>=0&&P.get(x,y)!==OUTL){bot=y;break}
+ const r={P,ax:Math.round(d.ax+o),ay:bot,lights:d.lights};SPR.set(k,r);return r}
+
+// ---------- scène ----------
+const KEYS=[[0,[.27,.3,.48]],[4.5,[.29,.31,.49]],[6.5,[.8,.62,.66]],[8.5,[1,.96,.9]],[13,[1.05,1.02,.96]],[17,[1,.93,.82]],[19,[.95,.62,.5]],[20.5,[.44,.4,.58]],[24,[.27,.3,.48]]];
+function ambient(h){h=((h%24)+24)%24;for(let k=1;k<KEYS.length;k++)if(h<=KEYS[k][0]){const[a,A]=KEYS[k-1],[b,B]=KEYS[k],t=(h-a)/(b-a);return A.map((v,i)=>v+(B[i]-v)*t)}return KEYS[0][1]}
+class Scene{constructor(){this.P=new Pix(W,H);this.F=new Pix(W,H);this.sh=new Float32Array(W*H);this.mask=new Uint8Array(W*H);this.lights=[];this.dyn=[];this.L=[0,1,2].map(()=>new Float32Array(W*H));this.A=[0,1,2].map(()=>new Float32Array(W*H))}
+ shadowShape(shape,cx,cz,h,a=.85){const dx=h*.5,dz=h*.22,ext=shape.ext;for(let sy=Math.floor(OY+(cz-ext)*T)-1;sy<=OY+(cz+ext+dz)*T+1;sy++)for(let sx=Math.floor(OX+(cx-ext)*T)-1;sx<=OX+(cx+ext+dx)*T+1;sx++){if(sx<0||sy<0||sx>=W||sy>=H)continue;const x=(sx+.5-OX)/T-cx,z=(sy+.5-OY)/T-cz;for(let k=0;k<=8;k++){const t=k/8;if(shape.inside(x-dx*t,z-dz*t)){const i=sy*W+sx;this.sh[i]=Math.max(this.sh[i],a);break}}}}
+ shadowEll(cx,cy,rx,ry,a){for(let y=Math.floor(cy-ry);y<=cy+ry;y++)for(let x=Math.floor(cx-rx);x<=cx+rx;x++){if(x<0||y<0||x>=W||y>=H)continue;const dx=(x+.5-cx)/rx,dy=(y+.5-cy)/ry;if(dx*dx+dy*dy<=1){const i=y*W+x;this.sh[i]=Math.max(this.sh[i],a)}}}
+ bake(ground,objs){for(let y=0;y<H;y++)for(let x=0;x<W;x++){const wx=(x+.5-OX)/T,wz=(y+.5-OY)/T;this.P.set(x,y,ground(wx,wz,x,y))}
+  this.ground=new Int32Array(this.P.c);objs.sort((a,b)=>a.key-b.key);
+  for(const o of objs){const L=new Pix(W,H),r=o.draw(L,this)||{};if(!r.noOutline)L.outline();if(r.post)r.post(L);this.P.blit(L,0,0,o.statue?this.mask:null);if(r.lights)this.lights.push(...r.lights);if(r.dyn)this.dyn.push(r.dyn)}
+  return this}
+ compose(t){const F=this.F,W=this.P.w,H=this.P.h;F.c.set(this.P.c);const D=this.D||(this.D=new Pix(W,H));D.c.fill(-1);D.bx0=W;D.by0=H;D.bx1=-1;D.by1=-1;for(const d of this.dyn)d(D,t,this);const s=D.c,o=new Int32Array(s),ok=i=>s[i]!==-1&&!(s[i]&0x1000000);for(let y=1;y<H-1;y++)for(let x=1;x<W-1;x++){const i=y*W+x;if(!ok(i))continue;let n=0;for(const k of[-W-1,-W,-W+1,-1,1,W-1,W,W+1])if(ok(i+k))n++;if(n<3)continue;for(const k of[-W,-1,1,W])if(s[i+k]===-1)o[i+k]=sh(s[i]&0xffffff,-.68)}for(let i=0;i<o.length;i++)if(o[i]!==-1)F.c[i]=o[i];return F}
+ render(g,hour,t){const amb=ambient(hour),lum=.3*amb[0]+.59*amb[1]+.11*amb[2],night=Math.max(0,Math.min(1,(.9-lum)/.6)),day=Math.max(0,Math.min(1,(lum-.45)/.5)),[lr,lg,lb]=this.L,[ar,ag,ab]=this.A;
+  const F=this.compose(t);
+  lr.fill(0);lg.fill(0);lb.fill(0);ar.fill(0);ag.fill(0);ab.fill(0);
+  if(night>.02)for(const L of this.lights){const add=L.add??(L.c===WHITEC?.2:L.c===VIOBLUE?.12:.04),fl=L.fl||0,I=L.i*night*(1+fl*(Math.sin(t*9.3+L.x)*.5+Math.sin(t*14.1+L.y*1.7)*.35)),R=L.r;
+   for(let y=Math.max(0,Math.floor(L.y-R/1.3));y<=Math.min(H-1,L.y+R/1.3);y++)for(let x=Math.max(0,Math.floor(L.x-R));x<=Math.min(W-1,L.x+R);x++){const dx=x+.5-L.x,dy=(y+.5-L.y)*1.3,d=Math.sqrt(dx*dx+dy*dy)/R;if(d>=1)continue;let f=1-d;f=f*f*(3-2*f);const q=Math.floor(f*4+.5)/4;if(q<=0)continue;const i=y*W+x;lr[i]+=L.c[0]*I*q;lg[i]+=L.c[1]*I*q;lb[i]+=L.c[2]*I*q;if(add){const k=add*I*q*255;ar[i]+=L.c[0]*k;ag[i]+=L.c[1]*k;ab[i]+=L.c[2]*k}}}
+  if(!this.img)this.img=g.createImageData(W,H);const d=this.img.data,P=F.c,G=this.ground,S=this.sh;
+  for(let i=0,o=0;i<W*H;i++,o+=4){const v=P[i];if(v<0){d[o]=11;d[o+1]=18;d[o+2]=14;d[o+3]=255;continue}const r=v>>16&255,gg=v>>8&255,b=v&255;
+   if(v&0x1000000){const k=1+night*.15;d[o]=Math.min(255,r*k);d[o+1]=Math.min(255,gg*k);d[o+2]=Math.min(255,b*k)}
+   else{const s=v===G[i]?1-S[i]*day*.42:1;d[o]=Math.min(255,r*(amb[0]*s+lr[i])+ar[i]);d[o+1]=Math.min(255,gg*(amb[1]*s+lg[i])+ag[i]);d[o+2]=Math.min(255,b*(amb[2]*s+lb[i])+ab[i])}d[o+3]=255}
+  g.putImageData(this.img,0,0)}}
+
+// ---------- objets ----------
+// palier/piton : forme extrudée posée en (x,z) entre y0 et y1
+function slab(shape,y0,y1,mat,o={}){const x=o.x||0,z=o.z||0;return{statue:!!o.mask,key:o.key??(z-shape.ext*Math.max(...(o.taper||[1]))+y0*.01),draw(L,S){if(y0<.01&&y1-y0>.12)S.shadowShape(shape,x,z,y1-y0,o.shadow??.8);prism(L,shape,{x,z,y0,y1,mat,taper:o.taper});return{lights:projL(o.lights)}}}}
+const projL=ls=>(ls||[]).map(l=>{const[sx,sy]=P3(l.x,l.y,l.z);return{...l,x:sx,y:sy}});
+function statueObj(god,y,matKey,o={}){return{key:.02,statue:true,draw(L,S){const sp=statue(god,matKey),[sx,sy]=P3(o.x||0,y,o.z||0),ox=Math.round(sx)-sp.ax,oy=Math.round(sy)-sp.ay-(o.lift||0);
+ const c=o.light;const lights=sp.lights.map(l=>({x:sx+l.dx,y:sy+l.dy-(o.lift||0),r:l.r,i:l.i,c,fl:.04}));
+ if(o.float){for(let b=-2;b<=2;b++){const M=new Pix(W,H);M.blit(sp.P,ox,oy+b,S.mask)}return{noOutline:true,lights,dyn(F,t){const b=Math.round(Math.sin(t*1.6)*2);F.blit(sp.P,ox,oy+b);}}}
+ L.blit(sp.P,ox,oy);return{noOutline:true,lights}}}}
+// auréole sculptée derrière la statue (disque de pierre, rayons, incrustation lumineuse)
+function haloObj(y,R,ringR,glow,o={}){return{key:-.05,statue:true,draw(L){const[sx,sy0]=P3(0,y,0),sy=sy0-(o.dy??34),cx=Math.round(sx),cy=Math.round(sy);
+ if(o.stem)prism(L,square(.07),{x:0,z:-.18,y0:y-.1,y1:y+(o.dy??34)/T,mat:stone(o.stemR||R,{noise:.08})});
+ L.ell(cx,cy,o.r||15,o.r||15,(x,y,dx,dy)=>{const d=Math.hypot(dx,dy);if(d>.84)return rp(ringR,.85-dx*.3-dy*.3,x,y);if(Math.abs(d-.7)<.05)return glow;if(o.rays&&d>.3){const a=Math.atan2(dy,dx);if(Math.abs(Math.sin(a*(o.rays/2)))<.13)return rp(ringR,.75-dy*.2,x,y)}if(o.moon)return rp(o.moon,.55-dx*.25-dy*.25+(vnoise(x*.4,y*.4,9)-.5)*.3,x,y);return rp(R,.32-dy*.18,x,y)});
+ if(o.spikes)for(let k=0;k<o.spikes;k++){const a=k*2*Math.PI/o.spikes-Math.PI/2,r0=(o.r||15)+1,r1=r0+(k&1?3:6);L.line(cx+Math.cos(a)*r0,cy+Math.sin(a)*r0,cx+Math.cos(a)*r1,cy+Math.sin(a)*r1,k&1?ringR[3]:glow)}
+ return{lights:[{x:cx,y:cy,r:(o.r||15)+16,i:.35,c:o.light}]}}}}
+
+// ---------- accessoires ----------
+const FL={vb:['#5a5cff','#9aa0ff','#e0e4ff'],orange:['#e06a20','#ff9a30','#ffe0a0'],green:['#3ab048','#7ae070','#d0ffb8'],white:['#a8b0c4','#dfe4f0','#ffffff']};
+function flameDyn(sx,sy,kind,sz=1){const c=FL[kind].map(E);return(F,t)=>{const k=Math.floor(t*10+sx*.37)%4,h=Math.round((3+((k*5)%3))*sz);for(let j=0;j<h;j++){const w=Math.max(0,Math.round((h-j)*.45*sz)),sway=Math.round(Math.sin(t*7+j*.8+sx)*.6*(j/h));for(let i=-w;i<=w;i++)F.set(sx+i+sway,sy-j,j>h-2?c[2]:Math.abs(i)<w*.5?c[2]:c[1])}F.set(sx,sy-h,c[0])}}
+function brazier(x,z,R,kind,light){return{key:z,draw(L,S){const[sx,sy]=P3(x,0,z);S.shadowEll(sx+2,sy+1,7,3,.8);prism(L,circle(.11),{x,z,y0:0,y1:.55,mat:stone(R,{noise:.06})});prism(L,circle(.24),{x,z,y0:.55,y1:.75,mat:stone(R,{noise:.06}),taper:[.7,1]});
+ const[fx,fy]=P3(x,.75,z-.05);return{lights:[{x:fx,y:fy-4,r:42,i:.95,c:light,fl:.18}],dyn:flameDyn(Math.round(fx),Math.round(fy),kind,1.1)}}}}
+function obelisk(x,z,h,R,glow,o={}){const w=o.w||.13,y0=o.y0||0;h+=y0;return{key:z,draw(L,S){prism(L,square(w),{x,z,y0,y1:h,mat:stone(R,{noise:.08,inlay:o.glyph?vlineI(glow,.03,.25,.8):null})});prism(L,square(w),{x,z,y0:h,y1:h+w*1.6,mat:stone(R,{noise:.04}),taper:[1,0]});
+ const[a,b]=P3(x,h+w*1.6,z);if(glow){L.set(a,b-1,glow);L.set(a,b,glow)}if(!y0)S.shadowShape(square(w),x,z,h,.7);return{lights:glow?[{x:a,y:b,r:20,i:.6,c:o.light}]:[]}}}}
+function menhir(x,z,h,glow,light){return{key:z,draw(L,S){S.shadowShape(poly(5,.2),x,z,h,.7);prism(L,poly(5,.2,.3),{x,z,y0:0,y1:h,mat:stone(MSTONE,{moss:.22,inlay:vlineI(glow,.035,.35,.75)}),taper:[1,.6]});const[a,b]=P3(x,h*.55,z+.2);return{lights:[{x:a,y:b,r:18,i:.45,c:light}]}}}}
+function spear(x,z,y0,h,flag){return{key:z,draw(L,S){const[a,b]=P3(x,y0,z),[,c]=P3(x,y0+h,z);L.line(a,b,a,c,WOOD[3]);L.line(a+1,b,a+1,c,WOOD[1]);L.set(a,c-1,SILVER[3]);L.set(a,c-2,SILVER[4]);L.set(a+1,c-1,SILVER[2]);L.set(a,c-3,SILVER[3]);
+ return{dyn:(F,t)=>{for(let i=0;i<7;i++){const wv=Math.round(Math.sin(t*4-i*.7+x)*1.2*(i/6));for(let j=0;j<4-Math.floor(i/3);j++)F.set(a+2+i,c+2+j+wv,j===0?flag[2]:(i+j)&1?flag[1]:flag[0])}}}}}}
+function column(x,z,h,R,o={}){return{key:z,draw(L,S){S.shadowShape(circle(.16),x,z,h,.7);prism(L,square(.17),{x,z,y0:0,y1:.12,mat:stone(R,{noise:.05})});prism(L,circle(.12),{x,z,y0:.12,y1:h-.1,mat:stone(R,{veins:1,noise:.05})});prism(L,square(.17),{x,z,y0:h-.1,y1:h,mat:stone(R,{noise:.05})});
+ if(!o.flame)return{};const[a,b]=P3(x,h,z-.02);return{lights:[{x:a,y:b-3,r:34,i:.8,c:o.light,fl:.12}],dyn:flameDyn(Math.round(a),Math.round(b),o.flame,.9)}}}}
+function bush(x,z,seed,bloom){return{key:z,draw(L,S){const[a,b]=P3(x,0,z);S.shadowEll(a,b,8,3,.7);const R=mulberry(seed);for(let k=0;k<6;k++){const bx=a+(R()-.5)*10,by=b-3-R()*5,r=3+R()*2;L.ell(bx,by,r,r*.85,(px,py,dx,dy)=>rp(LEAF,.6-dx*.15-dy*.3+(hash(px,py,3)-.5)*.15,px,py))}
+ if(bloom)for(let k=0;k<7;k++){const px=Math.round(a+(R()-.5)*12),py=Math.round(b-3-R()*8);if(L.get(px,py)>=0)L.set(px,py,k%2?'#fff4d8':'#e8a0c0')}return{}}}}
+function bones(x,z,seed){return{key:z,draw(L,S){const[a,b]=P3(x,0,z);S.shadowEll(a,b,7,3,.6);const R=mulberry(seed);for(let k=0;k<4;k++){const bx=a+(R()-.5)*9,by=b-1-R()*3;L.line(bx-3,by,bx+3,by+(R()-.5)*3,BONE[3]);L.set(bx-3,by-1,BONE[4]);L.set(bx+3,by+1,BONE[2])}L.ell(a,b-4,3,2.6,(px,py,dx,dy)=>rp(BONE,.75-dx*.2-dy*.3,px,py));L.set(a-1,b-4,BONE[0]);L.set(a+1,b-4,BONE[0]);return{}}}}
+function banner(x,z,cloth){return{key:z,draw(L,S){const[a,b]=P3(x,0,z);S.shadowEll(a+3,b,5,2,.7);L.rect(a,b-34,1,35,WOOD[3]);L.rect(a-4,b-34,10,1,WOOD[2]);L.set(a,b-36,SILVER[3]);
+ for(let y=0;y<18;y++)for(let i=-3;i<=4;i++){if(y>14&&Math.abs(i-.5)<y-14)continue;L.set(a+i,b-33+y,i===-3?cloth[2]:i>2?cloth[0]:cloth[1])}L.rect(a-1,b-27,3,3,cloth[3]);return{}}}}
+function mulberry(s){return()=>{s|=0;s=s+0x6D2B79F5|0;let t=Math.imul(s^s>>>15,1|s);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+
+// ---------- effets animés ----------
+function motes(cx,cy,spread,h,cols,n=10,seed=1){const c=cols.map(E);return(F,t)=>{for(let k=0;k<n;k++){const p=((t*.5+hash(k,1,seed))%1),x=Math.round(cx+(hash(k,2,seed)-.5)*spread*2+Math.sin(t*1.3+k)*2),y=Math.round(cy-p*h);if(p<.92)F.set(x,y,c[p>.6?0:p>.3?1:2])}}}
+function orbit(cx,cy,rx,ry,n,cols,speed=.7,size=1){const c=cols.map(E);return(F,t,S)=>{for(let k=0;k<n;k++){const a=t*speed+k*2*Math.PI/n,x=Math.round(cx+Math.cos(a)*rx),y=Math.round(cy+Math.sin(a)*ry),front=Math.sin(a)>0;
+ for(let j=-size;j<=size;j++)for(let i=-size;i<=size;i++){if(Math.abs(i)+Math.abs(j)>size)continue;const X=x+i,Y=y+j;if(X<0||Y<0||X>=W||Y>=H)continue;if(!front&&S.mask[Y*W+X])continue;F.set(X,Y,i===0&&j===0?c[2]:c[1])}}}}
+function ringDyn(cx,cy,R,cols,speed=.5){const c=cols.map(E);return(F,t,S)=>{const sx=Math.cos(t*speed);for(let k=0;k<64;k++){const a=k*2*Math.PI/64,x=Math.round(cx+Math.cos(a)*R*sx),y=Math.round(cy+Math.sin(a)*R),front=Math.cos(a)*Math.sign(sx||1)*Math.sin(t*speed)>=0;if(x<0||y<0||x>=W||y>=H)continue;if(!front&&S.mask[y*W+x])continue;F.set(x,y,k%8===0?c[2]:c[0])}}}
+function glyphOrbit(cx,cy,rx,ry,n,col,speed=.5){const c=E(col),d=sh(E(col),-.35);const G=[[1,0,1,0,1,0,1,0,1],[1,1,1,0,1,0,0,1,0],[0,1,0,1,1,1,0,1,0],[1,0,0,1,1,0,1,1,1]];return(F,t,S)=>{for(let k=0;k<n;k++){const a=t*speed+k*2*Math.PI/n,x=Math.round(cx+Math.cos(a)*rx)-1,y=Math.round(cy+Math.sin(a)*ry+Math.sin(t*2+k)*1.5)-1,front=Math.sin(a)>0,g=G[k%4];
+ for(let j=0;j<3;j++)for(let i=0;i<3;i++){const X=x+i,Y=y+j;if(X<0||Y<0||X>=W||Y>=H)continue;if(!front&&S.mask[Y*W+X])continue;F.set(X,Y,g[j*3+i]?c:d)}}}}
+function ripple(cx,cy,r0,r1,col){const c=E(col);return(F,t)=>{for(let k=0;k<3;k++){const p=((t*.4+k/3)%1),r=r0+(r1-r0)*p;for(let a=0;a<40;a++){if(hash(a,k,Math.floor(t*.4+k/3))<.5)continue;const an=a*2*Math.PI/40;F.set(Math.round(cx+Math.cos(an)*r),Math.round(cy+Math.sin(an)*r),c)}}}}
+
+// ---------- sols ----------
+function groundOf(kind,o={}){const pr=o.r??2.6,shape=o.shape;return(x,z,sx,sy)=>{const n=vnoise(x*1.3,z*1.3,7),e=Math.hypot(x/pr,z/(pr*.8));
+ const paved=shape?shape.inside(x,z):false;
+ if(paved){const P=o.pave||SLATE,g=o.grid||.5,u=((x%g)+g)%g,v=((z+(Math.floor(x/g)&1)*g/2)%g+g)%g;let b=.5+(vnoise(x*5,z*5,3)-.5)*.3;if(u<1/T||v<1/T)b-=.3;if(o.moss&&vnoise(x*2.3,z*2.3,41)>.66)return rp(MOSS,b,sx,sy);return rp(P,b,sx,sy)}
+ if(e<1+(n-.5)*.4){if(kind==='dirt'){return rp(DIRT,.5+(vnoise(x*4,z*4,5)-.5)*.5,sx,sy)}if(kind==='moss'){const m=vnoise(x*2,z*2,11);return m>.6?rp(MOSS,.5+(n-.5),sx,sy):rp(GRASS,.55+(n-.5)*.5,sx,sy)}return rp(GRASS,.42+(n-.5)*.35,sx,sy)}
+ const t=vnoise(x*2.2,z*2.2,17);if(t>.68){const v=hash(sx>>1,sy>>1,3);return rp(LEAF,.25+v*.35,sx,sy)}return rp(GRASS,.28+(n-.5)*.4+(hash(sx,sy,9)<.04?.25:0),sx,sy)}}
+
+// ---------- formes et accessoires du tour 2 ----------
+const rect=(x0,z0,x1,z1)=>shapeOf([[x0,z0],[x1,z0],[x1,z1],[x0,z1]]);
+const plus=(L,a)=>shapeOf([[-a,-L],[a,-L],[a,-a],[L,-a],[L,a],[a,a],[a,L],[-a,L],[-a,a],[-L,a],[-L,-a],[-a,-a]]);
+function ringShape(r0,r1){return{ext:r1,inside:(x,z)=>{const r=Math.hypot(x,z);return r>=r0&&r<=r1},normal:(x,z)=>{const r=Math.hypot(x,z)||1;return Math.abs(r-r1)<Math.abs(r-r0)?[x/r,z/r]:[-x/r,-z/r]}}}
+const ticksI=(r0,r1,n,c,w=.035,every=0,c2=null)=>q=>{if(q.f!=='top'||q.rad<r0||q.rad>r1)return null;const k=Math.round(q.ang*n/(2*Math.PI));if(Math.abs(q.ang-k*2*Math.PI/n)*q.rad<w)return every&&((k%every)+every)%every===0?c2:c;return null};
+const lacingI=(c)=>q=>{if(q.f!=='side'||q.lip||q.foot||q.v<.18||q.v>.82)return null;const u=q.ang*10/Math.PI,f=((u%1)+1)%1,tri=Math.abs(f*2-1);return Math.abs(tri-(q.v-.18)/.64)<.08?c:null};
+function shieldStand(x,z,y0=0){return{key:z,draw(L,S){const[a,b]=P3(x,y0,z);if(!y0)S.shadowEll(a+2,b,6,2,.7);L.rect(a,b-20,1,21,WOOD[3]);L.rect(a+1,b-20,1,21,WOOD[1]);const cy=b-14;
+ L.ell(a+.5,cy,5.5,5.5,(px,py,dx,dy)=>{const d=dx*dx+dy*dy;if(d>.7)return rp(COPPER,.85-dx*.3-dy*.3,px,py);if(d<.1)return rp(COPPER,.95,px,py);return rp(ORNG,.62-dx*.25-dy*.25,px,py)});return{}}}}
+function fireBowl(x,z,y0){return{key:z,draw(L){prism(L,circle(.14),{x,z,y0,y1:y0+.13,mat:stone(COPPER,{noise:.06}),taper:[.65,1]});const[a,b]=P3(x,y0+.13,z-.03);
+ return{lights:[{x:a,y:b-3,r:26,i:.7,c:ORANGE,fl:.18}],dyn:flameDyn(Math.round(a),Math.round(b),'orange',.8)}}}}
+function bookMat(k){const SP=[SLATE,WOOD,MARBLE,SLATE,WOOD];return q=>{if(q.f==='top'){if(q.rim)return rp(BONE,.55,q.sx,q.sy);return rp(BONE,.75+((q.sx+q.sy)%5===0?-.15:0),q.sx,q.sy)}
+ if(Math.abs(q.n[0])>.6)return rp(BONE,q.b+.15-((q.sy&1)?.12:0),q.sx,q.sy);const R=SP[k%SP.length];if(Math.abs(q.v-.5)<.12&&Math.abs(q.x)<.12)return rp(BONE,.7,q.sx,q.sy);return rp(R,q.b+(q.lip?.15:0),q.sx,q.sy)}}
+
+// ================= CREUSET DES EXILÉS =================
+// Emprise : 2 × 2 cases, soit un carré de demi-côté C (1 case = 4 unités de jeu ; le disque de rayon 2 des autels couvre 3 cases).
+const C=4/3;
+configure(24,132,136,66,102);
+const DSTONE=R_(['#121418','#1a1d23','#23272e','#2d323a','#393f48','#474e58']);
+const IRON=R_(['#15181d','#22272e','#323840','#464e58','#5e6772','#7c8692','#9ca5b0']);
+const QZ=R_(['#5e5c58','#8a877e','#b4b0a4','#d6d2c6','#eeebe2']);
+const LEATHER=R_(['#2a1810','#3e2418','#563422','#6e4630']);
+const CYD=ci('#12596b'),CY=E('#5ce8ff'),CYP=E('#c8fbff');
+const MOLT=['#7a3008','#c25412','#ec8424','#ffbc58','#ffeec0'].map(E);
+const HOT=[1.4,.78,.32],CYL=[.45,1.1,1.3];
+const tMat=o=>stone(SLATE,{courses:.2,joint:.6,noise:.1,...o});
+const iMat=o=>stone(IRON,{noise:.06,...o});
+const moltenTop=r=>q=>q.f==='top'&&q.rad<r?rp(MOLT,.45+.45*(1-q.rad/r)+(hash(q.sx,q.sy,4)-.5)*.25,q.sx,q.sy):null;
+const glyphs=(v0,v1,seed=7)=>bandI(v0,v1,CY,.15,seed);
+const cyLine=(v)=>q=>q.f==='side'&&!q.lip&&Math.abs(q.v-v)<.04?CY:null;
+
+// sol : ardoise de la salle, emprise dallée et limites des 2 × 2 cases
+function floor(){return(x,z,sx,sy)=>{const n=vnoise(x*1.4,z*1.4,7);
+ if(Math.abs(x)<=C&&Math.abs(z)<=C){const g=C/3,u=((x%g)+g)%g,v=((z+(Math.floor(x/g)&1)*g/2)%g+g)%g;let b=.5+(vnoise(x*5,z*5,3)-.5)*.3;if(u<1/T||v<1/T)b-=.25;
+  if(Math.abs(x)<1/T||Math.abs(z)<1/T||Math.abs(Math.abs(x)-C)<1/T||Math.abs(Math.abs(z)-C)<1/T)b-=.32;return rp(SLATE,b,sx,sy)}
+ const b=.42+(n-.5)*.22+(vnoise(x*4,z*4,13)-.5)*.12-Math.max(0,Math.max(Math.abs(x),Math.abs(z))-C)*.12;return rp(DSTONE,b,sx,sy)}}
+
+// ---------- effets ----------
+function sparkDyn(cx,cy,n=10,seed=1,up=14,spread=9){return(F,t)=>{for(let k=0;k<n;k++){const per=6/Math.round(6/(.9+hash(k,3,seed)*.7)),p=((t+hash(k,1,seed)*per)%per)/per,vx=(hash(k,2,seed)-.5)*spread*2,vy=up*(.6+hash(k,4,seed)*.6);
+ const x=Math.round(cx+vx*p),y=Math.round(cy-vy*p+vy*1.4*p*p);if(p<.85)F.set(x,y,MOLT[p<.25?4:p<.55?3:2])}}}
+function smokeDyn(cx,cy,h=34,n=9,seed=3){const G=R_(['#3a3e46','#4a4f58','#5c626c']);return(F,t)=>{for(let k=0;k<n;k++){const p=((t*.28+hash(k,1,seed))%1),x=Math.round(cx+Math.sin(t*.9+k*1.7)*2+p*6),y=Math.round(cy-p*h),r=p<.3?0:1;
+ if(p>.9)continue;for(let j=-r;j<=r;j++)for(let i=-r;i<=r;i++)if(Math.abs(i)+Math.abs(j)<=r&&hash(k,i*3+j,seed+Math.floor(t*2))>.25)F.set(x+i,y+j,G[p<.4?2:p<.7?1:0])}}}
+function bubbleDyn(cx,cy,rx,ry,n=4,seed=5){return(F,t)=>{const f=Math.floor(t*6);for(let k=0;k<n;k++){const a=hash(k,f,seed)*6.283,r=Math.sqrt(hash(k,f+7,seed)),x=Math.round(cx+Math.cos(a)*r*rx),y=Math.round(cy+Math.sin(a)*r*ry);F.set(x,y,MOLT[4]);if(hash(k,f,seed+1)>.6)F.set(x+1,y,MOLT[3])}}}
+// coulée : filet de métal du bec (a) vers le moule (b), sur 2,6 s d'une boucle de 6 s
+function pourDyn(ax,ay,bx,by,period=6,on=[1.2,3.8]){return(F,t)=>{const u=t%period;if(u<on[0]||u>on[1])return;const grow=Math.min(1,(u-on[0])/.35),end=Math.min(1,(on[1]-u)/.35),n=Math.ceil(Math.hypot(bx-ax,by-ay));
+ for(let k=0;k<=n;k++){const p=k/n;if(p>grow||p<1-end)continue;const x=Math.round(ax+(bx-ax)*p+Math.sin(t*Math.PI*6+k*.7)*.4),y=Math.round(ay+(by-ay)*p);F.set(x,y,MOLT[(k+Math.floor(t*14))%3===0?4:3]);if(p>.2)F.set(x+1,y,MOLT[2])}
+ if(grow>=1)for(let k=0;k<4;k++){const p=((t*3+k/4)%1);F.set(Math.round(bx+(k-1.5)*2*p),Math.round(by-3*p+4*p*p),MOLT[3])}}}
+function scanDyn(cx,cy,w,h){return(F,t)=>{const p=(Math.sin(t*1.6)*.5+.5),y=Math.round(cy-h*p);for(let x=-w;x<=w;x++)if((x+Math.floor(t*8))%3)F.set(cx+x,y,x%2?CY:CYP)}}
+
+// ---------- pièces ----------
+function crucible(x,z,y0,r,h,o={}){return{key:o.key??z,draw(L,S){if(!y0)S.shadowShape(circle(r),x,z,h,.8);
+ prism(L,circle(r),{x,z,y0,y1:y0+h,mat:iMat({inlay:anyI(moltenTop(r*.74),o.glyph?cyLine(.55):()=>null),trim:{R:IRON,v0:.82,v1:1}}),taper:[.72,1]});
+ const[a,b]=P3(x,y0+h,z);return{lights:[{x:a,y:b-2,r:o.lr||44,i:.95,c:HOT,fl:.15}],dyn:bubbleDyn(Math.round(a),Math.round(b),r*T*.62,r*T*.5)}}}}
+function anvil(x,z){return{key:z,draw(L,S){S.shadowShape(square(.16),x,z,.4,.7);prism(L,square(.16),{x,z,y0:0,y1:.08,mat:iMat()});prism(L,square(.1),{x,z,y0:.08,y1:.26,mat:iMat()});
+ prism(L,rect(-.3,-.11,.26,.11),{x,z,y0:.26,y1:.38,mat:iMat({trim:{R:IRON,v0:.7,v1:1}})});prism(L,tri(.11),{x:x+.33,z,y0:.3,y1:.38,mat:iMat()});return{}}}}
+function rack(x,z,n=3,o={}){return{key:z,draw(L,S){const[a,b]=P3(x,0,z);S.shadowEll(a+4,b+1,12,3,.7);const w=n*6+4;L.rect(a-w/2,b-22,2,23,WOOD[3]);L.rect(a+w/2-2,b-22,2,23,WOOD[2]);L.rect(a-w/2,b-20,w,2,WOOD[4]);L.rect(a-w/2,b-6,w,2,WOOD[2]);
+ for(let k=0;k<n;k++){const sx=Math.round(a-w/2+5+k*6),two=o.two&&k===1;L.rect(sx,b-(two?27:22),1,two?22:18,SILVER[3]);L.rect(sx+1,b-(two?27:22),1,two?22:18,SILVER[1]);L.set(sx,b-(two?28:23),SILVER[4]);L.rect(sx-2,b-8,5,1,IRON[4]);L.rect(sx,b-7,2,3,LEATHER[2])}
+ return{}}}}
+function shieldOn(x,z,y,col){return{key:z+.01,draw(L){const[a,b]=P3(x,y,z);L.ell(a,b,4.5,5,(px,py,dx,dy)=>{const d=dx*dx+dy*dy;if(d>.68)return rp(IRON,.8-dx*.3-dy*.3,px,py);if(d<.08)return CY;return rp(col,.6-dx*.25-dy*.25,px,py)});return{}}}}
+// armure posée sur un mannequin d'exosquelette (silhouette tyrienne, lueur cyan)
+function mannequin(x,z,o={}){return{key:z,statue:true,draw(L,S){const[a,b]=P3(x,0,z);S.shadowEll(a+5,b+1,8,3,.75);const A=Math.round(a),B=Math.round(b);
+ L.rect(A-1,B-14,3,14,IRON[2]);L.rect(A-5,B-1,11,2,IRON[3]);
+ const M=o.mat||IRON;for(let y=0;y<13;y++){const w=y<3?6:y<9?5:4;for(let i=-w;i<=w;i++)L.set(A+i,B-27+y,rp(M,.62-i*.05-y*.02+(i===-w?.2:0),A+i,y))}
+ L.rect(A-7,B-27,2,8,rp(M,.7,0,0));L.rect(A+6,B-27,2,8,rp(M,.45,0,0));L.ell(A+.5,B-31,3,3.2,(px,py,dx,dy)=>rp(IRON,.6-dx*.3-dy*.2,px,py));L.rect(A-1,B-31,3,1,CY);
+ L.rect(A,B-24,1,6,CY);L.set(A-3,B-22,CY);L.set(A+3,B-22,CY);return{lights:[{x:A,y:B-24,r:22,i:.45,c:CYL}]}}}}
+function moldTray(x,z,y0=0,o={}){return{key:o.key??z,draw(L,S){if(!y0)S.shadowShape(rect(-.5,-.22,.5,.22),x,z,.14,.7);
+ prism(L,rect(-.5,-.22,.5,.22),{x,z,y0,y1:y0+.14,mat:tMat({courses:0,inlay:linesI(o.segs||[[[-.38,-.07],[.3,-.07]],[[-.38,.08],[.3,.08]]],.035,MOLT[3])})});return{}}}}
+function chimney(x,z,h,w,o={}){return{key:z,draw(L,S){S.shadowShape(square(w),x,z,h,.75);prism(L,square(w),{x,z,y0:0,y1:h,mat:tMat({inlay:anyI(glyphs(.5,.62,o.seed||9),cyLine(.82))}),taper:[1.15,.9]});
+ const[a,b]=P3(x,h,z);L.ell(a,b,w*T*.75,w*T*.45,IRON[0]);return{dyn:smokeDyn(Math.round(a),Math.round(b)-1)}}}}
+function crystal(x,z,h,o={}){return{key:z,draw(L,S){S.shadowShape(poly(6,.1),x,z,h,.6);prism(L,poly(6,.11,.3),{x,z,y0:o.y0||0,y1:(o.y0||0)+h,mat:stone(QZ,{noise:.08,inlay:vlineI(CYP,.025,.25,.85)})});
+ prism(L,poly(6,.11,.3),{x,z,y0:(o.y0||0)+h,y1:(o.y0||0)+h+.18,mat:stone(QZ,{noise:.04}),taper:[1,0]});const[a,b]=P3(x,(o.y0||0)+h+.1,z);return{lights:[{x:a,y:b,r:20,i:.5,c:CYL}]}}}}
+function bellows(x,z){return{key:z,draw(L,S){const[a,b]=P3(x,0,z);S.shadowEll(a+3,b,9,3,.7);prism(L,rect(-.32,-.13,.22,.13),{x,z,y0:0,y1:.2,mat:stone(WOOD,{noise:.08})});
+ return{dyn:(F,t)=>{const k=Math.round((Math.sin(t*2.4)*.5+.5)*3),[c,d]=P3(x-.05,.2,z);for(let j=0;j<3+k;j++)for(let i=-5+j%2;i<=4;i++)F.set(Math.round(c)+i,Math.round(d)-j,rp(LEATHER,.5+(j===2+k?.3:0)-i*.02,i,j));F.set(Math.round(c)+7,Math.round(d)-1,IRON[4])}}}}}
+
+// ================= BÂTIMENTS SECONDAIRES v2 : Bibliothèque, Atelier, Forge, Entrepôt =================
+// Assemblé avec le moteur de creuset-planches.js par tools/batiments-v2/build.py (voir batiments-v2-planches.js).
+const AEC=['#34327a','#5a5cff','#9aa0ff','#e0e4ff'].map(E);
+const WHC=['#8e8c94','#c8ccd8','#eef0f6','#ffffff'].map(E);
+const BLUEC=R_(['#16244e','#20387c','#3054aa','#5a80d4','#9ab4ee']);
+const REDC=R_(['#3e1010','#6a1a1a','#962828','#c44444','#e88080']);
+const PARCH=R_(['#6e6250','#968a70','#bcb092','#ddd3b6','#f0e9d4']);
+const PLASTER=R_(['#4e4a44','#6a645a','#868072','#a29a8a','#bab2a0']);
+const VERDI=R_(['#17302c','#23463d','#305e4e','#427863','#5c937a']);
+const CANVAS=R_(['#4a4234','#6a604a','#8a7e62','#a89c7c','#c4b896']);
+const EARTH=R_(['#2a2018','#3a2c1e','#4c3a26','#5e4a30']);
+const SPINE=R_(['#2e3a4c','#3e4c38','#5a4230','#4c3a3e','#6c6656','#3c4450','#5e5444']);
+const WINW=E('#d6dae6'),WINV=E('#8c90f0');
+const TERRE=R_(['#2c261e','#3a3228','#4a4032','#5a4e3c','#6a5c46']);
+
+// ---------- heightfield : toits à pans, dômes, voûtes, cylindres couchés ----------
+// o: {x,z,hw,hd,y0,ym,hf(lx,lz)->y|null,mat,th}
+function hprism(L,o){const cx=o.x||0,cz=o.z||0,lo=o.y0-(o.th??.06),ym=o.ym,hf=o.hf,m=o.mat,st=.5/T,ep=.025;
+ const sx0=Math.floor(OX+(cx-o.hw)*T)-1,sx1=Math.ceil(OX+(cx+o.hw)*T)+1,sy0=Math.floor(OY+(cz-o.hd-ym)*T)-1,sy1=Math.ceil(OY+(cz+o.hd-lo)*T)+1;
+ const H=(lx,lz)=>Math.abs(lx)>o.hw||Math.abs(lz)>o.hd?null:hf(lx,lz);
+ for(let sy=sy0;sy<=sy1;sy++)for(let sx=sx0;sx<=sx1;sx++){const lx=(sx+.5-OX)/T-cx;if(Math.abs(lx)>o.hw)continue;const s=(sy+.5-OY)/T-cz;let front=false,py=null;
+  for(let y=ym;y>=lo-1e-6;y-=st){const lz=s+y;if(lz>o.hd){front=true;py=y;continue}if(lz<-o.hd)break;const h=H(lx,lz);
+   if(h==null||h<y){front=false;py=y;continue}
+   if(front&&h-y>.9/T){L.set(sx,sy,m({f:'side',x:lx,z:lz,y,v:(y-lo)/(ym-lo),b:.66,lip:h-y<1.6/T,foot:y<lo+1.2/T,n:[0,1],sx,sy,rad:Math.hypot(lx,lz),ang:Math.atan2(lz,lx)}));break}
+   let hy=y;if(py!=null){let A=py,B=y;for(let k=0;k<7;k++){const mid=(A+B)/2,hm=H(lx,s+mid);if(hm!=null&&hm>=mid)B=mid;else A=mid}hy=B}
+   const hz=s+hy,hh=H(lx,hz)??h,g=(dx,dz)=>{const p=H(lx+dx,hz+dz),q=H(lx-dx,hz-dz);return p==null||q==null?0:(p-q)/(2*(dx+dz))},gx=g(ep,0),gz=g(0,ep);
+   if(Math.abs(gz)>9||Math.abs(gx)>9){L.set(sx,sy,m({f:'side',x:lx,z:hz,y:hy,v:(hy-lo)/(ym-lo),b:.66,lip:false,foot:false,n:[0,1],sx,sy,rad:Math.hypot(lx,hz),ang:Math.atan2(hz,lx)}));break}
+   const nl=Math.hypot(gx,1,gz),d=(.5*gx+.75-.45*gz)/nl/1.007;
+   L.set(sx,sy,m({f:'top',x:lx,z:hz,y:hh,gx,gz,b:.3+.62*Math.max(0,d),rim:false,eave:hh<o.y0+.04,ridge:hh>ym-.05,sx,sy,rad:Math.hypot(lx,hz),ang:Math.atan2(hz,lx)}));break}}}
+const RF={
+ gx:(hw,hd,y0,h)=>(lx,lz)=>y0+h*(1-Math.abs(lz)/hd),          // faîtage parallèle à x
+ gz:(hw,hd,y0,h)=>(lx,lz)=>y0+h*(1-Math.abs(lx)/hw),          // faîtage parallèle à z (pignon en façade)
+ hip:(hw,hd,y0,h)=>(lx,lz)=>y0+h*Math.min(hw-Math.abs(lx),hd-Math.abs(lz))/Math.min(hw,hd),
+ pyr:(hw,hd,y0,h)=>(lx,lz)=>y0+h*Math.min(1-Math.abs(lx)/hw,1-Math.abs(lz)/hd),
+ cone:(hw,hd,y0,h)=>(lx,lz)=>{const r=Math.hypot(lx/hw,lz/hd);return r>1?null:y0+h*(1-r)},
+ dome:(hw,hd,y0,h)=>(lx,lz)=>{const r=Math.hypot(lx/hw,lz/hd);return r>1?null:y0+h*Math.sqrt(1-r*r)},
+ bell:(hw,hd,y0,h)=>(lx,lz)=>{const r=Math.hypot(lx/hw,lz/hd);return r>1?null:y0+h*(1-r*r*r)},
+ shed:(hw,hd,y0,h)=>(lx,lz)=>y0+h*(hd-lz)/(2*hd),             // monte vers le fond
+ vault:(hw,hd,y0,h)=>(lx,lz)=>y0+h*Math.sqrt(Math.max(0,1-(lz/hd)**2)),
+ logz:(hw,hd,y0)=>(lx,lz)=>{const r=hw;return Math.abs(lx)>r?null:y0+r+Math.sqrt(r*r-lx*lx)},
+};
+function roof(kind,x,z,hw,hd,y0,h,mat,o={}){return{key:o.key??z+hd,draw(L,S){if(o.shadow!==false&&!o.noShadow)S.shadowShape(rect(-hw,-hd,hw,hd),x,z,y0+h,o.shadow??.55);
+ hprism(L,{x,z,hw,hd,y0,ym:y0+h+.02,hf:o.hf||RF[kind](hw,hd,y0,h,o.r),mat,th:o.th});return{lights:projL(o.lights)}}}}
+// tuiles / bardeaux : rangs horizontaux (même hauteur), joints décalés
+function shingle(R,o={}){const cw=o.cw??.15,jw=o.jw??.2,ax=o.axis||'x';return q=>{if(o.inlay){const c=o.inlay(q);if(c!=null)return c}
+ if(q.f==='side')return o.side?o.side(q):rp(R,.5+(q.foot?-.2:.1),q.sx,q.sy);
+ let b=q.b+(q.eave?.14:0)+(q.ridge?.12:0);const r=q.y/cw,row=Math.floor(r),f=r-row;if(f<.24)b-=.2;
+ const w=ax==='x'?q.x:ax==='z'?q.z:q.ang*1.1,u=w/jw+(row&1)*.5;if(((u%1)+1)%1<.9/(T*jw))b-=.14;
+ b+=(hash(Math.floor(u),row,o.seed||5)-.5)*.12;
+ if(o.moss&&vnoise(q.x*2.5,q.z*2.5+q.y,61)>1-o.moss)return rp(MOSS,b*.85,q.sx,q.sy);return rp(R,b,q.sx,q.sy)}}
+// bois : planches, poutres
+function woodMat(R=WOOD,o={}){const w=o.w??.17;return q=>{if(o.inlay){const c=o.inlay(q);if(c!=null)return c}let b=q.f==='top'?.8+(q.rim?.1:0):q.b+(q.lip?.12:0)-(q.foot?.15:0);
+ const u=q.f==='top'?(o.along==='z'?q.x:q.z):(o.horiz?q.y:q.x),f=((u/w)%1+1)%1;if(f<1/(T*w))b-=.24;
+ b+=(hash(Math.floor(u/w),3,o.seed||2)-.5)*.16+(vnoise(q.x*11,q.y*4+q.z*11,5)-.5)*.1;return rp(R,b,q.sx,q.sy)}}
+const frontI=fn=>q=>q.f==='side'&&q.n[1]>.5?fn(q):null;
+// ouvertures en façade (coordonnées locales x, hauteur absolue y)
+const archI=(cx,w,y0,y1,fill)=>frontI(q=>{const dx=q.x-cx;if(Math.abs(dx)>w||q.y<y0)return null;const top=y1-w+Math.sqrt(Math.max(0,w*w-dx*dx));if(q.y>top)return null;
+ if(q.y>top-1.1/T||Math.abs(dx)>w-1.1/T)return rp(MARBLE,.9,q.sx,q.sy);return typeof fill==='function'?fill(q,dx):fill});
+const rectI=(cx,w,y0,y1,fill)=>frontI(q=>{const dx=q.x-cx;if(Math.abs(dx)>w||q.y<y0||q.y>y1)return null;return typeof fill==='function'?fill(q,dx):fill});
+const winFill=(c,mull=true)=>(q,dx)=>mull&&(Math.abs(dx)<.6/T)?rp(IRON,.3,q.sx,q.sy):c;
+const doorFill=(R=WOOD)=>(q,dx)=>{let b=.5;if(((dx*T/3)%1+1)%1<.34)b-=.2;if(Math.abs(q.y%.3)<.04)b-=.1;return rp(R,b,q.sx,q.sy)};
+// rayonnage de livres (ou de caisses) sur une façade : x0..x1 locaux, y0..y1 absolus
+function booksI(x0,x1,y0,y1,rows,seed=1,o={}){return frontI(q=>{if(q.x<x0||q.x>x1||q.y<y0||q.y>y1)return null;const r=(q.y-y0)/(y1-y0)*rows,row=Math.floor(r),lv=r-row;
+ if(lv<.16||Math.abs(q.x-x0)<1.2/T||Math.abs(q.x-x1)<1.2/T)return rp(o.frame||WOOD,lv<.08?.35:.62,q.sx,q.sy);
+ const u=Math.floor((q.x-x0)*T/(o.w||2)+row*1.7),k=hash(u,row,seed),top=.16+.72*(.6+.4*hash(u,row+9,seed));
+ if(o.crates){const cu=Math.floor((q.x-x0)*T/6+row*.5),ck=hash(cu,row,seed),lx=((q.x-x0)*T/6+row*.5)-cu;if(ck<.2||lv>.86)return rp(DSTONE,.15,q.sx,q.sy);const R=ck>.86?BLUEC:ck>.76?REDC:WOOD;
+  return rp(R,(lx<.17||lx>.83||lv<.24||lv>.78)?.75:.45+(Math.abs(lx-.5)-Math.abs(lv-.5)<.05&&Math.abs(lx-.5)-Math.abs(lv-.5)>-.05&&R===WOOD?.15:0),q.sx,q.sy)}
+ if(lv>top||k<.08)return rp(DSTONE,.12,q.sx,q.sy);if(o.scrolls)return rp(PARCH,.55+(Math.hypot(((q.x-x0)*T/3)%1-.5,(lv-.5)*2)<.3?.3:0),q.sx,q.sy);
+ const c=SPINE[Math.floor(k*SPINE.length)];const fx=((q.x-x0)*T/(o.w||2))%1;return sh(c,fx<.5?.12:-.12)})}
+
+// ---------- accessoires ----------
+function box(x,z,hw,hd,y0,y1,mat,o={}){return slab(rect(-hw,-hd,hw,hd),y0,y1,mat,{x,z,...o})}
+function post(x,z,y1,R=WOOD,w=.06,y0=0){return slab(square(w),y0,y1,woodMat(R),{x,z,key:z+.001})}
+function crateMat(s,R=WOOD){return q=>{const b=q.f==='top'?.84:q.b,a=q.x/s,c=q.f==='top'?q.z/s:(q.v-.5)*2;if(Math.abs(a)>.74||Math.abs(c)>.74)return rp(R,b+.1,q.sx,q.sy);
+ if(Math.abs(a-c)<.14)return rp(R,b+.04,q.sx,q.sy);return rp(R,b-.16+(hash(q.sx,q.sy>>1,4)-.5)*.1,q.sx,q.sy)}}
+function crate(x,z,s=.17,y0=0,R=WOOD){return slab(square(s),y0,y0+s*1.7,crateMat(s,R),{x,z})}
+function chestMat(R){return q=>{const b=q.f==='top'?.82:q.b;if(q.f==='side'){if(Math.abs(q.x)>.15||Math.abs(q.x)<.025)return rp(IRON,b+.1,q.sx,q.sy);if(Math.abs(q.v-.62)<.06)return rp(IRON,.3,q.sx,q.sy);if(Math.abs(q.x)<.06&&q.v>.38&&q.v<.58)return rp(SILVER,.8,q.sx,q.sy)}
+ else if(Math.abs(q.x)>.15||Math.abs(q.x)<.025)return rp(IRON,b,q.sx,q.sy);return rp(R,b,q.sx,q.sy)}}
+function chest(x,z,R){return slab(rect(-.19,-.12,.19,.12),0,.27,chestMat(R),{x,z})}
+function barrel(x,z,R=WOOD,o={}){return slab(circle(o.r||.15),o.y0||0,(o.y0||0)+(o.h||.42),q=>{if(q.f==='top')return o.water?(q.rad<(o.r||.15)*.75?rp(WATER,.6+(hash(q.sx,q.sy,2)-.5)*.4,q.sx,q.sy):rp(R,.8,q.sx,q.sy)):rp(R,q.rim?.9:.62,q.sx,q.sy);
+ if(Math.abs(q.v-.2)<.06||Math.abs(q.v-.8)<.06)return rp(IRON,q.b+.1,q.sx,q.sy);return rp(R,q.b+(Math.abs(q.v-.5)<.3?.06:0)+(((q.ang*6/Math.PI)%1+1)%1<.15?-.15:0),q.sx,q.sy)},{x,z})}
+function planks(x,z,n=4,len=.5,o={}){return{key:z,draw(L,S){S.shadowShape(rect(-len,-.14,len,.14),x,z,n*.05,.6);for(let k=0;k<n;k++){const dx=(hash(k,1,o.seed||3)-.5)*.08;
+ prism(L,rect(-len+dx,-.13,len+dx,.13),{x,z,y0:k*.055,y1:k*.055+.05,mat:woodMat(o.R||WOOD,{along:'x'})})}return{}}}}
+function logs(x,z,n=3,len=.4){const objs=[];for(let k=0;k<n;k++){const lx=x+(k-(n-1)/2)*.2,y0=0;objs.push(roof('logz',lx,z,.1,len,y0,.2,logMat,{key:z+len+k*.001,noShadow:1,th:0}))}
+ if(n>2)objs.push(roof('logz',x,z-.02,.1,len,.17,.2,logMat,{key:z+len+.01,noShadow:1,th:0}));return objs}
+const logMat=q=>{if(q.f==='side'){const r=Math.hypot(q.x,q.y-(q.y>0?0:0));return rp(SAND,.5+((Math.floor(q.x*T*.6+q.y*T*.6)&1)?.12:-.05),q.sx,q.sy)}return rp(BARK,q.b-.05+(hash(q.sx,q.sy>>1,7)>.7?.15:0),q.sx,q.sy)};
+function lectern(x,z,o={}){return{key:z,draw(L,S){const[a,b]=P3(x,o.y0||0,z);S.shadowEll(a+3,b,6,2,.7);prism(L,square(.05),{x,z,y0:o.y0||0,y1:(o.y0||0)+.42,mat:woodMat(WOOD)});
+ prism(L,rect(-.16,-.1,.16,.1),{x,z,y0:(o.y0||0)+.42,y1:(o.y0||0)+.5,mat:woodMat(WOOD)});const[c,d]=P3(x,(o.y0||0)+.5,z);const C_=Math.round(c),D=Math.round(d);
+ for(let j=-2;j<=1;j++)for(let i=-4;i<=4;i++)if(i)L.set(C_+i,D+j,rp(PARCH,.85-Math.abs(i)*.05-(j+2)*.04,i,j));L.set(C_,D-2,PARCH[1]);L.set(C_,D-1,PARCH[1]);return{}}}}
+function sawhorse(x,z){return{key:z,draw(L,S){const[a,b]=P3(x,0,z);S.shadowEll(a+3,b,10,3,.6);const A=Math.round(a),B=Math.round(b);
+ for(const s of[-7,6]){L.line(A+s-2,B,A+s,B-7,WOOD[2]);L.line(A+s+2,B,A+s,B-7,WOOD[3])}L.rect(A-9,B-9,19,2,WOOD[4]);L.rect(A-9,B-7,19,1,WOOD[1]);return{}}}}
+function lanternHang(x,y,z,c=WHC,lc=WHITEC,R=IRON){return{key:z+.02,draw(L){const[a,b]=P3(x,y,z),A=Math.round(a),B=Math.round(b);L.rect(A,B,1,3,R[2]);L.rect(A-1,B+3,3,4,c[2]);L.set(A,B+4,c[3]);L.rect(A-1,B+3,3,1,R[3]);L.rect(A-1,B+7,3,1,R[2]);
+ return{lights:[{x:A,y:B+5,r:34,i:.75,c:lc,fl:.08}]}}}}
+function candleDyn(x,y,z,kind='white'){const[a,b]=P3(x,y,z);return flameDyn(Math.round(a),Math.round(b),kind,.6)}
+
+// ---------- animations ----------
+const sparkC=(cx,cy,cols,n=10,seed=1,up=14,spread=9,period=0,win=.5)=>{const c=cols.map(E);return(F,t)=>{if(period&&(t%period)>win*period)return;for(let k=0;k<n;k++){const per=period||6/Math.round(6/(.9+hash(k,3,seed)*.7)),p=period?(t%period)/(win*period):((t+hash(k,1,seed)*per)%per)/per,vx=(hash(k,2,seed)-.5)*spread*2,vy=up*(.6+hash(k,4,seed)*.6);
+ const x=Math.round(cx+vx*p),y=Math.round(cy-vy*p+vy*1.4*p*p);if(p<.85)F.set(x,y,c[p<.25?c.length-1:p<.55?c.length-2:c.length-3])}}};
+function wheelDyn(cx,cy,r,n,speed,R=WOOD,o={}){return(F,t)=>{const a0=t*speed;for(let k=0;k<n;k++){const a=a0+k*2*Math.PI/n;for(let s=2;s<r-1;s++)F.set(Math.round(cx+Math.cos(a)*s),Math.round(cy+Math.sin(a)*s*(o.sq||1)),R[3])}
+ for(let k=0;k<72;k++){const a=k*2*Math.PI/72,x=Math.round(cx+Math.cos(a)*r),y=Math.round(cy+Math.sin(a)*r*(o.sq||1));F.set(x,y,Math.sin(a)<-.2?R[4]:R[2]);if(o.thick){F.set(Math.round(cx+Math.cos(a)*(r-1)),Math.round(cy+Math.sin(a)*(r-1)*(o.sq||1)),R[1])}
+  if(o.teeth&&k%6===0)F.set(Math.round(cx+Math.cos(a+a0)*(r+1)),Math.round(cy+Math.sin(a+a0)*(r+1)*(o.sq||1)),R[3])}
+ F.set(Math.round(cx),Math.round(cy),IRON[5]);F.set(Math.round(cx)+1,Math.round(cy),IRON[3])}}
+function bladeDyn(cx,cy,r,speed){return(F,t)=>{for(let k=0;k<40;k++){const a=k*2*Math.PI/40;F.set(Math.round(cx+Math.cos(a)*r),Math.round(cy+Math.sin(a)*r*.45),SILVER[(k+Math.floor(t*speed))%4<2?4:2])}
+ for(let i=-r+1;i<r;i++)F.set(Math.round(cx+i),Math.round(cy),SILVER[2]);F.set(Math.round(cx),Math.round(cy),IRON[1])}}
+// marteau à bascule : pivot (px,py), tête au bout du bras ; frappe toutes les `per` s
+function hammerDyn(px,py,len,per=1.1,dir=1,o={}){return(F,t)=>{const rest=o.rest??.12,amp=o.amp??.8,u=(t%per)/per,ang=u<.7?rest-amp*Math.sin(u/.7*Math.PI/2):rest-amp+amp*Math.min(1,(u-.7)/.12),c=Math.cos(ang),s=Math.sin(ang);
+ const ex=px+dir*c*len,ey=py+s*len;F.line(Math.round(px),Math.round(py),Math.round(ex),Math.round(ey),WOOD[4]);F.line(Math.round(px),Math.round(py)+1,Math.round(ex),Math.round(ey)+1,WOOD[2]);
+ for(let j=-2;j<=3;j++)for(let i=-2;i<=2;i++)F.set(Math.round(ex)+i,Math.round(ey)+j,j<0?IRON[5]:i<0?IRON[4]:IRON[2]);
+ if(u>.82&&u<.95){const k=(u-.82)/.13;for(let m=0;m<8;m++){const a=-Math.PI*(.1+.8*hash(m,1,7)),r=2+k*9*hash(m,2,7);F.set(Math.round(ex+Math.cos(a)*r),Math.round(ey+4+Math.sin(a)*r*.7),(o.cols||MOLT)[m%2?3:4])}}}}
+function hoistDyn(ax,ay,len,per=6,o={}){return(F,t)=>{const u=(t%per)/per,p=u<.4?u/.4:u<.5?1:u<.9?1-(u-.5)/.4:0,e=p*p*(3-2*p),y=Math.round(ay+(1-e)*len),sw=Math.round(Math.sin(t*2.3)*(o.sway||0));
+ for(let j=ay;j<y-4;j++)F.set(ax+(j>ay+len*.6?sw:0),j,IRON[1]);const cx=ax+sw;for(let j=0;j<6;j++)for(let i=-3;i<=3;i++){const edge=Math.abs(i)===3||j===0||j===5;F.set(cx+i,y-4+j,o.cargo?o.cargo[edge?3:1]:edge?WOOD[4]:(i===j-2||i===2-j)?WOOD[3]:WOOD[2])}}}
+function pageDyn(cx,cy,n=5,seed=3,h=26){return(F,t)=>{for(let k=0;k<n;k++){const p=((t*.22+hash(k,1,seed))%1),x=Math.round(cx+(hash(k,2,seed)-.5)*22+Math.sin(t*1.7+k*2)*4),y=Math.round(cy-p*h),fl=Math.floor(t*6+k)%3;
+ if(p>.9)continue;const C_=p>.7?PARCH[2]:PARCH[4];if(fl===0){F.set(x-1,y,C_);F.set(x,y,C_);F.set(x+1,y,C_)}else if(fl===1){F.set(x-1,y-1,C_);F.set(x,y,C_);F.set(x+1,y-1,C_)}else{F.set(x,y,C_);F.set(x,y-1,C_)}}}}
+function dustDyn(cx,cy,n=6,seed=4){return(F,t)=>{for(let k=0;k<n;k++){const p=((t*.5+hash(k,1,seed))%1),x=Math.round(cx+(hash(k,2,seed)-.5)*12+p*4),y=Math.round(cy-p*7+p*p*9);if(p<.8)F.set(x,y,SAND[k%2?5:4])}}}
+function steamDyn(cx,cy,h=18,seed=5){const G=R_(['#8a8e98','#a8acb6','#c4c8d0']);return(F,t)=>{for(let k=0;k<6;k++){const p=((t*.4+hash(k,1,seed))%1),x=Math.round(cx+Math.sin(t*1.4+k)*2+(hash(k,3,seed)-.5)*6),y=Math.round(cy-p*h);if(p<.85&&hash(k,Math.floor(t*3),seed)>.2)F.set(x,y,G[p<.3?2:p<.6?1:0])}}}
+const at=(x,y,z)=>{const[a,b]=P3(x,y,z);return[Math.round(a),Math.round(b)]};
+const fx=(key,fn)=>({key,draw(){return fn()}});
+
+// matériaux de base
+const mMat=o=>stone(MARBLE,{veins:1,noise:.06,...o});
+const sMat=o=>stone(SLATE,{courses:.2,joint:.6,noise:.1,...o});
+const dMat=o=>stone(DSTONE,{courses:.18,joint:.45,noise:.12,...o});
+const pMat=o=>stone(PLASTER,{noise:.1,...o});
+const plinth=(R=SLATE,h=.12,s=1.28)=>slab(square(s),0,h,stone(R,{noise:.08}),{key:-9});
+
+// ================= BÂTIMENTS v3 : monuments et machines en plein air, finition 16 bits =================
+// Assemblé par tools/batiments-16bits/build.py : moteur de creuset-planches.js + outils de batiments-v2-designs.js + ce fichier.
+// K = 1 au travail, 0 au repos (réglé par la page via BAT.setWork).
+let K=1;
+const TAU=Math.PI*2,Eo=a=>a.map(E);
+const FVB=Eo(['#34327a','#5a5cff','#9aa0ff','#e8ecff']),FOR=Eo(['#c23a08','#f2800e','#ffc83a','#fff6c0']),FGR=Eo(['#1c6a2e','#34a84a','#6ee07a','#d4ffd0']),FWH=Eo(['#8e8c98','#c8ccd8','#eef0f6','#ffffff']);
+const INDC=R_(['#3a1606','#7a3008','#c25a12','#f08a2a','#ffc070']);
+const SANDL=R_(['#6e5638','#8a6e48','#a68a5c','#c2a674','#d8c08e']);
+const CLOTH=R_(['#7a6a50','#b8a684','#e2d6b4','#fffaea']);
+const dyn=(key,f,lights)=>fx(key,()=>({dyn:f,lights:lights||[]}));
+const LT=(x,y,z,r,i,c,fl)=>{const[a,b]=at(x,y,z);return{x:a,y:b,r,i,c,fl}};
+const ease=p=>p*p*(3-2*p),clamp=(v,a=0,b=1)=>v<a?a:v>b?b:v;
+// calque masqué : ce qui passe derrière un volume marqué « mask » n’est pas dessiné
+const behind=(F,S)=>({set(x,y,c){const W=S.P.w,H=S.P.h;x=Math.round(x);y=Math.round(y);if(x<0||y<0||x>=W||y>=H||S.mask[y*W+x])return;F.set(x,y,c)},line(x0,y0,x1,y1,c){const n=Math.max(1,Math.ceil(Math.max(Math.abs(x1-x0),Math.abs(y1-y0))));for(let k=0;k<=n;k++)this.set(x0+(x1-x0)*k/n,y0+(y1-y0)*k/n,c)}});
+function bigFlame(F,x,y,w,h,C,t,s=0){if(h<=0)return;for(let i=-w;i<=w;i++){const a=1-Math.pow(Math.abs(i)/(w+1),1.6),hh=Math.max(1,Math.round(h*a*(.6+.4*Math.sin(t*11+i*1.9+s*3))+(hash(i,Math.floor(t*12),s)>.7?1:0)));
+ for(let j=0;j<hh;j++){const v=j/hh;F.set(x+i,y-j,C[v<.3&&Math.abs(i)<w?3:v<.6?2:v<.85?1:0])}}}
+function sChest(F,x,y,R){for(let j=0;j<8;j++)for(let i=-4;i<=4;i++){const band=Math.abs(i)===3;F.set(x+i,y-7+j,band?IRON[j<3?5:3]:R[j===0?4:j<3?3:j===7?1:2])}F.set(x,y-4,SILVER[4])}
+function sCrate(F,x,y,s=4){for(let j=0;j<2*s;j++)for(let i=-s;i<s;i++){const e=i===-s||i===s-1||j===2||j===2*s-1;F.set(x+i,y-2*s+1+j,j<2?WOOD[5]:e?WOOD[1]:(i+s===j-2||i+s===2*s+1-j)?WOOD[4]:WOOD[3])}}
+const cargo=(F,x,y,k)=>k%3===0?sChest(F,x,y,BLUEC):k%3===1?sChest(F,x,y,REDC):sCrate(F,x,y);
+const BOOKC=[BLUEC[2],REDC[2],VERDI[3],WOOD[3],SLATE[4]];
+function sBook(F,x,y,c,fl){F.set(x,y,PARCH[1]);F.set(x,y+1,c);for(let i=1;i<=3;i++){const d=fl?Math.round(i*.8):-Math.round(i*.34);F.set(x-i,y-d,PARCH[4]);F.set(x+i,y-d,PARCH[4]);F.set(x-i,y-d+1,c);F.set(x+i,y-d+1,c)}}
+function thick(F,x0,y0,x1,y1,a,b){F.line(x0,y0,x1,y1,a);F.line(x0,y0+1,x1,y1+1,b)}
+function zz(F,x,y,t,C){for(let k=0;k<3;k++){const p=(((t*.2+k/3)%1)+1)%1,zx=Math.round(x+p*7+Math.sin(p*6)*2),zy=Math.round(y-p*16),s=k%2?4:5;if(p>.9)continue;for(let i=0;i<s;i++){F.set(zx+i,zy,C[3]);F.set(zx+i,zy+s-1,C[3]);F.set(zx+s-1-i,zy+i,C[3])}}}
+function fireflies(F,t,n,s,cx,cy,rx,ry){for(let k=0;k<n;k++){const a=t*TAU/5*(1+k%2)+hash(k,s,2)*9;if(Math.sin(t*TAU*.6+k*2.1)>-.2)F.set(Math.round(cx+(hash(k,s,3)-.5)*2*rx+Math.sin(a)*5),Math.round(cy+(hash(k,s,4)-.5)*2*ry+Math.cos(a*1.3)*3),FGR[k%2?3:2])}}
+function flag(F,x,y,w,h,R,t,dir=1){for(let i=0;i<w;i++){const a=t*TAU*.8-i*.9,dy=Math.round(Math.sin(a)*1.3*(i/w));for(let j=0;j<h-(i>w-4?i-w+4:0);j++)F.set(x+dir*i,y+dy+j,R[j===0?4:Math.cos(a)>0?3:2])}}
+const oct=(R,h=.12,o={})=>slab(poly(8,1.32,Math.PI/8),0,h,stone(R,{noise:.08,...o}),{key:-9});
+const disc=(R,r=1.28,h=.12,o={})=>slab(circle(r),0,h,stone(R,{noise:.08,...o}),{key:-9});
+const mossy=o=>stone(MSTONE,{moss:.3,noise:.12,...o});
+const sand=o=>stone(SAND,{courses:.2,joint:.55,noise:.1,...o});
+const lac=o=>stone(INDC,{noise:.06,...o});
+
+
+// ================= BÂTIMENTS v4 : Scierie, Archerie, Armurerie (découpage de la fabrication, 2026-11-20) =================
+// Assemblé par tools/batiments-16bits/build_v4.py : moteur de creuset-planches.js + outils v2 + outils v3 (avant GROUPS) + ce fichier.
+// K = 1 au travail, 0 au repos (réglé par la page via BAT.setWork). Même rendu que la v3 : volumes en 3/4 finis en 16 bits.
+
+// ---------- outils propres à la v4 ----------
+const FIB=R_(['#7a6644','#a08a5e','#c8b080','#e6d6a8']);          // fibre de bois
+const FEA=R_(['#8a8e98','#b8bcc6','#e2e4ea','#ffffff']);          // plumes
+const STRING=E('#d8cfb4');
+function pdisk(F,cx,cy,r,fn){for(let j=-Math.ceil(r);j<=Math.ceil(r);j++)for(let i=-Math.ceil(r);i<=Math.ceil(r);i++){const d=Math.hypot(i,j);if(d<=r+.3){const c=fn(i,j,d);if(c!=null)F.set(Math.round(cx)+i,Math.round(cy)+j,c)}}}
+// lame circulaire vue de face : dents qui tournent avec l'angle a
+function sawBlade(F,cx,cy,r,a,hot){pdisk(F,cx,cy,r+1,(i,j,d)=>{const an=Math.atan2(j,i)-a,tooth=((an*12/TAU)%1+1)%1;
+ if(d>r-.4)return tooth<.45?SILVER[i+j<0?4:2]:null;if(d<2.2)return hot?AEC[3]:IRON[5];if(d<3.4)return IRON[3];
+ const sp=((an*4/TAU)%1+1)%1;if(sp<.08&&d<r-2)return SILVER[1];return SILVER[i+j<-2?4:i+j>3?2:3]})}
+// rondin couché le long de x (vu de côté) : x0..x1, axe en y, rayon r, bout coupé en x1
+function logX(F,x0,x1,y,r,cut){x0=Math.round(x0);x1=Math.round(x1);for(let x=x0;x<=x1;x++)for(let j=-r;j<=r;j++){const v=j/r;F.set(x,Math.round(y)+j,j===-r?BARK[4]:j===r?BARK[0]:BARK[v<-.3?3:v<.4?2:1])}
+ pdisk(F,x1,y,r,(i,j,d)=>i<0?null:d>r-1?BARK[1]:SAND[(Math.round(d)%2)?5:4]);if(cut!=null)for(let x=x0;x<=Math.min(cut,x1-1);x++)F.set(x,Math.round(y)-r+1,DSTONE[1])}
+// flèche de (x0,y0) vers (x1,y1) : pointe en x1
+function arrowL(F,x0,y0,x1,y1,fc=FEA,glow){F.line(x0,y0,x1,y1,WOOD[4]);const L=Math.hypot(x1-x0,y1-y0)||1,ux=(x1-x0)/L,uy=(y1-y0)/L;
+ F.set(Math.round(x1),Math.round(y1),SILVER[4]);F.set(Math.round(x1-ux),Math.round(y1-uy),SILVER[2]);
+ for(let k=0;k<3;k++){const bx=x0+ux*k,by=y0+uy*k;F.set(Math.round(bx-uy*1.5),Math.round(by+ux*1.5),glow?AEC[2]:fc[2]);F.set(Math.round(bx+uy*1.5),Math.round(by-ux*1.5),glow?AEC[3]:fc[3])}}
+// arc vertical vu de face, corde tirée de `pull` px vers la gauche
+function bowV(F,x,y,h,pull,R=WOOD){let px=x,py=y-h;for(let j=-h;j<=h;j++){const v=j/h,bx=Math.round(x+(1-v*v)*5);F.set(bx,y+j,R[4]);F.set(bx+1,y+j,R[2])}
+ F.set(x,y-h-1,R[5]);F.set(x,y+h+1,R[5]);F.line(x,y-h,x-pull,y,STRING);F.line(x-pull,y,x,y+h,STRING)}
+function ingot(F,x,y,R=COPPER){for(let i=0;i<7;i++){F.set(x+i,y-2,R[5]);F.set(x+i,y-1,R[i<1?3:4]);F.set(x+i,y,R[2])}F.set(x+7,y-1,R[1]);F.set(x+7,y,R[1])}
+function ingotsObj(x,z,R=COPPER,n=3){return{key:z,draw(L,S){const[a,b]=P3(x,0,z),A=Math.round(a),B=Math.round(b);S.shadowEll(A+4,B+1,7,2,.6);
+ for(let k=0;k<n;k++){const ox=A-4+(k%2)*4-(k>1?2:0),oy=B-(k>1?3:0)-(k%2?0:0);ingot(L,ox+(k>1?2:0),oy-(k===1?0:0),R)}return{}}}}
+function curl(F,x,y,p,c=FIB){for(let k=0;k<7;k++){const a=k*.9+p*6,r=1+k*.35;F.set(Math.round(x+Math.cos(a)*r),Math.round(y+Math.sin(a)*r*.8),c[k%2?3:2])}}
+// petit marteau en lévitation, tête en (x,y)
+function floatHammer(F,x,y,ang,R=IRON){const c=Math.cos(ang),s=Math.sin(ang);F.line(x,y,Math.round(x+c*10),Math.round(y+s*10),WOOD[4]);for(let j=-2;j<=2;j++)for(let i=-3;i<=3;i++)F.set(x+i,y+j,j<0?R[6]:i<0?R[5]:R[3])}
+function swordV(F,x,y,len,C=COLDB,hilt=true){for(let j=0;j<len;j++){F.set(x,y-j,C[j===len-1?0:1]);F.set(x+1,y-j,C[3])}if(hilt){for(let i=-3;i<=4;i++)F.set(x+i,y+1,IRON[5]);F.set(x,y+2,LEATHER[2]);F.set(x+1,y+2,LEATHER[1]);F.set(x,y+3,LEATHER[2]);F.set(x,y+4,COPPER[4])}}
+const HOTB=[MOLT[4],MOLT[3],MOLT[2],MOLT[1]],COLDB=[SILVER[4],SILVER[3],SILVER[2],SILVER[1]];
+
+// ================= ÉTABLI D'EXO (intro de la capsule, 2026-11-22, planches/intro-capsule-planche.html) =================
+// Assemblé par tools/batiments-16bits/build_etabli.py : moteur et outils des bâtiments v4 + ce fichier.
+// L'Établi fabrique les mods de l'Exilé d'après les plans retrouvés (premier : Analyse). Service d'Aether, mais
+// matériel tyrien : ardoise et glyphes cyan, comme le Coffre Antique et la capsule. K = 1 au travail, 0 au repos.
+
+const CYR=[CYD,ci('#1f9fb8'),ci('#5ce8ff'),ci('#c8fbff')];          // cyan tyrien, mat
+const CYE=[E('#12596b'),E('#1f9fb8'),E('#5ce8ff'),E('#c8fbff')];    // cyan tyrien, lumineux
+const CYANL=[.55,1.2,1.4];
+// gros module flottant : cadre d'argent, plaque d'ardoise, lentille cyan et halo au sol (y0 : sol sous le module)
+function bigModule(F,x,y,lit,y0){x=Math.round(x);y=Math.round(y);if(y0!=null)for(let i=-6;i<=6;i++)if(Math.abs(i)<5||lit)F.set(x+i,y0,lit?CYE[0]:SLATE[1]);
+ for(let j=-5;j<=5;j++)for(let i=-8;i<=8;i++){const e=Math.abs(i)+Math.abs(j)*1.3;if(e>10.5)continue;const rim=e>8.6;F.set(x+i,y+j,rim?SILVER[j<0?4:i<0?3:1]:SLATE[j<-1?4:j<2?3:2])}
+ pdisk(F,x,y,2.6,(i,j,d)=>d<1?(lit?CYE[3]:CYR[2]):d<2?(lit?CYE[2]:CYR[1]):(lit?CYE[1]:CYR[0]));for(const sx of[-6,6])F.set(x+sx,y,lit?CYE[2]:CYR[0])}
+// module d'exo vu de 3/4 : plaque arrondie w × h, face avant, lentille centrale (lit : allumée)
+function moduleS(F,x,y,w,h,lit,R=SILVER){x=Math.round(x);y=Math.round(y);
+ for(let j=0;j<h;j++)for(let i=0;i<w;i++){if((i===0||i===w-1)&&(j===0||j===h-1))continue;F.set(x+i,y+j,R[j===0?4:j<2?3:i===0?3:2])}
+ for(let i=1;i<w-1;i++)F.set(x+i,y+h,R[0]);
+ const cx=x+Math.floor(w/2),cy=y+Math.floor(h/2);F.set(cx,cy,lit?CYE[3]:CYR[1]);F.set(cx-1,cy,lit?CYE[2]:CYR[0]);F.set(cx+1,cy,lit?CYE[2]:CYR[0]);F.set(cx,cy-1,lit?CYE[2]:CYR[0])}
+// trame de plan au sol d'un plateau : lignes cyan, balayage en u (0..1, -1 : aucun)
+function planGrid(F,x0,y0,w,h,u){for(let j=0;j<=h;j++)for(let i=0;i<=w;i++){const edge=i===0||j===0||i===w||j===h,grid=i%4===0||j%3===0;if(!edge&&!grid)continue;
+ const near=u>=0&&Math.abs(i/w-u)<.08;F.set(x0+i,y0+j,near?CYE[3]:edge?CYE[1]:CYE[0])}}
+// jarre d'ichor posée au sol
+function ichorPot(x,z){return{key:z,draw(L,S){const[a,b]=P3(x,0,z),A=Math.round(a),B=Math.round(b);S.shadowEll(A,B+1,5,2,.6);
+ for(let j=-9;j<=0;j++){const w=j<-7?2:j<-5?3:4;for(let i=-w;i<=w;i++)L.set(A+i,B+j,j<-7?LEATHER[2]:ci(i<-1?'#a8323e':i>2?'#4a1018':'#8a1f2c'))}L.set(A-2,B-5,ci('#d85a5a'));return{}}}}
+// petite fiole d'ichor
+function ichorVial(F,x,y){for(let j=0;j<5;j++)for(let i=0;i<3;i++)F.set(x+i,y+j,j<1?SILVER[3]:ci(j<3?'#8a1f2c':'#4a1018'));F.set(x+1,y-1,LEATHER[2])}
+
+const GROUPS=[
+ {id:'etabli',name:'Établi d’exo',note:'Nouveau bâtiment, service d’Aether, débloqué par la Scierie. On y assemble les modules d’exo de l’Exilé d’après les plans retrouvés (le premier : Analyse, 50 fibres, 50 planches, 5 ichor). Matériel tyrien : ardoise et glyphes cyan, comme le Coffre Antique et la capsule. L’animation montre un module qui prend forme.'}];
+
+const ITEMS=[
+ {g:'etabli',name:'Établi à plan lumineux',desc:'Un plateau d’ardoise sur pieds où le plan tyrien s’allume en trame cyan, sous une potence à lentille. Le balayage parcourt le plan ; planches, fibre et ichor montent du bord et se fondent en un module qui flotte sous la lentille.',anims:['trame du plan','balayage','pièces qui convergent','module qui s’allume'],
+  build(){const[tx,ty]=at(0,.78,.05),[hx,hy]=at(0,2.05,-.05);return{ground:floor(),objs:[oct(SLATE,.1,{inlay:ringI(1.04,.035,CYD)}),
+   post(-.62,-.28,.7,IRON,.06,.1),post(.62,-.28,.7,IRON,.06,.1),post(-.62,.32,.7,IRON,.06,.1),post(.62,.32,.7,IRON,.06,.1),
+   slab(rect(-.78,-.4,.78,.42),.7,.82,stone(SLATE,{noise:.06,inlay:bandI(.1,.9,CYD,.14,3)}),{key:.1}),
+   post(-.95,-.55,2.2,IRON,.07),box(-.45,-.55,.55,.05,2.12,2.24,iMat(),{key:-.5}),
+   planks(.92,.92,3,.36),...logs(-.92,.85,2,.3),
+   dyn(4,(F,t)=>{const per=6,u=K?(t%per)/per:0;planGrid(F,tx-22,ty-9,44,12,K?u:-1);
+    for(let j=0;j<4;j++)F.set(hx,hy+j,IRON[4]);pdisk(F,hx,hy+6,3,(i,j,d)=>d>2.2?SILVER[3]:K?CYE[2]:CYR[1]);
+    const gather=clamp((u-.2)/.45),fy=ty-22-Math.round(Math.sin(t*2)*1.5);
+    if(K&&u>.55)for(let j=hy+9;j<fy-6;j+=2)F.set(hx,j,CYE[1]);
+    if(K&&u<.7)for(let k=0;k<3;k++){const sx=tx-30+k*30,sy=ty-2,x=Math.round(sx+(tx-sx)*ease(gather)),y=Math.round(sy+(fy-sy)*ease(gather));
+     if(k===0){for(let i=0;i<8;i++){F.set(x-4+i,y,WOOD[5]);F.set(x-4+i,y+1,WOOD[3])}}else if(k===1)curl(F,x,y,t);else ichorVial(F,x-1,y-2)}
+    bigModule(F,tx,fy,K&&u>.55,ty-8);if(K&&u>.62&&u<.78)sparkC(tx,fy,['#1f9fb8','#5ce8ff','#c8fbff'],12,7,12,12)(F,t)},[LT(0,1.2,0,44,.75,CYANL,.12)])]}}},
+ {g:'etabli',name:'Gabarit d’exo',desc:'Une armature d’exosquelette en argent dressée sur un socle d’ardoise, comme un mannequin de métal. Deux outils en lévitation y sertissent les modules ; les six logements du dos s’allument l’un après l’autre.',anims:['outils qui sertissent','logements qui s’allument','étincelles cyan','armature'],
+  build(){const[mx,my]=at(0,1.45,0);return{ground:floor(),objs:[oct(BASALT,.12,{inlay:ringI(1.04,.04,CYD)}),slab(circle(.46),.12,.42,stone(SLATE,{noise:.08,inlay:bandI(.2,.8,CYD,.2,5)}),{key:-2}),
+   ingotsObj(-.92,.85,IRON,2),planks(.92,.92,3,.32),crate(.98,-.85,.16),
+   dyn(4,(F,t)=>{const per=4.8,u=K?(t%per)/per:1;
+    // jambes, bassin, colonne, épaules, casque
+    for(const s of[-1,1]){F.line(mx+s*4,my+8,mx+s*6,my+24,SILVER[2]);F.line(mx+s*5,my+8,mx+s*7,my+24,SILVER[3]);F.set(mx+s*7,my+25,SILVER[1])}
+    for(let i=-6;i<=6;i++){F.set(mx+i,my+7,SILVER[3]);F.set(mx+i,my+8,SILVER[1])}
+    for(let j=-14;j<=7;j++){F.set(mx,my+j,SILVER[4]);F.set(mx+1,my+j,SILVER[2])}
+    for(let i=-13;i<=14;i++){F.set(mx+i,my-14,SILVER[i<0?4:3]);F.set(mx+i,my-13,SILVER[1])}
+    for(let r=0;r<4;r++)for(let i=-10+r*2;i<=11-r*2;i++)F.set(mx+i,my-9+r*4,SILVER[r%2?2:3]);
+    for(const s of[-1,1]){F.line(mx+s*13,my-14,mx+s*16,my+2,SILVER[3]);F.line(mx+s*16,my+2,mx+s*14,my+12,SILVER[2]);pdisk(F,mx+s*14,my-15,2,(i,j,d)=>SILVER[j<0?4:2])}
+    pdisk(F,mx,my-20,4,(i,j,d)=>d>3.2?SILVER[3]:j<0?SLATE[4]:SLATE[2]);for(let i=-2;i<=2;i++)F.set(mx+i,my-20,K?CYE[2]:CYR[1]);
+    for(let k=0;k<6;k++){const sx=mx-8+(k%2)*11,sy=my-11+Math.floor(k/2)*5,on=u>(k+1)/7;for(let i=0;i<5;i++){F.set(sx+i,sy,on?CYE[k===Math.floor(u*7)-1&&K?3:2]:CYR[0]);F.set(sx+i,sy+1,on?CYE[0]:SLATE[0])}}
+    if(K)for(const s of[-1,1]){const ph=(t*1.6+(s>0?.5:0))%1,lift=ph<.7?Math.sin(ph/.7*Math.PI/2):1-(ph-.7)/.3,hx=mx+s*(20+Math.round(lift*6)),hy=my-10-Math.round(lift*8);
+     floatHammer(F,hx,hy,s>0?-.6:-2.5,SILVER);if(ph>.94)sparkC(mx+s*9,my-8,['#1f9fb8','#5ce8ff','#c8fbff'],8,3+s,10,8)(F,t)}},[LT(0,1.4,0,42,.7,CYANL,.12)])]}}},
+ {g:'etabli',name:'Banc d’optique',desc:'Un long rail d’ardoise sur tréteaux porte trois lentilles cerclées d’argent. Un faisceau cyan part de l’émetteur, se resserre à chaque lentille et vient graver le module posé au bout, qui tourne sur son support.',anims:['faisceau qui pulse','lentilles','module qui tourne','émetteur'],
+  build(){const Y=1.05,[ax,ay]=at(-.85,Y,0),[bx,by]=at(.9,Y,0);return{ground:floor(),objs:[slab(square(1.28),0,.08,stone(SLATE,{noise:.08}),{key:-9}),
+   post(-.8,-.12,.85,IRON,.06,.08),post(.8,-.12,.85,IRON,.06,.08),post(-.8,.12,.85,IRON,.06,.08),post(.8,.12,.85,IRON,.06,.08),
+   box(0,0,1.05,.17,.85,.98,stone(SLATE,{noise:.06,inlay:bandI(.1,.9,CYD,.14,4)}),{key:.2}),
+   crate(-.95,.85,.18),planks(.9,.92,3,.3),...logs(.95,-.85,2,.26),
+   dyn(4,(F,t)=>{const pulse=K?.5+.5*Math.sin(t*6):0;
+    pdisk(F,ax,ay-6,5,(i,j,d)=>d>4.2?IRON[5]:j<-1?IRON[4]:IRON[2]);pdisk(F,ax+3,ay-6,1.6,()=>K?CYE[3]:CYR[1]);for(let j=0;j<6;j++)F.set(ax,ay-1+j,IRON[3]);
+    for(const lx of[-.4,.05,.5]){const[px,py]=at(lx,Y,0);for(let j=0;j<6;j++)F.set(px,py-1+j,IRON[4]);for(let k=0;k<28;k++){const a=k*TAU/28;F.set(Math.round(px+Math.cos(a)*3),Math.round(py-8+Math.sin(a)*7),Math.cos(a)<0?SILVER[4]:SILVER[2])}
+     for(let j=-5;j<=5;j++)F.set(px,py-8+j,K?(Math.abs(j)<2?CYE[2]:CYE[0]):CYR[0])}
+    if(K)for(let x=ax+6;x<bx-7;x++){F.set(x,ay-6,(x+Math.floor(t*12))%4?CYE[2]:CYE[3]);if(pulse>.4)F.set(x,ay-7,CYE[0])}
+    for(let j=0;j<5;j++)F.set(bx,by-1+j,IRON[4]);const ang=K?t*2:0,cw=Math.max(2,Math.round(Math.abs(Math.cos(ang))*12));
+    for(let j=-5;j<=5;j++)for(let i=-cw;i<=cw;i++){const rim=Math.abs(i)===cw||Math.abs(j)===5;F.set(bx+i,by-8+j,rim?SILVER[3]:SLATE[j<0?4:2])}
+    if(cw>3)pdisk(F,bx,by-8,2,()=>K&&pulse>.3?CYE[3]:CYR[1]);if(K&&pulse>.8)sparkC(bx-cw,by-8,['#1f9fb8','#5ce8ff','#c8fbff'],6,9,6,6)(F,t)},[LT(0,1.1,0,40,.65,CYANL,.15)])]}}},
+ {g:'etabli',name:'Armoire à modules',desc:'Une haute armoire d’ardoise aux six logements, à côté d’un plateau de travail. Un bras articulé va chercher un logement vide, y dépose le module fini et revient au plateau.',anims:['bras articulé','module transporté','logements allumés','glyphes de l’armoire'],
+  build(){const[cx,cy]=at(-.5,2.2,-.45),[px,py]=at(.45,.62,.25),[jx,jy]=at(.05,1.9,-.05);return{ground:floor(),objs:[oct(SLATE,.1),
+   box(-.5,-.45,.46,.28,.1,2.2,stone(SLATE,{noise:.06,inlay:bandI(.05,.97,CYD,.2,9)}),{key:-1.5}),box(-.5,-.45,.5,.32,2.2,2.32,iMat(),{key:-1.4}),
+   slab(rect(.02,-.08,.88,.58),.1,.62,stone(SLATE,{noise:.08}),{key:.25}),post(.05,-.05,1.9,IRON,.07),planks(-.95,.92,3,.3),ichorPot(.98,-.85),
+   dyn(4,(F,t)=>{const per=5,u=K?(t%per)/per:0,full=Math.floor(u*6);
+    for(let k=0;k<6;k++){const sx=cx-10+(k%2)*11,sy=cy+5+Math.floor(k/2)*11;for(let j=0;j<8;j++)for(let i=0;i<9;i++)F.set(sx+i,sy+j,j===0||i===0?SLATE[0]:SLATE[1]);
+     if(k<full||!K){moduleS(F,sx+1,sy+1,7,6,K)}}
+    const go=u<.5?ease(u/.5):1-ease((u-.5)/.5),tx=Math.round(px+(cx-px)*go),ty=Math.round(py-10+(cy+12-py)*go),ex=Math.round((jx+tx)/2+6),ey=Math.round(Math.min(jy,ty)-8);
+    thick(F,jx,jy,ex,ey,IRON[5],IRON[3]);thick(F,ex,ey,tx,ty-5,IRON[5],IRON[3]);pdisk(F,ex,ey,1.5,()=>CYE[K?2:0]);pdisk(F,jx,jy,2,()=>SILVER[3]);
+    if(K&&u<.5)moduleS(F,tx-4,ty-4,9,6,true);planGrid(F,px-14,py-5,28,8,K?(t*.5)%1:-1)},[LT(-.3,1.4,-.2,44,.7,CYANL,.1)])]}}},
+ {g:'etabli',name:'Reliquaire-établi',desc:'Le cousin du Coffre Antique : un coffre d’ardoise ouvert, mêmes glyphes et même œil, dont le grand couvercle relevé sert de pupitre. Au-dessus, le module du plan tourne en fil de lumière, puis se matérialise.',anims:['module en fil de lumière','matérialisation','œil du couvercle','glyphes du coffre'],
+  build(){const[cx,cy]=at(0,.72,.1),[lx,ly]=at(0,1.75,-.38);return{ground:floor(),objs:[oct(SLATE,.1,{inlay:ringI(1.04,.035,CYD)}),
+   box(0,.1,.66,.36,.1,.72,stone(SLATE,{noise:.06,inlay:bandI(.35,.7,CYD,.12,2)}),{key:-1}),
+   box(0,-.34,.66,.06,.72,2.0,stone(SLATE,{noise:.05,inlay:bandI(.45,.85,CYD,.2,6)}),{key:-1.2}),
+   planks(.95,.92,3,.32),...logs(-.95,.85,2,.28),ichorPot(-1.0,-.85),
+   dyn(4,(F,t)=>{const per=6,u=K?(t%per)/per:0,a=t*1.4,mat=clamp((u-.55)/.25);
+    for(let j=-3;j<=3;j++)for(let i=-5;i<=5;i++)if(i*i/25+j*j/9<=1)F.set(lx+i,ly+j,i*i/25+j*j/9<.3?(K?CYE[3]:CYR[2]):i*i/25+j*j/9<.7?(K?CYE[1]:CYR[1]):CYR[0]);
+    const my=cy-24-Math.round(Math.sin(t*2)*1.5);
+    if(K&&mat<1){const c=Math.cos(a),s=Math.sin(a);const P=[[-9,-4],[9,-4],[9,4],[-9,4]].map(([x,z])=>[Math.round(cx+x*c-z*s*.4),Math.round(my+z*.6+x*s*.3)]);
+     for(let k=0;k<4;k++){const[a0,b0]=P[k],[a1,b1]=P[(k+1)%4];F.line(a0,b0,a1,b1,CYE[2]);F.line(a0,b0-6,a1,b1-6,CYE[1]);F.line(a0,b0,a0,b0-6,CYE[1])}}
+    if(!K||mat>0)bigModule(F,cx,my-3,K,cy-6);if(K&&mat>0&&mat<.4)sparkC(cx,my,['#1f9fb8','#5ce8ff','#c8fbff'],14,11,10,14)(F,t)},[LT(0,1.3,0,46,.75,CYANL,.14)])]}}},
+];
+
+function floorScene(){const S=new Scene();S.bake(floor(),[]);return S}
+function vignette(i){const b=ITEMS[i].build(),S=new Scene();S.bake(b.ground,b.objs);if(b.fx)S.dyn.push(...b.fx(S));return S}
+// ---------- export vers le jeu ----------
+// Sprite 320 × 240, ancre (160, 168) au centre de l'emprise, 24 px par unité à l'échelle native (scale 1 : 2 × 2 cases = 64 px),
+// sol transparent, boucle de 72 images à 12 i/s (la coulée dure 6 s), portrait 128 × 128 du HUD.
+function exportSprite(i=0,frames=72,fps=12){configure(24,320,240,160,168);let S;try{const b=ITEMS[i].build();S=new Scene();S.bake(()=>-1,b.objs)}catch(e){configure(24,132,136,66,102);throw e}
+ const cols=12,rows=Math.ceil(frames/cols),sheet=document.createElement('canvas');sheet.width=320*cols;sheet.height=240*rows;const g=sheet.getContext('2d');let top=240,bot=0;
+ for(let f=0;f<frames;f++){const t=f/fps,F=S.compose(t);const img=g.createImageData(320,240),D=img.data;
+  for(let k=0;k<320*240;k++){const v=F.c[k],o=k*4;if(v>=0){D[o]=v>>16&255;D[o+1]=v>>8&255;D[o+2]=v&255;D[o+3]=255;const y=(k/320)|0;if(y<top)top=y;if(y>bot)bot=y}else if(S.sh[k]>0)D[o+3]=Math.round(S.sh[k]*95)}
+  g.putImageData(img,(f%cols)*320,((f/cols)|0)*240)}
+ const base=document.createElement('canvas');base.width=320;base.height=240;base.getContext('2d').drawImage(sheet,0,0,320,240,0,0,320,240);
+ const bd=base.getContext('2d').getImageData(0,0,320,240).data;let x0=320,x1=0,y0=240,y1=0;for(let y=0;y<240;y++)for(let x=0;x<320;x++)if(bd[(y*320+x)*4+3]===255){if(x<x0)x0=x;if(x>x1)x1=x;if(y<y0)y0=y;if(y>y1)y1=y}
+ const por=document.createElement('canvas');por.width=por.height=128;const pg=por.getContext('2d'),w=x1-x0+1,h=y1-y0+1,k=Math.min(1.5,120/w,124/h);pg.imageSmoothingEnabled=false;
+ pg.drawImage(base,x0,y0,w,h,Math.round(64-w*k/2),Math.round(128-h*k),Math.round(w*k),Math.round(h*k));
+ configure(24,132,136,66,102);return{sheet,base,portrait:por,pick:ITEMS[i].name,meta:{anchor:[160,168],top,bottom:bot,scale:1,anim:{frame_w:320,frame_h:240,cols,rows,count:frames,seconds:frames/fps,fps,exact:true,seam_pixels:0}}}}
+return{ITEMS,GROUPS,vignette,floorScene,setWork(v){K=v},ambient,exportSprite,get W(){return W},get H(){return H}}})();
+
+
+</script>
+<script>
+'use strict';
+const ACTUELS={"etabli": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAIQAAACICAYAAAAmhkPcAAAHUElEQVR42u2d72sTdxzH3+lSqtb+jB4hrpXO2VZpi5OyqayscxtY5ioIK2MI4pOBG+zBYDD2Lwx8trlnpSA+6MbQzqHQbYplyiRstRZta60/qjHGNE2bZG1mXfbAXnq5XH6cudT73r1fTy7Xu9yv7+s+n8/3e00CEEIIIYQQQgghhBBCCCGEEEIIIYQQQgghhBBCCCGEEEIIIYQQQgghhBBCCCGEEEIIIYQQQgghhBBCCCGEEEIIIYQQPRz75M0Er8LqUmLWA6tzrU94R/1obXBRCgqxwpH3tlEKCgFMz0QdQ+N+eEf9wkhhhRRn6ghRqBStDa7EaorkHfULHyGcZj/AZSl0iyCnGwDoHbyRuHZ7xsGEYAEh1PVEtsZViyDfseH5OFvaSkIoo0QmKVobXAm1CEPj/uT72dQWixCZpFBGhWwiyOsxdVgoZWhJoY4K1x7OorqyDABQXVmWUKYb1hMWE0K+y9tb3Mmeh0x7iztlmqkHwHrCIkJo1Qh6unqsJywYIZSNLzdwe4sbvYM3ct75FMFCQsjRQVk0atQTLBjtIsS12zMO76g/oQ776kGr1gYXC0a7pIyTlyazNjR7ETasIXJ1RZXdUWV0YTPbSAgtKdQRoxhifHwokTh5wuGgECaWos61Pm3UUi3GXMlGY1KYBWWwlBDqSCF3RzUiBgDgtfc/K2hfF872J+7dGmOEMDuO6pcxNH5fWU+kjFEkxfjlWwDA5jc+THl/pfM45peO5txPZ1ePJaWw1MnUb2lOdHb1IBQM4OrgCXQ0uTFf/y4A4OrgCQBAR1PqEHfv4I00Kbr3HcfAudxS1G6QcOFsP6wkhTAn8srmrYb859OT6MM0MeQ0EvuvtmjHP3X3phDX2imKDPveOWDoNn8+/X3G+qLj7SOGn8O5304nRJBCqBri8eOAYdvatecgAGDo0k8aYvSiueV9w/a1caPEolIUdu05mCIFYO9H5LYXQitayPMUwoaUVvUlX3d09eHJ3GFbXw+n3SXItsyOcjjtKkOuxi6t6kNplf0iRomdTvab43153/nyOtmiCYUQpMEz3fFff6UvDdhRCtMLUb+lOe8Ryi+PHs6rgfVgZMrQcy4UIsMF7OzqKWoRuZrb6OzqMb0UJWaXIRQ0ZnSykDvdqCgRCgZML0WJHWQwE2aXooQyUArbdjsJhSAUwvheAschCCOElSlkxDHfZx8UwgZS2E0GIYTwT9S+ECmKIYOR51IsbPf4+8nc4eSj7Vyi8P8hbJo+KILNhWDDs6gkFIJYPmWI9IEXClFEorEoJibHUVNVI+RFvnv/DmbnZlHrohCGsLC4AJ//PuYjc0IK8ejxQ8Tji4wQRtHU+CnGJ76D0ylmpygeX8T2bZ9TCCN5a/9H+OPcj9jasB2VFVWa60j1Awjc6857Xg96ty3VD2D4yk5M+25j74FD8E+wl2EI7sZQ1kaS6geSr/VMs22r0G3L0x2v/4Xqmr15nQuF0IkIzwGscOxCj0ME7nUnw7TeabZtFbpteTp8ZSfCs78LdU2FECLfUKtu7FzzeuUrZF6EdCF8hCA27mUAwNLSEqKxiDDHG/sniqdPlyhE8dKGWOMR8viDKOlCuAgBPBukEuUCZ+tdhIIB/Bs333dZma6GiEUimBy7jtoNUsbi0ohuXO0GSXMfRssgH7N6X1MTY4hFIxQiFzOBB47xkcuYHLuu2XhGSqHctpFyqGVQMzUxhumpUUTCQdN9b6Vpv0jTJW1KNLXtxqvN29M+56mUwYj0IctgxOdJA8Onsi6Prms2rQymriGWI0UCQJoU7saQoaN/Rn2wODB8Cl/0tGdd51i/17QymH4cQpk+1CHd6NRhJD5/GN6R6bSpCJh+YCpfKV6kGOr9+wIReKSKlHXU8+x26kT+Fd9nLCJy6zz+vnU+63vu/vlsqv65gxfRtdSSgkIUIIPyZ5z10jv4w6pIoS5uA8Mr0cAXiKS/dlczZRiSkwMRw+5co1OEuzGUtacjWqSw9Ad1jOyeqgXLZ3uyyCJJ4RQlMuiJEovxJWxW9UKeRw6tKJPtvbPzC/COTMMjVWgK4B2Zxuz8AgDsB3CGQuTJ2rLStHybK//6/OHkehfHHmXtnj5POsklUSgYXGn45Z+I9Ejl8AViaG9xawltSimESxlywxvRoJnE0JteQsEgwqGg5rIMMjBl6EEOvcr++8CvY/BI5YoUEoNHKk8u94764ZHKMXBxClMPwpB2FH7X65FhemoU7nVIiQweqSIZLeS/U4jnoKZyLdrb6lL+1p0jZcjL29vqcKzfuyrHqZQhEg463OuqEqJGBuEihBwBlBFC/u1N5XJZpGI+2gaAybHrKTKk1DvLx6wuLkUQxHLdTrmSL/Y34WrJcNM35zh95U5iTZkzY+/npm/uAzNfP9M+ddvqeRZ+5Ysbno9jTdlLiov7FNWVZSsNpFgeWlqPprbdRT2+8ZHLmAk8yHX99udYfoZCrBIuaVNRv0c6DxkIIYQQQmzD/7uGLAae7gKmAAAAAElFTkSuQmCC"};
+const W=BAT.W,H=BAT.H,views=[],root=document.getElementById('groups'),nav=document.getElementById('nav');
+let pick={},night=false,work=1,paused=matchMedia('(prefers-reduced-motion: reduce)').matches,t=2,last,acc=1;
+try{pick=JSON.parse(localStorage.getItem('bat16-etabli-choix')||'{}')||{}}catch(e){}
+const figs={};
+function currentScene(id){const S={base:BAT.floorScene(),ok:false,im:new Image(),render(g,hour){this.base.render(g,hour,0);if(this.ok){g.globalAlpha=hour<6?.6:1;g.drawImage(this.im,0,0);g.globalAlpha=1}}};S.im.onload=()=>{S.ok=true;S.dirty&&S.dirty()};S.im.src=ACTUELS[id];return S}
+for(const G of BAT.GROUPS){const sec=document.createElement('section');sec.id=G.id;sec.innerHTML=`<h2>${G.name}</h2><p class="mut">${G.note}</p><div class="grid"></div><button class="none" data-g="${G.id}" data-n="0" aria-pressed="false">Aucune de ces cinq</button>`;root.append(sec);
+ const a=document.createElement('a');a.href='#'+G.id;a.textContent=G.name.split(' ')[0];nav.append(a);const grid=sec.querySelector('.grid');figs[G.id]=[sec.querySelector('.none')];
+ const mk=(title,desc,anims,n,make)=>{const f=document.createElement('figure');if(!n)f.className='cur';f.innerHTML=`<canvas width="${W}" height="${H}" role="img" aria-label="${title}"></canvas><figcaption><h3>${title}</h3><p>${desc}</p>${anims?`<ul class="chips">${anims.map(a=>`<li>${a}</li>`).join('')}</ul><button class="pick" data-g="${G.id}" data-n="${n}" aria-pressed="false">Choisir</button>`:''}</figcaption>`;grid.append(f);
+  const cv=f.querySelector('canvas'),v={cv,g:cv.getContext('2d'),make,S:null,vis:false,dirty:true,anim:!!n};views.push(v);if(n)figs[G.id][n]=f;return v};
+ if(ACTUELS[G.id]){const v=mk('Actuel','Le dessin du jeu aujourd’hui, à la même échelle.',null,0,()=>{const S=currentScene(G.id);S.dirty=()=>{v.dirty=true};return S})}
+ let n=0;BAT.ITEMS.forEach((it,i)=>{if(it.g!==G.id)return;n++;const title=`${n} · ${it.name}`;mk(title,it.desc,it.anims,n,()=>{try{return BAT.vignette(i)}catch(e){console.error(title,e);return{render(g){g.fillStyle='#400';g.fillRect(0,0,W,H);g.fillStyle='#fff';g.font='8px monospace';String(e).match(/.{1,26}/g).slice(0,8).forEach((l,k)=>g.fillText(l,2,12+k*10))}}}})})}
+const io=new IntersectionObserver(es=>{for(const e of es){const v=views.find(v=>v.cv===e.target);if(v){v.vis=e.isIntersecting;v.dirty=true}}},{rootMargin:'250px'});views.forEach(v=>io.observe(v.cv));
+// ---------- choix ----------
+const names=g=>BAT.ITEMS.filter(it=>it.g===g).map(it=>it.name),recap=document.getElementById('recap'),count=document.getElementById('count'),note=document.getElementById('note'),status=document.getElementById('status');
+function showPick(){let done=0;recap.innerHTML='';for(const G of BAT.GROUPS){const n=pick[G.id];figs[G.id].forEach((el,k)=>{if(!el)return;const on=n===k;if(k===0)el.setAttribute('aria-pressed',on);else{el.classList.toggle('sel',on);const b=el.querySelector('.pick');b.setAttribute('aria-pressed',on);b.textContent=on?'Choisi':'Choisir'}});
+  if(n!==undefined&&n!==null)done++;const li=document.createElement('li');li.innerHTML=`<b>${G.name}</b> : ${n===undefined||n===null?'pas encore choisi':n===0?'aucune des cinq':n+' · '+names(G.id)[n-1]}`;recap.append(li)}
+ count.textContent=`${done} / ${BAT.GROUPS.length} choisis`;try{localStorage.setItem('bat16-etabli-choix',JSON.stringify(pick))}catch(e){}}
+document.addEventListener('click',e=>{const b=e.target.closest('[data-g]');if(!b)return;const g=b.dataset.g,n=+b.dataset.n;if(pick[g]===n)delete pick[g];else pick[g]=n;status.textContent='';showPick()});
+if(typeof pick.note==='string'){note.value=pick.note}note.oninput=()=>{pick.note=note.value;try{localStorage.setItem('bat16-etabli-choix',JSON.stringify(pick))}catch(e){}};
+showPick();
+const summary=()=>BAT.GROUPS.map(G=>{const n=pick[G.id];return`${G.name} ${n===undefined||n===null?'?':n===0?'aucune':n}`}).join(', ')+(note.value.trim()?' — '+note.value.trim():'');
+let db=null;(async()=>{try{db=await window.claude?.use?.('db')}catch(e){}if(!db)return;try{const s=await db.doc('choix/courant').get();if(s.exists){const d=s.data()||{};let any=false;for(const G of BAT.GROUPS)if(pick[G.id]!==undefined)any=true;if(!any){for(const G of BAT.GROUPS)if(typeof d[G.id]==='number')pick[G.id]=d[G.id];if(typeof d.note==='string'&&!note.value){note.value=d.note;pick.note=d.note}showPick();status.textContent='Dernier choix envoyé rechargé.'}}}catch(e){}})();
+document.getElementById('bSend').onclick=async()=>{const data={note:note.value.trim(),resume:summary(),envoye:new Date().toISOString()};for(const G of BAT.GROUPS){const n=pick[G.id];data[G.id]=n===undefined||n===null?-1:n;data[G.id+'_nom']=n>0?names(G.id)[n-1]:''}
+ if(!db){status.textContent='Envoi indisponible ici. Copie cette ligne dans la conversation : '+summary();return}
+ status.textContent='Envoi…';try{await db.doc('choix/courant').set(data);status.textContent='Choix envoyé. Dis « c’est choisi » dans la conversation et Claude le lira ici.'}catch(e){status.textContent='L’envoi a échoué ('+(e&&e.code||'erreur')+'). Copie cette ligne dans la conversation : '+summary()}};
+// ---------- animation ----------
+const bW=document.getElementById('bWork'),bN=document.getElementById('bNight'),bP=document.getElementById('bPause');
+const sync=()=>{BAT.setWork(work);bW.setAttribute('aria-pressed',!!work);bW.textContent=work?'Au travail':'Au repos';bN.setAttribute('aria-pressed',night);bN.textContent=night?'Nuit':'Jour';bP.setAttribute('aria-pressed',paused);bP.textContent=paused?'Reprendre':'Pause';views.forEach(v=>v.dirty=true)};
+bW.onclick=()=>{work=work?0:1;sync()};bN.onclick=()=>{night=!night;sync()};bP.onclick=()=>{paused=!paused;sync()};
+function paint(v){if(!v.S)v.S=v.make();v.S.render(v.g,night?21:11,Math.floor(t*12)/12);v.dirty=false}
+function loop(now){const dt=last===undefined?0:Math.min((now-last)/1000,.1);last=now;if(!paused)t+=dt;acc+=dt;if(acc>=1/12){acc=0;for(const v of views)if(v.vis&&(v.dirty||(v.anim&&!paused)))paint(v)}requestAnimationFrame(loop)}
+const Q=new URLSearchParams(location.search);
+if(Q.get('shot')){t=+(Q.get('t')??2);work=+(Q.get('k')??1);night=Q.get('n')==='1';sync();
+ if(Q.get('c')){const st=document.createElement('style');st.textContent='figcaption p,.chips,.pick,.none,section>p,h1,h1+p,h1~p,.bar,#choix{display:none!important}section{margin-top:4px!important}.wrap{padding-block:0!important;max-width:none!important}h2{font-size:13px!important}.grid{gap:4px!important;margin-top:2px!important;grid-template-columns:repeat(6,calc(132px*var(--s)))!important}figcaption{padding:1px 6px!important}h3{font-size:12px!important}';document.head.append(st)}
+ const s=Q.get('s');if(s)document.documentElement.style.setProperty('--s',s);const g=Q.get('g');views.forEach(v=>{paint(v);if(v.S&&v.S.im)v.S.im.addEventListener('load',()=>{v.S.ok=true;paint(v)})})}
+else{sync();requestAnimationFrame(loop)}
+</script>

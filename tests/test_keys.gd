@@ -62,13 +62,16 @@ func test_ctrl_a_selects_all_visible() -> void:
 	check_eq(GameState.hud_menu, "place", "P : menu Poser")
 	ic._key(_ev(KEY_P))
 	check_eq(GameState.hud_menu, "", "P : retour aux ordres")
-	# Maj+R : nouvelle partie ; Échap : annule le mode et le menu.
+	# Maj+R deux fois : nouvelle partie (le premier ne fait que prévenir) ; Échap : annule le mode et le menu.
 	GameState.hud_menu = "build"
 	GameState.hud_mode = "build"
 	ic._key(_ev(KEY_ESCAPE))
 	check(GameState.hud_menu == "" and GameState.hud_mode == "", "Échap : menu et mode annulés")
+	var n_before := GameState.units.size()
 	ic._key(_ev(KEY_R, true))
-	check_eq(GameState.units.size(), 1, "Maj+R : nouvelle partie (Ingénieur seul)")
+	check_eq(GameState.units.size(), n_before, "premier Maj+R : la partie continue (confirmation demandée)")
+	ic._key(_ev(KEY_R, true))
+	check_eq(GameState.units.size(), 1, "second Maj+R : nouvelle partie (Ingénieur seul)")
 	check(GameState.units[0].hidden, "Maj+R : l'Ingénieur attend le portail")
 
 

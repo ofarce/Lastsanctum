@@ -13,6 +13,9 @@ func game() -> Simulation:
 	var sim: Simulation = _main.get_node("Simulation")
 	sim.paused = true
 	sim.new_game(SEED)
+	# Âges des métaux (sim/ages.gd) ouverts d'office : ces tests portent sur l'économie, pas sur le verrou des métaux
+	# (tests/test_ages.gd). Un test qui veut le verrou les referme.
+	GameState.ages_open = {"copper": true, "iron": true}
 	var u: Unit = GameState.units[0]
 	u.hidden = false
 	GameState.portal_start = -100.0

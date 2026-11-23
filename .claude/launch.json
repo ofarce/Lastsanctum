@@ -374,6 +374,20 @@
         "planches"
       ],
       "port": 8137
+    },
+    {
+      "name": "portails",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8181",
+        "--bind",
+        "127.0.0.1",
+        "--directory",
+        "planches"
+      ],
+      "port": 8181
     }
   ]
 }

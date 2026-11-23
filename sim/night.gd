@@ -5,10 +5,13 @@ extends RefCounted
 ## - Flot nocturne : des squelettes épars se lèvent un peu partout sur le no man's land (dehors, au sud du
 ##   flanc de la montagne ; jamais dans la grotte ni les galeries), du crépuscule à la fin de nuit. Rares au début, plus serrés au cœur de la nuit, plus aucun avant l'aube
 ##   (Catalog.NIGHT_FLOW). Chaque palier de menace resserre le flot et renforce les squelettes.
-## - Meutes des pylônes : chaque nuit, un Pylône de Merenor non canalisé lâche une meute de chiens qui marche
-##   sur l'Ancre (Catalog.NIGHT_RAID), si et seulement si un chemin praticable relie le pylône à l'Ancre
-##   (galerie ouverte et raccordée à la base). La meute naît au pied du pylône, jamais ailleurs. Elle est
-##   d'autant plus nombreuse et forte que la menace est haute. Les gardiens restent en laisse (sim/pylons.gd).
+## - Meutes des pylônes : chaque nuit, le front des Pylônes de Merenor lâche des meutes de chiens qui marchent
+##   sur l'Ancre (Catalog.NIGHT_RAID). Les galeries étant toutes reliées (2026-11-22), le front, ce sont les
+##   pylônes éveillés et non canalisés les plus proches de l'Ancre en chemin (p["path"]) : 1 la première nuit,
+##   un de plus toutes les front_step nuits, front_max au plus. Canaliser les plus proches repousse le front.
+##   Un chemin praticable vers l'Ancre reste exigé (garde-fou). La meute naît au pied du pylône, jamais
+##   ailleurs ; elle est d'autant plus nombreuse et forte que la menace est haute, et plus forte selon l'anneau
+##   du pylône (p["threat"]). Les gardiens restent en laisse (sim/pylons.gd).
 ##
 ## Squelettes et meutes sont hors menace et hors fin de vague (Enemy.beast) : ils ne rapportent pas de menace
 ## et ne retardent pas l'assaut du matin.
@@ -111,12 +114,23 @@ static func _raids(sim: Simulation, day: int) -> void:
 		return
 	var st := sim.state()
 	var packs := 0
+	if st.raid_first_day == 0:
+		st.raid_first_day = day
+	var R: Dictionary = Catalog.NIGHT_RAID
+	var nights := day - st.raid_first_day
+	var front := mini(int(R["front_max"]), int(R["front"]) + floori(float(nights) / float(R["front_step"])))
+	var ready: Array[Dictionary] = []
 	for p: Dictionary in st.portals:
 		if int(p.get("raid_day", 0)) == day:
 			continue
 		p["raid_day"] = day
-		if bool(p.get("channeled", false)):
+		if bool(p.get("channeled", false)) or not bool(p.get("active", false)):
 			continue
+		ready.append(p)
+	ready.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return float(a.get("path", 0.0)) < float(b.get("path", 0.0)))
+	for p: Dictionary in ready:
+		if packs >= front:
+			break
 		var start: Variant = raid_start(sim, p)
 		if start == null:
 			continue

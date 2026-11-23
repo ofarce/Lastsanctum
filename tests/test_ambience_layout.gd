@@ -22,7 +22,8 @@ func test_layout_is_deterministic() -> void:
 func test_pools_are_rare_and_deep_water_blocks() -> void:
 	var s := _state()
 	var inner := s.pools.filter(func(p: Dictionary) -> bool: return CaveShape.in_start((p["center"] as Vector2).x, (p["center"] as Vector2).y))
-	check(inner.size() > 0 and inner.size() <= TerrainState.POOL_COUNT, "zone d'origine : 1 à %d bassins (%d)" % [TerrainState.POOL_COUNT, inner.size()])
+	# La source de C est devenue un combat (2026-11-22, RoomLayout) : le Temple peut n'avoir aucun bassin.
+	check(inner.size() <= TerrainState.POOL_COUNT, "zone d'origine : au plus %d bassins (%d)" % [TerrainState.POOL_COUNT, inner.size()])
 	check(not s.water_cells.is_empty(), "chaque carte a des cases de fosse")
 	for key: Vector2i in s.water_cells:
 		var x := key.x * 4.0 + 2.0

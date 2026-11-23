@@ -82,12 +82,9 @@ func test_creuset_recipe_indicator() -> void:
 	creuset.input_box.clear()
 	check(WorldOverlay.building_jobs(creuset)[0]["blocked"], "ingrédients manquants")
 	creuset.input_box.append({"item": "iron_ingot", "quantity": 5})
-	for i in Production.BOX_CAPACITY:
-		creuset.output_box.append({"item": "iron_shield", "quantity": Production.ItemStorage.MAX_STACK})
-	check(WorldOverlay.building_jobs(creuset)[0]["blocked"], "coffre de sortie plein")
-	creuset.output_box[0]["item"] = "iron_sword"
-	check_eq(WorldOverlay.building_jobs(creuset)[0]["stock"], (Production.BOX_CAPACITY - 1) * Production.ItemStorage.MAX_STACK, "seuls les boucliers du coffre rouge sont comptés")
-	creuset.output_box[1]["quantity"] -= 1
-	check(not WorldOverlay.building_jobs(creuset)[0]["blocked"], "place dans une pile")
+	# Coffres en réseau infini (2026-11-22) : plus de coffre de sortie plein ; seul le produit est compté.
+	creuset.output_box.append({"item": "iron_shield", "quantity": 7})
+	creuset.output_box.append({"item": "iron_sword", "quantity": 3})
+	check_eq(WorldOverlay.building_jobs(creuset)[0]["stock"], 7, "seuls les boucliers du coffre rouge sont comptés")
 	sim.craft(creuset, "iron_shield")
 	check(WorldOverlay.building_jobs(creuset).is_empty(), "indicateur retiré à l’arrêt")

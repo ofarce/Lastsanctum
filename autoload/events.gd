@@ -35,4 +35,17 @@ signal items_received(items: Array)
 ## Objets ramassés par l'Exilé (corps, caches, sol) : une ligne « icône Nom ×N » en haut à gauche (ui/hud/loot_feed.gd).
 signal loot_picked(item: String, count: int)
 
+## Mod ramassé par l'Exilé (sim/loot.gd) : annonce du grand écrin la première fois (ui/hud/mod_reveal.gd).
+signal mod_picked(item: String)
+
 signal production_chest_requested(building: Building, kind: String, engineer: Unit)
+
+## Échap sans rien à annuler, ou touche Pause : ouvre le menu de pause (ui/menu/pause_menu.gd).
+signal pause_requested
+
+## Alerte située (ui/hud/alert_watch.gd) : bâtiment attaqué, allié tombé… Texte rouge, point qui pulse sur la
+## minicarte ; Espace ou un clic sur l'alerte centre la caméra sur (x, z).
+signal map_alert(text: String, x: float, z: float)
+
+## Carte des portails (sim/portal_net.gd) : ouverte depuis le seuil du nœud `from_id`, ou fermée (PortalNet.NO_MAP).
+signal portal_map(from_id: int)

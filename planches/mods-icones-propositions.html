@@ -118,6 +118,7 @@ const PAL={
  fer:['#1a1c20','#3a3e46','#5e646e','#9aa2ac','#e0e6ec'],
  rouge:['#2a0808','#6a1414','#a82a2a','#e05a4a','#ffb0a0'],
  or:['#3a2a08','#7a5a10','#c89a20','#f0d050','#fff8c0'],
+ tyrien:['#06303a','#12596b','#1f9fb8','#5ce8ff','#c8fbff'],
 };
 /* ---------- Dessin au pixel sur une grille 32 × 32 ---------- */
 let X;
@@ -210,6 +211,12 @@ const MODS=[
   effect:'Les vagues et les meutes nocturnes s’annoncent 15 s plus tôt.',worn:'Porté : un éclat de pylône en pendentif dorsal, qui bourdonne et luit avant une vague.',
   draw(){const p=PAL.pylone;SHAPE((x,y)=>y>=8&&y<=28&&Math.abs(x-16)<=2+(y-8)*0.12,p,16,18);SHAPE(diamond(16,6,3,4.5),[p[1],p[3],p[4],'#ffffff','#ffffff'],16,5);
    R(12,27,9,2,p[1]);for(const r of[7,10.5,14])for(const s of[-1,1])ARC(16,6,r,s<0?Math.PI-0.5:-0.5,s<0?Math.PI+0.5:0.5,p[3],1-r/18);}},
+ // Ajouté le 2026-11-22 (planches/etabli-propositions.html, piste B « Barre sous la loupe ») : premier mod fabriqué, à l'Établi d'exo.
+ {id:'analyse',name:'Analyse',fam:'explo',tint:'tyrien',from:'plan du Coffre Antique',
+  effect:'Chaque ennemi visible à l’écran affiche sa barre de PV.',worn:'Porté : une petite loupe cerclée d’argent pendue à la ceinture, qui se lève devant l’œil quand un ennemi entre à l’écran.',
+  draw(){const r=PAL.rouge,a=PAL.argent,c=PAL.tyrien;R(2,21,26,4,'#020608');R(3,22,24,2,'#2a1512');R(3,22,15,2,r[3]);R(3,22,15,1,r[4]);for(let i=0;i<4;i++)P(4+i*6,25,r[1]);
+   SHAPE(disc(13,12,8),a,11,9);SHAPE(disc(13,12,6),['#0a2a33','#0a2a33',c[1],c[2],c[3]],11,9,{noEdge:true});
+   LINE(19,18,25,24,a[2]);LINE(20,18,26,24,a[1]);LINE(19,19,25,25,a[3]);P(10,8,'#ffffff');P(11,8,c[4]);P(10,9,c[4]);for(let x=9;x<17;x++)P(x,13,c[3],0.8);}},
 ];
 /* ---------- Rareté (sim/loot.gd) et caractéristiques (infobulle) ---------- */
 const RARITY=[['normal','Normal','#e4e2da'],['uncommon','Peu commun','#6fcf5a'],['rare','Rare','#f2e14a'],['epic','Épique','#f07a28'],['unique','Unique','#b47af0'],['mythic','Mythique','#5fd8e8']];
@@ -231,6 +238,7 @@ const EXTRA={
  chant:{rar:'rare',stats:[['Rayon','8 blocs'],['Travail des adeptes','+20 %']]},
  sack:{rar:'epic',stats:[['Paquetage','+1 rangée (+10)'],['Butin des corps','ramassé en passant']]},
  echo:{rar:'rare',stats:[['Préavis','+15 s'],['Annonce','vagues et meutes nocturnes']]},
+ analyse:{rar:'normal',stats:[['Révèle','PV des ennemis à l’écran']]},
 };
 MODS.forEach(m=>Object.assign(m,EXTRA[m.id]));
 let rmode=1;
@@ -282,7 +290,7 @@ function blit(ctx,src,x,y,k){ctx.imageSmoothingEnabled=false;ctx.drawImage(src,0
 /* ---------- Rendu ---------- */
 const stylesEl=document.getElementById('styles');
 STYLES.forEach((s,si)=>{const card=document.createElement('div');card.className='card';card.dataset.id='style-'+s.k;
- card.innerHTML=`<div class="sheet"><canvas class="px" width="${5*72+8}" height="${3*72+8}"></canvas></div><div class="cap"><b class="t">Style ${s.k} · ${s.name}</b><p>${s.desc}</p>
+ card.innerHTML=`<div class="sheet"><canvas class="px" width="${5*72+8}" height="${Math.ceil(MODS.length/5)*72+8}"></canvas></div><div class="cap"><b class="t">Style ${s.k} · ${s.name}</b><p>${s.desc}</p>
  <div class="verdict"><button data-v="garder">Garder</button><button data-v="revoir">Revoir</button><button data-v="rejeter">Rejeter</button></div>
  <label for="n-style-${s.k}" style="font-size:12px;color:var(--mut)">Note</label><textarea id="n-style-${s.k}" rows="1"></textarea></div>`;
  const g=card.querySelector('canvas').getContext('2d');MODS.forEach((m,mi)=>blit(g,icon(si,mi),8+(mi%5)*72,8+Math.floor(mi/5)*72,2));stylesEl.appendChild(card);});

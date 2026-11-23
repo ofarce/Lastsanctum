@@ -49,16 +49,7 @@ func test_base_priority_and_full_base_never_falls_back() -> void:
 	mine_one(sim)
 	check_eq(GameState.base_inventory, [{"item": "rock", "quantity": 1}], "coffre prioritaire même sans paquetage")
 	check(engineer().inventory.is_empty(), "paquetage vide")
-	sim = game()
-	engineer().unarmored = true
-	GameState.mining_seal = true
-	GameState.base_inventory_unlocked = true
-	for i in range(Storage.BASE_CAPACITY):
-		GameState.base_inventory.append({"item": "rock", "quantity": Storage.MAX_STACK})
-	mine_one(sim)
-	check_eq(GameState.base_inventory.size(), 100, "coffre limité à cent cases")
-	check(engineer().inventory.is_empty(), "aucun repli vers personnage")
-	check_eq(GameState.ground_items.size(), 1, "coffre plein : sol")
+	# Réseau des coffres infini (2026-11-22) : plus de coffre plein ni de repli au sol.
 	sim.new_game(SEED)
 	check(not GameState.base_inventory_unlocked, "déverrouillage réinitialisé")
 	check(GameState.base_inventory.is_empty() and GameState.ground_items.is_empty(), "stock et sol réinitialisés")
@@ -110,11 +101,16 @@ func test_stack_limit_overflow_and_full_inventory_merging() -> void:
 func test_base_stacks_all_item_types_and_remains_exclusive() -> void:
 	game()
 	GameState.base_inventory_unlocked = true
-	for i in range(Storage.BASE_CAPACITY):
-		GameState.base_inventory.append({"item": "any_item", "quantity": 9999})
-	GameState.base_inventory[99]["quantity"] = 9998
+	# Réseau des coffres infini (2026-11-22) : tout va au coffre, rien au sol.
 	Storage.deposit("any_item", engineer(), Vector2.ZERO)
-	check_eq(GameState.base_inventory[99]["quantity"], 9999, "coffre plein complète dernière pile")
-	Storage.deposit("any_item", engineer(), Vector2.ZERO)
-	check_eq(GameState.ground_items.size(), 1, "coffre saturé : sol")
+	check_eq(_count_of(GameState.base_inventory, "any_item"), 1, "au coffre")
+	check(GameState.ground_items.is_empty(), "rien au sol")
 	check(engineer().inventory.is_empty(), "pas de repli vers paquetage")
+
+
+func _count_of(items: Array, item: String) -> int:
+	var n := 0
+	for st: Dictionary in items:
+		if not st.is_empty() and st["item"] == item:
+			n += int(st["quantity"])
+	return n

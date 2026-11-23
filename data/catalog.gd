@@ -61,6 +61,11 @@ const BUILDINGS := {
 		"lore": "La grande scie d’Aether refend les rondins en fibre de bois, pour l’Archerie et les recettes de niveau supérieur."},
 	"archerie": {"name": "Archerie", "cost": {"forge": 50}, "deity": "", "requires": "scierie", "art": "da-archerie", "key": "j", "icon": "bow", "time": 8.0, "size": 2,
 		"lore": "L’étuve attendrit les lattes, le gabarit les plie : on y fait les arcs et les flèches des archers."},
+	## Écart voulu (intro de la capsule, 2026-11-22, planches/intro-capsule-planche.html) : fabrique les mods de l'Exilé
+	## dont le plan est appris (Recipes.PLANS). Dessin « Établi à plan lumineux » (planches/etabli-propositions.html, piste 1,
+	## choisie le 2026-11-22, export tools/batiments-16bits/export_etabli.py) ; touche W (X ouvre le grimoire des recherches).
+	"etabli": {"name": "Établi d’exo", "cost": {"forge": 60}, "deity": "", "requires": "scierie", "art": "da-etabli", "key": "w", "icon": "repair", "time": 8.0, "size": 2,
+		"lore": "Sur cet établi tyrien, les adeptes d’Aether assemblent les modules d’exo de l’Exilé d’après les plans retrouvés."},
 }
 
 ## Personnel des bâtiments (2026-11-17, sim/production.gd) : un bâtiment non-temple ne fonctionne qu'avec au moins
@@ -68,7 +73,7 @@ const BUILDINGS := {
 ## travailleurs présents. Un seul culte par bâtiment.
 ## Chambre et Église des Oublieux (2026-11-20) : sans personnel, elles fonctionnent seules dès qu'elles sont achevées.
 const STAFF_ROLE := {"warehouse": "sigil", "library": "sigil", "forge": "aether", "workshop": "aether", "creuset": "aether", "scierie": "aether", "archerie": "aether",
-	"soulwell": "medeina", "ecole": "medeina", "caserne": "indra"}
+	"etabli": "aether", "soulwell": "medeina", "ecole": "medeina", "caserne": "indra"}
 ## Culte du bâtisseur des bâtiments sans personnel (le chantier reste confié à un adepte de Medeina).
 const BUILD_ROLE := {"bedroom": "medeina", "eglise": "medeina"}
 const STAFF_MAX := 5
@@ -125,13 +130,33 @@ const RESEARCH := {
 	"gallery_props": {"name": "Étais de galerie", "building": "workshop", "requires": [], "cost": {"forge": 150}, "items": {"wood": 60}, "glyph": "pickaxe",
 		"desc": "Les adeptes minent 25 % plus vite."},
 	"sylviculture": {"name": "Sylviculture", "building": "soulwell", "requires": [], "cost": {"vie": 200}, "items": {"wood": 40}, "glyph": "wood",
-		"desc": "Un bosquet pétrifié abattu repousse en trois vagues."},
+		"desc": "Les adeptes minent 50 % plus vite."},
 	"copper_tips": {"name": "Pointes de cuivre", "building": "caserne", "requires": [], "cost": {"discipline": 300}, "items": {"copper_ingot": 10},
 		"desc": "Archers : + 25 % de dégâts. Leur carquois porte des pointes de cuivre."},
 	"verdigris_balm": {"name": "Baume de vert-de-gris", "building": "soulwell", "requires": [], "cost": {"vie": 400}, "items": {"copper_ingot": 10},
 		"desc": "Soin du Puits des Âmes : 5 → 8 PV par seconde."},
 	"copper_seal": {"name": "Sceau de cuivre", "building": "forge", "requires": [], "cost": {"forge": 300}, "items": {"copper": 20}, "glyph": "copper_ingot",
 		"desc": "La roche de vert-de-gris du biome 2 se creuse (8 coups)."},
+	# Sceaux des six strates (2026-11-22, planches/biomes-3-8-propositions.html) : chacun ouvre la roche d'un biome et
+	# demande la clef du boss de fin du biome d'avant (sim/loot.gd ITEMS). Chiffres proposés, non équilibrés.
+	"iron_seal": {"name": "Sceau de fer", "building": "forge", "requires": ["copper_seal"],
+		"cost": {"forge": 250, "vie": 250, "discipline": 250, "savoir": 250}, "items": {"copper_ingot": 20, "key_waters": 1}, "glyph": "iron_ingot",
+		"desc": "Le basalte des Forges mortes, biome 3, se creuse (12 coups)."},
+	"silver_seal": {"name": "Sceau d’argent", "building": "forge", "requires": ["iron_seal"],
+		"cost": {"forge": 300, "vie": 300, "discipline": 300, "savoir": 300}, "items": {"iron_ingot": 20, "key_matrix": 1}, "glyph": "silver_ingot",
+		"desc": "La roche noire des Galeries muettes, biome 4, se creuse (14 coups)."},
+	"limbo_seal": {"name": "Sceau de limbe", "building": "forge", "requires": ["silver_seal"],
+		"cost": {"forge": 400, "vie": 400, "discipline": 400, "savoir": 400}, "items": {"silver_ingot": 20, "key_tuning": 1}, "glyph": "tear",
+		"desc": "La roche des Rives des Limbes, biome 5, se creuse (16 coups)."},
+	"blood_seal": {"name": "Sceau de sang", "building": "forge", "requires": ["limbo_seal"],
+		"cost": {"forge": 500, "vie": 500, "discipline": 500, "savoir": 500}, "items": {"silver_ingot": 20, "tear": 10, "key_source": 1}, "glyph": "amber",
+		"desc": "La chair pétrifiée du Ventre de la Bête, biome 6, se perce (18 coups)."},
+	"orichalcum_seal": {"name": "Sceau d’orichalque", "building": "forge", "requires": ["blood_seal"],
+		"cost": {"forge": 600, "vie": 600, "discipline": 600, "savoir": 600}, "items": {"amber": 30, "key_amber": 1}, "glyph": "orichalcum_ingot",
+		"desc": "La pierre tyrienne de la Tyr enfouie, biome 7, se taille (20 coups)."},
+	"gold_seal": {"name": "Sceau d’or", "building": "forge", "requires": ["orichalcum_seal"],
+		"cost": {"forge": 700, "vie": 700, "discipline": 700, "savoir": 700}, "items": {"orichalcum_ingot": 30, "key_council": 1}, "glyph": "gold_ingot",
+		"desc": "La maçonnerie des Cryptes de l’Aube, biome 8, se perce (24 coups)."},
 	# Biome 2 : payée en lingots de cuivre.
 	"limbo_mastery": {"name": "Maîtrise du Fleuve des Limbes", "building": "soulwell", "requires": [], "cost": {"vie": 400}, "items": {"copper_ingot": 10}, "glyph": "copper_ingot",
 		"desc": "Débloque l’École de magie cristallisée et le bâton à focale à l’Atelier."},
@@ -142,6 +167,8 @@ const RESEARCH := {
 }
 ## Effets chiffrés des recherches du biome 1.
 const PROPS_MINING := 1.25
+## Sylviculture (Puits des Âmes, 2026-11-22) : les adeptes minent 50 % plus vite ; se cumule avec les Étais.
+const SYLVICULTURE_MINING := 1.5
 const FLETCHING_REACH := 1.15
 const REGROW_WAVES := 3
 const COPPER_TIPS_DAMAGE := 1.25
@@ -266,7 +293,7 @@ const ADEPT := {
 const MELEE_ADEPT := {"seek": 6.0, "reach": 1.9, "dmg": 4, "cd": 1.1, "status": "En attente · petite attaque au corps à corps"}
 const FIGHT := {
 	"flammes": {"seek": 36.0, "reach": 24.0, "dmg": 6, "cd": 0.3, "splash": 2.2, "continuous": true, "status": "Garde l’Ancre · flammes en continu ; explose à sa mort"},
-	"archer": {"seek": 26.0, "reach": 20.0, "dmg": 11, "cd": 0.95, "melee": {"reach": 2.3, "dmg": 13, "cd": 0.6}, "status": "Garde l’Ancre · arc, puis Charge du Lac au contact"},
+	"archer": {"seek": 46.0, "reach": 40.0, "dmg": 11, "cd": 0.95, "melee": {"reach": 2.3, "dmg": 13, "cd": 0.6}, "status": "Garde l’Ancre · arc, puis Charge du Lac au contact"},
 	"lame": {"seek": 7.0, "reach": 2.2, "dmg": 16, "cd": 0.85, "guard": 0.55, "status": "Garde l’Ancre · mêlée ; moulinet d’orage toutes les 3 frappes"},
 	"sigil": MELEE_ADEPT, "medeina": MELEE_ADEPT, "aether": MELEE_ADEPT, "indra": MELEE_ADEPT,
 	"engineer": {"seek": 6.0, "reach": 1.9, "dmg": 5, "cd": 1.15, "ranged": false, "status": "Prêt à recevoir vos ordres · corps à corps"},
@@ -322,7 +349,10 @@ const NIGHT_FLOW := {"from": 0.62, "to": 0.92, "early": 7.0, "peak": 3.0, "rate"
 	"mix": {"skeleton": 0.3, "skeleton_bubo": 0.4, "skeleton_bomb": 0.3}}
 ## Meute nocturne d'un pylône non canalisé (sim/night.gd) : une par nuit, lancée à la fraction AT de la journée ;
 ## BASE chiens + PER_TIER par palier de menace (CAP au plus), statistiques des gardiens (MENACE_PORTAL).
-const NIGHT_RAID := {"at": 0.7, "base": 3, "per_tier": 1, "cap": 12}
+## front / front_step / front_max : front des meutes (galeries reliées, 2026-11-22) — seuls les `front` pylônes
+## éveillés et non canalisés les plus proches de l'Ancre en chemin lâchent leur meute, un de plus toutes les
+## `front_step` nuits, `front_max` au plus.
+const NIGHT_RAID := {"at": 0.7, "base": 3, "per_tier": 1, "cap": 12, "front": 1, "front_step": 3, "front_max": 4}
 
 ## Soldats du Credo (fiches ENNEMI · CREDO et CREDO SOUILLÉ) : vitesse ×1,15 sur celle d'ENEMY (2026-11-20, demande),
 ## appliquée par Enemy.make. Ceux sans arme de tir (CREDO_MELEE) accélèrent encore de CREDO_RUSH ×1,2 dès qu'ils ont
@@ -354,6 +384,8 @@ const ENEMY := {
 	"tick": {"hp": 40, "speed": 1.6, "range": 1.5, "damage": 10, "cd": 1.5, "armor": 4},
 	## Boss de fin du biome 2 (sim/gorge.gd) : armure des anneaux ; dégâts doublés gueule ouverte.
 	"gorge": {"hp": 2400, "speed": 0.0, "range": 0.0, "damage": 30, "cd": 99.0, "armor": 5},
+	## Mini-boss 1 du Temple (sim/archipretre.gd) : immobile à l'autel ; dégâts doublés bulbe ouvert.
+	"archipretre": {"hp": 1500, "speed": 0.0, "range": 0.0, "damage": 16, "cd": 99.0, "armor": 3},
 	## Anguille des puits : immobile dans son bassin (sim/wildlife.gd), sa décharge touche tout ce qui en approche.
 	"eel": {"hp": 60, "speed": 0.0, "range": 13.5, "damage": 16, "cd": 3.0},
 	"bat": {"hp": 18, "speed": 7.0, "range": 1.5, "damage": 6, "cd": 1.2},
@@ -391,6 +423,7 @@ const HERO := {
 ## Fiches des ennemis sélectionnés dans le HUD (écart voulu D14 : le prototype ne sélectionne pas les ennemis).
 const ENEMY_INFO := {
 	"tick": {"name": "Tique de filon", "kind": "FAUNE · VERT-DE-GRIS", "lore": "Collée à son filon, elle se gave de cuivre et perfore de son rostre de fer quiconque vient le lui disputer. Elle n’attaque que ce qui l’approche."},
+	"archipretre": {"name": "L’Archiprêtre aux racines", "kind": "MINI-BOSS · GARDIEN DES CLOÎTRES", "lore": "Un prêtre du Temple que les racines de la Bête ont cousu à l’autel. Son bulbe ne s’ouvre que si les quatre cultes prient ensemble autour de lui."},
 	"gorge": {"name": "Gorge-Cuivre", "kind": "BOSS · DÉVOREUSE DE FILONS", "lore": "Un mille-pattes cuirassé long comme une galerie. Elle a mangé tous les filons de la grande salle et dort dessous. Ses anneaux arrêtent les coups ; sa gueule, non."},
 	"eel": {"name": "Anguille des puits", "kind": "FAUNE · NEUTRE", "lore": "Une crête d’épines de cuivre lui sort du dos. Elle ne quitte jamais son bassin ; sa décharge frappe tout ce qui s’en approche, Exilés comme ennemis."},
 	"bat": {"name": "Chauve-souris patinée", "kind": "FAUNE · VERT-DE-GRIS", "lore": "Poitrail plaqué de cuivre, ailes trouées. Elles chassent en nuées et piquent droit."},

@@ -17,7 +17,6 @@ const FLETCHING: Array[Vector2] = [Vector2(8, 16), Vector2(9, 15), Vector2(9, 16
 const FLETCH := Color("#fffaea")
 const FLETCH_INK := Color("#b8a684")
 const SHADOW := Color("#0b1615a0")
-const SEL := Color("#5ce8ff40")
 
 static var _meta: Dictionary
 ## Caisse portée (production_crate.png) et couleurs des objets transportés (matériaux, objets fabriqués).
@@ -52,6 +51,7 @@ const HIT_GAP := 0.6
 var _hit_t := -INF
 var _feel := UnitFeel.new()
 var _dt := 0.0
+var _warped := false
 var _kx := 1.0
 var _jolt := 0.0
 var _dip := 0.0
@@ -108,6 +108,19 @@ func _update() -> void:
 	if _revive:
 		_revive.tick()
 	position = Proj.nat(u.x, 0.0, u.z)
+	# Voyage par un portail (PortalNet) : mêmes étapes que UnitView (bulle, rétrécissement, disparition).
+	var wv := PortalNet.warp_view(u)
+	if not wv.is_empty():
+		var k := float(wv["k"])
+		scale = Vector2.ONE * (1.0 if k < 0.35 else maxf(0.08, 1.0 - (k - 0.35) / 0.25 * 0.92))
+		modulate = Color.WHITE.lerp(Color(0.78, 0.86, 1.0), clampf(k / 0.35, 0.0, 1.0))
+		if k >= 0.6:
+			visible = false
+		_warped = true
+	elif _warped:
+		scale = Vector2.ONE
+		modulate = Color.WHITE
+		_warped = false
 	if is_nan(_lx):
 		_lx = u.x
 		_lz = u.z
@@ -144,7 +157,7 @@ func _update() -> void:
 	_dip = 1.0 if _feel.turning(now) else 0.0
 	# Redessin seulement si l'image, l'orientation, la sélection, les PV, le niveau ou PX changent.
 	var mode := _mode()
-	var key := [mode, _frame_index(mode), _kx, _jolt, _flash, GameState.selected.has(u), u.hp, u.max_hp, Catalog.lvl(u),
+	var key := [mode, _frame_index(mode), _kx, _jolt, _flash, GameState.selected.has(u), UnitView.hovered == u, u.hp, u.max_hp, Catalog.lvl(u),
 		world.camera.px if world else 1, u.carrying.get("item", ""), visible, preload("res://sim/placeables.gd").posted(u), _load_key(u)]
 	if key != _key:
 		_key = key
@@ -165,10 +178,14 @@ func _work_target(u: Unit) -> float:
 
 func _draw() -> void:
 	var u := unit
+	# Sélection : halo cyan sous l'ombre (même dessin que UnitView), anneau vif par-dessus.
+	var sel := GameState.selected.has(u)
+	if sel:
+		UnitView._UnitDecal.halo(self, 0.56)
 	if not u.hidden:
 		_ellipse(0.7, SHADOW)
-	if GameState.selected.has(u):
-		_ellipse(1.45, SEL)
+	if sel:
+		draw_polyline(UnitView._UnitDecal._ellipse_points(0.56 * 1.75 * ZN * 0.9, 0.56 * 1.75 * ZN * 0.42, true), UnitView.SEL_LINE, 1.0, true)
 	var mode := _mode()
 	var F: Dictionary = _frames[mode]
 	var rects: Array[Rect2] = F["rects"]
@@ -195,7 +212,8 @@ func _draw() -> void:
 	var px := float(world.camera.px) if world else 1.0
 	var head := Proj.nat(u.x, 3.9, u.z) - position
 	draw_set_transform(head, 0.0, Vector2(1.0 / px, 1.0 / px))
-	if u.hp < u.max_hp:
+	# Barre de vie seulement sous le pointeur (InputController → UnitView.hovered).
+	if UnitView.hovered == u:
 		draw_rect(Rect2(-12, 0, 24, 3), Color("#000000aa"))
 		draw_rect(Rect2(-12, 0, 24.0 * u.hp / u.max_hp, 3), UnitView.HP_ALLY)
 	var lvl := Catalog.lvl(u)

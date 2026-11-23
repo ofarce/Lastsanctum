@@ -51,6 +51,7 @@ var _building_views := {}
 ## Défenses posées (GameState.placed) → PlacedView, et aperçu de pose sous le pointeur.
 var _placed_views := {}
 var _place_preview: PlacedView
+var _build_ghost: BuildingView.Ghost
 ## Coffres de production et silhouette « poste vide » de chaque bâtiment servi (ProductionView).
 var _production_views := {}
 var _enemy_views := {}
@@ -71,7 +72,6 @@ var spirit_arrival: SpiritArrivalFx
 ## Coffre antique de la réserve scellée (visible une fois la réserve découverte).
 var chest_view: ChestView
 ## Glyphe tyrien qui trahit la réserve scellée sur la paroi est de la salle.
-var vault_hint: VaultHint
 
 var _snap := ShaderMaterial.new()
 var _sprites_mat := ShaderMaterial.new()
@@ -154,6 +154,14 @@ func _ready() -> void:
 	gmarks.world = self
 	add_child(gmarks)
 	move_child(gmarks, ysort.get_index() + 1)
+	# Archiprêtre aux racines (sim/archipretre.gd) : nappe et places de prière sous les sprites, racines par-dessus.
+	for is_air: bool in [false, true]:
+		var am := ArchipretreMarks.new()
+		am.name = "ArchipretreMarksAir" if is_air else "ArchipretreMarksGround"
+		am.world = self
+		am.air = is_air
+		add_child(am)
+		move_child(am, ysort.get_index() + (1 if is_air else 0))
 	# Séquence d'ouverture (sim/opening.gd) : remparts et onde au sol sous les sprites ; portail, bouclier,
 	# canons et fumées par-dessus.
 	for is_air: bool in [false, true]:
@@ -255,6 +263,13 @@ func _ready() -> void:
 ## sol d'origine, décor d'origine, galeries régénérées, aucune case creusée.
 func reset_world(seed: int) -> void:
 	gallery_seed = seed
+	# Jungle d'abord (2026-11-22, chargement) : ses images (sol par zone, rivière, plusieurs secondes) se
+	# calculent sur des fils de travail pendant tout le reste ; _build_ambience les attend.
+	if terrain_state.groves:
+		var jungle := TerrainState.jungle(seed)
+		terrain_state.prebuilt = jungle
+		GroundZones.prepare(jungle["flora"])
+		RiverView.prepare(jungle["river"])
 	terrain.build()
 	for child in ysort.get_children():
 		child.free()
@@ -264,6 +279,7 @@ func reset_world(seed: int) -> void:
 	_building_views.clear()
 	_placed_views.clear()
 	_place_preview = null
+	_build_ghost = null
 	_production_views.clear()
 	_enemy_views.clear()
 	_turret_views.clear()
@@ -280,6 +296,10 @@ func reset_world(seed: int) -> void:
 		_attach_visuals(e)
 	terrain_state.reset_digging()
 	terrain_state.generate_galleries(seed)
+	# Images de la jungle (sol par zone, rivière) calculées en parallèle du reste ; _build_ambience les attend.
+	if terrain_state.flora:
+		GroundZones.prepare(terrain_state.flora)
+	RiverView.prepare(terrain_state.river)
 	_clear_river_decor()
 	_thin_trees()
 	_lay_roads()
@@ -324,13 +344,12 @@ func reset_world(seed: int) -> void:
 		cap.name = "Capsule" + part.capitalize()
 		cap.layer = part
 		ysort.add_child(cap)
-	vault_hint = VaultHint.new()
-	vault_hint.name = "VaultHint"
-	vault_hint.setup(terrain_state)
-	ysort.add_child(vault_hint)
 	terrain_ops = TerrainOps.new(terrain_state, decor, TerrainPainter.new(terrain, terrain_state))
 	terrain_ops.reshape_cave()
-	print("Graine des galeries : %d (%d réseaux)" % [seed, terrain_state.count])
+	# Galeries reliées (2026-11-22) : tout est ouvert dès le départ, le brouillard seul cache.
+	if terrain_state.groves:
+		terrain_ops.open_all_galleries()
+	print("Graine des galeries : %d (%d réseaux avant raccords, %d pylônes)" % [seed, terrain_state.count, terrain_state.portals.size()])
 	apply_view()
 
 
@@ -386,6 +405,10 @@ func _thin_trees() -> void:
 		return
 	decor.remove_in_rect(CaveShape.WORLD_X0, -100.0, CaveShape.WORLD_X1, CaveShape.WORLD_Z1,
 		func(e: Dictionary) -> bool: return String(e.get("s", "")).begins_with("tree_") and f.thin_tree(float(e["x"]), float(e["z"])))
+	# Bosquets de la jungle : rien de la flore ne pousse sur leurs 2 × 2 cases ni juste autour.
+	for origin: Vector2i in terrain_state.wood_left.keys() + terrain_state.lodes.keys():
+		if CaveShape.outdoors(origin.x * 4.0, origin.y * 4.0):
+			decor.remove_in_rect(origin.x * 4.0 - 2.0, origin.y * 4.0 - 2.0, origin.x * 4.0 + 10.0, origin.y * 4.0 + 10.0, func(_e: Dictionary) -> bool: return true)
 
 
 # ---------------------------------------------------------------- Décor généré (hors zone d'origine)
@@ -667,6 +690,11 @@ func _sync_units() -> void:
 
 ## Crée ou retire les nœuds des défenses posées (sim/placeables.gd) ; aperçu de pose en mode « place ».
 func _sync_placed() -> void:
+	if _build_ghost == null and GameState.hud_mode == "build":
+		_build_ghost = BuildingView.Ghost.new()
+		_build_ghost.name = "BuildGhost"
+		_build_ghost.world = self
+		ysort.add_child(_build_ghost)
 	if _place_preview == null and GameState.hud_mode == "place":
 		_place_preview = PlacedView.new()
 		_place_preview.name = "PlacePreview"
@@ -731,9 +759,15 @@ func _sync_enemies() -> void:
 		_enemy_meta = EnemyArt.all()
 	var live := {}
 	for e: Enemy in GameState.enemies + GameState.enemy_corpses:
-		if (e.hp <= 0.0 and not e.dead) or not (_enemy_meta.has(e.role) or e.kind == OeilMatrice.KIND or e.kind == Gorge.KIND):
+		if (e.hp <= 0.0 and not e.dead) or not (_enemy_meta.has(e.role) or e.kind == OeilMatrice.KIND or e.kind == Gorge.KIND or e.kind == Archipretre.KIND):
 			continue
 		live[e] = true
+		if not _enemy_views.has(e) and e.kind == Archipretre.KIND:
+			var av := ArchipretreView.new()
+			ysort.add_child(av)
+			av.setup(e, self)
+			_enemy_views[e] = av
+			continue
 		if not _enemy_views.has(e) and e.kind == Gorge.KIND:
 			var gv := GorgeView.new()
 			ysort.add_child(gv)
@@ -875,14 +909,10 @@ func _building_lights() -> Array[Dictionary]:
 	return out
 
 
-## Lueur cyan des glyphes du coffre antique, plus vive une fois le couvercle ouvert.
+## Lueur cyan des glyphes du coffre antique, plus vive une fois le couvercle ouvert ; aucune tant qu'il est éteint.
 func _vault_lights() -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
-	if not terrain_state.vault_open:
-		# Faible lueur du glyphe de la paroi, au rythme de son éclat.
-		var g := VaultHint.glow(3, GameState.sim_time)
-		out.append({"x": vault_hint.edge_x() + 0.75, "z": VaultHint.ROW_Z, "r": 2.5 + 1.5 * g, "rgb": Color8(92, 232, 255), "glow": 0.06 + 0.08 * g})
-	if terrain_state.vault_open:
+	if Capsule.chest_active():
 		var opened := GameState.sim_time >= GameState.chest_opened_at
 		out.append({"x": CaveShape.CHEST.x, "z": CaveShape.CHEST.y - 1.0, "r": 9.0 if opened else 5.5,
 			"rgb": Color8(92, 232, 255), "glow": 0.22 if opened else 0.12})

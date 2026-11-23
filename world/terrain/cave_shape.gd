@@ -4,7 +4,8 @@ class_name CaveShape
 
 const WORLD_X0 := -464.0
 const WORLD_X1 := 464.0
-const WORLD_Z0 := -744.0
+## Bord nord : Temple (330) + vert-de-gris (336) + six strates de 256 (2026-11-22, biomes 3 à 8).
+const WORLD_Z0 := -2280.0
 const WORLD_Z1 := 72.0
 ## Zone d'origine (carte du prototype, 464 × 408) : cœur du Temple, générée exactement comme le JS.
 ## Le reste de la carte (extension) est tiré avec une graine dérivée, hors de cette zone.
@@ -19,17 +20,17 @@ const CAVE_Z1 := -96.0
 const CAVE_GATE := 7.0
 ## Centre de l'Ancre (core).
 const CORE := Vector2(0.0, -154.0)
-## Réserve du coffre antique : petite pièce scellée à l'est de la salle, derrière la roche (x 56–64,
-## une case et demie) qu'il faut miner ; au nord de la rangée z −140 (tunnel de référence de test_dig).
-## Paroi ouest droite (x = 64, raccord exact avec la case creusée), angles est arrondis. Hors des
-## galeries (gallery_allowed exclut |x| < 76 près de la salle).
+## Ancienne réserve du coffre antique, à l'est de la salle : le coffre est passé à côté de la capsule le 2026-11-22
+## (planches/intro-capsule-planche.html) et la réserve ne s'ouvre plus (TerrainState.vault_open reste faux). Le volume
+## reste réservé : la génération des galeries, du décor et des filons l'évite toujours, la carte ne change pas.
 const VAULT_X0 := 64.0
 const VAULT_X1 := 76.0
 const VAULT_Z0 := -156.0
 const VAULT_Z1 := -144.0
-## Coffre : milieu de la face avant (au sol) ; l'Ingénieur se tient à sa droite pour l'ouvrir.
-const CHEST := Vector2(70.0, -149.0)
-const CHEST_SPOT := Vector2(74.0, -149.2)
+## Coffre antique : milieu de la face avant (au sol), contre la paroi nord à l'est de la capsule ; l'Ingénieur se
+## tient devant lui pour l'ouvrir.
+const CHEST := Vector2(7.0, -163.0)
+const CHEST_SPOT := Vector2(7.0, -161.2)
 
 
 ## Flanc de la montagne : z = EDGE_BASE + a1·sin(x·f1) + a2·sin(x·f2 + p2). EDGE_WAVES = (a1, f1, a2, f2),

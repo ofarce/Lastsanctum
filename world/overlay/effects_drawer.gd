@@ -1363,16 +1363,17 @@ func _enemy_shots(now: float) -> void:
 			"fire":
 				# Braise : traînée, anneau sombre, corps rouge, cœur blanc qui vacille.
 				var F := Rng.new(s["seed"])
+				var S: float = s.get("scale", 1.0)
 				for i in range(6, 2, -1):
-					dpx(q.x - d.x * i * 3.3 + (F.next() - 0.5) * 4.5, q.y - d.y * i * 3.3 + sin(now * 22.0 + i * 1.7) * 2.2,
+					dpx(q.x - d.x * i * 3.3 * S + (F.next() - 0.5) * 4.5 * S, q.y - d.y * i * 3.3 * S + sin(now * 22.0 + i * 1.7) * 2.2,
 						FIREBALL[0 if i > 4 else 1], 1.15 - i * 0.15)
 				# Grossie deux fois le 2026-11-20 : 13 px de large (5 puis 9 avant), queue de flamme de 9 px.
 				for i in range(6, 2, -1):
-					_disc(q.x - d.x * i * 1.5, q.y - d.y * i * 1.5, 3.9 - (i - 3) * 0.9, FIREBALL[1])
-				_disc(q.x, q.y, 6.3, FIREBALL[6])
-				_disc(q.x, q.y, 4.8, FIREBALL[2])
-				_disc(q.x + d.x * 1.5, q.y + d.y * 1.5, 3.0, FIREBALL[3])
-				_disc(q.x + d.x * 1.5, q.y + d.y * 1.5, 1.5, FIREBALL[4] if fmod(now * 16.0 + F.next(), 2.0) < 1.0 else FIREBALL[5])
+					_disc(q.x - d.x * i * 1.5 * S, q.y - d.y * i * 1.5 * S, (3.9 - (i - 3) * 0.9) * S, FIREBALL[1])
+				_disc(q.x, q.y, 6.3 * S, FIREBALL[6])
+				_disc(q.x, q.y, 4.8 * S, FIREBALL[2])
+				_disc(q.x + d.x * 1.5, q.y + d.y * 1.5, 3.0 * S, FIREBALL[3])
+				_disc(q.x + d.x * 1.5, q.y + d.y * 1.5, 1.5 * S, FIREBALL[4] if fmod(now * 16.0 + F.next(), 2.0) < 1.0 else FIREBALL[5])
 				ci.draw_rect(Rect2((g.x - 5.0) * px, g.y * px, 11.0 * px, px), SHOT_SHADOW)
 				ci.draw_rect(Rect2((g.x - 3.0) * px, (g.y + 1.0) * px, 7.0 * px, px), SHOT_SHADOW)
 			"ichor":
@@ -1904,7 +1905,8 @@ func _suspend(e: Dictionary, now: float) -> void:
 
 ## Sceau sensible (sim/mods.gd) : chaque case de filon à moins de 12 cases du porteur luit à travers la roche et le
 ## brouillard, d'un losange de sa couleur qui pulse ; le plus proche pulse plus fort.
-const SEAL_ORE := {"copper": Color("#e09450"), "iron": Color("#c8d0da"), "quartz": Color("#e6f0ff"), "gold": Color("#f0d050")}
+const SEAL_ORE := {"copper": Color("#e09450"), "iron": Color("#c8d0da"), "quartz": Color("#e6f0ff"), "gold": Color("#f0d050"),
+	"silver": Color("#eef2f8"), "tear": Color("#d8f0e6"), "amber": Color("#f0a84a"), "orichalcum": Color("#f0b898")}
 var _seal_cache: Array = []
 var _seal_at := -INF
 

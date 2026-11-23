@@ -36,7 +36,9 @@ func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	_world.stream = _load(WORLD)
 	_boss.stream = _load(BOSS)
+	GameOptions.ensure()
 	for p: AudioStreamPlayer in [_world, _boss]:
+		p.bus = GameOptions.MUSIC_BUS
 		add_child(p)
 		_gain[p] = 0.0
 

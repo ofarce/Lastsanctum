@@ -10,7 +10,8 @@ func _awake(sim: Simulation) -> Dictionary:
 	for q: Dictionary in st.portals:
 		if Vector2(q["x"], q["z"]).length() < Vector2(p["x"], p["z"]).length():
 			p = q
-	sim.world.terrain_ops.reveal_gallery(p["x"], p["z"])
+	# Galeries reliées (2026-11-22) : éveil à la vue, plus à la découverte de la galerie.
+	sim.world.terrain_ops.wake_pylon(p)
 	Pylons.tick(sim, DT)
 	return p
 
@@ -181,26 +182,58 @@ func test_engineer_blessing_delays_respawn() -> void:
 	check(Pylons.toggle_bless(sim), "E au contact du socle")
 	check_eq(eng.job["type"], "bless_pylon", "il bénit")
 	check_eq(Pylons.bless_spot(sim.state(), p, eng.job), Vector2(eng.x, eng.z), "sur place")
-	for i in roundi(10.0 / DT):
+	# 8 s seulement : à 10 s d'affilée, la prière canaliserait le pylône (test suivant).
+	for i in roundi(8.0 / DT):
 		sim.update_adepts(DT)
 		GameState.sim_time += DT
 		Pylons.tick(sim, DT)
-	check_near(p["blessing"], 10.0, 0.05, "10 s de prière : 10 s de répit")
+	check_near(p["blessing"], 8.0, 0.05, "8 s de prière : 8 s de répit")
+	check(not p["channeled"], "pas encore canalisé")
 	var rem := float(Pylons.timer(p)["rem"])
-	check_near(rem, Pylons.RESPAWN - 10.0, 0.1, "le minuteur court pendant la prière")
+	check_near(rem, Pylons.RESPAWN - 8.0, 0.1, "le minuteur court pendant la prière")
 	# Il s'arrête (E de nouveau) : le répit s'écoule, le minuteur est gelé.
 	check(Pylons.toggle_bless(sim), "E arrête la bénédiction")
 	check(eng.job == null, "plus de prière")
 	sim.update_adepts(DT)
 	_advance(sim, 5.0)
-	check_near(p["blessing"], 5.0, 0.05, "le répit s'écoule")
+	check_near(p["blessing"], 3.0, 0.05, "le répit s'écoule")
 	check_near(float(Pylons.timer(p)["rem"]), rem, 0.05, "renaissance gelée pendant le répit")
-	# Sans bénédiction la bête serait revenue à 60 s ; elle revient 10 s plus tard.
-	_advance(sim, rem + 5.0 - 0.5)
+	# Sans bénédiction la bête serait revenue à 60 s ; elle revient 8 s plus tard.
+	_advance(sim, rem + 3.0 - 0.5)
 	check_eq(_guards(p).size(), n, "pas encore revenue")
 	_advance(sim, 1.0)
-	check_eq(_guards(p).size(), n + 1, "revenue avec 10 s de retard")
+	check_eq(_guards(p).size(), n + 1, "revenue avec 8 s de retard")
 	check_eq(p["blessing"], 0.0, "répit épuisé")
+
+
+func test_engineer_prayer_seals_channel() -> void:
+	var sim := game()
+	var p := _awake(sim)
+	var eng := engineer()
+	GameState.incarnated = eng
+	eng.x = float(p["x"])
+	eng.z = float(p["z"]) + 4.6
+	eng.hp = eng.max_hp
+	check(Pylons.toggle_bless(sim), "E au contact du socle")
+	# Prière coupée à 6 s : le compte repart de zéro.
+	for i in roundi(6.0 / DT):
+		sim.update_adepts(DT)
+		GameState.sim_time += DT
+		Pylons.tick(sim, DT)
+	check(Pylons.toggle_bless(sim), "E arrête")
+	sim.update_adepts(DT)
+	_advance(sim, DT)
+	check_eq(p["bless_run"], 0.0, "prière interrompue : compte remis à zéro")
+	check(Pylons.toggle_bless(sim), "E reprend")
+	for i in roundi((Pylons.BLESS_CHANNEL + 0.1) / DT):
+		sim.update_adepts(DT)
+		GameState.sim_time += DT
+		Pylons.tick(sim, DT)
+	check(p["channeled"], "10 s d'affilée : canalisé")
+	check(eng.job == null, "la prière cesse d'elle-même")
+	_advance(sim, 30.0)
+	check(p["channeled"], "reste canalisé sans prière ni esprits")
+	check(PortalNet.linked(p), "sert de portail")
 
 
 func test_spirits_channel_within_three_cells() -> void:

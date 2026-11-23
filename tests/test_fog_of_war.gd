@@ -1,7 +1,43 @@
 extends "res://tests/econ_case.gd"
+## Le Temple (biome 1) n'a plus de brouillard depuis le 2026-11-22 (FogOfWar.clear_row) ; il reste au nord. Ces
+## cas se jouent dans la grotte de départ : la zone claire y est repoussée hors carte le temps du test.
+
+const Fog := preload("res://world/terrain/fog_of_war.gd")
+
+
+func _fogged(body: Callable) -> void:
+	var keep: int = Fog.clear_row
+	Fog.clear_row = Fog.SIZE.y
+	body.call()
+	Fog.clear_row = keep
 
 
 func test_bands_sources_road_and_reset() -> void:
+	_fogged(_case_test_bands_sources_road_and_reset)
+
+
+func test_wall_hides_enemy_until_dug() -> void:
+	_fogged(_case_test_wall_hides_enemy_until_dug)
+
+
+func test_wall_penumbra_and_scout() -> void:
+	_fogged(_case_test_wall_penumbra_and_scout)
+
+
+func test_active_portals_and_moving_spark() -> void:
+	_fogged(_case_test_active_portals_and_moving_spark)
+
+
+func test_explored_ground_outside_current_vision() -> void:
+	_fogged(_case_test_explored_ground_outside_current_vision)
+
+
+func test_archer_detection_zone_clears_fog() -> void:
+	_fogged(_case_test_archer_detection_zone_clears_fog)
+
+
+
+func _case_test_bands_sources_road_and_reset() -> void:
 	var sim := game()
 	var fog = sim.world.fog
 	var u := engineer()
@@ -32,14 +68,10 @@ func test_bands_sources_road_and_reset() -> void:
 	sim.new_game(SEED)
 	check(not fog.visible_at(Vector2(120, 20)), "nouvelle partie")
 	check(fog.visible_at(CaveShape.CORE), "Ancre éteinte")
-	check(not fog.visible_at(CaveShape.CHEST), "réserve scellée")
-	sim.state().vault_open = true
-	sim.state().version += 1
-	fog.refresh(sim.state())
-	check(fog.visible_at(CaveShape.CHEST), "coffre découvert")
+	check(fog.visible_at(CaveShape.CHEST), "coffre antique visible dès le départ, à côté de la capsule")
 
 
-func test_wall_hides_enemy_until_dug() -> void:
+func _case_test_wall_hides_enemy_until_dug() -> void:
 	var sim := game()
 	var fog = sim.world.fog
 	var st := sim.state()
@@ -75,7 +107,7 @@ func test_wall_hides_enemy_until_dug() -> void:
 	check(marker.r > 0.5 and marker.r > marker.g * 1.8, "ennemi révélé sur la minicarte")
 
 
-func test_wall_penumbra_and_scout() -> void:
+func _case_test_wall_penumbra_and_scout() -> void:
 	var sim := game()
 	var st := sim.state()
 	var origin := Vector2(-120, -280)
@@ -100,7 +132,7 @@ func test_wall_penumbra_and_scout() -> void:
 	check_eq(fog.image.get_pixelv(Vector2i(scout.pos()) - fog.ORIGIN).a8, 0, "toujours vue par l’Ingénieur à la mort de l’éclaireur")
 
 
-func test_active_portals_and_moving_spark() -> void:
+func _case_test_active_portals_and_moving_spark() -> void:
 	var sim := game()
 	var st := sim.state()
 	var fog = sim.world.fog
@@ -127,7 +159,7 @@ func test_active_portals_and_moving_spark() -> void:
 
 
 
-func test_explored_ground_outside_current_vision() -> void:
+func _case_test_explored_ground_outside_current_vision() -> void:
 	var sim := game()
 	var fog = sim.world.fog
 	var u := engineer()
@@ -153,7 +185,7 @@ func test_explored_ground_outside_current_vision() -> void:
 	check_eq(fog.image.get_pixelv(Vector2i(135, -200) - fog.ORIGIN).a8, 255, "montagne inexplorée en nouvelle partie")
 
 
-func test_archer_detection_zone_clears_fog() -> void:
+func _case_test_archer_detection_zone_clears_fog() -> void:
 	var sim := game()
 	var fog = sim.world.fog
 	engineer().hidden = true

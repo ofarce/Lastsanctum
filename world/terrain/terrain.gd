@@ -46,8 +46,8 @@ var _rock_c: Array[Color] = []
 ## Dessus de roche par palier (Biomes.rock_tier) : ardoise du Temple, roche de vert-de-gris.
 var _rocks: Array[Image] = []
 var _rock_texs: Array[Texture2D] = []
-## Rangée de pixels du sol où la roche change : au-dessus (py plus petit), le palier 1.
-var _front := -(1 << 30)
+## Frontières des paliers de roche, du sud au nord : (rangée de pixels du sol, palier au nord de la rangée).
+var _fronts: Array[Vector2i] = []
 var materialized := 0
 
 
@@ -58,10 +58,19 @@ func build() -> void:
 	_rock_tex = load(ArtStyle.TILES + "rock.png")
 	_grass_tex = load(ArtStyle.TILES + "grass.png")
 	_rock = _rgba(_rock_tex)
-	_rock_texs = [_rock_tex, load(ArtStyle.TILES + "rock2.png")]
-	_rocks = [_rock, _rgba(_rock_texs[1])]
-	var north := Biomes.north_z(0)
-	_front = origin.y + roundi(north * 8.0) if north != -INF and Biomes.rock_tier(north - 2.0) == 1 else -(1 << 30)
+	_rock_texs = [_rock_tex]
+	_rocks = [_rock]
+	for t in range(1, Biomes.ROCKS.size()):
+		_rock_texs.append(load(ArtStyle.TILES + "rock%s.png" % Biomes.tile_suffix(t)))
+		_rocks.append(_rgba(_rock_texs[t]))
+	_fronts.clear()
+	for k in Biomes.LIST.size():
+		var north := Biomes.north_z(k)
+		if north == -INF:
+			break
+		var t := Biomes.rock_tier(north - 2.0)
+		if t != Biomes.rock_tier(north + 2.0):
+			_fronts.append(Vector2i(origin.y + roundi(north * 8.0), t))
 	_grass = _rgba(_grass_tex)
 	_rock_c.clear()
 	var palette: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(ArtStyle.PALETTE))
@@ -129,7 +138,26 @@ func _block_kind(key: Vector2i) -> String:
 
 ## Palier de la roche à la rangée de pixels `py` du sol (la frontière suit les cases, pas les blocs).
 func rock_tier_px(py: int) -> int:
-	return 1 if py < _front else 0
+	var t := 0
+	for f in _fronts:
+		if py >= f.x:
+			break
+		t = f.y
+	return t
+
+
+## Tranches [début, fin, palier] des rangées de pixels [y0, y1), coupées aux frontières des paliers.
+func _tier_runs(y0: int, y1: int) -> Array:
+	var out := []
+	var y := y0
+	while y < y1:
+		var e := y1
+		for f in _fronts:
+			if f.x > y and f.x < e:
+				e = f.x
+		out.append([y, e, rock_tier_px(y)])
+		y = e
+	return out
 
 
 func rock_texture(tier: int) -> Texture2D:
@@ -138,11 +166,8 @@ func rock_texture(tier: int) -> Texture2D:
 
 ## Dessus de roche sur `local` (pixels de l'image posée en `at`), chaque palier de son côté de la frontière.
 func _tile_rock(image: Image, at: Vector2i, local: Rect2i) -> void:
-	var cut := clampi(_front - at.y, local.position.y, local.end.y)
-	if cut > local.position.y:
-		_tile(image, _rocks[1], ArtStyle.PERIOD, at, Rect2i(local.position.x, local.position.y, local.size.x, cut - local.position.y))
-	if cut < local.end.y:
-		_tile(image, _rocks[0], ArtStyle.PERIOD, at, Rect2i(local.position.x, cut, local.size.x, local.end.y - cut))
+	for run: Array in _tier_runs(at.y + local.position.y, at.y + local.end.y):
+		_tile(image, _rocks[run[2]], ArtStyle.PERIOD, at, Rect2i(local.position.x, run[0] - at.y, local.size.x, run[1] - run[0]))
 
 
 func _add_block(key: Vector2i, image: Image) -> void:
@@ -158,15 +183,17 @@ func _add_block(key: Vector2i, image: Image) -> void:
 
 
 func _add_plain(key: Vector2i, kind: String) -> void:
-	# Un bloc de roche à cheval sur la frontière des paliers : deux bandes, la seconde enfant de la première.
-	var cut := clampi(_front - key.y * chunk, 0, chunk) if kind == "rock" else 0
-	var s := _plain_band(key, kind, 0 if cut == 0 else 1, 0, chunk if cut == 0 else cut)
+	# Un bloc de roche à cheval sur une frontière des paliers : une bande par palier, enfants de la première.
+	var runs: Array = _tier_runs(key.y * chunk, (key.y + 1) * chunk) if kind == "rock" else [[key.y * chunk, (key.y + 1) * chunk, 0]]
+	var y0: int = runs[0][0] - key.y * chunk
+	var s := _plain_band(key, kind, runs[0][2], y0, runs[0][1] - runs[0][0])
 	s.name = "Plain_r%d_c%d" % [key.y, key.x]
 	add_child(s)
-	if cut > 0 and cut < chunk:
-		var low := _plain_band(key, kind, 0, cut, chunk - cut)
-		low.position = Vector2(0, cut)
-		s.add_child(low)
+	for n in range(1, runs.size()):
+		var y: int = runs[n][0] - key.y * chunk
+		var band := _plain_band(key, kind, runs[n][2], y, runs[n][1] - runs[n][0])
+		band.position = Vector2(0, y)
+		s.add_child(band)
 	_plain[key] = kind
 	_plain_sprites[key] = s
 

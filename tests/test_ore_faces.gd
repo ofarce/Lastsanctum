@@ -77,5 +77,7 @@ func test_plain_rock_flank_has_no_ore() -> void:
 func test_ore_atlas_layout() -> void:
 	var top: Texture2D = load("res://assets/ardoise/world/nodules.png")
 	var faces: Texture2D = load("res://assets/ardoise/world/ore_faces.png")
-	check_eq(top.get_size(), Vector2(128, 96), "dessus : 4 minerais × filon, gisement, icône")
-	check_eq(faces.get_size(), Vector2(128, 98), "flancs : 4 minerais × filon, gisement")
+	# Une colonne de 32 px par minerai (MineableBlocks.ORES, 8 depuis les biomes 3 à 8).
+	var w := 32.0 * (preload("res://data/mineable_blocks.gd").ORES as Array).size()
+	check_eq(top.get_size(), Vector2(w, 96), "dessus : minerais × filon, gisement, icône")
+	check_eq(faces.get_size(), Vector2(w, 98), "flancs : minerais × filon, gisement")

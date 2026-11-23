@@ -22,6 +22,9 @@ func test_buildings_match_js() -> void:
 		var b: Dictionary = js[k]
 		for f in ["name", "key", "icon", "lore", "art"]:
 			# Puits des Âmes : texte réécrit avec son soin de zone (écart voulu avec le prototype).
+			# Forge devenue Fonderie (lingots seuls, 2026-11-20) : nom et texte réécrits.
+			if k == "forge" and (f == "name" or f == "lore"):
+				continue
 			if k == "soulwell" and f == "lore":
 				check(String(a[f]).begins_with("Soigne les unités proches"), "soulwell.lore : soin de zone décrit")
 				continue

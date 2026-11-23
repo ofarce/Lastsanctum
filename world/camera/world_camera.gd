@@ -55,8 +55,14 @@ func reset() -> void:
 	view_changed.emit()
 
 
+## Ingénieur dans la capsule, hors cinématique : la caméra ne se déplace plus (touches, glisser, minicarte, sauts
+## d'alerte…), elle reste sur Capsule.VIEW ; le zoom reste libre. Les cinématiques gardent la main sur le cadrage.
+static func capsule_lock() -> bool:
+	return GameState.in_capsule and not Opening.cinematic()
+
+
 func set_view(new_cam: Vector2, new_px: int) -> void:
-	cam = clamp_cam(new_cam)
+	cam = clamp_cam(Capsule.VIEW if capsule_lock() else new_cam)
 	px = clampi(new_px, PX_MIN, PX_MAX)
 	view_changed.emit()
 
@@ -82,6 +88,12 @@ func consume_drag() -> bool:
 
 
 func _process(delta: float) -> void:
+	if capsule_lock():
+		_pan_on = false
+		if cam != clamp_cam(Capsule.VIEW):
+			cam = clamp_cam(Capsule.VIEW)
+			view_changed.emit()
+		return
 	if not input_enabled:
 		return
 	# Ctrl maintenu ou raccourci avec Ctrl en cours (Ctrl+A : tout sélectionner, D2) : pas de défilement.
@@ -122,14 +134,14 @@ func _unhandled_input(event: InputEvent) -> void:
 		set_view(cam, px + 1)
 	elif event.is_action_pressed("zoom_out"):
 		set_view(cam, px - 1)
-	elif event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_RIGHT and GameState.incarnated == null:
+	elif event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_RIGHT and GameState.incarnated == null and not capsule_lock():
 		if event.pressed:
 			_pan_on = true
 			_pan_moved = false
 			_pan_last = event.position
 		else:
 			_pan_on = false
-	elif event is InputEventMouseMotion and _pan_on and (event.button_mask & MOUSE_BUTTON_MASK_RIGHT):
+	elif event is InputEventMouseMotion and _pan_on and (event.button_mask & MOUSE_BUTTON_MASK_RIGHT) and not capsule_lock():
 		if not _pan_moved and event.position.distance_to(_pan_last) < DRAG_THRESHOLD:
 			return
 		_pan_moved = true

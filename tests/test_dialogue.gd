@@ -185,8 +185,9 @@ func test_new_game_closes_dialogue() -> void:
 func test_banners_and_notice_match_js() -> void:
 	var js := _js()
 	var hud: Hud = _game().get_node("Hud")
+	# Bannière de victoire masquée (tri des répliques du 2026-11-20).
 	hud.show_banner(true)
-	check_eq("%s<br><small>%s</small>" % [hud._banner_title.text, hud._banner_small.text], js["banner_won"], "victoire")
+	check(not hud._banner.visible, "pas de bannière de victoire")
 	GameState.core_hp = 0.0
 	hud.show_banner(false)
 	check_eq("%s<br><small>%s</small>" % [hud._banner_title.text, hud._banner_small.text], js["banner_core"], "Ancre perdue")

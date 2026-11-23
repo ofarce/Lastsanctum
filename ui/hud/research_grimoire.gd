@@ -37,10 +37,19 @@ func toggle() -> void:
 	queue_redraw()
 
 
+## Recherches montrées : celles dont l'âge de métal est ouvert (sim/ages.gd), dans l'ordre du catalogue.
+static func shown() -> Array[String]:
+	var out: Array[String] = []
+	for id: String in Catalog.RESEARCH:
+		if Ages.research_open(id):
+			out.append(id)
+	return out
+
+
 ## Types de bâtiment à recherches, dans l'ordre du catalogue.
 static func building_types() -> Array[String]:
 	var out: Array[String] = []
-	for id: String in Catalog.RESEARCH:
+	for id: String in shown():
 		var t: String = Catalog.RESEARCH[id]["building"]
 		if not out.has(t):
 			out.append(t)
@@ -67,7 +76,7 @@ func _window() -> Rect2:
 	var types := building_types()
 	var rows := 0
 	for t in types:
-		rows = maxi(rows, Catalog.RESEARCH.keys().filter(func(id: String) -> bool: return Catalog.RESEARCH[id]["building"] == t).size())
+		rows = maxi(rows, shown().filter(func(id: String) -> bool: return Catalog.RESEARCH[id]["building"] == t).size())
 	var w := minf(MAX_W, s.x - 48.0)
 	var h := HEAD_H + COL_HEAD + rows * (NODE_H + GAP) + 12.0 + CARD_H + 30.0 + PAD
 	return Rect2(floorf((s.x - w) / 2.0), floorf(maxf(24.0, (s.y - h) / 2.0 - 40.0)), w, h)
@@ -115,7 +124,7 @@ func _draw() -> void:
 	var y := win.position.y + 14.0
 	draw_string(f, Vector2(x0, y + 22.0), "Grimoire des recherches", HORIZONTAL_ALIGNMENT_LEFT, -1, 22, HudStyle.GOLD_LIGHT)
 	var done := GameState.research_done.size()
-	var info := "%d achevée%s sur %d · %s ou Échap pour fermer" % [done, "s" if done > 1 else "", Catalog.RESEARCH.size(), KEY]
+	var info := "%d achevée%s sur %d · %s ou Échap pour fermer" % [done, "s" if done > 1 else "", shown().size(), KEY]
 	draw_string(f, Vector2(win.end.x - PAD - HudStyle.text_width(info, 13), y + 20.0), info, HORIZONTAL_ALIGNMENT_LEFT, -1, 13, HudStyle.MUTED)
 	y = win.position.y + HEAD_H
 	draw_rect(Rect2(x0, y - 6.0, win.size.x - PAD * 2.0, 1.0), Color("#1b4652"))
@@ -131,7 +140,7 @@ func _draw() -> void:
 		var hc := HudStyle.GOLD_LIGHT if here != null and here.type == t else (HudStyle.MUTED if built else Color("#6a6a5c"))
 		draw_string(f, Vector2(cx, y + 12.0), title, HORIZONTAL_ALIGNMENT_LEFT, cw, 11, hc)
 		var ny := y + COL_HEAD
-		for id: String in Catalog.RESEARCH:
+		for id: String in shown():
 			if Catalog.RESEARCH[id]["building"] != t:
 				continue
 			var r := Rect2(cx, ny, cw, NODE_H)

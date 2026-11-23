@@ -1,0 +1,301 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8">
+<title>Intro · la capsule</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Cormorant+SC:wght@500;700&display=swap">
+<style>
+/* Planche de déroulé : fonds = vraies captures du jeu (tests/visual/intro_capsule_capture.tscn, graine du jour,
+   coffre antique déplacé à x 7, z −163 pour la capture). Les surcouches (jauge, invites, bannière) sont des maquettes CSS. */
+:root{--bg:#14161c;--panel:#1d2129;--line:#2f3540;--fg:#d9dde4;--mute:#8b93a1;--cyan:#5fe3e8;--pink:#f4bfd6;
+ --gold:#e8c060;--violet:#b48cff;--disp:"Cormorant SC",Georgia,serif;--mono:"Share Tech Mono",ui-monospace,monospace;color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font:14px/1.5 system-ui,sans-serif;margin:0;
+ padding:24px max(16px,env(safe-area-inset-right,0px)) 60px max(16px,env(safe-area-inset-left,0px))}
+h1{font-family:var(--disp);font-size:2.2rem;margin:0;letter-spacing:.04em}
+.lead{color:var(--mute);max-width:84ch;margin:.3rem 0 1.6rem}
+section{margin:0 0 44px}
+h2{font-family:var(--disp);font-size:1.5rem;margin:0 0 2px}
+h2 small{font-family:var(--mono);font-size:11px;color:var(--mute);margin-left:8px}
+.ctx{color:var(--mute);margin:0 0 12px;max-width:88ch}
+.row{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,380px),1fr));gap:14px}
+figure{margin:0;background:var(--panel);border:1px solid var(--line);padding:8px;min-width:0}
+.shot{position:relative;aspect-ratio:16/10;overflow:hidden;background:#000}
+.shot img,.shot canvas{width:100%;height:100%;display:block;image-rendering:pixelated}
+canvas.crop{width:100%;aspect-ratio:32/22;display:block;image-rendering:pixelated;background:#000}
+figcaption{padding:8px 2px 2px}
+figcaption b{font-family:var(--mono);color:var(--cyan);font-weight:400;margin-right:6px}
+figcaption p{margin:4px 0 0;color:var(--mute);font-size:13px}
+.t{font-family:var(--mono);font-size:11px;color:var(--gold);float:right}
+/* Surcouches (positions en % de la capture 960 × 600) */
+.ov{position:absolute;transform:translate(-50%,-100%);pointer-events:none}
+.gauge{width:22%;font-family:var(--mono);font-size:clamp(8px,1.4vw,11px);color:#e6d8ff;text-align:center;text-shadow:0 1px 0 #000}
+.gauge .bar{height:7px;background:#1a1426;border:1px solid #6b4fa8;margin-top:2px}
+.gauge .bar i{display:block;height:100%;background:linear-gradient(90deg,#7a4fe0,#d3a8ff)}
+.prompt{background:linear-gradient(#3a4fb8,#26338a);border:2px solid #dfe6ff;color:#fff;font-family:var(--mono);
+ font-size:clamp(8px,1.4vw,12px);padding:1px 7px;white-space:nowrap;box-shadow:0 2px 0 #0008}
+.banner{left:50%;top:6%;transform:translateX(-50%);width:82%;background:linear-gradient(#5866c8,#2b3690);
+ border:2px solid #e6ebff;color:#fff;padding:6px 10px 8px;box-shadow:0 3px 0 #0009}
+.banner h4{margin:0 0 4px;text-align:center;font:600 clamp(10px,1.7vw,15px)/1.2 Georgia,serif;letter-spacing:.03em}
+.banner ul{margin:0;padding:0;list-style:none;display:grid;grid-template-columns:1fr 1fr;gap:2px 10px;font-size:clamp(8px,1.3vw,12px)}
+.banner li::before{content:"";display:inline-block;width:.8em;height:.8em;margin-right:5px;vertical-align:-1px;border:1px solid #fff8;background:var(--c)}
+.bars::before,.bars::after{content:"";position:absolute;left:0;right:0;height:10%;background:#000}
+.bars::before{top:0}.bars::after{bottom:0}
+.tag{position:absolute;font-family:var(--mono);font-size:clamp(8px,1.3vw,11px);color:#000;background:var(--gold);padding:0 5px;transform:translate(-50%,-50%)}
+.ring{position:absolute;border:2px dashed var(--gold);border-radius:6px;transform:translate(-50%,-50%)}
+/* Tableaux et choix */
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{border-bottom:1px solid var(--line);padding:6px 8px;text-align:left;vertical-align:top}
+th{font-family:var(--mono);font-weight:400;color:var(--mute);font-size:11px;text-transform:uppercase;letter-spacing:.05em}
+td.n{font-family:var(--mono);color:var(--cyan);white-space:nowrap}
+.card{background:var(--panel);border:1px solid var(--line);padding:12px 14px}
+.card h3{font-family:var(--disp);font-size:1.15rem;margin:0 0 6px}
+.q{display:grid;gap:12px}
+.q .card h3 b{font-family:var(--mono);font-weight:400;color:var(--cyan);margin-right:6px;font-size:13px}
+.opt{display:grid;grid-template-columns:2.2em 1fr;gap:2px 6px;margin:6px 0;padding:6px 8px;border:1px solid var(--line);background:#181b22}
+.opt>span{font-family:var(--mono);color:var(--mute)}
+.opt.rec{border-color:#3d7f84;background:#16242a}
+.opt.rec>span{color:var(--cyan)}
+.opt p{margin:0}.opt small{color:var(--mute);grid-column:2}
+.rec-tag{font-family:var(--mono);font-size:10px;color:#000;background:var(--cyan);padding:0 4px;margin-left:6px;vertical-align:1px}
+.chain{display:flex;flex-wrap:wrap;align-items:center;gap:8px;font-family:var(--mono);font-size:13px;margin:6px 0 12px}
+.chain span{background:#181b22;border:1px solid var(--line);padding:3px 8px}
+.chain em{font-style:normal;color:var(--mute)}
+ul.dense{margin:6px 0;padding-left:1.2em}ul.dense li{margin:2px 0}
+code{font-family:var(--mono);font-size:12px;color:#c8d4e0;background:#0e1014;padding:0 4px}
+.del{color:#e88;text-decoration:line-through;text-decoration-color:#e886}
+</style></head><body>
+<h1>Nouvelle intro · la capsule</h1>
+<p class="lead"><b style="color:var(--cyan)">Validée le 2026-11-22 : choix recommandés (A1 B1 D1 E1 F1 G1 H1), C décidé (barres de PV). Touche de l’Établi : W au lieu de X, qui ouvre le grimoire des recherches.</b> L’Ingénieur ne tombe plus du portail : il se réveille dans sa capsule éteinte. L’Ancre s’allume et se recharge seule, puis alimente la capsule. Une fois sorti, il ouvre le Coffre Antique posé juste à côté et y trouve son équipement de départ et un premier plan de mod, « Analyse ». Les fonds sont de vraies captures du jeu. Les jauges, les invites et la bannière sont des maquettes. Les choix ouverts sont en bas, avec ma recommandation.</p>
+
+<section>
+<h2>1 · Déroulé <small>jour 1, dès « Nouvelle partie »</small></h2>
+<p class="ctx">Les étapes 1 à 3 forment une seule cinématique (barres noires, HUD masqué, commandes coupées), d’environ 12 s. La partie jouable commence à l’étape 4.</p>
+<div class="row">
+ <figure><div class="shot bars"><canvas class="scene" data-bg="1_sans_coffre" data-mode="off" width="960" height="600"></canvas>
+   <div class="ov prompt" style="left:50%;top:40%;transform:translate(-50%,0);background:#0009;border-color:#fff4">Jour 1</div></div>
+  <figcaption><span class="t">0 → 1,5 s</span><b>1</b>Capsule éteinte, Coffre désactivé
+   <p>L’Ingénieur est dans la capsule, invisible (<code>in_capsule</code>). La capsule est noire, sans invite. L’Ancre est éteinte. Le Coffre Antique est désactivé : ses glyphes sont éteints (rendu V1, section 2). Le carton « Jour 1 » apparaît puis s’efface.</p></figcaption></figure>
+
+ <figure><div class="shot"><canvas class="scene" data-bg="1b_sans_coffre" data-mode="wake" width="960" height="600"></canvas>
+   <div class="ov gauge" style="left:45%;top:43%">ANCRE · 45 %<div class="bar"><i style="width:45%"></i></div></div></div>
+  <figcaption><span class="t">1,5 → 9 s</span><b>2</b>L’Ancre s’allume : le Coffre se réactive
+   <p>Étincelle violette sur le puits. Au même instant, le Coffre se réactive : l’œil se rallume, puis les glyphes de la face avant de gauche à droite (1,2 s). La jauge de l’Ancre se remplit ensuite de 0 à 100 % en 7,5 s, sans action du joueur. Ce réveil remplace « E : Réactiver l’Ancre » et l’agenouillement.</p></figcaption></figure>
+
+ <figure><div class="shot bars"><img src="assets/intro-capsule/2_trait.png" alt="Trait d’énergie vers la capsule"></div>
+  <figcaption><span class="t">9 → 11,2 s</span><b>3</b>Jauge pleine : le trait part vers la capsule
+   <p>Le trait d’énergie existant (<code>link</code>, 2,2 s) court au sol de l’Ancre à la capsule. À son arrivée, la capsule s’allume (bruitage « capsule ») et la silhouette de l’Ingénieur apparaît dans le faisceau.</p></figcaption></figure>
+
+ <figure><div class="shot"><img src="assets/intro-capsule/3_allumee.png" alt="Capsule allumée, invite Sortir">
+   <div class="ov prompt" style="left:45%;top:3.5%;transform:translate(-50%,0)">E : Sortir</div></div>
+  <figcaption><span class="t">jouable</span><b>4</b>Capsule allumée : « E : Sortir »
+   <p>Les barres s’effacent et le HUD revient. La quête affichée est « Sortir de la capsule ». L’invite <b style="color:var(--fg);font-family:var(--mono)">E : Sortir</b> reste affichée jusqu’à l’appui sur E.</p></figcaption></figure>
+
+ <figure><div class="shot"><img src="assets/intro-capsule/4_sortie.png" alt="L’Ingénieur sort, le coffre est à côté">
+   <div class="ov prompt" style="left:68%;top:14%">E : Ouvrir le Coffre Antique</div></div>
+  <figcaption><span class="t">jouable</span><b>5</b>Sortie : le Coffre est déjà là
+   <p>L’Ingénieur sort torse nu et incarné, sans arme. Le Coffre Antique est visible dès le départ, à deux pas à l’est de la capsule. À portée, l’invite apparaît ; le clic droit marche aussi, comme aujourd’hui.</p></figcaption></figure>
+
+ <figure><div class="shot"><img src="assets/intro-capsule/6_ouvert.png" alt="Coffre ouvert, bannière d’objets">
+   <div class="ov banner"><h4>Reçu : le Coffre Antique</h4><ul>
+    <li style="--c:#b8c0c8">Arbalestrie <i style="opacity:.7">· équipée</i></li>
+    <li style="--c:#8fb3c9">Combinaison <i style="opacity:.7">· équipée</i></li>
+    <li style="--c:#5fe3e8">Sceau de minage</li>
+    <li style="--c:#b48cff">Plan de mod « Analyse »</li></ul></div></div>
+  <figcaption><span class="t">jouable</span><b>6</b>Ouverture : équipement et plan
+   <p>Le couvercle joue son animation, puis la bannière 16 bits liste les quatre objets reçus. L’Arbalestrie et la Combinaison s’équipent seules (comme le cadeau actuel de la capsule) et le Sceau de minage est actif. Le Plan « Analyse » s’ajoute aux plans connus. Le Coffre devient la réserve de la base (réseau des coffres).</p></figcaption></figure>
+</div>
+</section>
+
+<section>
+<h2>2 · Le Coffre désactivé <small>tant que l’Ancre est éteinte</small></h2>
+<p class="ctx">Ce sont les images du jeu (<code>chest_ardoise.png</code>, rangée « fermé ») dont on a remplacé les couleurs, posées dans la capture à px 3 avec l’éclairage de la salle. Le corps d’ardoise ne change pas : seuls les glyphes cyan s’éteignent. Le Coffre suit <code>orb_active</code>. Il est désactivé tant que l’Ancre est éteinte, il ne s’ouvre pas, et il n’affiche ni halo ni invite.</p>
+<div class="row">
+ <figure><canvas class="crop" data-bg="1_sans_coffre" data-mode="off" width="320" height="220"></canvas>
+  <figcaption><b>V1</b>Éteint <span class="rec-tag">recommandé</span>
+   <p>Les glyphes deviennent des rainures d’ardoise sombre, sans animation. Le coffre reste lisible comme objet, mais il est mort. Le rallumage n’en ressort que mieux.</p></figcaption></figure>
+ <figure><canvas class="crop" data-bg="1_sans_coffre" data-mode="idle" width="320" height="220"></canvas>
+  <figcaption><b>V2</b>En veille
+   <p>Comme V1, mais l’œil du couvercle garde une lueur sarcelle très faible qui respire toutes les 2 s. Elle signale que le coffre attend de l’énergie.</p></figcaption></figure>
+ <figure><canvas class="crop" data-bg="1_sans_coffre" data-mode="dull" width="320" height="220"></canvas>
+  <figcaption><b>V3</b>Éteint et terni
+   <p>Comme V1, avec en plus une ardoise désaturée et assombrie de 20 %, et des rainures noires. C’est le plus contrasté avec l’état actif, mais il se confond davantage avec le sol.</p></figcaption></figure>
+ <figure><canvas class="crop" data-bg="1b_sans_coffre" data-mode="wake" width="320" height="220"></canvas>
+  <figcaption><b>Réveil</b>Rallumage à l’activation de l’Ancre <span class="t">boucle de 6 s</span>
+   <p>À l’instant où l’Ancre s’active (<code>orb_finished_at</code>), un éclair blanc-cyan passe sur l’œil (0,2 s). Les glyphes s’allument ensuite de gauche à droite (1 s), un petit anneau cyan s’étend au sol (bruitage « coffre », sans couvercle), puis la boucle normale des glyphes reprend.</p></figcaption></figure>
+</div>
+</section>
+
+<section>
+<h2>3 · Le Coffre Antique change de place <small>réserve scellée retirée</small></h2>
+<div class="row">
+ <figure><div class="shot"><img src="assets/intro-capsule/0_large.png" alt="Vue large de la salle">
+   <div class="ring" style="left:61.8%;top:28%;width:10%;height:14%"></div>
+   <div class="tag" style="left:61.8%;top:39%">Coffre · x 7, z −163</div>
+   <div class="tag" style="left:50%;top:12%;background:var(--cyan)">Capsule</div>
+   <div class="tag" style="left:50%;top:66%;background:var(--violet)">Ancre</div></div>
+  <figcaption><b>Plan</b>Salle de départ, px 2
+   <p>Le Coffre est posé contre la paroi nord, à l’est de la capsule (centre x 7, z −163). Il reste hors du trajet capsule → Ancre et hors de l’emprise du puits de lumière. Son socle devient infranchissable, comme celui de l’Ancre. Le Coffre visible ici est actif : c’est son état une fois l’Ancre allumée.</p></figcaption></figure>
+ <div class="card">
+  <h3>Ce qui disparaît</h3>
+  <ul class="dense">
+   <li class="del">Cinématique d’arrivée par le portail d’argent (expulsion, genoux, relevé : 7,6 s)</li>
+   <li class="del">Quête « Réactiver l’Ancre » et l’invite « E : Réactiver l’Ancre »</li>
+   <li class="del">Cadeau de la première entrée dans la capsule (canon, combinaison, Sceau)</li>
+   <li class="del">Réserve scellée à l’est (x 64…76), glyphe « encore alimenté », creusement jusqu’au coffre</li>
+   <li class="del">Quête « Le Coffre Antique » en deux étapes (ouvrir un chemin, ouvrir)</li>
+  </ul>
+  <h3 style="margin-top:12px">Ce qui reste</h3>
+  <ul class="dense">
+   <li>Le trait d’énergie Ancre → capsule et l’allumage de la capsule</li>
+   <li>La capsule allumée soigne et rend du mana quand on y entre (E)</li>
+   <li>La prière à l’Ancre éveillée (« E : Prier »)</li>
+   <li>Le premier assaut à 9 h du jour 2, fixé quand la capsule s’allume</li>
+   <li>Le dessin et l’animation du Reliquaire d’ardoise (fermé, ouverture, ouvert), plus un état « désactivé »</li>
+  </ul>
+  <h3 style="margin-top:12px">Quêtes, dans l’ordre</h3>
+  <table><tr><th>#</th><th>Quête</th><th>Validée quand</th></tr>
+   <tr><td class="n">1</td><td>Sortir de la capsule</td><td>l’Ingénieur est dehors</td></tr>
+   <tr><td class="n">2</td><td>Ouvrir le Coffre Antique</td><td>coffre ouvert</td></tr>
+   <tr><td class="n">3</td><td>Le plan « Analyse » <small style="color:var(--mute)">(choix F)</small></td><td>bâtiment construit, puis mod fabriqué</td></tr>
+   <tr><td class="n">4</td><td>La Salamandre</td><td>quatre autels (inchangé)</td></tr>
+   <tr><td class="n">5</td><td>Âges des métaux, compagnon…</td><td>inchangé</td></tr></table>
+ </div>
+</div>
+</section>
+
+<section>
+<h2>4 · Le plan de mod « Analyse » <small>nouvel objet, nouveau bâtiment, nouvelle recette</small></h2>
+<p class="ctx">Aujourd’hui, les mods ne s’obtiennent que comme butin. « Analyse » est le premier mod fabriqué : le plan donne la recette, le nouveau bâtiment la fabrique.</p>
+<div class="chain"><span>Bois</span><em>→ Scierie →</em><span>Fibre de bois ×50</span><em>+</em>
+ <span>Bois</span><em>→ Scierie →</em><span style="border-color:var(--gold)">Planche ×50 · nouveau</span><em>+</em>
+ <span>Ichor ×5</span><em>→ nouveau bâtiment →</em><span style="border-color:var(--violet);color:var(--violet)">Mod « Analyse »</span></div>
+<div class="row">
+ <div class="card"><h3>Recettes</h3>
+  <table><tr><th>Bâtiment</th><th>Objet</th><th>Ingrédients</th></tr>
+   <tr><td>Scierie</td><td>Fibre de bois</td><td class="n">1 bois</td></tr>
+   <tr><td>Scierie</td><td><b>Planche</b> · nouveau</td><td class="n">2 bois <small style="color:var(--mute)">(choix E)</small></td></tr>
+   <tr><td><b>Nouveau bâtiment</b></td><td>Mod « Analyse »</td><td class="n">50 fibre · 50 planches · 5 ichor</td></tr></table>
+  <p style="color:var(--mute);margin:8px 0 0;font-size:13px">L’ichor tombe déjà des Fanatiques et de la Bête (15 %), avec la mention « Sans usage pour le moment ». Il aura enfin un usage. Pour 5 ichor, il faut tuer en moyenne 33 de ces ennemis. Avec la recette à 2 bois, le mod coûte 150 bois au total.</p></div>
+ <div class="card"><h3>Le plan</h3>
+  <p style="margin:0">Le plan rejoint le paquetage de l’Ingénieur (le coffre de base s’il est plein) et, à la réception, sa recette est <b>apprise</b> (liste <code>GameState.plans</code>) : la jeter ne l’oublie pas. Le bouton « Analyse » apparaît alors dans le menu du nouveau bâtiment. Sans le plan, la recette n’existe pas. Les plans pourront ensuite servir de butin pour d’autres mods fabriqués.</p>
+  <h3 style="margin-top:12px">Le mod « Analyse »</h3>
+  <table><tr><th>Champ</th><th>Valeur</th></tr>
+   <tr><td>Effet</td><td>Chaque ennemi visible à l’écran affiche sa barre de PV au-dessus de la tête, celle du jeu (comme les boss), à pleine opacité. Le brouillard s’applique toujours : on ne voit pas d’ennemi caché derrière la roche. <b>Sans le mod, les ennemis n’ont plus de barre de PV</b> (elles étaient toujours affichées avant). Les barres des alliés et celle des boss dans le HUD ne changent pas.</td></tr>
+   <tr><td>Emplacement</td><td>Module (une des 6 cases), rareté commune</td></tr>
+   <tr><td>Famille</td><td>Exploration · « Plan » au lieu de « Butin de boss »</td></tr>
+   <tr><td>Porté</td><td>Visière-lentille cyan devant l’œil (dessin dans la planche d’art)</td></tr></table>
+  <h3 style="margin-top:12px">Le nouveau bâtiment</h3>
+  <p style="margin:0">2 × 2, construit par l’Ingénieur comme les autres, avec une file de 5 fabrications. Son nom, son prérequis et son coût sont au choix D. Ses dessins (bâtiment, icône du mod, mod porté) feront l’objet d’une planche d’art dédiée. D’ici là, l’implémentation utilise un dessin provisoire.</p></div>
+</div>
+</section>
+
+<section>
+<h2>5 · Choix à faire <small>répondez par lettre et option, ex. « A1 B1 C2 »</small></h2>
+<div class="q">
+ <div class="card"><h3><b>A</b>Forme du réveil de l’Ancre</h3>
+  <div class="opt rec"><span>A1</span><p>Cinématique de ~12 s (étapes 1 à 3 sous barres), passable avec Échap.<span class="rec-tag">recommandé</span></p><small>On montre clairement la cause et l’effet (Ancre → trait → capsule) sans que le joueur attende avec des commandes inutiles.</small></div>
+  <div class="opt"><span>A2</span><p>Jouable : caméra libre, jauge de l’Ancre dans le HUD, on attend dans la capsule.</p><small>Il n’y a rien à faire pendant ce temps : l’attente ressemble à un temps de chargement.</small></div></div>
+
+ <div class="card"><h3><b>B</b>« Se régénère toute seule »</h3>
+  <div class="opt rec"><span>B1</span><p>Seulement à l’intro : la jauge passe de 0 à 100 %, puis l’Ancre garde ses PV comme aujourd’hui.<span class="rec-tag">recommandé</span></p><small>Aujourd’hui, l’Ancre ne régénère jamais. Une régénération permanente changerait l’équilibre des assauts.</small></div>
+  <div class="opt"><span>B2</span><p>En plus, régénération permanente : 1 PV/s hors combat (10 s sans dégâts).</p></div></div>
+
+ <div class="card"><h3><b>C</b>Effet du mod « Analyse » <span class="rec-tag" style="background:var(--gold)">décidé</span></h3>
+  <p style="margin:0">Le mod affiche la barre de PV des ennemis à l’écran. Les détails sont en section 4.</p></div>
+
+ <div class="card"><h3><b>D</b>Le nouveau bâtiment</h3>
+  <div class="opt rec"><span>D1</span><p><b>Établi d’exo</b> · prérequis Scierie · 60 Forge · touche W (X ouvre déjà le grimoire).<span class="rec-tag">recommandé</span></p><small>Il suit la chaîne du bois : Aether → Scierie → Établi. On le débloque au moment où l’on produit les planches.</small></div>
+  <div class="opt"><span>D2</span><p><b>Banc d’assemblage tyrien</b> · disponible dès le départ · 30 Forge.</p><small>On peut le construire tout de suite, mais il reste inutile tant que la Scierie n’est pas là.</small></div>
+  <div class="opt"><span>D3</span><p>Autre nom ou autre prérequis : précisez.</p></div></div>
+
+ <div class="card"><h3><b>E</b>Recette de la Planche (Scierie)</h3>
+  <div class="opt rec"><span>E1</span><p>2 bois → 1 planche.<span class="rec-tag">recommandé</span></p><small>La planche coûte plus que la fibre (1 bois), ce qui la distingue.</small></div>
+  <div class="opt"><span>E2</span><p>1 bois → 1 planche.</p></div></div>
+
+ <div class="card"><h3><b>F</b>Quête du plan « Analyse »</h3>
+  <div class="opt rec"><span>F1</span><p>Oui : la quête 3 « Le plan Analyse » (construire le bâtiment, fabriquer le mod) passe avant la Salamandre.<span class="rec-tag">recommandé</span></p><small>Elle guide le joueur vers la Scierie, l’ichor et le nouveau bâtiment.</small></div>
+  <div class="opt"><span>F2</span><p>Non : le plan reste un objectif libre, la Salamandre suit directement le Coffre.</p></div></div>
+
+ <div class="card"><h3><b>H</b>Rendu du Coffre désactivé</h3>
+  <div class="opt rec"><span>H1</span><p>V1 · Éteint.<span class="rec-tag">recommandé</span></p><small>Le changement est net quand l’Ancre s’active, sans abîmer la lisibilité du coffre.</small></div>
+  <div class="opt"><span>H2</span><p>V2 · En veille (l’œil respire faiblement).</p></div>
+  <div class="opt"><span>H3</span><p>V3 · Éteint et terni.</p></div></div>
+
+ <div class="card"><h3><b>G</b>Les 4 éclaireurs d’essai à la porte sud</h3>
+  <p style="margin:0 0 4px;color:var(--mute);font-size:13px">Ils forcent aujourd’hui la porte sud quand on reçoit le canon, pour tester le tir.</p>
+  <div class="opt rec"><span>G1</span><p>On les garde : ils arrivent à l’ouverture du Coffre, quand l’Arbalestrie est reçue.<span class="rec-tag">recommandé</span></p></div>
+  <div class="opt"><span>G2</span><p>On les supprime : la porte sud reste fermée jusqu’au premier assaut.</p></div></div>
+</div>
+</section>
+
+<section>
+<h2>6 · À l’implémentation <small>pour mémoire</small></h2>
+<ul class="dense" style="max-width:96ch;color:var(--mute)">
+ <li><code>world/vault/chest_view.gd</code> : visible d’office. État « désactivé » (V1, glyphes remappés sur l’ardoise, sans boucle) tant que <code>orb_active</code> est faux. Rallumage joué une fois depuis <code>orb_finished_at</code>. L’export <code>planches/coffre-export.html</code> gagne une rangée « éteint » et une rangée « rallumage », pour garder la planche de sprites comme source unique.</li>
+ <li><code>sim/opening.gd</code> : <code>start()</code> place l’Ingénieur dans la capsule (<code>in_capsule</code>, caché, désincarné). L’étape « arrival » devient « boot » (carton, étincelle). Nouvelle étape « recharge » (jauge 0 → 100 %), puis « link » et « awake » existants.</li>
+ <li><code>sim/capsule.gd</code> : plus de cadeau à la première entrée. Sortie possible seulement si <code>powered()</code>. Le réveil au clavier est retiré. Le Coffre s’ajoute à <code>solid_rects()</code>.</li>
+ <li><code>world/terrain/cave_shape.gd</code> : <code>CHEST</code> et <code>CHEST_SPOT</code> passent près de la capsule. La réserve est retirée (<code>in_vault</code>, glyphe, <code>vault_open</code> vrai d’office).</li>
+ <li><code>sim/simulation.gd</code> : <code>open_chest()</code> remet l’équipement, apprend le plan, émet <code>items_received</code> et lance les éclaireurs (G1).</li>
+ <li><code>sim/quests.gd</code>, <code>data/recipes.gd</code> (planche, Analyse), <code>data/catalog.gd</code> (bâtiment), <code>data/gear_items.gd</code> et <code>sim/mods.gd</code> (mod), <code>sim/loot.gd</code> (description de l’ichor).</li>
+ <li>Tests à mettre à jour : <code>test_opening</code>, <code>test_capsule</code>, <code>test_chest</code>, <code>test_vault</code>, <code>test_quests</code>, <code>test_full_game</code>.</li>
+</ul>
+</section>
+<script>
+// Coffre antique remappé : rangée « fermé » de chest_ardoise.png (56 × 72, 16 images, 5,6 i/s), posé à px 3 au pixel
+// (516, 6) des captures, multiplié par la lumière de la salle mesurée sur la capture (0,761 · 0,744 · 0,727).
+// Les glyphes cyan restent émissifs (non teintés). Œil : rangées 34–39 ; bande de glyphes : rangées 56–58.
+(()=>{
+const FW=56,FH=72,N=16,FPS=5.6,OX=516,OY=6,PX=3,TINT=[.761,.744,.727];
+const CY={'5ce8ff':0,'1f9fb8':1,'12596b':2,'c8fbff':0,'0a2a33':2};
+const OFF=[[0x3a,0x44,0x54],[0x2a,0x32,0x40],[0x1e,0x24,0x30]];
+const BLACK=[[0x1e,0x24,0x30],[0x0b,0x0a,0x0e],[0x0b,0x0a,0x0e]];
+const LIT=[[0x5c,0xe8,0xff],[0x1f,0x9f,0xb8],[0x12,0x59,0x6b]];
+const load=src=>new Promise(r=>{const i=new Image();i.onload=()=>r(i);i.src=src});
+const hex=(r,g,b)=>((1<<24)|(r<<16)|(g<<8)|b).toString(16).slice(1);
+const mix=(a,b,k)=>a.map((v,i)=>Math.round(v+(b[i]-v)*k));
+Promise.all([load('assets/intro-capsule/chest_ardoise.png'),load('assets/intro-capsule/1_sans_coffre.png'),load('assets/intro-capsule/1b_sans_coffre.png')]).then(([sheet,bg1,bg1b])=>{
+ const bgs={'1_sans_coffre':bg1,'1b_sans_coffre':bg1b};
+ const sc=document.createElement('canvas');sc.width=sheet.width;sc.height=sheet.height;
+ const sx=sc.getContext('2d');sx.drawImage(sheet,0,0);const src=sx.getImageData(0,0,sheet.width,sheet.height).data;
+ const tmp=document.createElement('canvas');tmp.width=FW;tmp.height=FH;const tx=tmp.getContext('2d');
+ // Image du coffre à l'instant t pour un mode : off, idle, dull, wake (boucle 6 s : 1,6 s éteint, rallumage, actif).
+ function frame(mode,t){
+  let m=mode,since=-1;
+  if(mode==='wake'){const c=t%6;if(c<1.6)m='off';else{m='wake';since=c-1.6}}
+  const fi=(m==='off'||m==='dull'||m==='idle')?0:Math.floor(t*FPS)%N;
+  const out=tx.createImageData(FW,FH),d=out.data;
+  for(let y=0;y<FH;y++)for(let x=0;x<FW;x++){
+   const si=(y*sheet.width+fi*FW+x)*4,di=(y*FW+x)*4,a=src[si+3];if(!a)continue;
+   let c=[src[si],src[si+1],src[si+2]],k=CY[hex(...c)],glow=false;
+   if(k!==undefined){
+    const eye=y<45;
+    if(m==='off')c=OFF[k];
+    else if(m==='dull')c=BLACK[k];
+    else if(m==='idle'){c=eye?mix(OFF[k],[0x12,0x59,0x6b],(.5-.5*Math.cos(t*Math.PI))*(k===2?.6:1)*.55):OFF[k];glow=eye}
+    else if(m==='wake'){
+     const on=eye?since>=0:since>=.2+(x-12)/34*1.0;
+     if(!on)c=OFF[k];
+     else{const age=eye?since:since-(.2+(x-12)/34);c=age<.18?[0xc8,0xfb,0xff]:c;glow=true}
+    }else glow=true;
+   }else if(m==='dull'){const g=(c[0]+c[1]+c[2])/3;c=c.map(v=>(v*.5+g*.5)*.8)}
+   if(!glow&&a===255)c=c.map((v,i)=>v*TINT[i]);
+   d[di]=c[0];d[di+1]=c[1];d[di+2]=c[2];d[di+3]=a}
+  tx.putImageData(out,0,0);return since}
+ const views=[...document.querySelectorAll('canvas.scene,canvas.crop')].map(cv=>({cv,ctx:cv.getContext('2d'),bg:bgs[cv.dataset.bg],mode:cv.dataset.mode,crop:cv.classList.contains('crop')}));
+ const t0=performance.now();
+ function draw(){
+  const t=(performance.now()-t0)/1000;
+  for(const v of views){
+   const {ctx,cv}=v;ctx.imageSmoothingEnabled=false;
+   // Vue recadrée : zone 440…760 × 62…282 de la capture, agrandie ×1 (le canvas est mis à l'échelle par CSS).
+   const ox=v.crop?-440:0,oy=v.crop?-62:0;
+   ctx.drawImage(v.bg,ox,oy);
+   const since=frame(v.mode,t);
+   ctx.drawImage(tmp,ox+OX,oy+OY,FW*PX,FH*PX);
+   if(since>=1.2&&since<1.9){const k=(since-1.2)/.7;ctx.strokeStyle=`rgba(92,232,255,${1-k})`;ctx.lineWidth=3;
+    ctx.beginPath();ctx.ellipse(ox+OX+28*PX,oy+OY+64*PX,(8+30*k)*PX/2,(3+12*k)*PX/2,0,0,Math.PI*2);ctx.stroke()}}
+  requestAnimationFrame(draw)}
+ draw()});
+})();
+</script>
+</body></html>

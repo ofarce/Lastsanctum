@@ -2019,6 +2019,38 @@
      "seam_pixels": 0
     },
     "pick": "Cintreuse à vapeur"
+   },
+   "da-etabli": {
+    "anchor": [
+     160,
+     168
+    ],
+    "top": 99,
+    "bottom": 197,
+    "scale": 1,
+    "anim": {
+     "frame_w": 320,
+     "frame_h": 240,
+     "cols": 12,
+     "rows": 6,
+     "count": 72,
+     "seconds": 6,
+     "fps": 12,
+     "exact": true,
+     "seam_pixels": 0
+    },
+    "rest": {
+     "frame_w": 320,
+     "frame_h": 240,
+     "cols": 12,
+     "rows": 6,
+     "count": 72,
+     "seconds": 6,
+     "fps": 12,
+     "exact": true,
+     "seam_pixels": 0
+    },
+    "pick": "Établi à plan lumineux"
    }
   },
   "constants": {

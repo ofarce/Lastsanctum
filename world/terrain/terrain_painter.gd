@@ -15,8 +15,8 @@ const M := 38
 var terrain: Terrain
 var state: TerrainState
 var stats := {"full": 0, "mixed": 0, "skip": 0}
-## Textures et teintes de bord par palier de roche (Biomes.rock_tier) : [Temple, vert-de-gris].
-## Le sol du biome 2 porte sa teinte dans floor2 / dug2 (elle suit la frontière à la case près).
+## Textures et teintes de bord par palier de roche (Biomes.rock_tier) : Temple, vert-de-gris, puis une par strate.
+## Le sol de chaque biome porte sa teinte dans floorN / dugN (elle suit la frontière à la case près).
 var _floor_tex: Array[PackedByteArray] = []
 var _rock_tex: Array[PackedByteArray] = []
 var _dug_tex: Array[PackedByteArray] = []
@@ -27,7 +27,8 @@ func _init(ground: Terrain, terrain_state: TerrainState) -> void:
 	terrain = ground
 	state = terrain_state
 	var palette: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(ArtStyle.PALETTE))
-	for suffix: String in ["", "2"]:
+	for t in Biomes.ROCKS.size():
+		var suffix := Biomes.tile_suffix(t)
 		_floor_tex.append(_rgba(load(ArtStyle.TILES + "floor%s.png" % suffix)).get_data())
 		_rock_tex.append(_rgba(load(ArtStyle.TILES + "rock%s.png" % suffix)).get_data())
 		_dug_tex.append(_rgba(load(ArtStyle.TILES + "dug%s.png" % suffix)).get_data())
@@ -114,6 +115,15 @@ func paint_region(x0: float, z0: float, x1: float, z1: float) -> void:
 
 
 var _queue: Array[Vector2] = []
+
+
+## Passe en tête de file les cases de la zone (ouverture de toutes les galeries : la grotte d'abord).
+func prioritize(zone: Rect2) -> void:
+	var first: Array[Vector2] = []
+	var rest: Array[Vector2] = []
+	for c in _queue:
+		(first if zone.has_point(c) else rest).append(c)
+	_queue = first + rest
 
 
 func pending() -> int:

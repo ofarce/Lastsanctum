@@ -1,5 +1,6 @@
 extends "res://tests/test_case.gd"
-## Capsule (sim/capsule.gd) : E entre (caché, désincarné), E sort (réincarné) ; canon équipé au départ.
+## Capsule (sim/capsule.gd) : la partie commence dedans ; une fois allumée, E sort (réincarné), E entre (caché,
+## désincarné, soigné). L'équipement de départ vient du Coffre Antique (tests/test_chest.gd).
 
 const DT := 1.0 / 30.0
 
@@ -15,30 +16,37 @@ func _game() -> Simulation:
 	return sim
 
 
+## Joue l'intro jusqu'à la capsule allumée (étape « awake »).
+func _to_awake(sim: Simulation) -> void:
+	var t := 0.0
+	while Opening.stage() != "awake" and t < 30.0:
+		sim.tick(DT)
+		t += DT
+
+
 func test_enter_and_exit() -> void:
 	var sim := _game()
-	for i in roundi((Opening.ARR_END + 0.5) / DT):
-		sim.tick(DT)
 	var eng := Capsule.engineer()
-	check(not eng.equipment.has("Main droite"), "arrive sans arme")
-	check_near(eng.hp, roundf(eng.max_hp / 3.0), 0.01, "arrive à un tiers de sa vie")
-	check(GameState.incarnated == eng)
-	check(not Capsule.can_enter() and not Capsule.toggle(sim), "capsule éteinte : inutilisable")
-	GameState.capsule_on = true
+	check(GameState.in_capsule and eng.hidden, "départ dans la capsule")
+	var hp0 := eng.hp
+	for i in 30:
+		sim.tick(DT)
+	check_eq(eng.hp, hp0, "capsule éteinte : pas de soin")
+	_to_awake(sim)
+	check(Capsule.powered(), "capsule allumée")
+	check(not eng.equipment.has("Main droite"), "sans arme")
+	check(Capsule.toggle(sim), "E : Sortir")
+	check(not GameState.in_capsule and not eng.hidden and GameState.incarnated == eng)
 	check(Capsule.can_enter())
 	check(Capsule.toggle(sim))
 	check(GameState.in_capsule and eng.hidden and GameState.incarnated == null)
-	check_eq(eng.hp, eng.max_hp, "soigné à la première entrée")
-	check_eq(eng.equipment.get("Main droite", ""), "cannon", "canon remis à la première entrée")
-	check(GameState.mining_seal, "sceau de minage remis à la première entrée")
+	check(not eng.equipment.has("Main droite"), "la capsule ne remet plus l'arme")
 	for i in 90:
 		sim.tick(DT)
 	check(eng.hidden, "reste caché dans la capsule")
 	check(Capsule.toggle(sim))
 	check(not GameState.in_capsule and not eng.hidden and GameState.incarnated == eng)
 	eng.hp = 10.0
-	check(Capsule.toggle(sim) and Capsule.toggle(sim))
-	check_eq(eng.hp, 10.0, "pas de second soin complet")
 	var res0: float = GameState.res["forge"]
 	check(Capsule.toggle(sim) and GameState.in_capsule)
 	for i in roundi(2.0 / DT):
@@ -55,11 +63,17 @@ func test_enter_and_exit() -> void:
 	check(not Capsule.toggle(sim))
 
 
+## Partie sans séquence d'ouverture : l'Ancre se réveille encore à la main.
 func test_e_wakes_anchor() -> void:
 	var sim := _game()
-	for i in roundi((Opening.ARR_END + 0.5) / DT):
+	sim.opening = false
+	sim.new_game(20261114)
+	GameState.portal_start = -100.0
+	for i in 30:
 		sim.tick(DT)
 	var eng := Capsule.engineer()
+	eng.hidden = false
+	ExileGallery.incarnate(eng)
 	check(not Capsule.can_wake_anchor(), "trop loin de l'Ancre")
 	eng.x = CaveShape.CORE.x + 6.0
 	eng.z = CaveShape.CORE.y

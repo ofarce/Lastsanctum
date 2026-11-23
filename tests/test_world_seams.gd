@@ -17,7 +17,8 @@ func test_whole_map_deterministic() -> void:
 		var t0 := Time.get_ticks_msec()
 		a.generate_galleries(map_seed)
 		var ms := Time.get_ticks_msec() - t0
-		check(ms < 3000, "génération en moins de 3 s (%d ms)" % ms)
+		# Carte prolongée jusqu’à z −2280 (biomes 3 à 8) et suite jouée sur 4 processus : 5 s de marge.
+		check(ms < 5000, "génération en moins de 5 s (%d ms)" % ms)
 		var b := TerrainState.new()
 		b.generate_galleries(map_seed)
 		check_eq(_snapshot(a), _snapshot(b), "graine %d : même carte, même contenu" % map_seed)
@@ -94,6 +95,9 @@ func test_ground_seams() -> void:
 				if CaveShape.in_start(w.x, w.y) and absf(w.x) < CaveShape.START_X1 - 10.0 and w.y > CaveShape.START_Z0 + 10.0:
 					continue
 				if Terrain.grass_cell(w.x, w.y) != grass_here or _near_edge(w):
+					continue
+				# Roche teintée par biome au-delà du Temple (biome 2 et suivants) : comparée au seul biome 1.
+				if Biomes.index_at(w.y) != 0:
 					continue
 				var want := grass.get_pixel(posmod(q.x, 512), posmod(q.y, 512)) if grass_here else rock.get_pixel(posmod(q.x, 504), posmod(q.y, 504))
 				checked += 1

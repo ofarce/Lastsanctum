@@ -298,6 +298,11 @@ func _craft(b: Building, dt: float) -> void:
 		take_from(b.input_box, k, int(cost[k]))
 	put_into(b.output_box, b.recipe, Recipes.output_quantity(b.recipe))
 	b.chest_out_at = GameState.sim_time
+	# Un mod ne se fabrique qu'une fois : la recette s'arrête et reste fermée.
+	if Recipes.PLANS.has(b.recipe):
+		GameState.mods_crafted.append(b.recipe)
+		sim.say("%s · %s fabriqué" % [b.def()["name"], Recipes.name_of(b.recipe)], 2.0)
+		b.recipe = ""
 	Sfx.at("forge", b.x, b.z)
 
 
@@ -519,6 +524,11 @@ func try_miner(u: Unit, cells: Array) -> bool:
 ## Recette fabriquée en boucle ; la même recette une seconde fois l'arrête.
 func select_recipe(b: Building, item: String) -> void:
 	if b == null or not b.complete or not Recipes.RECIPES.get(b.type, {}).has(item):
+		return
+	if b.recipe != item and (not Ages.recipe_open(item) or Recipes.disabled(item)):
+		return
+	if b.recipe != item and Recipes.once_done(item):
+		sim.say("%s : déjà fabriqué." % Recipes.name_of(item), 2.0)
 		return
 	if b.recipe != item and not Simulation.recipe_unlocked(item):
 		sim.say("%s : recherche « %s » requise (%s)." % [Recipes.name_of(item), Catalog.RESEARCH[Catalog.RECIPE_RESEARCH[item]]["name"], Catalog.BUILDINGS[Catalog.RESEARCH[Catalog.RECIPE_RESEARCH[item]]["building"]]["name"]], 2.5)

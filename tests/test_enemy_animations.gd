@@ -4,7 +4,7 @@ extends "res://tests/fight_case.gd"
 ## Ennemis sans atlas dans le manifeste : l'Œil de la Matrice, ses pupilles et Gorge-Cuivre ont leurs propres
 ## calques et leur propre vue ; un type à clé « art » (squelette) emprunte l'atlas d'un autre.
 static func _own_atlas(kind: String) -> bool:
-	return kind not in [OeilMatrice.KIND, OeilMatrice.PUPIL_KIND, "gorge"] and not Catalog.ENEMY[kind].has("art")
+	return kind not in [OeilMatrice.KIND, OeilMatrice.PUPIL_KIND, "gorge", Archipretre.KIND] and not Catalog.ENEMY[kind].has("art")
 
 
 func test_all_enemies_have_complete_atlases() -> void:

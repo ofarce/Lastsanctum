@@ -147,6 +147,10 @@ func _relayout() -> void:
 		_icon.position.x = 3.0
 		_cd.position = Vector2(size.x - 43.0, top + 2.0)
 		_cd.size = Vector2(41.0, 14.0)
+	# Bouton enfoncé : icône, libellé, touche et recharge descendent avec la face (PressFx).
+	var d := Vector2(0.0, PressFx.dy(self))
+	for c: Control in [_icon, _label_clip, _kbd, _cd]:
+		c.position += d
 	var fg := Color("#7c7c6c") if disabled else (Color("#ffe5ac") if _lit() else HudStyle.IVORY)
 	_label.add_theme_color_override("font_color", fg)
 	_kbd.add_theme_color_override("font_color", Color("#7ae070") if action.get("completed", false) else fg)
@@ -188,6 +192,9 @@ func _relayout_craft() -> void:
 		_glyph.size = Vector2(32, 32)
 	_over.position = Vector2.ZERO
 	_over.size = size
+	var d := Vector2(0.0, PressFx.dy(self))
+	for c: Control in [_kbd, _glyph, _label_clip, _over]:
+		c.position += d
 	_over.queue_redraw()
 	_glyph.queue_redraw()
 
@@ -205,6 +212,13 @@ func _notification(what: int) -> void:
 func _draw() -> void:
 	_relayout()
 	var r := Rect2(Vector2.ZERO, size)
+	var pressed := PressFx.down(self)
+	PressFx.begin(self, r, pressed)
+	_draw_face(r)
+	PressFx.finish(self, r, pressed)
+
+
+func _draw_face(r: Rect2) -> void:
 	var dim := _dim()
 	if action.get("research_done", false):
 		# Recherche achevée : fond vert sombre, filet olive ; le cachet vert est posé par _Over.
@@ -240,7 +254,8 @@ func _draw() -> void:
 	# Cadre de la touche (grenat quand le mana manque).
 	if not _kbd.visible:
 		return
-	var kr := Rect2(_kbd.position, _kbd.size)
+	# La touche a déjà descendu avec la face ; le repère de dessin aussi.
+	var kr := Rect2(_kbd.position - Vector2(0.0, PressFx.dy(self)), _kbd.size)
 	draw_rect(kr, Color("#10140d"))
 	var kc := Color("#4d4f40") if dim else Color("#8c744b")
 	if action.get("poor", false):
@@ -458,7 +473,7 @@ class _Over extends Control:
 			draw_rect(Rect2(o + Vector2(0, 3), Vector2(6, 5)), c)
 			draw_rect(Rect2(o + Vector2(2.5, 4.5), Vector2(1, 2)), Color("#24261f"))
 		if a.has("command_icon") and button._kbd.visible:
-			var kr := Rect2(button._kbd.position, button._kbd.size)
+			var kr := Rect2(button._kbd.position - position, button._kbd.size)
 			draw_rect(kr, Color("#10140d"))
 			draw_rect(kr.grow(-0.5), Color("#c0584c") if a.get("poor", false) else (Color("#4d4f40") if a.get("locked", false) else Color("#8c744b")), false, 1.0)
 		var cd: float = a.get("cd_frac", 0.0)

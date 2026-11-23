@@ -20,8 +20,9 @@ func test_right_click_and_item_tooltips() -> void:
 	click.pressed = true
 	click.position = point
 	inventory._input(click)
-	check_eq(u.equipment.get("Main droite"), "iron_sword", "clic droit équipe l'épée")
-	check_eq(u.inventory[0]["quantity"], 1, "un seul exemplaire équipé")
+	# L'Exilé n'équipe plus que des mods (2026-11-21) : l'épée, réservée aux adeptes, reste au paquetage.
+	check(u.equipment.get("Main droite") != "iron_sword", "clic droit n'équipe pas l'épée")
+	check_eq(u.inventory[0]["quantity"], 2, "les deux épées restent au paquetage")
 	click.pressed = false
 	inventory._input(click)
 	click.pressed = true

@@ -97,6 +97,13 @@ func _gui_input(event: InputEvent) -> void:
 	elif event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT and _pick(event.position) != -1:
 		Events.inventory_requested.emit()
 		accept_event()
+	elif event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_RIGHT and _pick(event.position) != -1:
+		# Clic droit sur une ration : l'Exilé la mange (sim/loot.gd).
+		var i := _pick(event.position)
+		var u := engineer()
+		if u and _stack(i).get("item", "") == "ration":
+			Loot.use_ration(u, u.inventory, i)
+		accept_event()
 
 
 func _notification(what: int) -> void:

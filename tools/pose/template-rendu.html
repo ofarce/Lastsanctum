@@ -1,0 +1,265 @@
+<meta charset="utf-8">
+<meta name="claude:viewport-fit-sides" content="cover">
+<title>Pose : rendu de visée</title>
+<style>
+/* Mise en page : une colonne, une section par piste, barre de lecture collante. Look sombre unique (planches du jeu). */
+:root{--bg:#0b120e;--panel:#111b14;--line:#2a3a2c;--txt:#dcd8bc;--mut:#93a08a;--acc:#e8c870;--ok:#a8d890;--okline:#3e6a3a;--scene:#28302a;color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--txt);font:15px/1.5 system-ui,sans-serif}
+header,main{max-width:900px;margin:auto;padding-block:18px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+h1{margin:0;font-weight:600;letter-spacing:.08em;font-size:24px;color:var(--acc);text-wrap:balance}
+header p,section>p{color:var(--mut);margin:8px 0 0;max-width:72ch}
+section>p b,header p b{color:var(--txt);font-weight:600}
+section{margin:26px 0 52px}
+h2{color:var(--acc);font-weight:600;letter-spacing:.04em;margin:0;font-size:21px;text-wrap:balance}
+canvas{display:block;max-width:100%;image-rendering:pixelated;image-rendering:crisp-edges;margin-top:12px;background:var(--scene)}
+.strip{display:grid;grid-template-columns:repeat(3,1fr);text-align:center;color:var(--mut);font-size:12px;margin-top:3px;max-width:816px;font-variant-numeric:tabular-nums}
+.facts{display:flex;flex-wrap:wrap;gap:6px 18px;margin:8px 0 0;padding:0;list-style:none;color:var(--mut);font-size:13px}
+.facts b{color:var(--txt);font-weight:600}
+.why{border:1px solid var(--line);background:var(--panel);padding:12px 16px;color:var(--mut);max-width:none}
+.bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:#0b120ee8;border-bottom:1px solid var(--line);padding:10px 16px;display:flex;gap:10px 14px;align-items:center;flex-wrap:wrap;justify-content:center}
+.bar button{background:var(--panel);color:var(--txt);border:1px solid var(--line);padding:4px 10px;border-radius:4px;cursor:pointer;font:inherit}
+.bar button.on{border-color:var(--acc);color:var(--acc)}
+.bar button:focus-visible,.bar input:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.bar input{width:260px;max-width:60vw}
+.bar span{color:var(--mut);font-variant-numeric:tabular-nums;min-width:130px}
+.tag{display:inline-block;font-size:12px;padding:1px 7px;border-radius:9px;border:1px solid var(--okline);color:var(--ok);margin-left:8px;vertical-align:2px;letter-spacing:0;font-weight:400}
+</style>
+<header><h1>POSE · RENDU DE VISÉE</h1>
+<p><b>Acquis :</b> la piste 4 « Le plan se défait ». Pendant la visée, on voit le <b>vrai rendu du bâtiment, en transparence</b> ; si la pose est impossible, il passe <b>au rouge</b>. Au clic, il s’écroule en moellons qui forment les deux tas, puis le chantier commence.</p>
+<p>Reste à choisir le traitement. Chaque piste rejoue la même scène : le pointeur part contre la paroi (pose impossible), glisse sur le sol dégagé (pose possible), puis clique. Trois bâtiments côte à côte, puis six instants figés sur la Fonderie. Deux choses varient : <b>le rendu de visée</b> (possible et impossible) et <b>la sortie au clic</b> (éclat blanc, ou couleurs qui s’éteignent pendant la chute).</p></header>
+<div class="bar"><button id="play" class="on">⏸ Pause</button>
+<button data-sp="1" class="on">×1</button><button data-sp="0.5">×0,5</button><button data-sp="0.2">×0,2</button>
+<input id="scrub" type="range" min="0" max="1000" value="0" aria-label="Position dans la scène"><span id="lbl"></span></div>
+<main id="root"></main>
+<main><section><h2>À trancher</h2><p class="why"><b>Choisis un rendu de visée</b> (A à D) <b>et une sortie au clic</b> (blanc ou couleurs), par exemple « A, sortie couleurs ». Mon conseil : <b>B · Liseré, sortie couleurs</b>. Le liseré d’un pixel détache le bâtiment du décor même devant une paroi ou un autre bâtiment, et il porte l’état à lui seul (vert, rouge) : le rendu peut rester assez transparent pour laisser voir le sol. Au clic, chaque pierre tombe avec sa vraie couleur qui s’éteint en ardoise : c’est exactement l’inverse du hissage, où l’ardoise prend la couleur en montant.</p></section></main>
+<script>
+'use strict';
+const IMG = /*IMG*/;
+const TS=6, SW=320, SH=240, D=0.11, P=.65;
+const ARTS=[{id:'da-forge',name:'Fonderie',dur:8},{id:'da-indra',name:'Temple d’Indra',dur:4},{id:'da-library',name:'Bibliothèque',dur:8}];
+const VIEW={x:92,y:96,w:136,h:112};
+const AIM=2.0, AFTER=2.6, TOTAL=AIM+AFTER;
+const KEYS=[-1.6,-0.2,0.05,0.2,0.4,0.7];
+const SCALE=2;
+
+function hs(n){const s=Math.sin(n*127.1+311.7)*43758.5453;return s-Math.floor(s);}
+const cl=v=>Math.max(0,Math.min(1,v));
+const eo=u=>1-Math.pow(1-u,3);
+const eio=u=>u<.5?4*u*u*u:1-Math.pow(-2*u+2,3)/2;
+const jr=v=>Math.floor(v+.5);
+const sst=(a,b,v)=>{const t=cl((v-a)/(b-a));return t*t*(3-2*t);};
+
+function loadImg(src){return new Promise(r=>{const i=new Image();i.onload=()=>r(i);i.src=src;});}
+function cv(w,h){const k=document.createElement('canvas');k.width=w;k.height=h;return k;}
+/* Silhouette pleine d'une couleur. */
+function flat(img,col){const k=cv(img.width,img.height),x=k.getContext('2d');x.drawImage(img,0,0);x.globalCompositeOperation='source-in';x.fillStyle=col;x.fillRect(0,0,k.width,k.height);return k;}
+/* Teinte par multiplication : les ombres et les lumières du sprite restent lisibles. */
+function mul(img,col){const k=cv(img.width,img.height),x=k.getContext('2d');x.drawImage(img,0,0);x.globalCompositeOperation='multiply';x.fillStyle=col;x.fillRect(0,0,k.width,k.height);x.globalCompositeOperation='destination-in';x.drawImage(img,0,0);return k;}
+/* Gris puis rouge : toute couleur d'origine disparaît. */
+function grayRed(img){const k=cv(img.width,img.height),x=k.getContext('2d');x.drawImage(img,0,0);const id=x.getImageData(0,0,k.width,k.height),d=id.data;
+  for(let i=0;i<d.length;i+=4){const l=d[i]*.3+d[i+1]*.59+d[i+2]*.11;d[i]=Math.min(255,l*.95+60);d[i+1]=l*.34+8;d[i+2]=l*.3+8;}x.putImageData(id,0,0);return k;}
+/* Liseré d'un pixel autour de la silhouette. */
+function outline(img,col){const f=flat(img,col),k=cv(img.width,img.height),x=k.getContext('2d');
+  for(const [a,b] of [[1,0],[-1,0],[0,1],[0,-1]])x.drawImage(f,a,b);x.globalCompositeOperation='destination-out';x.drawImage(img,0,0);return k;}
+/* Opaque à la base, transparent au sommet. */
+function grad(img,top,bot){const k=cv(img.width,img.height),x=k.getContext('2d');x.drawImage(img,0,0);x.globalCompositeOperation='destination-in';
+  const g=x.createLinearGradient(0,top,0,bot);g.addColorStop(0,'rgba(0,0,0,.28)');g.addColorStop(1,'rgba(0,0,0,.95)');x.fillStyle=g;x.fillRect(0,0,k.width,k.height);return k;}
+
+/* ---------- Découpe en pierres (port de BuildingView.site) ---------- */
+function makeSite(img){
+  const ay=168,cx=160;
+  const full=cv(SW,SH);const fc=full.getContext('2d');fc.drawImage(img,0,0,SW,SH,0,0,SW,SH);
+  const d=fc.getImageData(0,0,SW,SH).data;
+  const tiles=[];let top=SH,bot=0,x0=SW,x1=0;
+  for(let y=0;y<SH;y+=TS)for(let x=0;x<SW;x+=TS){let n=0;
+    for(let j=y;j<y+TS;j++)for(let i=x;i<x+TS;i++){const k=(j*SW+i)*4+3;if(k<d.length&&d[k]>120)n++;}
+    if(n>4){tiles.push({x,y,id:tiles.length});top=Math.min(top,y);bot=Math.max(bot,y);x0=Math.min(x0,x);x1=Math.max(x1,x+TS);}}
+  let sm=0;
+  for(const p of tiles){const h=(bot-p.y)/(bot!==top?bot-top:1);p.h=h;p.s=h*.78+hs(p.id*3.1)*.12;sm=Math.max(sm,p.s);}
+  for(const p of tiles)p.n=p.s/sm;
+  const L=[],R=[];
+  for(const p of tiles)(p.x+3<cx?L:R).push(p);
+  for(const [arr,sgn] of [[L,-1],[R,1]]){
+    arr.sort((a,b)=>b.n-a.n);
+    arr.forEach((p,k)=>{const lvl=Math.floor((1-Math.sqrt(1-k/arr.length))*6);
+      p.hx=cx+sgn*46+(hs(p.id*5.3)*2-1)*(6-lvl)*2.6-3;p.hy=ay+5-lvl*3.2-3+hs(p.id*1.9)*1.5;p.side=sgn;});
+  }
+  const heap=tiles.slice().sort((a,b)=>b.n-a.n);
+  const w=x1-x0,red=mul(full,'#ff6858');
+  return {full,tiles,heap,top,bot,ay,xs:[x0-3,x0+Math.round(w/3),x1-Math.round(w/3)-2,x1+1],H:ay+2-(top-6),
+    white:flat(full,'#ffffff'),red,grayRed:grayRed(full),outOk:outline(full,'#a4f2ca'),outBad:outline(full,'#ff7a68'),outW:outline(full,'#ffffff'),
+    grad:grad(full,top,bot+TS),gradRed:grad(red,top,bot+TS)};
+}
+
+const ROCK=[['#1e232b','#3a4250','#55606e','#76818e'],['#1e232b','#333a46','#4e5866','#6e7a88'],['#1a1f26','#2e3540','#465060','#647080']];
+function rock(c,x,y,id,a){
+  if(a<=0)return;const Q=ROCK[id%3];c.globalAlpha=a;
+  c.fillStyle=Q[0];c.fillRect(x,y,6,6);
+  c.fillStyle=Q[2];c.fillRect(x+1,y+1,4,4);
+  c.fillStyle=Q[3];c.fillRect(x+1,y+1,4,1);c.fillRect(x+1,y+1,1,2);
+  c.fillStyle=Q[1];c.fillRect(x+1,y+4,4,1);
+  if(hs(id*4.1)>.5){c.fillStyle=Q[1];c.fillRect(x+3,y+2,1,1);}
+  c.globalAlpha=1;
+}
+function puff(c,x,y,age,seed){
+  if(age<0||age>.7)return;const k=age/.7;
+  for(let i=0;i<4;i++){const a=hs(seed+i)*Math.PI,v=6+hs(seed*3+i)*8,sg=hs(seed+i*5)>.5?1:-1,w=k<.5?2:1;
+    c.fillStyle=k<.4?'#8d8770':'#6c6856';c.fillRect(jr(x+Math.cos(a)*v*k*sg),jr(y-Math.sin(a)*v*k*.4-k*2),w,w);}
+}
+function tile(c,S,p,x,y,src){const tw=Math.min(TS,SW-p.x);c.drawImage(src||S.full,p.x,p.y,tw,TS,jr(x),jr(y),tw,TS);}
+
+let FP,FPV,FPI;
+function footprint(c,img,t,alpha=1,dx=0,dy=0){
+  const fs=8/.86/16*(2/3)/2;
+  c.save();c.globalAlpha=alpha*(.85+.15*Math.sin(t*4));c.imageSmoothingEnabled=true;
+  c.translate(160+dx,168+dy);c.scale(fs,fs);c.drawImage(img,-198,-67);c.restore();c.imageSmoothingEnabled=false;
+}
+
+const pole=(i,tau)=>sst(.35+i*.04,.65+i*.04,tau),bar=(j,tau)=>sst(.58+j*.04,.76+j*.04,tau);
+function scaff(c,S,tau,front){
+  S.xs.forEach((x,i)=>{if((i===1||i===2)!==front)return;
+    const h=Math.round(S.H*pole(i,tau));if(h<=0)return;const y=S.ay+2-h;
+    c.fillStyle='#2e2016';c.fillRect(x-1,y,4,h);c.fillStyle='#9c7048';c.fillRect(x,y,2,h);c.fillStyle='#c49a68';c.fillRect(x,y,1,h);});
+  if(front)return;
+  for(let j=0;j<4;j++){const k=bar(j,tau);if(k<=0)continue;
+    const y=Math.round(S.ay-6-j*(S.H-12)/3),w=Math.round((S.xs[3]-S.xs[0]+3)*k);
+    c.fillStyle='#2e2016';c.fillRect(S.xs[0]-1,y-1,w+2,4);c.fillStyle='#6e4830';c.fillRect(S.xs[0],y,w,2);c.fillStyle='#c49a68';c.fillRect(S.xs[0],y,w,1);}
+}
+
+/* Écroulement au clic : chaque pierre quitte sa place (de la base au sommet) et roule jusqu'à son tas.
+   Sortie « blanc » : silhouette blanche qui s'éteint. Sortie « couleurs » : la pierre garde sa couleur (src, a0) qui s'éteint en ardoise. */
+function crumble(c,S,p,tau,o){
+  const t0=.08+hs(p.id*9.1)*.1+p.h*.18,white=o.exit==='blanc';
+  if(tau<t0){c.globalAlpha=white?(tau<.05?1:.8):o.a0;tile(c,S,p,p.x,p.y,white?S.white:o.src(S));c.globalAlpha=1;return;}
+  const g=cl((tau-t0)/.25),x=jr(p.x+(p.hx-p.x)*g),y=jr(p.y+(p.hy-p.y)*g*g-5*Math.sin(Math.PI*g)*(1-g));
+  rock(c,x,y,p.id,white?1:cl(g*2.5));
+  if(g<1){if(white){c.globalAlpha=(1-g)*.8;c.fillStyle='#ffffff';c.fillRect(x,y,6,6);}else{c.globalAlpha=(1-g)*o.a0;tile(c,S,p,x,y,o.src(S));}c.globalAlpha=1;}
+}
+
+/* Chantier commun (piste C en jeu), précédé de l'écroulement. */
+function build(c,S,tau,dur,o){
+  const q=cl((tau-P)/(dur-P)),T=D*(dur-P),fx=[];
+  for(const sg of [-1,1])for(let i=0;i<4;i++)fx.push([160+sg*46+(hs(i*3.7+sg)-.5)*24,S.ay+8,tau-.3-i*.08,i*13+sg+70]);
+  scaff(c,S,tau,false);
+  c.save();c.beginPath();c.rect(0,0,SW,S.ay+10);c.clip();
+  for(const p of S.heap){if(tau>=P&&(q-p.n*(1-D))/D>0)continue;crumble(c,S,p,tau,o);}
+  c.restore();
+  if(tau>=P)for(const p of S.tiles){const raw=(q-p.n*(1-D))/D;if(raw<=0)continue;const u=cl(raw);
+    if(u>=1){tile(c,S,p,p.x,p.y);const age=(raw-1)*T;if(age<.7)fx.push([p.x+3,p.y+TS,age,p.id]);continue;}
+    let x,y;const ty=p.y-4;
+    if(u<.55){x=p.hx;y=p.hy+(ty-p.hy)*eio(u/.55);}else if(u<.9){x=p.hx+(p.x-p.hx)*eio((u-.55)/.35);y=ty;}else{x=p.x;y=ty+4*(u-.9)/.1;}
+    const k=sst(.2,.7,u);rock(c,jr(x),jr(y),p.id,1-k);c.globalAlpha=k;tile(c,S,p,x,y);c.globalAlpha=1;
+    if(u*T<.4)fx.push([p.hx+3,p.hy+TS,u*T,p.id+7]);}
+  scaff(c,S,tau,true);
+  for(const f of fx)puff(c,...f);
+}
+
+/* Paroi de la grotte, en haut à gauche : tant que l'empreinte la touche, la pose est impossible. */
+function wall(c){
+  c.fillStyle='#141a16';c.fillRect(92,96,30,44);
+  for(let r=0;r<8;r++)for(let k=0;k<7;k++){if(k>=5&&hs(r*3.3+k)>.4)continue;if(r===7&&k>3)continue;rock(c,92+k*6-(r%2)*3,96+r*6,r*5+k,1);}
+  c.fillStyle='#0e130f';c.globalAlpha=.5;c.fillRect(92,144,34,3);c.globalAlpha=1;
+}
+/* Visée : le pointeur attend contre la paroi, puis glisse sur le sol dégagé. */
+function aimOffset(tau){const u=eio(cl((tau+1.25)/.9));return [(1-u)*-34,(1-u)*-26];}
+function aimState(tau){const [ox,oy]=aimOffset(tau);const sx=Math.round(ox/8)*8,sy=Math.round(oy/8)*8;return {sx,sy,ok:sx>-20};}
+function aim(c,S,tau,t,o){
+  const a=aimState(tau);
+  footprint(c,a.ok?FPV:FPI,t,1,a.sx,a.sy);
+  c.save();c.translate(a.sx,a.sy);o.ghost(c,S,a.ok,t);c.restore();c.globalAlpha=1;
+}
+function cursor(c,tau){
+  if(tau>.7)return;let [x,y]=aimOffset(Math.min(tau,0));x+=168;y+=172;
+  if(tau>.15){const k=(tau-.15)/.55;x+=k*30;y+=k*16;c.globalAlpha=1-k;}
+  x=jr(x);y=jr(y);
+  const W=[1,2,3,4,5,6,7,4,2,2];
+  c.fillStyle='#10140f';for(let r=0;r<W.length;r++)c.fillRect(x-1,y+r-1,W[r]+2,3);
+  c.fillStyle='#f4f0dc';for(let r=0;r<W.length;r++)c.fillRect(x,y+r,W[r],1);
+  if(tau>=0&&tau<.15){const r=3+Math.round(tau/.15*5);c.fillStyle='#fff4c8';
+    for(const [a,b] of [[-1,0],[1,0],[0,-1],[-.7,-.7],[.7,-.7]])c.fillRect(jr(x+a*r),jr(y+b*r),2,1);}
+  c.globalAlpha=1;
+}
+
+/* ---------- Pistes ---------- */
+const V={};
+
+V.A={title:'A · Verre',exit:'blanc',a0:.55,src:S=>S.full,
+  facts:['Possible : <b>rendu à 55 %</b>','Impossible : <b>teinte rouge</b>, même opacité','Sortie : <b>blanc</b>'],
+  text:'Le plus simple. Le vrai sprite du bâtiment, à 55 % d’opacité, sans rien d’autre. Impossible : le même rendu teinté de rouge, ombres et lumières conservées. Au clic, la silhouette blanchit d’un éclat puis s’écroule.',
+  ghost(c,S,ok){c.globalAlpha=.55;c.drawImage(ok?S.full:S.red,0,0);},
+  draw(c,S,tau,dur,t){footprint(c,FP,t);build(c,S,tau,dur,this);}};
+
+V.B={title:'B · Liseré',ok:true,exit:'couleurs',a0:.65,src:S=>S.full,
+  facts:['Possible : <b>rendu à 65 % + liseré vert</b>','Impossible : <b>teinte rouge + liseré rouge</b>','Sortie : <b>couleurs</b>'],
+  text:'Le rendu à 65 %, cerné d’un liseré d’un pixel : vert d’eau quand la pose est possible, rouge quand elle ne l’est pas. Le liseré détache le bâtiment du décor et porte l’état à lui seul. Au clic, le liseré claque en blanc, puis chaque pierre tombe avec sa vraie couleur, qui s’éteint en ardoise pendant la chute.',
+  ghost(c,S,ok){c.globalAlpha=.65;c.drawImage(ok?S.full:S.red,0,0);c.globalAlpha=1;c.drawImage(ok?S.outOk:S.outBad,0,0);},
+  draw(c,S,tau,dur,t){footprint(c,FP,t);build(c,S,tau,dur,this);
+    if(tau<.1){c.globalAlpha=1-tau/.1;c.drawImage(S.outW,0,0);c.globalAlpha=1;}}};
+
+V.C={title:'C · Souffle',exit:'blanc',a0:.55,src:S=>S.full,
+  facts:['Possible : <b>rendu qui respire, 40 à 70 %</b>','Impossible : <b>gris rougi qui clignote</b>','Sortie : <b>blanc</b>'],
+  text:'Le rendu respire lentement entre 40 et 70 % d’opacité : on voit tour à tour le sol et le bâtiment, et le mouvement dit « pas encore posé ». Impossible : le sprite perd ses couleurs, vire au rouge et clignote sec, quatre fois par seconde. Le refus le plus visible des quatre. Au clic, éclat blanc puis écroulement.',
+  ghost(c,S,ok,t){if(ok){c.globalAlpha=.55+.15*Math.sin(t*7.5);c.drawImage(S.full,0,0);}else{c.globalAlpha=Math.floor(t*8)%2?.7:.4;c.drawImage(S.grayRed,0,0);}},
+  draw(c,S,tau,dur,t){footprint(c,FP,t);build(c,S,tau,dur,this);}};
+
+V.D={title:'D · Pied franc',exit:'couleurs',a0:1,src:S=>S.grad,
+  facts:['Possible : <b>base à 95 %, sommet à 28 %</b>','Impossible : <b>le même dégradé, en rouge</b>','Sortie : <b>couleurs</b>'],
+  text:'Le rendu est presque opaque au pied et s’efface vers le sommet. On lit précisément où le bâtiment touche le sol, là où se décide la pose, sans que le haut masque ce qu’il y a derrière. Impossible : le même dégradé, teinté de rouge. Au clic, les pierres tombent avec leur couleur qui s’éteint, la base d’abord.',
+  ghost(c,S,ok){c.drawImage(ok?S.grad:S.gradRed,0,0);},
+  draw(c,S,tau,dur,t){footprint(c,FP,t);build(c,S,tau,dur,this);}};
+
+/* ---------- Mise en page ---------- */
+const ORDER=['A','B','C','D'];
+const sites={};const boards=[];
+let playing=!matchMedia('(prefers-reduced-motion: reduce)').matches,speed=1,clock=0,last=performance.now();
+
+function frame(ctx,S,v,tau,dur,t,ox){
+  ctx.save();ctx.translate(ox-VIEW.x,-VIEW.y);
+  ctx.beginPath();ctx.rect(VIEW.x,VIEW.y,VIEW.w,VIEW.h);ctx.clip();
+  wall(ctx);
+  if(tau<0)aim(ctx,S,tau,t,v);else v.draw(ctx,S,tau,dur,t);
+  cursor(ctx,tau);
+  ctx.restore();
+}
+function ground(ctx,w,h){ctx.fillStyle='#2b342c';ctx.fillRect(0,0,w,h);
+  for(let i=0;i<w*h/90;i++){const x=Math.floor(hs(i*1.7)*w),y=Math.floor(hs(i*2.9)*h);ctx.fillStyle=hs(i*.3)>.5?'#323c33':'#262e27';ctx.fillRect(x,y,2,1);}}
+function addCanvas(s,labels){
+  const k=cv(VIEW.w*3,VIEW.h);k.style.width=VIEW.w*3*SCALE+'px';s.appendChild(k);
+  const lab=document.createElement('div');lab.className='strip';lab.innerHTML=labels.map(a=>`<div>${a}</div>`).join('');s.appendChild(lab);
+  const x=k.getContext('2d');x.imageSmoothingEnabled=false;return x;
+}
+const stamp=tau=>tau<0?(aimState(tau).ok?'visée, pose possible':'visée, pose impossible'):'clic + '+tau.toFixed(2).replace('.',',')+' s';
+
+async function main(){
+  FP=await loadImg(IMG.fp);FPV=await loadImg(IMG.fpv);FPI=await loadImg(IMG.fpi);
+  for(const a of ARTS)sites[a.id]=makeSite(await loadImg(IMG[a.id]));
+  const root=document.getElementById('root');
+  for(const k of ORDER){const v=V[k];
+    const s=document.createElement('section');
+    s.innerHTML=`<h2>${v.title}${v.ok?'<span class="tag">conseillée</span>':''}</h2><p>${v.text}</p><ul class="facts">${v.facts.map(f=>`<li>${f}</li>`).join('')}</ul>`;
+    const live=addCanvas(s,ARTS.map(a=>`${a.name} · ${a.dur} s`));
+    for(let r=0;r<2;r++){const ks=KEYS.slice(r*3,r*3+3);const sc=addCanvas(s,ks.map(q=>'Fonderie · '+stamp(q)));
+      ground(sc,VIEW.w*3,VIEW.h);ks.forEach((q,i)=>frame(sc,sites['da-forge'],v,q,8,1.3,i*VIEW.w));}
+    root.appendChild(s);
+    boards.push({v,ctx:live,w:VIEW.w*3,h:VIEW.h});
+  }
+  requestAnimationFrame(tick);
+}
+
+const scrub=document.getElementById('scrub'),lbl=document.getElementById('lbl'),play=document.getElementById('play');
+function setPlay(p){playing=p;play.textContent=p?'⏸ Pause':'▶ Lecture';play.classList.toggle('on',p);}
+function tick(now){
+  const dt=Math.min(.1,(now-last)/1000);last=now;
+  if(playing){clock=(clock+dt*speed)%TOTAL;scrub.value=Math.round(clock/TOTAL*1000);}
+  const tau=clock-AIM;
+  lbl.textContent=stamp(tau);
+  for(const b of boards){ground(b.ctx,b.w,b.h);ARTS.forEach((a,i)=>frame(b.ctx,sites[a.id],b.v,tau,a.dur,clock,i*VIEW.w));}
+  requestAnimationFrame(tick);
+}
+setPlay(playing);
+play.onclick=()=>setPlay(!playing);
+document.querySelectorAll('[data-sp]').forEach(b=>b.onclick=()=>{speed=+b.dataset.sp;document.querySelectorAll('[data-sp]').forEach(x=>x.classList.toggle('on',x===b));});
+scrub.oninput=()=>{clock=scrub.value/1000*TOTAL;setPlay(false);};
+main();
+</script>

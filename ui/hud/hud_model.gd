@@ -44,8 +44,10 @@ static func incarnated_panel() -> bool:
 		or GameState.selected.any(func(u: Unit) -> bool: return u != inc))
 
 
-## unlocked (buildings.js) : sans prérequis, ou un bâtiment requis achevé.
+## unlocked (buildings.js) : sans prérequis, ou un bâtiment requis achevé ; et son âge de métal ouvert (sim/ages.gd).
 static func unlocked(type: String) -> bool:
+	if not Ages.building_open(type):
+		return false
 	var r: String = Catalog.BUILDINGS[type]["requires"]
 	if r.is_empty():
 		return true
@@ -61,6 +63,8 @@ static func unlocked(type: String) -> bool:
 ## Ce qui manque pour construire `type` : « construisez d'abord un … » ou la recherche exigée.
 static func lock_reason(type: String) -> String:
 	var D: Dictionary = Catalog.BUILDINGS[type]
+	if not Ages.building_open(type):
+		return "%s requis" % Ages.AGES[Ages.BUILDING_AGE[type]]["name"]
 	for b in GameState.buildings:
 		if b.type == D["requires"] and b.complete:
 			var research := String(D.get("research", ""))
@@ -329,7 +333,7 @@ static func _panel_actions(sim: Simulation) -> Array[Dictionary]:
 
 const CRAFT_KEYS := "1234567890"
 ## Icône du HUD par objet fabriqué (marteau par défaut).
-const CRAFT_ICON := {"torch": "flame", "arrows": "bow", "bow": "bow", "wood_fiber": "wood", "chest": "repair",
+const CRAFT_ICON := {"torch": "flame", "arrows": "bow", "bow": "bow", "wood_fiber": "wood", "plank": "wood", "chest": "repair",
 	"firing_post": "flag", "barricade": "shield", "caltrops": "skull", "sword": "sword", "shield": "shield",
 	"copper_ingot": "iron", "iron_ingot": "iron", "gold_ingot": "iron", "copper_armor": "shield", "iron_armor": "shield",
 	"iron_greatsword": "sword", "iron_sword": "sword", "copper_greatsword": "sword", "copper_sword": "sword",
@@ -344,6 +348,8 @@ static func _warehouse_actions(actions: Array[Dictionary], b: Building) -> void:
 	actions.append(_act("warehouse-page", "book", groups[b.warehouse_page] + " ›", "p",
 		"Afficher la catégorie suivante · " + groups[next], func() -> void: b.warehouse_page = next))
 	for item: String in catalogs[b.warehouse_page]:
+		if not Ages.recipe_open(item):
+			continue
 		var selected := b.requested_items.has(item)
 		var label := Simulation.Recipes.name_of(item)
 		var title := "Maintenir %d exemplaires de %s dans cet entrepôt." % [Production.WAREHOUSE_TARGET, label]
@@ -364,6 +370,9 @@ static func _craft_actions(A: Array[Dictionary], sim: Simulation, B: Building) -
 	var recipes: Dictionary = R.RECIPES[B.type]
 	var i := 0
 	for item: String in recipes:
+		# Âge de métal fermé, ou plan pas encore appris : la recette est masquée (sim/ages.gd, Recipes.PLANS).
+		if not Ages.recipe_open(item) or not R.plan_known(item):
+			continue
 		var cost: Dictionary = recipes[item]
 		var title := "%s · %s · %s s" % [R.name_of(item), _stock_text(cost), num(R.craft_time(B.type))]
 		var desc := R.desc_of(item)
@@ -373,6 +382,8 @@ static func _craft_actions(A: Array[Dictionary], sim: Simulation, B: Building) -
 			title += " · Recherche « %s » requise (%s)." % [Catalog.RESEARCH[Catalog.RECIPE_RESEARCH[item]]["name"], Catalog.BUILDINGS[Catalog.RESEARCH[Catalog.RECIPE_RESEARCH[item]]["building"]]["name"]]
 		if R.ITEMS.get(item, {}).get("pending", false):
 			title += " · Effet pas encore en jeu : l’objet est stocké."
+		if R.disabled(item):
+			title += " · Pas encore disponible."
 		title += " · Fabriqué en boucle par les adeptes au poste ; cliquer de nouveau pour arrêter."
 		var action := _act("craft-" + item, CRAFT_ICON.get(item, "hammer"), R.name_of(item), CRAFT_KEYS[i + research_keys(B)] if i + research_keys(B) < CRAFT_KEYS.length() else "", title,
 			func() -> void: sim.craft(B, item), not Simulation.can_craft(B, item), B.recipe == item)
@@ -381,9 +392,11 @@ static func _craft_actions(A: Array[Dictionary], sim: Simulation, B: Building) -
 		action["craft_item"] = item
 		action["craft_count"] = Production.count_in(B.output_box, item)
 		action["craft_progress"] = B.craft / R.craft_time(B.type) if B.recipe == item else 0.0
-		action["locked"] = not Simulation.recipe_unlocked(item)
+		action["locked"] = not Simulation.recipe_unlocked(item) or R.disabled(item)
 		var why := ""
-		if action["locked"]:
+		if R.disabled(item):
+			why = "Pas encore disponible"
+		elif action["locked"]:
 			why = "Recherche « %s » requise" % Catalog.RESEARCH[Catalog.RECIPE_RESEARCH[item]]["name"]
 		action["bubble"] = [R.name_of(item), "%s · %s s" % [_stock_text(cost), num(R.craft_time(B.type))], _stock_ok(cost), why]
 		A.append(action)
@@ -396,7 +409,7 @@ static func building_research(B: Building) -> Array[String]:
 	if B == null:
 		return out
 	for id: String in Catalog.RESEARCH:
-		if Catalog.RESEARCH[id]["building"] == B.type and not GameState.research_done.has(id):
+		if Catalog.RESEARCH[id]["building"] == B.type and not GameState.research_done.has(id) and Ages.research_open(id):
 			out.append(id)
 	return out
 
@@ -636,7 +649,7 @@ static func adept_status(sim: Simulation, u: Unit) -> String:
 	if j["type"] == "dig":
 		if not u.carrying.is_empty():
 			return "Transporte sa récolte"
-		return "Mine · 1 ressource toutes les %d s" % Simulation.adept_mining_seconds(u) if u.working else "Se rend au bloc"
+		return "Mine · 1 ressource toutes les %s s" % num(Simulation.adept_mining_seconds(u)) if u.working else "Se rend au bloc"
 	if j["type"] == "staff":
 		return staff_status(u)
 	return "En attente d’ordres"
@@ -663,6 +676,8 @@ static func staff_status(u: Unit) -> String:
 
 static func unit_status(sim: Simulation, u: Unit) -> String:
 	if u.hidden:
+		if u.role == "engineer" and GameState.in_capsule:
+			return "Dans la capsule · E : Sortir" if Capsule.powered() else "Dans la capsule éteinte…"
 		return "Franchit le portail…"
 	if Catalog.is_adept(u):
 		return adept_status(sim, u)
@@ -675,7 +690,9 @@ static func unit_status(sim: Simulation, u: Unit) -> String:
 			return "Construction · %s · %d %%" % [b.def()["name"], floori(b.progress / b.def()["time"] * 100.0)]
 		if u.job != null and u.job["type"] == "bless_pylon":
 			var bl := float(u.job["pylon"].get("blessing", 0.0))
-			return "Bénit le Pylône de Merenor · répit %d s" % floori(bl) if u.working else "Se rend au Pylône de Merenor"
+			var run := float(u.job["pylon"].get("bless_run", 0.0))
+			return "Bénit le Pylône de Merenor · canalisé dans %d s · répit %d s" % [ceili(Pylons.BLESS_CHANNEL - run), floori(bl)] \
+				if u.working else "Se rend au Pylône de Merenor"
 		if u.job != null and u.job["type"] == "anchor_pray":
 			return "Prie à l’Ancre · répare %s PV / s · +%s de chaque mana / s" % [num(Simulation.ANCHOR_REPAIR), num(Simulation.ANCHOR_PRAY)] \
 				if u.working else "Se rend à l’Ancre pour prier"
@@ -796,7 +813,8 @@ static func view(sim: Simulation) -> Dictionary:
 	else:
 		v["chosen"] = B.def()["name"] if B else "Aucune sélection"
 	var lv := ""
-	if u and alive.size() == 1 and not u.hidden:
+	# L'Ingénieur n'a plus de niveaux : pas de ligne NIV. / XP pour lui.
+	if u and alive.size() == 1 and not u.hidden and u.role != "engineer":
 		lv = " · NIV. %d · %d / %d XP" % [Catalog.lvl(u), floori(u.xp), Catalog.xp_need(Catalog.lvl(u))]
 	if anchor:
 		v["kind"] = "SANCTUAIRE · ANCRE"
@@ -931,7 +949,7 @@ static func _enemy_view(v: Dictionary, e: Enemy) -> void:
 const BUILD_FAMILIES := [
 	["temples", "Temples", "rune", ["sigil", "aether", "medeina", "indra"]],
 	["raw", "Matières premières", "wood", ["scierie", "forge"]],
-	["production", "Production", "hammer", ["workshop", "archerie", "creuset"]],
+	["production", "Production", "hammer", ["workshop", "archerie", "creuset", "etabli"]],
 	["utility", "Utilitaires", "people", ["bedroom", "eglise", "library", "warehouse"]],
 	["military", "Militaire", "sword", ["caserne", "soulwell", "ecole"]],
 ]

@@ -162,6 +162,9 @@ func _equip_slot(slot: Dictionary) -> void:
 	var stack := _slot_content(slot)
 	if stack.is_empty() or slot.has("equip"):
 		return
+	if stack["item"] == "ration":
+		Loot.use_ration(_owner if _owner else engineer(), slot["items"], slot["index"])
+		return
 	var destination := Gear.slot_of(stack["item"])
 	if destination.is_empty():
 		return

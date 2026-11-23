@@ -29,12 +29,48 @@ const LIST: Array[Dictionary] = [
 	# second, des traces de fer dans le cinquième nord, pas d'or. Plus de bassins (les anguilles y vivront).
 	# « rock » : type de la roche nue de la bande (data/mineable_blocks.gd). Un troisième nombre dans une plage
 	# de minerai est son poids au tirage (1 par défaut).
-	{"id": "biome2", "name": "Veines de vert-de-gris", "height": 0.0, "tier": 1, "threat": 2, "rock": "rock2",
+	{"id": "biome2", "name": "Veines de vert-de-gris", "height": 336.0, "tier": 1, "threat": 2, "rock": "rock2",
 		"worms": 9.0, "steps": [40, 90], "radius": [1.6, 2.6], "room": 0.03, "branch": 0.035,
 		"clearings": 1.5, "pools": 1.6, "lodes": 2.5, "veins": 14.0,
 		"ores": {"copper": [0.0, 1.0, 3], "quartz": [0.0, 1.0], "iron": [0.8, 1.0]},
 		"decor": {"mountain_rock": 1.0}},
+	# Six strates avant Byrsa (planches/biomes-3-8-propositions.html, validée le 2026-11-22). Socle seulement :
+	# bande, roche scellée, minerai ; leurs mécaniques, bestiaires et boss viennent par lots.
+	# Roches : 12, 14, 16, 18, 20 puis 24 coups (data/mineable_blocks.gd), chacune derrière son sceau.
+	{"id": "forges", "name": "Les Forges mortes", "height": 256.0, "tier": 2, "threat": 3, "rock": "rock3",
+		"worms": 9.0, "steps": [40, 90], "radius": [1.7, 2.8], "room": 0.04, "branch": 0.035,
+		"clearings": 1.2, "pools": 0.0, "lodes": 2.5, "veins": 14.0,
+		"ores": {"iron": [0.0, 1.0, 3], "copper": [0.0, 0.3]},
+		"decor": {"mountain_rock": 1.0}},
+	{"id": "galeries", "name": "Les Galeries muettes", "height": 256.0, "tier": 3, "threat": 4, "rock": "rock4",
+		"worms": 10.0, "steps": [50, 110], "radius": [1.6, 2.4], "room": 0.02, "branch": 0.05,
+		"clearings": 0.8, "pools": 0.8, "lodes": 2.0, "veins": 14.0,
+		"ores": {"silver": [0.0, 1.0, 3], "iron": [0.0, 0.3]},
+		"decor": {"mountain_rock": 1.0}},
+	{"id": "limbes", "name": "Les Rives des Limbes", "height": 256.0, "tier": 4, "threat": 5, "rock": "rock5",
+		"worms": 8.0, "steps": [40, 90], "radius": [1.8, 3.0], "room": 0.05, "branch": 0.03,
+		"clearings": 1.2, "pools": 2.0, "lodes": 1.5, "veins": 12.0,
+		"ores": {"tear": [0.0, 1.0, 3], "quartz": [0.0, 1.0], "silver": [0.0, 0.3]},
+		"decor": {"mountain_rock": 1.0}},
+	{"id": "ventre", "name": "Le Ventre de la Bête", "height": 256.0, "tier": 5, "threat": 6, "rock": "rock6",
+		"worms": 9.0, "steps": [40, 90], "radius": [1.8, 3.0], "room": 0.06, "branch": 0.04,
+		"clearings": 1.0, "pools": 0.0, "lodes": 2.0, "veins": 14.0,
+		"ores": {"amber": [0.0, 1.0, 3]},
+		"decor": {"mountain_rock": 1.0}},
+	{"id": "tyr", "name": "La Tyr enfouie", "height": 256.0, "tier": 6, "threat": 7, "rock": "rock7",
+		"worms": 8.0, "steps": [50, 100], "radius": [1.8, 2.8], "room": 0.07, "branch": 0.04,
+		"clearings": 1.0, "pools": 0.4, "lodes": 2.0, "veins": 10.0,
+		"ores": {"orichalcum": [0.0, 1.0, 3], "quartz": [0.0, 1.0]},
+		"decor": {"mountain_rock": 1.0}},
+	{"id": "cryptes", "name": "Les Cryptes de l’Aube", "height": 0.0, "tier": 7, "threat": 8, "rock": "rock8",
+		"worms": 9.0, "steps": [40, 90], "radius": [1.7, 2.6], "room": 0.06, "branch": 0.04,
+		"clearings": 0.8, "pools": 0.0, "lodes": 1.5, "veins": 12.0,
+		"ores": {"gold": [0.0, 1.0, 3], "quartz": [0.0, 1.0, 2]},
+		"decor": {"mountain_rock": 1.0}},
 ]
+
+## Roche nue de chaque palier (Biomes.rock_tier) : 0 ardoise du Temple, 1 vert-de-gris, puis une par strate.
+const ROCKS: Array[String] = ["rock", "rock2", "rock3", "rock4", "rock5", "rock6", "rock7", "rock8"]
 
 
 ## Index du biome à la profondeur z (la jungle et la base comptent dans le premier).
@@ -54,10 +90,28 @@ static func at(z: float) -> Dictionary:
 	return LIST[index_at(z)]
 
 
-## Palier de la roche nue à la profondeur z : 0 ardoise du Temple, 1 roche de vert-de-gris (« rock2 »).
+## Palier de la roche nue à la profondeur z : 0 ardoise du Temple, 1 roche de vert-de-gris (« rock2 »), etc.
 ## Il choisit la texture du dessus, la paroi et les teintes de bord (une roche par sceau de minage).
 static func rock_tier(z: float) -> int:
-	return 1 if String(at(z).get("rock", "rock")) == "rock2" else 0
+	return maxi(0, ROCKS.find(String(at(z).get("rock", "rock"))))
+
+
+## Suffixe des textures d'un palier (floor, rock, dug) : "" pour le Temple, puis "2" … "8".
+static func tile_suffix(tier: int) -> String:
+	return "" if tier <= 0 else str(tier + 1)
+
+
+## Suffixe des sprites d'un palier (parois, décor) : "" pour le Temple, puis "_r2" … "_r8".
+static func sprite_suffix(tier: int) -> String:
+	return "" if tier <= 0 else "_r%d" % (tier + 1)
+
+
+## Index du biome d'identifiant `id` (-1 s'il n'existe pas).
+static func index_of(id: String) -> int:
+	for k in LIST.size():
+		if LIST[k]["id"] == id:
+			return k
+	return -1
 
 
 ## Bord nord (z minimal, exclu) du biome k ; -INF pour le dernier.

@@ -98,8 +98,6 @@ func _draw() -> void:
 			1: ItemIcon.draw_item(self, "cannon", c, 1.0)
 			2:
 				_ball(c, Ammo.current())
-				if not Ammo.can_pay(Ammo.current(), 1.0):
-					draw_rect(r.grow(-3.0), Color(0.04, 0.05, 0.12, 0.55))
 	if _hover >= 0 and not _name_of(_hover).is_empty():
 		_tip(_slot(_hover), _name_of(_hover))
 

@@ -10,8 +10,10 @@ const Ammo := preload("res://data/ammo.gd")
 func _armed(item: String, slot := "Main droite") -> Unit:
 	var u := engineer()
 	u.unarmored = true
-	var pack: Array[Dictionary] = [{"item": item, "quantity": 1}]
-	check(Gear.equip(u, pack, 0, slot), item + " porté")
+	# L'Exilé n'équipe plus que des mods (2026-11-21) : l'arme est posée directement pour éprouver ses attaques.
+	u.equipment[slot] = item
+	if Gear.two_handed(u):
+		u.equipment.erase("Main gauche")
 	return u
 
 
@@ -62,7 +64,7 @@ func test_cannon_ball_stops_at_first_enemy() -> void:
 	check(nums.size() == 1 and nums[0]["age"] < 0.0, "chiffre de dégâts masqué jusqu'à l'arrivée de la balle")
 	var cd: float = Gear.ITEMS["cannon"]["cd"] * float(Ammo.AMMO[Ammo.current()].get("cd_mult", 1.0))
 	check_near(u.attack, cd, 1e-6, "cadence de l'arme et de la munition")
-	check_near(GameState.res["forge"], 100.0 - float(Gear.ITEMS["cannon"]["mana"]), 1e-6, "mana du tir payée")
+	check_near(GameState.res["forge"], 100.0, 1e-6, "le tir ne coûte pas de mana")
 	var ball: Array = GameState.effects.filter(func(e: Dictionary) -> bool: return e["type"] == "cball")
 	check_eq(ball.size(), 1, "une balle tirée")
 	# La balle s'arrête au bord de la silhouette (Enemy.BODY), devant le centre de l'ennemi.

@@ -40,9 +40,7 @@ func set_action(a: Dictionary) -> void:
 	tooltip_text = ""
 	_tex = art(Catalog.BUILDINGS[a["build_type"]]["art"])
 	_kbd.text = String(a["key"]).to_upper()
-	var w := maxf(15.0, HudStyle.text_width(_kbd.text, 10) + 6.0)
-	_kbd.position = Vector2(SIZE - w - 2.0, SIZE - 15.0)
-	_kbd.size = Vector2(w, 13.0)
+	_kbd.size = Vector2(maxf(15.0, HudStyle.text_width(_kbd.text, 10) + 6.0), 13.0)
 	queue_redraw()
 
 
@@ -52,6 +50,15 @@ func lit() -> bool:
 
 func _draw() -> void:
 	var r := Rect2(Vector2.ZERO, size)
+	# Enfoncé (PressFx) : la face et la touche descendent dans leur logement.
+	var pressed := PressFx.down(self)
+	_kbd.position = Vector2(SIZE - _kbd.size.x - 2.0, SIZE - 15.0 + PressFx.dy(self))
+	PressFx.begin(self, r, pressed)
+	_draw_face(r)
+	PressFx.finish(self, r, pressed)
+
+
+func _draw_face(r: Rect2) -> void:
 	draw_rect(r, Color("#14170fe8"))
 	if _tex:
 		var inner := r.grow(-3.0)
@@ -65,7 +72,7 @@ func _draw() -> void:
 		HudStyle.ring(self, r.grow(1.0), 1.0, Color(0, 0, 0, 0.8))
 	else:
 		HudStyle.ring(self, r, 1.0, Color("#565443") if disabled else HudStyle.GOLD)
-	var kr := Rect2(_kbd.position, _kbd.size)
+	var kr := Rect2(_kbd.position - Vector2(0.0, PressFx.dy(self)), _kbd.size)
 	draw_rect(kr, Color("#10140d"))
 	draw_rect(kr.grow(-0.5), Color("#4d4f40"), false, 1.0)
 	if action.get("locked", false):

@@ -37,7 +37,7 @@ func test_enemy_stats_follow_catalog() -> void:
 		var e := sim.combat.spawn_enemy({"x": 2.0, "kind": k})
 		# Allure des vagues : vitesse du catalogue × Catalog.WAVE_PACE.
 		check_eq([e.hp, e.max_hp, e.reach, e.damage], [float(want["hp"]), float(want["hp"]), float(want["range"]), float(want["damage"])], k)
-		check_near(e.speed, float(want["speed"]) * Catalog.WAVE_PACE, 1e-6, k + " : vitesse")
+		check_near(e.speed, float(want["speed"]) * Catalog.WAVE_PACE * (Catalog.CREDO_SPEED if Catalog.CREDO_KINDS.has(k) else 1.0), 1e-6, k + " : vitesse")
 		check(e.z >= 62.0 and e.z <= 66.0 and absf(e.x - 2.0) <= 1.6, "%s apparaît au sud : %s" % [k, e.pos()])
 
 

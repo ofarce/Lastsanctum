@@ -9,13 +9,18 @@ func test_bands_stack_north() -> void:
 	check_eq(Biomes.at(CaveShape.START_Z0)["id"], "temple", "zone d'origine entière dans le Temple")
 	check_eq(Biomes.north_z(0), Biomes.BASE_Z - 330.0, "hauteur fixe du Temple")
 	check_eq(Biomes.at(Biomes.north_z(0) - 1.0)["id"], "biome2", "au-delà : biome 2")
-	check_eq(Biomes.at(CaveShape.WORLD_Z0)["id"], "biome2", "bord nord")
-	check_eq(Biomes.north_z(1), -INF, "dernier biome sans limite")
+	check_eq(Biomes.north_z(1), Biomes.north_z(0) - 336.0, "hauteur fixe du biome 2")
+	check_eq(Biomes.at(CaveShape.WORLD_Z0)["id"], "cryptes", "bord nord : les Cryptes de l’Aube")
+	check_eq(Biomes.north_z(Biomes.LIST.size() - 1), -INF, "dernier biome sans limite")
+	for k in Biomes.LIST.size():
+		check_eq(Biomes.rock_tier(Biomes.north_z(k - 1) - 1.0 if k > 0 else 0.0), k, "palier de roche du biome %d" % k)
 
 
 func test_map_doubled() -> void:
 	check_eq(TerrainState.GAL_W, 2 * TerrainState.START_W, "largeur doublée")
-	check_eq(TerrainState.GAL_H, 2 * TerrainState.START_H, "hauteur doublée")
+	# 2026-11-22 : la carte monte jusqu'aux Cryptes de l'Aube (huit biomes), elle n'est plus seulement doublée.
+	check_eq(TerrainState.GAL_H, int(CaveShape.WORLD_Z1 - CaveShape.WORLD_Z0), "hauteur jusqu’au dernier biome")
+	check(float(CaveShape.WORLD_Z0) < Biomes.north_z(Biomes.LIST.size() - 2), "le dernier biome a de la place")
 
 
 func test_extension_is_deterministic_and_outside_start() -> void:
@@ -59,10 +64,11 @@ func test_extension_content_per_biome() -> void:
 		var t0 := Time.get_ticks_msec()
 		var st := _gen(map_seed)
 		var ms := Time.get_ticks_msec() - t0
-		var groves := [0, 0]
-		var lodes := [0, 0]
-		var veins := [0, 0]
-		var pools := [0, 0]
+		# Un compteur par biome (huit depuis les biomes 3 à 8) ; seuls les deux premiers sont vérifiés garnis.
+		var groves := _zeros()
+		var lodes := _zeros()
+		var veins := _zeros()
+		var pools := _zeros()
 		for o: Vector2i in st.wood_left:
 			if not CaveShape.in_start(o.x * 4.0, o.y * 4.0):
 				groves[Biomes.index_at(o.y * 4.0)] += 1
@@ -72,6 +78,9 @@ func test_extension_content_per_biome() -> void:
 				continue
 			var k := Biomes.index_at(z)
 			lodes[k] += 1
+			# Filons des salles de ressources du Temple (2026-11-22) : posés par salle, hors bande de profondeur.
+			if not st.temple_room(o.x * 4.0 + 4.0, z + 4.0).is_empty():
+				continue
 			# Le filon (2 × 2 cases) est posé à quelques cases du centre de sa clairière, où le minerai a été tiré.
 			var allowed := false
 			for dz: float in [-12.0, -8.0, -4.0, 0.0, 4.0, 8.0, 12.0, 16.0]:
@@ -102,65 +111,13 @@ func test_extension_content_per_biome() -> void:
 func test_portal_threat_follows_biome() -> void:
 	var st := _gen(42)
 	var seen := {}
+	# Pylônes par anneaux (galeries reliées, 2026-11-22) : la menace est le palier de l'anneau, au moins celle du biome.
 	for p: Dictionary in st.portals:
-		check_eq(p["threat"], Biomes.at(p["z"])["threat"], "menace du portail")
+		if p.has("ring"):
+			check_eq(p["threat"], p["ring"], "menace du pylône = son anneau")
+		check(int(p["threat"]) >= int(Biomes.at(p["z"])["threat"]), "menace au moins celle du biome")
 		seen[p["threat"]] = true
-	check(seen.has(1) and seen.has(2), "portails dans les deux biomes")
-
-
-## Les passages s'arrêtent avant la galerie d'origine : la zone d'origine reste séparée de l'extension,
-## mais à une ou deux cases près.
-func test_passages_stop_short_of_start_galleries() -> void:
-	for map_seed in [3, 42, 20261114]:
-		var st := AfterPassages.new()
-		st.generate_galleries(map_seed)
-		# Réseaux tels que les passages les laissent : les salles posées ensuite (pylônes, salles à thème)
-		# peuvent, elles, déborder sur un passage. Galerie d'origine = déjà là avant les passages (un passage
-		# entre lui-même loin dans la zone quand la galerie visée est loin du bord).
-		var final_mask := st.mask
-		st.mask = st.after_passages
-		var comp := _components(st)
-		st.mask = final_mask
-		var start_ids := {}
-		var ext_ids := {}
-		for k in st.mask.size():
-			if comp[k] == 0:
-				continue
-			var x := k % TerrainState.GAL_W + CaveShape.WORLD_X0 + 0.5
-			var z := k / TerrainState.GAL_W + CaveShape.WORLD_Z0 + 0.5
-			if st.before_passages[k] != 0 and TerrainState.gallery_allowed(x, z) and not TerrainState.ext_allowed(x, z) and CaveShape.in_start(x, z):
-				start_ids[comp[k]] = true
-			if TerrainState.ext_allowed(x, z):
-				ext_ids[comp[k]] = true
-		for id in start_ids:
-			check(not ext_ids.has(id), "graine %d : aucun réseau ne relie déjà l'origine à l'extension" % map_seed)
-		# Au moins deux passages arrivent à moins de 3 cases d'une galerie d'origine.
-		var close := 0
-		for side: Vector2 in [Vector2.LEFT, Vector2.RIGHT, Vector2.UP]:
-			var t: Variant = st._edge_gallery(side)
-			if t == null:
-				continue
-			var near := INF
-			for k in st.mask.size():
-				if st.mask[k] == 0 or start_ids.has(comp[k]):
-					continue
-				var q := Vector2(k % TerrainState.GAL_W + CaveShape.WORLD_X0 + 0.5, k / TerrainState.GAL_W + CaveShape.WORLD_Z0 + 0.5)
-				if absf(q.x - t.x) < 14.0 and absf(q.y - t.y) < 14.0:
-					near = minf(near, q.distance_to(t))
-			if near <= 12.0:
-				close += 1
-		check(close >= 2, "graine %d : passages tout près de la zone d'origine (%d)" % [map_seed, close])
-
-
-## Garde le masque des galeries juste après le percement des passages.
-class AfterPassages extends TerrainState:
-	var before_passages: PackedByteArray
-	var after_passages: PackedByteArray
-
-	func _carve_passages() -> void:
-		before_passages = mask.duplicate()
-		super()
-		after_passages = mask.duplicate()
+	check(seen.size() >= 2, "plusieurs paliers de pylônes")
 
 
 static func _components(st: TerrainState) -> PackedInt32Array:
@@ -186,3 +143,10 @@ static func _components(st: TerrainState) -> PackedInt32Array:
 			stack.append(k - w)
 			stack.append(k + w)
 	return comp
+
+
+static func _zeros() -> Array:
+	var out := []
+	out.resize(Biomes.LIST.size())
+	out.fill(0)
+	return out

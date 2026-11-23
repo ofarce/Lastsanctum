@@ -4,8 +4,8 @@ extends GroveView
 ## et même rai que le bosquet ; un seul aspect par minerai, puisqu'il ne s'épuise jamais.
 
 const LODE_SPRITES := preload("res://assets/ardoise/world/filons.png")
-## filons.png : cuivre, fer, or, 96 × 104 px chacun (emprise 64 × 64 en (16, 40)).
-const LODE_FRAMES := ["copper", "iron", "gold"]
+## filons.png : cuivre, fer, or, pierre (fer désaturé), 96 × 104 px chacun (emprise 64 × 64 en (16, 40)).
+const LODE_FRAMES := ["copper", "iron", "gold", "rock"]
 
 var _frame := 0
 

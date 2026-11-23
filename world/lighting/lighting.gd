@@ -18,7 +18,7 @@ const EVIL := Color8(255, 70, 40)
 ## Écart voulu D16 (charte graphique) : une couleur par culte, l'Ancre pourpre.
 const ANCRE := Color8(154, 58, 184)
 const CULT := {"medeina": Color8(122, 224, 112), "indra": Color8(255, 138, 42), "sigil": Color8(228, 234, 246), "aether": Color8(122, 128, 255)}
-const CULT_OF := {"sigil": "sigil", "warehouse": "sigil", "library": "sigil", "aether": "aether", "forge": "aether", "workshop": "aether", "creuset": "aether", "scierie": "aether", "archerie": "aether",
+const CULT_OF := {"sigil": "sigil", "warehouse": "sigil", "library": "sigil", "aether": "aether", "forge": "aether", "workshop": "aether", "creuset": "aether", "scierie": "aether", "archerie": "aether", "etabli": "aether",
 	"medeina": "medeina", "bedroom": "medeina", "soulwell": "medeina", "eglise": "medeina", "ecole": "medeina", "indra": "indra", "caserne": "indra"}
 const PORTAL := Vector2(0.0, -167.7)
 const ORB_TIME := 8.0

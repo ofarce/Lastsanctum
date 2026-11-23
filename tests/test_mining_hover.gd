@@ -53,3 +53,29 @@ func test_hover_updates_after_mining_camera_change_and_reset() -> void:
 	check(input.mining_hover_cell(pointer) == null, "case minée : plus de surbrillance")
 	sim.new_game(SEED)
 	check(input.mining_hover_cell(pointer) == null, "nouvelle partie : survol désactivé")
+
+
+## Case de roche rognée par une galerie (centre creux, roche peinte sur une partie de son emprise) : le
+## pointeur posé sur sa roche la désigne (avant, seul le centre comptait et elle restait impossible à viser).
+func test_partial_rock_cell_is_pointable() -> void:
+	var sim := game()
+	var st := sim.state()
+	var found: Variant = null
+	for j in range(-100, -30):
+		for i in range(-60, 60):
+			if found != null:
+				break
+			if st.rock_cell(i, j) or not st.minable_block(i, j) or st.faced_cell(i, j - 1) or st.faced_cell(i, j + 1):
+				continue
+			for a in 4:
+				for b in 4:
+					var p := Vector2(i * 4.0 + a + 0.5, j * 4.0 + b + 0.5)
+					if found == null and not st.ground(p.x, p.y) and st.dig_cell_at(i, j, p) != null:
+						found = {"key": Vector2i(i, j), "p": p}
+	check(found != null, "une case rognée minable existe dans le Temple")
+	if found == null:
+		return
+	var cell: Variant = st.pointed_cell(found["p"])
+	check(cell != null, "roche rognée désignable")
+	if cell != null:
+		check_eq(Vector2i(cell["i"], cell["j"]), found["key"], "c'est bien la case rognée qui est visée")

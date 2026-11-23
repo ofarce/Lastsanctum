@@ -110,7 +110,7 @@ func handle_input(event: InputEvent) -> bool:
 		return false
 	var k: Key = event.key_label if event.key_label != KEY_NONE else event.keycode
 	if k == KEY_F1:
-		if not event.echo and (open or not Opening.cinematic()):
+		if not event.echo and (open or not Opening.cinematic()) and not PauseMenu.open:
 			toggle()
 		return true
 	if not open:
@@ -398,6 +398,8 @@ class _Tab extends Control:
 	var text := ""
 	var icon := ""
 	var key := ""
+	## Cadre sombre même sans touche (lignes du menu de pause).
+	var boxed := false
 	var selected := false
 	var locked := false
 	var _hover := false
@@ -425,7 +427,7 @@ class _Tab extends Control:
 			HudStyle.ring(self, r, 1.0, Color("#ffe5ac"))
 			fg = HelpPanel.BRASS_INK
 			ic = HelpPanel.BRASS_INK
-		elif key != "":
+		elif key != "" or boxed:
 			draw_rect(r, Color("#0c100e"))
 			HudStyle.ring(self, r, 1.0, Color("#ffe0a0") if _hover else HudStyle.GOLD)
 		elif _hover and not locked:
@@ -438,7 +440,7 @@ class _Tab extends Control:
 			draw_texture(HudStyle.icon(icon, 22), Vector2(x, (size.y - 22.0) / 2.0), ic)
 			x += 33.0
 		var f := HudStyle.italic() if locked else HudStyle.font()
-		var px := 13 if key != "" else 15
+		var px := 13 if key != "" or boxed else 15
 		draw_string(f, Vector2(x, size.y / 2.0 + px * 0.36), text, HORIZONTAL_ALIGNMENT_LEFT, -1, px, fg)
 		if key != "":
 			_Key.paint(self, Vector2(size.x - 9.0 - _Key.width(key), (size.y - _Key.H) / 2.0), key)

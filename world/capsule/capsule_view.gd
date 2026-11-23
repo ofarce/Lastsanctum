@@ -265,11 +265,27 @@ func _draw_top(S: Dictionary) -> void:
 	_overlays(S)
 	var top := _base + Vector2(0, -36)
 	var label := ""
-	if GameState.in_capsule:
-		label = "E : Sortir"
-	elif Capsule.can_enter() and not Opening.cinematic():
+	if Opening.cinematic():
+		pass
+	elif GameState.in_capsule:
+		label = "E : Sortir" if Capsule.powered() else ""
+	elif Capsule.can_enter():
 		label = "E : Entrer"
-	_prompt(top, label)
+	# Dans la capsule, l'invite passe sous son pied : au-dessus, l'horloge du HUD la cache quand la caméra est
+	# sur l'Ingénieur (fin de l'intro, planches/intro-capsule-planche.html).
+	_prompt(_base + Vector2(0, 30) if GameState.in_capsule else top, label)
+	# Coffre Antique allumé et encore fermé, Ingénieur à un bloc.
+	if Capsule.can_open_chest() and not Opening.cinematic():
+		_prompt(Proj.nat(CaveShape.CHEST.x, 0.0, CaveShape.CHEST.y).round() + Vector2(0, -40), "E : Ouvrir le Coffre Antique")
+	# Ouverture : jauge de recharge de l'Ancre au-dessus du puits.
+	var k := Opening.recharge()
+	if k >= 0.0:
+		var g := Proj.nat(CaveShape.CORE.x, 6.0, CaveShape.CORE.y).round() + Vector2(-20, -12)
+		var gauge := Rect2(g, Vector2(40, 4))
+		_front.draw_rect(gauge.grow(1.0), Color("#6b4fa8"))
+		_front.draw_rect(gauge, Color("#1a1426"))
+		_front.draw_rect(Rect2(gauge.position, Vector2(roundf(gauge.size.x * k), gauge.size.y)), Color("#b48cff"))
+		PixelText.draw(_front, gauge.position + Vector2(gauge.size.x * 0.5, -3), "ANCRE  %d %%" % roundi(k * 100.0), Color("#e6d8ff"), 1)
 	# Dans la capsule : PV de l'Exilé au-dessus (la capsule le régénère, Capsule.HEAL_RATE).
 	var eng := Capsule.engineer() if GameState.in_capsule else null
 	if eng != null:

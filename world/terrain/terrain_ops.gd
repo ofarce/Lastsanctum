@@ -19,7 +19,7 @@ func _init(terrain_state: TerrainState, decor: DecorRegistry, terrain_painter: T
 ## digCell(i, j).
 ## Sprite de la paroi (variante v) dont le pied est en z : la roche qu'elle habille est la case juste au nord.
 static func face_id(v: int, z: float) -> String:
-	return "face5_%d" % v + ("_r2" if Biomes.rock_tier(z - 2.0) == 1 else "")
+	return "face5_%d" % v + Biomes.sprite_suffix(Biomes.rock_tier(z - 2.0))
 
 
 func dig_cell(i: int, j: int) -> void:
@@ -41,10 +41,6 @@ func dig_cell(i: int, j: int) -> void:
 		registry.add({"s": face_id(v, z), "runtime": true, "x": x, "z": z, "d": z, "bx": x, "bz": z})
 	state.version += 1
 	Combat.zone(x + 2.0, z + 2.0, 2.0, Color("#a89c86"))
-	# La case touche la réserve scellée du coffre antique : elle s'ouvre.
-	var vault := not state.vault_open and TerrainState.cell_touches_vault(i, j)
-	if vault:
-		open_vault()
 	# Une galerie touche la case : elle est découverte.
 	reveal_galleries_near(x - 1.5, z - 1.5, x + 5.5, z + 5.5)
 	if painter:
@@ -82,7 +78,8 @@ func reshape_cave() -> void:
 	state.version += 1
 
 
-## Réserve du coffre antique : devient creuse, sol repeint, décor de roche retiré, parois au nord.
+## Ancienne réserve du coffre antique : devient creuse, sol repeint, décor de roche retiré, parois au nord. Plus
+## appelée par le minage depuis que le coffre est à côté de la capsule (2026-11-22).
 func open_vault() -> void:
 	if state.vault_open:
 		return
@@ -141,7 +138,50 @@ func reveal_galleries_near(x0: float, z0: float, x1: float, z1: float) -> bool:
 	return any
 
 
-func reveal_gallery(sx: float, sz: float) -> void:
+## Galeries reliées (planches/galeries-reliees-propositions.html, 2026-11-22) : tout le réseau est ouvert dès le
+## départ, sans annonce ni éveil (les pylônes et les tanières s'éveillent à la vue, sim/awaken.gd). Le sol autour
+## de la grotte est peint en premier, le reste au fil des images.
+func open_all_galleries() -> void:
+	var w := TerrainState.GAL_W
+	# Temple et Veines seulement (2026-11-22) : les galeries des six strates restent closes sous leur roche
+	# scellée et s'ouvrent quand on y perce (reveal_galleries_near, appelé par dig_cell).
+	var k := -1 if Biomes.LIST.size() <= 2 else maxi(0, TerrainState.gal_idx(CaveShape.WORLD_X0, Biomes.north_z(1))) - 1
+	while true:
+		k = state.mask.find(1, k + 1)
+		if k < 0:
+			break
+		if state.open[k] == 0:
+			var i := k % w
+			@warning_ignore("integer_division")
+			reveal_gallery(i + CaveShape.WORLD_X0 + 0.5, (k - i) / w + CaveShape.WORLD_Z0 + 0.5, true)
+	if painter:
+		painter.prioritize(Rect2(CaveShape.CORE - Vector2(160.0, 140.0), Vector2(320.0, 260.0)))
+
+
+## Éveil d'un pylône (vu par un allié, sim/awaken.gd) : obélisque et nappe ajoutés au décor, éclat rouge.
+func wake_pylon(p: Dictionary) -> void:
+	if p["active"]:
+		return
+	p["active"] = true
+	p["next"] = GameState.sim_time + 5.0
+	dress_pylon(p)
+	Combat.zone(p["x"], p["z"], 6.0, Color("#e0583a"))
+
+
+## Id des pylônes dont l'obélisque est au décor (pas enregistré : une partie rechargée les rhabille, Awaken).
+var dressed := {}
+
+
+func dress_pylon(p: Dictionary) -> void:
+	if dressed.has(p["id"]):
+		return
+	dressed[p["id"]] = true
+	registry.add({"evil": p, "x": p["x"], "z": p["z"], "d": p["z"] + 3.8})
+	state.version += 1
+
+
+## `quiet` : ouverture de départ (open_all_galleries), sans éveil, éclat ni annonce.
+func reveal_gallery(sx: float, sz: float, quiet := false) -> void:
 	var w := TerrainState.GAL_W
 	var h := TerrainState.GAL_H
 	var stack: Array[int] = [TerrainState.gal_idx(sx, sz)]
@@ -175,7 +215,7 @@ func reveal_gallery(sx: float, sz: float) -> void:
 	state.found += 1
 	var woke: Array[Dictionary] = []
 	for p in state.portals:
-		if not p["active"] and state.is_gallery_open(p["x"], p["z"]):
+		if not quiet and not p["active"] and state.is_gallery_open(p["x"], p["z"]):
 			woke.append(p)
 	var X0 := floorf((i0 + CaveShape.WORLD_X0) / 4.0) * 4.0 - 4.0
 	var X1 := ceilf((i1 + CaveShape.WORLD_X0 + 1.0) / 4.0) * 4.0 + 4.0
@@ -185,6 +225,12 @@ func reveal_gallery(sx: float, sz: float) -> void:
 	# Toutes les cases ouvertes sont dans le rectangle [i0, i1] × [j0, j1] de la galerie.
 	registry.remove_in_rect(i0 + CaveShape.WORLD_X0, j0 + CaveShape.WORLD_Z0, i1 + CaveShape.WORLD_X0 + 1.0, j1 + CaveShape.WORLD_Z0 + 1.0,
 		func(e: Dictionary) -> bool: return not (DecorRegistry.is_fixed(e) or e.has("bx")) and state.is_gallery_open(e["x"], e["z"]))
+	# Parois vues de face déjà posées (grotte de départ, reshape_cave, ou galerie voisine) dont la roche habillée
+	# — la case de la grille juste au nord de celle du pied — vient de s'ouvrir : sinon un mur reste dessiné sur du
+	# sol praticable.
+	registry.remove_in_rect(X0, Z0, X1, Z1 + 4.0, func(e: Dictionary) -> bool:
+		return e.has("bx") and String(e.get("s", "")).begins_with("face") \
+			and state.ground(float(e["bx"]) + 2.0, floorf(float(e["bz"]) / 4.0) * 4.0 - 2.0))
 	if painter:
 		painter.paint_region(X0, Z0, X1, Z1)
 	# Parois vues de face au nord de chaque ouverture, cristaux le long des murs.
@@ -224,9 +270,11 @@ func reveal_gallery(sx: float, sz: float) -> void:
 	for p in woke:
 		p["active"] = true
 		p["next"] = GameState.sim_time + 5.0
-		registry.add({"evil": p, "x": p["x"], "z": p["z"], "d": p["z"] + 3.8})
+		dress_pylon(p)
 		Combat.zone(p["x"], p["z"], 6.0, Color("#e0583a"))
 	state.version += 1
+	if quiet:
+		return
 	Combat.zone((X0 + X1) / 2.0, (Z0 + Z1) / 2.0, 6.0, Color("#8fd6f0"))
 	var msg := "Galerie découverte ! (%d / %d)" % [state.found, state.count]
 	Events.notice.emit(msg, 3.0)

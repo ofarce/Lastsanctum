@@ -23,6 +23,11 @@ const HP_ALLY := Color("#85d6b1")
 const HP_GUARD := Color("#9db88f")
 const HP_ENEMY := Color("#db7772")
 const Gear := preload("res://data/gear_items.gd")
+## Halo de sélection alliée : lueur cyan douce au sol, anneau vif par-dessus.
+const HALO := Color("#3fe6ff")
+
+## Unité amie sous le pointeur (InputController) : seule elle montre sa barre de vie.
+static var hovered: Unit
 
 var unit: Unit
 var simulation: Simulation
@@ -82,6 +87,7 @@ var _lz := NAN
 ## Phase de marche, demi-tour (UnitFeel) ; _dt = durée de la dernière image.
 var _feel := UnitFeel.new()
 var _dt := 0.0
+var _warped := false
 ## Ingénieur sans armure : vue de face (« d ») ou de dos (« u ») quand il marche surtout vers le bas ou le
 ## haut de l'écran, gardée au repos ; vide = profil.
 var _vdir := ""
@@ -322,6 +328,21 @@ func _update() -> void:
 	if not enemy and (Martyre.blinking(u) or OeilMatrice.blinking(u)):
 		visible = false
 	position = Proj.nat(u.x, 0.0, u.z)
+	# Voyage par un portail (PortalNet, Orbe suspendu) : la bulle referme le voyageur, qui pâlit, rapetisse puis
+	# disparaît dans l'orbe ; à l'arrivée, l'inverse.
+	if not enemy:
+		var wv := PortalNet.warp_view(u)
+		if not wv.is_empty():
+			var k := float(wv["k"])
+			scale = Vector2.ONE * (1.0 if k < 0.35 else maxf(0.08, 1.0 - (k - 0.35) / 0.25 * 0.92))
+			modulate = Color.WHITE.lerp(Color(0.78, 0.86, 1.0), clampf(k / 0.35, 0.0, 1.0))
+			if k >= 0.6:
+				visible = false
+			_warped = true
+		elif _warped:
+			scale = Vector2.ONE
+			modulate = Color.WHITE
+			_warped = false
 	# Gardiens des Pylônes de Merenor : l'alpha est deux fois plus grand ; une bête qui renaît sort du slime
 	# en silhouette noire puis reprend ses couleurs.
 	if enemy and not u.dead:
@@ -598,12 +619,15 @@ func _update() -> void:
 		_over.visible = shown
 		_revive.tick()
 		_heal.tick()
+	# Barre de vie des ennemis : seulement avec le mod Analyse porté (planches/intro-capsule-planche.html).
+	if enemy:
+		_over.visible = Mods.analysis()
 	# Ombre, sélection, barre de vie et badge : redessinés seulement quand leur état change.
 	var under_key := selected()
 	if under_key != _under_key:
 		_under_key = under_key
 		_under.queue_redraw()
-	var over_key := Vector4(u.hp, u.max_hp, Catalog.lvl(u) * 100 + u.squad + (100000 if preload("res://sim/placeables.gd").posted(u) else 0), world.camera.px if world else 1)
+	var over_key := Vector4(u.hp, u.max_hp, Catalog.lvl(u) * 100 + u.squad + (100000 if preload("res://sim/placeables.gd").posted(u) else 0) + (1000000 if hovered == u else 0), world.camera.px if world else 1)
 	if over_key != _over_key:
 		_over_key = over_key
 		_over.queue_redraw()
@@ -768,11 +792,23 @@ class _UnitDecal extends Node2D:
 
 	func _draw() -> void:
 		var r := view.radius()
+		if view.selected() and not view.enemy:
+			halo(self, r)
 		_ellipse(r * 1.3 * ZN * 0.9, r * 1.3 * ZN * 0.42, SHADOW)
-		if view.selected():
-			_ellipse(r * 2.3 * ZN * 0.9, r * 2.3 * ZN * 0.42, FOE_FILL if view.enemy else SEL_FILL)
+		if view.selected() and view.enemy:
+			_ellipse(r * 2.3 * ZN * 0.9, r * 2.3 * ZN * 0.42, FOE_FILL)
 			# ctx.lineWidth = PX pixels d'écran, soit 1 pixel natif.
-			draw_polyline(_ellipse_points(r * 1.75 * ZN * 0.9, r * 1.75 * ZN * 0.42, true), FOE_LINE if view.enemy else SEL_LINE, 1.0, true)
+			draw_polyline(_ellipse_points(r * 1.75 * ZN * 0.9, r * 1.75 * ZN * 0.42, true), FOE_LINE, 1.0, true)
+		elif view.selected():
+			draw_polyline(_ellipse_points(r * 1.75 * ZN * 0.9, r * 1.75 * ZN * 0.42, true), SEL_LINE, 1.0, true)
+
+	## Halo cyan sous une unité amie sélectionnée : couronnes concentriques de plus en plus claires vers le
+	## centre (lueur diffuse), sous l'ombre portée. Rayon r en unités de monde.
+	static func halo(ci: CanvasItem, r: float) -> void:
+		const RINGS := 7
+		for i in RINGS:
+			var k := 2.6 - 1.4 * float(i) / (RINGS - 1)
+			ci.draw_colored_polygon(_ellipse_points(r * k * ZN * 0.9, r * k * ZN * 0.42, false), Color(HALO, 0.07 + 0.02 * i))
 
 	func _ellipse(rx: float, ry: float, c: Color) -> void:
 		draw_colored_polygon(_ellipse_points(rx, ry, false), c)
@@ -796,9 +832,11 @@ class _UnitBar extends Node2D:
 		var w := maxf(12.0 / px, 2.8 * ZN)
 		var y := -view.hp_y()
 		var u := view.unit
-		draw_rect(Rect2(-w / 2.0, y, w, 4.0 / px), HP_BG)
-		var fill := HP_ENEMY if view.enemy else (HP_GUARD if u.role == "guard" else HP_ALLY)
-		draw_rect(Rect2(-w / 2.0, y, w * maxf(0.0, u.hp / u.max_hp), 4.0 / px), fill)
+		# Unité amie : barre de vie seulement sous le pointeur (badges toujours affichés).
+		if view.enemy or UnitView.hovered == u:
+			draw_rect(Rect2(-w / 2.0, y, w, 4.0 / px), HP_BG)
+			var fill := HP_ENEMY if view.enemy else (HP_GUARD if u.role == "guard" else HP_ALLY)
+			draw_rect(Rect2(-w / 2.0, y, w * maxf(0.0, u.hp / u.max_hp), 4.0 / px), fill)
 		if view.enemy:
 			return
 		# drawLevelBadge : ★niveau au-dessus de la barre (16 px plus haut pour une escouade), gras 10 px d'écran.

@@ -36,6 +36,8 @@ static func _boss() -> Enemy:
 		return GameState.oeil
 	if Gorge.active():
 		return Gorge.boss()
+	if Archipretre.active():
+		return Archipretre.boss()
 	return null
 
 
@@ -73,8 +75,10 @@ func _draw() -> void:
 	var w := size.x
 	var f := clampf(e.hp / maxf(1.0, e.max_hp), 0.0, 1.0)
 	var gorge := e.kind == Gorge.KIND
-	var title := "GORGE-CUIVRE" if gorge else "ŒIL DE LA MATRICE" if eye else "MARTYRE DE BYRSA"
-	var phase := "Phase %s" % (Gorge.PHASE_NAMES[Gorge.phase_of(e)] if gorge else OeilMatrice.PHASE_NAMES[int(OeilMatrice.run().get("phase", 0))] if eye \
+	var priest := e.kind == Archipretre.KIND
+	var title := "GORGE-CUIVRE" if gorge else "ARCHIPRÊTRE AUX RACINES" if priest else "ŒIL DE LA MATRICE" if eye else "MARTYRE DE BYRSA"
+	var phase := "Phase %s" % (Gorge.PHASE_NAMES[Gorge.phase_of(e)] if gorge else Archipretre.PHASE_NAMES[Archipretre.phase_of(e)] if priest \
+		else OeilMatrice.PHASE_NAMES[int(OeilMatrice.run().get("phase", 0))] if eye \
 		else Martyre.PHASE_NAMES[mini(GameState.martyre_phase, Martyre.PHASE_NAMES.size() - 1)])
 	var hp := "%d / %d" % [ceili(e.hp), roundi(e.max_hp)]
 	# Nom au centre, ombré ; phase à gauche, PV à droite.

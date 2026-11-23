@@ -34,7 +34,7 @@ func test_shortcut_unlock_close_and_reset() -> void:
 
 func test_mining_slot_follows_capsule_gift() -> void:
 	var sim := game()
-	check_eq(Inventory.mining_item(), "", "emplacement vide avant la capsule")
+	check_eq(Inventory.mining_item(), "", "emplacement vide avant le Coffre Antique")
 	GameState.mining_seal = true
 	check_eq(Inventory.mining_item(), "Sceau de minage", "sceau automatiquement équipé")
 	sim.new_game(SEED)
@@ -51,24 +51,16 @@ func test_right_click_and_withdraw_from_production_chests() -> void:
 	u.unarmored = true
 	GameState.selected = [u]
 	GameState.base_inventory_unlocked = true
+	# Réseau des coffres (2026-11-22) : chaque coffre de bâtiment ouvre le même stockage global, sans case pleine.
 	for kind: String in ["in", "out"]:
-		var box := b.input_box if kind == "in" else b.output_box
-		for i in 16:
-			check_eq(Production.put_into(box, "item%d" % i, 2), 0, "case disponible")
-		check_eq(Production.put_into(box, "surplus", 1), 1, "coffre plein")
 		var pos := Production.chest_pos(b, kind)
 		u.x = pos.x
 		u.z = pos.y + 1
 		sim.world.fog.refresh(sim.state())
 		input._right_click(input.project(pos.x, 0, pos.y))
 		run(sim, DT)
-		check(inventory.opened and inventory._kind == kind, "ouverture du coffre ciblé")
-		if inventory.opened:
-			var slot := inventory.slot_at(inventory._box_rect(15).get_center())
-			inventory._drop(slot, slot)
-			check(box[15].is_empty(), "dernière case vidée")
-			check_eq(u.inventory[0]["quantity"], 2 if kind == "in" else 4, "transfert au paquetage")
-			inventory.close()
+		check(inventory.opened, "clic droit sur le coffre : réseau ouvert (%s)" % kind)
+		inventory.close()
 	inventory.free()
 
 

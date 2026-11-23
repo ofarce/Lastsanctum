@@ -36,7 +36,8 @@ func test_place_pays_without_engineer() -> void:
 	check_eq(GameState.hud_mode, "", "mode construction quitté")
 
 
-func test_no_build_while_incarnated() -> void:
+## Incarné, l'Exilé bâtit aussi (menu en bas à gauche, Simulation.place_building).
+func test_build_while_incarnated() -> void:
 	var sim := game()
 	give(25.0)
 	var u := engineer()
@@ -44,7 +45,7 @@ func test_no_build_while_incarnated() -> void:
 	ExileGallery.incarnate(u)
 	_arm("sigil")
 	sim.place_building(Vector2(-27.0, -119.0))
-	check(GameState.buildings.is_empty(), "pas de construction en incarnation")
+	check_eq(GameState.buildings.size(), 1, "construction possible en incarnation")
 	ExileGallery.disincarnate()
 
 

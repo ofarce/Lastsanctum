@@ -16,10 +16,4 @@ func test_button_adds_all_recipes_to_stock() -> void:
 		for station: String in ["workshop", "scierie", "archerie", "forge", "creuset"]:
 			for item: String in Simulation.Recipes.RECIPES[station]:
 				check_eq(Production.count_in(GameState.base_inventory, item), 100 * (click + 1), item + " ajouté au stock")
-	GameState.base_inventory.clear()
-	for i in Simulation.ItemStorage.BASE_CAPACITY:
-		GameState.base_inventory.append({"item": "full%d" % i, "quantity": Simulation.ItemStorage.MAX_STACK})
-	GameState.base_inventory[0] = {"item": "torch", "quantity": 10}
-	var before := GameState.base_inventory.duplicate(true)
-	button.pressed.emit()
-	check_eq(GameState.base_inventory, before, "stock plein : aucun ajout partiel")
+	# Réseau des coffres infini (2026-11-22) : plus de stock plein, ce cas a disparu.

@@ -38,54 +38,11 @@ func test_engineer_activates_but_never_carries() -> void:
 	check(sim.order_staff(b), "l'Ingénieur prend un poste")
 	run(sim, 8.0)
 	check_eq(Production.at_post(b), 1, "Ingénieur au poste")
-	# Du cuivre attend au coffre rouge d'un autre bâtiment : l'Ingénieur ne va pas le chercher.
-	var other := built("workshop", -10.0, -112.0)
-	Production.put_into(other.output_box, "copper", 10)
-	run(sim, 10.0)
-	check_eq(Production.count_in(other.output_box, "copper"), 10, "pas de transport par l'Ingénieur")
+	# Réseau des coffres (2026-11-22) : plus de trajet d'approvisionnement ; le bâtiment puise dans le réseau.
+	check(u.carrying.is_empty(), "l'Ingénieur ne porte rien")
 	Production.put_into(b.input_box, "copper", 5)
 	run(sim, Recipes.craft_time(b.type) + 0.2)
 	check_eq(Production.count_in(b.output_box, "copper_ingot"), 1, "la Fonderie tourne avec l'Ingénieur")
-
-
-func test_adept_fetches_from_another_red_chest() -> void:
-	var sim := game()
-	var forge := built("forge", 26.0, -112.0)
-	var creuset := built("creuset", -6.0, -112.0)
-	Production.put_into(forge.output_box, "copper_ingot", 4)
-	creuset.recipe = "copper_sword"
-	var crew := staff(sim, creuset, 1)
-	run(sim, 1.0)
-	check_eq(String(crew[0].job.get("step")), "fetch", "l'adepte part chercher les lingots")
-	check(Production.reserved({"kind": "building", "building": forge}, "copper_ingot") > 0, "lingots réservés")
-	run(sim, 40.0)
-	check_eq(Production.count_in(forge.output_box, "copper_ingot"), 0, "lingots pris au coffre rouge de la Fonderie")
-	check_eq(Production.count_in(creuset.output_box, "copper_sword"), 2, "deux épées coulées")
-	check(crew[0].carrying.is_empty(), "plus rien à porter")
-
-
-func test_carried_items_are_not_lost() -> void:
-	var sim := game()
-	var forge := built("forge", 26.0, -112.0)
-	var creuset := built("creuset", -6.0, -112.0)
-	Production.put_into(forge.output_box, "copper_ingot", 2)
-	creuset.recipe = "copper_sword"
-	var crew := staff(sim, creuset, 1)
-	for i in 600:
-		sim.tick(DT)
-		if not crew[0].carrying.is_empty():
-			break
-	check(not crew[0].carrying.is_empty(), "l'adepte porte les lingots")
-	_select(crew)
-	sim.issue_move(Vector2(crew[0].x, crew[0].z + 2.0))
-	sim.tick(DT)
-	check(crew[0].carrying.is_empty(), "nouvel ordre : il pose son lot")
-	var total := 0
-	for g: Dictionary in GameState.ground_items:
-		if g["item"] == "copper_ingot":
-			total += 1
-	total += Simulation.ItemStorage.count("copper_ingot")
-	check_eq(total, 2, "les deux lingots sont au stock ou au sol")
 
 
 func test_miner_brings_batches_of_five() -> void:
@@ -160,32 +117,3 @@ func test_research_and_soulwell_need_staff() -> void:
 	staff(sim, well, 1)
 	run(sim, 1.0)
 	check(hurt.hp > 10.0, "adepte de Medeina au poste : soin")
-
-
-func test_warehouse_requests_from_panel() -> void:
-	var sim := game()
-	var b := built("warehouse", -6.0, -112.0)
-	var workshop := built("workshop", 20.0, -112.0)
-	var crew := staff(sim, b)
-	Production.put_into(workshop.output_box, "wood", 12)
-	Production.put_into(workshop.output_box, "iron", 4)
-	GameState.anchor_selected = false
-	GameState.selected.clear()
-	GameState.hud_building = b
-	var actions := HudModel.panel_actions(sim)
-	var wood := actions.filter(func(a: Dictionary) -> bool: return a["id"] == "request-wood")
-	check_eq(wood.size(), 1, "le panneau propose le bois")
-	if wood.is_empty():
-		return
-	wood[0]["run"].call()
-	run(sim, 24.0)
-	check_eq(Production.count_in(b.output_box, "wood"), Production.WAREHOUSE_TARGET, "bois rapporté au coffre partagé")
-	check_eq(Production.count_in(workshop.output_box, "iron"), 4, "fer laissé au producteur")
-	Production.take_from(b.output_box, "wood", 2)
-	run(sim, 24.0)
-	check_eq(Production.count_in(b.output_box, "wood"), Production.WAREHOUSE_TARGET, "réassort après un retrait")
-	wood[0]["run"].call()
-	Production.take_from(b.output_box, "wood", 2)
-	run(sim, 24.0)
-	check_eq(Production.count_in(b.output_box, "wood"), Production.WAREHOUSE_TARGET - 2, "réassort désactivé")
-	check(crew[0].carrying.is_empty(), "livraison terminée")

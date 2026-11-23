@@ -26,8 +26,9 @@ func _motion(pos: Vector2) -> InputEventMouseMotion:
 
 func test_limits_and_zoom_range() -> void:
 	var cam := _camera()
-	cam.set_view(Vector2(1000, -1000), 9)
-	check_eq(cam.cam, Vector2(434, -724), "limites de la caméra")
+	# Carte prolongée au nord avec les biomes 3 à 8 : limites lues sur CaveShape (clampCam).
+	cam.set_view(Vector2(100000, -100000), 9)
+	check_eq(cam.cam, Vector2(CaveShape.WORLD_X1 - 30.0, CaveShape.WORLD_Z0 + 20.0), "limites de la caméra")
 	check_eq(cam.px, 6, "zoom maximal")
 	cam.set_view(Vector2(-1000, 500), 0)
 	check_eq(cam.cam, Vector2(-434, 44), "limites opposées")
@@ -76,4 +77,35 @@ func test_keyboard_speed_is_10_units_per_second_with_dt_cap() -> void:
 	cam._process(0.02)
 	check_near(cam.cam.y, WorldCamera.START.y - 0.2, 1e-5, "Z/W/haut : z diminue")
 	Input.action_release("cam_up")
+	cam.free()
+
+
+## Ingénieur dans la capsule (hors cinématique) : caméra fixée sur Capsule.VIEW, zoom libre.
+func test_capsule_locks_camera() -> void:
+	var cam := _camera()
+	var stage := GameState.opening_stage
+	GameState.opening_stage = "awake"
+	GameState.in_capsule = true
+	cam._process(0.0)
+	check_eq(cam.cam, Capsule.VIEW, "recentrée sur la capsule")
+	Input.action_press("cam_right")
+	cam._process(0.1)
+	Input.action_release("cam_right")
+	check_eq(cam.cam, Capsule.VIEW, "touches sans effet")
+	cam._unhandled_input(_mouse_button(MOUSE_BUTTON_RIGHT, true, Vector2(100, 100)))
+	cam._unhandled_input(_motion(Vector2(160, 140)))
+	cam._unhandled_input(_mouse_button(MOUSE_BUTTON_RIGHT, false, Vector2(160, 140)))
+	check_eq(cam.cam, Capsule.VIEW, "glisser sans effet")
+	check(not cam.consume_drag(), "le clic droit reste un clic")
+	cam.set_view(Vector2(40, -100), 4)
+	check_eq(cam.cam, Capsule.VIEW, "saut (minicarte, alerte) sans effet")
+	check_eq(cam.px, 4, "le zoom reste libre")
+	GameState.opening_stage = "boot"
+	cam.set_view(Vector2(10, -150), 3)
+	check_eq(cam.cam, Vector2(10, -150), "cinématique : cadrage libre")
+	GameState.opening_stage = "awake"
+	GameState.in_capsule = false
+	cam.set_view(Vector2(40, -100), 3)
+	check_eq(cam.cam, Vector2(40, -100), "sorti de la capsule : caméra libre")
+	GameState.opening_stage = stage
 	cam.free()

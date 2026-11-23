@@ -2,12 +2,16 @@ class_name Capsule
 extends RefCounted
 ## Capsule de l'Ingénieur, à la place du portail central des Exilés (Simulation.PORTAL). À moins d'un
 ## bloc, « E : Entrer » s'affiche dessus ; E y fait entrer l'Ingénieur (il disparaît, le jeu passe en mode
-## désincarné et il ne peut plus bouger ; la première fois, il y est soigné et reçoit un canon), un nouvel appui sur E l'en fait sortir et le réincarne.
+## désincarné et il ne peut plus bouger ; il y est soigné), un nouvel appui sur E l'en fait sortir et le réincarne.
+## Depuis le 2026-11-22 (planches/intro-capsule-planche.html), la partie commence dans la capsule éteinte : on n'en sort
+## qu'une fois l'Ancre rallumée (powered). L'équipement de départ vient du Coffre Antique voisin (Simulation.open_chest).
 
 ## Pied de la capsule, posé devant la paroi nord.
 const POS := Vector2(0.0, -165.5)
 const RANGE := 4.0  # un bloc (case de 4 unités)
 const EXIT := Vector2(0.0, -162.5)
+## Vue fixe de la caméra tant que l'Ingénieur est dans la capsule (WorldCamera.capsule_lock) : capsule, Coffre et Ancre.
+const VIEW := Vector2(2.0, -160.0)
 
 
 ## Dans la capsule, l'Ingénieur régénère HEAL_RATE PV par seconde (jusqu'à ses PV maximum) et chaque mana
@@ -17,7 +21,7 @@ const MANA_RATE := 2.0
 
 
 static func tick(dt: float) -> void:
-	if not GameState.in_capsule:
+	if not GameState.in_capsule or not powered():
 		return
 	var u := engineer()
 	if u == null:
@@ -47,7 +51,24 @@ const MARGIN := 0.6
 
 static func solid_rects() -> Array[Rect2]:
 	var capsule := Rect2(POS.x - 2.1, POS.y - 1.5, 4.2, 1.9)
-	return [anchor_solid(), capsule.grow(MARGIN)]
+	return [anchor_solid(), capsule.grow(MARGIN), chest_solid()]
+
+
+## Socle du Coffre Antique (dessin de 42 px natifs de large, face avant au sol en CaveShape.CHEST), élargi de MARGIN.
+static func chest_solid() -> Rect2:
+	return Rect2(CaveShape.CHEST.x - 2.5, CaveShape.CHEST.y - 2.2, 5.25, 2.4).grow(MARGIN)
+
+
+## Le Coffre Antique est éteint tant que l'Ancre l'est : il ne s'ouvre pas.
+static func chest_active() -> bool:
+	return GameState.orb_active
+
+
+## L'Ingénieur incarné est à un bloc du Coffre Antique allumé et encore fermé (« E : Ouvrir le Coffre Antique »).
+static func can_open_chest() -> bool:
+	var eng := GameState.incarnated
+	return eng != null and eng.role == "engineer" and chest_active() and not GameState.base_inventory_unlocked \
+		and eng.pos().distance_to(CaveShape.CHEST_SPOT) <= RANGE
 
 
 ## Socle infranchissable de l'Ancre (élargi de MARGIN).
@@ -98,12 +119,12 @@ static func can_enter() -> bool:
 		and eng.pos().distance_to(POS) <= RANGE
 
 
-## Soldats d'essai entrant par la porte sud, une fois le canon reçu (de quoi tester le tir).
+## Soldats d'essai entrant par la porte sud, une fois l'Arbalestrie reçue au Coffre (de quoi tester le tir).
 const INTRUDERS := ["scout", "scout", "scout", "scout"]
 const INTRUDER_AT := Vector2(0.0, -86.0)  # juste au sud de la porte (cases z −96…−92)
 
 
-static func _first_intruders(sim: Simulation) -> void:
+static func first_intruders(sim: Simulation) -> void:
 	if sim.world == null:
 		return
 	if GameState.door_closed:
@@ -114,8 +135,12 @@ static func _first_intruders(sim: Simulation) -> void:
 		GameState.enemies.append(e)
 
 
-## Appui sur E : entrer ou sortir de la capsule, ou réveiller l'Ancre. Vrai si l'appui a servi.
+## Appui sur E : entrer ou sortir de la capsule, ouvrir le Coffre Antique, ou réveiller l'Ancre (partie sans
+## ouverture). Vrai si l'appui a servi.
 static func toggle(sim: Simulation) -> bool:
+	if sim and can_open_chest():
+		sim.open_chest_incarnated(GameState.incarnated)
+		return true
 	if sim and can_wake_anchor():
 		sim.order_orb(GameState.incarnated)
 		return true
@@ -130,6 +155,8 @@ static func toggle(sim: Simulation) -> bool:
 	if eng == null:
 		return false
 	if GameState.in_capsule:
+		if not powered() or Opening.cinematic():
+			return false
 		GameState.in_capsule = false
 		eng.hidden = false
 		eng.x = EXIT.x
@@ -143,16 +170,6 @@ static func toggle(sim: Simulation) -> bool:
 	if sim:
 		sim.cancel_work(eng)
 	GameState.in_capsule = true
-	if not GameState.capsule_gift:
-		# Première entrée : soin complet, canon dans la main droite, combinaison et Sceau de minage.
-		GameState.capsule_gift = true
-		GameState.mining_seal = true
-		eng.hp = eng.max_hp
-		eng.equipment["Main droite"] = "cannon"
-		eng.equipment["Torse"] = "combinaison"
-		if sim:
-			Events.items_received.emit(["cannon", "combinaison", "mining_seal"])
-			_first_intruders(sim)
 	ExileGallery.disincarnate()
 	eng.hidden = true
 	eng.tx = eng.x

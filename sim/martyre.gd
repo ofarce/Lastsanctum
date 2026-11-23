@@ -198,7 +198,13 @@ static func tick(sim: Simulation) -> void:
 		return
 	match GameState.martyre_state:
 		"":
-			if GameState.menace >= MENACE:
+			# Temple en salles (choix du 2026-11-22) : mini-boss 2, elle se lève quand un allié entre dans son arène
+			# du quartier B ; la menace ne fait plus que les assauts. Sans plan (parité JS), la règle d'avant.
+			var arena := arena_room(sim.state())
+			if not arena.is_empty():
+				if RoomEncounters.entered(sim.state(), {"room": arena["id"]}):
+					spawn(sim, arena_center(arena), true)
+			elif GameState.menace >= MENACE:
 				spawn(sim)
 		"waiting", "duel":
 			var e: Enemy = GameState.martyre
@@ -211,6 +217,10 @@ static func tick(sim: Simulation) -> void:
 				_extinguish(GameState.sim_time, true)
 				GameState.martyre_fx.assign(GameState.martyre_fx.filter(func(f: Dictionary) -> bool: return f["type"] == "mote"))
 				GameState.martyre = null
+				# Dans son arène : sa chute ouvre la porte de la route du boss (clef du mini-boss 2).
+				if GameState.martyre_arena and sim.state() != null:
+					RoomEncounters.open_door(sim, "mb2")
+					sim.say("La porte de l’Orbite s’ouvre : la route de l’Œil est libre.", 4.0)
 				return
 			var u := duelist()
 			if GameState.martyre_state == "waiting" and u != null:
@@ -239,12 +249,31 @@ static func reset_duel() -> void:
 	GameState.martyre_shrink_at = INF
 
 
-static func spawn(sim: Simulation) -> Enemy:
-	var p := SPAWN
+## Arène de la Martyre dans le plan du Temple (salle du mini-boss 2, quartier B), ou {} sans plan.
+static func arena_room(st: TerrainState) -> Dictionary:
+	if st == null or st.temple_layout.is_empty():
+		return {}
+	for room: Dictionary in st.temple_layout["rooms"]:
+		if room["role"] == "mb2":
+			return room
+	return {}
+
+
+static func arena_center(room: Dictionary) -> Vector2:
+	var rr: Rect2i = room["rect"]
+	return Vector2(rr.position.x * 4.0 + rr.size.x * 2.0, rr.position.y * 4.0 + rr.size.y * 2.0)
+
+
+## `arena` : levée dans son arène (Temple en salles) ; sinon, sur la route du sud quand la menace l'appelle.
+static func spawn(sim: Simulation, at := SPAWN, arena := false) -> Enemy:
+	var p := at
 	if not sim.state().walkable(p.x, p.y):
 		p = sim.state().push_out_of_rock(p)
 	var e := Enemy.make(KIND, p.x, p.y, 1.0)
 	e.face = -1
+	GameState.martyre_arena = arena
+	# Dans son arène, elle est hors vague (comme les gardiens) : la fin d'assaut ne l'attend pas.
+	e.beast = arena
 	GameState.enemies.append(e)
 	GameState.martyre = e
 	GameState.martyre_state = "waiting"
@@ -263,13 +292,16 @@ static func spawn(sim: Simulation) -> Enemy:
 	GameState.martyre_radius = RADIUS
 	GameState.martyre_shrink_at = INF
 	GameState.martyre_iframe_until = -INF
-	# Elle vient seule : le reste de l'assaut en cours n'entre pas.
-	GameState.spawn_queue.clear()
-	GameState.next_wave = 0.0
 	Combat.zone(p.x, p.y, 6.0, Color("#f0cc66"))
 	Combat.flash(p.x, p.y, Color("#e2382e"))
 	Sfx.play("martyre")
-	sim.say("La Martyre de Byrsa est entrée par le sud. Son bouclier ne laisse passer que moi.", 4.0)
+	if arena:
+		sim.say("La Martyre de Byrsa se dresse au fond de la Nef dorée. Son bouclier ne laisse passer que moi.", 4.0)
+	else:
+		# Elle vient seule : le reste de l'assaut en cours n'entre pas.
+		GameState.spawn_queue.clear()
+		GameState.next_wave = 0.0
+		sim.say("La Martyre de Byrsa est entrée par le sud. Son bouclier ne laisse passer que moi.", 4.0)
 	enforce(sim)
 	return e
 

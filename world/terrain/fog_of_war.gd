@@ -21,6 +21,9 @@ static var _kits := {}
 var image := Image.create(SIZE.x, SIZE.y, false, Image.FORMAT_RGBA8)
 # Zone explorée hors de vue : 20 % de visibilité.
 const EXPLORED_ALPHA := 204
+## Le Temple (biome 1, jungle comprise : tout ce qui est au sud de la frontière de l'Œil) n'a pas de brouillard
+## (demande du 2026-11-22) : rangée de l'image à partir de laquelle tout est découvert et visible.
+static var clear_row := maxi(0, ceili(Biomes.north_z(0) - CaveShape.WORLD_Z0))
 var _explored_pixels: PackedByteArray
 var _current_visibility := PackedByteArray()
 ## Pixels affichés (explorés + visibilité courante), gardés d'un rafraîchissement à l'autre ; vide = à recomposer.
@@ -35,6 +38,10 @@ var road_torches := PackedVector2Array()
 var _sources := {}
 var _terrain_version := -1
 var _solid_tiles := {}
+## Murs pleins du Temple (2026-11-22) : sans brouillard ailleurs, la roche massive (case de 4 et ses 8 voisines
+## pleines) y reste voilée ; les galeries et le liseré de paroi qui les borde restent clairs.
+## _wall_built : le masque a été posé au moins une fois depuis la remise à zéro.
+var _wall_built := false
 
 
 func _init() -> void:
@@ -55,11 +62,31 @@ func reset_exploration() -> void:
 		var y0 := maxi(0, ceili(CaveShape.mountain_edge(wx) + 1.0) - ORIGIN.y)
 		for y in range(y0, SIZE.y):
 			_explored_pixels[(y * SIZE.x + x) * 4 + 3] = EXPLORED_ALPHA
+	# Temple sans brouillard : entièrement découvert, en clair.
+	for y in range(clear_row, SIZE.y):
+		for x in SIZE.x:
+			_explored_pixels[(y * SIZE.x + x) * 4 + 3] = 0
 	image.set_data(SIZE.x, SIZE.y, false, Image.FORMAT_RGBA8, _explored_pixels)
 	_current_visibility.resize(SIZE.x * SIZE.y)
 	_current_visibility.fill(0)
 	_pixels = PackedByteArray()
 	_sources.clear()
+	_wall_built = false
+
+
+## Zones explorées (canal alpha de l'image), pour la sauvegarde.
+func explored_data() -> PackedByteArray:
+	return _explored_pixels
+
+
+func set_explored_data(data: PackedByteArray) -> void:
+	if data.size() != _explored_pixels.size():
+		return
+	_explored_pixels = data
+	image.set_data(SIZE.x, SIZE.y, false, Image.FORMAT_RGBA8, _explored_pixels)
+	_pixels = PackedByteArray()
+	_sources.clear()
+	_wall_built = false
 
 
 func refresh(st: TerrainState) -> void:
@@ -74,8 +101,7 @@ func refresh(st: TerrainState) -> void:
 	if spark_lights.is_valid():
 		for light: Dictionary in spark_lights.call():
 			sources[Vector3i(floori(light["x"]), floori(light["z"]), r)] = true
-	if st.vault_open:
-		sources[Vector3i(floori(CaveShape.CHEST.x), floori(CaveShape.CHEST.y), r)] = true
+	sources[Vector3i(floori(CaveShape.CHEST.x), floori(CaveShape.CHEST.y), r)] = true
 	# L'Œil de la Matrice éveillé : sa lueur montre toute la salle.
 	if OeilMatrice.active():
 		var eye := TerrainState.eye_room_center()
@@ -97,6 +123,10 @@ func refresh(st: TerrainState) -> void:
 		_sources.clear()
 		_solid_tiles.clear()
 		_terrain_version = st.version
+		rebuild = true
+		_paint_walls(st, not _wall_built)
+	elif not _wall_built:
+		_paint_walls(st, true)
 		rebuild = true
 	if sources.size() == _sources.size() and _sources.has_all(sources.keys()):
 		return
@@ -195,8 +225,57 @@ func _apply(key: Vector3i, clip: Rect2i) -> void:
 			if strength > _current_visibility[cell]:
 				_current_visibility[cell] = strength
 				var alpha_index := cell * 4 + 3
-				_pixels[alpha_index] = 0
-				_explored_pixels[alpha_index] = EXPLORED_ALPHA
+				if y < clear_row:
+					_pixels[alpha_index] = 0
+					_explored_pixels[alpha_index] = EXPLORED_ALPHA
+				else:
+					_pixels[alpha_index] = _explored_pixels[alpha_index]
+
+
+## Masque des murs pleins dans la zone sans brouillard, écrit dans _explored_pixels (255 = mur plein, 0 = clair).
+## `whole` : toute la zone ; sinon seulement autour des unités (là où l'on creuse), pour rester bon marché.
+const WALL_WINDOW := 64
+func _paint_walls(st: TerrainState, whole: bool) -> void:
+	var t0 := Vector2i(0, floori(float(clear_row) / CELL_SIZE))
+	var t1 := Vector2i(ceili(float(SIZE.x) / CELL_SIZE), ceili(float(SIZE.y) / CELL_SIZE))
+	var areas: Array[Rect2i] = []
+	if whole:
+		areas.append(Rect2i(t0, t1 - t0))
+	else:
+		for u in GameState.units:
+			if u.alive():
+				var c := (Vector2i(floori(u.x), floori(u.z)) - ORIGIN) / CELL_SIZE
+				var r := WALL_WINDOW / CELL_SIZE
+				areas.append(Rect2i(c - Vector2i(r, r), Vector2i(r, r) * 2 + Vector2i.ONE).intersection(Rect2i(t0, t1 - t0)))
+	_wall_built = true
+	for area in areas:
+		if not area.has_area():
+			continue
+		# Pleins : case de 4 sans sol à son centre, sur l'aire élargie d'une case pour le test des voisines.
+		var big := area.grow(1)
+		var bw := big.size.x
+		var rock := PackedByteArray()
+		rock.resize(bw * big.size.y)
+		for j in big.size.y:
+			for i in bw:
+				var wx := float(ORIGIN.x + (big.position.x + i) * CELL_SIZE) + 2.0
+				var wz := float(ORIGIN.y + (big.position.y + j) * CELL_SIZE) + 2.0
+				rock[j * bw + i] = 0 if st.ground(wx, wz) else 1
+		for j in range(1, big.size.y - 1):
+			for i in range(1, bw - 1):
+				var k := j * bw + i
+				var full := rock[k] and rock[k - 1] and rock[k + 1] and rock[k - bw] and rock[k + bw] \
+					and rock[k - bw - 1] and rock[k - bw + 1] and rock[k + bw - 1] and rock[k + bw + 1]
+				var a := 255 if full else 0
+				var tx := (big.position.x + i) * CELL_SIZE
+				var ty := (big.position.y + j) * CELL_SIZE
+				var probe := (mini(maxi(ty, clear_row) + 1, SIZE.y - 1) * SIZE.x + mini(tx + 1, SIZE.x - 1)) * 4 + 3
+				if _explored_pixels[probe] == a:
+					continue
+				for y in range(maxi(ty, clear_row), mini(ty + CELL_SIZE, SIZE.y)):
+					var row := y * SIZE.x
+					for x in range(tx, mini(tx + CELL_SIZE, SIZE.x)):
+						_explored_pixels[(row + x) * 4 + 3] = a
 
 
 ## Masque local des obstacles à la résolution native des galeries (1 unité).
@@ -320,4 +399,6 @@ func explored_at(point: Vector2) -> bool:
 
 func visible_at(point: Vector2) -> bool:
 	var p := Vector2i(point.floor()) - ORIGIN
+	if p.y >= clear_row and Rect2i(Vector2i.ZERO, SIZE).has_point(p):
+		return true
 	return Rect2i(Vector2i.ZERO, SIZE).has_point(p) and _current_visibility[p.y * SIZE.x + p.x] > 0

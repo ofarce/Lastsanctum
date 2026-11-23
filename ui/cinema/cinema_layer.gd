@@ -38,8 +38,8 @@ func _process(delta: float) -> void:
 				_saved_px = world.camera.px
 				_stage = GameState.opening_stage
 			else:
-				# Fin de l'arrivée : on garde le zoom de la cinématique.
-				if _stage == "arrival":
+				# Fin de l'arrivée ou de l'intro de la capsule : on garde le zoom de la cinématique.
+				if _stage in ["arrival", "boot"]:
 					_saved_px = world.camera.px
 				_back_to_engineer()
 	if on and world:

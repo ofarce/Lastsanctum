@@ -1,0 +1,307 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Entrées de quartier</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=VT323&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Planche « Entrées de quartier » (2026-11-22, suite de biomes-salles-structure.html) : comment savoir en jeu, sans
+   interface plaquée, qu'on part vers le quartier A, B ou C. Cinq repères dessinés au pixel natif (canvas, palette
+   « rock » du Temple de assets/ardoise/palette.json), identité de quartier (glyphe, couleur, nom), noms par biome.
+   Thème sombre unique, comme les autres planches de jeu. */
+:root{
+  color-scheme:dark;
+  --bg:#12131a; --panel:#1a1c26; --panel2:#222533; --line:#32364a;
+  --fg:#e4e2da; --mute:#9a9cae; --soft:#c9c8c4; --ink:#0b0a0f;
+  --exile:#5fd8e8; --gold:#ddb457;
+  --qa:#f0a040; --qb:#58a8f0; --qc:#e04048;
+  --display:"VT323","Courier New",monospace; --body:"IBM Plex Sans",system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.55 var(--body);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 72px}
+.wrap{max-width:1120px;margin:0 auto;display:flex;flex-direction:column;gap:52px}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0;line-height:1.12;font-weight:400}
+h1{font-size:clamp(38px,6vw,60px)}
+h2{font-size:clamp(30px,4.4vw,42px)}
+h3{font-size:24px}
+p{margin:0;max-width:72ch}
+.lede{color:var(--mute);font-size:16px}
+.eyebrow{font-family:var(--display);font-size:18px;letter-spacing:.08em;text-transform:uppercase;color:var(--mute)}
+code{font:13px ui-monospace,Menlo,monospace;background:var(--panel2);padding:1px 5px;border-radius:3px}
+.stack{display:flex;flex-direction:column;gap:14px}
+.nav{position:sticky;top:0;z-index:5;background:var(--bg);border-bottom:2px solid var(--ink);display:flex;gap:6px;flex-wrap:wrap;padding-block:8px}
+.nav a{font-family:var(--display);font-size:18px;text-decoration:none;padding:2px 10px;border:2px solid var(--line);color:var(--mute)}
+.nav a:hover,.nav a:focus-visible{color:var(--fg);border-color:var(--fg);outline:none}
+
+.ident{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.ident div{background:var(--panel);border:2px solid var(--line);border-left:6px solid var(--q);padding:12px 14px;display:flex;gap:14px;align-items:center}
+.ident canvas{width:50px;height:50px;image-rendering:pixelated;flex:none;background:#141922;border:1px solid var(--ink)}
+.ident b{font-family:var(--display);font-size:22px;font-weight:400;color:var(--q);display:block}
+.ident span{font-size:13.5px;color:var(--soft)}
+
+.prop{background:var(--panel);border:2px solid var(--line);padding:18px;display:flex;flex-direction:column;gap:12px}
+.prop.reco{border-color:var(--exile);box-shadow:0 0 0 1px var(--exile) inset}
+.prop .tag{font-family:var(--display);font-size:17px;color:var(--mute)}
+.prop.reco .tag::after{content:" · VALIDÉ";color:var(--exile)}
+.prop:not(.reco){opacity:.62}
+.shots{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
+figure{margin:0;display:flex;flex-direction:column;gap:4px;min-width:0}
+.scene{position:relative;border:3px solid var(--ink);background:#0b0a0f}
+.scene canvas{display:block;width:100%;height:auto;image-rendering:pixelated}
+figcaption{font-size:12.5px;color:var(--mute)}
+.card{position:absolute;left:50%;top:14%;transform:translateX(-50%);text-align:center;padding:4px 14px 6px;
+  background:rgba(11,10,15,.78);border-top:2px solid var(--q);border-bottom:2px solid var(--q);white-space:nowrap}
+.card b{display:block;font-family:var(--display);font-size:clamp(17px,2.4vw,24px);font-weight:400;letter-spacing:.12em;color:#f2ede2}
+.card span{font-family:var(--display);font-size:clamp(12px,1.5vw,15px);color:var(--q);letter-spacing:.06em}
+ul.l{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px;font-size:14px}
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px 28px}
+.plus{color:var(--ok,#6fc27a)} .moins{color:#e08a7a}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--display);font-size:18px;font-weight:400;color:var(--mute);border-bottom:2px solid var(--line)}
+th.qa{color:var(--qa)} th.qb{color:var(--qb)} th.qc{color:var(--qc)}
+.tbl{overflow-x:auto} .tbl table{min-width:680px}
+td small{display:block;color:var(--mute);font-size:12px}
+.q{background:var(--panel);border:2px solid var(--line);padding:14px 18px}
+.q ul{margin:6px 0 0;padding-left:18px;display:flex;flex-direction:column;gap:6px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="stack">
+  <span class="eyebrow">Planche · 22 novembre 2026 · validée le 22/11 (repères 1, 2 et 4) · rien n’est codé</span>
+  <h1>Entrées de quartier</h1>
+  <p class="lede">Avec les biomes en salles, le joueur doit savoir en jeu, sans lire de menu, qu’il s’engage dans le quartier A, B ou C. Je propose de donner à chaque quartier une identité, puis de la poser au seuil sous la forme d’un repère dans le monde. Les vignettes sont au pixel natif, dans la roche d’ardoise du Temple.</p>
+</header>
+
+<nav class="nav" aria-label="Sections">
+  <a href="#identite">Identité</a><a href="#reperes">Cinq repères</a><a href="#ailleurs">Ce qui la répète</a><a href="#noms">Noms par biome</a><a href="#questions">Bilan</a>
+</nav>
+
+<section id="identite" class="stack">
+  <h2>Une identité par quartier</h2>
+  <p class="lede">Un glyphe tyrien et une couleur restent fixes d’un biome à l’autre : on apprend une seule fois que l’ambre veut dire A. Le nom change à chaque biome (tableau plus bas). C se distingue aussi par des fissures carmin, parce qu’il a un palier de menace de plus.</p>
+  <div class="ident">
+    <div style="--q:var(--qa)"><canvas data-glyph="A" width="9" height="9"></canvas><p><b>A · la Spirale</b><span>Ambre. Exp. 1, le quartier qu’on découvre.</span></p></div>
+    <div style="--q:var(--qb)"><canvas data-glyph="B" width="9" height="9"></canvas><p><b>B · la Fourche</b><span>Azur. Exp. 2, derrière la porte du mini-boss 1.</span></p></div>
+    <div style="--q:var(--qc)"><canvas data-glyph="C" width="9" height="9"></canvas><p><b>C · l’Œil fendu</b><span>Carmin. Ouvert dès l’entrée, un palier de plus.</span></p></div>
+  </div>
+</section>
+
+<section id="reperes" class="stack">
+  <h2>Cinq repères au seuil</h2>
+  <p class="lede">On est dans le hub, face à la bouche d’un couloir qui part vers le nord. Chaque repère est vu dans les trois quartiers. Ils se combinent : la meilleure lecture vient d’un objet dans le monde, d’une couleur qui le suit dans le quartier et d’un titre au premier passage.</p>
+  <div id="props" class="stack"></div>
+</section>
+
+<section id="ailleurs" class="stack">
+  <h2>Ce qui répète l’identité dans le quartier</h2>
+  <div class="cols">
+    <ul class="l">
+      <li><b>Braseros et torches</b> du quartier : flamme à sa couleur (règle des braseros du Sanctum, rallumés au passage).</li>
+      <li><b>Minicarte et carte des portails</b> (<code>MinimapOverlay</code>) : le glyphe du quartier sur chaque portail, la zone teintée.</li>
+      <li><b>Portes à clef</b> : la porte de B porte la Fourche ; la clef du mini-boss 1 aussi.</li>
+    </ul>
+    <ul class="l">
+      <li><b>Ambiance sonore</b> : une note de drone propre au quartier, qui monte en franchissant le seuil.</li>
+      <li><b>Rapport de l’Ingénieur</b> : l’objectif en cours cite le nom du quartier (« Explorer Les Cloîtres »).</li>
+      <li><b>État du quartier</b> : quand son mini-boss est vaincu, le repère du seuil change (proposition 5).</li>
+    </ul>
+  </div>
+</section>
+
+<section id="noms" class="stack">
+  <h2>Noms par biome</h2>
+  <p class="lede">Chaque nom suit la salle de mini-boss ou de boss déjà prévue pour ce biome (Fonderie scellée, Puits d’extraction, Embarcadère…). La route du boss reçoit aussi un nom, sans glyphe.</p>
+  <div class="tbl"><table id="names"></table></div>
+</section>
+
+<section id="questions" class="stack">
+  <h2>Bilan du 22 novembre</h2>
+  <div class="q"><ul>
+    <li><b>Repères retenus</b> : <b>la stèle-glyphe (1)</b> à gauche de chaque seuil, <b>l’arche aux braseros (2)</b> dont la couleur suit tous les braseros et torches du quartier, et <b>le carton au premier passage (4)</b>, réduit au nom pendant 2 s les fois suivantes. La mosaïque (3) et la bannière d’état (5) ne sont pas retenues.</li>
+    <li><b>Couleurs fixes</b> dans tous les biomes : A ambre, B azur, C carmin, et les fissures carmin pour le palier de plus de C.</li>
+    <li><b>Noms</b> : ceux du tableau sont validés.</li>
+    <li><b>La route du boss</b> n’a ni glyphe ni stèle. Son nom s’affiche au carton quand on franchit la porte du mini-boss 2.</li>
+  </ul></div>
+</section>
+
+</div>
+<script>
+// ---------- Données ----------
+const Q = {
+  A: {col:"#f0a040", glow:[240,160,64], name:"LES CLOÎTRES", sub:"Temple · quartier A · exp. 1"},
+  B: {col:"#58a8f0", glow:[88,168,240], name:"LA NEF DORÉE", sub:"Temple · quartier B · exp. 2"},
+  C: {col:"#e04048", glow:[224,64,72], name:"LES RACINES", sub:"Temple · quartier C · menace +1"},
+};
+// Glyphes 7 × 7 (style des frises tyriennes : traits d'un pixel, angles droits).
+const GLYPH = {
+  A: ["#######","#.....#","#.###.#","#.#.#.#","#.#...#","#.#####","#......"],
+  B: ["#..#..#","#..#..#","#..#..#","#######","...#...","...#...","..###.."],
+  C: ["..###..",".#...#.","#..#..#","#.###.#","#..#..#",".#...#.","..###.."],
+};
+const ROCK = ["#141922","#1c222d","#262e3b","#323c4b","#424e5f","#556274","#6c7a8c","#8a98a8"];
+const FLOOR = ["#1e232c","#232933","#283040"];
+const W = 128, H = 80;
+
+// Hasard déterministe (LCG), une graine par vignette.
+const rng = s => () => (s = (s * 1664525 + 1013904223) >>> 0) / 4294967296;
+
+// ---------- Dessin de la scène commune : salle au sud, couloir vers le nord, paroi en 3/4 ----------
+function base(ctx, seed, tint) {
+  const r = rng(seed);
+  const px = (x, y, c) => { ctx.fillStyle = c; ctx.fillRect(x, y, 1, 1); };
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    const corridor = x >= 52 && x < 76 && y < 52;
+    if (y >= 52 || corridor) {
+      const tile = (x % 8 === 0 || y % 8 === 4) ? FLOOR[0] : FLOOR[1 + ((x >> 3) + (y >> 3) & 1)];
+      px(x, y, tile);
+      if (r() < 0.03) px(x, y, FLOOR[0]);
+    } else if (y >= 40) {
+      // face de la paroi au-dessus de la salle (vue de dessus en 3/4)
+      const k = y === 40 ? 7 : y < 43 ? 5 : y < 48 ? 4 : 3;
+      px(x, y, ROCK[k - (r() < 0.18 ? 1 : 0)]);
+    } else {
+      // bruit groupé par blocs de 2 × 2 (plus proche des dalles d'ardoise que du bruit au pixel)
+      const h = Math.sin(((x >> 1) + (y >> 1) * 97 + seed * 13) * 12.9898) * 43758.5453;
+      const n = (h - Math.floor(h)) * 0.8 + r() * 0.2;
+      px(x, y, ROCK[n < 0.45 ? 1 : n < 0.82 ? 2 : n < 0.96 ? 3 : 0]);
+    }
+  }
+  // arêtes du couloir
+  for (let y = 0; y < 52; y++) { px(51, y, ROCK[6]); px(76, y, ROCK[6]); px(52, y, "#14171e"); px(75, y, "#171b23"); }
+  // ombre au pied de la paroi
+  ctx.fillStyle = "rgba(0,0,0,.35)"; ctx.fillRect(0, 52, 52, 2); ctx.fillRect(76, 52, 52, 2);
+  if (tint) { ctx.fillStyle = tint; ctx.fillRect(52, 0, 24, 44); }
+}
+function glyph(ctx, g, x, y, col, s = 1) {
+  ctx.fillStyle = col;
+  GLYPH[g].forEach((row, j) => [...row].forEach((ch, i) => { if (ch === "#") ctx.fillRect(x + i * s, y + j * s, s, s); }));
+}
+function halo(ctx, x, y, rad, rgb, a) {
+  const g = ctx.createRadialGradient(x, y, 0, x, y, rad);
+  g.addColorStop(0, `rgba(${rgb},${a})`); g.addColorStop(1, `rgba(${rgb},0)`);
+  ctx.fillStyle = g; ctx.fillRect(x - rad, y - rad, rad * 2, rad * 2);
+}
+function cracks(ctx, x, y, w, h, seed) {
+  const r = rng(seed); ctx.fillStyle = "#e04048";
+  for (let k = 0; k < 3; k++) { let cx = x + Math.floor(r() * w), cy = y; for (let i = 0; i < h; i++) { ctx.fillRect(cx, cy + i, 1, 1); if (r() < 0.4) cx += r() < 0.5 ? -1 : 1; cx = Math.max(x, Math.min(x + w - 1, cx)); } }
+}
+function flame(ctx, x, y, q, t) {
+  const c = Q[q].col;
+  halo(ctx, x + 2, y, 16, Q[q].glow.join(","), 0.45);
+  ctx.fillStyle = c; ctx.fillRect(x, y - 3, 5, 3); ctx.fillRect(x + 1, y - 5, 3, 2); ctx.fillRect(x + 2, y - 7 + (t & 1), 1, 2);
+  ctx.fillStyle = "#fff4d8"; ctx.fillRect(x + 2, y - 3, 1, 2);
+}
+
+// ---------- Les cinq repères ----------
+const PROPS = [
+  { id:1, nm:"La stèle-glyphe", reco:true,
+    what:"Une stèle d’ardoise tyrienne plantée à gauche de la bouche du couloir, gravée du glyphe du quartier. Le glyphe s’allume à sa couleur quand un allié passe à 5 cases. C’est le langage du glyphe de la réserve scellée et de la frise du coffre antique.",
+    plus:["Lisible de loin, même dans le noir (elle éclaire).","Fait partie du monde : rien n’est ajouté à l’interface.","Le même glyphe sert sur la minicarte et sur les portes."],
+    moins:["Petit au zoom 1 : à compléter par une couleur qui se voit de loin."],
+    draw(ctx, q) {
+      halo(ctx, 44, 38, 20, Q[q].glow.join(","), 0.35);
+      ctx.fillStyle = "rgba(0,0,0,.45)"; ctx.fillRect(38, 55, 13, 3);
+      ctx.fillStyle = "#262e3b"; ctx.fillRect(39, 30, 10, 26); ctx.fillRect(40, 29, 8, 1);
+      ctx.fillStyle = "#556274"; ctx.fillRect(39, 30, 1, 26); ctx.fillRect(40, 29, 8, 1);
+      ctx.fillStyle = "#141922"; ctx.fillRect(48, 30, 1, 26);
+      glyph(ctx, q, 40, 34, Q[q].col);
+      if (q === "C") cracks(ctx, 40, 43, 8, 12, 7);
+    } },
+  { id:2, nm:"L’arche aux braseros", reco:true,
+    what:"Deux piliers et un linteau encadrent le couloir. Les deux braseros au pied des piliers brûlent d’une flamme à la couleur du quartier. Dans tout le quartier, braseros et torches gardent cette couleur.",
+    plus:["Se voit de très loin, la lumière colore le sol du hub.","La couleur suit le joueur dans le quartier : il sait toujours où il est.","Reprend la règle des braseros du Sanctum (rallumés au passage)."],
+    moins:["Plus de décor à dessiner (piliers par biome).","Seul, ne distingue A, B et C que par la couleur."],
+    draw(ctx, q, t) {
+      for (const x of [44, 78]) {
+        ctx.fillStyle = "#323c4b"; ctx.fillRect(x, 30, 6, 24); ctx.fillStyle = "#6c7a8c"; ctx.fillRect(x, 30, 1, 24); ctx.fillStyle = "#1c222d"; ctx.fillRect(x + 5, 30, 1, 24);
+        ctx.fillStyle = "#424e5f"; ctx.fillRect(x - 1, 53, 8, 2);
+      }
+      ctx.fillStyle = "#424e5f"; ctx.fillRect(43, 26, 42, 5); ctx.fillStyle = "#8a98a8"; ctx.fillRect(43, 26, 42, 1); ctx.fillStyle = "#1c222d"; ctx.fillRect(43, 30, 42, 1);
+      for (const x of [38, 86]) { ctx.fillStyle = "#2b2425"; ctx.fillRect(x, 57, 7, 3); ctx.fillStyle = "#5c4e48"; ctx.fillRect(x, 57, 7, 1); flame(ctx, x + 1, 57, q, t); }
+      if (q === "C") cracks(ctx, 44, 31, 6, 20, 11);
+    } },
+  { id:3, nm:"Le seuil en mosaïque",
+    what:"Une bande de mosaïque traverse le sol à l’entrée du couloir, avec le glyphe du quartier au centre. Au-delà, le dallage prend une teinte légère à sa couleur, comme les sous-zones du sol de la jungle (GroundZones).",
+    plus:["Se lit sous les pieds, au moment exact où on franchit le seuil.","La teinte du sol reste dans tout le quartier."],
+    moins:["Masqué par les unités qui passent dessus.","Discret : peu visible au zoom 1."],
+    draw(ctx, q) {
+      base(ctx, 3 + q.charCodeAt(0), `rgba(${Q[q].glow.join(",")},.10)`);
+      for (let x = 52; x < 76; x++) for (let y = 44; y < 54; y++) {
+        const edge = y === 44 || y === 53;
+        ctx.fillStyle = edge ? "#8a98a8" : ((x + y) % 4 === 0 ? Q[q].col : (x + y) % 2 ? "#323c4b" : "#283040");
+        ctx.fillRect(x, y, 1, 1);
+      }
+      ctx.fillStyle = "#1e232c"; ctx.fillRect(59, 45, 10, 8);
+      glyph(ctx, q, 60, 45, Q[q].col);
+      if (q === "C") cracks(ctx, 53, 45, 22, 8, 5);
+      return true;
+    } },
+  { id:4, nm:"Le carton au premier passage", reco:true,
+    what:"La première fois qu’on franchit le seuil, un titre s’inscrit en haut de l’écran, dans le style du carton « Jour 2 » de l’ouverture : le nom du quartier et une ligne de rappel. Les fois suivantes, seul le nom s’affiche, plus petit, 2 secondes.",
+    plus:["Annonce le départ en expédition : le moment est marqué.","Donne le nom, que les autres repères ne disent pas."],
+    moins:["C’est de l’interface : il faut un repère dans le monde à côté."],
+    draw(ctx, q) {}, card:true },
+  { id:5, nm:"La bannière d’état",
+    what:"Une bannière à la couleur et au glyphe du quartier pend au-dessus de la bouche du couloir. Quand le mini-boss du quartier est vaincu, elle tombe à moitié brûlée. On voit depuis le hub ce qui reste à faire.",
+    plus:["Le seuil montre l’avancée du biome.","Grande surface de couleur : visible de loin."],
+    moins:["Un tissu dans une mine tyrienne : plausible au Temple, moins dans le Ventre de la Bête (à varier par biome)."],
+    draw(ctx, q, t, state) {
+      const burnt = state === "vaincu";
+      ctx.fillStyle = "#5c4e48"; ctx.fillRect(54, 24, 20, 2);
+      const h = burnt ? 10 : 18;
+      ctx.fillStyle = burnt ? "#3a2a22" : Q[q].col; ctx.fillRect(56, 26, 16, h);
+      ctx.fillStyle = "rgba(0,0,0,.25)"; ctx.fillRect(56, 26, 1, h); ctx.fillRect(71, 26, 1, h);
+      if (!burnt) { for (let x = 56; x < 72; x += 4) { ctx.fillStyle = Q[q].col; ctx.fillRect(x + 1, 44, 2, 2); } ctx.fillStyle = "#141922"; ctx.fillRect(59, 29, 10, 10); glyph(ctx, q, 60, 30, Q[q].col); }
+      else { const r = rng(9); for (let x = 56; x < 72; x++) { const d = Math.floor(r() * 4); ctx.fillStyle = "#e0602a"; ctx.fillRect(x, 26 + h - 1 + d, 1, 1); ctx.fillStyle = "#1c1a1c"; ctx.fillRect(x, 26 + h - 2, 1, 1); } ctx.fillStyle = "#2b2425"; ctx.fillRect(60, 56, 9, 2); }
+      if (q === "C" && !burnt) cracks(ctx, 57, 40, 14, 4, 3);
+    }, states:true },
+];
+
+// ---------- Rendu ----------
+const out = [];
+for (const p of PROPS) {
+  const shots = p.states ? [["A",""],["B",""],["C",""],["A","vaincu"]] : [["A",""],["B",""],["C",""]];
+  out.push(`<article class="prop${p.reco ? " reco" : ""}">
+    <span class="tag">Proposition ${p.id}</span><h3>${p.nm}</h3><p>${p.what}</p>
+    <div class="shots">${shots.map(([q,s]) => `<figure><div class="scene" style="--q:${Q[q].col}"><canvas width="${W}" height="${H}" data-p="${p.id}" data-q="${q}" data-s="${s}"></canvas>${p.card ? `<div class="card"><b>${Q[q].name}</b><span>${Q[q].sub}</span></div>` : ""}</div><figcaption>Quartier ${q}${s ? " · mini-boss vaincu" : ""}</figcaption></figure>`).join("")}</div>
+    <div class="cols"><ul class="l">${p.plus.map(x => `<li class="plus">${x}</li>`).join("")}</ul><ul class="l">${p.moins.map(x => `<li class="moins">${x}</li>`).join("")}</ul></div>
+  </article>`);
+}
+document.getElementById("props").innerHTML = out.join("");
+let tick = 0;
+function paint() {
+  for (const cv of document.querySelectorAll("canvas[data-p]")) {
+    const p = PROPS.find(o => o.id === +cv.dataset.p), q = cv.dataset.q, ctx = cv.getContext("2d");
+    if (p.id !== 3) base(ctx, p.id * 31 + q.charCodeAt(0));
+    p.draw(ctx, q, tick, cv.dataset.s);
+  }
+}
+paint();
+// Flammes animées (2 images), sauf si l'utilisateur réduit les animations.
+if (!matchMedia("(prefers-reduced-motion: reduce)").matches) setInterval(() => { tick++; paint(); }, 260);
+for (const cv of document.querySelectorAll("canvas[data-glyph]")) {
+  const ctx = cv.getContext("2d"), g = cv.dataset.glyph;
+  ctx.fillStyle = "#141922"; ctx.fillRect(0, 0, 9, 9); glyph(ctx, g, 1, 1, Q[g].col);
+}
+
+// ---------- Noms ----------
+const N = [
+  ["1 · Temple", ["Les Cloîtres","gardien du Temple"], ["La Nef dorée","Martyre de Byrsa"], ["Les Racines","site d’avant-poste"], ["L’Orbite","Œil de la Matrice"]],
+  ["2 · Veines de vert-de-gris", ["Les Puits","gardien des Veines"], ["Les Écluses","Martyre des Veines"], ["La Grande Patine","filons de cuivre"], ["L’Antre de la Gorge","Gorge-Cuivre"]],
+  ["3 · Forges mortes", ["Les Fonderies","Fonderie scellée"], ["Les Halles d’enclume","Martyre du Fer"], ["La Grande Veine","quête des Broutefers"], ["Le Haut-Fourneau","Grand Crassier"]],
+  ["4 · Galeries muettes", ["Les Puits d’extraction","Contremaître à la lampe"], ["Les Galeries sourdes","Martyre du Silence"], ["Les Filons d’argent","filons"], ["Le Grand Dôme","Mère des Échos"]],
+  ["5 · Rives des Limbes", ["L’Embarcadère","Nautonier sans visage"], ["Les Berges grises","Martyre des Âmes"], ["Les Eaux mortes","bassins"], ["La Source du Fleuve","L’Effaceuse"]],
+  ["6 · Ventre de la Bête", ["L’Ossuaire","Ossuaire nerveux"], ["Les Côtes","Martyre engloutie"], ["Les Entrailles","ambre de sang"], ["La Nef des côtes","Cœur-Racine"]],
+  ["7 · Tyr enfouie", ["La Porte de Tyr","Gardien du Seuil"], ["Les Archives","Martyre archiviste"], ["Les Citernes","coffres de Tyr"], ["La Salle du Colosse","Colosse et Bomilcar"]],
+  ["8 · Cryptes de l’Aube", ["Le Trésor du Concile","Gardien des Reliques"], ["Les Tombes royales","Martyre couronnée"], ["Les Ossuaires de l’Aube","filons d’or"], ["Le Chœur souterrain","Hiérophante de Byrsa"]],
+];
+document.getElementById("names").innerHTML = `<tr><th>Biome</th><th class="qa">A · Spirale</th><th class="qb">B · Fourche</th><th class="qc">C · Œil fendu</th><th>Route du boss</th></tr>` +
+  N.map(([b,...cells]) => `<tr><td><b>${b}</b></td>${cells.map(([n,s]) => `<td>${n}<small>${s}</small></td>`).join("")}</tr>`).join("");
+</script>
+</body>
+</html>

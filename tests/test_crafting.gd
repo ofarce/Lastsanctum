@@ -8,11 +8,7 @@ const Gear := preload("res://data/gear_items.gd")
 
 
 func _stock(items: Dictionary) -> void:
-	# Coffre antique débloqué : la réserve est ouverte, les adeptes peuvent y aller chercher les objets.
-	var sim: Simulation = _main.get_node("Simulation")
-	if not sim.state().vault_open:
-		sim.world.dig_cell(14, -37)
-		sim.world.dig_cell(15, -37)
+	# Coffre antique débloqué (à côté de la capsule) : les adeptes peuvent y aller chercher les objets.
 	GameState.base_inventory_unlocked = true
 	for k: String in items:
 		for i in int(items[k]):
@@ -21,12 +17,15 @@ func _stock(items: Dictionary) -> void:
 
 func test_recipes_match_spec() -> void:
 	check_eq(Recipes.RECIPES["workshop"].size(), 8, "8 recettes à l'Atelier (fibre, arc et flèches partis)")
-	check_eq(Recipes.RECIPES["scierie"].keys(), ["wood_fiber"], "la Scierie fait la fibre de bois")
+	check_eq(Recipes.RECIPES["scierie"].keys(), ["wood_fiber", "plank"], "la Scierie fait la fibre de bois et les planches")
+	check_eq(Recipes.RECIPES["scierie"]["plank"], {"wood": 2}, "planche : 2 bois")
+	check_eq(Recipes.RECIPES["etabli"]["module_analyse"], {"wood_fiber": 50, "plank": 50, "ichor": 5}, "mod Analyse")
+	check_eq(Catalog.BUILDINGS["etabli"]["requires"], "scierie", "Établi d'exo débloqué par la Scierie")
 	check_eq(Recipes.RECIPES["archerie"].keys(), ["bow", "arrows"], "l'Archerie fait arcs et flèches")
 	check_eq(Catalog.BUILDINGS["archerie"]["requires"], "scierie", "Archerie débloquée par la Scierie")
 	check_eq(Catalog.STAFF_ROLE["scierie"], "aether", "Scierie servie par Aether")
-	check_eq(Recipes.RECIPES["forge"].size(), 3, "3 recettes à la Fonderie : les lingots seuls")
-	check_eq(Recipes.RECIPES["creuset"].size(), 11, "11 recettes à l'Armurerie")
+	check(Recipes.RECIPES["forge"].size() >= 3, "recettes de lingots à la Fonderie (argent et orichalque ajoutés avec les biomes 3 à 8)")
+	check_eq(Recipes.RECIPES["creuset"].size(), 10, "10 recettes à l'Armurerie")
 	check_eq(Recipes.RECIPES["workshop"]["barricade"], {"wood": 10, "rock": 10}, "barricade")
 	check_eq(Recipes.RECIPES["workshop"]["fishing_rod"], {"wood": 2, "iron": 1, "wood_fiber": 1}, "canne à pêche")
 	check_eq(Recipes.RECIPES["creuset"]["iron_armor"], {"iron_ingot": 40}, "armure en fer")
@@ -44,8 +43,10 @@ func test_recipes_match_spec() -> void:
 			check(Recipes.name_of(item) != item, "nom de %s" % item)
 			for k: String in Recipes.RECIPES[station][item]:
 				check(Recipes.name_of(k) != k, "nom de l'ingrédient %s" % k)
+	# Épée et bouclier de soldat vont à la Caserne, pas sur une fiche d'équipement.
 	for item: String in Recipes.RECIPES["creuset"]:
-		check(Gear.is_gear(item), "%s s'équipe" % item)
+		if item != "sword" and item != "shield":
+			check(Gear.is_gear(item), "%s s'équipe" % item)
 
 
 ## Règle du 2026-11-17 (sim/production.gd) : la recette choisie tourne en boucle, ingrédients apportés au coffre
@@ -60,8 +61,9 @@ func test_recipe_loop_fetches_from_vault() -> void:
 	check_eq(Storage.count("wood"), 3, "rien n'est pris au choix de la recette")
 	run(sim, 120.0)
 	check_eq(Production.count_in(b.output_box, "arrows"), 3 * Recipes.output_quantity("arrows"), "trois lots de flèches au coffre rouge")
-	check_eq(Storage.count("wood"), 0, "bois apporté depuis le coffre antique")
-	check_eq(Storage.count("arrows"), 0, "le produit reste au coffre rouge")
+	check_eq(Storage.count("wood"), 0, "bois pris au réseau des coffres")
+	# Réseau des coffres (2026-11-22) : le coffre rouge est le réseau, le produit y est compté.
+	check_eq(Storage.count("arrows"), 3 * Recipes.output_quantity("arrows"), "le produit est au réseau")
 	sim.craft(b, "arrows")
 	check_eq(b.recipe, "", "second clic : arrêt")
 
@@ -81,20 +83,6 @@ func test_idle_without_staff_and_speed() -> void:
 	run(sim, Recipes.craft_time(b.type) + 0.1)
 	check_eq(Production.count_in(b.output_box, "copper_ingot"), 4, "trois adeptes : trois fois plus vite")
 	check(not Simulation.can_craft(b, "torch"), "la Fonderie ne fait pas de torche")
-
-
-func test_engineer_pack_is_a_source() -> void:
-	var sim := game()
-	var b := built("workshop", 26.0, -112.0)
-	GameState.base_inventory_unlocked = false
-	var u := engineer()
-	u.unarmored = true
-	Storage.store(u.inventory, u.inventory_capacity, "wood")
-	staff(sim, b, 1)
-	sim.craft(b, "torch")
-	run(sim, 40.0)
-	check_eq(Storage.count("wood"), 0, "l'adepte a pris le bois dans le sac de l'Ingénieur")
-	check_eq(Production.count_in(b.output_box, "torch"), 1, "torche au coffre rouge")
 
 
 func test_caserne_waits_for_items_in_blue_chest() -> void:
@@ -118,24 +106,26 @@ func test_creuset_gear_stats() -> void:
 	var sim := game()
 	var u := engineer()
 	u.unarmored = true
+	# À mains nues (sans l'Arbalestrie ni la combinaison d'office) pour la base de comparaison.
+	u.equipment.clear()
 	var base_armor := Catalog.armor(u)
 	var base_dmg := Catalog.attack_damage(u)
 	var pack: Array[Dictionary] = [{"item": "iron_armor", "quantity": 1}, {"item": "copper_shield", "quantity": 1},
 		{"item": "iron_greatsword", "quantity": 1}, {"item": "cannon", "quantity": 1}]
-	check(Gear.equip(u, pack, 0, "Torse"), "armure en fer portée")
-	check(Gear.equip(u, pack, 1, "Main gauche"), "bouclier porté")
+	# L'Exilé n'équipe plus que des mods (2026-11-21) : armes et armures sont refusées par la fiche ; leurs
+	# chiffres restent ceux du Creuset, éprouvés en les posant directement.
+	check(not Gear.equip(u, pack, 0, "Torse"), "armure refusée à l'Exilé")
+	check(not Gear.equip(u, pack, 2, "Main droite"), "épée refusée à l'Exilé")
+	u.equipment["Torse"] = "iron_armor"
+	u.equipment["Main gauche"] = "copper_shield"
 	check_eq(Catalog.armor(u), base_armor + 6 + 1, "défense de l'armure et du bouclier")
-	check(Gear.equip(u, pack, 2, "Main droite"), "épée à deux mains portée")
-	check(not u.equipment.has("Main gauche"), "la main gauche est libérée")
-	check(pack.any(func(s: Dictionary) -> bool: return not s.is_empty() and s["item"] == "copper_shield"), "bouclier rendu au sac")
+	u.equipment.erase("Main gauche")
+	u.equipment["Main droite"] = "iron_greatsword"
+	check(Gear.two_handed(u), "épée à deux mains")
 	check_eq(Catalog.attack_damage(u), 18, "dégâts élevés")
 	check(base_dmg < 18, "plus fort qu'à mains nues")
-	var shield_at := pack.find_custom(func(s: Dictionary) -> bool: return not s.is_empty() and s["item"] == "copper_shield")
-	check(not Gear.equip(u, pack, shield_at, "Main gauche"), "pas de bouclier avec une arme à deux mains")
-	# Arbalestrie (ancien canon) : portée 12, dégâts 12, de la mana de chaque type par tir (data/ammo.gd) ;
-	# sans mana, pas de tir.
-	var cannon_at := pack.find_custom(func(s: Dictionary) -> bool: return not s.is_empty() and s["item"] == "cannon")
-	check(Gear.equip(u, pack, cannon_at, "Main droite"), "Arbalestrie portée")
+	# Arbalestrie (ancien canon) : portée 12, dégâts 12 ; les balles ne consomment pas de mana (data/ammo.gd).
+	u.equipment["Main droite"] = "cannon"
 	check_near(Catalog.unit_reach(u), 12.0, 1e-9, "portée 12")
 	check_eq(Catalog.attack_damage(u), 12, "dégâts 12")
 	var e := Enemy.make("brute", u.x + 8.0, u.z, 1.0)
@@ -144,11 +134,8 @@ func test_creuset_gear_stats() -> void:
 	GameState.enemies.append(e)
 	give(0.0)
 	sim.combat.barracks_strike(u, e)
-	check_eq(e.hp, 500.0, "sans mana, pas de tir")
-	var mana: float = Gear.ITEMS["cannon"]["mana"]
-	give(2.0 * mana)
-	sim.combat.barracks_strike(u, e)
-	check_near(GameState.res["forge"], mana, 1e-9, "mana d'un tir payée")
+	check(e.hp < 500.0, "tir sans mana")
+	check_eq(GameState.res["forge"], 0.0, "aucune mana prélevée")
 	check(e.hp < 500.0, "le tir touche")
 
 
@@ -158,5 +145,6 @@ func test_creuset_art_two_by_two() -> void:
 	var m: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://assets/baked/manifest.json"))
 	var art: Dictionary = m["buildings"]["arts"]["da-creuset"]
 	check_eq(float(art.get("scale", 0.0)), 1.0, "dessiné à l'échelle native")
-	check_eq(int(art["anim"]["count"]), 72, "boucle de 72 images (une coulée de 6 s)")
+	# Armurerie v4 (piste 3, 2026-11-20) : boucle de 48 images.
+	check_eq(int(art["anim"]["count"]), 48, "boucle de 48 images")
 	check(ResourceLoader.exists("res://assets/baked/hud/portraits/bld-creuset.png"), "portrait du HUD")

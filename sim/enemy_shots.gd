@@ -41,7 +41,27 @@ const PILUM := {"flight": 0.75, "radius": 1.1, "shards": 4, "shard_speed": 6.0, 
 ## (la boule vole à SHOT_LIFT px du sol : la gueule du sprite beast est à 24 px devant et 16 px au-dessus des pieds).
 ## core : distance à laquelle une boule visant l'Ancre la touche.
 ## count boules en cône, écartées de spread radians ; seule la boule centrale éclaire (Lighting).
-const SPIT := {"count": 3, "spread": 0.22, "speed": 9.0, "r": 0.675, "damage": 1.0, "every": 1.6, "jitter": 0.8, "first": 0.5, "warn": 0.3, "core": 0.8}
+const SPIT := {"count": 3, "spread": 0.22, "speed": 10.8, "r": 0.675, "damage": 1.0, "every": 1.6, "jitter": 0.8, "first": 0.5, "warn": 0.3, "core": 0.8}
+## Alpha des meutes (2026-11-22) : boules plus grosses (r et dessin ×), plus rapides, plus fortes.
+const ALPHA_SPIT := {"r": 1.6, "speed": 1.3, "damage": 1.5}
+## Tirs des ennemis sans projectile (demande du 2026-11-22), contre l'Exilé incarné seulement, comme les autres
+## balles. every : s entre deux tirs ; range : portée (ligne dégagée) ; count/spread : éventail ; ring : tir en
+## couronne dans toutes les directions (count balles) ; shot : dessin (orb, ichor, bone, shard, fire) ; damage :
+## part du coup de l'ennemi. Fanatique : une boule toutes les 3 s, à la portée des archers (20).
+const VOLLEY := {
+	"creep": {"every": 3.0, "range": 20.0, "count": 1, "spread": 0.0, "speed": 7.0, "r": 0.6, "shot": "orb", "damage": 1.0},
+	"shield": {"every": 2.0, "range": 16.0, "count": 10, "ring": true, "speed": 6.0, "r": 0.3, "shot": "shard", "damage": 0.4},
+	"scout": {"every": 2.5, "range": 14.0, "count": 1, "spread": 0.0, "speed": 12.0, "r": 0.25, "shot": "shard", "damage": 0.5},
+	"brute": {"every": 4.0, "range": 12.0, "count": 3, "spread": 0.35, "speed": 5.0, "r": 0.7, "shot": "orb", "damage": 0.5},
+	"skeleton": {"every": 3.0, "range": 12.0, "count": 1, "spread": 0.0, "speed": 7.0, "r": 0.3, "shot": "bone", "damage": 0.6},
+	"skeleton_bubo": {"every": 3.5, "range": 12.0, "count": 2, "spread": 0.3, "speed": 5.0, "r": 0.35, "shot": "ichor", "damage": 0.6},
+	"skeleton_bomb": {"every": 3.0, "range": 10.0, "count": 1, "spread": 0.0, "speed": 9.0, "r": 0.3, "shot": "fire", "damage": 0.5},
+	"tick": {"every": 3.0, "range": 10.0, "count": 1, "spread": 0.0, "speed": 6.0, "r": 0.35, "shot": "ichor", "damage": 0.8},
+	"bat": {"every": 2.0, "range": 10.0, "count": 1, "spread": 0.0, "speed": 9.0, "r": 0.25, "shot": "shard", "damage": 0.8},
+	"croc": {"every": 4.0, "range": 12.0, "count": 3, "spread": 0.3, "speed": 6.0, "r": 0.35, "shot": "ichor", "damage": 0.5},
+	"feline": {"every": 2.5, "range": 12.0, "count": 2, "spread": 0.25, "speed": 10.0, "r": 0.25, "shot": "shard", "damage": 0.5},
+	"eel": {"every": 4.0, "range": 13.5, "count": 8, "ring": true, "speed": 5.0, "r": 0.35, "shot": "ichor", "damage": 0.5},
+}
 const MOUTH_AHEAD := 3.0
 const MOUTH_UP := 0.25
 const HIT := 0.375
@@ -216,16 +236,47 @@ static func _spit_fire(sim: Simulation, e: Enemy, now: float) -> void:
 		return
 	var a := (to - from).angle()
 	var n: int = SPIT["count"]
+	var big := e.alpha
+	var spd: float = SPIT["speed"] * (ALPHA_SPIT["speed"] if big else 1.0)
 	for i in n:
 		var k := i - (n - 1) / 2.0
 		var c: float = a + k * SPIT["spread"]
-		var b := {"kind": "fire", "x": from.x, "z": from.y, "vx": cos(c) * SPIT["speed"], "vz": sin(c) * SPIT["speed"],
-			"r": SPIT["r"], "dmg": e.damage * SPIT["damage"], "born": now, "until": now + e.reach / SPIT["speed"],
-			"target": target, "lit": k == 0.0, "seed": sim.rng.randi()}
+		var b := {"kind": "fire", "x": from.x, "z": from.y, "vx": cos(c) * spd, "vz": sin(c) * spd,
+			"r": SPIT["r"] * (ALPHA_SPIT["r"] if big else 1.0), "dmg": e.damage * SPIT["damage"] * (ALPHA_SPIT["damage"] if big else 1.0),
+			"born": now, "until": now + e.reach / spd, "target": target, "lit": k == 0.0, "seed": sim.rng.randi(),
+			"scale": ALPHA_SPIT["r"] if big else 1.0}
 		if core:
 			b["core"] = to
 		_add(b)
 	Sfx.at("flammes", e.x, e.z)
+
+
+## Tir d'un ennemi sans projectile (VOLLEY) sur l'Exilé incarné, à portée et ligne dégagée.
+static func _volley(sim: Simulation, e: Enemy, u: Unit, now: float) -> void:
+	if e.hp <= 0.0 or e.neutral or e.stun > 0.0:
+		return
+	var V: Dictionary = VOLLEY[e.kind]
+	var at: float = e.memo.get("volley_at", -INF)
+	if at == -INF:
+		e.memo["volley_at"] = now + sim.rng.randf() * float(V["every"])
+		return
+	if now < at:
+		return
+	var from := e.pos()
+	var d := u.pos().distance_to(from)
+	if d > float(V["range"]) or not sim.combat.clear_shot(from, u.pos()):
+		e.memo["volley_at"] = now + 0.3
+		return
+	e.memo["volley_at"] = now + float(V["every"])
+	var n: int = V["count"]
+	var a := (u.pos() - from).angle()
+	var spd: float = V["speed"]
+	for i in n:
+		var c: float = a + i * TAU / n if V.get("ring", false) else a + (i - (n - 1) / 2.0) * float(V.get("spread", 0.0))
+		var b := {"kind": V["shot"], "x": from.x, "z": from.y, "vx": cos(c) * spd, "vz": sin(c) * spd, "r": V["r"],
+			"dmg": e.damage * float(V["damage"]), "born": now, "until": now + float(V["range"]) * 1.3 / spd, "seed": sim.rng.randi()}
+		_add(b)
+	e.face = -1 if u.x < e.x else 1
 
 
 static func _add(b: Dictionary) -> void:
@@ -243,6 +294,8 @@ static func tick(sim: Simulation, dt: float) -> void:
 			_spit_fire(sim, e, now)
 		if e.kind == "strazhar":
 			_trail(e, u, now)
+		elif u != null and VOLLEY.has(e.kind):
+			_volley(sim, e, u, now)
 	if GameState.enemy_shots.is_empty():
 		return
 	var ts: Variant = sim.world.terrain_state if sim.world != null else null

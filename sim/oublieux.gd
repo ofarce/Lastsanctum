@@ -8,6 +8,7 @@ extends RefCounted
 ## Tâche de l'unité : {type: "glean", building, step: seek | go | take | return, target, until, since, best, skip}.
 
 const ItemStorage := preload("res://sim/item_storage.gd")
+const Recipes := preload("res://data/recipes.gd")
 
 const ROLE := "oublieux"
 const CAPACITY := 12
@@ -202,8 +203,10 @@ static func _take(u: Unit, t: Dictionary) -> void:
 	if t.has("corpse"):
 		for got: Dictionary in Loot.take(t["corpse"], room):
 			ItemStorage.store(u.inventory, CAPACITY, got["item"], got["owner"])
+			Recipes.learn(got["item"])
 	elif room > 0 and ItemStorage.store(u.inventory, CAPACITY, t["drop"]["item"], String(t["drop"].get("owner", ""))):
 		GameState.ground_items.erase(t["drop"])
+		Recipes.learn(String(t["drop"]["item"]))
 	Sfx.at("coffre", u.x, u.z)
 
 

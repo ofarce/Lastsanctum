@@ -1,0 +1,28 @@
+{
+ "frame_w": 56,
+ "frame_h": 56,
+ "ax": 28,
+ "ay": 53,
+ "anims": {
+  "idle": {
+   "count": 6,
+   "fps": 6,
+   "loop": true
+  },
+  "open": {
+   "count": 4,
+   "fps": 8,
+   "loop": true
+  },
+  "cast": {
+   "count": 6,
+   "fps": 10,
+   "loop": false
+  },
+  "death": {
+   "count": 8,
+   "fps": 8,
+   "loop": false
+  }
+ }
+}

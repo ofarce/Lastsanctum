@@ -35,6 +35,28 @@ TOP_DARK = hexc("#121419")  # ombre portée d'un éclat sur la masse
 FACE_DARK = hexc("#141922")
 RB = [hexc(c) for c in ("#0b090b", "#1e232c", "#272d37", "#333a46", "#404955", "#515a66")]
 GLINT = (11, 13)  # point du reflet animé d'OreView (-5, -3) dans le sprite
+# Minerais des six strates (2026-11-22) : dessinés avec la forme d'un minerai existant et leur propre rampe.
+# L'ordre suit data/mineable_blocks.gd ORES (colonnes des atlas).
+NEW_ORES = {
+    "silver": ("iron", [hexc(c) for c in ("#2a303c", "#566070", "#8e98a8", "#c4ccd8", "#f4f8fc")]),
+    "tear": ("quartz", [hexc(c) for c in ("#2e4a44", "#5a8a80", "#a9cfc0", "#dcefe6", "#ffffff")]),
+    "amber": ("gold", [hexc(c) for c in ("#4a1a06", "#8a3c10", "#d07a2a", "#f0a84a", "#ffe0a0")]),
+    "orichalcum": ("copper", [hexc(c) for c in ("#4e2420", "#8a4a3c", "#c47a62", "#e09a78", "#ffd0b8")]),
+}
+ALL_ORES = list(ORES) + list(NEW_ORES)
+
+
+def drawn(fn, ore, *args):
+    """fn dessinée pour `ore` : un nouveau minerai emprunte la forme de son modèle, avec sa rampe."""
+    if ore not in NEW_ORES:
+        return fn(ore, *args)
+    base, pal = NEW_ORES[ore]
+    saved = PAL[base]
+    PAL[base] = pal
+    try:
+        return fn(base, *args)
+    finally:
+        PAL[base] = saved
 
 
 def tone(ore):
@@ -284,12 +306,12 @@ def main():
     os.makedirs(OUT, exist_ok=True)
     faces = [Image.open(os.path.join(v2.ROOT, "assets", "ardoise", "world", "runtime", f"face5_{v}.png")).convert("RGBA") for v in range(6)]
     for key, _name, fn, _d in PISTES:
-        atlas = Image.new("RGBA", (128, 96))
-        fatlas = Image.new("RGBA", (128, FH * 2))
-        for oi, ore in enumerate(ORES):
+        atlas = Image.new("RGBA", (32 * len(ALL_ORES), 96))
+        fatlas = Image.new("RGBA", (32 * len(ALL_ORES), FH * 2))
+        for oi, ore in enumerate(ALL_ORES):
             for si, (st, big) in enumerate((("vein", False), ("lode", True))):
-                top = fn(ore, "top", big, random.Random(f"v4-{key}-{ore}-{st}-top"))
-                face = fn(ore, "face", big, random.Random(f"v4-{key}-{ore}-{st}-face"))
+                top = drawn(fn, ore, "top", big, random.Random(f"v4-{key}-{ore}-{st}-top"))
+                face = drawn(fn, ore, "face", big, random.Random(f"v4-{key}-{ore}-{st}-face"))
                 top.save(os.path.join(OUT, f"{key}-{ore}-{st}-top.png"))
                 face.save(os.path.join(OUT, f"{key}-{ore}-{st}-face.png"))
                 atlas.alpha_composite(top, (oi * 32, si * 32))
@@ -298,7 +320,7 @@ def main():
                 prev = faces[(oi + si) % 6].copy()
                 prev.alpha_composite(face)
                 prev.save(os.path.join(OUT, f"{key}-{ore}-{st}-face-apercu.png"))
-            ic = icon(key, ore, random.Random(f"v4-{key}-{ore}-icon"))
+            ic = drawn(lambda o, r: icon(key, o, r), ore, random.Random(f"v4-{key}-{ore}-icon"))
             ic.save(os.path.join(OUT, f"{key}-{ore}-icon.png"))
             atlas.alpha_composite(ic, (oi * 32, 64))
         atlas.save(os.path.join(OUT, f"atlas-{key}.png"))

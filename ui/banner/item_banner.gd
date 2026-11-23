@@ -15,10 +15,12 @@ const SOUND_DB := -8.0
 
 ## Texte de chaque objet remis (titre en capitales, visuel tiré des sprites de l'Ingénieur).
 ## Nom des objets absents de data/gear_items.gd.
-const NAMES := {"mining_seal": "Sceau de minage"}
+const NAMES := {"mining_seal": "Sceau de minage", "plan_analyse": "Plan de mod « Analyse »"}
+## Plans remis comme objets de bannière : l'icône du mod qu'ils apprennent sert de visuel (Recipes.PLAN_ITEMS).
 const TEXTS := {
 	"cannon": "L'arme de base de tous les Exilés, la vôtre n'ayant pas survécu au voyage temporel. Consomme de l'énergie spirituelle à chaque tir. Faites-en bon usage.",
 	"mining_seal": "Un sceau commun qui vous permet de miner la roche et certains minéraux basiques.",
+	"plan_analyse": "Le plan d'un module d'exo tyrien. Une fois fabriqué à l'Établi d'exo (50 fibres de bois, 50 planches, 5 ichor), il affiche les PV des ennemis à l'écran.",
 	"combinaison": "Une combinaison sommaire commune à tous les Exilés, votre armure n'ayant pas supporté le voyage temporel. Il existe peut-être des moyens de la renforcer ?",
 }
 
@@ -90,6 +92,9 @@ func _layout() -> void:
 static func visual(item: String) -> Texture2D:
 	if item == "mining_seal":
 		return HudStyle.MINING_SEAL
+	var plans: Dictionary = preload("res://data/recipes.gd").PLAN_ITEMS
+	if plans.has(item):
+		return preload("res://ui/inventory/item_icon.gd").mod_texture(plans[item])
 	var wi := TyrienArt.weapon_icon(item)
 	if wi:
 		return wi

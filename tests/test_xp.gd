@@ -17,7 +17,15 @@ func test_kill_gives_xp_and_bonus() -> void:
 	var e := foe("brute", 1.0, -120.0, 50.0)
 	game_sim().combat.barracks_strike(u, e)
 	check_eq(e.hp, 0.0, "la brute est achevée (80 dégâts)")
-	check_eq(u.level, 2, "35 XP : niveau 2")
-	check_eq(int(u.xp), 15, "reste 15 XP")
-	check_eq(Catalog.lvl_bonus(u), 1, "+1 dégât et +1 défense")
-	check_near(Combat.after_armor(u, 0.5), 0.5 * 0.15, 1e-9, "plancher de 15 %")
+	# L'Ingénieur ne gagne plus de niveaux (2026-11-22) : il progresse par ses mods.
+	check_eq(u.level, 1, "Ingénieur : pas de niveau gagné")
+	check_eq(int(u.xp), 0, "Ingénieur : pas d'XP")
+	# Un adepte qui achève une brute gagne ses 35 XP : niveau 2, reste 15.
+	var a := setup("sigil", 1)
+	var e2 := foe("brute", 1.0, -120.0, 50.0)
+	e2.hp = 1.0
+	game_sim().combat.barracks_strike(a, e2)
+	check_eq(a.level, 2, "35 XP : niveau 2")
+	check_eq(int(a.xp), 15, "reste 15 XP")
+	check_eq(Catalog.lvl_bonus(a), 1, "+1 dégât et +1 défense")
+	check_near(Combat.after_armor(a, 0.5), 0.5 * 0.15, 1e-9, "plancher de 15 %")

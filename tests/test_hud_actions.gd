@@ -68,6 +68,9 @@ func test_panel_actions_match_js() -> void:
 						expected = "Ressusciter %s (niveau %d) · %s" % [unit.name, Catalog.lvl(unit), Catalog.cost_text(cost)]
 					elif f == "disabled":
 						expected = not Catalog.can_pay(cost)
+					# Les recherches du Puits prennent les premières touches (HudModel.research_keys).
+					elif f == "key" and str(expected) != "":
+						expected = str(int(expected) + HudModel.research_keys(HudModel.selected_building()))
 				if got[i]["id"].begins_with("train-"):
 					if f == "label":
 						expected = str(expected).replace(" · ", " ×4 · ")
@@ -114,6 +117,9 @@ func test_hud_texts_match_js() -> void:
 				expected = HudModel.building_status(shown_b)
 				check(str(expected).begins_with("À l’arrêt"), "%s : signalé à l'arrêt" % c["name"])
 			# Population : « occupées/plafond » (Catalog.POP_BASE et Chambres), au lieu du seul nombre d'unités.
+			# L'Ingénieur ne gagne plus de niveaux (2026-11-22) : plus de niveau ni d'XP dans son titre.
+			if f == "kind" and shown != null and shown.role == "engineer":
+				expected = str(expected).split(" · NIV.")[0]
 			if f == "population":
 				expected = "%d/%d" % [Simulation.pop_used(), Simulation.pop_cap()]
 			if f == "lore" and c["name"] in ["puits_des_ames", "puits_des_ames_vide"]:

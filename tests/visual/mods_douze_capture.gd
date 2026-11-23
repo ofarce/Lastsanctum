@@ -75,7 +75,7 @@ func _ready() -> void:
 		GameState.res[r] = 999.0
 	GameState.ammo = "spirit"
 	Ammo.select("indra")
-	var shots := [Mods.shot_ammo(eng, 0.5), Mods.shot_ammo(eng, 0.5), Mods.shot_ammo(eng, 0.5), Mods.shot_ammo(eng, 0.5)]
+	var shots := [Mods.shot_ammo(eng), Mods.shot_ammo(eng), Mods.shot_ammo(eng), Mods.shot_ammo(eng)]
 	_check(shots == ["indra", "spirit", "indra", "spirit"], "barillet : munitions alternées %s" % [shots])
 	GameState.sim_time = GameState.ammo_changed_at + 1.0
 	eng.mods.erase("ember")

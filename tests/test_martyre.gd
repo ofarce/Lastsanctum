@@ -3,6 +3,8 @@ extends "res://tests/fight_case.gd"
 
 
 func _boss(sim: Simulation) -> Enemy:
+	# Temple en salles (2026-11-22) : elle se lève dans son arène ; sans plan, la règle des 500 de menace.
+	sim.state().temple_layout = {}
 	GameState.menace = Martyre.MENACE
 	Martyre.tick(sim)
 	return GameState.martyre
@@ -26,6 +28,7 @@ func _into_dome(u: Unit, offset := Vector2(0.0, -6.0)) -> void:
 
 func test_appears_alone_at_500_menace_and_cancels_the_assault() -> void:
 	var sim := game()
+	sim.state().temple_layout = {}
 	GameState.menace = Martyre.MENACE - 1
 	sim.combat.start_wave()
 	Martyre.tick(sim)

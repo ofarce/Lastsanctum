@@ -30,6 +30,7 @@ func _ready() -> void:
 
 
 func _gui_input(event: InputEvent) -> void:
+	PressFx.track(self, event)
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
 		accept_event()
 		_pulse = false
@@ -50,6 +51,8 @@ func _draw() -> void:
 	var r := Rect2(Vector2.ZERO, size)
 	var f := HudStyle.font()
 	var ink := HudStyle.GOLD_LIGHT
+	var pressed := PressFx.down(self)
+	PressFx.begin(self, r, pressed)
 	if HelpPanel.open:
 		# Codex ouvert : laiton plein, comme l'onglet choisi.
 		HudStyle.linear_gradient(self, r, 180.0, [[0.0, HelpPanel.BRASS_TOP], [1.0, HelpPanel.BRASS_BOTTOM]])
@@ -72,6 +75,7 @@ func _draw() -> void:
 	draw_rect(kr, Color("#10140d") if not HelpPanel.open else HelpPanel.BRASS_INK)
 	HudStyle.ring(self, kr, 1.0, Color("#8c744b") if not HelpPanel.open else HelpPanel.BRASS_INK)
 	draw_string(f, kr.position + Vector2(4.5, 11.0), KEY, HORIZONTAL_ALIGNMENT_LEFT, -1, 10, HudStyle.MUTED if not HelpPanel.open else HudStyle.GOLD_LIGHT)
+	PressFx.finish(self, r, pressed)
 	if _pulse:
 		# Halo : un filet clair qui s'écarte et s'efface, toutes les 1,6 s.
 		var t := float(Time.get_ticks_msec() % 1600) / 1600.0

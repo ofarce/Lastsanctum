@@ -41,6 +41,24 @@ VEIN2 = hx('#4a9480')
 COPPER = hx('#c47b58')
 # Teinte du sol du biome 2 (ancien Terrain.BIOME_TINT, désormais cuit dans floor2 / dug2).
 TINT2 = (0.72, 0.96, 0.86)
+# Six strates avant Byrsa (planches/biomes-3-8-propositions.html, 2026-11-22) : rampe de 8 tons sur l'échelle de
+# clarté de SL, couleur des veines, des paillettes, teinte du sol, et motif ("veines" ou "appareil" de pierres).
+STRATES = {
+    3: dict(sl=['#0e0c0e', '#171315', '#201b1c', '#2b2425', '#382f2e', '#483d3a', '#5c4e48', '#78665c'],
+            vein='#7a3a22', fleck='#9eacb8', fleck2='#e0602a', tint=(0.92, 0.82, 0.78), seed=61, motif="veines"),
+    4: dict(sl=['#07080b', '#0c0e13', '#12151c', '#1a1e27', '#232835', '#2e3445', '#3c4458', '#525c74'],
+            vein='#8a94a4', fleck='#dfe6f0', fleck2=None, tint=(0.66, 0.70, 0.80), seed=71, motif="veines"),
+    5: dict(sl=['#0b1213', '#101a1b', '#162324', '#1d2e2e', '#263b3a', '#324b49', '#43605c', '#5c7c76'],
+            vein='#6e948c', fleck='#e8eee6', fleck2=None, tint=(0.80, 0.95, 0.92), seed=81, motif="veines"),
+    6: dict(sl=['#120709', '#1a0b0e', '#241013', '#30161a', '#3d1d21', '#4c262a', '#5e3136', '#7a4248'],
+            vein='#7a2a32', fleck='#d07a2a', fleck2=None, tint=(1.0, 0.76, 0.76), seed=91, motif="veines"),
+    7: dict(sl=['#100c0e', '#181214', '#211a1c', '#2b2225', '#372c2f', '#45383a', '#574849', '#6e5e5e'],
+            vein='#6a4a40', fleck='#e09a78', fleck2='#5fd8e8', tint=(0.95, 0.86, 0.86), seed=101, motif="appareil"),
+    8: dict(sl=['#0e0c0a', '#16130f', '#1f1b16', '#29241e', '#352f27', '#433b32', '#564c40', '#6f6354'],
+            vein='#8a8478', fleck='#ddb457', fleck2=None, tint=(1.0, 0.94, 0.84), seed=111, motif="appareil"),
+}
+for _n, _d in STRATES.items():
+    _d['SL'] = [hx(c) for c in _d['sl']]
 
 M32 = 0xFFFFFFFF
 
@@ -124,8 +142,48 @@ def tex_top2():
     return pick(fleck, np.broadcast_to(np.array(COPPER, np.uint8), out.shape), out)
 
 
-def tinted(t):
-    return np.clip(np.round(t.astype(np.float64) * np.array(TINT2)), 0, 255).astype(np.uint8)
+def tex_top_n(n):
+    """Roche d'une strate : masse sombre sans mousse, veines (ou appareil de pierres), paillettes."""
+    d = STRATES[n]
+    S, sd = d['SL'], d['seed']
+    x, y = grid()
+    v = .24 + (fbm(x, y, 9, 7, sd) - .5) * .4
+    if d['motif'] == "appareil":
+        # Pierres taillées : rangées de 14 px, joints décalés d'une rangée à l'autre (504 = 36 × 14 = 28 × 18).
+        row = y // 14
+        off = (row & 1) * 14
+        lu, lv = (x + off) % 28, y % 14
+        v = v + (hash_(((x + off) // 28) % (P // 28), row % (P // 14), sd + 1) - .5) * .14
+        out = rp(S, v, x, y)
+        out = pick((lv == 1) | (lu == 1), rp(S, v + .14, x, y), out)
+        out = pick((lv == 0) | (lu == 0), rp(S, np.full(x.shape, .05), x, y), out)
+    else:
+        out = rp(S, v, x, y)
+        dd = (x + 2 * y + np.floor(vn(x, y, 24, 24, sd + 2) * 26).astype(np.int64)) % 36
+        solid = vn(x, y, 14, 14, sd + 4) >= .42
+        out = pick(solid & (dd == 1), rp(S, v + .16, x, y), out)
+        out = pick(solid & (dd == 0), np.broadcast_to(np.array(hx(d['vein']), np.uint8), out.shape), out)
+    fleck = hash_((x >> 1) % (P // 2), (y >> 1) % (P // 2), sd + 6) < .003
+    out = pick(fleck, np.broadcast_to(np.array(hx(d['fleck']), np.uint8), out.shape), out)
+    if d['fleck2']:
+        f2 = hash_((x >> 1) % (P // 2), (y >> 1) % (P // 2), sd + 8) < .0012
+        out = pick(f2, np.broadcast_to(np.array(hx(d['fleck2']), np.uint8), out.shape), out)
+    return out
+
+
+def tinted(t, tint=TINT2):
+    return np.clip(np.round(t.astype(np.float64) * np.array(tint)), 0, 255).astype(np.uint8)
+
+
+def to_tier(a, n):
+    """Sprite d'ardoise → même sprite dans la roche de la strate n (teintes SL remplacées une à une)."""
+    a = a.copy()
+    rgb = a[..., :3]
+    src = rgb.copy()
+    S = STRATES[n]['SL']
+    for c, c2 in list(zip(SL, S)) + list(zip(MOSS, S[2:6])):
+        rgb[np.all(src == np.array(c, np.uint8), axis=-1) & (a[..., 3] > 0)] = c2
+    return a
 
 
 def to_tier2(a):
@@ -351,13 +409,19 @@ def main():
     W = json.load(open(f"{SRC}/manifest.json"))["world"]
     os.makedirs(f"{OUT}/world/tiles", exist_ok=True)
     top, flo, dug = tex_top(), tex_floor(), tex_dug()
-    for name, t in (("rock", top), ("floor", flo), ("dug", dug), ("rock2", tex_top2()), ("floor2", tinted(flo)), ("dug2", tinted(dug))):
+    tiles = [("rock", top), ("floor", flo), ("dug", dug), ("rock2", tex_top2()), ("floor2", tinted(flo)), ("dug2", tinted(dug))]
+    for n, d in STRATES.items():
+        tiles += [(f"rock{n}", tex_top_n(n)), (f"floor{n}", tinted(flo, d['tint'])), (f"dug{n}", tinted(dug, d['tint']))]
+    for name, t in tiles:
         Image.fromarray(np.dstack([t, np.full(t.shape[:2], 255, np.uint8)])).save(f"{OUT}/world/tiles/{name}.png", optimize=True)
     rmap = rock_map(W["CAVE_C"]["rock"])
-    json.dump({"note": "Style ardoise tyrienne (tools/ardoise/ardoise.py)", "period": P,
-               "rock": ["#%02x%02x%02x" % c for c in rmap],
-               "rock2": ["#%02x%02x%02x" % SL2[SL.index(c)] for c in rmap],
-               "light": [0.95, 1.02, 1.14]}, open(f"{OUT}/palette.json", "w"), indent=1)
+    pal = {"note": "Style ardoise tyrienne (tools/ardoise/ardoise.py)", "period": P,
+           "rock": ["#%02x%02x%02x" % c for c in rmap],
+           "rock2": ["#%02x%02x%02x" % SL2[SL.index(c)] for c in rmap]}
+    for n, d in STRATES.items():
+        pal[f"rock{n}"] = ["#%02x%02x%02x" % d['SL'][SL.index(c)] for c in rmap]
+    pal["light"] = [0.95, 1.02, 1.14]
+    json.dump(pal, open(f"{OUT}/palette.json", "w"), indent=1)
     build_ground(W, top, flo, rmap)
     atlas = np.array(Image.open(f"{SRC}/world/decor_atlas.png").convert("RGBA"))
     rocky = np.zeros(atlas.shape[:2], bool)
@@ -378,6 +442,8 @@ def main():
     Image.fromarray(atlas).save(f"{OUT}/world/decor_atlas.png", optimize=True)
     # Même planche pour le décor posé sur la roche de vert-de-gris (DecorLoader la prend au nord du Temple).
     Image.fromarray(np.where(rocky[..., None], to_tier2(atlas), atlas)).save(f"{OUT}/world/decor_atlas_r2.png", optimize=True)
+    for n in STRATES:
+        Image.fromarray(np.where(rocky[..., None], to_tier(atlas, n), atlas)).save(f"{OUT}/world/decor_atlas_r{n}.png", optimize=True)
     os.makedirs(f"{OUT}/world/runtime", exist_ok=True)
     for f in sorted(os.listdir(f"{SRC}/world/runtime")):
         if f.endswith(".png"):
@@ -386,6 +452,8 @@ def main():
             Image.fromarray(out).save(f"{OUT}/world/runtime/{f}", optimize=True)
             if f.startswith(("face5_", "gallery_spire_")):
                 Image.fromarray(to_tier2(out)).save(f"{OUT}/world/runtime/{f[:-4]}_r2.png", optimize=True)
+                for n in STRATES:
+                    Image.fromarray(to_tier(out, n)).save(f"{OUT}/world/runtime/{f[:-4]}_r{n}.png", optimize=True)
             n += 1
     print("sprites repeints :", n)
 

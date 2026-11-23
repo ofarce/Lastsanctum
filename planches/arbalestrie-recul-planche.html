@@ -1,0 +1,223 @@
+<meta charset="utf-8">
+<meta name="claude:viewport-fit-sides" content="cover">
+<title>Arbalestrie · recul au tir</title>
+<style>
+/* Planche de propositions : cinq animations de recul de l'Arbalestrie. Une carte par piste : scène, vues de face
+   et de dos, puis les images posées une à une. Même habillage sombre que les autres planches du projet. */
+:root{--bg:#14161b;--panel:#1d2028;--line:#2c313c;--ink:#e6e8ee;--mute:#9aa1b0;--acc:#7ab0ff;
+  --ok:#5fbf7a;--redo:#e0b04a;--no:#e0583a;--btn:#2a2f3a;--field:#171a21;color-scheme:dark}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,sans-serif}
+main{max-width:1460px;margin:0 auto;padding-block:24px 60px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+h1{font-size:26px;margin:0 0 4px;text-wrap:balance}
+.sub{color:var(--mute);margin:0 0 14px;max-width:980px}
+.note{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px 14px;color:#c9cdd6;font-size:14px;max-width:980px}
+.note b{color:var(--ink)}
+.bar{position:sticky;top:env(safe-area-inset-top,0px);background:var(--bg);padding:8px 0;z-index:5;display:flex;gap:6px;flex-wrap:wrap;align-items:center;border-bottom:1px solid var(--line);margin:14px 0 14px}
+.bar .lab{color:var(--mute);font-size:13px;margin-left:8px}
+.bar .lab:first-child{margin-left:0}
+button{background:var(--btn);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:5px 10px;cursor:pointer;font:inherit;font-size:13px}
+button:hover{border-color:#4a5262}
+button.on{background:#26364f;border-color:#3e5d8a}
+button:focus-visible,textarea:focus-visible{outline:2px solid var(--acc);outline-offset:1px}
+#tally{margin-left:auto;font-size:13px;color:var(--mute)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,690px),1fr));gap:14px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px 14px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.card[data-v="garder"]{border-color:#2f6a40}.card[data-v="revoir"]{border-color:#7a6226}.card[data-v="rejeter"]{border-color:#7a3a2a;opacity:.75}
+.card.ref{border-style:dashed}
+.card h3{margin:0;font-size:16px}
+.card h3 .tag{font:12px/1 ui-monospace,monospace;color:var(--mute);font-weight:400;margin-left:6px}
+.card p{margin:0;color:#c9cdd6;font-size:14px;max-width:70ch}
+.spec{font:12px/1.45 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--mute)}
+.view{display:flex;gap:6px;align-items:flex-start;max-width:654px}
+figure{margin:0;min-width:0;display:flex;flex-direction:column;gap:3px;font-size:11px;color:var(--mute)}
+.view .main{flex:176 1 0}.view .side{flex:40 1 0}
+.strip{max-width:640px}
+canvas.px{image-rendering:pixelated;width:100%;height:auto;display:block;border-radius:4px;background:#000}
+.verdict{display:flex;gap:6px;flex-wrap:wrap}
+.verdict button{flex:1 1 0;min-width:0}
+.verdict button.sel[data-v="garder"]{background:#1f3a28;border-color:var(--ok)}
+.verdict button.sel[data-v="revoir"]{background:#3a321b;border-color:var(--redo)}
+.verdict button.sel[data-v="rejeter"]{background:#3a2019;border-color:var(--no)}
+textarea{background:var(--field);color:var(--ink);border:1px solid var(--line);border-radius:6px;font:inherit;font-size:13px;padding:6px 8px;resize:vertical;min-height:32px;width:100%;box-sizing:border-box}
+#out{margin-top:10px;min-height:160px;font-family:ui-monospace,monospace}
+</style>
+<main>
+<h1>Arbalestrie · recul au tir</h1>
+<p class="sub">Cinq façons de faire sentir chaque tir dans l'arme et dans le corps de l'Ingénieur. Tout est visuel : ni la cadence, ni les dégâts, ni la position réelle de l'Ingénieur ne changent. Les scènes sont en pixels natifs du jeu, avec le vrai dessin du Templier ; la balle, le souffle au sol et la douille sont ceux déjà en jeu.</p>
+<div class="note"><b>Mode d'emploi.</b> Chaque carte montre la scène de profil, les tirs de face et de dos à droite, puis les huit premières images posées une à une (24 images/s, trait cyan = bouche du canon au repos). Jugez d'abord en <b>Rafale</b> : à 6 tirs/s, seules les quatre premières images ont le temps de passer. Les pistes peuvent se cumuler si elles ne touchent pas la même partie du corps. « Copier le bilan » produit le texte à me coller.</div>
+
+<div class="bar">
+  <span class="lab">Vitesse</span>
+  <button id="sp1" data-speed="1" class="on">× 1</button><button id="sp2" data-speed="0.35">× 0,35</button><button id="sp3" data-speed="0.1">× 0,1</button>
+  <button id="pause">Pause</button>
+  <span class="lab">Tir</span>
+  <button id="b0" data-burst="0">Coup par coup</button><button id="b1" data-burst="1" class="on">Rafale</button>
+  <span class="lab">Munition</span>
+  <button id="a0" data-ammo="spirit" class="on">Spirituelles · 6 tirs/s</button><button id="a1" data-ammo="indra">Indra · 4 tirs/s</button>
+  <span class="lab">Décor</span>
+  <button id="fx" class="on">Souffle et douille</button>
+  <button id="copy">Copier le bilan</button>
+  <span id="tally"></span>
+</div>
+<textarea id="out" readonly hidden></textarea>
+
+<div class="grid" id="cards"></div>
+</main>
+<script src="assets/engineer-colosse.js"></script>
+<script src="assets/engineer-exile.js"></script>
+<script src="assets/engineer-cannon.js"></script>
+<script src="assets/engineer-ragged.js"></script>
+<script src="assets/engineer-maj.js"></script>
+<script>
+'use strict';
+// ====================== Verdicts ======================
+const KEY='arbalestrie-recul-v1';
+let store={};try{store=JSON.parse(localStorage.getItem(KEY)||'{}')}catch(e){}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(store))}catch(e){}tally()}
+function tally(){const v=Object.values(store).map(s=>s.v);document.getElementById('tally').innerHTML=
+ `<b style="color:var(--ok)">${v.filter(x=>x==='garder').length}</b> gardés · <b style="color:var(--redo)">${v.filter(x=>x==='revoir').length}</b> à revoir · <b style="color:var(--no)">${v.filter(x=>x==='rejeter').length}</b> rejetés`}
+function verdict(card,id,title){
+ card.dataset.id=id;card.dataset.title=title;const s=store[id]||{};
+ const box=document.createElement('div');box.className='verdict';
+ for(const [v,l] of [['garder','Garder'],['revoir','À revoir'],['rejeter','Rejeter']]){
+  const b=document.createElement('button');b.dataset.v=v;b.textContent=l;b.id='v-'+id+'-'+v;if(s.v===v)b.classList.add('sel');
+  b.onclick=()=>{const cur=store[id]||{};cur.v=cur.v===v?undefined:v;store[id]=cur;card.dataset.v=cur.v||'';
+   box.querySelectorAll('button').forEach(x=>x.classList.toggle('sel',x.dataset.v===cur.v));save()};box.append(b)}
+ const t=document.createElement('textarea');t.id='n-'+id;t.placeholder='Note (facultative)';t.value=s.note||'';t.rows=1;
+ t.oninput=()=>{const cur=store[id]||{};cur.note=t.value;store[id]=cur;save()};
+ if(s.v)card.dataset.v=s.v;card.append(box,t)}
+document.getElementById('copy').onclick=()=>{
+ const lines=['Bilan · planches/arbalestrie-recul-planche.html'];
+ document.querySelectorAll('.card[data-id]').forEach(c=>{const s=store[c.dataset.id]||{};
+  lines.push(`- ${c.dataset.title} : ${s.v?({garder:'GARDER',revoir:'À REVOIR',rejeter:'REJETER'})[s.v]:'—'}${s.note?' · '+s.note:''}`)});
+ const o=document.getElementById('out');o.hidden=false;o.value=lines.join('\n');o.select();
+ try{navigator.clipboard.writeText(o.value).catch(()=>{})}catch(e){}};
+
+// ====================== Pixels ======================
+let G=null;
+function P(x,y,col,a=1){if(a<=0)return;G.globalAlpha=Math.min(1,a);G.fillStyle=col;G.fillRect(Math.round(x),Math.round(y),1,1);G.globalAlpha=1}
+function rng(seed){let s=seed|0||1;return()=>{s^=s<<13;s^=s>>>17;s^=s<<5;return((s>>>0)%10000)/10000}}
+const INK='#0a0a0c',TAU=6.283,R8=[[-1,-1],[0,-1],[1,-1],[-1,0],[1,0],[-1,1],[0,1],[1,1]];
+const CY=['#0a2a33','#12596b','#1f9fb8','#5ce8ff','#c8fbff','#ffffff'],OR=['#2a1204','#7a3208','#d0680e','#ff9a2a','#ffd08a','#fff4e0'];
+const SMOKE=['#c9cdd6','#9aa1b0','#6d7482'];
+function ell(x,y,rx,ry,col,a,keep){const n=Math.max(8,Math.round((rx+ry)*3.2));
+ for(let k=0;k<n;k++){const th=k/n*TAU,c=Math.cos(th),s=Math.sin(th);if(!keep||keep(c,s,k))P(x+c*rx,y+s*ry,col,a)}}
+function part(x,y,vx,vy,g,t,gy){let X=x+vx*t,Y=y+vy*t+g*t*t/2;if(Y>gy)Y=gy-Math.abs(Math.sin(t*16))*2*Math.max(0,1-t*1.6);return[X,Y]}
+function floor(w,h){const c=document.createElement('canvas');c.width=w;c.height=h;const g=c.getContext('2d');const r=rng(7);
+ const T=['#3c3f4a','#454855','#4d505e','#565a68'];
+ for(let y=0;y<h;y+=8){const off=(y/8)%2?8:0;for(let x=-16;x<w;x+=16){g.fillStyle=T[(r()*4)|0];g.fillRect(x+off,y,15,7);
+  g.fillStyle='rgba(255,255,255,.06)';g.fillRect(x+off,y,15,1);g.fillStyle='#24262e';g.fillRect(x+off,y+7,16,1);g.fillRect(x+off+15,y,1,8)}}
+ for(let i=0;i<w*h/60;i++){g.fillStyle=r()<.5?'rgba(255,255,255,.05)':'rgba(0,0,0,.12)';g.fillRect((r()*w)|0,(r()*h)|0,1,1)}
+ return c}
+function ballSpirit(x,y,age,seed){for(const[a,b]of R8)P(x+a,y+b,INK);P(x,y,'#5b6068');
+ const r=rng(seed+Math.floor(age*30)*7);
+ for(let k=0;k<3;k++){if(r()<.25)continue;let a=r()*TAU,sx=x+Math.round(Math.cos(a)*2),sy=y+Math.round(Math.sin(a)*2);
+  for(let s=0;s<2;s++){P(sx,sy,s?CY[3]:'#e9fbff');const b=a+(s&1?.9:-.9);sx+=Math.round(Math.cos(b));sy+=Math.round(Math.sin(b))}}}
+function ballIndra(x,y,age,seed){const C=OR,r=rng(seed+Math.floor(age*30)*7);
+ for(let i=1;i<=6;i++){const a=1-i/7;P(x-2-i,y,i<3?C[3]:C[2],a);P(x-2-i,y+(i%2?-1:1),C[2],a*.6)}
+ for(let b=-2;b<=2;b++)for(let a=-2;a<=2;a++){if(Math.abs(a)===2&&Math.abs(b)===2)continue;P(x+a,y+b,Math.abs(a)<2&&Math.abs(b)<2?C[3]:INK)}
+ P(x,y,C[5]);P(x+1,y,C[4]);P(x-1,y-1,C[4]);P(x,y-1,C[5],.8);P(x+1,y+1,C[2]);P(x-1,y+1,C[2]);
+ if(r()<.4)P(x-4-((r()*3)|0),y-3-((r()*2)|0),C[4])}
+const AMMO={spirit:{cd:1/6,ball:ballSpirit,C:CY},indra:{cd:.25,ball:ballIndra,C:OR}};
+
+// ====================== Poses ======================
+// Une pose = paramètres de eng() (planches/assets/engineer-maj.js) + ox, décalage du corps entier en px.
+// i = image à 24 i/s depuis le tir ; h = rang du tir dans la rafale (0 = premier).
+const FPS=24,at=(a,i)=>a[Math.min(i,a.length-1)];
+function mk(i,{rec=[0],ang=[0],lean=[0],dy=[0],ub=[0],hx=[0],hy=[0],lb=[0],lf=[0],coat=[0]}){
+ return{cannon:{ang:at(ang,i),rec:at(rec,i),flash:i<2},lean:at(lean,i),dy:at(dy,i),ub:at(ub,i),hd:[at(hx,i),at(hy,i)],
+  legB:{x:at(lb,i)},legF:{x:at(lf,i)},coat:at(coat,i),rune:i<2?1:.7}}
+const REST=mk(99,{});
+const SLIDE=[.7,1,1,.9,.8,.6,.45,.3,.15,0],CLIMB=[.35,1,.8,.55,.3,.1,-.12,0];
+const PROPS=[
+ {id:'now',ref:true,name:'Actuel',tag:'référence',
+  pose(i){const k=i>>1;if(k>5)return{o:REST,ox:0};const o=ENG_ANIMS.c_shoot.f(k);return{o:{...o,hd:[0,0]},ox:0}},
+  desc:'Ce qui est en jeu : la première image ne bouge pas, puis le canon recule de 2 px et remonte de 4°, le pied arrière cale. À 12 images/s, la rafale ne montre que deux images par tir : le recul se lit à peine.',
+  spec:'12 i/s · recul 0 → 2 → 1,5 → 1 → 0,5 → 0 px en 0,5 s'},
+ {id:'sec',name:'A · Coup sec',tag:'l’arme seule',
+  pose(i){return{o:mk(i,{rec:[4,4,2,0,-1,0]}),ox:0}},
+  over(c){if(c.i<2)for(let x=1;x<=4;x++)for(let y=-2;y<=1;y++)P(c.M.x-x,c.M.y+y,CY[4],(c.i?.22:.5)*(1-x/6))},
+  desc:'Le canon claque de 4 px vers l’arrière dès l’image du tir, y reste une image, revient et dépasse d’1 px vers l’avant avant de se caler, comme un ressort. Une traînée claire marque l’endroit que le fût vient de quitter. Le corps ne bouge pas : c’est la piste la plus nette en rafale, tout est fini avant le tir suivant.',
+  spec:'24 i/s · recul 4 → 4 → 2 → 0 → −1 → 0 px en 0,21 s · corps fixe · 6 images à réexporter par direction'},
+ {id:'bascule',name:'B · Bascule',tag:'le canon se cabre',
+  pose(i,h){const pk=10+2*Math.min(h,3);return{o:mk(i,{ang:CLIMB.map(k=>-pk*k),rec:[2,3,2,1,1,0],lean:[0,-1,-1,-1,0],hy:[0,-1,-1,0]}),ox:0}},
+  desc:'Le recul part vers le haut : la bouche se cabre de 10° autour de la poignée, les épaules partent en arrière, le menton se lève, puis l’arme redescend et pique légèrement avant de se remettre en ligne. En rafale elle n’a pas le temps de redescendre et grimpe à chaque tir, jusqu’à 16° : l’Ingénieur lutte pour la garder basse. La balle part toujours droit.',
+  spec:'24 i/s · bascule 10° (jusqu’à 16° en rafale) · recul 3 px · épaules −1 px · 8 images × 4 paliers de montée à exporter'},
+ {id:'glissade',name:'C · Glissade',tag:'tout le corps recule',
+  pose(i,h){const m=Math.min(h,3)+3;return{o:mk(i,{rec:[3,3,2,2,1,1,0],lean:[1,1,1,1,1,0],dy:[1,1,1,1,0],lb:[-2,-2,-2,-2,-1,-1,0],lf:[1,1,1,1,1,0]}),ox:-Math.round(m*at(SLIDE,i))}},
+  under(c){const ext=Math.min(c.h,3)+3,a=c.t<.35?.8:.8*(1-(c.t-.35)/.4);
+   for(const f of[-4,2])for(let x=0;x<=ext;x++)P(c.E.x+f-x,c.gy+(f>0?1:0),'#1c1e25',a*(1-x/(ext+3)));
+   if(c.t<.3){const q=c.t/.3;for(let k=0;k<3;k++)P(c.E.x-8+c.ox-q*(4+k*2),c.gy-k-q*2,SMOKE[k],.7*(1-q))}},
+  desc:'L’Ingénieur s’arc-boute, penché vers l’avant, jambes écartées, et le tir le fait glisser de 3 px sur les dalles. Les bottes laissent deux traces et soulèvent de la poussière, puis il regagne sa place. En rafale il recule un peu plus à chaque tir, jusqu’à 6 px, et tressaute sur place. Seule l’image glisse : sa position réelle ne change pas.',
+  spec:'24 i/s · glissade 3 px (jusqu’à 6 en rafale), retour en 0,4 s · décalage et traces en code · 7 images de pose à exporter'},
+ {id:'ressort',name:'D · Ressort',tag:'les genoux encaissent',
+  pose(i){return{o:mk(i,{rec:[3,3,2,1,0,0],ang:[3,3,1,0,-2,0],dy:[2,2,1,0,0,0],ub:[1,1,0,0,-1,0],lb:[-3,-3,-3,-2,-1,0],coat:[1,3,3,2,1,0]}),ox:0}},
+  under(c){if(c.t<.25){const q=c.t/.25;ell(c.E.x-5,c.gy,2+q*5,1+q*1.5,'#8d8f98',.6*(1-q))}},
+  desc:'Le coup descend dans les jambes : le bassin tombe de 2 px, le buste se tasse, le pied arrière part 3 px en arrière et claque au sol, le manteau s’ouvre. Puis le corps se détend et dépasse d’1 px vers le haut avant de se poser. En rafale l’Ingénieur reste fléchi et pompe à chaque tir. Le mouvement est vertical, donc lisible aussi de face et de dos.',
+  spec:'24 i/s · bassin −2 px, buste −1 px, rebond +1 px · recul 3 px · pied arrière −3 px · 6 images à réexporter par direction'},
+ {id:'onde',name:'E · L’onde',tag:'le choc traverse le corps',
+  pose(i){return{o:mk(i,{rec:[3,3,2,1,0,0],lean:[0,-1,-2,-1,0,0],hx:[0,1,0,-1,-1,0],hy:[0,0,-1,-1,0,0],ub:[0,0,1,1,0,0],coat:[0,0,1,3,3,2,1,0],lb:[0,0,0,-1,-2,-2,-1,0]}),ox:0}},
+  desc:'Le recul se propage d’une partie du corps à la suivante, une image après l’autre : le canon, puis les épaules, puis la tête qui part en retard, puis le manteau qui claque et enfin le talon arrière qui cède. C’est la piste la plus vivante au coup par coup. À 6 tirs/s l’onde est coupée avant le manteau : seul le haut du corps tangue.',
+  spec:'24 i/s · canon −3 px, épaules −2 px, tête en retard d’une image, manteau à l’image 3, talon à l’image 4 · 8 images à réexporter par direction'},
+];
+
+// ====================== Rendu ======================
+const CACHE={};
+function sprite(o){const k=JSON.stringify(o);return CACHE[k]||(CACHE[k]=render(eng(o),1))}
+// Même recul vu de face ('d', tir vers le bas) ou de dos ('u') : le canon recule, le buste se tasse.
+function front(o,dir){const c=o.cannon||{};return sprite({dir,cshoot:{rec:Math.min(4,(c.rec||0)+Math.abs(c.ang||0)/4),flash:!!c.flash},ub:((o.dy||0)+(o.ub||0))>0?1:0,rune:o.rune})}
+const W=176,H=64,GY=52,E={x:46,y:GY},M={x:E.x-24+42,y:GY-46+30},FLOOR=floor(W,H),FLOOR2=floor(40,64);
+const state={speed:1,burst:true,ammo:'spirit',fx:true,paused:matchMedia('(prefers-reduced-motion: reduce)').matches};
+const LEAD=.2,NB=8;
+function shots(tc){const cd=AMMO[state.ammo].cd;if(tc<LEAD)return{n:-1,t:9,cd};
+ const n=state.burst?Math.min(NB-1,Math.floor((tc-LEAD)/cd)):0;return{n,t:tc-LEAD-n*cd,cd}}
+function cycle(){return state.burst?LEAD+NB*AMMO[state.ammo].cd+.9:1.1}
+
+function drawCard(c,T){const p=c.p,tc=T%cycle(),s=shots(tc),fired=s.n>=0,i=fired?Math.floor(s.t*FPS+1e-6):99,h=Math.max(0,s.n);
+ const ps=fired?p.pose(i,h):{o:REST,ox:0},am=AMMO[state.ammo],ctx={t:s.t,i,h,ox:ps.ox,M,E,gy:GY};
+ G=c.g;G.clearRect(0,0,W,H);G.drawImage(FLOOR,0,0);
+ if(fired&&p.under)p.under(ctx);
+ for(let k=0;k<=s.n;k++){const age=tc-LEAD-k*s.cd;
+  if(state.fx&&age<.28){const q=age/.28,e=1-(1-q)*(1-q);ell(M.x+3,GY+1,3+e*13,1+e*3.5,'#8d8f98',.55*(1-q),(a,b,n)=>n%2===0);ell(M.x+3,GY+1,2+e*8,.6+e*2.2,'#6d7482',.35*(1-q))}}
+ G.globalAlpha=.35;G.fillStyle='#000';G.beginPath();G.ellipse(E.x+ps.ox,GY,8,2.5,0,0,7);G.fill();G.globalAlpha=1;
+ G.drawImage(sprite(ps.o),E.x-24+ps.ox,GY-46);
+ for(let k=0;k<=s.n;k++){const age=tc-LEAD-k*s.cd,sd=k*37+11;
+  if(state.fx&&age<.75){const r=rng(sd),[x,y]=part(M.x-12,M.y-2,-22-r()*14,-58-r()*12,300,age,GY+1),a=age<.5?1:1-(age-.5)/.25;
+   P(x,y,age<.12?am.C[4]:age<.3?am.C[2]:'#6d7482',a);P(x+1,y,age<.12?am.C[3]:'#3e434d',a)}
+  const bx=M.x+1+age*320;if(bx<W+6)am.ball(Math.round(bx),M.y,age,sd)}
+ if(fired&&p.over)p.over(ctx);
+ // Face et dos : le corps recule à l'opposé du tir.
+ G=c.g2;G.clearRect(0,0,40,64);G.drawImage(FLOOR2,0,0);
+ G.drawImage(front(ps.o,'d'),4,14,40,32,0,ps.ox,40,32);G.drawImage(front(ps.o,'u'),4,14,40,32,0,32-ps.ox,40,32)}
+
+function drawStrip(c){const g=c.g3,p=c.p;for(let k=0;k<8;k++){const ps=p.pose(k,0);g.save();g.beginPath();g.rect(k*40,0,40,34);g.clip();
+  g.fillStyle=k%2?'#2a2c35':'#30333d';g.fillRect(k*40,0,40,34);g.fillStyle='#1c1e25';g.fillRect(k*40,32,40,2);
+  g.fillStyle='rgba(92,232,255,.35)';g.fillRect(k*40+36,0,1,32);
+  g.drawImage(sprite(ps.o),6,13,40,34,k*40+ps.ox,0,40,34);g.restore()}}
+
+function cv(w,h){const c=document.createElement('canvas');c.width=w;c.height=h;c.className='px';return c}
+function fig(c,cls,cap){const f=document.createElement('figure');f.className=cls;const fc=document.createElement('figcaption');fc.textContent=cap;f.append(c,fc);return f}
+const cards=[];
+for(const p of PROPS){const card=document.createElement('section');card.className='card'+(p.ref?' ref':'');
+ const h=document.createElement('h3');h.textContent=p.name;const tg=document.createElement('span');tg.className='tag';tg.textContent=p.tag;h.append(tg);
+ const c1=cv(W,H),c2=cv(40,64),c3=cv(320,34),view=document.createElement('div');view.className='view';
+ view.append(fig(c1,'main','de profil, en jeu'),fig(c2,'side','de face · de dos'));
+ const d=document.createElement('p');d.textContent=p.desc;const sp=document.createElement('div');sp.className='spec';sp.textContent=p.spec;
+ card.append(h,view,fig(c3,'strip','images 0 à 7 du premier tir, 1/24 s chacune'),d,sp);
+ if(!p.ref)verdict(card,p.id,p.name);
+ document.getElementById('cards').append(card);
+ const c={p,g:c1.getContext('2d'),g2:c2.getContext('2d'),g3:c3.getContext('2d')};cards.push(c);drawStrip(c)}
+tally();
+
+// ====================== Commandes et boucle ======================
+function group(attr,fn){document.querySelectorAll(`[data-${attr}]`).forEach(b=>b.onclick=()=>{
+ document.querySelectorAll(`[data-${attr}]`).forEach(x=>x.classList.toggle('on',x===b));fn(b.dataset[attr]);T=0})}
+group('speed',v=>state.speed=+v);group('burst',v=>state.burst=v==='1');group('ammo',v=>state.ammo=v);
+const pb=document.getElementById('pause');pb.onclick=()=>{state.paused=!state.paused;pb.textContent=state.paused?'Lecture':'Pause'};
+if(state.paused)pb.textContent='Lecture';
+const fb=document.getElementById('fx');fb.onclick=()=>{state.fx=!state.fx;fb.classList.toggle('on',state.fx)};
+let T=0,last=0;
+function loop(now){const dt=Math.min(.05,(now-last)/1000||0);last=now;if(!state.paused)T+=dt*state.speed;
+ for(const c of cards)drawCard(c,T);requestAnimationFrame(loop)}
+requestAnimationFrame(loop);
+</script>

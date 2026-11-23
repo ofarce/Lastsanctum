@@ -7,11 +7,11 @@ extends "res://tests/econ_case.gd"
 func test_reach_d13_and_hud_range() -> void:
 	var sim := game()
 	check_eq(Catalog.FIGHT["flammes"]["reach"], 24.0, "lance-flammes : portée 24")
-	check_eq(Catalog.FIGHT["archer"]["reach"], 20.0, "archer : portée 20")
+	check_eq(Catalog.FIGHT["archer"]["reach"], 40.0, "archer : portée 40")
 	check(Catalog.FIGHT["flammes"]["seek"] > Catalog.FIGHT["flammes"]["reach"], "lance-flammes : détection au-delà de la portée")
 	check(Catalog.FIGHT["archer"]["seek"] > Catalog.FIGHT["archer"]["reach"], "archer : détection au-delà de la portée")
 	# Ingénieur : 250 en armure (test_requested_changes), 1,9 sans armure, corps à corps seul (vérifié plus bas).
-	var want := {"engineer": "250", "flammes": "24", "archer": "20", "lame": "2,2", "paladin": "2,2", "shooter": "17,2", "healer": "8,6", "guard": "8,6"}
+	var want := {"engineer": "250", "flammes": "24", "archer": "40", "lame": "2,2", "paladin": "2,2", "shooter": "17,2", "healer": "8,6", "guard": "8,6"}
 	for role: String in want:
 		var u := sim.spawn("U", 0.0, -120.0, role)
 		GameState.selected = [u]
@@ -40,7 +40,7 @@ func test_left_click_selects_enemy() -> void:
 	var v := HudModel.view(sim)
 	check_eq(v["chosen"], Catalog.ENEMY_INFO["brute"]["name"], "nom de l'ennemi")
 	check_eq(v["health_text"], "100 / 110", "points de vie")
-	check_eq([v["damage"], v["range"], v["armor"], v["speed"]], [str(int(Catalog.ENEMY["brute"]["damage"])), "1,5", "0", "1,4"], "statistiques")
+	check_eq([v["damage"], v["range"], v["armor"], v["speed"]], [str(int(Catalog.ENEMY["brute"]["damage"])), "1,5", "0", "1,61"], "statistiques")
 	check_eq(v["portrait_key"], "enemy-brute", "portrait")
 	check(v["enemy"], "fiche marquée ennemie (barre rouge)")
 	check(HudModel.panel_actions(sim).is_empty(), "aucun ordre pour un ennemi")

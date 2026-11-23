@@ -8,6 +8,7 @@ extends RefCounted
 
 const ItemStorage := preload("res://sim/item_storage.gd")
 const Gear := preload("res://data/gear_items.gd")
+const Recipes := preload("res://data/recipes.gd")
 
 const CORPSE_DAYS := 2.0
 ## Corps porteurs de butin gardés au plus ; au-delà les plus anciens disparaissent.
@@ -29,13 +30,25 @@ const RARITY := {
 
 ## Butins courants, sans usage pour l'instant : ils se ramassent et se stockent.
 const ITEMS := {
-	"ichor": {"name": "Ichor", "color": Color("#8a1f2c"), "desc": "Sang noir de la Bête, encore tiède. Sans usage pour le moment."},
+	"ichor": {"name": "Ichor", "color": Color("#8a1f2c"), "desc": "Sang noir de la Bête, encore tiède. Ingrédient des mods de l’Établi d’exo."},
 	"acid_gland": {"name": "Glande acide", "color": Color("#9ac83a"), "desc": "Poche à venin d’un cracheur. Sans usage pour le moment."},
 	"volt_organ": {"name": "Organe voltaïque", "color": Color("#6a9aff"), "desc": "Arraché à une anguille des puits, encore chargé. Sans usage pour le moment (prévu pour le piège à arc)."},
 	"guano": {"name": "Guano", "color": Color("#c8c2ac"), "desc": "Fiente de chauve-souris patinée. Sans usage pour le moment."},
-	"ration": {"name": "Ration", "color": Color("#c8a676"), "desc": "Pain de route d’un soldat de Laetan. Sans usage pour le moment."},
+	"ration": {"name": "Ration", "color": Color("#c8a676"), "desc": "Pain de route d’un soldat de Laetan. Rend 20 PV à l’Exilé : mangée d’elle-même dès qu’il en manque 20 (une toutes les 6 s), ou tout de suite d’un clic droit."},
+	# Clefs des strates (2026-11-22, planches/biomes-3-8-propositions.html) : chaque boss de fin lâche la sienne,
+	# et le sceau du biome suivant la demande (Catalog.RESEARCH, « items »).
+	"key_nave": {"name": "Clef de la Nef dorée", "color": Color("#ddb457"), "desc": "Arrachée à l’Archiprêtre aux racines. Sa porte s’est ouverte à sa chute."},
+	"key_waters": {"name": "Clef des Eaux", "color": Color("#4f9a83"), "desc": "Arrachée à la Gorge-Cuivre. Le Sceau de fer la demande."},
+	"key_matrix": {"name": "Lingot-matrice", "color": Color("#e0602a"), "desc": "Le cœur du Grand Crassier, encore chaud. Le Sceau d’argent le demande."},
+	"key_tuning": {"name": "Diapason d’argent", "color": Color("#c4ccd8"), "desc": "Pris à la Mère des Échos. Le Sceau de limbe le demande."},
+	"key_source": {"name": "Goutte-source", "color": Color("#a9cfc0"), "desc": "Une goutte de la source du Fleuve. Le Sceau de sang la demande."},
+	"key_amber": {"name": "Ambre-mère", "color": Color("#d07a2a"), "desc": "Le noyau du Cœur-Racine. Le Sceau d’orichalque le demande."},
+	"key_council": {"name": "Sceau du Concile", "color": Color("#ddb457"), "desc": "Repris à l’Inquisiteur Bomilcar. Le Sceau d’or le demande."},
+	"key_ramparts": {"name": "Clef des remparts", "color": Color("#ddb457"), "desc": "Elle ouvre les rues de Byrsa."},
 }
 
+## Mods (2026-11-22) : le butin donne leur plan (plan_*, data/recipes.gd), jamais le mod ; le mod se fabrique à
+## l'Établi d'exo une fois le plan appris (Recipes.learn, au ramassage).
 ## Par type d'ennemi : tirages indépendants. « item » ou « pick » (un au hasard), « chance », « n » (quantité, ou [min, max]).
 ## Chiffres proposés, à régler. Brute : une pièce commune une fois sur quatre ; Strazhar : toujours une pièce peu
 ## commune, une rare une fois sur dix (retours du 2026-11-20 : pas d'insignes).
@@ -48,7 +61,7 @@ const TABLE := {
 	"archer": [{"item": "arrows", "chance": 0.3, "n": 5}],
 	"shield": [{"item": "ration", "chance": 0.2}, {"item": "copper_shield", "chance": 0.08}],
 	"brute": [{"pick": ["gear_gloves", "gear_boots", "gear_hood"], "chance": 0.25},
-		{"pick": ["module_scale", "module_ember", "module_magnet"], "chance": 0.06}],
+		{"pick": ["plan_scale", "plan_ember", "plan_magnet"], "chance": 0.06}],
 	# Biome 2 : la tique rend toujours le cuivre qu'elle a mangé (2 à 4), la chauve-souris parfois du guano.
 	"tick": [{"item": "copper", "chance": 1.0, "n": [2, 4]}],
 	"bat": [{"item": "guano", "chance": 0.2}],
@@ -56,11 +69,12 @@ const TABLE := {
 	# Plus de fer dans le Temple (2026-11-20) : le champion porte du cuivre, mais ses pièces sont les seules
 	# peu communes et rares du biome.
 	"strazhar": [{"item": "copper_greatsword", "chance": 1.0}, {"item": "copper_armor", "chance": 0.1},
-		{"pick": ["module_scale", "module_ember", "module_lens", "module_barrel"], "chance": 0.2}],
-	# Boss du Temple : leur module d'exo, toujours.
-	"martyre": [{"item": "module_veil", "chance": 1.0}],
-	"oeil": [{"item": "module_iris", "chance": 1.0}],
-	"gorge": [{"item": "module_drill", "chance": 1.0}, {"item": "copper", "chance": 1.0, "n": [8, 12]}],
+		{"pick": ["plan_scale", "plan_ember", "plan_lens", "plan_barrel"], "chance": 0.2}],
+	# Boss du Temple : le plan de leur module d'exo, toujours (fabriqué ensuite à l'Établi d'exo).
+	"martyre": [{"item": "plan_veil", "chance": 1.0}],
+	"archipretre": [{"item": "plan_wisp", "chance": 1.0}, {"item": "key_nave", "chance": 1.0}],
+	"oeil": [{"item": "plan_iris", "chance": 1.0}],
+	"gorge": [{"item": "plan_drill", "chance": 1.0}, {"item": "copper", "chance": 1.0, "n": [8, 12]}, {"item": "key_waters", "chance": 1.0}],
 }
 
 
@@ -69,6 +83,9 @@ static func lifetime() -> float:
 
 
 static func rarity_of(item: String) -> String:
+	# Un plan a la rareté du mod qu'il apprend (trait de lumière du corps, ligne de ramassage).
+	if Recipes.PLAN_ITEMS.has(item):
+		item = Recipes.PLAN_ITEMS[item]
 	return String(Gear.ITEMS.get(item, ITEMS.get(item, {})).get("rarity", "normal"))
 
 
@@ -178,13 +195,13 @@ static func roll(e: Enemy) -> void:
 ## un corps ; une cache vidée reste du décor. Chiffres proposés, à régler : les ponts lointains paient mieux.
 const CACHES := {
 	"cart": [{"item": "ration", "chance": 1.0, "n": [1, 2]}, {"item": "arrows", "chance": 0.6, "n": 5}, {"item": "copper", "chance": 0.5, "n": [2, 4]},
-		{"pick": ["module_magnet", "module_frost", "module_seal"], "chance": 0.1}],
+		{"pick": ["plan_magnet", "plan_frost", "plan_seal"], "chance": 0.1}],
 	"outpost": [{"item": "ration", "chance": 1.0, "n": 2}, {"item": "arrows", "chance": 1.0, "n": 5},
 		{"pick": ["gear_gloves", "gear_boots", "gear_hood"], "chance": 1.0},
-		{"pick": ["module_seal", "module_wisp", "module_chant", "module_sack"], "chance": 0.5}],
+		{"pick": ["plan_seal", "plan_wisp", "plan_chant", "plan_sack"], "chance": 0.5}],
 	"bridge": [{"item": "copper", "chance": 1.0, "n": [6, 10]}, {"pick": ["gear_gloves", "gear_boots", "gear_hood"], "chance": 0.6},
 		{"item": "copper_shield", "chance": 0.25},
-		{"pick": ["module_lens", "module_barrel", "module_frost", "module_anchor", "module_echo"], "chance": 0.4}],
+		{"pick": ["plan_lens", "plan_barrel", "plan_frost", "plan_anchor", "plan_echo"], "chance": 0.4}],
 }
 
 
@@ -269,17 +286,26 @@ static func eat(u: Unit) -> void:
 			or GameState.sim_time - u.ate_at < RATION_GAP:
 		return
 	for i in u.inventory.size():
-		var stack := u.inventory[i]
-		if stack.is_empty() or stack["item"] != "ration":
-			continue
-		stack["quantity"] -= 1
-		if stack["quantity"] <= 0:
-			u.inventory[i] = {}
-		u.hp = minf(u.max_hp, u.hp + RATION_HEAL)
-		u.healed_at = GameState.sim_time
-		u.ate_at = GameState.sim_time
-		Sfx.at("soin", u.x, u.z)
-		return
+		if use_ration(u, u.inventory, i):
+			return
+
+
+## Clic droit sur une ration (fiche, réseau des coffres ou paquetage) : `u` la mange tout de suite, sans attendre
+## RATION_GAP. Refusé si la case n'est pas une ration ou si `u` a tous ses PV. Vrai si la ration est mangée.
+static func use_ration(u: Unit, items: Array, index: int) -> bool:
+	if u == null or not u.alive() or index < 0 or index >= items.size() or u.hp >= u.max_hp:
+		return false
+	var stack: Dictionary = items[index]
+	if stack.is_empty() or stack["item"] != "ration":
+		return false
+	stack["quantity"] -= 1
+	if stack["quantity"] <= 0:
+		items[index] = {}
+	u.hp = minf(u.max_hp, u.hp + RATION_HEAL)
+	u.healed_at = GameState.sim_time
+	u.ate_at = GameState.sim_time
+	Sfx.at("soin", u.x, u.z)
+	return true
 
 
 ## Guano (engrais) : un bosquet abattu repousse tout de suite, pour un guano pris au stock. Vrai si un bosquet a repoussé.
@@ -328,10 +354,14 @@ const CACHE_REACH := 1.2
 
 
 ## L'Exilé à pied fouille les corps sur lesquels il marche (même condition que le ramassage au sol).
-## Signale un objet ramassé par l'Exilé (ligne du coin haut gauche) ; les mods ont déjà leur propre annonce.
+## Signale un objet ramassé par l'Exilé : ligne du coin haut gauche, ou grand écrin pour un mod (ui/hud/mod_reveal.gd).
+## Un plan ramassé apprend sa recette.
 static func picked(item: String) -> void:
+	Recipes.learn(item)
 	if not Gear.ITEMS.get(item, {}).has("module"):
 		Events.loot_picked.emit(item, 1)
+	else:
+		Events.mod_picked.emit(item)
 
 
 static func collect(u: Unit) -> void:

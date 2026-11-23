@@ -91,6 +91,8 @@ func _run_files(files: PackedStringArray, as_batch: bool) -> void:
 	# Les tests du jeu complet partent de l'ancien enchaînement ; test_opening.gd rallume la séquence.
 	load("res://sim/simulation.gd").play_opening = false
 	load("res://sim/simulation.gd").autostart = false
+	# Jamais de sauvegarde automatique dans les données du joueur pendant les tests.
+	load("res://sim/save_game.gd").autosave = false
 	# Un lot dont le lanceur a disparu (Ctrl+C) s'arrête au test suivant au lieu de tourner dans le vide.
 	var parent := int(_arg("parent", "0"))
 	var trap := ErrorTrap.new()

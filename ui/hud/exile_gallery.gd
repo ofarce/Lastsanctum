@@ -191,9 +191,15 @@ class _TextButton extends BaseButton:
 	func _draw() -> void:
 		var r := Rect2(Vector2.ZERO, size)
 		var hover := is_hovered()
+		var pressed := PressFx.down(self)
+		PressFx.begin(self, r, pressed)
 		draw_rect(r, Color("#2a2414") if hover else Color("#14170f"))
 		HudStyle.ring(self, r, 1.0, HudStyle.GOLD_LIGHT if hover else HudStyle.GOLD)
 		var f := HudStyle.font()
 		var w := HudStyle.text_width(text, 13)
 		var y := (size.y + f.get_ascent(13) - f.get_descent(13)) * 0.5
+		PressFx.finish(self, r, pressed)
+		if pressed:
+			draw_set_transform(Vector2(0.0, PressFx.DEPTH))
 		draw_string(f, Vector2((size.x - w) * 0.5, y), text, HORIZONTAL_ALIGNMENT_LEFT, -1, 13, HudStyle.IVORY)
+		draw_set_transform(Vector2.ZERO)

@@ -1,0 +1,314 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Archiprêtre aux racines</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=VT323&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Planche de rendu 16 bits de l'Archiprêtre aux racines (mini-boss 1 du Temple, validé le 2026-11-22 sur
+   mini-boss-temple-veines-propositions.html, T1). Trois silhouettes, chacune au repos (bulbe fermé, nappe) et en
+   point faible (canalisé : bulbe ouvert, dégâts doublés), à l'échelle de l'Exilé ; arène vue de dessus.
+   Rendu au pixel natif avec le petit moteur des planches (rampes, ombre en haut à gauche, contour sélectif).
+   Thème sombre unique, comme les autres planches de jeu. */
+:root{
+  color-scheme:dark;
+  --bg:#12131a; --panel:#1a1c26; --panel2:#222533; --line:#32364a;
+  --fg:#e4e2da; --mute:#9a9cae; --soft:#c9c8c4; --ink:#0b0a0f;
+  --exile:#5fd8e8; --gold:#ddb457; --bulb:#d0404a;
+  --display:"VT323","Courier New",monospace; --body:"IBM Plex Sans",system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.55 var(--body);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 72px}
+.wrap{max-width:1120px;margin:0 auto;display:flex;flex-direction:column;gap:48px}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0;line-height:1.12;font-weight:400}
+h1{font-size:clamp(38px,6vw,60px)}
+h2{font-size:clamp(30px,4.4vw,42px)}
+h3{font-size:24px}
+p{margin:0;max-width:72ch}
+.lede{color:var(--mute);font-size:16px}
+.eyebrow{font-family:var(--display);font-size:18px;letter-spacing:.08em;text-transform:uppercase;color:var(--mute)}
+.stack{display:flex;flex-direction:column;gap:14px}
+.prop{background:var(--panel);border:2px solid var(--line);padding:18px;display:flex;flex-direction:column;gap:12px}
+.prop .tag{font-family:var(--display);font-size:17px;color:var(--mute)}
+.prop.reco{border-color:var(--bulb);box-shadow:0 0 0 1px var(--bulb) inset}
+.prop.reco .tag::after{content:" · MA PRÉFÉRENCE";color:var(--bulb)}
+.row{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end}
+figure{margin:0;display:flex;flex-direction:column;gap:4px;align-items:center}
+.stage{background:#1c222d;border:3px solid var(--ink);padding:8px;display:flex;align-items:flex-end;gap:10px;
+  background-image:linear-gradient(#262e3b 1px,transparent 1px),linear-gradient(90deg,#262e3b 1px,transparent 1px);background-size:16px 16px}
+.stage canvas{image-rendering:pixelated;display:block}
+figcaption{font-size:12.5px;color:var(--mute);text-align:center}
+.pal{display:flex;gap:3px;flex-wrap:wrap}
+.pal span{width:22px;height:14px;border:1px solid var(--ink)}
+ul.l{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px;font-size:14px}
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px 28px}
+.plus{color:#6fc27a} .moins{color:#e08a7a}
+.arena{display:grid;grid-template-columns:minmax(0,1fr) minmax(260px,.8fr);gap:20px;align-items:start}
+@media(max-width:760px){.arena{grid-template-columns:1fr}}
+.arena svg{width:100%;height:auto;border:3px solid var(--ink);background:#141922}
+.q{background:var(--panel);border:2px solid var(--line);padding:14px 18px}
+.q ul{margin:6px 0 0;padding-left:18px;display:flex;flex-direction:column;gap:6px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="stack">
+  <span class="eyebrow">Planche de rendu · 22 novembre 2026 · mini-boss 1 du Temple · rien n’est intégré</span>
+  <h1>L’Archiprêtre aux racines</h1>
+  <p class="lede">Un prêtre du Temple que les racines de la Bête ont soudé à l’autel de l’Oratoire, dans l’arène du quartier A (les Cloîtres). La règle est validée : quatre esprits, un par culte, prient aux points cardinaux ; la nappe recule et le bulbe s’ouvre, il prend alors double dégâts. Trois silhouettes, chacune au repos et en point faible, à côté de l’Exilé pour l’échelle.</p>
+</header>
+
+<section class="stack">
+  <h2>Trois silhouettes</h2>
+  <div id="props" class="stack"></div>
+</section>
+
+<section class="stack">
+  <h2>L’arène : l’Oratoire envahi</h2>
+  <div class="arena">
+    <svg id="arena" viewBox="0 0 340 260" role="img" aria-label="Arène vue de dessus : autel au nord, quatre places de prière aux points cardinaux, nappe autour de l'autel, entrée au sud"></svg>
+    <ul class="l">
+      <li><b>Autel au nord</b>, l’Archiprêtre agenouillé devant, qui ne bouge pas (comme l’Œil).</li>
+      <li><b>Quatre places de prière</b> aux points cardinaux, une par culte : Aether à l’ouest, Indra à l’est, Medeina au sud, Sigil au nord-ouest de l’autel. Elles brillent faiblement tant que personne n’y prie.</li>
+      <li><b>La nappe</b> part de l’autel en anneaux et retire des PV à l’Exilé ; les esprits y sont immunisés, comme près d’un pylône.</li>
+      <li><b>Les quatre cultes en prière</b> : la nappe recule, le bulbe s’ouvre, dégâts doublés. Un esprit tué ou chassé : le bulbe se referme.</li>
+      <li><b>Phase II</b> (moitié des PV) : trois chiens jaillissent du bulbe toutes les 25 s et visent d’abord les esprits qui prient.</li>
+      <li>La salle fait 15 × 11 cases (60 × 44 u) : assez pour quatre places à 16 u de l’autel.</li>
+    </ul>
+  </div>
+</section>
+
+<section class="stack">
+  <h2>Questions</h2>
+  <div class="q"><ul>
+    <li><b>Quelle silhouette ?</b> Ou un mélange (la pose de l’une, le bulbe d’une autre).</li>
+    <li><b>Animations</b> que je prévois pour l’export : repos (bulbe qui pulse, 6 images), racines (geste d’appel, 6), meute (le bulbe se fend, 6), point faible (bulbe ouvert, boucle de 4), chute (8).</li>
+    <li><b>Taille</b> : je l’ai faite à environ 1,6 fois la hauteur de l’Exilé. Plus grand, plus petit ?</li>
+  </ul></div>
+</section>
+
+</div>
+<script>
+'use strict';
+// ---------- Palettes (rampes sombre → clair) ----------
+const R = {
+  linen: ['#2a2420', '#6e5e4c', '#a89478', '#d8c8a8', '#f2ead4'],
+  stole: ['#2a0e14', '#6a1e2a', '#a8323a', '#d85a4a', '#f6906a'],
+  skin:  ['#2e2a30', '#5e5660', '#8c8490', '#b8b0b8', '#dcd6da'],
+  root:  ['#160e12', '#3a2228', '#5c3a3a', '#7e5648', '#a07a5e'],
+  moss:  ['#141e10', '#2c4a22', '#4e7a34', '#7eaa48', '#b8d878'],
+  bulb:  ['#2a060c', '#6a1420', '#a8202e', '#d84a4a', '#ff9a7a'],
+  core:  ['#5a2a10', '#c06a20', '#f0b040', '#ffe08a', '#ffffff'],
+  stone: ['#141922', '#323c4b', '#556274', '#8a98a8', '#c8d0da'],
+  gold:  ['#2a1e08', '#6a4c18', '#a87c2a', '#ddb457', '#fff0b0'],
+  suit:  ['#0e1a20', '#1e3a44', '#2f5a66', '#4a8290', '#8cc4cc'],
+  cy:    ['#0a3a48', '#1f9fb8', '#5ce8ff', '#c8fbff', '#ffffff'],
+  hair:  ['#0e0a08', '#1e1610', '#2e2218', '#423226', '#5e4a3a'],
+  eskin: ['#5a2c1c', '#a0583a', '#d88e62', '#f4c093', '#ffe2bf'],
+};
+const MAT = Object.keys(R);
+
+// ---------- Tampon de pixels et formes ----------
+function buf(w, h) { return { w, h, m: new Int8Array(w * h).fill(-1), s: new Float32Array(w * h) }; }
+function put(b, x, y, mat, s) { x |= 0; y |= 0; if (x < 0 || y < 0 || x >= b.w || y >= b.h) return; b.m[y * b.w + x] = MAT.indexOf(mat); b.s[y * b.w + x] = s; }
+// ellipse ombrée, lumière en haut à gauche
+function blob(b, cx, cy, rx, ry, mat, bias = 0) {
+  for (let y = Math.floor(cy - ry); y <= Math.ceil(cy + ry); y++) for (let x = Math.floor(cx - rx); x <= Math.ceil(cx + rx); x++) {
+    const dx = (x + .5 - cx) / rx, dy = (y + .5 - cy) / ry, d = dx * dx + dy * dy; if (d > 1) continue;
+    const nz = Math.sqrt(1 - Math.min(d, 1)); put(b, x, y, mat, (-dx * .55 - dy * .65 + nz * .75) * .62 + .28 + bias);
+  }
+}
+function rect(b, x0, y0, w, h, mat, bias = 0) { for (let y = y0; y < y0 + h; y++) for (let x = x0; x < x0 + w; x++) { const u = (x - x0 + .5) / w, v = (y - y0 + .5) / h; put(b, x, y, mat, .75 - u * .45 - v * .2 + bias); } }
+// trapèze (robe) : largeur w0 en haut, w1 en bas
+function trap(b, cx, y0, h, w0, w1, mat, bias = 0) {
+  for (let y = y0; y < y0 + h; y++) { const v = (y - y0) / h, w = w0 + (w1 - w0) * v;
+    for (let x = Math.floor(cx - w / 2); x <= Math.ceil(cx + w / 2); x++) { const u = (x - (cx - w / 2)) / w; put(b, x, y, mat, .8 - u * .5 - v * .15 + bias); } }
+}
+// racine : polyligne épaisse qui s'amincit
+function root(b, pts, w0, w1, mat = 'root') {
+  const n = pts.length - 1;
+  for (let k = 0; k < n; k++) {
+    const [x0, y0] = pts[k], [x1, y1] = pts[k + 1], L = Math.hypot(x1 - x0, y1 - y0), steps = Math.max(1, Math.ceil(L * 2));
+    for (let s = 0; s <= steps; s++) { const t = s / steps, x = x0 + (x1 - x0) * t, y = y0 + (y1 - y0) * t, w = w0 + (w1 - w0) * ((k + t) / n);
+      blob(b, x, y, Math.max(.6, w / 2), Math.max(.6, w / 2), mat, -.05); }
+  }
+}
+function px(b, x, y, mat, s) { put(b, x, y, mat, s); }
+// mousse veinée semée sur une matière donnée
+function moss(b, onMat, rate, seed) {
+  let s = seed; const rnd = () => (s = (s * 1664525 + 1013904223) >>> 0) / 4294967296; const m = MAT.indexOf(onMat);
+  for (let i = 0; i < b.w * b.h; i++) if (b.m[i] === m && rnd() < rate) { b.m[i] = MAT.indexOf('moss'); b.s[i] = .3 + rnd() * .5; }
+}
+
+// ---------- Rendu (paliers francs, contour sélectif) ----------
+function render(b, scale) {
+  const c = document.createElement('canvas'); c.width = b.w * scale; c.height = b.h * scale;
+  const g = c.getContext('2d');
+  const col = (i) => { const r = R[MAT[b.m[i]]]; const v = Math.max(0, Math.min(.999, b.s[i])) * (r.length - 1.0001); return r[Math.min(Math.max(Math.round(v), 1), r.length - 1)]; };
+  for (let y = 0; y < b.h; y++) for (let x = 0; x < b.w; x++) { const i = y * b.w + x; if (b.m[i] < 0) continue; g.fillStyle = col(i); g.fillRect(x * scale, y * scale, scale, scale); }
+  for (let y = 0; y < b.h; y++) for (let x = 0; x < b.w; x++) {
+    if (b.m[y * b.w + x] >= 0) continue; let best = -1;
+    for (const [dx, dy] of [[0, 1], [1, 0], [-1, 0], [0, -1]]) { const X = x + dx, Y = y + dy; if (X < 0 || Y < 0 || X >= b.w || Y >= b.h) continue; const j = Y * b.w + X; if (b.m[j] >= 0) { best = b.m[j]; break; } }
+    if (best >= 0) { g.fillStyle = R[MAT[best]][0]; g.fillRect(x * scale, y * scale, scale, scale); }
+  }
+  return c;
+}
+// halo additif (lueur du bulbe, de la nappe) sous ou sur le sprite
+function glow(c, x, y, r, rgb, a, scale) {
+  const g = c.getContext('2d'); g.globalCompositeOperation = 'lighter';
+  const gr = g.createRadialGradient(x * scale, y * scale, 0, x * scale, y * scale, r * scale);
+  gr.addColorStop(0, `rgba(${rgb},${a})`); gr.addColorStop(1, `rgba(${rgb},0)`); g.fillStyle = gr; g.fillRect(0, 0, c.width, c.height);
+  g.globalCompositeOperation = 'source-over';
+}
+
+// ---------- L'Exilé, pour l'échelle (silhouette simplifiée de la combinaison, 16 × 30) ----------
+function exile() {
+  const b = buf(18, 32);
+  blob(b, 9, 30, 6, 1.4, 'stone', -.4);
+  rect(b, 6, 18, 2, 11, 'suit'); rect(b, 10, 18, 2, 11, 'suit');
+  trap(b, 9, 9, 10, 9, 8, 'suit');
+  blob(b, 4, 13, 1.8, 3.4, 'suit'); blob(b, 14, 13, 1.8, 3.4, 'suit');
+  blob(b, 9, 5, 3.6, 3.8, 'eskin'); blob(b, 9, 3, 3.8, 2.2, 'hair');
+  px(b, 9, 12, 'cy', .9); px(b, 8, 12, 'cy', .6);
+  return b;
+}
+
+// ---------- Les trois silhouettes ----------
+// open : point faible (bulbe ouvert, canalisé)
+function kneeling(open) {
+  const b = buf(56, 56);
+  blob(b, 28, 53, 22, 2.6, 'stone', -.45);
+  // racines qui partent du dos et plongent dans le sol
+  root(b, [[28, 26], [16, 30], [9, 42], [4, 53]], 4, 1.4);
+  root(b, [[28, 26], [41, 31], [47, 43], [52, 53]], 4, 1.4);
+  root(b, [[26, 30], [19, 42], [16, 53]], 3, 1.2);
+  root(b, [[30, 30], [37, 42], [40, 53]], 3, 1.2);
+  // tige du bulbe : du dos jusqu'au-dessus de la tête
+  root(b, [[28, 27], [27, 18], [28, 12]], 4, 3);
+  // bulbe au-dessus de la tête, derrière elle
+  if (open) {
+    for (const [dx, dy] of [[-8, -3], [8, -3], [-6, 4], [6, 4]]) blob(b, 28 + dx, 9 + dy, 3.6, 2.6, 'bulb', -.1);
+    blob(b, 28, 9, 7, 6, 'bulb', .05);
+    blob(b, 28, 8, 4, 3.4, 'core', .2);
+  } else {
+    blob(b, 28, 9, 6.5, 6, 'bulb');
+    for (let k = 0; k < 4; k++) px(b, 25 + k * 2, 6 + (k & 1), 'bulb', .95);
+  }
+  // corps agenouillé : bas de robe large, buste aux épaules larges, capuche, tête penchée
+  trap(b, 28, 40, 12, 18, 28, 'linen', -.05);
+  trap(b, 28, 28, 13, 16, 18, 'linen');
+  rect(b, 26, 29, 4, 22, 'stole');
+  blob(b, 28, 25, 5.4, 5, 'linen', -.12);
+  blob(b, 28, 27, 3.2, 2.8, 'skin', -.1);
+  px(b, 27, 27, 'bulb', .9); px(b, 29, 27, 'bulb', .9);
+  // mains jointes sur la poitrine
+  blob(b, 26.5, 35, 2.2, 2.4, 'skin'); blob(b, 29.5, 35, 2.2, 2.4, 'skin', .05);
+  // racines qui percent la robe et le sol devant lui
+  root(b, [[22, 46], [15, 51]], 2, 1); root(b, [[34, 46], [42, 51]], 2, 1);
+  moss(b, 'linen', .05, 11); moss(b, 'root', .1, 5);
+  return b;
+}
+function lifted(open) {
+  const b = buf(56, 62);
+  blob(b, 28, 59, 22, 2.6, 'stone', -.45);
+  // butte de racines qui le soulève
+  blob(b, 28, 54, 15, 6, 'root', -.05);
+  root(b, [[14, 56], [10, 48], [12, 40]], 3, 1.2); root(b, [[42, 56], [46, 48], [44, 40]], 3, 1.2);
+  root(b, [[22, 52], [24, 44]], 4, 2); root(b, [[34, 52], [32, 44]], 4, 2);
+  // robe tendue, bras écartés traversés par les racines
+  trap(b, 28, 22, 24, 12, 18, 'linen');
+  rect(b, 26, 23, 4, 22, 'stole');
+  root(b, [[22, 24], [12, 22], [5, 16]], 3, 1.2); root(b, [[34, 24], [44, 22], [51, 16]], 3, 1.2);
+  rect(b, 12, 21, 8, 3, 'linen', -.1); rect(b, 36, 21, 8, 3, 'linen', -.1);
+  blob(b, 11, 22, 1.8, 1.6, 'skin'); blob(b, 45, 22, 1.8, 1.6, 'skin');
+  // tête renversée en arrière
+  blob(b, 28, 16, 5.2, 5, 'linen', -.1); blob(b, 28, 17, 3.4, 3, 'skin', -.05);
+  // bulbe dans la poitrine
+  if (open) {
+    blob(b, 28, 31, 6.5, 6, 'bulb', .05); blob(b, 28, 30, 3.6, 3.4, 'core', .2);
+    root(b, [[22, 28], [18, 33]], 2, 1, 'bulb'); root(b, [[34, 28], [38, 33]], 2, 1, 'bulb');
+  } else {
+    blob(b, 28, 31, 4.2, 4, 'bulb');
+  }
+  moss(b, 'linen', .05, 7); moss(b, 'root', .12, 3);
+  return b;
+}
+function tree(open) {
+  const b = buf(56, 66);
+  blob(b, 28, 63, 22, 2.6, 'stone', -.45);
+  // souche : tronc de racines tressées jusqu'à la taille
+  trap(b, 28, 40, 22, 14, 26, 'root');
+  root(b, [[16, 62], [12, 55]], 3, 1.4); root(b, [[40, 62], [45, 55]], 3, 1.4); root(b, [[28, 62], [28, 56]], 4, 2);
+  // buste qui sort du tronc, mitre
+  trap(b, 28, 24, 17, 12, 15, 'linen');
+  rect(b, 26, 25, 4, 15, 'stole');
+  blob(b, 28, 19, 4.6, 4.4, 'skin', -.05);
+  trap(b, 28, 8, 9, 4, 9, 'linen', .1); px(b, 28, 10, 'gold', .9); px(b, 28, 12, 'gold', .7);
+  blob(b, 21, 32, 2, 2, 'skin'); blob(b, 35, 32, 2, 2, 'skin');
+  // couronne de racines au-dessus des épaules, bulbe au sommet
+  root(b, [[22, 26], [14, 16], [16, 6]], 3, 1.2); root(b, [[34, 26], [42, 16], [40, 6]], 3, 1.2);
+  if (open) {
+    blob(b, 28, 4, 7, 4.4, 'bulb', .05); blob(b, 28, 4, 3.6, 2.6, 'core', .2);
+  } else {
+    blob(b, 28, 5, 5, 3.6, 'bulb');
+  }
+  root(b, [[16, 6], [22, 4]], 2, 1); root(b, [[40, 6], [34, 4]], 2, 1);
+  moss(b, 'root', .1, 9); moss(b, 'linen', .05, 2);
+  return b;
+}
+
+const S = 4;
+const PROPS = [
+  { id: 'A', nm: 'Agenouillé, soudé à l’autel', draw: kneeling, reco: true, bulb: [28, 9],
+    what: 'Le texte validé à la lettre : à genoux, mains jointes, les racines lui sortent du dos et le clouent au sol. Une tige de racine porte le bulbe au-dessus de sa tête penchée ; ouvert, il se fend en quatre pétales autour d’un cœur doré.',
+    plus: ['Immobile, il se lit comme une cible fixe : on comprend qu’il faut agir autour de lui (les quatre places).', 'Le bulbe est la partie la plus visible, au sommet de la silhouette.'],
+    moins: ['Silhouette basse : moins imposante qu’un mini-boss debout.'] },
+  { id: 'B', nm: 'Dressé sur sa butte de racines', draw: lifted, bulb: [28, 31],
+    what: 'Les racines l’ont soulevé de terre comme une marionnette, bras écartés, mains percées. Le bulbe est dans sa poitrine ; ouvert, la robe se déchire sur un cœur qui brûle.',
+    plus: ['Pose en croix : se lit de loin, prête aux gestes (appel des racines bras levés).', 'Plus haut que l’Exilé : vrai poids de mini-boss.'],
+    moins: ['Le bulbe dans la poitrine se cache derrière l’Exilé quand celui-ci est au sud.'] },
+  { id: 'C', nm: 'L’arbre-prêtre', draw: tree, bulb: [28, 4],
+    what: 'Le bas du corps est devenu une souche de racines tressées ; le buste mitré en sort. Une couronne de racines porte le bulbe au-dessus de sa tête.',
+    plus: ['Silhouette la plus étrange, la plus « Bête ».', 'Bulbe tout en haut : toujours visible, même en mêlée.'],
+    moins: ['Il ne peut plus être « agenouillé devant l’autel » : on perd l’image du prêtre en prière.'] },
+];
+const out = [];
+for (const p of PROPS) {
+  out.push(`<article class="prop${p.reco ? ' reco' : ''}"><span class="tag">Silhouette ${p.id}</span><h3>${p.nm}</h3><p>${p.what}</p>
+    <div class="row"><div class="stage" data-p="${p.id}"></div></div>
+    <div class="cols"><ul class="l">${p.plus.map(x => `<li class="plus">${x}</li>`).join('')}</ul><ul class="l">${p.moins.map(x => `<li class="moins">${x}</li>`).join('')}</ul></div></article>`);
+}
+document.getElementById('props').innerHTML = out.join('');
+for (const p of PROPS) {
+  const st = document.querySelector(`.stage[data-p="${p.id}"]`);
+  const add = (canvas, cap) => { const f = document.createElement('figure'); f.appendChild(canvas); const c = document.createElement('figcaption'); c.textContent = cap; f.appendChild(c); st.appendChild(f); };
+  add(render(exile(), S), 'Exilé');
+  const rest = render(p.draw(false), S); glow(rest, p.bulb[0], p.bulb[1], 10, '208,64,74', .35, S); glow(rest, 28, 50, 26, '110,40,60', .18, S);
+  add(rest, 'Repos · nappe, bulbe fermé');
+  const weak = render(p.draw(true), S); glow(weak, p.bulb[0], p.bulb[1], 16, '255,200,110', .6, S);
+  add(weak, 'Point faible · canalisé');
+}
+
+// ---------- Arène vue de dessus ----------
+(function () {
+  const svg = document.getElementById('arena');
+  const CULT = { aether: '#7a86ff', indra: '#ff9a3a', medeina: '#6fe07a', sigil: '#d8d4ca' };
+  let s = '';
+  for (let x = 0; x <= 340; x += 20) s += `<line x1="${x}" y1="0" x2="${x}" y2="260" stroke="#1c222d"/>`;
+  for (let y = 0; y <= 260; y += 20) s += `<line x1="0" y1="${y}" x2="340" y2="${y}" stroke="#1c222d"/>`;
+  s += `<rect x="20" y="20" width="300" height="220" fill="#323c4b" stroke="#0b0a0f" stroke-width="3"/>`;
+  s += `<rect x="150" y="236" width="40" height="24" fill="#323c4b"/><text x="170" y="254" text-anchor="middle" fill="#9a9cae" font-family="VT323" font-size="15">entrée</text>`;
+  for (let k = 3; k >= 1; k--) s += `<ellipse cx="170" cy="80" rx="${k * 34}" ry="${k * 26}" fill="rgba(120,40,70,${0.12 + 0.05 * (3 - k)})" stroke="rgba(208,64,74,.35)" stroke-dasharray="4 4"/>`;
+  s += `<rect x="146" y="34" width="48" height="18" fill="#8a98a8" stroke="#0b0a0f"/><text x="170" y="47" text-anchor="middle" fill="#0b0a0f" font-family="VT323" font-size="14">autel</text>`;
+  s += `<circle cx="170" cy="74" r="12" fill="#a8202e" stroke="#0b0a0f" stroke-width="2"/><text x="170" y="100" text-anchor="middle" fill="#f6906a" font-family="VT323" font-size="15">Archiprêtre</text>`;
+  const spots = [['sigil', 110, 40], ['aether', 60, 120], ['indra', 280, 120], ['medeina', 170, 190]];
+  for (const [c, x, y] of spots) s += `<rect x="${x - 12}" y="${y - 12}" width="24" height="24" fill="none" stroke="${CULT[c]}" stroke-width="3"/><circle cx="${x}" cy="${y}" r="5" fill="${CULT[c]}"/><text x="${x}" y="${y + 26}" text-anchor="middle" fill="${CULT[c]}" font-family="VT323" font-size="14">${c[0].toUpperCase() + c.slice(1)}</text>`;
+  s += `<circle cx="170" cy="225" r="6" fill="#5fd8e8"/><text x="196" y="229" fill="#5fd8e8" font-family="VT323" font-size="14">Exilé</text>`;
+  svg.innerHTML = s;
+})();
+</script>
+</body>
+</html>

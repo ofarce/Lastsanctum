@@ -107,7 +107,7 @@ const TABS := [
 			{"list": [
 				"Les soldats attaquent seuls ce qui approche. Un clic droit sur un ennemi force la cible.",
 				"L’Arbalestrie de l’Ingénieur charge cinq munitions une fois la recherche faite. Le barillet montre celle qui est engagée.",
-				"Chaque tir spécial coûte du mana du culte correspondant.",
+				"Aucune munition ne coûte de mana : choisissez-la pour son effet.",
 			]},
 		],
 	},

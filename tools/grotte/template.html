@@ -41,6 +41,19 @@ p { margin: 6px 0; }
 code { font-size: 13px; color: #bcd; overflow-wrap: anywhere; }
 .now { background: var(--panel); border: 1px solid var(--line); padding: 14px 16px; margin: 14px 0; }
 .ask { border-left: 2px solid var(--violet); padding-left: 10px; color: var(--ink); }
+.pick { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); display: grid; gap: 8px; }
+.row { display: flex; gap: 6px; flex-wrap: wrap; }
+.row button[data-v="oui"].on { border-color: #5fc88a; color: #8ee0ad; }
+.row button[data-v="plus_tard"].on { border-color: #d8b45a; color: #ecd28e; }
+.row button[data-v="non"].on { border-color: #d0605a; color: #ec9a94; }
+.row.opts button.on { border-color: var(--violet); color: var(--violet); }
+textarea { font: inherit; font-size: 13px; color: var(--ink); background: var(--bg); border: 1px solid var(--line); padding: 6px 8px; width: 100%; min-height: 54px; resize: vertical; }
+textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.chips button.d-oui { border-color: #5fc88a; color: #8ee0ad; }
+.chips button.d-plus_tard { border-color: #d8b45a; color: #ecd28e; }
+.chips button.d-non { border-color: #d0605a; color: #ec9a94; text-decoration: line-through; }
+.status { font-size: 13px; color: var(--mute); }
+.status b { color: var(--ink); font-weight: 400; }
 @media (max-width: 960px) { .card { grid-template-columns: 1fr; } }
 @media (prefers-reduced-motion: reduce) { canvas { animation: none; } }
 </style>
@@ -49,7 +62,7 @@ code { font-size: 13px; color: #bcd; overflow-wrap: anywhere; }
 <header>
   <h1>Faire vivre la grotte de départ</h1>
   <p>Les dix idées retenues sur la liste du 21 novembre, animées sur une vraie capture du jeu : vue ×3, paroi nord, capsule et Ancre. Braseros, colonne, gravats, quartz et flaques sont les sprites du jeu, posés à la main sur la capture. Les effets sont dessinés en pixels du jeu (3 × 3 px écran).</p>
-  <p>Les numéros sont ceux de la liste. Rien n'est codé.</p>
+  <p>Les numéros sont ceux de la liste. Rien n'est codé. Choisissez sur chaque fiche, sous le texte : à coder, plus tard ou non, la réponse à la question s'il y en a une, et une remarque si besoin. Chaque choix s'enregistre tout de suite ; je le relirai ensuite.</p>
 </header>
 </div>
 <div class="bar"><div class="wrap">
@@ -69,7 +82,8 @@ code { font-size: 13px; color: #bcd; overflow-wrap: anywhere; }
     <h2>Tout ensemble</h2>
     <div class="chips" id="chips"></div>
     <canvas id="c_all" width="960" height="600"></canvas>
-    <p class="note">Cliquer une idée pour l'ôter de la scène et voir ce qu'elle apporte.</p>
+    <p class="note">Cliquer une idée pour l'ôter de la scène et voir ce qu'elle apporte. Le bord de chaque bouton prend la couleur de votre choix : vert à coder, ocre plus tard, rouge non.</p>
+    <p class="status" id="status">Connexion à l'enregistrement…</p>
   </section>
 
   <section id="cards"></section>
@@ -94,7 +108,7 @@ const FEATS = [
           "Le halo chaud du brasero vacille un peu plus fort."],
     when: "Tant que le brasero est allumé. Un brasero éteint ne fait rien.",
     code: "<code>world/sanctum/flame_view.gd</code> pour les braises ; l'ombre en sprite au sol dans <code>sanctum_view.gd</code>, orientée depuis le brasero le plus proche.",
-    ask: "L'ombre portée aussi pour les unités qui passent près du feu, ou seulement pour le décor ?" },
+    ask: "L'ombre portée aussi pour les unités qui passent près du feu, ou seulement pour le décor ?", opts: ["Décor seulement", "Décor et unités"] },
   { id: "puits", n: 3, name: "Puits de lumière", size: "petit",
     see: ["Une colonne de lumière tombe de la voûte sur la capsule, plus large que le trait actuel, avec une flaque de lumière au sol.",
           "Des grains de poussière y flottent et ne s'allument que dans le faisceau.",
@@ -107,14 +121,14 @@ const FEATS = [
           "Toutes les 2,5 s, une onde part du socle et s'élargit sur les dalles en s'effaçant."],
     when: "Ancre allumée. On peut accélérer les ondes quand l'Ancre est attaquée ou en surcharge.",
     code: "<code>world/anchor/anchor_view.gd</code>, au sol sous la sphère.",
-    ask: "Les ondes plus rapides quand l'Ancre perd des PV : oui ou non ?" },
+    ask: "Les ondes plus rapides quand l'Ancre perd des PV : oui ou non ?", opts: ["Oui, plus rapides", "Non, rythme fixe"] },
   { id: "chauves", n: 5, name: "Chauves-souris", size: "moyen",
     see: ["Six petites chauves-souris pendues sous la voûte, entre les stalactites, qui bougent de temps en temps.",
           "Au tir (bouton « L'Exilé tire », ou toutes les 9 s ici), elles se décrochent et tournent en nuée.",
           "Elles reviennent se pendre une à une quand le calme revient."],
     when: "Un tir, une explosion ou une unité qui passe juste dessous.",
     code: "Nouvelle vue dans <code>world/ambience/</code> sur le modèle de <code>fauna_view.gd</code>, à l'écoute des tirs de la simulation.",
-    ask: "Inoffensives et purement décoratives, ou un jour une proie ou une source de guano ?" },
+    ask: "Inoffensives et purement décoratives, ou un jour une proie ou une source de guano ?", opts: ["Décor seulement", "Proie ou guano plus tard"] },
   { id: "gouttes", n: 6, name: "Gouttes et flaques", size: "petit",
     see: ["Une goutte se forme au bout de chaque stalactite, tombe et touche une flaque au pied de la paroi.",
           "Une petite éclaboussure, puis un rond qui s'élargit dans la flaque.",
@@ -141,21 +155,21 @@ const FEATS = [
           "La scène fait défiler douze jours en douze secondes."],
     when: "Avec les jours de jeu. Seulement dans la grotte, pas dans les galeries.",
     code: "Taches tirées dans <code>sanctum_layout.gd</code>, croissance lue sur le jour de jeu, effacées sous les emprises des bâtiments. Les sprites de mousse et de champignons existent.",
-    ask: "Vitesse de pousse : toute la grotte couverte vers le jour 10, ou plus lent ?" },
+    ask: "Vitesse de pousse : toute la grotte couverte vers le jour 10, ou plus lent ?", opts: ["Plus rapide (jour 5)", "Couverte vers le jour 10", "Plus lent (jour 20)"] },
   { id: "usure", n: 12, name: "Usure des chemins", size: "moyen",
     see: ["Les trajets les plus fréquentés se dessinent au sol : poussière tassée sur les bords, dalles polies au milieu.",
           "Ici : capsule → Ancre → sortie, et Ancre → réserve à l'est.",
           "La trace se creuse au fil des passages (de 0 à 100 % sur la scène)."],
     when: "Chaque unité qui marche ajoute un peu d'usure à sa case.",
     code: "Compteur basse résolution par case côté simulation, peint en calque de sol par <code>terrain_painter.gd</code>. Doit être sauvegardé avec la partie.",
-    ask: "L'usure s'efface-t-elle quand un chemin n'est plus emprunté ?" },
+    ask: "L'usure s'efface-t-elle quand un chemin n'est plus emprunté ?", opts: ["S'efface avec le temps", "Reste pour toujours"] },
   { id: "air", n: 17, name: "Courant d'air", size: "petit",
     see: ["Un souffle va de la paroi nord vers la sortie sud.",
           "Les flammes et la fumée des braseros penchent de ce côté ; de fins traits de poussière filent au ras du sol.",
           "Il vient en rafales lentes, rien de constant."],
     when: "Toujours. Plus fort pendant la Brume ou la tempête si la météo de la jungle s'en mêle.",
     code: "Un vecteur de vent unique (vers la porte de <code>CaveShape</code>) lu par la flamme, les braises, la fumée et la poussière de la capsule.",
-    ask: "Rafales régulières, ou liées à la météo du dehors ?" },
+    ask: "Rafales régulières, ou liées à la météo du dehors ?", opts: ["Rafales régulières", "Selon la météo du dehors"] },
 ];
 
 // -------------------------------------------------------------- Repères (pixels du jeu sur la capture ×3)
@@ -392,11 +406,48 @@ function frame(c, on, s, t, dt) {
   if (on.air) { c.fillStyle = "#c8ced6"; c.globalAlpha = .7; c.font = "18px 'Share Tech Mono', monospace"; c.textAlign = "center"; c.fillText("sortie ↓", EXIT[0] * G, 592); c.globalAlpha = 1; }
 }
 
+// -------------------------------------------------------------- Choix (base de l'artefact, collection « choix », un document par idée)
+const picks = {}; let db = null;
+function paint(id) {
+  const p = picks[id] || {}, card = document.querySelector(`[data-card="${id}"]`), chip = document.getElementById("chip_" + id);
+  if (card) { card.querySelectorAll(".dec button").forEach(b => b.classList.toggle("on", b.dataset.v === p.decision));
+    card.querySelectorAll(".opts button").forEach(b => b.classList.toggle("on", b.dataset.a === p.answer));
+    const ta = card.querySelector("textarea"); if (ta && document.activeElement !== ta) ta.value = p.note || ""; }
+  if (chip) { chip.classList.remove("d-oui", "d-plus_tard", "d-non"); if (p.decision) chip.classList.add("d-" + p.decision); }
+}
+function summary(msg) {
+  const n = k => FEATS.filter(f => (picks[f.id] || {}).decision === k).length, left = FEATS.length - n("oui") - n("plus_tard") - n("non");
+  document.getElementById("status").innerHTML = `<b>${n("oui")}</b> à coder · <b>${n("plus_tard")}</b> plus tard · <b>${n("non")}</b> non · <b>${left}</b> sans réponse` + (msg ? " · " + msg : "");
+}
+const timers = {};
+function save(id, patch) {
+  picks[id] = Object.assign({}, picks[id], patch); paint(id);
+  if (!db) { summary("non enregistré : ouvrez la planche connecté sur claude.ai"); return; }
+  summary("enregistrement…");
+  clearTimeout(timers[id]);
+  timers[id] = setTimeout(() => db.doc("choix/" + id).set(Object.assign({ n: FEATS.find(f => f.id === id).n, decision: null, answer: null, note: "" }, picks[id], { at: new Date().toISOString() }))
+    .then(() => summary("enregistré"), e => summary("échec de l'enregistrement (" + (e && e.code || "erreur") + ")")), 400);
+}
+function wire(card, f) {
+  card.dataset.card = f.id;
+  card.querySelectorAll(".dec button").forEach(b => b.onclick = () => save(f.id, { decision: (picks[f.id] || {}).decision === b.dataset.v ? null : b.dataset.v }));
+  card.querySelectorAll(".opts button").forEach(b => b.onclick = () => save(f.id, { answer: (picks[f.id] || {}).answer === b.dataset.a ? null : b.dataset.a }));
+  const ta = card.querySelector("textarea"); let tt; ta.oninput = () => { clearTimeout(tt); tt = setTimeout(() => save(f.id, { note: ta.value.trim() }), 700); };
+}
+async function connect() {
+  const timer = setTimeout(() => { if (!db) summary("l'enregistrement ne répond pas ; les choix restent sur cette page"); }, 10000);
+  try { db = window.claude && window.claude.use ? await window.claude.use("db") : null; } catch (e) { db = null; }
+  clearTimeout(timer);
+  if (!db) { summary("enregistrement indisponible ici ; les choix restent sur cette page"); return; }
+  db.collection("choix").onSnapshot(snap => { for (const d of snap.docs) { picks[d.id] = Object.assign({}, picks[d.id], d.data()); paint(d.id); } summary(""); },
+    e => summary("lecture impossible (" + (e && e.code || "erreur") + ")"));
+}
+
 // -------------------------------------------------------------- Montage de la page
 const ui = { night: false, slow: false, shot: 0 };
 const bg = new Image(), atlas = new Image();
-let pending = 2;
-bg.onload = atlas.onload = () => { if (--pending === 0) start(); };
+let toLoad = 2;
+bg.onload = atlas.onload = () => { if (--toLoad === 0) start(); };
 bg.src = BG; atlas.src = ATLAS;
 
 const scenes = [];
@@ -417,11 +468,21 @@ function start() {
       <h3>CE QU'ON VOIT</h3><ul>${f.see.map(x => `<li>${x}</li>`).join("")}</ul>
       <h3>QUAND</h3><p>${f.when}</p>
       <h3>OÙ ÇA SE BRANCHE</h3><p>${f.code}</p>
-      ${f.ask ? `<h3>À TRANCHER</h3><p class="ask">${f.ask}</p>` : ""}</div>`;
+      ${f.ask ? `<h3>À TRANCHER</h3><p class="ask">${f.ask}</p>` : ""}
+      <div class="pick">
+        <div class="row dec" role="group" aria-label="Décision">
+          <button type="button" data-v="oui" id="d_${f.id}_oui">À coder</button>
+          <button type="button" data-v="plus_tard" id="d_${f.id}_pt">Plus tard</button>
+          <button type="button" data-v="non" id="d_${f.id}_non">Non</button></div>
+        ${f.opts ? `<div class="row opts" role="group" aria-label="Réponse">${f.opts.map((o, k) => `<button type="button" data-a="${o}" id="a_${f.id}_${k}">${o}</button>`).join("")}</div>` : ""}
+        <textarea id="n_${f.id}" aria-label="Remarque" placeholder="Remarque (facultatif)"></textarea>
+      </div></div>`;
+    wire(card, f);
     host.appendChild(card);
     const el = card.querySelector("canvas");
     scenes.push({ c: el.getContext("2d"), on: { [f.id]: true }, s: makeState(i + 2), el });
   });
+  FEATS.forEach(f => paint(f.id)); summary("connexion à l'enregistrement…"); connect();
   const io = new IntersectionObserver(es => es.forEach(e => { const sc = scenes.find(x => x.el === e.target); if (sc) sc.vis = e.isIntersecting; }));
   scenes.forEach(sc => { sc.vis = true; io.observe(sc.el); });
   const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;

@@ -157,10 +157,10 @@ func test_dig_and_gallery_effects() -> void:
 		"case creusée : onde de rayon 2")
 	for c: Array in sc["cells"]:
 		sim.world.dig_cell(int(c[0]), int(c[1]))
+	# Galeries reliées (2026-11-22) : toutes ouvertes en silence dès le départ ; creuser n'en révèle plus.
 	var blue := GameState.effects.filter(func(e: Dictionary) -> bool: return e["color"] == Color("#8fd6f0"))
-	check(sim.state().found >= 1, "le scénario révèle au moins une galerie")
-	check_eq(blue.size(), sim.state().found, "une onde bleue (rayon 6) par galerie révélée")
-	check(blue.all(func(e: Dictionary) -> bool: return e["r"] == 6.0), "ondes de galerie de rayon 6")
+	check(sim.state().found >= 1, "galeries déjà ouvertes au départ")
+	check_eq(blue.size(), 0, "pas d'onde de révélation")
 
 
 ## D9 : les héros du drapeau apparaissent sur un sol praticable (jungle au sud de l'entrée de la grotte).

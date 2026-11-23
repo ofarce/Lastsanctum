@@ -36,8 +36,8 @@ static var play_opening := true
 ## La scène du jeu lance une partie dès son chargement (main.gd) ; la suite de tests s'en passe : chaque
 ## test lance la sienne, et générer un monde de plus coûtait plusieurs secondes par processus.
 static var autostart := true
-## Vitesses (move) : Ingénieur 15,2 ; adeptes 7,6 ; gardes 3,45.
-const SPEED_ENGINEER := 15.2
+## Vitesses (move) : Ingénieur 18,24 (15,2 + 20 %, demande du 2026-11-22) ; adeptes 7,6 ; gardes 3,45.
+const SPEED_ENGINEER := 15.2 * 1.2
 const SPEED_ADEPT := 7.6
 const SPEED_GUARD := 3.45
 const ADEPT_ROLES := ["sigil", "medeina", "aether", "indra", "flammes", "archer", "lame", "oublieux", "guerisseuse", "chantre", "envouteur"]
@@ -75,9 +75,24 @@ var profile: Dictionary = {}
 var profiling := false
 
 
+## Vitesse du jeu (menu de pause, F2) : 1, 2 ou 3 pas de simulation par image, au même dt (collisions
+## et minuteries inchangées). Retombe à 1 en cinématique et à chaque alerte (Hud).
+const SPEEDS := [1, 2, 3]
+var speed := 1
+
+
 func _process(delta: float) -> void:
-	if not paused:
+	if paused:
+		return
+	var n := 1 if Opening.cinematic() else speed
+	for i in n:
 		tick(minf(delta, MAX_DT))
+		if GameState.ended:
+			break
+
+
+func cycle_speed() -> void:
+	speed = SPEEDS[(SPEEDS.find(speed) + 1) % SPEEDS.size()]
 
 
 func _prof(phase: String, t0: int) -> int:
@@ -95,6 +110,7 @@ func _prof(phase: String, t0: int) -> int:
 ## init() : nouvelle partie. `seed` < 0 : graine des galeries au hasard.
 func new_game(seed: int = -1) -> void:
 	GameState.reset()
+	speed = 1
 	_day_phase = ""
 	var gallery_seed := seed if seed >= 0 else randi()
 	rng.seed = gallery_seed
@@ -122,7 +138,8 @@ func new_game(seed: int = -1) -> void:
 		world.camera.set_view(eng.pos(), world.camera.px)
 	# selected = [units[0]] : le Paladin quand les héros sont présents.
 	GameState.selected = [GameState.units[0]]
-	say("L’Ancre s’est éteinte. Sélectionnez l’Ingénieur, puis clic droit sur l’Ancre (ou R) pour la réactiver.", 7.0)
+	if not opening:
+		say("L’Ancre s’est éteinte. Sélectionnez l’Ingénieur, puis clic droit sur l’Ancre (ou R) pour la réactiver.", 7.0)
 
 
 func spawn(unit_name: String, x: float, z: float, role: String, squad := 0) -> Unit:
@@ -178,7 +195,9 @@ func tick(dt: float) -> void:
 	Capsule.tick(dt)
 	if profiling:
 		t = _prof("bâtiments et adeptes", t)
+	Awaken.tick(self)
 	Pylons.tick(self, dt)
+	PortalNet.tick(self, dt)
 	Roamers.tick(self, dt)
 	Night.tick(self, dt)
 	Mods.tick(self)
@@ -193,9 +212,11 @@ func tick(dt: float) -> void:
 	Martyre.tick(self)
 	OeilMatrice.tick(self)
 	Gorge.tick(self)
+	Archipretre.tick(self)
+	Ages.tick(self)
 	EnemyShots.tick(self, dt)
-	# Aucune vague tant que la Martyre de Byrsa est debout.
-	while not Martyre.active() and not GameState.spawn_queue.is_empty() and GameState.spawn_queue[0]["at"] <= GameState.sim_time and combat.tactics.ready(GameState.spawn_queue[0]):
+	# Aucune vague tant que la Martyre de Byrsa est debout sur la route ; dans son arène, les assauts continuent.
+	while not (Martyre.active() and not GameState.martyre_arena) and not GameState.spawn_queue.is_empty() and GameState.spawn_queue[0]["at"] <= GameState.sim_time and combat.tactics.ready(GameState.spawn_queue[0]):
 		combat.spawn_enemy(GameState.spawn_queue.pop_front())
 	if Overload.tick():
 		overload_finished.emit(GameState.overload_unit)
@@ -253,6 +274,11 @@ func _trample(dt: float, alive: Array[Unit]) -> void:
 
 ## steer : prochain point du chemin A* vers `to` (chemin en cache dans u.memo).
 func steer(u: Unit, to: Vector2) -> Vector2:
+	# Réseau des portails : une unité alliée en long trajet passe par le portail le plus proche (PortalNet.route).
+	if not (u is Enemy):
+		var via: Variant = PortalNet.route(self, u, to)
+		if via != null:
+			to = via
 	return world.pathfinder.steer(u.pos(), to, u.memo)
 
 
@@ -288,11 +314,15 @@ static func in_boss_fight(u: Unit) -> bool:
 		return false
 	if Martyre.duelist() == u or OeilMatrice.duelist() == u:
 		return true
+	if Archipretre.active() and Archipretre.in_room(u.pos()):
+		return true
 	return Gorge.active() and u.pos().distance_to(Gorge.center()) <= Gorge.ROOM
 
 
 ## move : avance vers t ; glisse le long des murs si le pas direct entre dans la roche.
 func move(u: Unit, t: Vector2, dt: float, mult := 1.0) -> void:
+	if PortalNet.warping(u):
+		return
 	var dx := t.x - u.x
 	var dz := t.y - u.z
 	var d := sqrt(dx * dx + dz * dz)
@@ -621,6 +651,7 @@ func _collect_mined_item(item: String, miner: Unit, drop_position: Vector2, hit:
 	if not GameState.collected_items.has(item):
 		GameState.collected_items[item] = true
 		GameState.effects.append({"type": "new_resource", "miner": miner, "item": item, "age": 0.0, "duration": 2.6})
+		Ages.on_first_ore(self, item)
 
 
 ## Sylviculture (recherche du Puits des Âmes) : les bosquets abattus depuis REGROW_WAVES vagues repoussent, sauf
@@ -880,30 +911,21 @@ func update_adepts(_dt: float) -> void:
 		u.job = null
 	for id: String in Catalog.DEITY_NAMES:
 		GameState.deity_active[id] = GameState.sim_time < GameState.deity_until.get(id, 0.0)
-	_vault_hint()
 
 
-## Distance à laquelle l'Ingénieur remarque le glyphe de la paroi est (unités de monde).
-const VAULT_HINT_RANGE := 9.0
+## Réplique quand on tente d'ouvrir le Coffre Antique encore éteint.
+const CHEST_OFF_LINE := "Le Coffre est éteint. Il attend l’énergie de l’Ancre."
 
 
-## L'Ingénieur muni du Sceau de minage passe près du glyphe : il le remarque, une fois par partie.
-func _vault_hint() -> void:
-	if GameState.vault_hint_said or state().vault_open or not GameState.mining_seal:
-		return
-	var at := Vector2(CaveShape.VAULT_X0 - 6.0, -146.0)
-	for u in GameState.units:
-		if u.role == "engineer" and u.alive() and not u.hidden and u.pos().distance_to(at) < VAULT_HINT_RANGE:
-			GameState.vault_hint_said = true
-			engineer_spoke.emit(u, "Un glyphe tyrien dans la roche, encore alimenté. Il y a quelque chose de scellé derrière cette paroi.")
-			return
-
-
-## Coffre antique (réserve scellée à l'est de la salle) : clic droit dessus. Fermé, l'Ingénieur (sélectionné,
-## sinon le premier disponible) va l'ouvrir ; ouvert, l'inventaire s'affiche. Faux si la réserve est scellée.
+## Coffre antique (à côté de la capsule, planches/intro-capsule-planche.html) : clic droit dessus. Fermé, l'Ingénieur
+## (sélectionné, sinon le premier disponible) va l'ouvrir ; ouvert, l'inventaire s'affiche. Éteint tant que l'Ancre
+## l'est : il ne s'ouvre pas.
 func order_chest(u: Unit = null) -> bool:
-	if GameState.ended or not state().vault_open:
+	if GameState.ended:
 		return false
+	if not Capsule.chest_active():
+		say(CHEST_OFF_LINE, 3.0)
+		return true
 	if GameState.base_inventory_unlocked:
 		Events.inventory_requested.emit()
 		return true
@@ -926,7 +948,10 @@ func order_chest(u: Unit = null) -> bool:
 ## Incarnation : clic droit sur le coffre antique. Déjà ouvert : la réserve s'affiche ; sinon l'Ingénieur incarné
 ## s'y rend de lui-même et l'ouvre une fois à portée (tâche « chest » ; un déplacement au clavier l'annule).
 func open_chest_incarnated(u: Unit) -> void:
-	if GameState.ended or u == null or not state().vault_open:
+	if GameState.ended or u == null:
+		return
+	if not Capsule.chest_active():
+		say(CHEST_OFF_LINE, 3.0)
 		return
 	if GameState.base_inventory_unlocked:
 		Events.inventory_requested.emit()
@@ -954,14 +979,36 @@ func open_production_chest(u: Unit, b: Building, kind: String) -> void:
 	Events.production_chest_requested.emit(b, kind, u)
 
 
-## L'Ingénieur arrive devant le coffre : le couvercle s'ouvre et la réserve de la base (100 cases) se débloque.
+## Objets remis par le Coffre Antique à sa première ouverture (planches/intro-capsule-planche.html), dans l'ordre de la
+## bannière. « plan_analyse » rejoint le paquetage de l'Ingénieur (le coffre de base s'il est plein) et apprend la
+## recette (GameState.plans).
+const CHEST_GIFT := ["cannon", "combinaison", "mining_seal", "plan_analyse"]
+
+
+## L'Ingénieur arrive devant le coffre : le couvercle s'ouvre, la réserve de la base (100 cases) se débloque et
+## l'équipement de départ est remis (Arbalestrie et Combinaison portées, Sceau de minage, plan « Analyse »).
 func open_chest(u: Unit) -> void:
-	if GameState.base_inventory_unlocked:
+	if GameState.base_inventory_unlocked or not Capsule.chest_active():
 		return
 	GameState.base_inventory_unlocked = true
 	GameState.chest_opened_at = GameState.sim_time
 	Combat.zone(CaveShape.CHEST.x, CaveShape.CHEST.y - 1.0, 4.0, Color("#5ce8ff"))
 	Sfx.play("coffre")
+	if GameState.capsule_gift:
+		return
+	GameState.capsule_gift = true
+	GameState.mining_seal = true
+	if not GameState.plans.has("analyse"):
+		GameState.plans.append("analyse")
+	var eng := u if u != null and u.role == "engineer" else Capsule.engineer()
+	if eng:
+		eng.equipment["Main droite"] = "cannon"
+		eng.equipment["Torse"] = "combinaison"
+	if eng == null or not ItemStorage.store(eng.inventory, eng.inventory_capacity, "plan_analyse"):
+		ItemStorage.store(GameState.base_inventory, ItemStorage.BASE_CAPACITY, "plan_analyse")
+	Events.items_received.emit(CHEST_GIFT)
+	if world:
+		Capsule.first_intruders(self)
 
 
 func order_adepts(p: Vector2) -> bool:
@@ -1737,12 +1784,14 @@ func train_unit(b: Building, id: String) -> void:
 ## avec les ingrédients du coffre bleu (sim/production.gd).
 static func can_craft(b: Building, item: String) -> bool:
 	return not GameState.ended and b != null and GameState.buildings.has(b) and b.complete \
-		and Recipes.RECIPES.get(b.type, {}).has(item) and recipe_unlocked(item)
+		and Recipes.RECIPES.get(b.type, {}).has(item) and recipe_unlocked(item) and not Recipes.disabled(item) \
+		and (b.recipe == item or not Recipes.once_done(item))
 
 
-## Recette accessible : sans recherche requise, ou recherche achevée (Catalog.RECIPE_RESEARCH).
+## Recette accessible : son âge de métal est ouvert (sim/ages.gd), et sans recherche requise ou recherche achevée
+## (Catalog.RECIPE_RESEARCH).
 static func recipe_unlocked(item: String) -> bool:
-	return not Catalog.RECIPE_RESEARCH.has(item) or GameState.research_done.has(Catalog.RECIPE_RESEARCH[item])
+	return Ages.recipe_open(item) and Recipes.plan_known(item) and (not Catalog.RECIPE_RESEARCH.has(item) or GameState.research_done.has(Catalog.RECIPE_RESEARCH[item]))
 
 
 ## Choisit (ou arrête) la recette fabriquée en boucle.
@@ -1898,8 +1947,12 @@ func revive_unit(b: Building, u: Unit) -> void:
 
 static func adept_mining_seconds(u: Unit) -> float:
 	var seconds := 2.0 if u.role == "aether" else 4.0
-	# Étais de galerie (recherche de l'Atelier).
-	return seconds / Catalog.PROPS_MINING if GameState.research_done.has("gallery_props") else seconds
+	# Étais de galerie (recherche de l'Atelier) et Sylviculture (Puits des Âmes) : se cumulent.
+	if GameState.research_done.has("gallery_props"):
+		seconds /= Catalog.PROPS_MINING
+	if GameState.research_done.has("sylviculture"):
+		seconds /= Catalog.SYLVICULTURE_MINING
+	return seconds
 
 
 static func can_mine(u: Unit) -> bool:
@@ -1919,7 +1972,7 @@ static func can_research(b: Building, id: String) -> bool:
 	return not GameState.ended and b != null and GameState.buildings.has(b) and b.complete \
 		and Catalog.RESEARCH.has(id) and Catalog.RESEARCH[id]["building"] == b.type \
 		and not GameState.research_done.has(id) and not GameState.research_jobs.has(id) \
-		and research_requirements_met(id) and Catalog.can_pay_research(id)
+		and Ages.research_open(id) and research_requirements_met(id) and Catalog.can_pay_research(id)
 
 
 func start_research(b: Building, id: String) -> void:

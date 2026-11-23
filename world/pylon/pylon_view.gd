@@ -13,6 +13,11 @@ var pylon: Dictionary
 var _corrupt := Sprite2D.new()
 var _channel := Sprite2D.new()
 var _sides: Array[Sprite2D] = []
+## Reflux (PortalNet) : la boucle corrompue redescend l'obélisque depuis la pointe pendant l'annonce
+## (« Glyphes qui virent »), par-dessus la boucle canalisée.
+var _red := Sprite2D.new()
+## Hauteur (px natifs, depuis le haut du cadre) que la corruption gagne à la fin de l'annonce : jusqu'au socle.
+const RED_DEPTH := 112.0
 
 
 static func meta() -> Dictionary:
@@ -38,6 +43,13 @@ func setup(p: Dictionary, slot: Node2D) -> void:
 		s.offset = off
 		s.use_parent_material = true
 		add_child(s)
+	_red.texture = _sheets["corrupt"]
+	_red.region_enabled = true
+	_red.centered = false
+	_red.offset = off
+	_red.use_parent_material = true
+	_red.visible = false
+	add_child(_red)
 	var fw := float(m["frame_w"])
 	var fh := float(m["frame_h"])
 	for k in (m["sides"] as Array).size():
@@ -61,6 +73,10 @@ func _process(_delta: float) -> void:
 	_corrupt.region_rect = r
 	_channel.region_rect = r
 	var cover := float(pylon.get("cover", 1.0))
+	var rk := PortalNet.reflux_k(pylon)
+	_red.visible = rk > 0.0 and cover < 1.0
+	if _red.visible:
+		_red.region_rect = Rect2(r.position, Vector2(r.size.x, roundf(minf(r.size.y, RED_DEPTH * rk))))
 	_channel.visible = cover < 1.0
 	_channel.modulate.a = 1.0 - cover
 	var praying: Array = pylon.get("praying", [])

@@ -73,9 +73,13 @@ func _process(_delta: float) -> void:
 		_mining_hover.cell = null if ui_blocked else _incarnated_wall(ground(pointer))
 		_mining_hover.selected_cells = _visible_mining_cells()
 		_mining_hover.queue_redraw()
+		UnitView.hovered = null if ui_blocked else pick_ally(pointer)
 		return
 	var pointer := get_viewport().get_mouse_position()
 	var blocked := not _pointer_inside or get_viewport().gui_get_hovered_control() != null or _box_on 		or Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT)
+	# Unité amie sous le pointeur : sa barre de vie apparaît (UnitView, AdeptView).
+	UnitView.hovered = null if not _pointer_inside or get_viewport().gui_get_hovered_control() != null or _box_on \
+		else pick_ally(pointer)
 	_mining_hover.cell = mining_hover_cell(pointer, blocked)
 	_mining_hover.selected_cells = _visible_mining_cells()
 	_mining_hover.queue_redraw()
@@ -230,14 +234,20 @@ func _input(event: InputEvent) -> void:
 		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED if full else DisplayServer.WINDOW_MODE_FULLSCREEN)
 		get_viewport().set_input_as_handled()
 		return
-	if Opening.cinematic() or HelpPanel.open:
+	if Opening.cinematic() or HelpPanel.open or PauseMenu.open:
 		return
 	# Capsule : E entre (désincarne) ou sort (réincarne).
 	if event is InputEventKey and event.pressed and not event.echo and not event.ctrl_pressed \
 			and not (get_viewport().gui_get_focus_owner() is LineEdit):
 		var key: Key = event.key_label if event.key_label != KEY_NONE else event.keycode
 		# Pylône de Merenor au contact : E lance (ou arrête) la bénédiction ; sinon la capsule.
-		if key == KEY_E and (Pylons.toggle_bless(sim) or Capsule.toggle(sim)):
+		# Carte des portails ouverte : Échap la ferme (avant le menu de pause).
+		if key == KEY_ESCAPE and PortalNet.map_from != PortalNet.NO_MAP:
+			Events.portal_map.emit(PortalNet.NO_MAP)
+			get_viewport().set_input_as_handled()
+			return
+		# Seuil d'un portail ouvert (pylône canalisé ou Ancre) : E ouvre la carte des portails.
+		if key == KEY_E and (PortalNet.toggle_map(sim) or Pylons.toggle_bless(sim) or Capsule.toggle(sim)):
 			get_viewport().set_input_as_handled()
 			return
 		# F3 : contrôle des hitboxes des ennemis (WorldOverlay._draw_hitboxes).
@@ -472,11 +482,22 @@ func _unhandled_input(event: InputEvent) -> void:
 			elif menu and not event.shift_pressed and (not GameState.hud_menu.is_empty() or k == KEY_B or k == KEY_P):
 				# Menu de construction / pose : B, P, puis la touche du bâtiment ou de l'objet.
 				hud_key(key_char(k))
+			elif k == KEY_G and not event.shift_pressed and not GameState.ended \
+					and (Mods.worn(GameState.incarnated, "anchor") or PortalNet.assault_recall_ready(GameState.incarnated)):
+				# Ancre de rappel (sim/mods.gd) : retour à la capsule, aussi en incarné (le bandeau d'ordres y est masqué).
+				# Sans le mod, ou mod en recharge : le rappel d'assaut gratuit (PortalNet), une fois par assaut.
+				var eng := GameState.incarnated
+				if not Mods.recall_ready(eng) and PortalNet.assault_recall_ready(eng):
+					PortalNet.assault_recall(sim, eng)
+				else:
+					Mods.recall(sim, eng)
 			elif k == KEY_ESCAPE and HudModel.incarnated_panel():
 				_close_incarnated_panel()
+			elif k == KEY_ESCAPE and not GameState.ended:
+				Events.pause_requested.emit()
 			# Échap ne désincarne plus (2026-11-19) : seule la capsule (touche E) le fait.
 			elif k == KEY_R and event.shift_pressed:
-				sim.new_game()
+				request_restart()
 		return
 	if event is InputEventMouseMotion:
 		# templePointer : point du sol sous le pointeur, pour l'aperçu de construction.
@@ -571,6 +592,20 @@ func _left_click(p: Vector2, shift: bool) -> void:
 		GameState.selected = []
 		GameState.anchor_selected = false
 		GameState.hud_mode = ""
+
+
+## Unité amie vivante et visible la plus proche du point, à la tolérance du clic de sélection ; sinon null.
+func pick_ally(p: Vector2) -> Unit:
+	var near: Unit = null
+	var best := INF
+	for u in GameState.units:
+		if not u.alive() or u.hidden or u.is_enemy():
+			continue
+		var d := project(u.x, 1.0, u.z).distance_to(p)
+		if d < best:
+			best = d
+			near = u
+	return near if near and best < maxf(18.0, 1.3 * zoom_k()) else null
 
 
 ## Ennemi vivant et visible le plus proche du point, à moins de max(18, 1,3·Z) pixels ; sinon null.
@@ -791,8 +826,6 @@ func hit_production_chest(p: Vector2) -> Dictionary:
 
 
 func hit_chest(p: Vector2) -> bool:
-	if not sim.state().vault_open:
-		return false
 	var k := float(world.camera.px)
 	var q := project(CaveShape.CHEST.x, 0.0, CaveShape.CHEST.y)
 	return absf(p.x - q.x) < 20.0 * k and p.y > q.y - 40.0 * k and p.y < q.y + 4.0 * k
@@ -812,14 +845,33 @@ func hit_turret(p: Vector2) -> Variant:
 	return null
 
 
+## Maj+R : partie finie, nouvelle partie tout de suite ; en cours, il faut un second Maj+R dans les
+## RESTART_WINDOW secondes (temps réel : le jeu peut être en pause), la bannière prévient.
+const RESTART_WINDOW := 3.0
+var _restart_armed_at := -INF
+
+
+func request_restart() -> void:
+	var now := Time.get_ticks_msec() / 1000.0
+	if GameState.ended or now - _restart_armed_at <= RESTART_WINDOW:
+		_restart_armed_at = -INF
+		sim.new_game()
+		return
+	_restart_armed_at = now
+	sim.say("Maj + R encore une fois pour recommencer : la partie en cours sera perdue.", RESTART_WINDOW)
+
+
 func _key(e: InputEventKey) -> void:
 	# Lettre imprimée sur la touche (ev.key : AZERTY comme QWERTY) ; les événements synthétiques (MCP,
 	# Input.parse_input_event sans key_label) retombent sur keycode.
 	var k := e.key_label if e.key_label != KEY_NONE else e.keycode
 	if k == KEY_R and e.shift_pressed:
-		sim.new_game()
+		request_restart()
 		return
 	if k == KEY_ESCAPE:
+		# Rien à annuler : Échap ouvre le menu de pause.
+		if GameState.hud_mode.is_empty() and GameState.hud_menu.is_empty() and not GameState.ended:
+			Events.pause_requested.emit()
 		GameState.hud_mode = ""
 		GameState.hud_menu = ""
 		return

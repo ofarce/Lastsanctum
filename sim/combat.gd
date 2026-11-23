@@ -91,6 +91,9 @@ func damage(t: Unit, amount: float, src: Unit = null, delay := 0.0) -> void:
 	# Gorge-Cuivre : dégâts doublés dans la gueule ouverte.
 	if t is Enemy and (t as Enemy).kind == Gorge.KIND and amount > 0.0:
 		amount *= Gorge.damage_mult()
+	# Archiprêtre aux racines : dégâts doublés bulbe ouvert (les quatre cultes prient).
+	if t is Enemy and (t as Enemy).kind == Archipretre.KIND and amount > 0.0:
+		amount *= Archipretre.damage_mult()
 		(t as Enemy).hurt_at = GameState.sim_time
 	# Voile de la Martyre (module d'exo) : le coup est absorbé en entier.
 	if amount > 0.0 and not t.is_enemy() and Loot.veil_absorbs(t):
@@ -154,6 +157,9 @@ static func damage_number(t: Unit, amount: float, delay := 0.0) -> void:
 ## gainXP : paliers 20·1,6^(niveau−1) ; chaque niveau donne +1 dégât et +1 défense.
 func gain_xp(u: Unit, n: int) -> void:
 	if u == null or u.role.is_empty() or u.hp <= 0.0:
+		return
+	# L'Ingénieur ne gagne plus de niveaux (demande du 2026-11-22) : il progresse par ses mods et son équipement.
+	if u.role == "engineer":
 		return
 	u.level = Catalog.lvl(u)
 	u.xp += n
@@ -425,14 +431,10 @@ func gear_attack(u: Unit, point: Vector2) -> void:
 	if d.length() < 0.01:
 		d = Vector2(float(u.face), 0.0)
 	d = d.normalized()
-	# Arbalestrie : chaque tir consomme la mana de la munition choisie (data/ammo.gd ; balles spirituelles :
-	# `mana` de chaque type) ; sans assez de mana, pas de tir.
+	# Arbalestrie (arme marquée `mana`) : munition choisie au barillet (data/ammo.gd), sans coût en mana.
 	var ammo := "spirit"
 	if w.has("mana"):
-		ammo = Mods.shot_ammo(u, float(w["mana"]))
-		if not Ammo.can_pay(ammo, float(w["mana"])):
-			return
-		Ammo.pay(ammo, float(w["mana"]))
+		ammo = Mods.shot_ammo(u)
 	u.face = -1 if d.x < 0.0 else 1
 	u.aim_dir = d
 	u.attack = float(w.get("cd", Catalog.FIGHT["engineer"]["cd"]))
@@ -819,6 +821,10 @@ func update_units(dt: float, alive: Array[Unit]) -> void:
 
 # ---------------------------------------------------------------- Ennemis
 
+## Ruée du porte-bouclier sur l'Exilé : distance de repérage, multiplicateur de vitesse.
+const SHIELD_CHARGE := {"sight": 24.0, "speed": 2.2}
+
+
 func update_enemies(dt: float, alive: Array[Unit]) -> void:
 	tactics.update(dt, alive)
 	var core := {"x": CaveShape.CORE.x, "z": CaveShape.CORE.y}
@@ -833,6 +839,9 @@ func update_enemies(dt: float, alive: Array[Unit]) -> void:
 			continue
 		if e.kind == Gorge.KIND:
 			Gorge.act(sim, e, dt, alive)
+			continue
+		if e.kind == Archipretre.KIND:
+			Archipretre.act(sim, e, dt, alive)
 			continue
 		# Pupilles errantes : menées par l'Œil (OeilMatrice.update_fx).
 		if e.kind == OeilMatrice.PUPIL_KIND:
@@ -855,7 +864,7 @@ func update_enemies(dt: float, alive: Array[Unit]) -> void:
 		# Errant des galeries : il ne vise que ce qui entre sur son territoire, jamais l'Ancre.
 		var roaming := e.roam != null
 		if roaming:
-			target = Roamers.target(e, alive)
+			target = Roamers.target(e, alive, sim.state())
 		# Attaqué par une bête de la jungle : il riposte.
 		var wild := Wildlife.attacker_of(e)
 		if wild and (target == null or dist(wild, e) < dist(target, e)):
@@ -866,6 +875,14 @@ func update_enemies(dt: float, alive: Array[Unit]) -> void:
 		var is_core := target == null
 		# Credo sans arme de tir : cible détectée, il se rue au contact (Catalog.CREDO_RUSH).
 		var rush := 1.0
+		# Porte-bouclier (2026-11-22) : il fonce sur l'Exilé incarné qu'il voit pour le frapper au contact.
+		if e.kind == "shield":
+			var ex := GameState.incarnated
+			if ex != null and ex.alive() and not ex.hidden and dist(ex, e) < SHIELD_CHARGE["sight"] and not Martyre.blocks(e, ex):
+				target = ex
+				is_core = false
+				rush = SHIELD_CHARGE["speed"]
+				espd *= rush
 		if not is_core and Catalog.CREDO_MELEE.has(e.kind):
 			rush = Catalog.CREDO_RUSH
 			espd *= rush
@@ -1041,8 +1058,6 @@ func start_wave() -> void:
 	# Chaque vague, la végétation abîmée regagne un stade (trois vagues pour repousser).
 	if sim.state().flora:
 		sim.state().flora.regrow()
-	if GameState.research_done.has("sylviculture"):
-		sim.regrow_groves()
 	# La faune hostile s'installe au premier assaut, puis se repeuple vague après vague.
 	if GameState.wildlife_lairs.is_empty() and sim.world:
 		Wildlife.populate(sim, sim.state().seed)

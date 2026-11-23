@@ -142,7 +142,8 @@ const MELEE_BASE := 0.6
 ## Silhouette de cet ennemi (voir BODY), à l'échelle de l'alpha.
 func body() -> Dictionary:
 	var b: Dictionary = Martyre.BODY if kind == Martyre.KIND else OeilMatrice.BODY if kind == OeilMatrice.KIND \
-		else OeilMatrice.PUPIL_BODY if kind == OeilMatrice.PUPIL_KIND else Gorge.BODY if kind == Gorge.KIND else BODY.get(kind, BODY["creep"])
+		else OeilMatrice.PUPIL_BODY if kind == OeilMatrice.PUPIL_KIND else Gorge.BODY if kind == Gorge.KIND \
+		else Archipretre.BODY if kind == Archipretre.KIND else BODY.get(kind, BODY["creep"])
 	if not alpha:
 		return b
 	var s := Pylons.ALPHA

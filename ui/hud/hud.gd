@@ -54,6 +54,7 @@ var _minimap_unlock := Button.new()
 var _wave_trigger := Button.new()
 var _archer_spawn := Button.new()
 var _mods_give := Button.new()
+var _age_open := Button.new()
 ## Seul bouton de debug visible au départ : il déplie les autres, qu'un clic ailleurs replie.
 var _debug_toggle := Button.new()
 var _debug_open := false
@@ -76,6 +77,8 @@ var _banner_title := HudStyle.label(25, HudStyle.IVORY)
 var _banner_small := HudStyle.label(15, Color("#b8c9bb"))
 var dialogue := DialogueBubble.new()
 var item_banner := ItemBanner.new()
+## Grand écrin du premier ramassage d'un mod (ui/hud/mod_reveal.gd).
+var mod_reveal := ModReveal.new()
 # Bandeau de commandement.
 var _bar := _Panel.new()
 var _modules: Array[_Panel] = []
@@ -136,6 +139,16 @@ var loot_feed := preload("res://ui/hud/loot_feed.gd").new()
 ## Fiche de la recherche survolée, à la place des statistiques quand un bâtiment a des recherches (piste A).
 var research_card := ResearchCard.new()
 var grimoire := ResearchGrimoire.new()
+## Menu de pause (Échap sans rien à annuler, touche Pause) ; raccourcis F2, F5 et F9.
+var pause_menu := PauseMenu.new()
+## Alertes situées (allié tombé ou attaqué hors champ, Ancre frappée) : texte rouge, ping sur la minicarte.
+var alert_watch := AlertWatch.new()
+## Adeptes oisifs et bâtiments à l'arrêt (mode commandant), au-dessus du bandeau, à droite.
+var idle_button := IdleButton.new()
+## Dernière alerte située : Retour arrière ou un clic sur le texte y centre la caméra.
+var _alert_pos: Variant = null
+const ALERT_JUMP := 20.0
+var _alert_at := -INF
 var sfx_player: Node = preload("res://ui/audio/sfx_player.gd").new()
 var music_player: Node = preload("res://ui/audio/music_player.gd").new()
 
@@ -155,6 +168,7 @@ func _ready() -> void:
 	_root.add_child(boss_bar)
 	_root.add_child(exile_gallery)
 	_root.add_child(_zoom)
+	_root.add_child(idle_button)
 	var inventory := preload("res://ui/inventory/engineer_inventory.gd").new()
 	_root.add_child(inventory)
 	_root.add_child(grimoire)
@@ -164,11 +178,17 @@ func _ready() -> void:
 	_root.add_child(help_panel)
 	_help_button.pressed.connect(help_panel.toggle)
 	_root.add_child(_help_button)
+	_root.add_child(pause_menu)
 	add_child(sfx_player)
 	add_child(music_player)
 	get_viewport().size_changed.connect(_layout)
 	Events.notice.connect(say)
 	Events.wave_alert.connect(show_wave_alert)
+	Events.map_alert.connect(_on_map_alert)
+	add_child(alert_watch)
+	_wave_alert.gui_input.connect(func(e: InputEvent) -> void:
+		if e is InputEventMouseButton and e.pressed and e.button_index == MOUSE_BUTTON_LEFT and jump_to_alert():
+			_wave_alert.accept_event())
 	Events.game_reset.connect(_on_reset)
 	Events.game_over.connect(show_banner)
 	Events.items_received.connect(item_banner.show_items)
@@ -183,7 +203,13 @@ func setup(s: Simulation, w: World) -> void:
 	minimap.world = w
 	_zoom.world = w
 	minimap_overlay.world = w
+	minimap_overlay.sim = s
 	help_panel.sim = s
+	pause_menu.sim = s
+	pause_menu.world = w
+	pause_menu.hud = self
+	alert_watch.world = w
+	idle_button.world = w
 	grimoire.sim = s
 	help_panel.world = w
 	exile_gallery.world = w
@@ -347,6 +373,8 @@ func _build_top() -> void:
 		"Fait apparaître gratuitement un archer allié à côté de l’Ancre, sans Caserne", _spawn_archer)
 	_debug_button(_mods_give, "ModsGive", "Donner les 15 mods",
 		"Met un exemplaire de chaque mod dans le paquetage de l’Ingénieur, le reste dans le réseau des coffres", _give_mods)
+	_debug_button(_age_open, "AgeOpen", "Ouvrir l’âge suivant",
+		"Ouvre l’âge de métal en cours (cuivre, puis fer) sans miner ni vaincre son boss", _open_next_age)
 	_debug_button(_debug_toggle, "DebugToggle", "DEBUG", "Affiche les boutons de debug", func() -> void:
 		_set_debug_open(not _debug_open))
 	_set_debug_open(false)
@@ -399,13 +427,24 @@ func _debug_button(b: Button, node_name: String, label: String, tip: String, act
 
 func _debug_buttons() -> Array[Button]:
 	return [_resource_boost, _fast_construction, _crafted_item_boost, _martyre_spawn, _oeil_go,
-		_minimap_unlock, _wave_trigger, _archer_spawn, _mods_give]
+		_minimap_unlock, _wave_trigger, _archer_spawn, _mods_give, _age_open]
 
 
 func _set_debug_open(open: bool) -> void:
 	_debug_open = open
 	for b: Button in _debug_buttons():
 		b.visible = open
+
+
+## Debug : l'âge de métal en cours (sim/ages.gd) s'ouvre tout de suite, comme si son minerai était extrait et son boss vaincu.
+func _open_next_age() -> void:
+	var age := Ages.pending()
+	if age == "":
+		sim.say("Aucun âge de métal à ouvrir.", 2.0)
+		return
+	GameState.ages_open[age] = true
+	sim.say("%s · %s" % [String(Ages.AGES[age]["name"]).to_upper(), Ages.unlock_text(age)], 6.0)
+	refresh(true)
 
 
 ## Debug : l'assaut suivant part aussitôt ; le calendrier normal des vagues reste inchangé.
@@ -459,7 +498,7 @@ func _go_oeil() -> void:
 func _add_crafted_items() -> void:
 	var stock := GameState.base_inventory.duplicate(true)
 	var items := {}
-	for station: String in ["workshop", "scierie", "archerie", "forge", "creuset"]:
+	for station: String in ["workshop", "scierie", "archerie", "forge", "creuset", "etabli"]:
 		for item: String in Simulation.Recipes.RECIPES[station]:
 			items[item] = true
 	for item: String in items:
@@ -604,6 +643,11 @@ func _build_overlays() -> void:
 	_root.add_child(_banner)
 	_root.add_child(dialogue)
 	_root.add_child(item_banner)
+	_root.add_child(mod_reveal)
+	mod_reveal.portrait_rect = func() -> Rect2:
+		return _portrait.get_global_rect() if _portrait.is_visible_in_tree() else Rect2()
+	mod_reveal.busy = func() -> bool:
+		return dialogue.active() or item_banner.active() or Opening.cinematic()
 
 
 # ---------------------------------------------------------------- Mise en page
@@ -711,6 +755,8 @@ func _layout_debug() -> void:
 	# À droite du dernier bouton : en 720 de haut, une rangée de plus passerait sous le portrait.
 	_mods_give.position = Vector2(254, dbg_y + 308.0)
 	_mods_give.size = Vector2(230, 38)
+	_age_open.position = Vector2(254, dbg_y + 264.0)
+	_age_open.size = Vector2(230, 38)
 
 
 ## Debug : un exemplaire de chaque mod (data/gear_items.gd, champ « module ») au paquetage de l'Ingénieur, puis au
@@ -1161,6 +1207,7 @@ func _process(delta: float) -> void:
 	dialogue.tick(minf(delta, Simulation.MAX_DT))
 	_help_button.visible = HelpPanel.open or not Opening.cinematic()
 	_notice.position.y = _notice_top()
+	mod_reveal.anchor_y = _res_panel.position.y + _res_panel.size.y + 8.0 + _sky_card.size.y
 	# Incarnation : mode action pur, sans bandeau de commandement.
 	var free := GameState.incarnated == null
 	# Incarné : le bandeau ne revient que pour les options d'un bâtiment ouvert au clic droit.
@@ -1188,6 +1235,9 @@ func _process(delta: float) -> void:
 		_wave_alert.modulate.a = maxf(0.0, _wave_alert.modulate.a - delta / 0.6)
 	else:
 		_wave_alert.modulate.a = minf(1.0, _wave_alert.modulate.a + delta / 0.2)
+	# Clic sur l'alerte située : seulement tant qu'elle est lisible (sinon elle masquerait la minicarte).
+	_wave_alert.mouse_filter = Control.MOUSE_FILTER_STOP if _alert_pos != null and _wave_alert.modulate.a > 0.3 \
+		and GameState.incarnated == null else Control.MOUSE_FILTER_IGNORE
 	var ctx := "%s|%s|%s|%s|%s|%s|%s|%s" % [GameState.selected.map(func(u: Unit) -> int: return u.id), GameState.hud_menu,
 		GameState.hud_mode, GameState.hud_build_type, GameState.hud_building.id if GameState.hud_building else -1,
 		GameState.anchor_selected, GameState.ended, GameState.hud_enemy.get_instance_id() if GameState.hud_enemy else 0] + str(GameState.hud_grove)
@@ -1196,6 +1246,12 @@ func _process(delta: float) -> void:
 		_ctx = ctx
 		_last_update = t
 		refresh()
+	_autosave()
+	if free and not Opening.cinematic() and not GameState.ended and _bar.visible:
+		idle_button.update()
+		idle_button.position = Vector2(_screen().x - BAR_MARGIN - idle_button.size.x, _bar.position.y - 6.0 - IdleButton.H)
+	else:
+		idle_button.visible = false
 
 
 ## updateHUD : textes, ordres, portrait ; minicarte au plus toutes les 0,1 s de simulation.
@@ -1270,6 +1326,8 @@ func _apply_view(v: Dictionary) -> void:
 	var text: String = sky["day"] + " · " + sky["time"] + " · " + sky["weather"]
 	if sky["next"] != "":
 		text += " › " + sky["next"]
+	if sim.speed > 1:
+		text += "  ▸▸ ×%d" % sim.speed
 	if _sky_label.text != text or _sky_key != sky["time_icon"]:
 		var relayout_sky := _sky_label.text.length() != text.length()
 		_sky_label.text = text
@@ -1361,8 +1419,46 @@ func say(text: String, seconds := 2.0) -> void:
 	_layout_notice()
 
 
+## Sauvegarde automatique à chaque aube, quand elle est permise (pas en combat de boss, ni en cinématique).
+var _phase := ""
+
+
+func _autosave() -> void:
+	var phase := DayNight.phase(GameState.sim_time)
+	if phase == _phase:
+		return
+	var dawn := _phase != "" and phase == "aube"
+	_phase = phase
+	if dawn and SaveGame.autosave and SaveGame.cannot_save(sim) == "" and SaveGame.store(sim, self):
+		say("Sauvegarde automatique.", 2.0)
+
+
+## Alerte située : texte rouge, ping sur la minicarte, bruitage, retour à la vitesse ×1.
+func _on_map_alert(text: String, x: float, z: float) -> void:
+	_alert_pos = Vector2(x, z)
+	_alert_at = GameState.sim_time
+	minimap.ping(x, z)
+	Sfx.play("ui_refus")
+	show_wave_alert(text + ("   ⌫ y aller" if GameState.incarnated == null else ""), 5.0, false)
+
+
+## Centre la caméra sur la dernière alerte située, si elle date de moins de ALERT_JUMP s.
+func jump_to_alert() -> bool:
+	if _alert_pos == null or GameState.sim_time - _alert_at > ALERT_JUMP or world == null:
+		return false
+	world.camera.set_view(_alert_pos, world.camera.px)
+	refresh(true)
+	return true
+
+
 ## Alerte de vague, en rouge au-dessus de la minicarte ; s'efface seule au bout de `seconds`.
-func show_wave_alert(text: String, seconds := 5.0) -> void:
+func show_wave_alert(text: String, seconds := 5.0, clear_pos := true) -> void:
+	if clear_pos:
+		_alert_pos = null
+	# Une alerte fait toujours revenir le jeu à vitesse normale.
+	if sim != null and sim.speed > 1:
+		sim.speed = 1
+		refresh(true)
 	_wave_alert.text = text
 	_wave_alert_end = GameState.sim_time + seconds
 	_wave_alert.modulate.a = maxf(_wave_alert.modulate.a, 0.01)
@@ -1373,7 +1469,9 @@ func show_wave_alert(text: String, seconds := 5.0) -> void:
 func _layout_wave_alert() -> void:
 	var x := _bar.position.x + _modules[0].position.x
 	var w := maxf(_modules[0].size.x, HudStyle.text_width(_wave_alert.text, 20) + 8.0)
-	_wave_alert.position = Vector2(x, _bar.position.y - 8.0 - 30.0)
+	# Au-dessus de la galerie des Exilés et des boutons de zoom, qui occupent le bas de la colonne de la minicarte.
+	var top := minf(_zoom.position.y, _bar.position.y - ExileGallery.GAP - ExileGallery.SIZE)
+	_wave_alert.position = Vector2(x, top - 6.0 - 30.0)
 	_wave_alert.size = Vector2(w, 30.0)
 
 
@@ -1396,6 +1494,9 @@ func show_banner(won: bool) -> void:
 
 func _on_reset() -> void:
 	_res_shown = false
+	_phase = ""
+	_alert_pos = null
+	minimap.pings.clear()
 	_wave_alert_end = -1.0
 	_wave_alert.modulate.a = 0.0
 	_fast_construction.set_pressed_no_signal(GameState.fast_construction)
@@ -1467,6 +1568,15 @@ func _input(event: InputEvent) -> void:
 	if help_panel.handle_input(event):
 		get_viewport().set_input_as_handled()
 		return
+	if pause_menu.handle_input(event):
+		get_viewport().set_input_as_handled()
+		return
+	# Retour arrière : caméra sur la dernière alerte située (libre ; incarné, la caméra suit l'Exilé).
+	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_BACKSPACE \
+			and GameState.incarnated == null and not (get_viewport().gui_get_focus_owner() is LineEdit):
+		if jump_to_alert():
+			get_viewport().set_input_as_handled()
+			return
 	# Grimoire des recherches : X l'ouvre et le ferme ; ouvert, Échap le ferme.
 	var gkey: Key = (event.key_label if event.key_label != KEY_NONE else event.keycode) if event is InputEventKey else KEY_NONE
 	if event is InputEventKey and event.pressed and not event.echo and not event.ctrl_pressed and not event.alt_pressed and not event.meta_pressed \
@@ -1480,7 +1590,7 @@ func _input(event: InputEvent) -> void:
 	var map_key: Key = (event.key_label if event.key_label != KEY_NONE else event.keycode) if event is InputEventKey else KEY_NONE
 	if event is InputEventKey and event.pressed and not event.echo and map_key in [KEY_TAB, KEY_M] \
 			and not event.ctrl_pressed and not event.alt_pressed and not event.meta_pressed:
-		if not (get_viewport().gui_get_focus_owner() is LineEdit) and MinimapOverlay.available():
+		if not (get_viewport().gui_get_focus_owner() is LineEdit) and (MinimapOverlay.available() or minimap_overlay.portal_mode()):
 			minimap_overlay.toggle()
 			refresh(true)
 			get_viewport().set_input_as_handled()
@@ -1613,6 +1723,12 @@ class _PortraitButton extends BaseButton:
 
 	func _draw() -> void:
 		var r := Rect2(Vector2.ZERO, size)
+		var pressed := PressFx.down(self)
+		PressFx.begin(self, r, pressed)
+		_draw_face(r)
+		PressFx.finish(self, r, pressed)
+
+	func _draw_face(r: Rect2) -> void:
 		draw_rect(r, Color("#0b100e"))
 		var c := r.get_center()
 		for i in range(12, 0, -1):
@@ -1650,6 +1766,13 @@ class _RestartButton extends BaseButton:
 
 	func _draw() -> void:
 		modulate.a = 1.0 if is_hovered() else 0.7
+		var r := Rect2(Vector2.ZERO, size)
+		var pressed := PressFx.down(self)
+		PressFx.begin(self, r, pressed)
+		_draw_face()
+		PressFx.finish(self, r, pressed)
+
+	func _draw_face() -> void:
 		HudStyle.metal_panel(self, size)
 		var f := HudStyle.font()
 		var x := 11.0

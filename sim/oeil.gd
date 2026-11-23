@@ -236,6 +236,8 @@ static func reset_duel() -> void:
 static func spawn(sim: Simulation) -> Enemy:
 	var c := center()
 	var e := Enemy.make(KIND, c.x, c.y, 1.0)
+	# Boss de salle : hors menace et hors fin de vague, sinon il bloque les assauts dès le début (comme Gorge).
+	e.beast = true
 	e.face = 1
 	GameState.enemies.append(e)
 	GameState.oeil = e
@@ -410,6 +412,7 @@ static func _start_pattern(sim: Simulation, e: Enemy, r: Dictionary, u: Unit, no
 			var list: Array = []
 			for i in PUPILS["count"]:
 				var pe := Enemy.make(PUPIL_KIND, center().x, center().y + FOOT.y, 99.0)
+				pe.beast = true
 				pe.memo["slot"] = i
 				pe.memo["h"] = PUPILS["h0"]
 				GameState.enemies.append(pe)

@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><title>Export des bâtiments 16 bits</title>
+<style>body{margin:0;padding:16px;background:#0b120e;color:#dcd8bc;font:14px/1.4 system-ui,sans-serif}canvas{image-rendering:pixelated;background:#223}figure{display:inline-block;margin:6px}</style></head><body>
+<h1 style="font-size:18px;margin:0">Export de l’Établi d’exo (piste 1 retenue le 2026-11-22, planches/etabli-propositions.html)</h1>
+<p>Sprites 320 × 240, ancre (160, 168), échelle 1. Deux boucles par bâtiment : <code>_anim</code> (au travail) et <code>_rest</code> (au repos), 12 i/s. <code>?save=sync</code> lancé par <code>tools/batiments-16bits/export_etabli.py</code> écrit dans <code>assets/baked/</code>.</p>
+<p id="log"></p><div id="out"></div>
+<script src="assets/batiments-etabli-planches.js"></script>
+<script>
+'use strict';
+// type du jeu, art, nom du modèle retenu, durée de la boucle (s)
+const PICKS=[['etabli','da-etabli','Établi à plan lumineux',6]];
+const save=new URLSearchParams(location.search).get('save'),log=document.querySelector('#log'),out=document.querySelector('#out');
+const post=(n,b)=>{const x=new XMLHttpRequest();x.open('POST','/out/'+n,false);x.send(b);if(x.status>=300)throw new Error(n+' '+x.status)};
+try{for(const[type,art,name,L]of PICKS){const i=BAT.ITEMS.findIndex(it=>it.name===name);if(i<0)throw new Error('modèle introuvable : '+name);
+  BAT.setWork(1);const w=BAT.exportSprite(i,Math.round(L*12),12);BAT.setWork(0);const r=BAT.exportSprite(i,Math.round(L*12),12);BAT.setWork(1);
+  const meta={...w.meta,top:Math.min(w.meta.top,r.meta.top),bottom:Math.max(w.meta.bottom,r.meta.bottom),rest:r.meta.anim,pick:name};
+  for(const[c,cap]of[[w.base,name+' · travail'],[r.base,'repos'],[w.portrait,'portrait']]){const f=document.createElement('figure');f.append(c,document.createElement('br'),cap);out.append(f)}
+  if(save){post(art+'_anim.png',w.sheet.toDataURL('image/png'));post(art+'_rest.png',r.sheet.toDataURL('image/png'));post(art+'_base.png',w.base.toDataURL('image/png'));post('bld-'+type+'.png',w.portrait.toDataURL('image/png'));post('meta-'+art+'.json',JSON.stringify(meta))}}
+ log.textContent=save?'Écrit : Établi d’exo (travail, repos, base, portrait, manifeste).':'Aperçu seulement.'}catch(e){log.textContent='Erreur : '+e.message;if(save)post('erreur.txt',String(e&&e.stack||e));throw e}
+</script></body></html>

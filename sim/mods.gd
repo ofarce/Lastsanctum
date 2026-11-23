@@ -39,6 +39,30 @@ const SACK_REACH := 6.0
 const ECHO_LEAD := 15.0
 
 
+## Analyse (2026-11-22, planches/intro-capsule-planche.html) : un Exilé vivant porte le mod, les ennemis à l'écran
+## affichent leur barre de PV (entities/unit/unit_view.gd). Sans lui, ils n'en ont pas. Lu une fois par image.
+static var _analysis_frame := -1
+static var _analysis := false
+
+
+static func analysis() -> bool:
+	var f := Engine.get_process_frames()
+	if f != _analysis_frame:
+		_analysis_frame = f
+		_analysis = GameState.units.any(func(u: Unit) -> bool: return u.alive() and Gear.has_module(u, "analyse"))
+	return _analysis
+
+
+## Rendu porté d'Analyse (planches/etabli-propositions.html, piste B) : la loupe se lève devant l'œil tant qu'un ennemi
+## vivant est à ANALYSIS_SEEN unités ou moins du porteur (environ la moitié de l'écran au zoom de jeu).
+const ANALYSIS_SEEN := 18.0
+
+
+static func analysis_seen(u: Unit) -> bool:
+	var r2 := ANALYSIS_SEEN * ANALYSIS_SEEN
+	return GameState.enemies.any(func(e: Enemy) -> bool: return e.alive() and not e.hidden and e.pos().distance_squared_to(u.pos()) <= r2)
+
+
 static func worn(u: Unit, effect: String) -> bool:
 	return u != null and not u.is_enemy() and u.alive() and Gear.has_module(u, effect)
 
@@ -117,14 +141,13 @@ static func pierce(u: Unit) -> int:
 	return 1 if worn(u, "lens") else 0
 
 
-## Munition du tir qui part (Barillet double : une fois sur deux, la munition d'avant le dernier changement, si on
-## peut la payer) ; `base` : mana de chaque type de l'arme.
-static func shot_ammo(u: Unit, base: float) -> String:
+## Munition du tir qui part (Barillet double : une fois sur deux, la munition d'avant le dernier changement).
+static func shot_ammo(u: Unit) -> String:
 	var cur := Ammo.current()
 	if not worn(u, "barrel") or not Ammo.unlocked() or GameState.ammo_prev == cur or not Ammo.AMMO.has(GameState.ammo_prev):
 		return cur
 	GameState.barrel_flip = not GameState.barrel_flip
-	if not GameState.barrel_flip and Ammo.can_pay(GameState.ammo_prev, base):
+	if not GameState.barrel_flip:
 		return GameState.ammo_prev
 	return cur
 
@@ -162,16 +185,26 @@ static func recall_ready(u: Unit) -> bool:
 ## Ancre de rappel : l'Exilé revient à la sortie de la capsule (hors combat). Vrai s'il est parti.
 static func recall(sim: Simulation, u: Unit) -> bool:
 	if not recall_ready(u) or u.hidden or Simulation.in_combat(u):
-		if worn(u, "anchor") and not u.hidden and Simulation.in_combat(u):
-			sim.say("Ancre de rappel · impossible en combat.", 2.5)
+		if worn(u, "anchor") and not u.hidden:
+			if not recall_ready(u):
+				sim.say("Ancre de rappel · prête dans %d s." % ceili(at(u, "recall_ready") - GameState.sim_time), 2.5)
+			elif Simulation.in_combat(u):
+				sim.say("Ancre de rappel · impossible en combat.", 2.5)
 		return false
 	var now := GameState.sim_time
-	sim.cancel_work(u)
-	if not u.carrying.is_empty():
-		sim.production._drop(u)
 	u.mods["recall"] = now
 	u.mods["recall_from"] = u.pos()
 	u.mods["recall_ready"] = now + RECALL_CD
+	warp_home(sim, u)
+	return true
+
+
+## Retour à la sortie de la capsule (Ancre de rappel, rappel d'assaut de PortalNet) : travail lâché, charge posée,
+## éclair au départ et à l'arrivée.
+static func warp_home(sim: Simulation, u: Unit) -> void:
+	sim.cancel_work(u)
+	if not u.carrying.is_empty():
+		sim.production._drop(u)
 	Combat.zone(u.x, u.z, 1.8, Color("#8a7ad0"))
 	Sfx.at("portail", u.x, u.z)
 	u.x = Capsule.EXIT.x
@@ -180,7 +213,6 @@ static func recall(sim: Simulation, u: Unit) -> bool:
 	u.tz = u.z
 	u.force_move = false
 	Combat.zone(u.x, u.z, 1.8, Color("#8a7ad0"))
-	return true
 
 
 # ---------------------------------------------------------------- Gestion

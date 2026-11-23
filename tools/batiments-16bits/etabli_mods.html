@@ -1,0 +1,49 @@
+<section id="analyse"><h2>Mod Analyse · icône et rendu porté</h2>
+<p class="mut">Aujourd’hui, Analyse emprunte l’icône de l’Iris de la Matrice. Trois motifs au style A « Cartouche » des autres mods (planche <b>mods-icones-propositions.html</b>) : plaque octogonale teintée, bord gris des mods normaux (le jeu le teinte à la rareté), motif de 32 × 32. Chaque piste dit aussi ce qu’on verrait sur l’Ingénieur. Indique la lettre retenue dans tes remarques en bas de page (« Analyse : B »).</p>
+<div class="grid" id="mods-grid" style="grid-template-columns:repeat(auto-fill,minmax(260px,1fr))"></div>
+</section>
+<script>
+'use strict';
+(()=>{
+ const CYAN=['#06303a','#12596b','#1f9fb8','#5ce8ff','#c8fbff'],ARG=['#202832','#465461','#6d7b88','#b5c1ca','#eff4f5'],
+  ROUGE=['#2a0808','#6a1414','#a82a2a','#e05a4a','#ffb0a0'],VERT=['#0a2a10','#1a6a2a','#3ab040','#9af070','#f0ffc0'],METAL=['#14121a','#2a2430','#4a4454','#7a7488','#c8c4d4'];
+ let X;
+ const P=(x,y,c,a=1)=>{if(c==null||a<=0)return;x=Math.round(x);y=Math.round(y);if(x<0||y<0||x>31||y>31)return;X.globalAlpha=Math.min(1,a);X.fillStyle=c;X.fillRect(x,y,1,1);X.globalAlpha=1};
+ const R=(x,y,w,h,c)=>{X.fillStyle=c;X.fillRect(x,y,w,h)};
+ function LINE(x0,y0,x1,y1,c,a=1){x0=Math.round(x0);y0=Math.round(y0);x1=Math.round(x1);y1=Math.round(y1);const dx=Math.abs(x1-x0),dy=-Math.abs(y1-y0),sx=x0<x1?1:-1,sy=y0<y1?1:-1;let e=dx+dy;for(let k=0;k<80;k++){P(x0,y0,c,a);if(x0===x1&&y0===y1)break;const e2=2*e;if(e2>=dy){e+=dy;x0+=sx}if(e2<=dx){e+=dx;y0+=sy}}}
+ function ARC(cx,cy,r,a0,a1,c,a=1){const n=Math.max(6,Math.round(r*(a1-a0)*1.3)),s=new Set();for(let i=0;i<=n;i++){const t=a0+(a1-a0)*i/n,x=Math.round(cx+Math.cos(t)*r),y=Math.round(cy+Math.sin(t)*r),k=x*99+y;if(s.has(k))continue;s.add(k);P(x,y,c,a)}}
+ function SHAPE(inside,pal,cx,cy,opt={}){const has=(x,y)=>x>=0&&y>=0&&x<32&&y<32&&inside(x+.5,y+.5);for(let y=0;y<32;y++)for(let x=0;x<32;x++){if(!has(x,y))continue;const edge=!has(x-1,y)||!has(x+1,y)||!has(x,y-1)||!has(x,y+1);
+  if(edge&&!opt.noEdge){P(x,y,pal[0]);continue}const s=(x-cx)*.7+(y-cy);P(x,y,s<-4?pal[4]:s<-1.5?pal[3]:s<2.5?pal[2]:pal[1])}}
+ const disc=(cx,cy,r)=>(x,y)=>(x-cx)**2+(y-cy)**2<=r*r,ell=(cx,cy,rx,ry)=>(x,y)=>((x-cx)/rx)**2+((y-cy)/ry)**2<=1;
+ // barre de PV miniature : w pixels, part pleine k
+ function hpBar(x,y,w,k,full=ROUGE){R(x-1,y-1,w+2,4,'#020608');R(x,y,w,2,'#2a1512');R(x,y,Math.round(w*k),2,full[3]);R(x,y,Math.round(w*k),1,full[4])}
+ const PISTES=[
+  {k:'A',name:'Visière-lentille',tint:CYAN,desc:'Une visière d’argent et sa grande lentille cyan ; dans la lentille, la barre de PV d’un ennemi, trois quarts pleine.',
+   worn:'Porté : la visière en travers de l’œil avant, lentille cyan ; elle s’allume et balaie quand un ennemi entre à l’écran.',
+   draw(){SHAPE((x,y)=>y>=10&&y<=14&&x>=3&&x<=28,ARG,10,11);R(4,10,24,1,ARG[4]);SHAPE(disc(19,17,8),CYAN,17,14);SHAPE(disc(19,17,6),['#0a2a33','#0a2a33','#12596b','#1f9fb8','#5ce8ff'],17,14,{noEdge:true});
+    hpBar(14,16,10,.72);P(15,12,'#ffffff');P(16,12,CYAN[4]);ARC(19,17,10,-2.4,-1.4,CYAN[3],.8);ARC(19,17,12.5,-2.2,-1.6,CYAN[2],.6)}},
+  {k:'B',name:'Barre sous la loupe',tint:CYAN,desc:'La barre de PV d’un ennemi, en grand, sous une loupe tyrienne cerclée d’argent. Le motif dit l’effet sans détour.',
+   worn:'Porté : une petite loupe cerclée d’argent pendue à la ceinture, qui se lève devant l’œil quand un ennemi entre à l’écran.',
+   draw(){hpBar(3,22,24,.62);for(let i=0;i<4;i++)P(4+i*6,25,ROUGE[1]);SHAPE(disc(13,12,8),ARG,11,9);SHAPE(disc(13,12,6),['#0a2a33','#0a2a33','#12596b','#1f9fb8','#5ce8ff'],11,9,{noEdge:true});
+    LINE(19,18,25,24,ARG[2]);LINE(20,18,26,24,ARG[1]);LINE(19,19,25,25,ARG[3]);P(10,8,'#ffffff');P(11,8,CYAN[4]);P(10,9,CYAN[4]);
+    for(let x=9;x<17;x++)P(x,13,CYAN[3],.8)}},
+  {k:'C',name:'Œil-réticule',tint:METAL,desc:'Un œil tyrien cyan pris dans un réticule de visée, et trois points de PV sous la pupille. Plus abstrait, dans la famille de l’Iris.',
+   worn:'Porté : un réticule cyan qui flotte devant le visage ; les ennemis à l’écran gagnent leur barre de PV quand il clignote.',
+   draw(){SHAPE(ell(16,14,10,6),['#0a2a33','#12596b','#1f9fb8','#5ce8ff','#c8fbff'],14,12);SHAPE(disc(16,14,3.2),['#06303a','#06303a','#0a2a33','#12596b','#1f9fb8'],16,14,{noEdge:true});P(15,13,'#ffffff');
+    for(const[a,b,c,d]of[[2,14,6,14],[26,14,30,14],[16,3,16,7],[16,21,16,23]])LINE(a,b,c,d,CYAN[3]);ARC(16,14,12,-.4,.4,CYAN[2],.8);ARC(16,14,12,Math.PI-.4,Math.PI+.4,CYAN[2],.8);
+    for(let k=0;k<3;k++){R(10+k*5,25,4,3,'#020608');R(11+k*5,26,2,1,k<2?ROUGE[3]:ROUGE[1])}}},
+ ];
+ const OCT=[[5,1],[26,1],[30,5],[30,26],[26,30],[5,30],[1,26],[1,5]],EDGE='#7a8488';
+ function icon(p){const c=document.createElement('canvas');c.width=c.height=32;const g=c.getContext('2d');X=g;g.fillStyle=p.tint[0];g.beginPath();OCT.forEach(([x,y],i)=>i?g.lineTo(x,y):g.moveTo(x,y));g.closePath();g.fill();
+  for(let i=0;i<8;i++){const a=OCT[i],b=OCT[(i+1)%8];LINE(a[0],a[1],b[0]-(b[0]>a[0]?1:0),b[1]-(b[1]>a[1]?1:0),EDGE)}LINE(6,2,25,2,'#b8c0c4');LINE(2,6,2,25,'#b8c0c4');p.draw();return c}
+ const grid=document.getElementById('mods-grid');
+ for(const p of PISTES){const f=document.createElement('figure');const big=document.createElement('canvas');big.width=big.height=32*6;
+  const slot=document.createElement('canvas');slot.width=72;slot.height=72;const ic=icon(p);
+  const g=big.getContext('2d');g.imageSmoothingEnabled=false;g.drawImage(ic,0,0,192,192);
+  const s=slot.getContext('2d');s.fillStyle='#0a2a33';s.fillRect(0,0,72,72);s.strokeStyle='#5ce8ff';s.strokeRect(.5,.5,71,71);s.imageSmoothingEnabled=false;s.drawImage(ic,0,0,32,32,7,7,58,58);
+  for(const cv of[big,slot])Object.assign(cv.style,{imageRendering:'pixelated',display:'inline-block',width:cv.width+'px',height:cv.height+'px',maxWidth:'100%'});
+  slot.style.margin='0 0 0 12px';slot.style.verticalAlign='bottom';
+  f.innerHTML=`<div style="padding:12px;display:flex;align-items:flex-end;flex-wrap:wrap"></div><figcaption><h3>${p.k} · ${p.name}</h3><p>${p.desc}</p><p><b>${p.worn}</b></p><p class="mut">À droite : la case du paquetage (×1,8), taille réelle en jeu.</p></figcaption>`;
+  f.firstChild.append(big,slot);grid.append(f)}
+})();
+</script>

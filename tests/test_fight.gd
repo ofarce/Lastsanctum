@@ -6,7 +6,7 @@ extends "res://tests/fight_case.gd"
 ## Écarts voulus après 73b410f, le reste reste identique : D13, portées (archer 20, ramenée de 112 avec les postes de tir) ; D15, lance-flammes
 ## à portée 12, tir continu, sans sillon de feu (statut réécrit).
 const D13 := {"flammes": {"seek": 36.0, "reach": 24.0, "status": "Garde l’Ancre · flammes en continu ; explose à sa mort"},
-	"archer": {"seek": 26.0, "reach": 20.0},
+	"archer": {"seek": 46.0, "reach": 40.0},  # portée 40 (réglages du 2026-11-22)
 	"engineer": {"seek": 6.0, "reach": 1.9, "dmg": 5, "ranged": false, "status": "Prêt à recevoir vos ordres · corps à corps"}}
 const ItemStorage := preload("res://sim/item_storage.gd")
 

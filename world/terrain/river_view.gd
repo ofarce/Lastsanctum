@@ -25,6 +25,47 @@ static var _cache := {}
 
 var river: River
 var _mats: Array[ShaderMaterial] = []
+## Bandes calculées en avance sur un fil de travail (prepare) : graine → [tâche, bandes d'images].
+static var _pending := {}
+
+
+## Lance le calcul des images de la rivière sur un fil de travail (2026-11-22, chargement) : elles ne font que
+## lire la rivière ; setup attend le résultat et en fait les textures. Mêmes images qu'un calcul sur place.
+static func prepare(r: River) -> void:
+	if r == null or _cache.has(r.seed) or _pending.has(r.seed):
+		return
+	var helper := RiverView.new()
+	helper.river = r
+	# Une tâche par bande, chacune écrit dans son propre tableau : rien n'est partagé en écriture.
+	var bands := helper._bands()
+	var out := []
+	for n in bands.size():
+		out.append([])
+	var task := WorkerThreadPool.add_group_task(func(n: int) -> void:
+		var b: Array = bands[n]
+		(out[n] as Array).append_array([b[0], b[1]] + helper._segment_images(b[0], b[1], b[2], b[3])), bands.size(), -1, false, "images de la rivière")
+	_pending[r.seed] = [[task, out], helper]
+
+
+## Bandes [px0, py0, largeur, hauteur] (pixels) de la rivière, d'ouest en est.
+func _bands() -> Array:
+	var zr := river.z_range()
+	var py0 := floori(zr.x * PX)
+	var h := ceili(zr.y * PX) - py0
+	var out := []
+	var x := CaveShape.WORLD_X0
+	while x < CaveShape.WORLD_X1:
+		out.append([floori(x * PX), py0, mini(SEG * PX, floori((CaveShape.WORLD_X1 - x) * PX)), h])
+		x += SEG
+	return out
+
+
+## [px0, py0, eau, berges] (Image) de toutes les bandes, calculées sur place.
+func _segment_images_all() -> Array:
+	var out := []
+	for b: Array in _bands():
+		out.append([b[0], b[1]] + _segment_images(b[0], b[1], b[2], b[3]))
+	return out
 
 
 func setup(r: River) -> void:
@@ -40,11 +81,17 @@ func setup(r: River) -> void:
 	# plusieurs secondes), puis reprises à chaque nouvelle partie de même graine (tests, Recommencer).
 	var segs: Array = _cache.get(river.seed, [])
 	if segs.is_empty():
-		var x := CaveShape.WORLD_X0
-		while x < CaveShape.WORLD_X1:
-			var px0 := floori(x * PX)
-			segs.append([px0, py0] + _segment_textures(px0, py0, mini(SEG * PX, floori((CaveShape.WORLD_X1 - x) * PX)), h))
-			x += SEG
+		var images: Array = []
+		if _pending.has(river.seed):
+			var p: Array = _pending[river.seed]
+			WorkerThreadPool.wait_for_group_task_completion(p[0][0])
+			_pending.erase(river.seed)
+			images = p[0][1]
+			(p[1] as Node).free()
+		else:
+			images = _segment_images_all()
+		for s: Array in images:
+			segs.append([s[0], s[1], ImageTexture.create_from_image(s[2]), ImageTexture.create_from_image(s[3])])
 		if _cache.size() >= CACHE_SIZE:
 			_cache.erase(_cache.keys()[0])
 		_cache[river.seed] = segs
@@ -58,8 +105,8 @@ func set_flood(units: float) -> void:
 		m.set_shader_parameter("flood", clampf(units / FLOOD_RANGE, 0.0, 1.0))
 
 
-## Textures [eau, berges] d'une bande.
-func _segment_textures(px0: int, py0: int, w: int, h: int) -> Array:
+## Images [eau, berges] d'une bande (sans texture : calculables sur un fil de travail).
+func _segment_images(px0: int, py0: int, w: int, h: int) -> Array:
 	var water := PackedByteArray()
 	water.resize(w * h * 4)
 	var top := Image.create(w, h, false, Image.FORMAT_RGBA8)
@@ -97,7 +144,7 @@ func _segment_textures(px0: int, py0: int, w: int, h: int) -> Array:
 			if col.a > 0.0:
 				top.set_pixel(i, j, col)
 	var data := Image.create_from_data(w, h, false, Image.FORMAT_RGBA8, water)
-	return [ImageTexture.create_from_image(data), ImageTexture.create_from_image(top)]
+	return [data, top]
 
 
 func _add_segment(px0: int, py0: int, water_tex: Texture2D, top_tex: Texture2D) -> void:

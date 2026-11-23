@@ -39,6 +39,9 @@ func _can(step: int) -> bool:
 
 
 func _gui_input(event: InputEvent) -> void:
+	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
+		var step := _pick(event.position)
+		PressFx.track(self, event, step if step != 0 and _can(step) else null)
 	if event is InputEventMouseMotion:
 		_hover = _pick(event.position)
 		queue_redraw()
@@ -66,6 +69,10 @@ func _draw() -> void:
 		var r := Rect2(0.0 if step == 1 else BTN + GAP, 0.0, BTN, BTN)
 		var ok := _can(step)
 		draw_rect(Rect2(r.position + Vector2(2, 3), r.size), Color(0, 0, 0, 0.35))
+		# Enfoncé (PressFx) : la face descend sur son ombre portée.
+		var pressed: bool = PressFx.down(self) and PressFx.pressed_key(self) is int and PressFx.pressed_key(self) == step
+		if pressed:
+			draw_set_transform(Vector2(1, PressFx.DEPTH))
 		draw_rect(r, SnesBanner.EDGE)
 		draw_rect(r.grow(-1.0), SnesBanner.RIM if ok else SnesBanner.RIM_LO)
 		draw_rect(r.grow(-3.0), SnesBanner.DEEP.lerp(SnesBanner.SKY, 0.6 if ok and _hover == step else 0.25))
@@ -74,3 +81,6 @@ func _draw() -> void:
 		draw_rect(Rect2(c.x - 6.0, c.y - 1.5, 12.0, 3.0), ink)
 		if step == 1:
 			draw_rect(Rect2(c.x - 1.5, c.y - 6.0, 3.0, 12.0), ink)
+		if pressed:
+			PressFx.shade(self, r)
+			draw_set_transform(Vector2.ZERO)

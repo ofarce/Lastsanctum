@@ -20,20 +20,22 @@ func test_every_piece_has_layers_for_every_animation() -> void:
 	check_eq(EngineerAim.frames_bare.size() if not EngineerAim.frames_bare.is_empty() else 4, 4, "4 lignes de visée")
 
 
+## L'Exilé n'équipe plus que des mods (2026-11-21, six cases Module 1 à 6) : le reste est refusé.
 func test_equip_swap_and_unequip() -> void:
 	game()
 	var u := engineer()
 	u.unarmored = true
-	u.inventory.assign([{"item": "gear_iron", "quantity": 1}, {"item": "gear_mail", "quantity": 1}, {"item": "gear_helm", "quantity": 1}])
-	check(not Gear.equip(u, u.inventory, 2, "Torse"), "casque refusé sur le torse")
-	check(Gear.equip(u, u.inventory, 0, "Torse"), "plastron équipé")
-	check_eq(u.equipment.get("Torse", ""), "gear_iron", "porté")
+	u.inventory.assign([{"item": "module_veil", "quantity": 1}, {"item": "module_iris", "quantity": 1}, {"item": "gear_iron", "quantity": 1}])
+	check(not Gear.equip(u, u.inventory, 2, "Torse"), "plastron refusé à l'Exilé")
+	check(not Gear.equip(u, u.inventory, 2, "Module 1"), "plastron refusé dans une case de mod")
+	check(Gear.equip(u, u.inventory, 0, "Module 1"), "Voile équipé")
+	check_eq(u.equipment.get("Module 1", ""), "module_veil", "porté")
 	check(u.inventory[0].is_empty(), "case vidée")
-	check(Gear.equip(u, u.inventory, 1, "Torse"), "cotte à la place")
-	check_eq(u.inventory[1].get("item", ""), "gear_iron", "le plastron revient dans la case")
-	check(Gear.unequip(u, "Torse", u.inventory, 0, u.inventory_capacity), "retirée")
-	check_eq(u.inventory[0].get("item", ""), "gear_mail", "dans la case visée")
-	check(not u.equipment.has("Torse"), "emplacement vide")
+	check(Gear.equip(u, u.inventory, 1, "Module 1"), "Iris à la place")
+	check_eq(u.inventory[1].get("item", ""), "module_veil", "le Voile revient dans la case")
+	check(Gear.unequip(u, "Module 1", u.inventory, 0, u.inventory_capacity), "retiré")
+	check_eq(u.inventory[0].get("item", ""), "module_iris", "dans la case visée")
+	check(not u.equipment.has("Module 1"), "emplacement vide")
 
 
 func test_layers_follow_body_frame_in_stack_order() -> void:
@@ -58,10 +60,10 @@ func test_inventory_drag_to_slot() -> void:
 	game()
 	var u := engineer()
 	u.unarmored = true
-	u.inventory.assign([{"item": "gear_cape", "quantity": 1}])
+	u.inventory.assign([{"item": "module_iris", "quantity": 1}])
 	var inv := Inventory.new()
-	inv._drop({"items": u.inventory, "index": 0, "capacity": 10}, {"equip": "Dos"})
-	check_eq(u.equipment.get("Dos", ""), "gear_cape", "cape glissée sur le dos")
-	inv._drop({"equip": "Dos"}, {"items": u.inventory, "index": 3, "capacity": 10})
-	check_eq(u.inventory[3].get("item", ""), "gear_cape", "rendue au paquetage")
+	inv._drop({"items": u.inventory, "index": 0, "capacity": 10}, {"equip": "Module 2"})
+	check_eq(u.equipment.get("Module 2", ""), "module_iris", "mod glissé dans sa case")
+	inv._drop({"equip": "Module 2"}, {"items": u.inventory, "index": 3, "capacity": 10})
+	check_eq(u.inventory[3].get("item", ""), "module_iris", "rendu au paquetage")
 	inv.free()

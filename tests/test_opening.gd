@@ -27,25 +27,41 @@ func _engineer() -> Unit:
 	return null
 
 
-## Suite simplifiée : le réveil de l'Ancre lance le trait d'énergie, puis la capsule s'allume.
-func test_anchor_links_capsule() -> void:
+## Intro de la capsule (planches/intro-capsule-planche.html) : capsule éteinte, l'Ancre s'allume et se recharge
+## seule, le trait part vers la capsule qui s'allume ; l'Ingénieur peut alors sortir.
+func test_capsule_intro() -> void:
 	if Opening.ANCHOR_SEQUENCE:
 		return
 	var sim := _game()
-	_run(sim, Opening.ARR_END + 0.1)
-	check_eq(Opening.stage(), "day1")
-	check(not Capsule.powered(), "capsule éteinte avant l'Ancre")
-	GameState.orb_active = true
-	GameState.orb_finished_at = GameState.sim_time
-	_run(sim, 0.2)
-	check_eq(Opening.stage(), "link", "le trait part vers la capsule")
-	check(not Opening.cinematic(), "pas de cinématique")
+	var eng := _engineer()
+	check_eq(Opening.stage(), "boot", "la partie commence dans la capsule")
+	check(GameState.in_capsule and eng.hidden and eng.unarmored, "l'Ingénieur est dans la capsule, sans armure")
+	check(Opening.cinematic(), "cinématique")
+	check(not GameState.orb_active and not Capsule.powered() and not Capsule.chest_active(), "Ancre, capsule et Coffre éteints")
+	check(not Capsule.toggle(sim), "capsule éteinte : on ne sort pas")
+	_run(sim, 0.8)
+	check_eq(Opening.card()[0], "Jour 1", "carton « Jour 1 »")
+	_run(sim, Opening.BOOT_WAKE - 0.8 + 0.1)
+	check_eq(Opening.stage(), "recharge", "l'Ancre s'allume seule")
+	check(GameState.orb_active and Capsule.chest_active(), "Ancre allumée : le Coffre se rallume")
+	check(GameState.core_hp >= 1.0 and GameState.core_hp < 10.0, "recharge depuis presque rien (%.1f)" % GameState.core_hp)
+	check(not GameState.ended, "pas de défaite à l'allumage")
+	_run(sim, Opening.RECHARGE_LEN * 0.5)
+	check_near(Opening.recharge(), 0.5, 0.05, "jauge à mi-course")
+	check_near(GameState.core_hp, Simulation.CORE_MAX * 0.5, 6.0, "PV de l'Ancre suivent la jauge")
+	_run(sim, Opening.RECHARGE_LEN * 0.5 + 0.1)
+	check_eq(Opening.stage(), "link", "jauge pleine : le trait part vers la capsule")
+	check_eq(GameState.core_hp, Simulation.CORE_MAX, "Ancre pleine")
+	check(Opening.cinematic() and not Capsule.powered(), "capsule encore éteinte pendant le trait")
 	check(GameState.overload_at == INF and not GameState.spark_pending, "ni étincelle ni surcharge")
 	_run(sim, Opening.LINK_LEN + 0.2)
 	check_eq(Opening.stage(), "awake")
-	check(Capsule.powered(), "capsule allumée")
+	check(Capsule.powered() and not Opening.cinematic(), "capsule allumée, commandes rendues")
 	check(GameState.door_closed and not GameState.shield_up, "ni bouclier, ni porte")
 	check_eq(GameState.next_wave, DayNight.first_wave(0.0), "premier assaut à 9 h du jour 2")
+	check(Capsule.toggle(sim), "E : Sortir")
+	check(not GameState.in_capsule and not eng.hidden and GameState.incarnated == eng, "dehors et incarné")
+	check(not eng.equipment.has("Main droite"), "sans arme : elle est dans le Coffre")
 
 
 ## Ancienne suite (Opening.ANCHOR_SEQUENCE), gardée de côté.
