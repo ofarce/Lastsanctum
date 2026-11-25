@@ -119,22 +119,6 @@ static func can_enter() -> bool:
 		and eng.pos().distance_to(POS) <= RANGE
 
 
-## Soldats d'essai entrant par la porte sud, une fois l'Arbalestrie reçue au Coffre (de quoi tester le tir).
-const INTRUDERS := ["scout", "scout", "scout", "scout"]
-const INTRUDER_AT := Vector2(0.0, -86.0)  # juste au sud de la porte (cases z −96…−92)
-
-
-static func first_intruders(sim: Simulation) -> void:
-	if sim.world == null:
-		return
-	if GameState.door_closed:
-		Opening.set_door(sim.state(), false)
-		Sfx.play("porte_barree")  # la porte sud est forcée de l'extérieur
-	for i in INTRUDERS.size():
-		var e := Enemy.make(INTRUDERS[i], INTRUDER_AT.x + (i - 1.5) * 2.0, INTRUDER_AT.y + (i % 2) * 2.0, 0.5 + i * 0.3)
-		GameState.enemies.append(e)
-
-
 ## Appui sur E : entrer ou sortir de la capsule, ouvrir le Coffre Antique, ou réveiller l'Ancre (partie sans
 ## ouverture). Vrai si l'appui a servi.
 static func toggle(sim: Simulation) -> bool:

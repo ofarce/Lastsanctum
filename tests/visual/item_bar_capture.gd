@@ -47,11 +47,12 @@ func _ready() -> void:
 	eng.unarmored = true
 	eng.equipment["Main droite"] = "cannon"
 	GameState.ammo = "indra"
+	# Étagère des mods (piste A) : 6 mods portés, Ancre en recharge, Culasse active.
+	var mods := ["module_veil", "module_iris", "module_drill", "module_anchor", "module_frost", "module_wisp"]
+	for i in mods.size():
+		eng.equipment["Module %d" % (i + 1)] = mods[i]
+	eng.mods["recall_ready"] = GameState.sim_time + 54.0
+	GameState.ammo_changed_at = GameState.sim_time
 	await _shot("4_incarne_complet")
-	var bar: Control = null
-	for n in main.find_children("*", "Control", true, false):
-		if n.get_script() == preload("res://ui/hud/item_bar.gd"):
-			bar = n
-	bar._hover = 2
-	await _shot("5_survol_balles")
+	# Barre d'objets retirée le 2026-11-24 : plus de capture de survol.
 	get_tree().quit()

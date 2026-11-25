@@ -1,0 +1,413 @@
+%%HEAD%%<style>
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
+.card{background:#07080c;border:1px solid var(--line);padding:18px 12px 14px;display:flex;flex-direction:column;align-items:center;gap:6px;min-width:0}
+.card .nm{display:flex;align-items:center;gap:10px;width:100%;justify-content:center;font-family:var(--disp);font-size:1.25rem;letter-spacing:.22em;color:#ece5d2;text-align:center}
+.card .nm::before,.card .nm::after{content:"";flex:1 1 0;max-width:46px;height:1px;background:var(--q)}
+.card .sub{font-family:var(--mono);font-size:12px;color:var(--mute);text-align:center}
+.card .gl{display:grid;grid-template-columns:repeat(7,5px);gap:1px;margin-top:6px}
+.card .gl i{width:5px;height:5px;background:transparent}
+.card .gl i.on{background:var(--q)}
+.card .hex{font-family:var(--mono);font-size:11px;color:var(--mute)}
+.q ul{margin:.3rem 0 0;padding-left:1.2rem;max-width:76ch}
+.q li{margin:.25rem 0}
+.lore{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;max-width:1080px}
+.lore div{border-top:1px solid var(--line);padding-top:8px;min-width:0}
+.lore b{font-family:var(--disp);font-size:1.15rem;font-weight:700;color:var(--acc);display:block}
+.lore p{margin:.25rem 0 0;color:var(--mute)}
+.anim{max-width:860px;overflow-x:auto}
+.anim table{border-collapse:collapse;width:100%;font-size:13px}
+.anim th,.anim td{text-align:left;padding:5px 10px 5px 0;border-bottom:1px solid var(--line);vertical-align:top}
+.anim th{font-family:var(--mono);font-size:12px;color:var(--mute);font-weight:400}
+.anim td.k{font-family:var(--mono);font-size:12px;white-space:nowrap}
+.anim .new{color:var(--acc)}
+</style>
+<main>
+<header>
+ <h1>Les Forges mortes · couloirs, salles et repères</h1>
+ <p class="lead">Le biome 3 est la grande fonderie des Tyriens, creusée dans le basalte au-dessus d'une poche de lave. Les fondeurs y coulaient le fer de toute la montagne. Quand la Bête est montée, ils sont partis d'un coup, en laissant les fours chargés et les lingotières pleines. Depuis, personne n'a tenu les feux : le fer a figé dans les rigoles, la rouille a tout pris, et la lave, que plus rien ne canalise, a rouvert la roche. Chaque vignette est dessinée à la taille des pixels du jeu, sur le sol et la roche du biome 3.</p>
+</header>
+
+<div class="lore">
+ <div><b>La fonderie de Tyr</b><p>Fours de brique réfractaire, soufflets de cuir, rigoles de coulée, lingotières de basalte, palans sous la voûte. C'est la couche la plus ancienne, celle du travail.</p></div>
+ <div><b>Le départ des fondeurs</b><p>Outils posés là où on les a lâchés, lingots figés dans leur moule, ferraille et tas de scories. Tout a rouillé sur place.</p></div>
+ <div><b>La lave revenue</b><p>Fissures qui rougeoient dans les parois et le sol, braises qui montent, vieilles coulées refroidies qui ont noyé le bas des halles.</p></div>
+ <div><b>Ce qui y vit encore</b><p>Les Scories vives dorment dans les tas tièdes, les Broutefers rongent les filons, et des esprits d'Aether sont enchaînés aux enclumes : quelqu'un a forgé ici après les Tyriens.</p></div>
+</div>
+
+<div class="reco">
+ <h2>Ma recommandation</h2>
+ <p>Pour les couloirs, <b>F1 Halle des fours</b>, <b>F5 Scories et rouille</b> et <b>F6 Fissures de lave</b> partout : la forge, l'abandon et la lave. <b>F2 Rigoles de coulée</b> et <b>F3 Lingotières</b> près des salles à thème, là où l'on travaillait. <b>F4 Palans et chaînes</b> surtout vers la chapelle de la Martyre du Fer.</p>
+ <p>Pour la lumière, <b>L2 Lanternes de fondeur</b>, fixes sur leur potence : elles gardent le rythme des torches du Temple, et seule leur flamme bouge, avec le mode déjà en jeu. Les braises des fours de F1 donnent en plus des taches rouges basses.</p>
+ <p>Pour les salles, <b>R1 Salle de trempe</b>, <b>R3 Forge aux esprits enchaînés</b> (le lieu de la quête « Les chaînes d'Aether ») et <b>R4 Magasin de la fonderie</b>. Pour les arènes, <b>A1</b> à <b>A4</b>. Pour les repères, <b>Q1 Stèle marquée au fer</b>.</p>
+ <p>Répondez par les numéros, par exemple « F1, F5, F6, L2, R1, R3, A1–A4, Q1 ».</p>
+</div>
+
+<section class="m q" style="grid-template-columns:minmax(0,1fr)">
+ <div class="txt"><h2>Animations en jeu</h2><p>Au biome 2, les gouttes, la fuite, l'aiguille et le balancement des fanaux sont restés figés en jeu : l'export ne prend qu'une image par pièce. Cette fois, chaque animation de la planche a sa façon de passer en jeu, et je la compte dans l'intégration. Trois modes existent déjà ; trois sont à écrire (en orange).</p></div>
+ <div class="anim"><table>
+  <thead><tr><th>Ce qui bouge</th><th>Où</th><th>En jeu</th></tr></thead>
+  <tbody>
+   <tr><td>Flammes des lanternes, braseros, fours rallumés</td><td>L2, F1, arches</td><td class="k">flammes (existant)</td></tr>
+   <tr><td>Braises des fours, fissures de lave, scories tièdes, enclume qui rougit, cercle des trophées</td><td>F1, F5, F6, A1, A4</td><td class="k">pulse (existant)</td></tr>
+   <tr><td>Chaînes, crochets, creuset et cages qui se balancent</td><td>F4, A2</td><td class="k">swing (existant), sprite ancré à son crochet en haut</td></tr>
+   <tr><td>Lave qui glisse dans les rigoles</td><td>F2, L3, A3</td><td class="k new">coulée (nouveau)</td></tr>
+   <tr><td>Braises qui montent des fissures et du haut-fourneau</td><td>F6, A3</td><td class="k new">braises (nouveau)</td></tr>
+   <tr><td>Vapeur du bassin et des vannes de trempe</td><td>R1, A3</td><td class="k new">vapeur (nouveau)</td></tr>
+  </tbody>
+ </table></div>
+</section>
+
+<div class="tools">
+ <button id="pause" type="button" aria-pressed="false">Pause</button>
+ <span>Vignettes en pixels du monde, agrandies ×3 · un personnage mesure environ 36 px</span>
+</div>
+
+<div class="part"><h2>Couloirs des Forges mortes</h2><p>Semés par le générateur dans les galeries, contre les parois, sans jamais bloquer le passage. Chaque famille a son quartier de prédilection.</p></div>
+<div id="listD" style="display:contents"></div>
+
+<div class="part"><h2>Lumière des couloirs</h2><p>Au Temple, les couloirs ont des torches à bras de fer (T2) et un halo doux (H1) ; aux Salles oubliées, des fanaux de Byrsa. Ici la montagne est chaude : trois façons d'éclairer une forge morte.</p></div>
+<div id="listL" style="display:contents"></div>
+
+<div class="part"><h2>Salles à thème</h2><p>Comme les salles à thème du Temple et des Salles oubliées : chacune a son mobilier et une petite récompense, sans nouveau système.</p></div>
+<div id="listS" style="display:contents"></div>
+
+<div class="part"><h2>Arènes des Forges mortes</h2><p>Posées autour de l'aire de combat, jamais au centre : l'enclume du Maître-Forgeron, le dôme de la Martyre du Fer et la lave du Grand Crassier restent lisibles.</p></div>
+<div id="listA" style="display:contents"></div>
+
+<div class="part"><h2>Repères d'entrée de quartier</h2><p>Comme au Temple et aux Salles oubliées : une arche à l'entrée de la salle-seuil et une stèle, qui s'allument au passage d'un allié. Deux façons de les dessiner. Les trois stèles de chaque vignette montrent les trois quartiers.</p></div>
+<div id="listQ" style="display:contents"></div>
+
+<section class="m" style="grid-template-columns:minmax(0,1fr)">
+ <div class="txt"><h2><i>Q</i>Cartons de quartier</h2><p>Le même carton qu'aux deux premiers biomes, en haut de l'écran : 3 s au premier passage avec la ligne de rappel, puis le nom seul 2 s. Couleurs et glyphes proposés pour les quatre quartiers.</p></div>
+ <div class="cards" id="cards"></div>
+</section>
+
+<section class="m q" style="grid-template-columns:minmax(0,1fr)">
+ <div class="txt"><h2>Questions</h2><ul>
+  <li><b>Quelles familles de couloir ?</b> Les six, ou une partie.</li>
+  <li><b>Quelle lumière ?</b> L1, L2 ou L3 (on peut mêler L2 et les braises de L1).</li>
+  <li><b>Quelles salles à thème ?</b> Les récompenses sont de moi, à régler.</li>
+  <li><b>Les arènes</b> A1 à A4 vous conviennent-elles telles quelles ?</li>
+  <li><b>Repères :</b> Q1 ou Q2, et les noms, couleurs et glyphes des quartiers.</li>
+  <li><b>Les quartiers</b> supposent que le biome 3 passe en salles comme le biome 2. Aujourd'hui, ses galeries sont creusées au hasard et n'ont pas de quartiers.</li>
+ </ul></div>
+</section>
+</main>
+
+<script>
+%%ENGINE%%
+%%PIECES%%
+/* ---------- palettes des Forges mortes ---------- */
+const FS=[0x201b1c,0x2b2425,0x382f2e,0x483d3a,0x5c4e48,0x78665c];      // basalte (rampe du biome 3, tools/ardoise)
+const FB=[0x24120e,0x46221a,0x683424,0x8a4a30];                       // brique réfractaire noircie
+const LV=[0x4a1006,0x8a240c,0xd8541e,0xf09a3a,0xffd27a];              // lave, de la croûte au cœur
+const FE=[0x2c3036,0x4a525c,0x6e7884,0x9aa6b2,0xc4ced6];              // fer
+const RS=[0x3a1a10,0x5e2c18,0x7a3a22,0x9c5634];                       // rouille
+const SC=[0x121014,0x221e24,0x363238,0x5a5460];                       // scories vitreuses
+const LE=[0x2a1810,0x4a2c1c,0x6a4228];                                // cuir des soufflets
+const SOOT=0x0a0809,AE=0x8a90ff;
+const QC={A:0xe0703a,B:0xe8b84a,C:0x9eacb8,R:0xd84030};               // couleurs des quartiers proposées
+const QG={A:["..###..",".#...#.","#.....#","#.###.#","#.#.#.#","#.....#","#######"],
+ B:["##..##.","..##..#",".......","##..##.","..##..#",".......","#######"],
+ C:["......#",".....#.","...##..","..#..#.",".##....","#......","#......"],
+ R:["...#...","..#.#..","..#.#..",".#...#.","#..#..#","#.###.#",".#####."]};
+
+/* ---------- aides ---------- */
+function brub(x,y,seed,n,sp){sp=sp||14;for(let i=0;i<n;i++){const ox=(hs(seed+i*2.3)-.5)*sp,oy=(hs(seed+i*5.1)-.5)*sp*.4,r=1.2+hs(seed+i*9.7)*2.2;
+ ell(x+ox,y+oy,r,r*.75,FS[2+(i%2)]);px(x+ox-1,y+oy-r*.75,FS[4]);px(x+ox,y+oy-r*.75,FS[5])}}
+function soot(x,y,w,h){for(let j=0;j<h;j++)for(let i=-w;i<=w;i++){const k=1-j/h-Math.abs(i)/w*.6;if(k>0&&hs(x+i*1.7+j*2.9)<k+.2)blend(x+i,y-j,SOOT,.35+.35*k)}}
+function flames(x,y,n,sp,hgt,seed){for(let k=0;k<n;k++){const fx=x+(k-(n-1)/2)*sp,fh=hgt+2*Math.sin(T*9+k*2.1+seed)+1.5*hs(Math.floor(T*10)+k+seed);
+ for(let j=0;j<fh;j++){const w=Math.round((1-j/fh)*1.5),o=Math.round(Math.sin(T*7+j*.8+k)*.7);for(let i=-w;i<=w;i++)blend(fx+i+o,y-j,j<fh*.3?FR[3]:j<fh*.65?FR[2]:FR[1],1)}}}
+function embers(x,y,n,spread,rise,seed){for(let k=0;k<n;k++){const u=(T*.7+hs(seed+k*3.3))%1;blend(x+(hs(seed+k*7.7)-.5)*spread+Math.sin(T*3+k)*1.5,y-u*rise,u<.5?LV[4]:LV[3],1-u)}}
+function vwheel(x,y){ell(x,y,3.4,3.4,0,(xx,yy,dx,dy)=>dx*dx+dy*dy>.5?I[3]:null);line(x-3,y,x+3,y,I[2]);line(x,y-3,x,y+3,I[2]);px(x,y,RS[3]);px(x-2,y-3,FE[3])}
+function arc(x,t,f,R,fn){for(let y=t;y<f;y++){const dy=y-t;for(let i=-R;i<=R;i++){if(dy<R&&Math.abs(i)>Math.sqrt(R*R-(R-dy)*(R-dy)))continue;fn(x+i,y,i,dy)}}}
+
+/* ---------- pièces : la fonderie de Tyr ---------- */
+// gueule de four maçonnée dans la paroi nord : st 0 froide, 1 braises, 2 rallumée
+function furnace(x,seed,st){const f=ft(x),t=f-22,R=8;soot(x,t+3,7,10);
+ arc(x,t,f,R,(X,Y,i,dy)=>{const row=Math.floor(dy/3),u=i+R+(row%2)*2;px(X,Y,(dy%3===2||u%4===3)?FB[0]:hs(row*5.1+Math.floor(u/4)*2.3+seed)>.5?FB[3]:FB[2])});
+ arc(x,t+8,f,4,(X,Y)=>px(X,Y,st?0x2a0c06:0x07060a));
+ rect(x-6,f-1,13,1,FS[4]);for(let i=-3;i<=3;i++)if(hs(seed+i)>.4)px(x+i,f-2,st?LV[1]:0x3a3436);
+ rect(x+R+1,f-8,4,2,CL[1]);px(x+R+4,f-8,CL[2]);
+ if(st)post.push(()=>{for(let k=0;k<6;k++){const p=.5+.5*Math.sin(T*2.3+k*1.9+seed);blend(x-3+hs(seed+k)*6,f-2-hs(seed+k*2)*4,p>.6?LV[4]:LV[3],.5+.5*p)}
+  if(st===2)flames(x,f-2,3,2.5,5,seed);light(x,f-5,st===2?30:18,st===2?20:11,LV[2],(st===2?.09:.05)+.015*Math.sin(T*3+seed))})}
+// soufflet de cuir entre deux planches, buse de fer ; d = sens, s = échelle
+function bellows(x,y,flat,seed,d,s){d=d||1;s=s||1;const h=(flat?1:4)*s,X=i=>x+d*i*s,Y=j=>y-j*s;shadow(x+d*s,y+1,10*s,2.4*s);
+ poly([[X(-9),Y(1)],[X(4),Y(2)],[X(4),Y(3)],[X(-9),Y(3)]],WD[1]);
+ poly([[X(-9),Y(3)],[X(4),Y(3)],[X(4),Y(4)-h*.4],[X(-9),Y(4)-h]],LE[1]);for(let i=-7;i<3;i+=3)line(X(i),Y(3),X(i),Y(4)-h*(1-(i+9)/13*.6),LE[0]);
+ poly([[X(-10),Y(5)-h],[X(4),Y(5)-h*.4],[X(5),Y(4)-h*.4],[X(-10),Y(4)-h]],WD[2]);line(X(-10),Y(5)-h,X(4),Y(5)-h*.4,WD[3]);
+ line(X(-10),Y(4)-h,X(-14),Y(5)-h,WD[1]);line(X(-10),Y(2),X(-14),Y(2),WD[1]);
+ for(let i=4;i<10;i++){px(X(i),Y(4),I[3]);px(X(i),Y(3),I[2])}px(X(9),Y(4),FE[4])}
+// rigole de coulée creusée dans le dallage : froide (fer figé et rouille) ou chaude (la lave coule) ; y : nombre ou fonction de x
+function rigole(x0,x1,y,hot,seed){const Y=typeof y==='function'?y:x=>y+Math.round(Math.sin(x*.05+seed)*1.2);
+ // points du lit de la rigole ; v = tronçon vertical qui relie deux marches de la paroi
+ const pts=[];let pv=null;for(let x=x0;x<x1;x++){const yy=Y(x);if(pv!==null&&yy!==pv){const s=Math.sign(yy-pv);for(let k=pv+s;k!==yy;k+=s)pts.push([x,k,1])}pts.push([x,yy,0]);pv=yy}
+ for(const[x,yy,v]of pts){if(v){blend(x-2,yy,SOOT,.9);blend(x+2,yy,FS[5],1)}else{blend(x,yy-2,SOOT,.9);blend(x,yy+2,FS[5],1)}
+  for(let j=-1;j<=1;j++){const X=v?x+j:x,YY=v?yy:yy+j;blend(X,YY,hot?LV[1]:hs(X*.7+YY*3.1+seed)>.74?RS[2]:hs(X*1.3+YY*.7+seed)>.8?FE[2]:FE[1],1)}}
+ if(hot)post.push(()=>{for(const[x,yy,v]of pts){const w=Math.sin((x+yy)*.3-T*2.4+seed)+Math.sin((x+yy)*.11+T*.8);blend(x,yy,w>1.1?LV[4]:w>.1?LV[3]:LV[2],1);
+   if(w>.6){if(v){blend(x-1,yy,LV[2],.8);blend(x+1,yy,LV[2],.8)}else{blend(x,yy-1,LV[2],.8);blend(x,yy+1,LV[2],.8)}}}
+  for(let x=x0+8;x<x1;x+=18)light(x,Y(x),16,7,LV[2],.05+.01*Math.sin(T*2+x))})}
+// lingotières de basalte empilées, certaines pleines de fer figé
+function moulds(x,y,n,seed,stack){stack=stack||1;shadow(x+n*2.5,y+1,n*3+2,2);for(let s=0;s<stack;s++){const yy=y-s*4,xx=x+s;
+ rect(xx,yy-4,n*5+1,4,FS[3]);rect(xx,yy-4,n*5+1,1,FS[5]);rect(xx,yy-1,n*5+1,1,FS[1]);
+ if(s===stack-1)for(let i=0;i<n;i++){const fill=hs(seed+i)>.4;rect(xx+1+i*5,yy-3,4,2,fill?FE[1]:SOOT);if(fill){px(xx+1+i*5,yy-3,FE[3]);if(hs(seed+i*3)>.6)px(xx+3+i*5,yy-2,RS[2])}}}}
+function ironBars(x,y,n,seed){for(let i=0;i<n;i++){const ox=(i%3)*5-5,oy=-Math.floor(i/3)*2;rect(x+ox,y+oy-2,4,2,FE[2]);rect(x+ox,y+oy-2,4,1,FE[3]);px(x+ox+3,y+oy-1,FE[0]);if(hs(seed+i)>.5)px(x+ox+1,y+oy-1,RS[2])}}
+function tongs(x,y){line(x-5,y-1,x+4,y-3,I[3]);line(x-5,y-3,x+4,y-1,I[2]);px(x+4,y-3,FE[3]);px(x+4,y-1,FE[3])}
+function hammer(x,y){rect(x,y-1,7,1,WD[2]);rect(x+6,y-3,3,4,I[3]);px(x+6,y-3,FE[3])}
+function fAnvil(x,y){shadow(x+1,y+1,6,2);rect(x-2,y-5,4,5,FS[2]);rect(x-5,y-8,10,3,I[3]);rect(x-5,y-8,10,1,FE[3]);rect(x+5,y-7,3,1,I[2])}
+// poutre de fer sous la voûte, le long de la paroi nord
+function beam(x0,x1){for(let x=x0;x<x1;x++){const t=wallTop(x)-2;px(x,t,I[3]);px(x,t+1,I[2]);px(x,t+2,I[1]);if(x%8===0)px(x,t+1,FE[4])}}
+// chaîne de palan qui pend de la poutre : crochet, creuset ou rien
+function hoist(x,len,seed,end){const t=wallTop(x)-1,sw=Math.sin(T*.8+seed)*1.4;for(let j=0;j<len;j++)px(x+Math.round(sw*j/len),t+j,j%2?I[2]:I[4]);
+ const cx=Math.round(x+sw),cy=t+len;
+ if(end==='hook'){px(cx,cy,I[3]);px(cx,cy+1,I[3]);px(cx+1,cy+2,I[3]);px(cx+2,cy+1,I[3]);px(cx-1,cy+2,I[2])}
+ else if(end==='pot'){line(cx-4,cy+2,cx,cy,I[3]);line(cx+4,cy+2,cx,cy,I[3]);ell(cx,cy+5,4,3.2,0,(xx,yy,dx,dy)=>dy<-.4?null:dx<-.3?FS[4]:FS[2]);ell(cx,cy+3,3.4,1,SOOT);px(cx+3,cy+7,RS[2])}
+ else rect(cx-1,cy,3,2,I[3])}
+
+/* ---------- pièces : le départ des fondeurs ---------- */
+// tas de scories : des blocs vitreux entassés, du haut vers le bas pour que les blocs du pied passent devant
+function slag(x,y,r,seed,warm){shadow(x+1,y+1,r+2,r*.35);const n=Math.round(r*1.8);
+ for(let k=n-1;k>=0;k--){const u=k/n,ox=(hs(seed+k*1.7)-.5)*r*1.8*(1-u*.6),oy=-u*r*.95-hs(seed+k*2.9)*1.2,rr=1.3+hs(seed+k*3.3)*r*.26;
+  ell(x+ox,y+oy-rr*.6,rr,rr*.8,0,(xx,yy,dx,dy)=>{const g=hs(xx*1.9+yy*2.7+seed);return g>.9?SOOT:dx+dy<-.7?SC[3]:dx+dy<.2?SC[2]:SC[1]});
+  if(hs(seed+k*4.1)>.6)px(x+ox-rr*.4,y+oy-rr*1.1,FE[3])}
+ for(let k=0;k<3;k++)px(x-r*.7+hs(seed+k*5.2)*r*1.4,y-1-hs(seed+k*1.1)*2,RS[2]);
+ if(warm)post.push(()=>{for(let k=0;k<3;k++){const p=.5+.5*Math.sin(T*2+k*2+seed);blend(x-r*.5+hs(seed+k*4.4)*r,y-r*.3-hs(seed*2+k)*r*.35,p>.5?LV[3]:LV[2],.5+.5*p)}light(x,y-r*.4,r+6,r*.6,LV[1],.04)})}
+// coulure de rouille sous un crampon planté dans la paroi
+function rustRun(x,seed){const t=wallTop(x)+2,f=ft(x);rect(x-1,t-1,3,2,I[3]);px(x,t-1,FE[3]);
+ for(let y=t+1;y<f;y++){const w=y<t+4?3:y<t+8?2:1,o=y<t+4?-1:0;for(let i=0;i<w;i++)blend(x+o+i,y,(y+seed)%4?RS[1]:RS[2],.8)}gell(x,f+2,3.5,1.2,RS[1],.6)}
+function scrap(x,y,seed){shadow(x+1,y+1,9,2.2);for(let k=0;k<5;k++){const a=(hs(seed+k)-.5)*1.4,len=4+hs(seed+k*2)*6,ox=(hs(seed+k*3)-.5)*11,oy=-2-k*.7;
+  line(x+ox-Math.cos(a)*len/2,y+oy-Math.sin(a)*len/2,x+ox+Math.cos(a)*len/2,y+oy+Math.sin(a)*len/2,k%2?RS[2]:FE[1])}
+ ell(x+2,y-4,2.6,2.6,0,(xx,yy,dx,dy)=>dx*dx+dy*dy>.35?RS[1]:null);px(x+2,y-4,FE[2]);for(let k=0;k<6;k++){const a=k/6*TAU;px(x+2+Math.cos(a)*3.4,y-4+Math.sin(a)*3.4,RS[2])}}
+
+/* ---------- pièces : la lave revenue ---------- */
+// fissure de lave dans la paroi : lit noir de 3 px, cœur de 2 px qui rougeoie, s'élargit vers le pied, deux branches
+function crackW(x,seed){const t=wallTop(x)+1,f=ft(x),pts=[],core=[];let cx=x;
+ const seg=(x0,y0,y1,dir,w0)=>{let c=x0;for(let y=y0;y<y1;y++){c+=(hs(seed+y*1.3+dir*7)-.5)*2+dir*.35;const X=Math.round(c),w=w0+((y-y0)/(y1-y0)>.6?1:0);
+  for(let i=-1;i<=w;i++)blend(X+i,y,i<0||i===w?FS[0]:0x0a0607,1);for(let i=0;i<w;i++)core.push([X+i,y])}return c};
+ seg(x,t,f,0,2);seg(x,t+Math.round((f-t)*.35),t+Math.round((f-t)*.6),1,1);seg(x,t+Math.round((f-t)*.55),t+Math.round((f-t)*.8),-1,1);
+ post.push(()=>{const p=.55+.45*Math.sin(T*1.7+seed);for(const[a,b]of core)blend(a,b,hs(a*.7+b+seed)>.55?LV[4]:LV[3],.5+.5*p);light(x,(t+f)/2,9,10,LV[2],.05*p);embers(x,t+2,3,6,12,seed)})}
+function crackF(x0,x1,y,seed){const pts=[];let cy=y;for(let x=x0;x<x1;x++){cy+=(hs(seed+x*1.3)-.5)*1.4;const Y=Math.round(cy);pts.push([x,Y]);blend(x,Y,0x0a0607,1);blend(x,Y+1,FS[0],.8)}
+ post.push(()=>{const p=.55+.45*Math.sin(T*1.5+seed);for(const[a,b]of pts)if(hs(a*.3+seed)>.25)blend(a,b,hs(a+seed)>.6?LV[3]:LV[2],.45+.5*p);light((x0+x1)/2,y,(x1-x0)*.6,6,LV[2],.04*p)})}
+// vieille coulée refroidie, plate au sol (décalque), croûte cordée
+function coolFlow(x,y,rx,ry,seed){for(let k=0;k<4;k++){const ox=(k-1.5)*rx*.5,oy=(hs(seed+k)-.5)*ry*.6;gell(x+ox,y+oy,rx*.45,ry*.7,FS[1],.95)}
+ for(let k=0;k<6;k++)gring(x+(hs(seed+k*2.1)-.5)*rx*1.4,y+(hs(seed+k*1.3)-.5)*ry*.6,2.5,1.2,FS[3],.7);
+ for(let k=0;k<5;k++)blend(x+(hs(seed+k*3.7)-.5)*rx*1.4,y+(hs(seed+k*1.9)-.5)*ry,LV[1],.8)}
+
+/* ---------- pièces : lumière ---------- */
+// lanterne de fondeur à grille, fixe sur sa potence
+function cageLamp(x,lit,seed){const y=wallTop(x)+3;line(x,y,x+5,y,I[3]);px(x,y+1,I[2]);px(x,y-1,I[2]);
+ const cx=x+5,cy=y+1;rect(cx-2,cy,5,1,I[3]);for(let j=1;j<6;j++){px(cx-2,cy+j,I[2]);px(cx+2,cy+j,I[1]);px(cx-1,cy+j,lit?FR[1]:SOOT);px(cx,cy+j,j%2?I[2]:(lit?FR[2]:SOOT));px(cx+1,cy+j,lit?FR[1]:SOOT)}rect(cx-2,cy+6,5,1,I[3]);px(cx,cy+7,I[2]);
+ if(lit)post.push(()=>{blend(cx,cy+3-(Math.sin(T*7+seed)>.5?1:0),FR[3],1);blend(cx,cy+4,FR[2],1);light(cx,cy+4,26,16,FR[2],.08+.015*Math.sin(T*7+seed))})}
+
+/* ---------- pièces : salles ---------- */
+function steam(x0,x1,y,seed){post.push(()=>{for(let k=0;k<9;k++){const u=(T*.25+k/9)%1,xx=x0+hs(seed+k*2.7)*(x1-x0)+Math.sin(T*.6+k)*4;gell(xx,y-u*18,3+u*5,1.5+u*2.4,0xc8ccd0,(1-u)*u*1.1)}})}
+function blades(x,y,n,seed){for(let i=0;i<n;i++){const bx=x+i*4,h=6+hs(seed+i)*5;rect(bx,y-h,1,h,i%2?FE[2]:FE[3]);px(bx+1,y-h+1,FE[1]);px(bx,y-h,FE[4])}}
+function spirit(x,y,free,seed){const b=Math.round(Math.sin(T*1.3+seed));ell(x,y-9+b,2.6,3.4,0,(xx,yy,dx)=>dx<-.2?(free?0xc8ccff:0x6a6c88):(free?AE:0x4a4c66));px(x-1,y-10+b,free?0xffffff:0x8a8ca8);
+ for(let j=0;j<4;j++)blend(x+Math.sin(T*2+j+seed)*.8,y-5+b+j,free?AE:0x4a4c66,.7-j*.15);if(free)post.push(()=>light(x,y-9,12,9,AE,.06))}
+function chainTo(x0,y0,x1,y1){const n=Math.max(Math.abs(x1-x0),Math.abs(y1-y0))|0;for(let i=0;i<=n;i+=2)px(x0+(x1-x0)*i/n,y0+(y1-y0)*i/n+Math.sin(i/n*Math.PI)*2,(i/2)%2?I[2]:I[4])}
+
+/* ---------- pièces : arènes ---------- */
+function bigAnvil(x,y,hot){shadow(x+1,y+2,14,3.5);rect(x-8,y-7,16,7,FS[3]);rect(x-8,y-7,16,1,FS[5]);rect(x+5,y-6,3,6,FS[1]);
+ rect(x-3,y-12,6,5,I[2]);rect(x-3,y-12,2,5,I[3]);poly([[x-10,y-17],[x+8,y-17],[x+8,y-13],[x-6,y-13]],I[3]);rect(x-10,y-17,18,1,FE[3]);poly([[x+8,y-17],[x+15,y-16],[x+8,y-14]],I[2]);
+ if(hot)post.push(()=>{const p=.5+.5*Math.sin(T*2.2);for(let i=-8;i<8;i++)blend(x+i,y-16,p>.5?LV[3]:LV[2],.35+.55*p);light(x,y-15,22,12,LV[2],.03+.05*p)})}
+function anchorRing(x,y,d,seed){gell(x,y,4,1.6,SOOT,.6);ell(x,y-1,3,1.6,0,(xx,yy,dx,dy)=>dx*dx+dy*dy>.35?I[3]:null);px(x-2,y-2,FE[3]);
+ for(let k=0;k<6;k++){const lx=x+d*(4+k*3),ly=y-1+Math.sin(k+seed);ell(lx,ly,1.6,1,0,(xx,yy,dx,dy)=>dx*dx+dy*dy>.3?(k%2?I[2]:I[3]):null)}}
+function blastFurnace(x,seed){const f=ft(x),t=f-28,R=17;soot(x,t+1,14,6);
+ for(let y=t;y<f;y++){const dy=y-t,half=Math.round(dy<9?R-(9-dy)*1.1:R);for(let i=-half;i<=half;i++){const row=Math.floor(dy/3),u=i+R+(row%2)*2;
+  px(x+i,y,(dy%3===2||u%5===4)?FB[0]:hs(row*5.1+Math.floor(u/5)*2.3+seed)>.55?FB[3]:i>R*.6?FB[1]:FB[2])}}
+ for(const yy of[t+9,f-12])for(let i=-R;i<=R;i++)px(x+i,yy,i%6===0?FE[4]:I[3]);
+ arc(x,f-11,f,6,(X,Y)=>px(X,Y,0x2a0c06));rect(x-2,f,5,3,I[2]);rect(x-2,f,5,1,FE[3]);
+ post.push(()=>{const p=.5+.5*Math.sin(T*1.6);for(let k=0;k<10;k++){const pp=.5+.5*Math.sin(T*2.3+k*1.9);blend(x-5+hs(k*3.1)*10,f-2-hs(k*1.7)*7,pp>.5?LV[4]:LV[3],.5+.5*pp)}
+  flames(x,f-2,3,3,5,seed);embers(x,t+2,4,12,14,seed);const u=(T*.8)%1;blend(x,f+3+u*4,LV[3],1-u*.5);light(x,f-5,40,24,LV[2],.08+.02*p)})}
+function steamValve(x,y,open,seed){shadow(x+1,y+1,6,2);rect(x-2,y-10,4,10,I[2]);rect(x-2,y-10,1,10,FE[3]);rect(x-4,y-2,8,2,I[1]);rect(x+2,y-8,4,2,I[3]);px(x+5,y-8,FE[4]);vwheel(x,y-13);
+ if(open)post.push(()=>{for(let k=0;k<9;k++){const u=(T*.8+k/9)%1;gell(x+7+u*5+Math.sin(k*2.1+T)*1.5,y-8-u*16,1+u*3,1+u*2.2,0xd8dcdc,(1-u)*.45)}})}
+function bigCrucible(x,y,tip,seed){shadow(x+1,y+1,12,3);for(const sx of[-10,10]){rect(x+sx-1,y-17,2,17,I[2]);px(x+sx-1,y-17,FE[3])}rect(x-11,y-18,23,1,I[3]);
+ const tl=tip?3:0;poly([[x-7,y-15+tl],[x+7,y-15-tl],[x+5,y-4-tl*.3],[x-5,y-4+tl*.3]],FS[3]);line(x-7,y-15+tl,x+7,y-15-tl,FS[5]);poly([[x+3,y-14-tl*.6],[x+7,y-15-tl],[x+5,y-4],[x+3,y-5]],FS[1]);
+ for(const sx of[-8,8])px(x+sx,y-11,FE[4]);
+ if(tip){coolFlow(x+14,y+1,9,3,seed);line(x+7,y-15-tl,x+11,y-6,FS[1])}
+ else{ell(x,y-15,6,1.3,SOOT);post.push(()=>{const p=.5+.5*Math.sin(T*1.8+seed);for(let i=-4;i<=4;i++)blend(x+i,y-15,p>.5?LV[3]:LV[2],.6+.3*p);light(x,y-16,14,8,LV[2],.04*p)})}}
+function cage(x,len,seed){const t=wallTop(x)-1,sw=Math.sin(T*.7+seed)*1.2;for(let j=0;j<len;j++)px(x+Math.round(sw*j/len),t+j,j%2?I[2]:I[4]);const cx=Math.round(x+sw),cy=t+len;
+ ell(cx,cy+1,5,1.4,I[3]);for(let i=-4;i<=4;i+=2)for(let j=2;j<12;j++)px(cx+i,cy+j,i<0?I[3]:I[2]);rect(cx-5,cy+12,11,1,I[3]);px(cx-1,cy+12,RS[2])}
+function penitent(x,y,seed){shadow(x+1,y+1,7,2);rect(x-5,y-4,10,4,FS[3]);rect(x-5,y-4,10,1,FS[5]);
+ poly([[x-3,y-5],[x-4,y-12],[x-1,y-16],[x+2,y-15],[x+3,y-5]],FE[1]);rect(x-3,y-12,2,7,FE[2]);ell(x-1,y-17,2.4,2.4,FE[2]);px(x-2,y-18,FE[3]);
+ for(let k=0;k<4;k++)px(x-3+k*2,y-9+k%2,RS[2]);for(const d of[-1,1])for(let k=0;k<5;k++)px(x+d*(4+k),y-8+k*1.2,k%2?I[2]:I[3])}
+function looseLinks(x,y,n,seed){for(let k=0;k<n;k++){const lx=x+(hs(seed+k)-.5)*16,ly=y+(hs(seed+k*2)-.5)*6;ell(lx,ly,1.6,1,0,(xx,yy,dx,dy)=>dx*dx+dy*dy>.3?(k%2?RS[2]:I[3]):null)}}
+function billot(x,y){shadow(x+1,y+1,7,2.2);rect(x-5,y-6,10,6,FS[3]);rect(x-5,y-6,10,1,FS[5]);rect(x+3,y-5,2,5,FS[1]);rect(x-6,y-1,12,1,FS[1])}
+function fSeal(x,y,r){gring(x,y,r,r*.5,FS[4],1);gring(x,y,r-2,r*.5-1,FS[0],1);for(let k=0;k<12;k++){const a=k/12*TAU;blend(x+Math.cos(a)*(r-1),y+Math.sin(a)*(r*.5-.5),LV[1],1)}
+ post.push(()=>{const p=.6+.4*Math.sin(T*1.2);for(let k=0;k<12;k++){const a=k/12*TAU;blend(x+Math.cos(a)*(r-1),y+Math.sin(a)*(r*.5-.5),LV[3],.7*p)}light(x,y,r*1.3,r*.7,LV[2],.035*p)})}
+function trophyHammer(x,y){rect(x-1,y-9,2,9,WD[2]);rect(x-4,y-12,8,4,FE[2]);rect(x-4,y-12,8,1,FE[4]);px(x+3,y-9,FE[0]);line(x-1,y-12,x+1,y-9,SOOT)}
+function trophyLink(x,y){ell(x-2,y-7,2.6,3.4,0,(xx,yy,dx,dy)=>dx*dx+dy*dy>.35?FE[3]:null);ell(x+2,y-3,2.6,3.4,0,(xx,yy,dx,dy)=>dx*dx+dy*dy>.35&&!(dx>.5&&dy<0)?I[3]:null);px(x+4,y-1,RS[2]);px(x-4,y-9,RS[2])}
+function trophyHeart(x,y){ell(x,y-5,4,4,0,(xx,yy,dx,dy)=>hs(xx*1.3+yy*2.1)>.8?SC[0]:dx+dy<-.4?SC[3]:SC[2]);post.push(()=>{const p=.5+.5*Math.sin(T*2.5);for(let k=0;k<5;k++)blend(x-2+hs(k*3.1)*4,y-7+hs(k*1.7)*4,LV[3],.5+.5*p);light(x,y-5,10,7,LV[2],.05+.03*p)})}
+
+/* ---------- pièces : repères ---------- */
+function glyph7(x0,y0,q,lit){QG[q].forEach((row,j)=>[...row].forEach((ch,i)=>{if(ch==='#')px(x0+i,y0+j,lit?QC[q]:FS[1])}))}
+// Q1 : dalle de basalte, glyphe marqué au fer rouge ; Q2 : borne-enclume sur son pilier
+function steleF(x,y,q,v,seed){shadow(x+1,y+1,6,2);
+ if(v===1){const h=22;for(let j=0;j<h;j++)for(let i=-5;i<=5;i++){if(j>h-3&&Math.abs(i)>5-(j-h+3)*2)continue;px(x+i,y-1-j,i<-2?FS[5]:i>2?FS[2]:FS[3])}
+  for(let k=0;k<5;k++)px(x-4+hs(seed+k)*8,y-3-hs(seed*2+k)*6,FS[1]);soot(x,y-20,4,4);glyph7(x-3,y-17,q,true)}
+ else{rect(x-3,y-12,6,12,FS[3]);rect(x-3,y-12,2,12,FS[4]);rect(x+2,y-12,1,12,FS[1]);rect(x-5,y-1,10,1,FS[1]);
+  poly([[x-8,y-21],[x+6,y-21],[x+6,y-13],[x-4,y-13]],I[3]);rect(x-8,y-21,14,1,FE[3]);poly([[x+6,y-21],[x+11,y-20],[x+6,y-18]],I[2]);glyph7(x-3,y-20,q,true)}
+ post.push(()=>light(x,y-15,14,10,QC[q],.07+.03*Math.sin(T*1.6+seed)))}
+function archF(x,y,q,v){
+ if(v===1){for(const sx of[-15,15]){for(let j=0;j<34;j++)for(let i=-3;i<=3;i++){const row=Math.floor(j/3),u=i+3+(row%2)*2;px(x+sx+i,y-1-j,(j%3===2||u%4===3)?FB[0]:i<-1?FB[3]:FB[2])}soot(x+sx,y-35,4,6);shadow(x+sx+1,y+1,5,1.6)}
+  rect(x-19,y-34,39,4,I[3]);rect(x-19,y-34,39,1,FE[3]);rect(x-19,y-31,39,1,I[1]);for(let i=-17;i<=17;i+=6)px(x+i,y-32,FE[4]);
+  rect(x-4,y-42,9,8,I[2]);rect(x-4,y-42,9,1,FE[3]);glyph7(x-3,y-41,q,true);brazier(x-23,y+4,true);brazier(x+23,y+4,true)}
+ else{for(const sx of[-14,14]){rect(x+sx-1,y-36,3,36,I[2]);rect(x+sx-1,y-36,1,36,FE[3]);shadow(x+sx+1,y+1,4,1.4)}
+  rect(x-18,y-38,37,3,I[3]);rect(x-18,y-38,37,1,FE[3]);for(let i=-16;i<=16;i+=5)px(x+i,y-37,FE[4]);
+  for(let j=0;j<8;j++)px(x+8,y-35+j,j%2?I[2]:I[4]);ell(x+8,y-23,4,3,0,(xx,yy,dx,dy)=>dy<-.4?null:dx<-.3?FS[4]:FS[2]);
+  for(let j=0;j<4;j++)px(x-6,y-35+j,I[3]);rect(x-10,y-31,9,9,I[2]);rect(x-10,y-31,9,1,FE[3]);glyph7(x-9,y-30,q,true);brazier(x-23,y+4,true);brazier(x+23,y+4,true)}
+ post.push(()=>light(x,y-32,20,12,QC[q],.06+.02*Math.sin(T*1.3)))}
+
+/* ---------- propositions ---------- */
+const DECOR=[
+ {n:"F1",nom:"Halle des fours",mask:gal(61),dark:.7,
+  txt:"Des gueules de four en brique réfractaire sont maçonnées dans la paroi nord, noircies de suie au-dessus de l'arche. Devant, les soufflets de cuir se sont affaissés, et les tuyères d'argile ne soufflent plus rien. Dans un four sur trois, des braises couvent encore.",
+  pour:"Dit tout de suite « forge ». Annonce les fours tyriens du biome, qu'on rallume avec 20 bois, sans se confondre avec eux : ceux du décor sont petits et bouchés au fond.",
+  contre:"Il faut distinguer un four de décor d'un four qu'on peut rallumer : le four rallumable sera plus grand, seul dans sa salle, avec sa grille.",
+  jeu:"Sprites contre la paroi nord. Les braises prennent le mode « pulse » existant.",
+  d(){furnace(26,1,0);furnace(86,2,1);furnace(146,3,0);bellows(58,ft(58)+14,false,1,1,1.3);bellows(122,fb(122)-6,true,2,-1,1.3);tongs(104,fb(104)-7);brub(40,fb(40)-6,7,4);brub(160,ft(160)+16,3,3)}},
+ {n:"F2",nom:"Rigoles de coulée",mask:gal(67),dark:.66,
+  txt:"Le dallage est creusé de rigoles qui menaient la fonte des fours aux lingotières. Le fer y a figé et rouillé. Plus loin, la lave de la montagne a trouvé le chemin : elle coule encore dans la rigole, très lentement.",
+  pour:"Les rigoles guident l'œil le long du couloir et racontent le travail des fondeurs. La lave qui y coule annonce la vraie lave du biome.",
+  contre:"La lave des rigoles ne brûle pas : elle reste étroite et bordée de pierre, pour ne jamais ressembler aux cases de lave infranchissables (20 dégâts par seconde).",
+  jeu:"Décalques au sol. La rigole chaude demande le mode nouveau « coulée » (la couleur glisse le long de la rigole).",
+  d(){rigole(4,92,ft(4)+19,false,1);rigole(92,172,ft(92)+19,true,2);moulds(28,fb(28)-5,5,3,1);crackF(112,156,fb(112)-11,4);brub(70,fb(70)-6,5,4);slag(150,fb(150)-4,6,7,false)}},
+ {n:"F3",nom:"Lingotières et outils",mask:gal(71),dark:.68,
+  txt:"Devant les fours, les lingotières de basalte sont restées empilées. Certaines sont encore pleines de fer coulé il y a des siècles, piqué de rouille, d'autres sont vides ou fendues. Des pinces et des marteaux traînent à côté.",
+  pour:"Montre le fer, la ressource du biome, sans un mot. Les lingots figés donnent envie de les prendre : c'est la variante.",
+  contre:"Les lingots figés ne doivent pas ressembler aux lingots de fer à ramasser : ils restent dans le moule, gris et rouillés, jamais posés seuls.",
+  jeu:"Décor pur. Variante : une pile se brise pour 2 à 4 fer, une fois.",
+  d(){moulds(14,ft(14)+14,5,1,3);moulds(66,fb(66)-5,4,2,1);moulds(124,ft(124)+13,6,3,2);tongs(60,ft(60)+17);hammer(100,fb(100)-6);ironBars(152,fb(152)-5,5,4);brub(108,ft(108)+15,5,3);rustRun(48,2)}},
+ {n:"F4",nom:"Palans et chaînes",mask:gal(73),dark:.66,
+  txt:"Des poutres de fer courent sous la voûte. Les fondeurs y accrochaient des palans pour porter les creusets : les chaînes pendent encore avec leurs crochets, et un creuset est resté suspendu à mi-hauteur.",
+  pour:"Occupe le haut de l'écran sans gêner le passage. Annonce la Martyre du Fer et ses chaînes.",
+  contre:"Les chaînes doivent rester contre la paroi nord : au milieu du couloir, elles passeraient devant les unités.",
+  jeu:"Les chaînes se balancent avec le mode « swing » existant, à condition d'ancrer le sprite à son crochet en haut, et non au pied du mur comme les fanaux des Salles oubliées.",
+  d(){beam(0,176);hoist(22,10,1,'hook');hoist(58,15,2,'pot');hoist(100,8,3,'hook');hoist(140,13,4,'hook');scrap(82,fb(82)-6,1);brub(30,fb(30)-6,4,4);moulds(150,fb(150)-5,3,6,1)}},
+ {n:"F5",nom:"Scories et rouille",mask:gal(79),dark:.66,
+  txt:"Les tas de scories sont restés là où les fondeurs les ont jetés, contre les parois. La rouille coule des crampons de fer plantés dans le basalte, et la ferraille s'entasse : roues dentées, barres, plaques. Certains tas sont encore tièdes : c'est là que dorment les Scories vives.",
+  pour:"Le biome a l'air abandonné depuis longtemps, mais pas mort. Les tas tièdes annoncent les Scories vives.",
+  contre:"Les tas tièdes ne doivent pas faire croire à un ennemi : leur lueur reste faible et immobile.",
+  jeu:"Décor pur. Les tas tièdes prennent le mode « pulse ».",
+  d(){slag(20,ft(20)+15,8,1,false);slag(150,fb(150)-4,9,2,true);slag(98,ft(98)+13,6,3,true);rustRun(40,1);rustRun(72,2);rustRun(124,3);scrap(60,fb(60)-6,4);scrap(126,ft(126)+17,5);brub(86,fb(86)-6,6,4)}},
+ {n:"F6",nom:"Fissures de lave",mask:gal(83),dark:.64,
+  txt:"Sans fondeurs pour canaliser la chaleur, la lave a rouvert le basalte. Des fissures rougeoient dans les parois et dans le sol, des braises en montent, et une ancienne coulée refroidie a noyé le bas du couloir.",
+  pour:"Le plus chaud des six : la lave est partout, mais toujours enfermée dans la roche. Prépare aux coulées du biome.",
+  contre:"La coulée refroidie du décor ne doit pas être confondue avec le basalte frais qu'une coulée laisse et qu'il faut recreuser : elle reste plate, au sol, sans relief.",
+  jeu:"Décalques et sprites. La lueur des fissures prend le mode « pulse », les braises qui montent demandent le mode nouveau « braises ».",
+  d(){crackW(30,1);crackW(88,2);crackW(146,3);crackF(48,100,ft(48)+24,4);crackF(112,150,fb(112)-11,5);coolFlow(132,fb(132)-8,14,4,6);brub(66,fb(66)-6,7,4);slag(16,fb(16)-4,5,8,true)}}
+];
+const LIGHTS=[
+ {n:"L1",nom:"Braises des fours",mask:gal(89),dark:.42,h:112,
+  txt:"Pas de torches : les fours de la paroi nord gardent leurs braises, un sur deux. La lumière est basse, rouge, et vient du pied du mur.",
+  pour:"Le plus cohérent avec l'abandon : personne n'entretient rien, la chaleur de la montagne suffit. Aucune pièce nouvelle : ce sont les fours de F1.",
+  contre:"Lumière plus faible que les torches du Temple : il faut vérifier que les ennemis et leurs tirs restent lisibles.",
+  jeu:"Un four toutes les 6 cases à la place des torches, un sur deux en braises (mode « pulse »), halo doux rouge.",
+  d(){furnace(20,1,1);furnace(64,2,0);furnace(108,3,1);furnace(152,4,1);brub(40,fb(40)-6,2,3);slag(130,fb(130)-4,6,5,false)}},
+ {n:"L2",nom:"Lanternes de fondeur",mask:gal(97),dark:.42,h:112,
+  txt:"Des lanternes de fer à grille, sur des potences scellées dans la paroi. Elles ne se balancent pas : les fondeurs les voulaient stables au-dessus des coulées.",
+  pour:"Le plus proche des torches T2 du Temple : même place, même rythme. Fixes, elles passent en jeu avec les flammes existantes, sans code nouveau.",
+  contre:"Des lanternes allumées dans une forge abandonnée posent la même question qu'au biome 2 : qui les remplit ?",
+  jeu:"Comme les torches T2 : une lanterne toutes les 6 cases, une sur deux allumée, flammes du mode existant, halo doux (H1).",
+  d(){for(const[x,on]of[[14,1],[56,0],[98,1],[140,1]])cageLamp(x,on,x);rustRun(36,1);rustRun(118,2);brub(80,fb(80)-6,4,3);moulds(150,fb(150)-5,3,2,1)}},
+ {n:"L3",nom:"Rigole de lave murale",mask:gal(101),dark:.4,h:112,
+  txt:"La lave court dans une rigole taillée au pied de la paroi nord, sur toute la longueur du couloir. Elle éclaire par en dessous.",
+  pour:"Une lumière continue, très lisible, qui suit le couloir. Contraste net avec le Temple et les Salles oubliées.",
+  contre:"Beaucoup de lave à l'écran : la vraie lave, celle qui brûle, devra se distinguer (plus large, bordée de croûte noire).",
+  jeu:"Un décalque continu le long des couloirs, animé par le mode nouveau « coulée ».",
+  d(){rigole(0,176,x=>ft(x)+3,true,1);brub(40,fb(40)-6,6,3);slag(130,fb(130)-4,6,5,false);scrap(90,fb(90)-6,2)}}
+];
+const ROOMS=[
+ {n:"R1",nom:"Salle de trempe",mask:room,dark:.6,
+  txt:"Les fondeurs trempaient le fer dans un grand bassin d'eau noire. L'eau est restée, tiède, couverte de vapeur. Des lames jamais finies dépassent encore de la grille au fond du bassin.",
+  rec:"La Chaleur ne s'applique pas dans la salle, et l'escouade y récupère 2 PV/s, comme à la citerne du Temple.",
+  pour:"Une halte au frais au milieu d'un biome qui brûle. Annonce la Trempe du Grand Crassier : la vapeur qui refroidit.",
+  contre:"L'eau ne doit pas ressembler à celle des Salles oubliées : elle est noire et fumante, sans vert.",
+  jeu:"Eau infranchissable, comme la citerne du Temple. La vapeur demande le mode nouveau « vapeur ».",
+  d(){water(50,54,126,94);blades(66,64,6,1);blades(100,86,5,2);steam(54,122,80,3);rack(144,64);moulds(26,100,3,4,2);furnace(32,5,0);fAnvil(146,100);brub(120,104,6,4)}},
+ {n:"R2",nom:"Salle des soufflets",mask:room,dark:.6,
+  txt:"Deux soufflets géants, hauts comme deux hommes, soufflaient dans un four commun par des tuyères d'argile. Leur cuir a tenu.",
+  rec:"Un adepte posté 10 s aux soufflets rallume le four : +80 Forge, une fois par jour.",
+  pour:"Montre l'échelle de la fonderie tyrienne. Même règle que la pompe des Salles oubliées : un adepte posté agit.",
+  contre:"Proche des fours tyriens qu'on rallume avec du bois : celui-ci ne fond rien, il ne donne que de la Forge.",
+  jeu:"Par simple présence, comme la pompe de la citerne. Le four passe en braises une fois soufflé.",
+  d(){furnace(88,1,2);bellows(54,70,false,1,1,1.6);bellows(122,70,false,2,-1,1.6);for(let k=0;k<2;k++){line(70,64+k,80,30+k,CL[1]);line(106,64+k,96,30+k,CL[1])}
+   moulds(30,104,4,3,1);slag(146,102,7,4,true);tongs(84,98);brub(40,56,5,4)}},
+ {n:"R3",nom:"Forge aux esprits enchaînés",mask:room,dark:.6,
+  txt:"Quatre enclumes en cercle autour d'un foyer éteint. À chacune est enchaîné un esprit d'Aether, pâle et figé. Quelqu'un forgeait ici après le départ des Tyriens.",
+  rec:"Le lieu de la quête « Les chaînes d'Aether » : 3 tirs par chaîne, et les esprits libérés rejoignent la base.",
+  pour:"Donne un lieu à la quête déjà validée, et pose dans le décor la question de la quête : qui forge avec des prisonniers ?",
+  contre:"Les esprits enchaînés ne doivent pas ressembler aux esprits d'Aether alliés : ils restent éteints, sans halo, jusqu'à ce qu'on brise leur chaîne.",
+  jeu:"Les chaînes sont des cibles, comme les gardiens de la porte du boss. Brisée, la chaîne tombe et l'esprit s'allume (le dernier montré libre).",
+  d(){brazier(88,78,false);for(const[x,y,fr]of[[52,62,0],[124,62,0],[52,100,0],[124,100,1]]){fAnvil(x,y);const sx=x+(x<88?-12:12);chainTo(x+(x<88?-5:5),y-6,sx,y-4);spirit(sx,y,fr,x+y)}
+   moulds(78,48,4,2,1);scrap(146,82,3);slag(26,82,6,5,false)}},
+ {n:"R4",nom:"Magasin de la fonderie",mask:room,dark:.6,
+  txt:"Le magasin où les Tyriens rangeaient le fer avant de le remonter. Les râteliers ont rouillé, les lingotières sont empilées jusqu'au plafond, et une caisse de lingots est restée scellée.",
+  rec:"La caisse : 10 lingots de fer, une fois.",
+  pour:"Une récompense utile au biome du fer, sur le modèle de l'atelier de Byrsa des Salles oubliées.",
+  contre:"Ressemble à l'atelier de Byrsa : ici tout est en fer et en basalte, sans cuivre.",
+  jeu:"Comme l'atelier de Byrsa : la caisse s'ouvre quand une unité passe à côté.",
+  d(){beam(16,160);hoist(60,12,1,'pot');hoist(116,9,2,'hook');moulds(24,58,4,1,3);moulds(130,58,4,2,3);ironBars(56,96,8,3);ironBars(120,96,6,4);crate(88,84,false);crate(102,86,true);
+   rack(36,100);scrap(146,100,5);rustRun(92,1)}}
+];
+const ARENAS=[
+ {n:"A1",nom:"La Fonderie scellée",mask:room,dark:.6,
+  txt:"Le gardien du sanctum est enchaîné au centre de sa fonderie, à quatre anneaux scellés dans le sol. Son enclume est posée devant lui sur un billot de basalte. Autour : des lingotières, des chaînes de palan et deux fours qui couvent.",
+  rec:"Arène du Maître-Forgeron enchaîné. L'enclume du décor est celle qui rougit à chaque martèlement ; les quatre anneaux tiennent les chaînes qu'il rompt à chaque tiers de ses PV.",
+  pour:"Le décor explique le combat : on voit l'enclume et les chaînes avant le réveil.",
+  contre:"L'enclume et les anneaux sont des pièces du combat : le reste du décor ne doit pas leur ressembler.",
+  jeu:"L'enclume rougit (mode « pulse ») quand il frappe ; un anneau se brise à chaque tiers.",
+  d(){bigAnvil(88,80,true);anchorRing(48,58,1,1);anchorRing(128,58,-1,2);anchorRing(48,100,1,3);anchorRing(128,100,-1,4);furnace(40,1,1);furnace(136,2,1);beam(56,120);hoist(70,8,1,'hook');hoist(106,11,2,'hook');
+   moulds(22,106,3,1,2);moulds(140,106,3,2,1);slag(150,84,5,3,true)}},
+ {n:"A2",nom:"La Chapelle des chaînes",mask:room,dark:.6,
+  txt:"Les fondeurs priaient dans cette nef avant chaque coulée. Après eux, quelqu'un y a enchaîné des pénitents de fer, à genoux autour de l'aire. Des cages pendent de la voûte.",
+  rec:"Arène de la Martyre du Fer, autour du dôme de 18 unités. Tout le décor est hors du dôme.",
+  pour:"Les chaînes et les pénitents annoncent la Croix de chaînes et la Pénitence sans les imiter.",
+  contre:"Les maillons au sol ne doivent pas ressembler à ceux qu'elle sème et qui brûlent : ceux du décor sont froids et rouillés.",
+  jeu:"Décor pur. Les cages prennent le mode « swing », ancrées par le haut.",
+  d(){for(const[x,y]of[[26,58],[150,58],[26,102],[150,102]])penitent(x,y,x+y);cage(52,10,1);cage(124,13,2);gring(88,74,30,12,RS[1],.35);gring(88,74,22,8,RS[0],.3);
+   looseLinks(60,98,5,1);looseLinks(118,52,4,2);brazier(70,44,true);brazier(106,44,true);crackW(88,5)}},
+ {n:"A3",nom:"Le Haut-Fourneau",mask:room,dark:.6,
+  txt:"Le cœur des Forges : un haut-fourneau maçonné dans la paroi nord, dont la gueule rougeoie encore. Des creusets géants sont restés sur leurs potences, l'un renversé. Trois vannes de vapeur percent le bord de la salle.",
+  rec:"Arène du Grand Crassier. Les trois vannes sont celles de la Trempe (E, 2 s) ; la lave de la phase III part des rigoles du sol, par quarts.",
+  pour:"On reconnaît le but de la quête « Le feu de Tyr ». Les vannes se voient avant le combat, comme les pompes de l'Éclusier.",
+  contre:"Le décor du sol (rigoles, coulée refroidie) doit rester plus sombre que la lave du combat.",
+  jeu:"Les vannes lâchent leur vapeur quand l'Exilé les ouvre (mode « vapeur ») ; la gueule du fourneau bat (« pulse ») et crache des braises (« braises »).",
+  d(){blastFurnace(88,1);rigole(20,72,104,false,3);rigole(104,156,104,true,4);steamValve(24,76,true,1);steamValve(152,76,false,2);steamValve(40,106,false,3);
+   bigCrucible(44,56,false,1);bigCrucible(130,56,true,2);slag(150,100,7,5,true);crackF(64,112,92,6)}},
+ {n:"A4",nom:"Seuil et trophées",mask:room,dark:.6,
+  txt:"Commun aux trois arènes. À l'entrée, une arche de fer sur deux piliers-cheminées de brique. Au fond, un billot de basalte attend. Quand le boss tombe, le cercle s'allume en fonte et son trophée y reste : le marteau fendu du Maître-Forgeron, le maillon rompu de la Martyre, le cœur de scorie du Crassier.",
+  rec:"Entrée et fond des trois arènes. Les trois trophées sont montrés côte à côte ; en jeu, un seul par arène.",
+  pour:"La salle garde la trace de la victoire, comme au Temple et aux Salles oubliées, et le trophée rappelle le butin du boss.",
+  contre:"L'arche doit rester dans l'axe d'entrée sans rétrécir le passage.",
+  jeu:"Même état « vaincu » que les autres arènes : il allume le cercle (mode « pulse ») et pose le trophée.",
+  d(){fSeal(88,62,30);for(const[x,f]of[[64,trophyHammer],[88,trophyLink],[112,trophyHeart]]){billot(x,64);f(x,58)}for(const[x,y]of[[34,48],[142,48]])brazier(x,y,1);
+   archF(88,112,"R",1)}}
+];
+const MARKS=[
+ {n:"Q1",nom:"Stèle marquée au fer",mask:room,dark:.62,
+  txt:"Une dalle de basalte dressée, où le glyphe du quartier a été marqué au fer rouge. Il rougit à la couleur du quartier au passage d'un allié, et les braseros de l'arche reprennent. L'arche est faite de deux cheminées de brique et d'un linteau de fer.",
+  pour:"Même lecture qu'au Temple et aux Salles oubliées : le joueur reconnaît le repère tout de suite, dans les matières du biome.",
+  contre:"La stèle reste sobre : la différence tient au basalte et à la brique.",
+  jeu:"Même règle qu'au Temple : éteints, puis allumés pour de bon au passage d'un allié à 20 unités ; carton au premier passage.",
+  d(){archF(88,60,"A",1);steleF(40,56,"A",1,1);steleF(126,56,"B",1,2);steleF(146,56,"C",1,3);crackF(48,80,98,4);brub(120,98,4,4)}},
+ {n:"Q2",nom:"Borne-enclume et portique",mask:room,dark:.62,
+  txt:"Les fondeurs marquaient leurs halles d'une enclume posée sur un pilier, frappée du glyphe du quartier. À l'entrée, un portique de palan : deux montants de fer, une poutre, un creuset pendu et une plaque au glyphe.",
+  pour:"Raconte la fonderie jusque dans les repères. Le fer se lit bien sur le basalte.",
+  contre:"L'enclume-borne ressemble à l'enclume du Maître-Forgeron : elle devra rester petite et sur son pilier.",
+  jeu:"Même règle qu'au Temple ; seuls les dessins changent.",
+  d(){archF(88,60,"A",2);steleF(40,56,"A",2,1);steleF(126,56,"B",2,2);steleF(146,56,"C",2,3);moulds(52,100,3,4,1);slag(120,100,5,5,false)}}
+];
+
+%%PAGE%%
+build(LIGHTS,document.getElementById('listL'),[['pour','Pour'],['contre','Contre'],['jeu','En jeu']]);
+build(ARENAS,document.getElementById('listA'),[['rec','Où'],['pour','Pour'],['contre','Contre'],['jeu','En jeu']]);
+build(MARKS,document.getElementById('listQ'),[['pour','Pour'],['contre','Contre'],['jeu','En jeu']]);
+
+/* ---------- cartons de quartier ---------- */
+const CARDS=[["A","LES FOURS","Forges mortes · quartier A · exp. 1"],["B","LES COULÉES","Forges mortes · quartier B · exp. 2"],
+ ["C","LA GRANDE VEINE","Forges mortes · quartier C · menace +1"],["R","LE HAUT-FOURNEAU","Forges mortes · route du boss"]];
+const ch=document.getElementById('cards');
+for(const[q,nm,sub]of CARDS){const d=document.createElement('div');d.className='card';const hex='#'+QC[q].toString(16).padStart(6,'0');d.style.setProperty('--q',hex);
+ d.innerHTML=`<div class="nm">${nm}</div><div class="sub">${sub}</div><div class="gl">${QG[q].map(r=>[...r].map(c=>`<i class="${c==='#'?'on':''}"></i>`).join('')).join('')}</div><div class="hex">${q} · ${hex}</div>`;ch.appendChild(d)}
+</script>

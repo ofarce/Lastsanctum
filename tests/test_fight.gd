@@ -6,7 +6,7 @@ extends "res://tests/fight_case.gd"
 ## Écarts voulus après 73b410f, le reste reste identique : D13, portées (archer 20, ramenée de 112 avec les postes de tir) ; D15, lance-flammes
 ## à portée 12, tir continu, sans sillon de feu (statut réécrit).
 const D13 := {"flammes": {"seek": 36.0, "reach": 24.0, "status": "Garde l’Ancre · flammes en continu ; explose à sa mort"},
-	"archer": {"seek": 46.0, "reach": 40.0},  # portée 40 (réglages du 2026-11-22)
+	"archer": {"seek": 36.8, "reach": 32.0},  # portée 32 (−20 %, 2026-11-24)
 	"engineer": {"seek": 6.0, "reach": 1.9, "dmg": 5, "ranged": false, "status": "Prêt à recevoir vos ordres · corps à corps"}}
 const ItemStorage := preload("res://sim/item_storage.gd")
 
@@ -56,7 +56,19 @@ func test_strikes_match_js() -> void:
 		foe("creep", 1.5, -119.0, 400.0)
 		foe("spitter", 6.0, -120.0, 400.0)
 		var i := 0
-		for want: Dictionary in sc["strikes"]:
+		# Coups reçus par chaque ennemi d'après le relevé (ses PV baissent d'une frappe à la suivante).
+		var hits: Array[int] = []
+		var prev: Array = []
+		for raw: Dictionary in sc["strikes"]:
+			var want := raw.duplicate(true)
+			for k in (raw["hp"] as Array).size():
+				if hits.size() <= k:
+					hits.append(0)
+					prev.append(400.0)
+				if float(raw["hp"][k]) < float(prev[k]):
+					hits[k] += 1
+				prev[k] = raw["hp"][k]
+				want["hp"][k] = lvl_hp(float(raw["hp"][k]), u, hits[k])
 			game_sim().combat.barracks_strike(u, GameState.enemies[0])
 			_same(snap(u), want, "%s niv. %d, frappe %d" % [sc["role"], sc["level"], i + 1])
 			GameState.sim_time += 1.0

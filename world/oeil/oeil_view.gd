@@ -20,6 +20,13 @@ var _body := Sprite2D.new()
 var _iris := Sprite2D.new()
 var _lids := Sprite2D.new()
 var _dark := 0.0
+## Recul au tir (1 → 0), nombre de balles à l'image précédente, phase précédente et date du dernier sursaut.
+var _kick := 0.0
+var _shots := 0
+var _phase := 0
+var _jolt_at := -INF
+## Hauteur de la masse au-dessus de l'ancre (px) : la respiration compte en pixels entiers de cette hauteur.
+const TALL := 128.0
 
 
 static func meta() -> Dictionary:
@@ -56,7 +63,7 @@ func _process(delta: float) -> void:
 	var t := GameState.sim_time
 	position = Proj.nat(enemy.x, 0.0, enemy.z).round()
 	visible = world == null or world.fog.visible_at(enemy.pos())
-	var r := OeilMatrice.run()
+	var r := GameState.oeil_run
 	var open: float = r.get("open", 0.0)
 	var ph: int = clampi(int(r.get("phase", 0)), 0, int(m.get("phases", 1)) - 1)
 	var sheet := "cast" if open > 0.5 and enemy.hp > 0.0 else "idle"
@@ -85,7 +92,29 @@ func _process(delta: float) -> void:
 	var tint := Color.WHITE.lerp(Color(0.42, 0.36, 0.38), _dark)
 	if t - enemy.hurt_at < 0.12:
 		tint = Color(1.6, 0.75, 0.7)
-	scale = Vector2.ONE
+	# Vie de la masse, en pixels entiers : elle respire (plus vite à chaque phase), se gonfle quand l'œil s'ouvre,
+	# recule à chaque salve dans le sens opposé au regard, tressaille quand elle est touchée et se convulse au
+	# changement de phase. L'ancre reste au sol : seul le haut bouge.
+	var n := GameState.oeil_bullets.size()
+	if n > _shots:
+		_kick = 1.0
+	_shots = n
+	_kick = move_toward(_kick, 0.0, delta * 9.0)
+	if ph != _phase:
+		_phase = ph
+		_jolt_at = t
+	var breath := sin(t * (1.7 + 0.5 * ph)) * 2.0 + open * 3.0
+	if t - _jolt_at < 0.7:
+		breath += (1.0 - (t - _jolt_at) / 0.7) * sin((t - _jolt_at) * 38.0) * 5.0
+	var grow := roundf(breath)
+	scale = Vector2(1.0 - grow / 400.0, 1.0 + grow / TALL)
+	if not dead:
+		var off := -Vector2(cos(look), sin(look) * 0.5) * 3.0 * _kick
+		if t - enemy.hurt_at < 0.12:
+			off.x += 1.0 if fmod(t * 40.0, 2.0) < 1.0 else -1.0
+		elif ph >= 2 and fmod(t * 1.3, 1.0) < 0.12:
+			off.x += 1.0 if fmod(t * 30.0, 2.0) < 1.0 else -1.0
+		position += off.round()
 	if dead:
 		var k := clampf((t - enemy.died_at) / OeilMatrice.COLLAPSE, 0.0, 1.0)
 		tint = Color(1.0 + 0.6 * (1.0 - k), 1.0 - 0.2 * k, 1.0 - 0.2 * k, 1.0 - k * k)

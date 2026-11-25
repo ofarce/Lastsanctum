@@ -136,20 +136,55 @@ static func killed(src: Unit, e: Enemy) -> void:
 	GameState.damage_numbers.append({"target": src, "x": src.x, "z": src.z, "amount": healed, "age": -0.4, "duration": 0.9, "heal": true})
 
 
+## Mines de patine : un tir manqué laisse une mine PATINE_LIFE s ; un ennemi à moins de PATINE_TOUCH la fait éclater
+## (dégâts du tir). Le canon verdit (Unit.mods["patine"], entities/unit/mods_worn_fx.gd).
+const PATINE_LIFE := 3.0
+const PATINE_TOUCH := 0.9
+const PATINE_MAX := 12
+
+
+static func patine_drop(u: Unit, at: Vector2, dmg: float) -> void:
+	if not worn(u, "patine"):
+		return
+	if GameState.patine_mines.size() >= PATINE_MAX:
+		GameState.patine_mines.pop_front()
+	GameState.patine_mines.append({"x": at.x, "z": at.y, "at": GameState.sim_time, "until": GameState.sim_time + PATINE_LIFE,
+		"dmg": dmg, "src": u})
+
+
+static func patine_tick(sim: Simulation) -> void:
+	if GameState.patine_mines.is_empty():
+		return
+	var now := GameState.sim_time
+	var keep: Array[Dictionary] = []
+	for m: Dictionary in GameState.patine_mines:
+		if now >= float(m["until"]):
+			continue
+		var hit: Enemy = null
+		for e: Enemy in GameState.enemies:
+			if e.hp > 0.0 and not e.hidden and absf(e.x - float(m["x"])) < PATINE_TOUCH and absf(e.z - float(m["z"])) < PATINE_TOUCH:
+				hit = e
+				break
+		if hit == null:
+			keep.append(m)
+			continue
+		var src: Unit = m["src"]
+		sim.combat.damage(hit, float(m["dmg"]), src)
+		Combat.flash(m["x"], m["z"], Color("#78e098"))
+		Combat.zone(m["x"], m["z"], 1.2, Color("#2aa452"))
+		if src != null:
+			src.mods["patine"] = now
+	GameState.patine_mines = keep
+
+
 ## Ennemis percés en plus par un carreau de `u` (Lentille de souffle).
 static func pierce(u: Unit) -> int:
 	return 1 if worn(u, "lens") else 0
 
 
-## Munition du tir qui part (Barillet double : une fois sur deux, la munition d'avant le dernier changement).
-static func shot_ammo(u: Unit) -> String:
-	var cur := Ammo.current()
-	if not worn(u, "barrel") or not Ammo.unlocked() or GameState.ammo_prev == cur or not Ammo.AMMO.has(GameState.ammo_prev):
-		return cur
-	GameState.barrel_flip = not GameState.barrel_flip
-	if not GameState.barrel_flip:
-		return GameState.ammo_prev
-	return cur
+## Munition du tir qui part (le Barillet double, qui l’alternait, est retiré le 2026-11-23).
+static func shot_ammo(_u: Unit) -> String:
+	return Ammo.current()
 
 
 # ---------------------------------------------------------------- Exploration
@@ -245,7 +280,10 @@ static func _raid_due(sim: Simulation, n: int) -> bool:
 
 ## Annonces de l'Écho du pylône, et pulsation des adeptes touchés par la Voix du Chantre.
 static func tick(sim: Simulation) -> void:
-	if GameState.ended or not GameState.orb_active:
+	if GameState.ended:
+		return
+	patine_tick(sim)
+	if not GameState.orb_active:
 		return
 	var now := GameState.sim_time
 	var echo := wearer("echo")

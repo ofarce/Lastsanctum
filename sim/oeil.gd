@@ -9,8 +9,13 @@ extends RefCounted
 ## - Il s'éveille quand la salle est découverte, et ne quitte jamais son centre.
 ## - La salle sert d'arène : seul l'Ingénieur y entre (les autres unités sont reconduites à l'entrée), rien ne vise
 ##   à travers sa paroi, et seul l'Ingénieur, dans la salle, le blesse. L'œil ouvert prend OPEN_MULT fois les dégâts.
-## - Combat singulier dès que l'Ingénieur entre. Les attaques s'enchaînent selon ROTATION (planches/oeil-maj.html),
-##   avec une fenêtre de souffle entre deux :
+## - Combat singulier dès que l'Ingénieur entre. Les attaques s'enchaînent selon ROTATION, avec une fenêtre de souffle
+##   entre deux (2026-11-23 : chaque mini-boss du Temple joue une part de ses attaques) :
+##   phase I : les motifs de la Martyre de Byrsa (fissure, larmes d'or, rosace, litanie), joués par le moteur de
+##   la Martyre (Martyre.host_*) depuis le pourtour de la base ;
+##   phase II : ses attaques propres (celles que joue aussi l'Archiprêtre aux racines, host_*) ;
+##   phase III : deux attaques à la fois, une de la phase II et un motif de la phase I ;
+##   Fixation et Clignement ne sont plus joués (code gardé). Attaques propres (planches/oeil-maj.html) :
 ##   Regard : l'œil vise l'Ingénieur, trace un couloir d'avertissement au sol (LANE.warn s), puis lâche un torrent
 ##   d'yeux rapides dans cet axe, et des yeux lents qui le suivent un instant ;
 ##   Larmes : larmes en cloche autour de l'Ingénieur, éclaboussure, flaque qui éclate en couronne (œil mi-clos) ;
@@ -22,9 +27,9 @@ extends RefCounted
 ##   Les mille yeux : à l'entrée en phase II puis en phase III, les parois lâchent des murs d'yeux à une brèche, que la
 ##   masse arrête.
 ## - Racines : l'Ingénieur collé à la base est frappé (ROOT_DAMAGE toutes les ROOT_EVERY s).
-## - Trois phases (PHASE_HP) : chacune ajoute des attaques, balles plus rapides ; en phase III, le Regard vise deux
-##   axes à la fois. Au changement de phase, les balles s'éteignent. Après un coup, l'Ingénieur est invulnérable
-##   IFRAMES s.
+## - Trois phases (PHASE_HP), balles plus rapides de l'une à l'autre ; en phase III les attaques gardent les nombres
+##   de la phase II (TIER). Au changement de phase, les balles s'éteignent. Après un coup, l'Ingénieur est
+##   invulnérable IFRAMES s.
 ## - S'il ressort de la salle, ses balles s'éteignent et l'œil se referme, sans se soigner.
 ## État : GameState.oeil, oeil_state, oeil_bullets, oeil_fx (couloirs, flaques, marques, événements à venir),
 ## oeil_run (phase, attaque en cours, état visuel : close, dark, iris_out, weep, open_to). Rendu : world/oeil/.
@@ -33,6 +38,9 @@ const KIND := "oeil"
 ## Emprise au sol (demi-axes, unités) : la base de chair, infranchissable pour l'Ingénieur. Les balles partent
 ## de son pourtour.
 const FOOT := Vector2(9.5, 3.0)
+## Emprise et orbite des pupilles (part de PUPILS.rx / rz) quand un autre boss joue ses attaques (host_begin).
+const HOST_FOOT := Vector2(2.4, 1.2)
+const HOST_ORBIT := 0.7
 ## Silhouette pour les tirs et les clics : demi-largeur, hauteur projetée au nord du centre, marge au sud.
 const BODY := {"half_w": 9.0, "top": 11.0, "foot": 2.5, "melee": 3.0}
 const OPEN_MULT := 2.0
@@ -46,17 +54,22 @@ const ROOT_EVERY := 1.2
 const BULLET := {"r": 0.40, "big_r": 0.68, "hit": 0.375, "damage": 8.0, "big_damage": 16.0, "lift": 17.0, "life": 6.0}
 ## Regard : annonce, tirs du torrent (nombre, cadence, vitesse, écart, une grosse balle sur `big`), yeux chercheurs
 ## (un tous les `seek_every` tirs, vitesse, virage max en rad/s, durée du guidage), ouverture avant le premier,
-## pause après chaque regard ; écart du second axe en phase III.
+## pause après chaque regard.
 const LANE := {"warn": 0.7, "shots": 18, "every": 0.05, "speed": 21.25, "jitter": 0.035, "big": 6,
-	"seek_every": 4, "seek_speed": 7.25, "seek_turn": 1.2, "seek_time": 1.3, "open": 0.5, "rest": 0.5, "split": 0.55}
+	"seek_every": 4, "seek_speed": 7.25, "seek_turn": 1.2, "seek_time": 1.3, "open": 0.5, "rest": 0.5}
 const PHASE_HP := [2.0 / 3.0, 1.0 / 3.0]
 const PHASE_SPEED := [1.0, 1.12, 1.25]
 const PHASE_ROUNDS := [3, 4, 5]
-## Enchaînement des attaques par phase ; INTRO (l'attaque de la phase III) se joue à l'entrée en phase II, puis
-## de nouveau à l'entrée en phase III (2026-11-20).
-const ROTATION := [["regard", "larmes", "cils"], ["regard", "strabisme", "pupilles", "larmes", "cils"],
-	["regard", "fixation", "clignement", "pupilles", "cils"]]
+## Enchaînement des attaques par phase (2026-11-23). Phase I : motifs de la Martyre (préfixe MARTYRE_PREFIX, joués
+## par Martyre.host_start). Phase II : attaques propres, aussi jouées par l'Archiprêtre. Phase III (ligne vide) : à
+## chaque tour, l'attaque suivante de la phase II et le motif suivant de la phase I partent ensemble (5 × 4 : vingt
+## paires avant de boucler). INTRO se joue seule à l'entrée en phase II, puis de nouveau à l'entrée en phase III.
+const MARTYRE_PREFIX := "m:"
+const ROTATION := [["m:fissure", "m:larmes", "m:rosace", "m:litanie"], ["regard", "strabisme", "pupilles", "larmes", "cils"], []]
 const INTRO := "milleyeux"
+## Rang des nombres par attaque (rounds, larmes, bras…) selon la phase : la phase III garde ceux de la phase II,
+## puisqu'elle en lance deux à la fois.
+const TIER := [0, 1, 1]
 ## Larmes : départ, cadence, nombre par phase, vol (s) et hauteur de la cloche (px), dispersion autour de
 ## l'Ingénieur (une sur `exact` tombe pile sur lui), éclaboussure, flaque (éclate à `burst_at` s), pause finale ;
 ## l'œil reste mi-clos (open_to), donc sans dégâts doublés.
@@ -92,7 +105,7 @@ const WALLS := {"wake": 0.5, "start": 1.1, "waves": 5, "every": 1.7, "row": 1.5,
 ## Fermeture brusque de l'œil (clignement, réveil des parois), part par seconde.
 const SHUT_RATE := 8.0
 const PHASE_WINDOW := [1.6, 1.4, 1.2]
-const PHASE_NAMES := ["I · Le regard", "II · L’iris", "III · Les deux axes"]
+const PHASE_NAMES := ["I · Le credo", "II · L’iris", "III · Le credo et l’iris"]
 const PHASE_PAUSE := 1.0
 const FIRST_PATTERN := 1.5
 ## Ouverture et fermeture de l'œil (part par seconde), suivi du regard (rad/s).
@@ -112,12 +125,27 @@ static func active() -> bool:
 	return GameState.oeil != null and GameState.oeil.hp > 0.0
 
 
+## Un autre boss joue ses attaques (l'Archiprêtre aux racines) : centre, emprise, salle et cibles sont les siens.
+static func hosted() -> bool:
+	return GameState.oeil_host != ""
+
+
 static func center() -> Vector2:
-	return TerrainState.eye_room_center()
+	return Archipretre.center() if hosted() else TerrainState.eye_room_center()
 
 
+static func foot() -> Vector2:
+	return HOST_FOOT if hosted() else FOOT
+
+
+## (x, z) est dans la salle où volent les balles (grow : marge en unités).
+static func in_room(x: float, z: float, grow := 0.0) -> bool:
+	return Archipretre.in_arena(x, z, grow) if hosted() else TerrainState.in_eye_room(x, z, grow)
+
+
+## État du combat : celui de l'Œil, ou celui de l'hôte tant qu'un autre boss joue ses attaques.
 static func run() -> Dictionary:
-	return GameState.oeil_run
+	return GameState.oeil_host_run if hosted() else GameState.oeil_run
 
 
 ## p (unité, ennemi, baliste {x, z}) est-il dans la salle ?
@@ -131,6 +159,8 @@ static func blocks(a: Variant, b: Variant) -> bool:
 
 
 static func can_hurt(src: Unit) -> bool:
+	if hosted():
+		return true
 	return src != null and src.role == "engineer" and inside(src)
 
 
@@ -146,6 +176,11 @@ static func duelist() -> Unit:
 		if u.role == "engineer" and u.alive() and not u.hidden and inside(u):
 			return u
 	return null
+
+
+## L'Exilé que visent les balles en vol (zone touchée, regard des pupilles) : le duelliste, ou celui de l'hôte.
+static func aimed() -> Unit:
+	return Archipretre.exile() if hosted() else duelist()
 
 
 static func body_rect(e: Enemy) -> Rect2:
@@ -180,14 +215,14 @@ static func blinking(u: Unit) -> bool:
 ## (x, z) dans l'emprise de la base, grossie de `grow` unités.
 static func in_foot(x: float, z: float, grow := 0.0) -> bool:
 	var c := center()
-	var dx := (x - c.x) / (FOOT.x + grow)
-	var dz := (z - c.y) / (FOOT.y + grow)
+	var dx := (x - c.x) / (foot().x + grow)
+	var dz := (z - c.y) / (foot().y + grow)
 	return dx * dx + dz * dz < 1.0
 
 
 ## Point du pourtour de la base dans la direction a, d'où partent les balles.
 static func emit(a: float) -> Vector2:
-	return center() + Vector2(cos(a) * (FOOT.x + 0.4), sin(a) * (FOOT.y + 0.4))
+	return center() + Vector2(cos(a) * (foot().x + 0.4), sin(a) * (foot().y + 0.4))
 
 
 # ---------------------------------------------------------------- Cycle de vie
@@ -198,7 +233,10 @@ static func tick(sim: Simulation) -> void:
 	var st := sim.state()
 	match GameState.oeil_state:
 		"":
-			if st.frontier and st.is_gallery_open(center().x, center().y):
+			# Éveil à la vue (comme les pylônes) : les galeries sont toutes ouvertes dès le départ (galeries reliées,
+			# Temple en salles), « galerie ouverte » ne suffit plus — sinon il s'éveillait au premier pas de la partie.
+			var own := TerrainState.eye_room_center()
+			if st.frontier and st.is_gallery_open(own.x, own.y) and Awaken.seen(own, Awaken.SIGHT):
 				spawn(sim)
 		"waiting", "duel":
 			var e: Enemy = GameState.oeil
@@ -216,6 +254,12 @@ static func tick(sim: Simulation) -> void:
 				run()["cast"] = false
 				_clear_vis(run())
 				run()["next_at"] = INF
+		"defeated":
+			# Failles et éclats des motifs de la Martyre : ils finissent de s'éteindre, puis son moteur est rendu.
+			if Martyre.host() == KIND:
+				Martyre.host_tick(sim, null, null, GameState.sim_time, 0.0, 0)
+				if GameState.martyre_fx.is_empty():
+					Martyre.host_end()
 
 
 ## L'Ingénieur est tombé pendant le duel : l'Œil retrouve tous ses PV et sa première phase.
@@ -234,7 +278,8 @@ static func reset_duel() -> void:
 
 
 static func spawn(sim: Simulation) -> Enemy:
-	var c := center()
+	# Toujours dans sa salle : center() suit l'hôte (l'Archiprêtre) quand un autre boss joue ses attaques.
+	var c := TerrainState.eye_room_center()
 	var e := Enemy.make(KIND, c.x, c.y, 1.0)
 	# Boss de salle : hors menace et hors fin de vague, sinon il bloque les assauts dès le début (comme Gorge).
 	e.beast = true
@@ -242,8 +287,10 @@ static func spawn(sim: Simulation) -> Enemy:
 	GameState.enemies.append(e)
 	GameState.oeil = e
 	GameState.oeil_state = "waiting"
-	GameState.oeil_bullets.clear()
-	GameState.oeil_fx.clear()
+	# Un hôte en plein combat (l'Archiprêtre) garde ses balles : l'Œil s'éveille dès qu'il est vu, parfois avant.
+	if not hosted():
+		GameState.oeil_bullets.clear()
+		GameState.oeil_fx.clear()
 	GameState.oeil_run = {"at": GameState.sim_time, "phase": 0, "next_at": INF, "busy_until": -INF, "cast": false,
 		"open": 0.0, "look": PI / 2.0, "iframe_until": -INF, "root_at": -INF, "down_at": INF, "rounds": 0, "idx": 0,
 		"pattern": ""}
@@ -271,12 +318,17 @@ static func _defeat(sim: Simulation) -> void:
 static func act(sim: Simulation, e: Enemy, dt: float) -> void:
 	e.stun = 0.0
 	e.cooldown -= dt
+	# Ses attaques sont prêtées à un autre boss : il attend, paupière close, sans toucher aux balles de l'hôte.
+	if hosted():
+		return
 	var now := GameState.sim_time
 	var r := run()
 	var u := duelist()
 	_eye(r, u, now, dt)
 	update_fx(sim, u, now, dt)
 	update_bullets(sim, u, now, dt)
+	if Martyre.host() == KIND:
+		Martyre.host_tick(sim, e, u, now, dt, int(r["phase"]))
 	if u == null:
 		return
 	_roots(sim, r, u, now)
@@ -314,7 +366,7 @@ static func _roots(sim: Simulation, r: Dictionary, u: Unit, now: float) -> void:
 		if off.length() < 0.01:
 			off = Vector2(0.0, 1.0)
 		var a := off.angle()
-		var p := center() + Vector2(cos(a) * (FOOT.x + 0.45), sin(a) * (FOOT.y + 0.45))
+		var p := center() + Vector2(cos(a) * (foot().x + 0.45), sin(a) * (foot().y + 0.45))
 		u.x = p.x
 		u.z = p.y
 	if in_foot(u.x, u.z, ROOT_REACH) and now >= float(r["root_at"]):
@@ -349,27 +401,51 @@ static func _check_phase(sim: Simulation, e: Enemy, r: Dictionary, now: float) -
 
 # ---------------------------------------------------------------- Attaques
 
-## Attaque suivante : l'intro de phase si elle attend, sinon la rotation de la phase.
-static func next_pattern(r: Dictionary) -> String:
+## Attaques du tour : l'intro de phase si elle attend, sinon la rotation de la phase ; en phase III, l'attaque
+## suivante de la phase II et le motif suivant de la phase I, ensemble.
+static func next_patterns(r: Dictionary) -> Array:
 	if r.has("intro"):
 		var p: String = r["intro"]
 		r.erase("intro")
-		return p
-	var rot: Array = ROTATION[int(r["phase"])]
+		return [p]
+	var ph: int = r["phase"]
 	var i: int = r.get("idx", 0)
 	r["idx"] = i + 1
-	return rot[i % rot.size()]
+	var own: Array = ROTATION[1]
+	var lent: Array = ROTATION[0]
+	var out: Array = [own[i % own.size()], lent[i % lent.size()]] if ph >= 2 else [ROTATION[ph][i % ROTATION[ph].size()]]
+	# Les motifs de la Martyre passent par son moteur : pris si elle est elle-même sur le terrain (partie sans plan).
+	if Martyre.active():
+		out = out.filter(func(p: String) -> bool: return not p.begins_with(MARTYRE_PREFIX))
+		if out.is_empty():
+			out = [own[i % own.size()]]
+	return out
 
 
-## Lance l'attaque suivante : événements datés (fx "ev") et contrôleurs (fx "sweep", "orbs", "walleyes"…), fin à
-## busy_until, puis souffle PHASE_WINDOW.
+## Lance les attaques du tour, ensemble : fin à busy_until (la plus longue), puis souffle PHASE_WINDOW.
 static func _start_pattern(sim: Simulation, e: Enemy, r: Dictionary, u: Unit, now: float) -> void:
 	var ph: int = r["phase"]
-	var k: float = PHASE_SPEED[ph]
-	var p := next_pattern(r)
-	r["pattern"] = p
+	var list := next_patterns(r)
+	r["pattern"] = "+".join(PackedStringArray(list))
 	r["cast"] = true
 	e.cast_started = now
+	var end := now
+	for p: String in list:
+		if p.begins_with(MARTYRE_PREFIX):
+			if Martyre.host() != KIND:
+				Martyre.host_begin(KIND, center(), TerrainState.EYE_ROOM_RX)
+			end = maxf(end, Martyre.host_start(sim, e, u, p.trim_prefix(MARTYRE_PREFIX), now))
+		else:
+			end = maxf(end, cast(sim, r, u, p, now))
+	r["busy_until"] = end
+	r["next_at"] = end + PHASE_WINDOW[ph]
+
+
+## Lance l'attaque p : événements datés (fx "ev") et contrôleurs (fx "sweep", "orbs", "walleyes"…) ; renvoie
+## l'instant où elle finit. Nombres de la phase selon TIER, vitesses selon PHASE_SPEED.
+static func cast(sim: Simulation, r: Dictionary, u: Unit, p: String, now: float) -> float:
+	var k: float = PHASE_SPEED[int(r["phase"])]
+	var ph: int = TIER[int(r["phase"])]
 	var end := now
 	match p:
 		"regard":
@@ -411,7 +487,7 @@ static func _start_pattern(sim: Simulation, e: Enemy, r: Dictionary, u: Unit, no
 			var base := sim.rng.randf() * TAU
 			var list: Array = []
 			for i in PUPILS["count"]:
-				var pe := Enemy.make(PUPIL_KIND, center().x, center().y + FOOT.y, 99.0)
+				var pe := Enemy.make(PUPIL_KIND, center().x, center().y + foot().y, 99.0)
 				pe.beast = true
 				pe.memo["slot"] = i
 				pe.memo["h"] = PUPILS["h0"]
@@ -452,8 +528,7 @@ static func _start_pattern(sim: Simulation, e: Enemy, r: Dictionary, u: Unit, no
 			_ev(now + WALLS["wake"], "wake", {})
 			for i in WALLS["waves"]:
 				_ev(t0 + i * every, "wall", {"both": i >= 2 and i % 2 == 0, "side": i % 2})
-	r["busy_until"] = end
-	r["next_at"] = end + PHASE_WINDOW[ph]
+	return end
 
 
 static func _ev(at: float, op: String, args: Dictionary) -> void:
@@ -471,7 +546,7 @@ static func _clear_vis(r: Dictionary) -> void:
 ## Événement daté d'une attaque.
 static func _event(sim: Simulation, f: Dictionary, u: Unit, now: float, k: float, born: Array[Dictionary]) -> void:
 	var r := run()
-	var ph: int = r.get("phase", 0)
+	var ph: int = TIER[int(r.get("phase", 0))]
 	match f["op"]:
 		"tear":
 			if u == null:
@@ -480,7 +555,7 @@ static func _event(sim: Simulation, f: Dictionary, u: Unit, now: float, k: float
 			if not f["exact"]:
 				t += Vector2((sim.rng.randf() * 2.0 - 1.0) * TEARS["spread_x"], (sim.rng.randf() * 2.0 - 1.0) * TEARS["spread_z"])
 			t = _landing(t)
-			var s := center() + Vector2((sim.rng.randf() - 0.5) * 2.0, FOOT.y - 0.5)
+			var s := center() + Vector2((sim.rng.randf() - 0.5) * 2.0, foot().y - 0.5)
 			var b := shoot(s, 0.0, 0.0, false, {"style": "larme"})
 			b["arc"] = {"x0": s.x, "z0": s.y, "tx": t.x, "tz": t.y, "t0": now, "T": TEARS["flight"] / k, "h0": PUPILS["h0"],
 				"H": TEARS["arc"]}
@@ -530,9 +605,9 @@ static func _event(sim: Simulation, f: Dictionary, u: Unit, now: float, k: float
 static func _landing(t: Vector2) -> Vector2:
 	var c := center()
 	if in_foot(t.x, t.y, 2.0):
-		var a := atan2((t.y - c.y) / (FOOT.y + 2.0), (t.x - c.x) / (FOOT.x + 2.0))
-		t = c + Vector2(cos(a) * (FOOT.x + 2.3), sin(a) * (FOOT.y + 2.3))
-	while not TerrainState.in_eye_room(t.x, t.y, -1.0) and t.distance_to(c) > 1.0:
+		var a := atan2((t.y - c.y) / (foot().y + 2.0), (t.x - c.x) / (foot().x + 2.0))
+		t = c + Vector2(cos(a) * (foot().x + 2.3), sin(a) * (foot().y + 2.3))
+	while not in_room(t.x, t.y, -1.0) and t.distance_to(c) > 1.0:
 		t = t.lerp(c, 0.1)
 	return t
 
@@ -576,7 +651,8 @@ static func pupil_at(f: Dictionary, slot: int, now: float) -> Array:
 	var k: float = PHASE_SPEED[int(run().get("phase", 0))]
 	var a: float = f["base"] + slot * TAU / PUPILS["count"] + PUPILS["orbit"] * k * maxf(0.0, t - out)
 	var c := center()
-	var p := (c + Vector2(0.0, FOOT.y)).lerp(c + Vector2(cos(a) * PUPILS["rx"], sin(a) * PUPILS["rz"]), o)
+	var reach := HOST_ORBIT if hosted() else 1.0
+	var p := (c + Vector2(0.0, foot().y)).lerp(c + Vector2(cos(a) * PUPILS["rx"], sin(a) * PUPILS["rz"]) * reach, o)
 	return [p, lerpf(PUPILS["h0"], PUPILS["h1"], o)]
 
 
@@ -589,8 +665,8 @@ static func update_fx(sim: Simulation, u: Unit, now: float, dt: float) -> void:
 	if GameState.oeil_fx.is_empty():
 		return
 	var r := run()
-	var ph: int = r.get("phase", 0)
-	var k: float = PHASE_SPEED[ph]
+	var k: float = PHASE_SPEED[int(r.get("phase", 0))]
+	var ph: int = TIER[int(r.get("phase", 0))]
 	var keep: Array[Dictionary] = []
 	var born: Array[Dictionary] = []
 	for f: Dictionary in GameState.oeil_fx:
@@ -607,14 +683,10 @@ static func update_fx(sim: Simulation, u: Unit, now: float, dt: float) -> void:
 				if u == null:
 					continue
 				var a := (u.pos() - center()).angle()
-				var axes: Array[float] = [a]
-				if ph >= 2:
-					axes.append(a + (LANE["split"] if sim.rng.randf() < 0.5 else -LANE["split"]))
 				r["lock"] = a
-				for th: float in axes:
-					var fire: float = now + LANE["warn"]
-					born.append({"type": "lane", "a": th, "at": now, "fire": fire, "shots": 0,
-						"until": fire + LANE["shots"] * LANE["every"] + 0.25})
+				var fire: float = now + LANE["warn"]
+				born.append({"type": "lane", "a": a, "at": now, "fire": fire, "shots": 0,
+					"until": fire + LANE["shots"] * LANE["every"] + 0.25})
 			"lane":
 				var fire: float = f["fire"]
 				while now >= fire + f["shots"] * LANE["every"] and f["shots"] < LANE["shots"]:
@@ -693,6 +765,7 @@ static func update_fx(sim: Simulation, u: Unit, now: float, dt: float) -> void:
 					continue
 				var c := Vector2(f["x"], f["z"])
 				if u != null and u.pos().distance_to(c) < FIX["r1"] + BULLET["hit"] and hurt_engineer(sim, u, FIX["damage"], now):
+					_heal_on_hit()
 					Combat.flash(u.x, u.z, Color("#ff8a6a"))
 				_ring(c, FIX["ring"][ph], FIX["ring_speed"] * k, sim.rng.randf() * TAU, {})
 				_ring(c, FIX["big"], FIX["big_speed"] * k, sim.rng.randf() * TAU, {"big": true})
@@ -730,9 +803,49 @@ static func hurt_engineer(sim: Simulation, u: Unit, amount: float, now: float) -
 	var r := run()
 	if now < float(r.get("iframe_until", -INF)):
 		return false
-	sim.combat.damage(u, amount * DAMAGE_MULT)
+	sim.combat.damage(u, Combat.boss_shot(u.z))
 	r["iframe_until"] = now + IFRAMES
 	return true
+
+
+## Cibles des balles : l'Ingénieur en duel ; quand un autre boss joue ses attaques, toutes les unités de son arène.
+static func _victims(u: Unit) -> Array[Unit]:
+	if hosted():
+		return Archipretre.squad()
+	var out: Array[Unit] = []
+	if u != null:
+		out.append(u)
+	return out
+
+
+## Une balle touche v. L'Ingénieur : coup de boss et invulnérabilité (hurt_engineer). Les autres unités (attaques
+## prêtées) : dégâts de la balle après armure, et la même invulnérabilité, chacune la sienne.
+static func _hit(sim: Simulation, v: Unit, amount: float, now: float) -> bool:
+	if v.role == "engineer":
+		return hurt_engineer(sim, v, amount, now)
+	var safe: Dictionary = run().get("hit_until", {})
+	var id := v.get_instance_id()
+	if now < float(safe.get(id, -INF)):
+		return false
+	safe[id] = now + IFRAMES
+	run()["hit_until"] = safe
+	sim.combat.damage(v, Combat.after_armor(v, amount))
+	return true
+
+
+## L'Œil reprend HEAL_ON_HIT de ses PV max à chaque projectile qui touche l'Exilé (2026-11-23).
+const HEAL_ON_HIT := 0.05
+
+
+static func _heal_on_hit() -> void:
+	var e: Enemy = GameState.oeil
+	if e == null or e.hp <= 0.0:
+		return
+	var healed := minf(e.max_hp - e.hp, e.max_hp * HEAL_ON_HIT)
+	if healed <= 0.0:
+		return
+	e.hp += healed
+	GameState.damage_numbers.append({"target": e, "x": e.x, "z": e.z, "amount": healed, "age": -0.2, "duration": 0.9, "heal": true})
 
 
 ## Vol des balles : larmes en cloche, accélération, guidage des yeux chercheurs, murs arrêtés par la masse, sortie de
@@ -742,6 +855,7 @@ static func update_bullets(sim: Simulation, u: Unit, now: float, dt: float) -> v
 		return
 	var keep: Array[Dictionary] = []
 	var landed: Array[Dictionary] = []
+	var victims := _victims(u)
 	for b: Dictionary in GameState.oeil_bullets:
 		if b.has("arc"):
 			var A: Dictionary = b["arc"]
@@ -773,20 +887,29 @@ static func update_bullets(sim: Simulation, u: Unit, now: float, dt: float) -> v
 			b["vz"] = v.y
 		b["x"] += b["vx"] * dt
 		b["z"] += b["vz"] * dt
-		if now >= float(b["until"]) or not TerrainState.in_eye_room(b["x"], b["z"], 0.5):
+		if now >= float(b["until"]) or not in_room(b["x"], b["z"], 0.5):
+			# Fin de la braise (ShotEnds « fire ») : gerbe et suie contre la paroi, ou braise étouffée en fin de vie.
+			var mode := "range" if now >= float(b["until"]) else "wall"
+			GameState.oeil_fx.append({"type": "end", "mode": mode, "x": b["x"], "z": b["z"], "vx": b["vx"], "vz": b["vz"],
+				"big": b["big"] and b.get("style", "oeil") == "oeil", "h": b.get("h", 0.0),
+				"at": now, "until": now + float(ShotEnds.DUR["fire"][0 if mode == "wall" else 1])})
 			continue
 		if b.get("wall", false) and in_foot(b["x"], b["z"], -0.5):
 			GameState.oeil_fx.append({"type": "mote", "x": b["x"], "z": b["z"], "at": now, "until": now + 0.9})
 			continue
-		if u != null:
-			var big: bool = b["big"]
-			var reach: float = BULLET["hit"] + (BULLET["big_r"] if big else BULLET["r"])
-			var dx: float = u.x - b["x"]
-			var dz: float = u.z - b["z"]
-			if dx * dx + dz * dz < reach * reach and hurt_engineer(sim, u, BULLET["big_damage"] if big else BULLET["damage"], now):
-				Combat.flash(u.x, u.z, Color("#ff8a6a"))
-				continue
-		keep.append(b)
+		var big: bool = b["big"]
+		var reach: float = BULLET["hit"] + (BULLET["big_r"] if big else BULLET["r"])
+		var spent := false
+		for v: Unit in victims:
+			var dx: float = v.x - b["x"]
+			var dz: float = v.z - b["z"]
+			if dx * dx + dz * dz < reach * reach and _hit(sim, v, BULLET["big_damage"] if big else BULLET["damage"], now):
+				_heal_on_hit()
+				Combat.flash(v.x, v.z, Color("#ff8a6a"))
+				spent = true
+				break
+		if not spent:
+			keep.append(b)
 	GameState.oeil_bullets = keep
 	# Larmes posées : éclaboussure tout de suite, flaque qui éclate un peu plus tard.
 	var k: float = PHASE_SPEED[int(run().get("phase", 0))]
@@ -810,6 +933,52 @@ static func _extinguish(motes: bool) -> void:
 	GameState.oeil_fx = keep
 	_remove_pupils()
 	run().erase("lock")
+	# Motifs de la Martyre en cours (phases I et III) : éteints avec le reste.
+	if Martyre.host() == KIND:
+		Martyre.host_clear(motes)
+
+
+# ---------------------------------------------------------------- Attaques prêtées
+
+## Phase dont un hôte joue les attaques (nombres et vitesses de la phase II).
+const HOST_PHASE := 1
+
+
+## Un autre boss (`who` : son KIND) joue les attaques de la phase II : balles, annonces et pupilles passent par les
+## mêmes listes (GameState.oeil_bullets, oeil_fx) et le même rendu (world/oeil/oeil_fx.gd), centrées sur lui.
+static func host_begin(who: String) -> void:
+	GameState.oeil_host = who
+	GameState.oeil_bullets.clear()
+	GameState.oeil_fx.clear()
+	GameState.oeil_host_run = {"at": GameState.sim_time, "phase": HOST_PHASE, "cast": false, "open": 0.0, "look": PI / 2.0,
+		"iframe_until": -INF, "hit_until": {}, "pattern": ""}
+
+
+## L'hôte lance l'attaque p sur u ; renvoie l'instant où elle finit.
+static func host_cast(sim: Simulation, u: Unit, p: String, now: float) -> float:
+	var r := run()
+	r["pattern"] = p
+	return cast(sim, r, u, p, now)
+
+
+## À chaque pas de l'hôte : annonces, événements et vol des balles ; u est la cible visée (ou null).
+static func host_tick(sim: Simulation, u: Unit, now: float, dt: float) -> void:
+	update_fx(sim, u, now, dt)
+	update_bullets(sim, u, now, dt)
+
+
+## Balles, annonces et pupilles de l'hôte éteintes (en éclats si motes).
+static func host_clear(motes: bool) -> void:
+	_extinguish(motes)
+	_clear_vis(run())
+
+
+static func host_end() -> void:
+	GameState.oeil_bullets.clear()
+	GameState.oeil_fx.clear()
+	_remove_pupils()
+	GameState.oeil_host = ""
+	GameState.oeil_host_run = {}
 
 
 static func hurt(e: Enemy) -> void:

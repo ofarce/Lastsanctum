@@ -93,7 +93,41 @@ func _on_screen() -> bool:
 
 # ---------- état ----------
 
+## État affiché : celui de la capsule (_base_state), ou, à la mort de l'Ingénieur, celui de son retour
+## (sim/engineer_return.gd, planches/ingenieur-mort-planche.html) : attente « Les quatre bornes » (colonne en filet,
+## bornes rallumées une à une, feu follet nourri par des arcs), puis résurrection « Le souffle » (la colonne se
+## resserre, un instant de noir, tout repart d'un coup).
 func _state() -> Dictionary:
+	var s := _base_state()
+	var wk := EngineerReturn.wait_k()
+	var rt := EngineerReturn.res_t()
+	if wk < 0.0 and rt == INF:
+		return s
+	s.merge({"mode": 2, "rise": 1.0, "lit": 1.0, "flash": 0.0, "bt": 9.0, "settle": 9.0, "lamp": "on"}, true)
+	if rt != INF:
+		s["res"] = rt
+		if rt < -EngineerReturn.RES_DARK:
+			var k := _ph(rt, -EngineerReturn.RES_PRE, -EngineerReturn.RES_DARK)
+			s["ws"] = 1.0 - 0.8 * (1.0 - (1.0 - k) * (1.0 - k))
+			s["occ"] = false
+		elif rt < 0.0:
+			s.merge({"lit": 0.0, "beam": 0.0, "pit": 0.0, "lamp": "dim", "occ": false, "pyl": [false, false, false, false]}, true)
+		else:
+			s["flash"] = 0.8 * (1.0 - _ph(rt, 0.0, 0.25))
+			s["occ"] = GameState.in_capsule
+		return s
+	# Bornes dans l'ordre des aiguilles d'une montre : arrière gauche, arrière droite, avant droite, avant gauche.
+	var n := mini(4, floori(wk * 4.0 + 0.000001))
+	var pyl := [false, false, false, false]
+	var order := [0, 1, 3, 2]
+	for r in 4:
+		pyl[order[r]] = r < n or (r == n and fmod(s.t * 5.0, 1.0) < 0.5)
+	s.merge({"wait": wk, "lit_n": n, "ws": 0.4, "beam": 0.22, "pit": 0.35 + 0.65 * wk, "lit": 0.3 + 0.7 * wk, "occ": false, "pyl": pyl,
+		"arrive": 1.0 - _ph(EngineerReturn.age(), EngineerReturn.ARRIVE, EngineerReturn.ARRIVE + 0.35)}, true)
+	return s
+
+
+func _base_state() -> Dictionary:
 	var t := GameState.sim_time
 	var s := {"t": t, "occ": GameState.in_capsule, "mode": 0, "rise": 0.0, "lit": 0.0, "flash": 0.0,
 		"bt": -9.0, "settle": -9.0, "lamp": "off"}
@@ -137,12 +171,17 @@ func _draw() -> void:
 		return
 	if S.mode == 1 and S.bt > 0.8 and S.bt < 1.15:
 		_base.x += 1.0 if int(floorf(S.bt * 40.0)) % 2 else -1.0
+	var rt: float = S.get("res", INF)
+	if rt >= 0.0 and rt < 0.12:
+		_base.x += 1.0 if int(floorf(rt * 40.0)) % 2 else -1.0
 	if layer == "front":
 		_draw_front(S)
 		return
 	_pylon(45, 55, 0, S)
 	_pylon(75, 55, 1, S)
 	_beam(S, 1.0)
+	if S.has("wait"):
+		_draw_wait(S)
 	if S.rise > 0.0:
 		_motes(S)
 	if S.flash > 0.0:
@@ -164,7 +203,7 @@ func _draw_pit(S: Dictionary) -> void:
 	_EL(60, 61, 9, 2, Color("#0b0e14"))
 	_RING(60, 59, 13, 4, STONE[2], 1.0, 1)
 	_RING(60, 60, 11, 5, STONE[2], 1.0, 1)
-	var g := maxf(S.lit, S.rise)
+	var g: float = S.get("pit", maxf(S.lit, S.rise))
 	if g > 0.0:
 		_EL(60, 61, 9, 2, CY[2], 0.7 * g)
 		_EL(60, 61, 5, 1, CY[4], 0.8 * g)
@@ -174,14 +213,88 @@ func _draw_pit(S: Dictionary) -> void:
 		var r := 8.0 + 36.0 * k
 		_RING(60, 62, r, r * 0.3, CY[3], 1.0 - k)
 		_RING(60, 62, r - 3.0, (r - 3.0) * 0.3, CY[4], (1.0 - k) * 0.5)
+	# Retour de l'Ingénieur : éclat à l'arrivée du feu follet, puis souffle au sol à la résurrection (anneau, grains).
+	var arrive: float = S.get("arrive", 0.0)
+	if arrive > 0.0:
+		_EL(60, 61, 9, 2, CY[4], arrive)
+		var ra := 8.0 + 30.0 * (1.0 - arrive)
+		_RING(60, 62, ra, ra * 0.3, CY[3], arrive)
+	var rt: float = S.get("res", INF)
+	if rt >= 0.0 and rt < 0.6:
+		var rk := rt / 0.6
+		var rr := 8.0 + 40.0 * rk
+		_RING(60, 62, rr, rr * 0.3, CY[4], 1.0 - rk)
+		_RING(60, 62, rr - 2.0, (rr - 2.0) * 0.3, CY[3], (1.0 - rk) * 0.7)
+		var out := 1.0 - (1.0 - rk) * (1.0 - rk)
+		for i in 16:
+			var ga := i / 16.0 * TAU + 0.2
+			var q := (10.0 + 34.0 * out) * (0.8 + 0.4 * _hash(i))
+			_R(60.0 + cos(ga) * q, 62.0 + sin(ga) * q * 0.3 - sin(rk * PI) * 3.0 * _hash(i + 3.0), 1, 1, CY[3] if i % 2 else Color("#9aa1b0"), 1.0 - rk)
+
+
+## Attente du retour (« Les quatre bornes ») : le feu follet flotte dans le filet de lumière, les bornes rallumées
+## lui lancent des arcs, il grossit à chaque borne ; éclat de la colonne à son arrivée.
+func _draw_wait(S: Dictionary) -> void:
+	var t: float = S.t
+	var k: float = S.wait
+	var arrive: float = S.get("arrive", 0.0)
+	if arrive > 0.0:
+		for r: Array in _beam_rows:
+			if r[0] > 30:
+				_R(r[1], r[0], r[2] - r[1] + 1, 1, CY[4], arrive * 0.5 * (r[0] - 30) / 27.0)
+	var oy := 34 + roundi(sin(t * 1.6) * 2.0)
+	var tops := [Vector2(45, 45), Vector2(75, 45), Vector2(47, 53), Vector2(73, 53)]
+	var order := [0, 1, 3, 2]
+	for r in int(S.lit_n):
+		var i: int = order[r]
+		var sd := floorf(t * 10.0) + i * 13.0
+		if _hash(sd) < 0.5:
+			continue
+		var prev: Vector2 = tops[i]
+		for st in range(1, 5):
+			var q := Vector2(60, oy)
+			if st < 4:
+				q = Vector2(roundf(lerpf(tops[i].x, 60.0, st / 4.0) + (_hash(sd + st) - 0.5) * 5.0),
+					roundf(lerpf(tops[i].y, oy, st / 4.0) + (_hash(sd + st + 5.0) - 0.5) * 5.0))
+			var steps := maxi(1, int(maxf(absf(q.x - prev.x), absf(q.y - prev.y))))
+			for j in steps + 1:
+				var pt := prev.lerp(q, float(j) / steps).round()
+				_R(pt.x, pt.y, 1, 1, CY[4], 0.85)
+			prev = q
+	wisp(_ci, _base + Vector2(0, oy - 62), 0.35 + 0.65 * k, t)
+	if k > 0.5:
+		_R(58, oy - 2, 5, 5, CY[3], 0.35)
+	for j in 2:
+		var g := t * 3.0 + j * PI
+		var rr := 4.0 + 3.0 * k
+		_R(60.0 + cos(g) * rr, oy + sin(g) * rr * 0.5, 1, 1, CY[4], 0.9)
+
+
+## Feu follet (retour de l'Ingénieur) : halo, croix, cœur blanc qui scintille ; s = taille de 0 à 1.
+static func wisp(ci: CanvasItem, at: Vector2, s: float, t: float) -> void:
+	if s <= 0.0:
+		return
+	var p := at.round()
+	ci.draw_rect(Rect2(p + Vector2(-2, -2), Vector2(5, 5)), Color(CY[2], 0.25 * s))
+	ci.draw_rect(Rect2(p + Vector2(-1, -2), Vector2(3, 5)), Color(CY[2], 0.3 * s))
+	ci.draw_rect(Rect2(p + Vector2(-2, -1), Vector2(5, 3)), Color(CY[2], 0.3 * s))
+	if s > 0.5:
+		ci.draw_rect(Rect2(p + Vector2(-1, -1), Vector2(3, 3)), CY[3])
+		ci.draw_rect(Rect2(p + Vector2(0, -2), Vector2(1, 5)), Color(CY[3], 0.8))
+		ci.draw_rect(Rect2(p + Vector2(-2, 0), Vector2(5, 1)), Color(CY[3], 0.8))
+	ci.draw_rect(Rect2(p, Vector2.ONE), CY[4])
+	var g := int(floorf(t * 14.0))
+	ci.draw_rect(Rect2(p + Vector2(g % 3 - 1, (g * 5) % 3 - 1), Vector2.ONE), Color(CY[4], 0.9))
 
 
 ## Colonne de lumière : jaillit du puits en s'évasant au pied ; stries et étincelles qui montent.
 func _beam(S: Dictionary, m: float) -> void:
 	var t: float = S.t
 	var k := _ease(_ph(S.rise, 0.3, 1.0))
-	if k <= 0.0:
+	m *= float(S.get("beam", 1.0))
+	if k <= 0.0 or m <= 0.0:
 		return
+	var ws: float = S.get("ws", 1.0)
 	var top := roundi(57.0 - 53.0 * k)
 	var pulse := 0.8 + 0.2 * sin(t * PI) if S.lit >= 1.0 else 1.0
 	# Un rectangle d'un pixel par point de la colonne : boucle resserrée (même calcul que _R, sans l'appel).
@@ -200,14 +313,18 @@ func _beam(S: Dictionary, m: float) -> void:
 			continue
 		var fade := clampf((y - top) / 12.0, 0.0, 1.0)
 		var ph := (y + t * 30.0) * 0.5
+		var half := (x1 - x0 + 1) * 0.5 * ws
 		for x in range(x0, x1 + 1):
+			if ws < 1.0 and absf(x + 0.5 - 60.0) > half:
+				k0 += 1
+				continue
 			var s := 0.5 + 0.5 * sin(x * 1.7 + ph)
 			var col: Color = c4 if _beam_core[k0] else (c3 if s > 0.7 else c2)
 			var a := m * _beam_base[k0] * fade * pulse * (0.75 + 0.25 * s)
 			k0 += 1
 			if a > 0.0:
 				_ci.draw_rect(Rect2(ox + x, oy + y, 1.0, 1.0), Color(col, col.a * minf(a, 1.0)))
-	if S.lit >= 1.0:
+	if S.lit >= 1.0 and ws >= 1.0:
 		for i in 6:
 			var f := fmod(t * 0.9 + i / 6.0, 1.0)
 			_R(53 + (i * 5) % 14, roundi(56.0 - f * 48.0), 1, 1, CY[4], m * (1.0 - f))
@@ -231,18 +348,26 @@ func _motes(S: Dictionary) -> void:
 
 ## Ingénieur en lévitation au-dessus du puits (nœud Occupant, shader de teinte).
 func _draw_occupant() -> void:
-	if not GameState.in_capsule:
-		return
 	var S := _state()
-	if S.lit < 1.0:
-		return
+	var rt: float = S.get("res", INF)
 	var frames := TyrienArt.anim("idle")
 	if frames.is_empty():
 		return
-	var tex: AtlasTexture = frames[int(floorf(S.t * 12.0)) % frames.size()]
 	_occupant.draw_set_transform(-position)
+	if rt < 0.0:
+		# Le souffle, avant le retour : la silhouette de lumière se forme dans la colonne qui se resserre, yeux clos.
+		var a := _ph(rt, -EngineerReturn.RES_PRE, -EngineerReturn.RES_PRE + 0.35)
+		_occupant.draw_texture(frames[30 % frames.size()], _base + Vector2(-24, 57 - HOVER - 62 - 45), Color(1.0, 0.0, 0.0, a))
+		return
+	if not GameState.in_capsule or S.lit < 1.0:
+		return
+	# Il rouvre les yeux 0,4 s après le souffle (image 30 du repos = paupières closes).
+	var tex: AtlasTexture = frames[30 % frames.size()] if rt < 0.4 else frames[int(floorf(S.t * 12.0)) % frames.size()]
 	var fy := 57 - HOVER + roundi(sin(S.t * 1.6))
 	var p := _base + Vector2(60 - 60 - 24, fy - 62 - 45)
+	if rt < 0.3:
+		_occupant.draw_texture(tex, p, Color(0.45 + 0.55 * (1.0 - rt / 0.3), 0.0, 0.0, 1.0))
+		return
 	for o: Vector2 in [Vector2(1, 0), Vector2(-1, 0), Vector2(0, -1)]:
 		_occupant.draw_texture(tex, p + o, Color(1.0, 0.0, 0.0, 0.55))
 	_occupant.draw_texture(tex, p, Color(0.45, 0.0, 0.0, 1.0))
@@ -257,6 +382,14 @@ func _draw_front(S: Dictionary) -> void:
 	_R(56, 63, 8, 3, K)
 	_R(57, 64, 6, 1, STONE[2])
 	_lamp(59, 64, S)
+	# Le souffle : le cercle runique se rallume en dernier (Templier), éclat en croix sur le plastron.
+	var rt: float = S.get("res", INF)
+	if rt >= 0.55 and rt < 0.8 and not TyrienArt.ragged():
+		var a := 1.0 - (rt - 0.55) / 0.25
+		var y := 57 - HOVER + roundi(sin(S.t * 1.6)) - 14
+		_R(60, y, 7, 1, CY[4], a)
+		_R(63, y - 3, 1, 7, CY[4], a)
+		_R(62, y - 1, 3, 3, CY[4], a)
 
 
 ## Par-dessus les sprites : poussière, vapeur, lucioles, invites, PV de l'Exilé.
@@ -353,6 +486,8 @@ func _pylon(x: int, y: int, i: int, S: Dictionary) -> void:
 	_R(x - 2, y - h - 2, 5, 3, K)
 	_R(x - 1, y - h - 1, 3, 1, BRZ[3])
 	var on: bool = S.rise > i * 0.22 + 0.05 or S.lit >= 1.0
+	if S.has("pyl"):
+		on = S.pyl[i]
 	if on:
 		_R(x - 2, y - h - 6, 5, 5, CY[2], 0.3)
 	_R(x - 1, y - h - 5, 3, 3, K)
@@ -370,6 +505,8 @@ func _lamp(x: int, y: int, S: Dictionary) -> void:
 		if k < 0.14 or (k > 0.3 and k < 0.44):
 			col = Color("#d0483c")
 			glow = 0.3
+	elif S.lamp == "dim":
+		col = CY[0]
 	elif S.lamp == "boot":
 		col = Color("#d0483c") if int(floorf(S.t * 12.0)) % 3 else Color("#ffcf6a")
 		glow = 0.25

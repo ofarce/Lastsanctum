@@ -1,0 +1,343 @@
+%%HEAD%%<style>
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
+.card{background:#07080c;border:1px solid var(--line);padding:18px 12px 14px;display:flex;flex-direction:column;align-items:center;gap:6px;min-width:0}
+.card .nm{display:flex;align-items:center;gap:10px;width:100%;justify-content:center;font-family:var(--disp);font-size:1.25rem;letter-spacing:.22em;color:#ece5d2;text-align:center}
+.card .nm::before,.card .nm::after{content:"";flex:1 1 0;max-width:46px;height:1px;background:var(--q)}
+.card .sub{font-family:var(--mono);font-size:12px;color:var(--mute);text-align:center}
+.card .gl{display:grid;grid-template-columns:repeat(7,5px);gap:1px;margin-top:6px}
+.card .gl i{width:5px;height:5px;background:transparent}
+.card .gl i.on{background:var(--q)}
+.card .hex{font-family:var(--mono);font-size:11px;color:var(--mute)}
+.q ul{margin:.3rem 0 0;padding-left:1.2rem;max-width:76ch}
+.q li{margin:.25rem 0}
+.lore{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;max-width:1080px}
+.lore div{border-top:1px solid var(--line);padding-top:8px;min-width:0}
+.lore b{font-family:var(--disp);font-size:1.15rem;font-weight:700;color:var(--acc);display:block}
+.lore p{margin:.25rem 0 0;color:var(--mute)}
+</style>
+<main>
+<header>
+ <h1>Les Salles oubliées · couloirs, salles et repères</h1>
+ <p class="lead">Le biome 2 est le premier Temple, celui que les Tyriens ont taillé dans l'ardoise bien avant l'arrivée des moines. Quand l'eau est montée par les veines de cuivre, les moines ont muré les passages et rayé ces salles de leurs registres : on a cessé de les nommer. Plus tard, les ingénieurs de Byrsa sont descendus chercher le cuivre. Ils ont posé leurs tuyaux, leurs vannes et leurs pompes, puis ils sont partis à leur tour. Chaque vignette est dessinée à la taille des pixels du jeu, sur le dallage et la roche réels.</p>
+</header>
+
+<div class="lore">
+ <div><b>Le Temple tyrien</b><p>Ardoise usée, colonnes rongées, glyphes cyan presque effacés. C'est la couche la plus ancienne, et la seule qui garde un peu de la technique tyrienne.</p></div>
+ <div><b>L'oubli des moines</b><p>Portes murées de briques, marques d'oubli peintes, niches vidées. Les moines ont fermé ces salles sans les détruire.</p></div>
+ <div><b>Les travaux de Byrsa</b><p>Tuyaux de cuivre, vannes, pompes, wagonnets et rails. Tout est resté sur place, à demi noyé.</p></div>
+ <div><b>L'eau et le vert-de-gris</b><p>Les veines de cuivre suintent, l'eau stagne dans les rigoles, et le vert-de-gris recouvre tout ce qui est en métal.</p></div>
+</div>
+
+<div class="reco">
+ <h2>Ma recommandation</h2>
+ <p>Pour les couloirs, <b>V1 Galerie tyrienne rongée</b> et <b>V2 Suintements</b> partout : elles posent l'âge et l'eau. <b>V3 Portes murées</b> près des murs de quartier, où les moines ont fermé le passage. <b>V4 Canalisations de Byrsa</b> surtout aux Écluses, <b>V5 Rigoles noyées</b> surtout aux Puits, <b>V6 Voie des wagonnets</b> vers la Grande Patine et l'Antre de la Gorge.</p>
+ <p>Pour la lumière, <b>L1 Fanaux de Byrsa</b> avec le halo doux déjà choisi pour le Temple : on garde une lumière par couloir, mais elle vient de Byrsa et non plus des moines.</p>
+ <p>Pour les salles, <b>R1 Citerne</b> et <b>R3 Atelier de Byrsa</b> d'abord. Pour les arènes, <b>A1</b>, <b>A2</b>, <b>A3</b> et <b>A4</b>. Pour les repères, <b>Q1 Stèle tyrienne verdie</b>, qui garde la stèle et l'arche du Temple.</p>
+ <p>Répondez par les numéros, par exemple « V1, V2, V4, L1, R1, R3, A1–A4, Q1 ».</p>
+</div>
+
+<div class="tools">
+ <button id="pause" type="button" aria-pressed="false">Pause</button>
+ <span>Vignettes en pixels du monde, agrandies ×3 · un personnage mesure environ 36 px</span>
+</div>
+
+<div class="part"><h2>Couloirs des Salles oubliées</h2><p>Semés par le générateur dans les couloirs taillés entre les salles, contre les parois, sans jamais bloquer le passage. Chaque famille a son quartier de prédilection.</p></div>
+<div id="listD" style="display:contents"></div>
+
+<div class="part"><h2>Lumière des couloirs</h2><p>Au Temple, les couloirs ont des torches à bras de fer (T2) et un halo doux (H1). Les Salles oubliées sont abandonnées depuis plus longtemps : trois façons d'y garder une lumière.</p></div>
+<div id="listL" style="display:contents"></div>
+
+<div class="part"><h2>Salles à thème</h2><p>Comme les quinze salles à thème du Temple : chacune a son mobilier et une petite récompense, sans nouveau système.</p></div>
+<div id="listS" style="display:contents"></div>
+
+<div class="part"><h2>Arènes des Salles oubliées</h2><p>Posées autour de l'aire de combat, jamais au centre : l'eau de l'Éclusier, le dôme de la Patine et les attaques de la Gorge restent lisibles.</p></div>
+<div id="listA" style="display:contents"></div>
+
+<div class="part"><h2>Repères d'entrée de quartier</h2><p>Au Temple, chaque salle-seuil a son arche (A1) et sa stèle (S1), qui s'allument au passage d'un allié. Ici, deux façons de les poser. Les trois stèles de chaque vignette montrent les trois quartiers.</p></div>
+<div id="listQ" style="display:contents"></div>
+
+<section class="m" style="grid-template-columns:minmax(0,1fr)">
+ <div class="txt"><h2><i>Q</i>Cartons de quartier</h2><p>Le même carton que celui du Temple, en haut de l'écran : 3 s au premier passage avec la ligne de rappel, puis le nom seul 2 s. Couleurs et glyphes proposés pour les quatre quartiers.</p></div>
+ <div class="cards" id="cards"></div>
+</section>
+
+<section class="m q" style="grid-template-columns:minmax(0,1fr)">
+ <div class="txt"><h2>Questions</h2><ul>
+  <li><b>Quelles familles de couloir ?</b> Les six, ou une partie.</li>
+  <li><b>Quelle lumière ?</b> L1, L2 ou L3 (on peut aussi mêler L2 et L3).</li>
+  <li><b>Quelles salles à thème ?</b> Les récompenses sont de moi, à régler.</li>
+  <li><b>Les arènes</b> A1 à A4 vous conviennent-elles telles quelles ?</li>
+  <li><b>Repères :</b> Q1 ou Q2, et les couleurs et glyphes des cartons.</li>
+ </ul></div>
+</section>
+</main>
+
+<script>
+%%ENGINE%%
+%%PIECES%%
+/* ---------- palettes des Salles oubliées ---------- */
+const VR=[0x15241f,0x24403a,0x3a6a5c,0x5a9a84,0x8ec8b0];               // vert-de-gris
+const VS=[0x1a2224,0x2a3638,0x3e4e50,0x566a68,0x74888a,0x98aaa8];      // ardoise verdie
+const BR=[0x2e2824,0x5a4c40,0x7a6654,0x96806a];                       // briques des moines (joint, briques)
+const QC={A:0x4aa6b8,B:0xd88a48,C:0x6cc4a0,R:0xddb457};               // couleurs des quartiers proposées
+const QG={A:["#######","#.....#","#..#..#","#..#..#","#.###.#","#.....#","#######"],
+ B:["#.#.#.#","#.#.#.#","#######","#.#.#.#","#.#.#.#",".......",".#.#.#."],
+ C:["...#...","..#.#..",".#...#.","#.....#","#..#..#",".#...#.","..###.."],
+ R:["#.....#",".#...#.","..#.#..","...#...","..#.#..",".#...#.","#.....#"]};
+
+/* ---------- pièces : le Temple tyrien ---------- */
+function vcol(x,y,h,brk,seed){column(x,y,h,brk,[VS[1],VS[2],VS[3],VS[4],VS[5]]);
+ for(let k=0;k<7;k++)px(x-4+hs(seed+k*1.3)*7,y-5-hs(seed*2+k)*h*.8,k%3?VR[2]:VR[3]);for(let j=0;j<h*.5;j++)px(x-3,y-4-j,j%3?VR[2]:VR[1])}
+// glyphe tyrien de 3 × 5 dans la paroi, presque effacé ; une lueur cyan passe dessus de temps en temps
+function glyphW(x,seed){const t=wallTop(x)+4,pts=[];for(let j=0;j<5;j++)for(let i=0;i<2;i++)if(hs(seed+i*3.1+j*1.7)>.45){pts.push([i,j]);pts.push([2-i,j])}
+ for(const[i,j]of pts)blend(x+i,t+j,S[4],.55);post.push(()=>{const p=Math.max(0,Math.sin(T*.9+seed*2));for(const[i,j]of pts)if(hs(i+j*2+seed)>.35)blend(x+i,t+j,GLY,.55*p)})}
+// veine de cuivre dans la paroi, croûtée de vert
+function seam(x0,x1,seed){for(let x=x0;x<x1;x++){const y=wallTop(x)+5+Math.round(Math.sin(x*.13+seed)*1.5);blend(x,y,CU[1],.9);blend(x,y+1,hs(x*1.7+seed)>.55?VR[2]:CU[0],.85);if(hs(x*.9+seed)>.94)blend(x,y,CU[2],.9)}}
+// coulure de vert-de-gris depuis la veine, goutte qui tombe, flaque au pied
+function seep(x,seed){const t=wallTop(x)+5+Math.round(Math.sin(x*.21+seed)*2),f=ft(x);
+ for(let y=t;y<f;y++){const w=y<t+3?2:1;for(let i=0;i<w;i++)blend(x+i,y,(y+seed)%5===0?VR[4]:VR[3],.85)}
+ puddle(x+1,f+3,5,1.6);post.push(()=>{const u=(T*.55+hs(seed))%1;blend(x,t+u*(f+3-t),VR[4],1);if(u>.93)gring(x+1,f+3,3,1,VR[4],.7)})}
+function stalV(x,len,seed){const t=wallTop(x);for(let j=0;j<len;j++){const w=Math.max(0,Math.round((1-j/len)*1.5));for(let i=-w;i<=w;i++)blend(x+i,t+j,j>len*.6?VR[3]:VR[2],1)}
+ post.push(()=>{const u=(T*.4+hs(seed))%1;if(u<.6)blend(x,t+len+u*14,VR[4],1-u)})}
+
+/* ---------- pièces : l'oubli des moines ---------- */
+function walled(x,seed,broken){const t=Math.max(wallTop(x)+1,ft(x)-24),f=ft(x);
+ for(let y=t;y<f;y++)for(let i=-6;i<=6;i++){if(y<t+3&&Math.abs(i)>3+(y-t)*1.3)continue;const row=Math.floor((y-t)/3),u=i+6+(row%2)*2;
+  let c=(y-t)%3===2||u%4===3?BR[0]:hs(row*7.3+Math.floor(u/4)*3.1+seed)>.55?BR[3]:BR[2];if(broken&&Math.abs(i)<4&&y>t+5&&y<f-1)c=0x07080b;blend(x+i,y,c,1)}
+ for(let i=-7;i<=7;i++)blend(x+i,t-1,S[5],1);for(let y=t;y<f;y++){blend(x-7,y,S[4],1);blend(x+7,y,S[1],1)}
+ if(!broken){const cy=t+10;for(let k=0;k<18;k++){const a=k/18*TAU;blend(x+Math.cos(a)*3.3,cy+Math.sin(a)*3.3,0xa08848,.9)}bline(x-3,cy+3,x+3,cy-3,0xa08848,.9);
+  rect(x-1,f-3,3,2,0x5a3a24);px(x,f-4,0x7a4e30)}
+ else{rubble(x,f+4,seed,6,12);for(let k=0;k<4;k++){rect(x-6+k*4,f+2+(k%2)*3,3,2,BR[2]);px(x-6+k*4,f+2+(k%2)*3,BR[3])}}}
+function plaque(x,seed){const t=wallTop(x)+3;for(let j=0;j<6;j++)for(let i=0;i<9;i++)blend(x+i,t+j,i===0||j===0?S[4]:S[2],.9);
+ for(let r=0;r<2;r++)for(let i=1;i<8;i++)if(hs(seed+i+r*9)>.3)blend(x+i,t+2+r*2,S[0],.9);bline(x+1,t+1,x+8,t+5,0xa08848,.8)}
+function emptyNiche(x,seed,statuette){const t=Math.max(wallTop(x)+3,ft(x)-22);for(let j=0;j<9;j++)for(let i=-3;i<=3;i++){if(j<2&&Math.abs(i)>j+1)continue;blend(x+i,t+j,0x0b0d12,.92)}
+ for(let i=-4;i<=4;i++)blend(x+i,t+9,S[5],1);if(statuette){rect(x-1,t+3,3,6,VR[2]);px(x-1,t+3,VR[4]);ell(x,t+2,1.4,1.4,VR[3]);px(x+1,t+8,VR[1])}
+ else{px(x-1,t+8,CL[1]);px(x+1,t+8,CL[0])}}
+
+/* ---------- pièces : les travaux de Byrsa ---------- */
+function pipe(x0,x1,off,seed,leak){const Y=x=>wallTop(x)+off;
+ for(let x=x0;x<x1;x++){const y=Y(x);px(x,y,CU[3]);px(x,y+1,CU[2]);px(x,y+2,CU[1]);if(hs(x*1.3+seed)>.84)px(x,y+1,VR[3])}
+ for(let x=x0+6;x<x1-2;x+=18){const y=Y(x);rect(x,y-1,2,5,CU[2]);px(x,y-1,CU[4]);px(x+1,y+3,CU[0]);px(x,y+4,I[3]);px(x+1,y+4,I[3])}
+ if(leak!==undefined){const y=Y(leak)+1;post.push(()=>{for(let k=0;k<7;k++){const u=(T*1.3+k/7)%1;blend(leak+u*5+hs(k)*2,y+u*u*(ft(leak)-y+3),WT[3],1-u*.4)}});puddle(leak+5,ft(leak)+4,4,1.4)}}
+function valve(x,y){ell(x,y,3.4,3.4,0,(xx,yy,dx,dy)=>dx*dx+dy*dy>.5?I[3]:null);line(x-3,y,x+3,y,I[2]);line(x,y-3,x,y+3,I[2]);px(x,y,CU[3]);px(x-2,y-3,I[4])}
+function gauge(x,y){ell(x,y,3,3,CU[2]);ell(x,y,2,2,Q[1]);post.push(()=>{const a=-2.3+Math.sin(T*2.6)*.35+(hs(Math.floor(T*5))-.5)*.25;blend(x,y,INK,1);blend(x+Math.cos(a)*1.7,y+Math.sin(a)*1.7,INK,1)})}
+function sluice(x,seed){const t=Math.max(wallTop(x)+1,ft(x)-22),f=ft(x);
+ for(let y=t;y<f;y++)for(let i=-6;i<=6;i++)blend(x+i,y,(y-t)%4===3?WD[0]:i<-3?WD[3]:WD[2],1);
+ rect(x-8,t-1,2,f-t+2,I[2]);rect(x+7,t-1,2,f-t+2,I[1]);rect(x-8,t-3,17,2,I[3]);px(x-8,t-3,I[4]);for(let i=-5;i<=5;i+=5)px(x+i,t+1,I[4]);
+ for(let k=0;k<5;k++)px(x-5+k*2.5,t+6+hs(seed+k)*8,VR[3]);valve(x,t-6);puddle(x,f+5,9,2.2);
+ post.push(()=>{for(let k=0;k<7;k++){const u=(T*.9+k/7)%1;blend(x-5+k*1.6,f+u*6,WT[3],1-u)}})}
+function pumpP(x,y,held){shadow(x+1,y+1,6,2);rect(x-4,y-12,8,12,CU[2]);rect(x-4,y-12,8,1,CU[4]);rect(x+2,y-11,2,11,CU[1]);ell(x,y-7,2.4,2.4,0,(xx,yy,dx,dy)=>dx*dx+dy*dy>.45?CU[3]:held?Q[1]:I[1]);
+ line(x,y-13,x,y-16,I[3]);line(x,y-16,x+5,y-16,I[3]);px(x-2,y-5,VR[3]);px(x+1,y-3,VR[3]);if(held)post.push(()=>{const u=(T*2)%1;blend(x+5,y-2+u*3,WT[3],1-u)})}
+function cart(x,y,tip,seed){shadow(x+1,y+1,9,2.5);const k=tip?3:0;
+ poly([[x-8,y-9-k],[x+8,y-9+k],[x+6,y-2],[x-6,y-2]],I[2]);line(x-8,y-9-k,x+8,y-9+k,I[4]);rect(x-6,y-3,12,1,I[1]);for(let i=-5;i<6;i+=5)px(x+i,y-6,RU[1]);
+ for(const wx of[x-4,x+4]){ell(wx,y-1,2,2,I[1]);px(wx,y-1,I[3])}
+ if(!tip)for(let i=0;i<5;i++){ell(x-5+i*2.5,y-10-hs(i+seed)*2,1.6,1.3,i%2?CU[2]:CU[3]);if(i===2)px(x,y-11,VR[3])}
+ else for(let i=0;i<4;i++)ell(x+11+i*3,y-1+hs(i+seed)*2,1.5,1.2,i%2?CU[2]:CU[3])}
+function rails(x0,x1,y,broken){for(let x=x0;x<x1;x++){if(broken&&x>broken&&x<broken+7)continue;blend(x,y,I[3],1);blend(x,y+5,I[3],1);if((x-x0)%5===0)for(let j=-1;j<=6;j++)blend(x,y+j,WD[1],.85)}}
+function cuLamp(x,lit,seed){const y=ft(x)-6;rect(x-1,y,3,2,CU[2]);px(x,y+2,CU[1]);line(x+1,y,x+3,y-3,CU[3]);ell(x+4,y-5,2.2,2,0,(xx,yy,dx)=>dx<0?CU[4]:CU[2]);rect(x+3,y-8,3,1,CU[1]);px(x+2,y-4,VR[3]);
+ if(lit)post.push(()=>{blend(x+4,y-9-(Math.sin(T*8+seed)>.4?1:0),FR[3],1);blend(x+4,y-9,FR[2],1);light(x+4,y-7,24,15,FR[2],.075+.015*Math.sin(T*9+seed))});else px(x+4,y-9,I[0])}
+function fanal(x,len,seed,lit){const t=wallTop(x)-1;const sw=Math.sin(T*1.1+seed)*1.2;bline(x,t,x+sw,t+len,I[3],1);const cx=Math.round(x+sw),cy=t+len;
+ rect(cx-2,cy,5,1,I[3]);rect(cx-2,cy+1,1,5,I[2]);rect(cx+2,cy+1,1,5,I[1]);rect(cx-1,cy+1,3,5,lit?Q[1]:I[0]);rect(cx-2,cy+6,5,1,I[3]);px(cx,cy-1,I[4]);
+ if(lit)post.push(()=>{blend(cx,cy+3-(Math.sin(T*7+seed)>.5?1:0),FR[3],1);light(cx,cy+4,28,18,FR[2],.085+.015*Math.sin(T*7+seed))})}
+function bench(x,y,w){shadow(x+w/2,y+1,w/2+2,2.5);rect(x,y-8,w,4,WD[2]);rect(x,y-8,w,1,WD[3]);rect(x,y-4,w,1,WD[0]);for(const lx of[x+1,x+w-3])rect(lx,y-4,2,4,WD[1])}
+function anvil(x,y){shadow(x+1,y+1,6,2);rect(x-2,y-5,4,5,I[1]);rect(x-5,y-8,10,3,I[3]);rect(x-5,y-8,10,1,I[4]);rect(x+5,y-7,3,1,I[2]);px(x-3,y-6,VR[3])}
+function ingots(x,y,n){for(let i=0;i<n;i++){const ox=(i%3)*5-5,oy=-Math.floor(i/3)*2;rect(x+ox,y+oy-2,4,2,CU[3]);rect(x+ox,y+oy-2,4,1,CU[4]);px(x+ox+3,y+oy-1,CU[1]);if(i%2)px(x+ox+1,y+oy-1,VR[3])}}
+function crucible(x,y){shadow(x+1,y+1,7,2.2);ell(x,y-4,5,4,0,(xx,yy,dx,dy)=>dy<-.6?null:dx<-.3?S[4]:S[2]);ell(x,y-6,4,1.3,0x241a14);ell(x,y-6,2.4,.8,VR[2]);line(x-6,y-9,x-4,y-6,I[3]);line(x+6,y-9,x+4,y-6,I[3])}
+function bunk(x,y,w,seed){shadow(x+w/2,y+1,w/2+2,2.5);rect(x,y-10,2,10,WD[1]);rect(x+w-2,y-10,2,10,WD[1]);rect(x,y-6,w,2,WD[2]);rect(x+1,y-8,w-2,2,LN[hs(seed)>.5?1:0]);rect(x,y-11,w,1,WD[3]);
+ if(hs(seed*3)>.4){rect(x+2,y-12,w-4,1,LN[0]);px(x+3,y-13,LN[1])}}
+function helmet(x,y){ell(x,y-2,3,2.4,0,(xx,yy,dx,dy)=>dy>.3?null:dx<0?CU[3]:CU[2]);rect(x-4,y-1,8,1,CU[1]);px(x-1,y-3,VR[3]);px(x+1,y-2,VR[3])}
+function chainH(x,len,seed){const t=wallTop(x)-1;for(let j=0;j<len;j++){const sw=Math.round(Math.sin(T*.9+seed)*j/len*1.2);px(x+sw,t+j,j%2?I[2]:I[3])}const sw=Math.round(Math.sin(T*.9+seed)*1.2);rect(x+sw-1,t+len,3,2,I[3]);px(x+sw,t+len+2,I[2])}
+function scrollsWet(x,y,n,seed){for(let i=0;i<n;i++){const ox=(hs(seed+i*1.9)-.5)*16,oy=(hs(seed+i*2.7)-.5)*6;scroll(x+ox,y+oy,hs(seed+i)*3);if(i%2)gell(x+ox,y+oy+1,3,1,WT[2],.5)}}
+
+/* ---------- pièces : arènes ---------- */
+function organ(x0,n,seed){for(let k=0;k<n;k++){const x=x0+k*4,h=8+Math.round(Math.sin(k*.9+seed)*3+k%3*2),f=ft(x),t=f-1-h;
+ for(let y=t;y<f;y++){blend(x,y,CU[3],1);blend(x+1,y,CU[2],1);blend(x+2,y,CU[1],1)}blend(x+1,t,0x0b0d12,1);if(hs(seed+k)>.4)for(let j=0;j<4;j++)blend(x+1,t+3+j*2,VR[3],1)}}
+function chandelierDown(x,y){shadow(x+1,y+1,12,3);gring(x,y-1,11,3.6,CU[2],1);gring(x,y-2,11,3.6,CU[3],1);for(let k=0;k<8;k++){const a=k/8*TAU;const cx=x+Math.cos(a)*11,cy=y-2+Math.sin(a)*3.6;rect(cx-1,cy-2,2,2,CU[1]);px(cx,cy-3,k%3?VR[3]:Q[1])}
+ line(x-11,y-2,x+11,y-2,CU[1]);line(x,y-6,x,y+2,CU[1])}
+function gnaw(x,seed){const t=wallTop(x)+2,f=ft(x);for(let k=0;k<4;k++){const ox=k*3;for(let j=0;j<f-t-2;j++){const xx=x+ox+Math.round(Math.sin(j*.35+k)*1.5);blend(xx,t+j,j%4?S[0]:S[1],1);if(j%5===0)blend(xx+1,t+j,S[4],1)}}}
+function lodeHole(x,seed){const cy=ft(x)-7;gell(x,cy,6,4,0x07080b,.95);for(let k=0;k<12;k++){const a=k/12*TAU;if(hs(seed+k)>.45)blend(x+Math.cos(a)*6,cy+Math.sin(a)*4,CU[1],1)}px(x-2,cy+2,VR[2])}
+function pedestal(x,y){shadow(x+1,y+1,7,2.2);rect(x-5,y-7,10,7,S[3]);rect(x-5,y-7,10,1,S[5]);rect(x+3,y-6,2,6,S[1]);rect(x-6,y-1,12,1,S[1])}
+function trophyPort(x,y){ell(x,y-4,4,4,CU[3]);ell(x,y-4,2.8,2.8,0,(xx,yy,dx,dy)=>dx+dy<-.4?0xdcfbff:0x2f8494);for(const[dx,dy]of[[-1,-1],[1,-1],[-1,1],[1,1]])px(x+dx*3.5,y-4+dy*3.5,I[3]);
+ post.push(()=>light(x,y-4,10,7,0x74cad6,.05+.02*Math.sin(T*1.5)))}
+function trophyHelm(x,y){ell(x,y-5,3.6,4,0,(xx,yy,dx)=>dx<-.2?VR[4]:VR[2]);rect(x-2,y-5,5,1,0xddb457);rect(x,y-10,1,2,0xddb457);rect(x-4,y-1,8,1,VR[1])}
+function trophyRing(x,y){for(let k=0;k<7;k++){const a=Math.PI*(1-k/6);px(x+Math.cos(a)*5,y-2-Math.sin(a)*4,k%2?CU[3]:CU[2]);px(x+Math.cos(a)*5,y-1-Math.sin(a)*4,CU[1])}rect(x-6,y-1,13,1,CU[1]);px(x,y-6,VR[3])}
+
+/* ---------- pièces : repères ---------- */
+function glyph7(x0,y0,q,lit){QG[q].forEach((row,j)=>[...row].forEach((ch,i)=>{if(ch==='#')px(x0+i,y0+j,lit?QC[q]:S[1])}))}
+// Q1 : la dalle d'ardoise du Temple, rongée et verdie ; Q2 : une plaque de cuivre de Byrsa boulonnée par-dessus
+function steleQ(x,y,q,v,seed){shadow(x+1,y+1,6,2);const h=22;
+ for(let j=0;j<h;j++)for(let i=-5;i<=5;i++){if(j>h-3&&Math.abs(i)>5-(j-h+3)*2)continue;if(v===1&&j>h-5&&i>2&&hs(seed+i+j)>.5)continue;px(x+i,y-1-j,i<-2?VS[4]:i>2?VS[2]:VS[3])}
+ for(let k=0;k<6;k++)px(x-4+hs(seed+k)*8,y-4-hs(seed*2+k)*10,VR[3]);moss(x,y-1,6,1.4,seed);
+ if(v===2){rect(x-4,y-19,9,10,CU[2]);rect(x-4,y-19,9,1,CU[4]);rect(x+4,y-18,1,9,CU[1]);for(const[dx,dy]of[[-4,-19],[4,-19],[-4,-10],[4,-10]])px(x+dx,y+dy,I[4]);glyph7(x-3,y-18,q,true);px(x-1,y-7,CU[3]);px(x+1,y-7,CU[3])}
+ else glyph7(x-3,y-17,q,true);
+ post.push(()=>light(x,y-14,14,10,QC[q],.07+.03*Math.sin(T*1.6+seed)))}
+function archQ(x,y,q,v){if(v===1){vcol(x-14,y,24,false,3);vcol(x+14,y,24,false,5);const t=y-35;rect(x-20,t,41,5,VS[3]);rect(x-20,t,41,1,VS[5]);rect(x-20,t+4,41,1,VS[1]);
+  for(let i=0;i<8;i++)px(x-18+hs(i*3.3)*36,t+1+hs(i*1.7)*3,VR[3]);rect(x-4,t-3,9,8,VS[4]);glyph7(x-3,t-2,q,true);brazier(x-21,y+4,true);brazier(x+21,y+4,true)}
+ else{for(const sx of[-14,14]){rect(x+sx-2,y-33,5,33,I[2]);rect(x+sx-2,y-33,1,33,I[4]);rect(x+sx+2,y-33,1,33,I[1]);for(let j=4;j<33;j+=7)px(x+sx,y-j,I[4]);shadow(x+sx+1,y+1,5,1.6)}
+  rect(x-17,y-37,35,4,I[3]);rect(x-17,y-37,35,1,I[4]);for(let i=-15;i<=15;i+=5)px(x+i,y-35,I[4]);valve(x,y-42);
+  rect(x-5,y-33,11,7,CU[2]);rect(x-5,y-33,11,1,CU[4]);glyph7(x-3,y-33,q,true);cuLampAt(x-19,y-14,1);cuLampAt(x+19,y-14,2)}
+ post.push(()=>light(x,y-30,20,12,QC[q],.06+.02*Math.sin(T*1.3)))}
+function cuLampAt(x,y,seed){rect(x-1,y,3,2,CU[2]);ell(x,y-3,2.2,2,0,(xx,yy,dx)=>dx<0?CU[4]:CU[2]);rect(x-1,y-6,3,1,CU[1]);
+ post.push(()=>{blend(x,y-7-(Math.sin(T*8+seed)>.4?1:0),FR[3],1);blend(x,y-7,FR[2],1);light(x,y-5,22,14,FR[2],.07+.015*Math.sin(T*9+seed))})}
+
+/* ---------- propositions ---------- */
+const DECOR=[
+ {n:"V1",nom:"Galerie tyrienne rongée",mask:gal(71),dark:.7,
+  txt:"Les colonnes d'ardoise du premier Temple, plus massives que celles du monastère, rongées à la base par l'eau et tachées de vert. Des glyphes tyriens presque effacés courent sur la paroi ; de temps en temps, une lueur cyan passe encore dessus.",
+  pour:"Dit tout de suite « plus ancien que le Temple » : on reconnaît l'ardoise du biome 1, en plus usé. Le cyan rare rappelle que la technique tyrienne dort encore là.",
+  contre:"Proche de la colonnade du Temple (D1) : la différence tient au vert et à l'usure, il ne faut pas la diluer.",
+  jeu:"Décor pur. Colonnes contre les parois, décalques de glyphes sur la paroi nord.",
+  d(){vcol(22,ft(22)+14,18,false,1);vcol(66,ft(66)+14,12,true,2);vcol(122,ft(122)+14,18,false,3);vcol(158,fb(158)-3,8,true,4);for(const x of[40,92,104,140])glyphW(x,x);
+   drum(84,fb(84)-6,VS);rubble(46,fb(46)-6,7,4);moss(140,fb(140)-5,9,2.4,3);slab(100,ft(100)+22,2,false)}},
+ {n:"V2",nom:"Suintements de vert-de-gris",mask:gal(73),dark:.62,
+  txt:"Une veine de cuivre affleure dans la paroi. L'eau qui la traverse ressort verte, coule le long du mur et goutte au sol, où elle forme des flaques. Au plafond, de petites concrétions vertes pendent comme des stalactites.",
+  pour:"Montre d'où vient l'eau du biome et pourquoi tout y est vert. Les gouttes qui tombent animent un couloir sans ajouter de lumière.",
+  contre:"Le vert ne doit pas rappeler Medeina : il reste terne, mêlé au cuivre, jamais lumineux.",
+  jeu:"Décor pur. Variante : les flaques ralentissent un peu, comme les quarts noyés de la Grande Écluse.",
+  d(){seam(4,172,1);for(const x of[18,47,63,110,148])seep(x,x);for(const[x,l]of[[30,6],[84,9],[96,5],[130,7],[162,6]])stalV(x,l,x);puddle(80,fb(80)-8,9,2.6);rubble(126,fb(126)-5,3,3)}},
+ {n:"V3",nom:"Portes murées",mask:gal(79),dark:.66,
+  txt:"Les moines ont fermé les passages vers le premier Temple avec des briques, puis ils ont peint dessus la marque de l'oubli, un cercle barré. Une plaque a été martelée pour en effacer le nom. Plus loin, une porte a été défoncée de l'intérieur.",
+  pour:"Raconte le nom du biome : ces salles ont été oubliées exprès. La porte défoncée laisse une question ouverte : qui est sorti ?",
+  contre:"Les portes murées ne doivent pas être confondues avec les vraies portes de quartier, scellées jusqu'à la chute d'un mini-boss.",
+  jeu:"Décor pur, posé près des murs de quartier. Variante : une porte murée se creuse et cache une petite réserve.",
+  d(){walled(30,1,false);walled(98,2,false);walled(150,3,true);plaque(52,4);plaque(118,5);emptyNiche(74,6,false);candle(36,ft(36)+5);rubble(62,fb(62)-5,8,3)}},
+ {n:"V4",nom:"Canalisations de Byrsa",mask:gal(83),dark:.64,
+  txt:"Les ingénieurs de Byrsa ont fixé leurs tuyaux de cuivre le long des parois, avec des brides, des vannes et des manomètres dont l'aiguille tremble encore. Un joint fuit et arrose le sol. Au fond, une vanne murale retient une eau qui passe dessous.",
+  pour:"Annonce l'Éclusier et les pompes. Les tuyaux suivent la paroi sur toute sa longueur : ils relient les couloirs entre eux et donnent un sens à l'eau.",
+  contre:"Les tuyaux ressemblent un peu aux rambardes : ils doivent rester collés à la paroi et ne jamais traverser le passage.",
+  jeu:"Décor pur, surtout aux Écluses. Variante : fermer une vanne murale assèche la flaque devant elle.",
+  d(){pipe(2,120,4,1,58);pipe(2,120,8,2);valve(36,wallTop(36)+4);gauge(88,wallTop(88)+6);sluice(146,3);rubble(30,fb(30)-5,2,3);puddle(108,fb(108)-7,6,2)}},
+ {n:"V5",nom:"Rigoles noyées",mask:gal(89),dark:.62,
+  txt:"Le dallage est creusé de rigoles où l'eau stagne. Certaines dalles se sont enfoncées sous l'eau. Les terrassiers de Byrsa ont jeté des planches pour passer, et des champignons pâles poussent sur le bois pourri.",
+  pour:"Le sol lui-même raconte l'inondation. Les rigoles guident l'œil le long du couloir. Les champignons donnent une lueur froide qui change de celle des flammes.",
+  contre:"L'eau des rigoles ne doit pas ressembler à l'eau des quarts noyés de l'arène, qui ralentit : elle reste étroite et bordée.",
+  jeu:"Décor pur, surtout aux Puits. Rigoles en décalque, planches et champignons en sprites.",
+  d(){water(4,ft(4)+18,172,ft(4)+23);water(40,fb(40)-16,92,fb(40)-9);rect(60,ft(60)+16,4,9,WD[2]);rect(60,ft(60)+16,4,1,WD[3]);rect(70,fb(70)-17,12,3,WD[1]);rect(70,fb(70)-17,12,1,WD[3]);
+   shrooms(66,ft(66)+26,4,1);shrooms(140,fb(140)-4,5,2);ripple(120,ft(120)+20,.3);ripple(30,ft(30)+20,.7);rubble(150,fb(150)-6,4,4);seep(110,9)}},
+ {n:"V6",nom:"Voie des wagonnets",mask:gal(97),dark:.66,
+  txt:"Des rails de Byrsa courent le long du couloir vers les filons. Un wagonnet est resté chargé de minerai, un autre s'est renversé là où la voie est coupée. Un casque de terrassier traîne près d'une poutre.",
+  pour:"Mène vers la Grande Patine et l'Antre de la Gorge : on comprend que Byrsa venait chercher le cuivre, et que quelque chose l'a mangé avant elle.",
+  contre:"Les rails sont longs et réguliers : ils doivent suivre le couloir, sinon ils forment des lignes qui ne mènent nulle part.",
+  jeu:"Décor pur. Variante : un wagonnet chargé se vide pour 3 à 5 cuivre, une fois.",
+  d(){rails(0,176,ft(0)+26,98);cart(44,ft(44)+30,false,1);cart(124,ft(124)+31,true,2);helmet(84,fb(84)-6);fallenTimber(150,fb(150)-6,.2);rubble(102,ft(102)+30,5,5);seam(6,60,4)}}
+];
+const LIGHTS=[
+ {n:"L1",nom:"Fanaux de Byrsa",mask:gal(101),dark:.42,h:112,
+  txt:"Les terrassiers de Byrsa ont pendu des fanaux de fer au plafond, le long des tuyaux. La plupart sont encore pleins d'huile : un sur deux brûle.",
+  pour:"Une lumière par couloir, régulière, comme au Temple, mais qui vient de Byrsa et non des moines. Les fanaux se balancent un peu, ce qui anime le couloir.",
+  contre:"Des fanaux allumés dans des salles oubliées posent la même question que les lampes des moines : qui les entretient ?",
+  jeu:"Comme les torches T2 du Temple : un fanal toutes les 6 cases le long des couloirs, avec le halo doux (H1).",
+  d(){pipe(0,176,3,1);for(const[x,l,on]of[[20,10,1],[64,13,0],[108,10,1],[152,12,1]])fanal(x,l,x,on);rubble(40,fb(40)-6,2,3);seep(86,4)}},
+ {n:"L2",nom:"Appliques de cuivre",mask:gal(103),dark:.42,h:112,
+  txt:"Des appliques de cuivre sont vissées dans la paroi, dans le style de Byrsa. Le vert-de-gris les a rongées ; certaines brûlent encore, les autres sont mortes.",
+  pour:"Plus proche des torches du Temple : on garde la place des torches sur la paroi nord et sur les rebords. Le cuivre verdi tient le thème du biome.",
+  contre:"Moins lisible de loin que les fanaux : la flamme est petite et collée au mur.",
+  jeu:"Même placement que les torches T2, une applique sur deux allumée.",
+  d(){for(const[x,on]of[[16,1],[56,0],[96,1],[136,1],[166,0]])cuLamp(x,on,x);seam(0,176,2);rubble(110,fb(110)-6,4,3);puddle(62,fb(62)-8,6,2)}},
+ {n:"L3",nom:"Champignons pâles",mask:gal(107),dark:.4,h:112,
+  txt:"Aucun feu : les couloirs sont noirs, sauf là où poussent des champignons pâles, sur le bois pourri et au pied des suintements. Leur lueur est froide et faible.",
+  pour:"Le plus « oublié » des trois : personne n'entretient rien. Contraste fort avec le Temple, et l'Exilé devient la seule vraie source de lumière.",
+  contre:"Les couloirs deviennent très sombres : il faut s'assurer que les ennemis et leurs tirs restent lisibles.",
+  jeu:"Des touffes semées au sol, deux à trois par couloir ; pas de torches. Lumière froide en paliers tramés.",
+  d(){shrooms(26,fb(26)-6,5,1);shrooms(92,ft(92)+16,4,2);shrooms(150,fb(150)-5,6,3);seep(60,5);seep(120,6);quartz(132,ft(132)+18,2,4,.6);rubble(40,ft(40)+20,6,3)}}
+];
+const ROOMS=[
+ {n:"R1",nom:"Citerne des Tyriens",mask:room,dark:.6,
+  txt:"Une grande citerne d'ardoise occupe le centre de la salle. Ses colonnes plongent dans l'eau verte. Byrsa y a branché une pompe à main, encore amorcée.",
+  rec:"Un adepte posté à la pompe pendant 10 s remplit une gourde : 2 PV/s à l'escouade dans la salle pendant 60 s. Une fois par jour.",
+  pour:"Montre l'eau du biome en grand, sans danger. Prépare les pompes de l'Éclusier : on apprend ici qu'un adepte posté à une pompe agit.",
+  contre:"Proche de la citerne du Temple (S5) : la pompe de Byrsa et le vert la distinguent.",
+  jeu:"L'eau est infranchissable, comme la citerne du Temple. La pompe se tient par simple présence.",
+  d(){water(48,48,128,96);for(const[x,y]of[[60,60],[116,60],[60,90],[116,90]])vcol(x,y,12,x===116&&y===90,x+y);pumpP(136,74,true);
+   for(let x=128;x<134;x++)px(x,72,CU[2]);seep(30,1);seep(150,2);rubble(28,100,3,4);shrooms(36,60,3,4)}},
+ {n:"R2",nom:"Registres noyés",mask:room,dark:.6,
+  txt:"La salle où les moines rangeaient les registres du premier Temple avant de l'oublier. Les rayonnages sont à demi sous l'eau, les rouleaux flottent ou se sont collés au sol. Un pupitre est resté au sec.",
+  rec:"Repêcher les rouleaux (l'Exilé reste 5 s près du pupitre) : 150 Savoir, une fois.",
+  pour:"Relie les deux époques : les moines savaient ce qu'il y avait ici. Le pupitre éclairé donne un but à la salle.",
+  contre:"Ressemble à la bibliothèque du Temple : les rayonnages noyés doivent dominer.",
+  jeu:"Comme la bibliothèque du Temple, par proximité.",
+  d(){water(20,70,156,108);shelf(24,50,26);shelf(56,50,26);shelf(100,50,26);shelf(132,50,26);scrollsWet(60,86,6,1);scrollsWet(118,92,5,2);lectern(88,64);candle(80,60);candle(96,60);seep(52,3)}},
+ {n:"R3",nom:"Atelier de Byrsa",mask:room,dark:.6,
+  txt:"Les ingénieurs de Byrsa avaient installé un atelier au sec : établi, enclume, creuset, et une caisse de lingots de cuivre jamais remontés. Un râtelier garde leurs outils.",
+  rec:"La caisse : 10 lingots de cuivre, une fois. Variante : un plan de mod au hasard parmi ceux des dépôts.",
+  pour:"Donne une récompense utile au biome du cuivre. Montre qui étaient les gens de Byrsa : des artisans, pas seulement des soldats.",
+  contre:"Ressemble à la salle d'armes du Temple : l'établi et le creuset doivent primer sur les armes.",
+  jeu:"Comme la crypte du Temple : objet ramassé à la proximité.",
+  d(){bench(30,60,34);ingots(46,54,5);anvil(84,62);crucible(110,60);rack(140,62);crate(40,96,false);crate(54,98,true);ingots(130,96,7);cart(104,100,false,5);seam(20,160,6);fanal(64,9,1,true)}},
+ {n:"R4",nom:"Chapelle des quatre dieux",mask:room,dark:.6,
+  txt:"Avant les moines, les Tyriens priaient ici les quatre dieux. L'autel est un dais d'ardoise ; autour, quatre statues rongées. Chacune garde une trace de sa couleur : la lyre d'Aether, le bouclier d'Indra, la lance de Medeina, le capuchon de Sigil.",
+  rec:"Un adepte de chaque culte dans la salle en même temps : bénédiction de l'escouade, dégâts ×1,5 pendant 60 s (comme l'oratoire du Temple).",
+  pour:"Rattache le biome aux autels de la base : les mêmes dieux, priés autrement. Donne une raison d'amener un adepte de chaque culte.",
+  contre:"Les quatre couleurs des cultes restent très ternes : elles ne doivent pas faire croire à un autel actif.",
+  jeu:"Par simple présence, comme la canalisation d'un pylône.",
+  d(){dais(88,52,30,12);for(const[x,y,c]of[[46,52,0x7a80ff],[130,52,0xff8a2a],[46,96,0x7ae070],[130,96,0xe4eaf6]]){statue(x,y);px(x,y-14,c);px(x-1,y-13,c);post.push(()=>light(x,y-14,8,6,c,.035))}
+   slab(88,80,1,false);candle(80,44);candle(96,44);moss(88,104,14,3,3);rubble(110,90,5,4)}},
+ {n:"R5",nom:"Dortoir des terrassiers",mask:room,dark:.6,
+  txt:"Les terrassiers de Byrsa dormaient là, sur des châlits de bois. Ils sont partis vite : une gamelle reste sur le feu éteint, un casque sur une couchette. Un squelette porte encore le sien.",
+  rec:"Fouiller les couchettes : une pièce d'armure de cuivre au hasard, une fois.",
+  pour:"Donne un visage aux ouvriers de Byrsa et fait écho aux cellules des moines (C3) : deux façons de vivre au même endroit.",
+  contre:"Le squelette ne doit pas ressembler à un squelette de la nuit, qui se lève.",
+  jeu:"Comme la salle d'armes du Temple, par proximité.",
+  d(){bunk(24,56,22,1);bunk(54,56,22,2);bunk(100,56,22,3);bunk(130,56,22,4);bunk(24,94,22,5);bunk(130,94,22,6);helmet(64,46);cauldron(88,86);bones(108,96,2);helmet(104,92);jug(78,96);stool(70,90,false);fanal(88,10,2,true)}}
+];
+const ARENAS=[
+ {n:"A1",nom:"La Grande Écluse",mask:room,dark:.6,
+  txt:"La salle de l'Éclusier est une écluse de Byrsa. Trois vannes de bois et de fer ferment la paroi nord, des chaînes pendent du plafond. Les trois quarts noyés gardent leur pompe contre la paroi ; le quart de l'entrée reste sec.",
+  rec:"Arène du mini-boss 1 (quartier A, Les Puits). Les vannes du décor sont celles qu'il ouvre : l'eau qui monte part de leur pied.",
+  pour:"Le décor explique le combat : on voit les vannes, les pompes et l'eau avant que l'Éclusier se réveille.",
+  contre:"L'eau du décor et l'eau du combat doivent rester une seule et même eau, sinon on ne sait plus où le sol ralentit.",
+  jeu:"Les vannes s'animent quand il ouvre un quart (eau qui jaillit), les pompes passent à l'état tenu.",
+  d(){water(18,32,86,68);water(90,32,158,68);water(18,72,86,108);for(const x of[44,88,132])sluice(x,x);pumpP(22,56,false);pumpP(22,98,true);pumpP(154,56,false);
+   for(const[x,l]of[[64,10],[112,14]])chainH(x,l,x);gauge(88,wallTop(88)+2);rubble(130,96,4,5)}},
+ {n:"A2",nom:"La Nef verte",mask:room,dark:.6,
+  txt:"La nef du premier Temple. Deux rangées de colonnes verdies bordent l'aire du dôme, des tuyaux d'orgue de cuivre montent le long de la paroi nord. Le grand lustre de cuivre est tombé au bord de la nef ; le sol garde une auréole verte là où il pendait.",
+  rec:"Arène du mini-boss 2 (quartier B, Les Écluses), autour du dôme de 18 unités. Tout le décor est hors du dôme.",
+  pour:"Le vert du décor annonce les mines de la Patine sans les imiter. Les colonnes dessinent la limite de l'arène.",
+  contre:"Les bougies du lustre et les points verts des colonnes doivent rester plus ternes que les mines, qui doivent se lire d'abord.",
+  jeu:"Décor pur. Auréole au sol en décalque, sous le dôme.",
+  d(){organ(40,7,1);organ(110,7,2);for(const y of[52,76,100]){vcol(26,y,14,y===100,y);vcol(150,y,14,y===76,y+3)}gring(88,72,30,12,VR[2],.35);gring(88,72,22,8,VR[1],.3);
+   chandelierDown(54,104);dais(88,40,22,6);toppled(110,44);candle(72,40);seep(132,7)}},
+ {n:"A3",nom:"L'Antre de la Gorge",mask:room,dark:.6,
+  txt:"Une ancienne salle d'extraction de Byrsa. La Gorge-Cuivre en a mangé tous les filons : les parois sont trouées et griffées, les rails sont coupés, les wagonnets renversés. Ses anneaux de mue traînent au sol avec des carcasses de tiques.",
+  rec:"Arène du boss du biome 2. Les trous des filons sont ceux par où elle passe ; ses Percées jaillissent du sol nu au centre.",
+  pour:"On comprend qui a vidé le biome avant d'entrer. Les mues de cuivre annoncent son armure d'anneaux.",
+  contre:"Les mues au sol ne doivent pas ressembler au cuivre qu'elle laisse tomber à ramasser.",
+  jeu:"Décor pur. Les trous des filons peuvent servir de points de sortie à ses tiques.",
+  d(){for(const x of[34,72,108,142])lodeHole(x,x);gnaw(52,1);gnaw(124,2);rails(16,160,98,70);cart(36,96,true,3);cart(140,62,true,4);for(const[x,y,a]of[[60,52,.3],[120,56,-.4],[104,90,1.1]])plate(x,y,a,x);
+   tick(46,66,1);tick(130,86,2);burrow(88,72,6);rubble(70,96,5,6)}},
+ {n:"A4",nom:"Seuil et trophées",mask:room,dark:.6,
+  txt:"Commun aux trois arènes, comme au Temple. À l'entrée, une arche de fer de Byrsa sur des piliers d'ardoise. Au fond, un piédestal attend. Quand le boss tombe, le cercle de glyphes s'allume et son trophée y reste : le hublot de l'Éclusier, le heaume verdi de la Patine, l'anneau de mue de la Gorge.",
+  rec:"Entrée et fond des trois arènes. Les trois trophées sont montrés ici côte à côte ; en jeu, un seul par arène.",
+  pour:"La salle garde la trace de la victoire, comme au Temple, et le trophée rappelle le butin du boss.",
+  contre:"L'arche doit rester dans l'axe d'entrée sans rétrécir le passage.",
+  jeu:"Même état « vaincu » que les arènes du Temple (porte ouverte), qui allume le cercle et pose le trophée.",
+  d(){sealRing(88,62,30);for(const[x,f]of[[64,trophyPort],[88,trophyHelm],[112,trophyRing]]){pedestal(x,64);f(x,57)}for(const[x,y]of[[34,48],[142,48]])brazier(x,y,1);
+   archQ(88,112,"R",2)}}
+];
+const MARKS=[
+ {n:"Q1",nom:"Stèle tyrienne verdie",mask:room,dark:.62,
+  txt:"La stèle et l'arche du Temple (S1 et A1), en plus vieilles : l'ardoise est rongée, tachée de vert, la mousse monte à leur pied. Le glyphe s'allume à la couleur du quartier, et les braseros reprennent au passage.",
+  pour:"Continuité avec le Temple : le joueur reconnaît le repère tout de suite. Rien de nouveau à apprendre.",
+  contre:"Peu de différence avec le Temple, à part l'usure et le vert.",
+  jeu:"Même règle qu'au Temple : éteints, puis allumés pour de bon au passage d'un allié à 20 unités ; carton au premier passage.",
+  d(){archQ(88,58,"A",1);steleQ(40,54,"A",1,1);steleQ(126,54,"B",1,2);steleQ(146,54,"C",1,3);seep(110,4);rubble(60,96,3,4)}},
+ {n:"Q2",nom:"Plaque de Byrsa",mask:room,dark:.62,
+  txt:"Byrsa a renuméroté les salles du premier Temple : ses ingénieurs ont boulonné une plaque de cuivre sur la vieille stèle, et dressé à l'entrée un portique de fer avec une vanne et deux appliques. Le glyphe du quartier est frappé dans le cuivre.",
+  pour:"Raconte la couche de Byrsa jusque dans les repères. Le cuivre et le fer se distinguent bien de l'ardoise du Temple.",
+  contre:"Le portique ressemble à une machine : il ne doit pas faire croire qu'il s'actionne.",
+  jeu:"Même règle qu'au Temple ; seuls les dessins changent.",
+  d(){archQ(88,58,"A",2);steleQ(40,54,"A",2,1);steleQ(126,54,"B",2,2);steleQ(146,54,"C",2,3);puddle(60,96,6,2);rubble(120,96,4,4)}}
+];
+
+%%PAGE%%
+build(LIGHTS,document.getElementById('listL'),[['pour','Pour'],['contre','Contre'],['jeu','En jeu']]);
+build(ARENAS,document.getElementById('listA'),[['rec','Où'],['pour','Pour'],['contre','Contre'],['jeu','En jeu']]);
+build(MARKS,document.getElementById('listQ'),[['pour','Pour'],['contre','Contre'],['jeu','En jeu']]);
+
+/* ---------- cartons de quartier ---------- */
+const CARDS=[["A","LES PUITS","Salles oubliées · quartier A · exp. 1"],["B","LES ÉCLUSES","Salles oubliées · quartier B · exp. 2"],
+ ["C","LA GRANDE PATINE","Salles oubliées · quartier C · menace +1"],["R","L’ANTRE DE LA GORGE","Salles oubliées · route du boss"]];
+const ch=document.getElementById('cards');
+for(const[q,nm,sub]of CARDS){const d=document.createElement('div');d.className='card';const hex='#'+QC[q].toString(16).padStart(6,'0');d.style.setProperty('--q',hex);
+ d.innerHTML=`<div class="nm">${nm}</div><div class="sub">${sub}</div><div class="gl">${QG[q].map(r=>[...r].map(c=>`<i class="${c==='#'?'on':''}"></i>`).join('')).join('')}</div><div class="hex">${q} · ${hex}</div>`;ch.appendChild(d)}
+</script>

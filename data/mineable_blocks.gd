@@ -21,7 +21,7 @@ const TYPES := {
 	"tear": {"resistance": 4, "material_name": "Larme de limbe", "mining_label": "Détache la larme", "drop_item": "tear"},
 	"amber": {"resistance": 4, "material_name": "Ambre de sang", "mining_label": "Arrache l’ambre", "drop_item": "amber"},
 	"orichalcum": {"resistance": 4, "material_name": "Orichalque", "mining_label": "Mine l’orichalque", "drop_item": "orichalcum"},
-	"wood": {"resistance": 4, "material_name": "Arbre pétrifié", "mining_label": "Récolte le bois", "drop_item": "wood"},
+	"wood": {"resistance": 4, "material_name": "Arbre pétrifié", "mining_label": "Récolte le bois noir", "drop_item": "wood"},
 }
 const ITEMS := {
 	"gold": {"name": "Or", "color": Color("#ddb457")},
@@ -29,7 +29,7 @@ const ITEMS := {
 	"iron": {"name": "Fer", "color": Color("#8796a2")},
 	"copper": {"name": "Cuivre", "color": Color("#c47b58")},
 	"rock": {"name": "Roche", "color": Color("#89969c")},
-	"wood": {"name": "Bois", "color": Color("#9a7a52")},
+	"wood": {"name": "Bois noir", "color": Color("#9a7a52")},
 	"silver": {"name": "Argent", "color": Color("#b8c2d0")},
 	"tear": {"name": "Larme de limbe", "color": Color("#a9cfc0")},
 	"amber": {"name": "Ambre de sang", "color": Color("#d07a2a")},

@@ -17,7 +17,7 @@ const BODY_DIR := "res://assets/imported/engineer/templier/"
 const PORTRAIT := BODY_DIR + "templier_portrait.png"
 const EXIL_DIR := "res://assets/imported/engineer/exil/"
 const EXIL_PORTRAIT := EXIL_DIR + "exil_portrait.png"
-const ANIMS := ["idle", "walk", "kneel", "pray", "settle", "lotus", "aim", "slash1", "slash2", "shoot", "idle_d", "walk_d", "idle_u", "walk_u", "shoot_d", "shoot_u", "hit", "c_idle", "c_walk", "c_shoot", "c_idle_d", "c_walk_d", "c_idle_u", "c_walk_u", "c_shoot_d", "c_shoot_u", "helm", "helm_d", "helm_u"]
+const ANIMS := ["idle", "walk", "kneel", "pray", "settle", "lotus", "aim", "slash1", "slash2", "shoot", "idle_d", "walk_d", "idle_u", "walk_u", "shoot_d", "shoot_u", "hit", "c_idle", "c_walk", "c_shoot", "c_idle_d", "c_walk_d", "c_idle_u", "c_walk_u", "c_shoot_d", "c_shoot_u", "idle_dr", "walk_dr", "idle_ur", "walk_ur", "c_idle_dr", "c_walk_dr", "c_idle_ur", "c_walk_ur", "shoot_dr", "shoot_ur", "c_shoot_dr", "c_shoot_ur", "fall", "helm", "helm_d", "helm_u", "helm_dr", "helm_ur"]
 
 static var meta: Dictionary
 ## frames[calque][animation] : Array[AtlasTexture] ; calque = "base" ou une pièce (helm, iron…).

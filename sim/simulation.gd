@@ -213,6 +213,12 @@ func tick(dt: float) -> void:
 	OeilMatrice.tick(self)
 	Gorge.tick(self)
 	Archipretre.tick(self)
+	Eclusier.tick(self, dt)
+	Patine.tick(self)
+	OrbitGate.tick(self)
+	QuarterMarks.tick(self)
+	BiomeCard.tick(self)
+	RoomEncounters.rest_tick(self, dt)
 	Ages.tick(self)
 	EnemyShots.tick(self, dt)
 	# Aucune vague tant que la Martyre de Byrsa est debout sur la route ; dans son arène, les assauts continuent.
@@ -245,8 +251,10 @@ func tick(dt: float) -> void:
 	combat.update_turrets(dt)
 	if profiling:
 		t = _prof("balistes", t)
+	CaveDoors.before(self, dt, alive)
 	combat.update_enemies(dt, alive)
 	Wildlife.tick(self, dt, alive)
+	CaveDoors.enforce(self)
 	if not GameState.placed.is_empty():
 		Placeables.tick(self, dt)
 	Martyre.enforce(self)
@@ -316,6 +324,8 @@ static func in_boss_fight(u: Unit) -> bool:
 		return true
 	if Archipretre.active() and Archipretre.in_room(u.pos()):
 		return true
+	if Patine.duelist() == u or (Eclusier.active() and Eclusier.in_room(u.pos())):
+		return true
 	return Gorge.active() and u.pos().distance_to(Gorge.center()) <= Gorge.ROOM
 
 
@@ -330,6 +340,8 @@ func move(u: Unit, t: Vector2, dt: float, mult := 1.0) -> void:
 		return
 	# En duel, l'Exilé garde sa vitesse : pas de boue ni de crue sous les balles (bilan « Visibilité des balles »).
 	var ground := 1.0 if in_boss_fight(u) else Weather.speed_at(u.x, u.z)
+	# Quarts noyés de la Grande Écluse (sim/eclusier.gd) : la marche y est ralentie, combat ou non.
+	ground *= Eclusier.slow_at(u.x, u.z)
 	var speed := (SPEED_GUARD if u.role == "guard" else SPEED_ADEPT if is_adept(u) else SPEED_ENGINEER) * mult * ground
 	var step := minf(d, speed * dt)
 	var nx := u.x + dx / d * step
@@ -1007,8 +1019,6 @@ func open_chest(u: Unit) -> void:
 	if eng == null or not ItemStorage.store(eng.inventory, eng.inventory_capacity, "plan_analyse"):
 		ItemStorage.store(GameState.base_inventory, ItemStorage.BASE_CAPACITY, "plan_analyse")
 	Events.items_received.emit(CHEST_GIFT)
-	if world:
-		Capsule.first_intruders(self)
 
 
 func order_adepts(p: Vector2) -> bool:
@@ -1045,10 +1055,14 @@ func grove_cell(origin: Vector2i) -> Variant:
 ## envoie l'Exilé, qui s'arrête à un bloc et demi pour la miner) ; null sans le sceau, en combat, ou si le
 ## pointeur ne vise aucun mur (le clic droit tire alors normalement).
 func incarnated_mining_cell(u: Unit, aim: Vector2) -> Variant:
-	if u == null or not u.alive() or u.role != "engineer" or not GameState.mining_seal \
-			or not can_mine(u) or in_combat(u):
+	if not incarnated_can_mine(u):
 		return null
 	return state().pointed_cell(aim)
+
+
+## L'Exilé incarné peut miner : Ingénieur vivant, Sceau de minage remis, hors combat.
+func incarnated_can_mine(u: Unit) -> bool:
+	return u != null and u.alive() and u.role == "engineer" and GameState.mining_seal and can_mine(u) and not in_combat(u)
 
 
 ## Rayon (unités de monde, 4 blocs) où un ennemi hostile met l'Exilé incarné « en combat », et délai sans coup
@@ -1559,7 +1573,7 @@ func site_visible(type: String, center: Vector2) -> bool:
 	var first := center - Vector2.ONE * (half_of(type) - CELL / 2)
 	for x in size:
 		for z in size:
-			if not world.fog.visible_at(first + Vector2(x, z) * CELL):
+			if not world.fog.known_at(first + Vector2(x, z) * CELL):
 				return false
 	return true
 
@@ -1850,7 +1864,7 @@ func on_unit_death(u: Unit) -> void:
 
 
 ## Délai de retour de l'Ingénieur tombé (s).
-const ENGINEER_RESPAWN := 20.0
+const ENGINEER_RESPAWN := 5.0
 
 
 ## L'Ingénieur tombe : ses tâches s'arrêtent, le joueur est désincarné, et il reviendra dans la capsule après
@@ -1861,6 +1875,9 @@ func engineer_fell(u: Unit) -> void:
 	if not u.carrying.is_empty():
 		production._drop(u)
 	GameState.selected.erase(u)
+	GameState.engineer_fell_pos = Vector2(u.x, u.z)
+	GameState.engineer_fell_face = (1 if u.aim_dir.x >= 0.0 else -1) if u.face == 0 else signi(u.face)
+	GameState.engineer_fell_follow = GameState.incarnated == u
 	if GameState.incarnated == u:
 		ExileGallery.disincarnate()
 	var boss := ""
@@ -1870,6 +1887,9 @@ func engineer_fell(u: Unit) -> void:
 	if GameState.oeil_state == "duel":
 		OeilMatrice.reset_duel()
 		boss = "L’Œil de la Matrice"
+	if Patine.active() and Patine.inside(u):
+		Patine.reset_duel()
+		boss = "La Martyre de la Patine"
 	GameState.engineer_respawn_at = GameState.sim_time + ENGINEER_RESPAWN
 	say("L’Ingénieur est tombé · retour à la capsule dans %d s.%s" % [int(ENGINEER_RESPAWN),
 		("\n%s retrouve toutes ses forces." % boss) if boss != "" else ""], 5.0)
@@ -1880,6 +1900,7 @@ func engineer_respawn_tick() -> void:
 	if GameState.sim_time < GameState.engineer_respawn_at:
 		return
 	GameState.engineer_respawn_at = INF
+	GameState.engineer_back_at = GameState.sim_time
 	for u: Unit in GameState.units:
 		if u.role != "engineer" or u.alive():
 			continue
@@ -2028,8 +2049,6 @@ func update_research(dt: float) -> void:
 		Sfx.play("recherche")
 		if id == "palisades":
 			Placeables.reinforce()
-		if id == "modular_crossbow":
-			say("Recherche achevée : Arbalestrie modulaire !\nChoisissez vos munitions au barillet, à gauche de votre barre de vie.", 4.0)
 
 
 ## Offrande réutilisable de l’Ancre : paiement atomique, sans recharge.

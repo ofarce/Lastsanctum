@@ -42,6 +42,8 @@ func test_corpses_are_visual_and_count_menace_once() -> void:
 	sim.combat.finish_tick(DT, [engineer()])
 	check_eq(GameState.menace, reward, "pas de double comptage")
 	check_eq(GameState.enemy_corpses.size(), 1, "pas de corps dupliqué")
+	# Corps vide : il s'efface au bout de CORPSE_LIFETIME (un corps qui porte du butin reste CORPSE_DAYS jours, sim/loot.gd).
+	e.loot.clear()
 	GameState.sim_time += EnemyArt.CORPSE_LIFETIME
 	sim.combat.finish_tick(DT, [engineer()])
 	check(GameState.enemy_corpses.is_empty(), "nettoyage")
@@ -146,14 +148,20 @@ func test_views_play_attacks_then_hold_final_corpse_frame() -> void:
 		v.setup(e, EnemyArt.all()[kind], sim, world)
 		v._update()
 		var body: Sprite2D = v.get("_body")
-		check((body.texture as AtlasTexture).atlas.resource_path.ends_with(kind + "_attack.png"), "attaque : " + kind)
+		# Tir porté par le coup lui-même (manifeste : cast.attack) : c'est l'atlas du geste qui joue.
+		var cast_attack: bool = EnemyArt.all()[kind].get("cast", {}).get("attack", false)
+		check((body.texture as AtlasTexture).atlas.resource_path.ends_with(kind + ("_cast.png" if cast_attack else "_attack.png")), "attaque : " + kind)
 		e.hp = 0.0
 		e.dead = true
 		e.died_at = GameState.sim_time - 3.0
 		v._update()
 		var frames: Array = v.get("_enemy_death")
 		check(v.visible, "cadavre encore visible : " + kind)
-		check(body.texture == frames.back(), "dernière image maintenue : " + kind)
+		if UnitView.ASH_KEEP.has(kind):
+			check(body.texture == frames.back(), "dernière image maintenue : " + kind)
+		else:
+			# Mort « Souffle » (2026-11-23) : le corps part en cendres (AshDeath) à la place de la dernière image.
+			check(v.get("_ash") != null and not body.visible, "corps parti en cendres : " + kind)
 		check(not (v.get("_over") as Node2D).visible, "aucune barre de vie sur le corps")
 		v.queue_free()
 

@@ -4,6 +4,8 @@ extends RefCounted
 const GROUP_SIZE := 7
 const SPACING := 1.8
 const DETECTION := 28.0
+## Proximité de l'Ancre qui vaut contact : restée à 14 m quand la détection des cibles a doublé (2026-11-20).
+const CORE_CONTACT := 14.0
 ## Au combat : largeur du premier rang, durée maximale de tenue du second rang et de la réserve.
 const FIRST_RANK := 3
 const HOLD_RANKS := 6.0
@@ -123,7 +125,7 @@ func _update_group(members: Array, alive: Array[Unit], dt: float) -> void:
 			front.append(e)
 		if e.tactical_role != "reserve":
 			speed = minf(speed, e.speed)
-		if e.hp < e.tactical_last_hp or Combat.target_closest(e, alive, DETECTION) != null or e.pos().distance_to(CaveShape.CORE) < DETECTION:
+		if e.hp < e.tactical_last_hp or Combat.target_closest(e, alive, DETECTION) != null or e.pos().distance_to(CaveShape.CORE) < CORE_CONTACT:
 			contact = true
 		e.tactical_last_hp = e.hp
 	center /= members.size()

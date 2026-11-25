@@ -49,6 +49,40 @@
         "count": 6,
         "fps": 24,
         "duration": 0.25
+      },
+      "cast": {
+        "frame_w": 88,
+        "frame_h": 62,
+        "cols": 12,
+        "rows": 2,
+        "count": 18,
+        "fps": 24,
+        "duration": 0.75,
+        "ax": 44,
+        "ay": 57,
+        "release": 0.4167,
+        "from": [
+          13.5,
+          17.1
+        ],
+        "name": "La fronde"
+      },
+      "cast_run": {
+        "frame_w": 88,
+        "frame_h": 62,
+        "cols": 12,
+        "rows": 2,
+        "count": 18,
+        "fps": 24,
+        "duration": 0.75,
+        "ax": 44,
+        "ay": 57,
+        "release": 0.4167,
+        "from": [
+          13.5,
+          17.1
+        ],
+        "name": "La fronde"
       }
     },
     "spitter": {
@@ -97,6 +131,24 @@
         "count": 6,
         "fps": 24,
         "duration": 0.25
+      },
+      "cast": {
+        "frame_w": 88,
+        "frame_h": 62,
+        "cols": 12,
+        "rows": 2,
+        "count": 24,
+        "fps": 24,
+        "duration": 1,
+        "ax": 44,
+        "ay": 57,
+        "release": 0.5,
+        "from": [
+          25.9,
+          13.7
+        ],
+        "name": "L’élévation",
+        "attack": true
       }
     },
     "brute": {
@@ -151,6 +203,40 @@
         "count": 45,
         "fps": 24.0,
         "duration": 1.875
+      },
+      "cast": {
+        "frame_w": 88,
+        "frame_h": 54,
+        "cols": 12,
+        "rows": 3,
+        "count": 29,
+        "fps": 24,
+        "duration": 1.2083,
+        "ax": 44,
+        "ay": 51,
+        "release": 0.625,
+        "from": [
+          31.6,
+          23.1
+        ],
+        "name": "Le revers"
+      },
+      "cast_run": {
+        "frame_w": 88,
+        "frame_h": 54,
+        "cols": 12,
+        "rows": 3,
+        "count": 29,
+        "fps": 24,
+        "duration": 1.2083,
+        "ax": 44,
+        "ay": 51,
+        "release": 0.625,
+        "from": [
+          30.6,
+          23.1
+        ],
+        "name": "Le revers"
       }
     },
     "beast": {
@@ -196,6 +282,40 @@
         "count": 36,
         "fps": 24,
         "duration": 1.5
+      },
+      "cast": {
+        "frame_w": 84,
+        "frame_h": 48,
+        "cols": 12,
+        "rows": 2,
+        "count": 18,
+        "fps": 24,
+        "duration": 0.75,
+        "ax": 36,
+        "ay": 44,
+        "release": 0.2917,
+        "from": [
+          24.9,
+          23.8
+        ],
+        "name": "Le hurlement"
+      },
+      "cast_run": {
+        "frame_w": 84,
+        "frame_h": 48,
+        "cols": 12,
+        "rows": 2,
+        "count": 18,
+        "fps": 24,
+        "duration": 0.75,
+        "ax": 36,
+        "ay": 44,
+        "release": 0.2917,
+        "from": [
+          25.3,
+          21.9
+        ],
+        "name": "Le hurlement"
       }
     },
     "scout": {
@@ -886,6 +1006,40 @@
         "count": 6,
         "fps": 24,
         "duration": 0.25
+      },
+      "cast": {
+        "frame_w": 64,
+        "frame_h": 52,
+        "cols": 12,
+        "rows": 2,
+        "count": 19,
+        "fps": 24,
+        "duration": 0.7917,
+        "ax": 32,
+        "ay": 43,
+        "release": 0.4583,
+        "from": [
+          12,
+          21.1
+        ],
+        "name": "Le souffle"
+      },
+      "cast_run": {
+        "frame_w": 64,
+        "frame_h": 52,
+        "cols": 12,
+        "rows": 2,
+        "count": 19,
+        "fps": 24,
+        "duration": 0.7917,
+        "ax": 32,
+        "ay": 43,
+        "release": 0.4583,
+        "from": [
+          14,
+          20.1
+        ],
+        "name": "Le souffle"
       }
     }
   },

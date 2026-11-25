@@ -16,7 +16,8 @@ extends RefCounted
 const FILE := "user://sauvegarde.save"
 const INFO := "user://sauvegarde.cfg"
 ## 2 (2026-11-22) : Temple en salles. Une sauvegarde de la version 1 rejouerait ses cases creusées sur une autre carte.
-const VERSION := 2
+## 3 (2026-11-24) : Veines en salles, même raison.
+const VERSION := 3
 ## État passager : remis à zéro au chargement plutôt qu'enregistré.
 const GS_SKIP := ["hud_mode", "hud_menu", "hud_build_type", "hud_place_item", "hud_chest", "hud_enemy", "hud_grove",
 	"build_pointer", "damage_numbers", "effects", "pray_popups", "hud_building", "anchor_selected"]
@@ -61,7 +62,7 @@ static func cannot_save(sim: Simulation) -> String:
 		return "Pas de sauvegarde pendant l’ouverture."
 	if Overload.active() or GameState.orb_active:
 		return "Pas de sauvegarde pendant le rallumage de l’Ancre."
-	if Martyre.active() or Gorge.active() or Archipretre.active() or GameState.oeil_state == "duel":
+	if Martyre.active() or Gorge.active() or Archipretre.active() or Eclusier.active() or Patine.active() or GameState.oeil_state == "duel":
 		return "Pas de sauvegarde pendant un combat de boss."
 	return ""
 

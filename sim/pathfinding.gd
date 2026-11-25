@@ -98,19 +98,16 @@ func clear_line(a: Vector2, b: Vector2) -> bool:
 	# 0,6 et, contre une paroi en biais (raccord salle / case creusée devant la réserve du coffre), le
 	# glissement axe par axe de Simulation.move s'y coince. Seul le début compte : steer revérifie la ligne à
 	# chaque image depuis la position courante, un coin plus lointain est vu avant d'être atteint.
-	if not clear_near(a, b):
-		return false
 	var n := ceili(d / 0.6)
+	# Cases d'abord (lecture d'un tableau) : une ligne qui traverse une case de roche est écartée sans un seul test
+	# de point exact (les lignes longues et bouchées étaient le premier coût de la simulation). Le résultat est le
+	# même : la ligne n'est dégagée que si les cases ET les points passent, dans un ordre ou dans l'autre.
 	var last := -1
 	for s in range(1, n + 1):
 		var t := float(s) / n
 		var i := floori((ax + dx * t - CaveShape.WORLD_X0) / 2.0)
 		var j := floori((az + dz * t - CaveShape.WORLD_Z0) / 2.0)
 		if i < 0 or j < 0 or i >= W or j >= H:
-			return false
-		# Point exact : une case de 2 unités dont le centre est praticable peut avoir un coin de roche (entrée de
-		# la réserve du coffre) ; sans ce test, le chemin lissé coupe l'angle et l'unité reste bloquée.
-		if not state.walkable(ax + dx * t, az + dz * t):
 			return false
 		var k := j * W + i
 		if k == last:
@@ -120,6 +117,14 @@ func clear_line(a: Vector2, b: Vector2) -> bool:
 		if v == 0:
 			v = _fill(k, i, j)
 		if v != 1:
+			return false
+	if not clear_near(a, b):
+		return false
+	# Point exact : une case de 2 unités dont le centre est praticable peut avoir un coin de roche (entrée de
+	# la réserve du coffre) ; sans ce test, le chemin lissé coupe l'angle et l'unité reste bloquée.
+	for s in range(1, n + 1):
+		var t := float(s) / n
+		if not state.walkable(ax + dx * t, az + dz * t):
 			return false
 	return true
 

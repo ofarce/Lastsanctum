@@ -27,5 +27,5 @@ func test_kill_gives_xp_and_bonus() -> void:
 	game_sim().combat.barracks_strike(a, e2)
 	check_eq(a.level, 2, "35 XP : niveau 2")
 	check_eq(int(a.xp), 15, "reste 15 XP")
-	check_eq(Catalog.lvl_bonus(a), 1, "+1 dégât et +1 défense")
+	check_eq(Catalog.lvl_bonus(a), 0.5, "+0,5 dégât (et +1 défense)")
 	check_near(Combat.after_armor(a, 0.5), 0.5 * 0.15, 1e-9, "plancher de 15 %")

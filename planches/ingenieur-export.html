@@ -19,12 +19,14 @@
 // restent ceux du Templier dans les deux planches.
 const FW=48,FH=48,AX=24,AY=45,OX=8,OY=15,D=DEG;
 const EXIL=new URLSearchParams(location.search).get('body')==='exil';
-const ORDER=['idle','walk','kneel','pray','settle','lotus','slash1','slash2','shoot','aim','shoot_d','shoot_u','idle_d','walk_d','idle_u','walk_u','hit','c_idle','c_walk','c_shoot','c_idle_d','c_walk_d','c_idle_u','c_walk_u','c_shoot_d','c_shoot_u'];
+const ORDER=['idle','walk','kneel','pray','settle','lotus','slash1','slash2','shoot','aim','shoot_d','shoot_u','idle_d','walk_d','idle_u','walk_u','hit','c_idle','c_walk','c_shoot','c_idle_d','c_walk_d','c_idle_u','c_walk_u','c_shoot_d','c_shoot_u','idle_dr','walk_dr','idle_ur','walk_ur','c_idle_dr','c_walk_dr','c_idle_ur','c_walk_ur','shoot_dr','shoot_ur','c_shoot_dr','c_shoot_ur','fall'];
 const A={};
 for(const k of ORDER){const a=ENG_ANIMS[k];A[k]={cols:a.cols,rows:Math.ceil(a.n/a.cols),n:a.n,fps:a.fps,note:a.note,f:i=>engFrame(k,i,EXIL&&!k.startsWith('c_')?'exil':'templier')}}
 A.helm={cols:4,rows:1,n:4,note:'calque du casque de combat : fermeture 25 / 50 / 75 / 100 % (tête au repos, décaler de dy)',f:i=>helmetLayer((i+1)/4)};
 A.helm_d={cols:4,rows:1,n:4,note:'casque de face : fermeture 25 / 50 / 75 / 100 %',f:i=>helmetFront((i+1)/4,'d')};
 A.helm_u={cols:4,rows:1,n:4,note:'casque de dos : fermeture 25 / 50 / 75 / 100 %',f:i=>helmetFront((i+1)/4,'u')};
+A.helm_dr={cols:4,rows:1,n:4,note:'casque de trois quarts face : fermeture 25 / 50 / 75 / 100 %',f:i=>helmetFront((i+1)/4,'dr')};
+A.helm_ur={cols:4,rows:1,n:4,note:'casque de trois quarts dos : fermeture 25 / 50 / 75 / 100 %',f:i=>helmetFront((i+1)/4,'ur')};
 const W=19*FW;let y=0;for(const k in A){A[k].y=y;y+=A[k].rows*FH}
 const sheet=document.getElementById('sheet');sheet.width=W;sheet.height=y;const g=sheet.getContext('2d');
 for(const k in A){const a=A[k];for(let i=0;i<a.n;i++)g.drawImage(render(a.f(i),1),(i%a.cols)*FW,a.y+Math.floor(i/a.cols)*FH)}

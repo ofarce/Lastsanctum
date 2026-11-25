@@ -34,15 +34,24 @@ var _dark := 0.0
 func _process(delta: float) -> void:
 	var r := OeilMatrice.run()
 	_dark = move_toward(_dark, 1.0 if r.get("dark", false) else 0.0, delta * 4.0)
-	visible = not GameState.oeil_bullets.is_empty() or not GameState.oeil_fx.is_empty() or OeilMatrice.active() or _dark > 0.0
+	visible = not GameState.oeil_bullets.is_empty() or not GameState.oeil_fx.is_empty() or OeilMatrice.active() or _dark > 0.0 \
+		or _boss_seen()
 	if visible:
 		queue_redraw()
+
+
+## Le boss est là et sa salle est vue : son ancrage au sol (OeilRoots) se dessine même hors du duel.
+func _boss_seen() -> bool:
+	var e: Enemy = GameState.oeil
+	return e != null and (world == null or world.fog.visible_at(e.pos()))
 
 
 func _draw() -> void:
 	var now := GameState.sim_time
 	var lift: float = OeilMatrice.BULLET["lift"]
 	if ground:
+		if _boss_seen():
+			OeilRoots.draw_ground(self, GameState.oeil, GameState.oeil_run, now)
 		_veil(now, true)
 		for f: Dictionary in GameState.oeil_fx:
 			match f["type"]:
@@ -65,17 +74,26 @@ func _draw() -> void:
 	for f: Dictionary in GameState.oeil_fx:
 		if f["type"] == "walleyes":
 			_wall_eyes(f, now)
+	if _boss_seen():
+		OeilRoots.draw_air(self, GameState.oeil, GameState.oeil_run, now)
 	_weep(now)
 	_glow(now)
+	var n := 0
 	for b: Dictionary in GameState.oeil_bullets:
-		var rot := posmod(roundi(atan2(b["vz"], b["vx"]) / TAU * ROT), ROT)
-		var tex := bullet(b.get("style", "oeil"), b["big"], rot)
-		var h := (tex.get_width() - 1) / 2.0
-		draw_texture(tex, Proj.nat(b["x"], 0.0, b["z"]).round() - Vector2(h, h + lift + float(b.get("h", 0.0))))
+		n += 1
+		# Sens du vol à l'écran (une larme en cloche garde son cap au sol).
+		var d := Proj.nat(b["vx"], 0.0, b["vz"])
+		var big: bool = b["big"] and b.get("style", "oeil") == "oeil"
+		_ember(Proj.nat(b["x"], 0.0, b["z"]).round() - Vector2(0.0, lift + float(b.get("h", 0.0))),
+			d.normalized() if d.length_squared() > 0.0001 else Vector2.DOWN, big, n, now)
 	_pupils(now)
 	for f: Dictionary in GameState.oeil_fx:
 		var k := clampf((now - float(f["at"])) / maxf(0.01, float(f["until"]) - float(f["at"])), 0.0, 1.0) if f.has("until") else 0.0
 		match f["type"]:
+			"end":
+				var g := Proj.nat(f["x"], 0.0, f["z"]).round()
+				ShotEnds.draw(self, 1.0, "fire", f["mode"], g - Vector2(0.0, lift + float(f.get("h", 0.0))), g.y,
+					Proj.nat(f["vx"], 0.0, f["vz"]), now - float(f["at"]), true, EMBER_S_BIG if f["big"] else EMBER_S)
 			"mote":
 				var p := Proj.nat(f["x"], 0.0, f["z"]) + Vector2(0.0, -lift - k * 10.0)
 				draw_rect(Rect2(p.round(), Vector2.ONE), Color(BLOOD[4], 1.0 - k))
@@ -111,7 +129,7 @@ func _lane(f: Dictionary, now: float) -> void:
 	var s := 0.0
 	while s < 140.0:
 		var w := o + d * s
-		if not TerrainState.in_eye_room(w.x, w.y, 0.5):
+		if not OeilMatrice.in_room(w.x, w.y, 0.5):
 			break
 		var p := Proj.nat(w.x, 0.0, w.y)
 		for k in range(-6, 7, 2):
@@ -210,7 +228,7 @@ func _wall_eye(p: Vector2, op: float, a: float, ph: float) -> void:
 ## Larmes qui coulent sous l'œil pendant l'attaque Larmes (laiteuses, de sang en phase III).
 func _weep(now: float) -> void:
 	var e: Enemy = GameState.oeil
-	if e == null or not OeilMatrice.run().get("weep", false):
+	if e == null or OeilMatrice.hosted() or not OeilMatrice.run().get("weep", false):
 		return
 	var m := OeilView.meta()
 	var eye: Dictionary = m["eye"]
@@ -228,7 +246,7 @@ func _weep(now: float) -> void:
 ## Pupilles errantes : globe blanc, iris tourné vers l'Ingénieur, lueur carmin ; trait de sang vers l'orbite tant
 ## qu'elles sortent ou rentrent.
 func _pupils(now: float) -> void:
-	var u := OeilMatrice.duelist()
+	var u := OeilMatrice.aimed()
 	var e: Enemy = GameState.oeil
 	for p: Enemy in GameState.enemies:
 		if p.kind != OeilMatrice.PUPIL_KIND or p.hp <= 0.0:
@@ -256,7 +274,7 @@ func _glow(now: float) -> void:
 	var e: Enemy = GameState.oeil
 	if e == null:
 		return
-	var r0 := OeilMatrice.run()
+	var r0 := GameState.oeil_run
 	var open: float = r0.get("open", 0.0)
 	if open < 0.2 or r0.get("iris_out", false):
 		return
@@ -277,7 +295,7 @@ func _glow(now: float) -> void:
 
 
 func _hitbox(now: float) -> void:
-	var u := OeilMatrice.duelist()
+	var u := OeilMatrice.aimed()
 	if u == null:
 		return
 	var c := Proj.nat(u.x, 0.0, u.z).round() + Vector2(0.0, -OeilMatrice.BULLET["lift"])
@@ -290,7 +308,8 @@ func _hitbox(now: float) -> void:
 	draw_rect(Rect2(c - Vector2(1, 1), Vector2(3, 3)), Color.WHITE)
 
 
-## Texture d'une balle (mise en cache) : style "oeil", "larme" ou "cil", grosse ou non (œil seul), orientée selon rot/ROT
+## Ancien dessin des balles (piste D « Œil cerné »), gardé pour les yeux des parois des Mille yeux ; les balles en vol
+## sont des braises (_ember). Texture mise en cache : style "oeil", "larme" ou "cil", grosse ou non (œil seul), orientée selon rot/ROT
 ## tour. Piste D « Œil cerné » de planches/oeil-projectiles.html : disque plein de BALL_R px (BALL_R_BIG gros) dont le
 ## dernier pixel est un anneau de la couleur de la famille (carmin, rose, os), puis bord noir et bord noir à moitié
 ## transparent. L'œil garde iris et pupille presque centrés (léger regard vers l'avant) ; la larme est une bulle de chair
@@ -346,6 +365,60 @@ static func bullet(style: String, big: bool, rot: int) -> Texture2D:
 	var tex := ImageTexture.create_from_image(img)
 	_tex[key] = tex
 	return tex
+
+
+## Balle de l'Œil : la braise des chiens de la Bête (EffectsDrawer, tir "fire"), à l'échelle de la zone touchée —
+## étincelles tramées dans le sillage, queue de flamme, anneau sombre, corps rouge, cœur blanc qui vacille. Toutes les
+## familles (œil, larme, cil) partagent ce dessin ; seule la grosse balle est plus grande (taille de celle des chiens).
+const EMBER_S := 0.8
+const EMBER_S_BIG := 1.04
+
+
+func _ember(q: Vector2, d: Vector2, big: bool, sd: int, now: float) -> void:
+	var s := EMBER_S_BIG if big else EMBER_S
+	var col: Array[Color] = EffectsDrawer.FIREBALL
+	for i in range(6, 2, -1):
+		var jx := (fposmod(sin(sd * 12.9898 + i * 78.233) * 43758.5453, 1.0) - 0.5) * 4.5 * s
+		var p := (q - d * i * 3.3 * s + Vector2(jx, sin(now * 22.0 + i * 1.7 + sd) * 2.2 * s)).round()
+		if _bay(int(p.x), int(p.y)) < 1.15 - i * 0.15:
+			draw_rect(Rect2(p, Vector2.ONE), col[0 if i > 4 else 1])
+	var rot := posmod(roundi(d.angle() / TAU * ROT), ROT)
+	var tex := ember_tex(big, rot, fmod(now * 16.0 + sd * 0.37, 2.0) < 1.0)
+	var h := (tex.get_width() - 1) / 2.0
+	draw_texture(tex, q - Vector2(h, h))
+
+
+## Tête et queue de la braise (mises en cache) : grosse ou non, orientée selon rot/ROT tour, cœur blanc ou rosé.
+static func ember_tex(big: bool, rot: int, white: bool) -> Texture2D:
+	var key := "ember_%d_%d_%d" % [1 if big else 0, rot, 1 if white else 0]
+	if _tex.has(key):
+		return _tex[key]
+	var s := EMBER_S_BIG if big else EMBER_S
+	var col: Array[Color] = EffectsDrawer.FIREBALL
+	var d := Vector2.from_angle(rot * TAU / ROT)
+	var hh := ceili(13.0 * s) + 1
+	var img := Image.create(2 * hh + 1, 2 * hh + 1, false, Image.FORMAT_RGBA8)
+	var c := Vector2(hh, hh)
+	for i in range(6, 2, -1):
+		_img_disc(img, c - d * i * 1.5 * s, (3.9 - (i - 3) * 0.9) * s, col[1])
+	_img_disc(img, c, 6.3 * s, col[6])
+	_img_disc(img, c, 4.8 * s, col[2])
+	_img_disc(img, c + d * 1.5 * s, 3.0 * s, col[3])
+	_img_disc(img, c + d * 1.5 * s, maxf(0.5, 1.5 * s), col[4] if white else col[5])
+	var tex := ImageTexture.create_from_image(img)
+	_tex[key] = tex
+	return tex
+
+
+## Disque en rangées pleines, comme EffectsDrawer._disc.
+static func _img_disc(img: Image, c: Vector2, r: float, col: Color) -> void:
+	var x0 := roundi(c.x)
+	var y0 := roundi(c.y)
+	for y in range(-floori(r), floori(r) + 1):
+		var w := floori(sqrt(r * r - y * y))
+		for x in range(-w, w + 1):
+			if x0 + x >= 0 and y0 + y >= 0 and x0 + x < img.get_width() and y0 + y < img.get_height():
+				img.set_pixel(x0 + x, y0 + y, col)
 
 
 ## Ombre d'une balle (piste B « tramée à point central ») : ellipse 7 × 3 px (11 × 5 grosse) en damier à 70 %, point

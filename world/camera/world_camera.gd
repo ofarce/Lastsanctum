@@ -29,6 +29,9 @@ var px := PX_MIN
 var input_enabled := true
 
 var _pan_on := false
+## Suivi du feu follet : position de la caméra au départ du vol.
+var _ret_on := false
+var _ret_from := Vector2.ZERO
 var _pan_moved := false
 var _pan_last := Vector2.ZERO
 ## Touches appuyées avec Ctrl ou Cmd (Ctrl+A, D2) : tant que l'une est maintenue, pas de défilement.
@@ -94,6 +97,17 @@ func _process(delta: float) -> void:
 			cam = clamp_cam(Capsule.VIEW)
 			view_changed.emit()
 		return
+	# Mort de l'Ingénieur incarné : la caméra accompagne le feu follet jusqu'à la capsule (sim/engineer_return.gd).
+	var rk := EngineerReturn.camera_k()
+	if rk >= 0.0:
+		if not _ret_on:
+			_ret_on = true
+			_ret_from = cam
+		cam = clamp_cam(_ret_from.lerp(Capsule.VIEW, rk * rk * (3.0 - 2.0 * rk)))
+		_pan_on = false
+		view_changed.emit()
+		return
+	_ret_on = false
 	if not input_enabled:
 		return
 	# Ctrl maintenu ou raccourci avec Ctrl en cours (Ctrl+A : tout sélectionner, D2) : pas de défilement.

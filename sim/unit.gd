@@ -3,7 +3,7 @@ extends RefCounted
 ## Unité alliée (soldier(), Index.html, 73b410f). Les champs reprennent ceux du prototype ; les tâches
 ## (job : creuser, prier ; build_job ; orb_job) sont des dictionnaires partagés avec les systèmes.
 
-const HP := {"paladin": 180, "healer": 115, "shooter": 110, "engineer": 140}
+const HP := {"paladin": 180, "healer": 115, "shooter": 110, "engineer": 100}
 const DEFAULT_HP := 82
 
 var id := 0

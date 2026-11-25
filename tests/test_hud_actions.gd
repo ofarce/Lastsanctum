@@ -102,11 +102,27 @@ func test_hud_texts_match_js() -> void:
 		var want: Dictionary = data["results"][k]["hud"]
 		var shown: Unit = GameState.selected[0] if not GameState.selected.is_empty() else null
 		var armored := shown != null and shown.role == "engineer" and not shown.unarmored
+		# PV de l’Ingénieur : 140 dans le prototype, Unit.HP en jeu. Sélection qui le contient : les PV attendus
+		# sont ceux du prototype, l'Ingénieur ramené à son plafond.
+		var eng: Unit = null
+		for su: Unit in GameState.selected:
+			if su.role == "engineer":
+				eng = su
+		var eng_cur := 0
+		var eng_max := 0
+		if eng != null and str(want["health_text"]).contains(" / "):
+			var parts := str(want["health_text"]).split(" / ")
+			var cap := int(Unit.HP["engineer"])
+			eng_max = int(parts[1]) - 140 + cap
+			eng_cur = int(parts[0]) - maxi(0, mini(140, int(parts[0])) - cap) if GameState.selected.size() == 1 else int(parts[0]) - (140 - cap)
+		else:
+			eng = null
 		for f: String in TEXT_FIELDS:
 			var expected: Variant = want[f]
 			# Ingénieur : dégâts de base réduits de 80 à 5 ; en armure, 1 000 de dégâts et +500 de défense.
+			# Bonus de niveau : +0,5 dégât par niveau (Catalog.lvl_bonus), au lieu de +1 dans le prototype.
 			if f == "damage" and str(expected) in ["80", "82"]:
-				expected = str(int(expected) - 80 + (1000 if armored else 5))
+				expected = str(int((int(expected) - 80) * 0.5) + (1000 if armored else 5))
 			if f == "armor" and armored:
 				expected = str(int(expected) + 500)
 			if f == "status" and c["name"] == "puits_des_ames":
@@ -124,8 +140,13 @@ func test_hud_texts_match_js() -> void:
 				expected = "%d/%d" % [Simulation.pop_used(), Simulation.pop_cap()]
 			if f == "lore" and c["name"] in ["puits_des_ames", "puits_des_ames_vide"]:
 				expected = Catalog.BUILDINGS["soulwell"]["lore"]
+			if f == "health_text" and eng != null:
+				expected = "%d / %d" % [eng_cur, eng_max]
 			check_eq(got[f], expected, "%s, %s" % [c["name"], f])
-		check_near(got["health_pct"], want["health_pct"], 1e-3, "%s, health_pct" % c["name"])
+		var pct: float = want["health_pct"]
+		if eng != null:
+			pct = eng_cur * 100.0 / eng_max
+		check_near(got["health_pct"], pct, 1e-3, "%s, health_pct" % c["name"])
 
 
 func test_hud_key_runs_visible_action() -> void:

@@ -26,10 +26,10 @@ extends RefCounted
 ## capsule (« link »), qui s'allume et devient utilisable (« awake »).
 const ANCHOR_SEQUENCE := false
 ## Durée de la course du trait jusqu'à la capsule.
-const LINK_LEN := 2.2
+const LINK_LEN := 1.32  # 2,2 s × 0,6 (accéléré de 40 %)
 ## Capsule éteinte : l'Ancre s'allume à BOOT_WAKE s, puis se recharge en RECHARGE_LEN s.
-const BOOT_WAKE := 1.5
-const RECHARGE_LEN := 7.5
+const BOOT_WAKE := 0.9  # 1,5 s × 0,6
+const RECHARGE_LEN := 4.5  # 7,5 s × 0,6
 ## Cadrage des cinématiques de la capsule : entre la capsule et l'Ancre, px 3.
 const BOOT_CAM := Capsule.VIEW
 ## Une fois arrivé, le trait reste allumé LINK_HOLD s puis s'éteint en LINK_FADE s.
@@ -113,7 +113,8 @@ static func _cannon_sounds() -> void:
 		_fire[i] = p
 
 
-## Nouvelle partie avec séquence : l'Ingénieur est dans la capsule éteinte, la porte est fermée.
+## Nouvelle partie avec séquence : l'Ingénieur est dans la capsule éteinte. La porte sud reste ouverte en permanence
+## (demande du 2026-11-25) : DOOR_OPEN.
 static func start(sim: Simulation, eng: Unit) -> void:
 	_go("boot")
 	eng.hidden = true
@@ -126,7 +127,7 @@ static func start(sim: Simulation, eng: Unit) -> void:
 	GameState.next_wave = INF
 	# Le portail des Exilés ne joue plus son ouverture : l'arrivée a sa propre sphère.
 	GameState.portal_start = -1000.0
-	set_door(sim.state(), true)
+	set_door(sim.state(), not DOOR_OPEN)
 
 
 ## Une cinématique est en cours : barres, HUD masqué, commandes coupées.
@@ -141,6 +142,9 @@ static func cinematic() -> bool:
 
 
 static func tick(sim: Simulation) -> void:
+	# Porte sud ouverte en permanence : une partie sauvegardée porte fermée est rouverte au chargement.
+	if DOOR_OPEN and GameState.door_closed:
+		set_door(sim.state(), false)
 	var s := GameState.opening_stage
 	if s == "":
 		return
@@ -270,6 +274,9 @@ static func _block_line(sim: Simulation) -> void:
 
 ## Porte posée à l'ouverture de la grotte (sortie du tunnel, au pied du flanc).
 const DOOR_Z := -75.5
+## Grandes portes du sud ouvertes en permanence, battants rabattus (2026-11-25) ; faux : fermées jusqu'à l'explosion
+## du bouclier, comme dans la séquence d'origine.
+const DOOR_OPEN := true
 
 
 ## Cases sous la porte (une rangée en z −80…−76, x −8…8) : infranchissables tant que la porte est fermée.

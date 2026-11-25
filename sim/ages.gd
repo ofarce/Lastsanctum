@@ -16,7 +16,7 @@ const AGES := {
 	"iron": {"name": "Âge du fer", "ore": "iron", "metal": "fer", "boss_name": "Gorge-Cuivre",
 		"quest": "Le secret du fer", "mine_label": "Miner du fer", "boss_label": "Vaincre Gorge-Cuivre",
 		"quote": "Le fer ne se laisse pas fondre. Gorge-Cuivre en a dévoré le secret : il faudra le lui reprendre.",
-		"seek_quote": "Le fer affleure au nord des veines de vert-de-gris. Il faut d’abord en extraire.",
+		"seek_quote": "Le fer affleure au nord des Salles oubliées. Il faut d’abord en extraire.",
 		"done_quote": "Le fer plie sous nos marteaux. L’Armurerie a de quoi forger."},
 	"gold": {"name": "Âge de l’or", "ore": "gold", "metal": "or", "boss_name": "",
 		"quest": "Le secret de l’or", "mine_label": "Miner de l’or", "boss_label": "",

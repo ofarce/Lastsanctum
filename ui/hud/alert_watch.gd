@@ -4,7 +4,8 @@ extends Node
 ## simulation n'a besoin de les émettre.
 ##  - un allié tombe (Exilé, adepte, soldat) : toujours ;
 ##  - un allié encaisse un coup hors de l'écran : au plus une alerte par zone toutes les ZONE_COOLDOWN s ;
-##  - une barricade est frappée hors de l'écran, l'Ancre perd de l'intégrité.
+##  - une barricade ou une porte de la grotte (sim/cave_doors.gd) est frappée hors de l'écran, l'Ancre perd de
+##    l'intégrité.
 ## Les alertes se regroupent : au plus une toutes les GLOBAL_GAP s (sauf une mort, qui passe toujours).
 
 const ZONE := 48.0
@@ -56,6 +57,11 @@ func _process(_delta: float) -> void:
 		var p := Vector2(float(o["x"]), float(o["z"]))
 		if float(o["hp"]) < before - 0.01 and not _on_screen(p) and _zone_free(p, now):
 			_emit("Une barricade est attaquée !", p, false)
+	for i in GameState.cave_doors.size():
+		var hp := float(GameState.cave_doors[i]["hp"])
+		var p := CaveDoors.mid(i)
+		if hp < float(_barricades.get(-1 - i, hp)) - 0.01 and not _on_screen(p) and _zone_free(p, now):
+			_emit("Une porte de la grotte est attaquée !", p, false)
 	if _core >= 0.0 and GameState.core_hp < _core - 0.001 and now - _core_at >= CORE_COOLDOWN:
 		_core_at = now
 		_emit("L’Ancre est attaquée !", CaveShape.CORE, true)
@@ -72,6 +78,8 @@ func _snapshot() -> void:
 	for o: Dictionary in GameState.placed:
 		if o.has("hp"):
 			_barricades[o["cell"]] = float(o["hp"])
+	for i in GameState.cave_doors.size():
+		_barricades[-1 - i] = float(GameState.cave_doors[i]["hp"])
 	_core = GameState.core_hp
 
 

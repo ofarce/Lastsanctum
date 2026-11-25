@@ -1,0 +1,216 @@
+%%HEAD%%<main>
+<header>
+ <h1>Le monastère abandonné · couloirs et arènes</h1>
+ <p class="lead">Le biome 1 est un temple abandonné, autrefois un sanctuaire où vivait une communauté de moines. Ses couloirs et ses arènes doivent garder la trace de cette vie : où l'on priait, mangeait, dormait, sonnait les heures, enterrait les siens. Puis la jungle et la Bête sont entrées. Dix familles de props, à la taille des pixels du jeu, sur le dallage et la roche réels. L'or reste réservé au Credo, le rouge à la Bête, le cyan à la technique tyrienne.</p>
+</header>
+
+<div class="reco">
+ <h2>Ma recommandation</h2>
+ <p>Pour les couloirs, <b>C1 Cloître</b> et <b>C2 Niches à lampes</b> partout : le premier dit « monastère » au premier coup d'œil, le second éclaire. <b>C3 Cellules</b> et <b>C4 Réfectoire</b> dans les quartiers calmes, là où vivaient les moines. <b>C5 Clocher tombé</b> près des salles-seuils, comme repère. <b>C6 Ossuaire</b> sur la route de l'Œil, pour annoncer la crypte.</p>
+ <p>Pour les arènes, chaque boss reçoit une pièce du monastère : <b>B1 Chœur</b> pour l'Archiprêtre, <b>B2 Salle capitulaire</b> pour la Martyre, <b>B3 Crypte des abbés</b> pour l'Œil. <b>B4 Seuil et trophée</b> se pose dans les trois.</p>
+ <p>Répondez par les numéros, par exemple « C1, C2, C6, B1, B2, B3, B4 ».</p>
+</div>
+
+<div class="tools">
+ <button id="pause" type="button" aria-pressed="false">Pause</button>
+ <span>Vignettes en pixels du monde, agrandies ×3 · un personnage mesure environ 36 px</span>
+</div>
+
+<div class="part"><h2>Couloirs du monastère</h2><p>Semés par le générateur dans les couloirs taillés entre les salles (RoomLayout), contre les parois, sans jamais bloquer le passage. Chaque famille a son quartier de prédilection.</p></div>
+<div id="listD" style="display:contents"></div>
+
+<div class="part"><h2>Arènes des boss du Temple</h2><p>Posées à la main autour de l'aire de combat, jamais au centre : les motifs d'attaque restent lisibles.</p></div>
+<div id="listS" style="display:contents"></div>
+</main>
+
+<script>
+%%ENGINE%%
+/* ---------- palettes propres à cette planche ---------- */
+const GD=[0x5a3e14,0xa07424,0xd0a038,0xf0cc66,0xfff2b0];              // or du Credo (dôme de la Martyre)
+const RD=[0x2a0809,0x5a1014,0x8e1c20,0xc0302c,0xe2382e];              // chair de la Bête
+const CU=[0x3a1c10,0x6e3a1c,0xa85a2c,0xd88a48,0xf0b878],VG=0x4a9a84;  // cuivre, vert-de-gris
+const OC=[0x4a3424,0x7a5a3a,0xa8865a,0x8a3020];                       // fresque : enduit, ocre, rouge de terre
+const GL=[0x8ab4d8,0xd0a038,0xb8302a,0x6a9a6a];                       // vitrail
+
+/* ---------- pièces des couloirs : le monastère ---------- */
+const BZ=[0x3a2c18,0x5a4a2a,0x8a7040,0xb09458,0xd0b878];               // bronze terni
+const CL=[0x4a2a1a,0x7a4a2c,0xa06a40];                                  // terre cuite
+const FL2=[0xd8c86a,0x9a8ac8,0xc87a6a];                                 // fleurs du préau
+function wallTop(x){return ft(x)-FACE+1}
+function arcade(x0,x1){for(let ax=x0;ax+16<=x1;ax+=16){const cx=ax+8;
+  for(let x=ax+2;x<ax+14;x++){const t=Math.max(wallTop(x),ft(x)-30),f=ft(x),k=(x-cx)/6,top=t+2+(1-Math.sqrt(Math.max(0,1-k*k)))*5;
+   for(let y=Math.round(top);y<f;y++)blend(x,y,y>=f-2?MS[1]:y>=f-4?0x1a2a1c:0x0c0e14,y>=f-2?.85:.9);blend(x,Math.round(top)-1,S[5],.9)}
+  for(const px0 of[ax,ax+14]){const t=wallTop(px0),f=ft(px0);for(let y=t;y<f;y++){blend(px0,y,S[4],1);blend(px0+1,y,S[3],1)}blend(px0,t,S[5],1);blend(px0+1,t,S[5],1)}
+  if(hs(ax)>.5)for(let j=0;j<6;j++)blend(ax+4+hs(ax+j)*8,ft(ax+8)-1-j*.6,MS[2+(j%2)],1)}}
+function well(x,y){shadow(x+1,y+1,10,3);ell(x,y-3,8,4,S[3]);ell(x,y-4,8,4,S[4]);ell(x,y-4,5.5,2.6,WT[0]);gell(x-1,y-4,3,1.2,WT[2],.7);
+ rect(x-8,y-16,2,13,WD[1]);rect(x+7,y-16,2,13,WD[2]);rect(x-9,y-17,19,2,WD[3]);line(x+2,y-15,x+2,y-9,LN[1]);rect(x+1,y-9,3,3,WD[1]);px(x+1,y-9,WD[3])}
+function herbs(x,y,w,h,seed){rect(x,y,w,h,S[3]);rect(x,y,w,1,S[5]);rect(x+1,y+1,w-2,h-2,WD[0]);
+ for(let i=0;i<w*h*.5;i++){const a=x+1+hs(seed+i)*(w-2),b=y+1+hs(seed*2+i)*(h-2);px(a,b,i%3?MS[2]:MS[3]);if(i%7===0)px(a,b-1,FL2[i%3])}
+ for(let k=0;k<3;k++)tuft(x+3+k*(w-6)/2,y+h-1,seed+k)}
+function niche(x,lit,seed){const t=Math.max(wallTop(x)+3,ft(x)-24);for(let j=0;j<8;j++)for(let i=-3;i<=3;i++){if(j<2&&Math.abs(i)>j+1)continue;blend(x+i,t+j,0x0c0e14,.92)}
+ for(let i=-4;i<=4;i++)blend(x+i,t+8,S[5],1);rect(x-1,t+6,3,2,CL[1]);px(x-1,t+6,CL[2]);px(x+2,t+7,CL[0]);px(x-3,t+7,BN[1]);
+ for(let k=0;k<3;k++){const rx=x-3+k*3;for(let j=0;j<4+k;j++)blend(rx+Math.round(Math.sin(T*1.6+k+j*.5)*.4),t+9+j,k===1?0x9a4a3a:LN[1],.85)}
+ if(lit)post.push(()=>{blend(x,t+5-(Math.sin(T*9+seed)>.4?1:0),FR[3],1);blend(x,t+5,FR[2],1);light(x,t+6,18,12,FR[2],.075+.015*Math.sin(T*8+seed))})}
+function offering(x,y,seed){ell(x,y-1,2.4,1.2,CL[1]);px(x-1,y-2,CL[2]);for(let k=0;k<3;k++)px(x-1+k,y-3-hs(seed+k)*2,FL2[k]);ell(x+5,y,1.6,1,CL[0])}
+function cellDoor(x,seed,door){const t=Math.max(wallTop(x)+2,ft(x)-22);for(let y=t;y<ft(x);y++)for(let i=-4;i<=4;i++)blend(x+i,y,0x0a0c12,.95);for(let y=t;y<ft(x);y++){blend(x-5,y,S[5],1);blend(x+5,y,S[1],1)}
+ for(let i=-5;i<=5;i++)blend(x+i,t-1,S[5],1);if(door===undefined?hs(seed)>.4:door){poly([[x+5,ft(x)],[x+7,t+2],[x+11,t+4],[x+9,ft(x)+1]],WD[1]);line(x+7,t+2,x+11,t+4,WD[3]);line(x+8,t+6,x+10,t+7,WD[0]);line(x+8,t+10,x+10,t+11,WD[0])}}
+function pallet(x,y){shadow(x+1,y+1,9,2);rect(x-8,y-4,16,5,LN[1]);rect(x-8,y-4,16,1,LN[2]);for(let i=-6;i<8;i+=3)rect(x+i,y-3,1,4,LN[0]);rect(x-8,y-4,4,2,LN[2])}
+function jug(x,y){shadow(x,y,3,1);ell(x,y-3,2.4,3,0,(xx,yy,dx)=>dx<-.2?CL[2]:CL[1]);rect(x-1,y-7,2,2,CL[1]);px(x+2,y-5,CL[0])}
+function stool(x,y,top){shadow(x,y,4,1.4);if(top){line(x-3,y,x+3,y-2,WD[2]);line(x-2,y-2,x-4,y-5,WD[1]);return}rect(x-3,y-5,7,2,WD[3]);rect(x-3,y-3,1,3,WD[1]);rect(x+3,y-3,1,3,WD[1])}
+function table(x,y,w,seed){shadow(x+w/2,y+2,w/2+3,3);rect(x,y-9,w,5,WD[2]);rect(x,y-9,w,1,WD[3]);rect(x,y-5,w,1,WD[0]);for(const lx of[x+1,x+w-3])rect(lx,y-4,2,4,WD[1]);
+ for(let k=0;k*9+4<w;k++){const bx=x+4+k*9;if(hs(seed+k)>.35){ell(bx,y-7,2,1,CL[1]);px(bx-1,y-8,CL[2])}else{rect(bx,y-9,1,1,CL[0]);line(bx+1,y-8,bx+3,y-7,CL[1])}}
+ rect(x,y+1,w*.6,2,WD[1]);rect(x,y+1,w*.6,1,WD[3]);line(x+w*.65,y+2,x+w-2,y+4,WD[2]);line(x+w*.65,y+3,x+w-2,y+5,WD[0])}
+function cauldron(x,y){shadow(x+1,y+1,8,2.4);gell(x,y+1,7,2.4,0x2a2622,.9);line(x-6,y,x-2,y-12,I[2]);line(x+6,y,x+2,y-12,I[2]);
+ ell(x,y-4,5,4,0,(xx,yy,dx,dy)=>dy<-.55?null:dx<-.3?I[3]:I[1]);ell(x,y-6,5,1.4,I[0]);rect(x-5,y-7,11,1,I[4])}
+function bell(x,y){shadow(x+1,y+2,13,3.5);poly([[x-8,y-11],[x+4,y-14],[x+10,y-1],[x-8,y+2]],BZ[2]);poly([[x-8,y-11],[x-4,y-12],[x-4,y+1],[x-8,y+2]],BZ[3]);
+ ell(x+10,y-7,2.6,6.5,BZ[1]);ell(x+10,y-7,1.6,5,BZ[0]);line(x-8,y-11,x+4,y-14,BZ[4]);line(x-10,y-7,x-8,y-11,BZ[2]);line(x-10,y-7,x-8,y+2,BZ[1]);
+ line(x-2,y-12,x+1,y-6,INK);line(x+1,y-6,x-1,y-1,INK);px(x+4,y-6,VG);px(x+6,y-3,VG);px(x-5,y-4,VG)}
+function rope(x,len,seed){const t=wallTop(x);for(let j=0;j<len;j++){const sw=Math.round(Math.sin(T*1.1+seed)*j/len*1.5);px(x+sw,t+j,j%2?LN[0]:LN[1])}
+ const sw=Math.round(Math.sin(T*1.1+seed)*1.5);px(x+sw-1,t+len,LN[2]);px(x+sw+1,t+len,LN[2]);px(x+sw,t+len+1,LN[2])}
+function ossuary(x0,x1,seed){const top=Math.max(wallTop(x0)+2,ft(x0)-40);for(let x=x0;x<x1;x++){for(let y=top;y<ft(x)-1;y++)blend(x,y,0x0c0e14,.9);blend(x,top-1,S[5],1);blend(x,ft(x)-1,S[4],1)}
+ for(let ry=top,r=0;ry+9<=ft(x0)-1;ry+=10,r++){for(let i=x0;i<x1;i++)blend(i,ry+9,S[3],1);
+  for(let x=x0+2;x<x1-2;x+=5){if(hs(seed+x+r*7.1)>.12){ell(x+1,ry+2.5,1.8,1.6,BN[2]);px(x,ry+2,INK);px(x+2,ry+2,INK);px(x+1,ry+4,BN[0])}
+   for(let i=0;i<5;i++){blend(x+i-1,ry+6,i%4===0?BN[2]:BN[1],1);blend(x+i-1,ry+7,BN[0],1)}}}}
+function bonepile(x,y,seed){shadow(x,y+1,8,2);for(let k=0;k<6;k++){const a=hs(seed+k)*Math.PI,l=4+hs(seed*2+k)*3;line(x-Math.cos(a)*l,y-1-Math.sin(a)*l*.3-k*.4,x+Math.cos(a)*l,y-1+Math.sin(a)*l*.3-k*.4,k%2?BN[1]:BN[2])}
+ ell(x+2,y-4,1.8,1.6,BN[2]);px(x+1,y-4,INK);px(x+3,y-4,INK)}
+/* ---------- pièces des arènes : le monastère ---------- */
+function mitre(x,y){shadow(x+1,y+1,7,2);rect(x-6,y-3,13,3,0x6a1616);rect(x-6,y-3,13,1,GD[2]);poly([[x-4,y-3],[x-3,y-13],[x,y-16],[x+3,y-13],[x+4,y-3]],0xe8e2d0);
+ line(x-3,y-13,x,y-16,0xfff8e8);rect(x,y-14,1,11,GD[2]);rect(x-4,y-7,9,1,GD[3]);px(x,y-10,RD[3])}
+function veil(x,y){shadow(x+1,y+1,9,2);poly([[x-8,y],[x-5,y-9],[x,y-12],[x+5,y-9],[x+8,y],[x+2,y-2],[x-3,y-1]],0x7a1a1a);line(x-5,y-9,x,y-12,GD[3]);line(x,y-12,x+5,y-9,GD[2]);
+ line(x-2,y-10,x-4,y-1,0x5a1010);line(x+2,y-10,x+3,y-2,0x5a1010);for(let i=-7;i<=7;i+=2)px(x+i,y,GD[2])}
+function arch(x,y,sp){column(x-sp/2,y,22,false);column(x+sp/2,y,22,false);const t=y-33;rect(x-sp/2-6,t,sp+12,4,S[3]);rect(x-sp/2-6,t,sp+12,1,S[5]);rect(x-sp/2-6,t+3,sp+12,1,S[1]);
+ rect(x-2,t-2,5,6,S[4]);px(x,t,GLY);px(x,t+1,GLY)}
+
+function stalls(x,y,w,seed){shadow(x+w/2,y+1,w/2+2,2.5);rect(x,y-14,w,10,WD[1]);rect(x,y-14,w,1,WD[3]);for(let i=x;i<x+w;i+=5){rect(i,y-14,1,13,WD[0]);px(i+2,y-15,WD[3]);px(i+2,y-16,WD[2])}
+ rect(x,y-5,w,3,WD[2]);rect(x,y-5,w,1,WD[3]);rect(x,y-2,w,2,WD[0]);if(hs(seed)>.4){poly([[x+w-9,y-14],[x+w-3,y-14],[x+w-5,y-8]],-1)}}
+function censer(x,len,seed){const t=wallTop(x),sw=Math.sin(T*1.2+seed)*2;bline(x,t,x+sw,t+len,I[3],1);const cx=x+sw,cy=t+len;
+ ell(cx,cy+2,2.6,2.2,0,(xx,yy,dx)=>dx<0?GD[2]:GD[1]);rect(cx-2,cy,5,1,GD[3]);px(cx,cy-1,GD[3]);
+ post.push(()=>{for(let k=0;k<5;k++){const u=(T*.35+k/5)%1;gell(cx+Math.sin(T+k*1.7)*2+u*3,cy-1-u*16,1+u*2.2,1+u*1.5,0xb8b4c0,(1-u)*.28)}light(cx,cy+2,12,8,FR[2],.05)})}
+function gisant(x,y,open){shadow(x+1,y+1,15,3);rect(x-12,y-6,24,6,S[2]);rect(x-12,y-6,24,1,S[4]);rect(x+9,y-5,3,5,S[1]);
+ const lx=open?x-6:x-12,ly=open?y-14:y-12;if(open){rect(x-12,y-9,24,3,I[0]);ell(x+4,y-8,2,1.4,BN[1])}
+ rect(lx,ly,24,6,S[3]);rect(lx,ly,24,1,S[5]);ell(lx+4,ly+3,2.4,2.2,MB[2]);px(lx+3,ly+2,MB[3]);rect(lx+7,ly+1,14,4,MB[1]);rect(lx+7,ly+1,14,1,MB[3]);rect(lx+11,ly+2,3,2,MB[3]);rect(lx+20,ly+1,2,4,MB[2]);
+ if(open)line(lx+2,ly+6,lx+22,ly+7,S[0])}
+function chapterBench(x0,x1,y){for(let x=x0;x<x1;x++){blend(x,y,S[5],1);blend(x,y+1,S[3],1);blend(x,y+2,S[3],1);blend(x,y+3,S[1],1);if((x-x0)%12===0){blend(x,y+1,S[1],1);blend(x,y+2,S[1],1)}}}
+function chapterSide(x,y0,y1){for(let y=y0;y<y1;y++){blend(x,y,S[5],1);blend(x+1,y,S[3],1);blend(x+2,y,S[3],1);blend(x+3,y,S[1],1)}}
+/* ---------- pièces des salles de boss ---------- */
+function candelabra(x,y){shadow(x+1,y,6,2);ell(x,y-1,3.2,1.3,GD[1]);rect(x,y-14,1,13,GD[2]);px(x-1,y-8,GD[3]);rect(x-4,y-14,9,1,GD[3]);rect(x-4,y-15,1,1,GD[2]);rect(x+4,y-15,1,1,GD[2]);
+ for(const o of[-4,0,4])rect(x+o,y-18,1,3,Q[2]);post.push(()=>{for(const o of[-4,0,4]){blend(x+o,y-19-(Math.sin(T*8+o+x)>.3?1:0),FR[3],1);blend(x+o,y-19,FR[2],1)}light(x,y-16,26,17,GD[3],.07+.015*Math.sin(T*7+x))})}
+function priedieu(x,y,top){shadow(x+1,y+1,7,2);if(top){poly([[x-6,y-1],[x+5,y-4],[x+6,y-1],[x-5,y+2]],WD[1]);line(x-6,y-1,x+5,y-4,WD[3]);line(x+3,y+1,x+9,y,WD[2]);return}
+ rect(x-5,y-3,11,3,WD[1]);rect(x-5,y-3,11,1,WD[3]);rect(x-5,y-9,1,6,WD[0]);rect(x+5,y-9,1,6,WD[0]);rect(x-5,y-9,11,2,WD[2]);rect(x-5,y-9,11,1,WD[3])}
+function shards(x,y,seed,n){for(let i=0;i<n;i++){const ox=(hs(seed+i*1.9)-.5)*18,oy=(hs(seed+i*3.7)-.5)*8,c=GL[Math.floor(hs(seed+i*5.1)*4)],s=1+hs(seed+i)*1.5;
+  poly([[x+ox,y+oy-s],[x+ox+s*1.4,y+oy],[x+ox-s*.6,y+oy+s*.7]],c);px(x+ox,y+oy-s,0xffffff)}
+ post.push(()=>{const k=Math.floor(T*1.5+seed)%n;blend(x+(hs(seed+k*1.9)-.5)*18,y+(hs(seed+k*3.7)-.5)*8-1,0xffffff,.9)})}
+function rose(x){const t=wallTop(x),face=ft(x)-t,RX=face>20?14:9,RY=face>20?10:6,cy=Math.max(t+6,ft(x)-26);
+ for(let y=cy-RY;y<=cy+RY;y++)for(let i=-RX;i<=RX;i++){const dy=(y-cy)/RY,dx=i/RX;if(dx*dx+dy*dy>1)continue;
+  const br=hs(i*1.3+y*.7)>.72&&i>2;if(br){blend(x+i,y,INK,.9);continue}const a=Math.atan2(dy,dx),ring=Math.sqrt(dx*dx+dy*dy);
+  let c=GL[(Math.floor((a+Math.PI)/TAU*8)+(ring>.5?1:0))%4];if(ring<.22)c=GD[3];if(Math.abs(Math.sin(a*4))<.12||Math.abs(ring-.55)<.08)c=I[0];blend(x+i,y,c,1)}
+ for(let k=0;k<64;k++){const a=k/64*TAU;blend(x+Math.cos(a)*(RX+1),cy+Math.sin(a)*(RY+1),S[5],1)}
+ post.push(()=>{const p=.8+.2*Math.sin(T*.7);for(let j=0;j<46;j++)for(let i=-6;i<=6;i++){const xx=x+i+j*.35,yy=ft(x)+j;if(M(xx,yy)&&hs(i*2.1+j*.3)>.25)blend(xx,yy,GD[4],.05*p*(1-j/46))}})}
+function gbanner(x,y,h){rect(x-5,y,11,1,GD[1]);for(let j=1;j<=h;j++)for(let i=-3;i<=3;i++){if(j>h-3&&hs(x+i*3.3+j)>.5+(h-j)*.15)continue;const sw=j>h*.5?Math.round(Math.sin(T*1.3+x)*.6):0;
+  px(x+i+sw,y+j,i===-3||i===3?GD[1]:j%7===4?RD[3]:0x7a1a1a)}ell(x,y+5,1.6,1.6,GD[3]);px(x,y+5,GD[4])}
+function runner(x,y0,y1,w){for(let y=y0;y<y1;y++)for(let i=0;i<w;i++){if(hs(i*1.7+y*.9)>.93||(y>y1-6&&hs(i+y*3.1)>.5))continue;
+  blend(x+i,y,i===0||i===w-1?GD[1]:i===1||i===w-2?GD[2]:0x6a1616,.82)}}
+function altar(x,y){shadow(x+1,y+1,14,3);rect(x-11,y-8,22,8,S[3]);rect(x-11,y-8,22,1,S[5]);rect(x+8,y-7,3,7,S[1]);rect(x-6,y-8,12,6,0x6a1616);rect(x-6,y-8,12,1,GD[3]);
+ rect(x-6,y-3,12,1,GD[1]);ell(x,y-13,3.2,3.2,GD[2]);ell(x-1,y-14,1.4,1.4,GD[4]);for(let a=0;a<8;a++){const an=a/8*TAU;px(x+Math.cos(an)*5,y-13+Math.sin(an)*5,GD[3])}
+ post.push(()=>light(x,y-12,30,20,GD[3],.06+.02*Math.sin(T*1.4)))}
+function vein(x,y,len,seed,dx){let cx=x,cy=y;const pts=[];for(let j=0;j<len;j++){cx+=dx*.6+(hs(seed+j*1.7)-.5)*1.4;cy+=.7+(hs(seed+j*2.3)-.5)*.6;pts.push([cx,cy,j])}
+ for(const[a,b,j]of pts){const w=j<len*.5?2:1;for(let i=0;i<w;i++)blend(a+i,b,RD[2],1);if(w===2)blend(a,b,RD[1],1)}
+ post.push(()=>{const h=(T*18+seed*7)%(len+20);for(const[a,b,j]of pts)if(Math.abs(j-h)<2.5)blend(a,b,RD[4],1)})}
+function flesh(x,y,rx,ry,seed){for(let i=0;i<rx*ry*2.2;i++){const a=hs(seed+i*1.3)*TAU,r=Math.sqrt(hs(seed+i*2.9));blend(x+Math.cos(a)*r*rx,y+Math.sin(a)*r*ry,r<.5?RD[2]:RD[1],.75)}}
+function pustule(x,y,r,seed){shadow(x+1,y+1,r+1,r*.4);const p=1+.12*Math.sin(T*2.6+seed);ell(x,y-r*.7,r*p,r*.8*p,0,(xx,yy,dx,dy)=>dx+dy<-.6?RD[4]:dx+dy<.3?RD[3]:RD[2]);
+ px(x-r*.4,y-r*1.1,0xffd0c0);post.push(()=>light(x,y-r,r*4,r*2.6,RD[4],.04+.03*Math.sin(T*2.6+seed)))}
+function ichor(x,y,rx,ry){gell(x,y,rx,ry,RD[0],.95);gell(x-rx*.2,y-ry*.15,rx*.55,ry*.45,RD[1],.8);const u=(T*.35+hs(x))%1;gring(x,y,rx*.8*u,ry*.8*u,RD[3],(1-u)*.8)}
+function rib(x,y,dir,h){for(let k=0;k<h;k++){const t=k/h,xx=x+dir*Math.sin(t*Math.PI*.8)*h*.45,yy=y-k;px(xx,yy,t<.15?BN[0]:BN[2]);px(xx+dir,yy,BN[1]);if(t<.6)px(xx-dir,yy,BN[1])}shadow(x,y+1,3,1.2)}
+function crater(x,y,r){gell(x,y,r,r*.45,0x050304,.92);gring(x,y,r,r*.45,RD[2],1);gring(x,y,r+1.5,r*.45+.8,RD[1],.8);for(let k=0;k<7;k++){const a=k/7*TAU+.4;bline(x+Math.cos(a)*r,y+Math.sin(a)*r*.45,x+Math.cos(a)*(r+7+hs(k)*6),y+Math.sin(a)*(r*.45+3+hs(k)*3),RD[1],.9)}
+ post.push(()=>light(x,y,r*2.4,r*1.2,RD[3],.05+.03*Math.sin(T*1.8)))}
+function plate(x,y,a,seed){const c=Math.cos(a),s=Math.sin(a);const P=[[-7,-1],[-3,-4],[3,-4],[7,-1],[5,2],[-5,2]].map(([u,v])=>[x+u*c-v*s*.6,y+u*s*.5+v]);shadow(x+1,y+2,8,2);poly(P,CU[2]);
+ line(P[0][0],P[0][1],P[1][0],P[1][1],CU[4]);line(P[1][0],P[1][1],P[2][0],P[2][1],CU[4]);line(P[2][0],P[2][1],P[3][0],P[3][1],CU[3]);line(P[4][0],P[4][1],P[5][0],P[5][1],CU[0]);
+ px(x-2,y-1,VG);px(x+2,y,VG);px(x+3,y-1,VG)}
+function tick(x,y,seed){shadow(x,y+1,5,1.6);for(let k=-2;k<=2;k++){line(x+k*1.5,y-2,x+k*2.6,y-6-hs(seed+k)*2,0x2a2018);}ell(x,y-2,4,2.6,0,(xx,yy,dx,dy)=>dy<-.2?0x8a7a5a:0x4a3a30);px(x-1,y-3,0xb8a880)}
+function burrow(x,y,r){gell(x,y,r,r*.45,0x050608,.95);gring(x,y,r,r*.45,S[1],1);rubble(x,y+r*.5,x,6,r*2.4);rubble(x,y-r*.5,x*2,4,r*2)}
+function fallenTimber(x,y,a){const dx=Math.cos(a)*12,dy=Math.sin(a)*5;shadow(x+1,y+2,12,2.5);for(let o=0;o<3;o++)line(x-dx,y-dy+o,x+dx,y+dy+o,o===0?WD[3]:o===1?WD[2]:WD[0])}
+function skullBig(x,y){shadow(x+1,y+1,9,2.5);ell(x,y-7,7,6,0,(xx,yy,dx,dy)=>dx+dy<-.5?BN[2]:dx+dy<.5?BN[1]:BN[0]);ell(x-3,y-7,1.8,1.6,INK);ell(x+3,y-7,1.8,1.6,INK);
+ rect(x-3,y-2,7,2,BN[1]);for(let i=-3;i<=3;i+=2)px(x+i,y-1,INK);for(const d of[-1,1])for(let k=0;k<8;k++)px(x+d*(6+k*.9),y-11-k*1.1+k*k*.08,k<4?BN[1]:BN[2]);
+ post.push(()=>{const p=.5+.5*Math.sin(T*1.6);blend(x-3,y-7,RD[4],.5*p);blend(x+3,y-7,RD[4],.5*p)})}
+function sealRing(x,y,r){gring(x,y,r,r*.5,S[4],1);gring(x,y,r-2,r*.5-1,S[1],1);for(let k=0;k<12;k++){const a=k/12*TAU;const gx=x+Math.cos(a)*(r-1),gy=y+Math.sin(a)*(r*.5-.5);blend(gx,gy,GLY,1)}
+ post.push(()=>{const p=.6+.4*Math.sin(T*1.2);for(let k=0;k<12;k++){const a=k/12*TAU;blend(x+Math.cos(a)*(r-1),y+Math.sin(a)*(r*.5-.5),0xd8ffff,.7*p)}light(x,y,r*1.3,r*.7,GLY,.035*p)})}
+
+/* ---------- propositions ---------- */
+const DECOR=[
+ {n:"C1",nom:"Cloître en ruine",mask:gal(41),dark:.74,
+  txt:"Les parois s'ouvrent en arcades sur un ancien préau, où l'herbe a repris. Le long du couloir, un puits à margelle et des carrés de simples envahis : les herbes que cultivaient les moines.",
+  pour:"Dit « monastère » au premier coup d'œil. Les arcades rythment la paroi et donnent de la profondeur à des couloirs plats. Le vert du préau rappelle que la jungle est au-dessus.",
+  contre:"Les arcades suggèrent un passage : il faut que leur fond reste clairement fermé.",
+  jeu:"Décor pur. Décalques d'arcades posés sur la paroi nord, puits et carrés de simples au sol. Variante : les simples se récoltent une fois pour un peu de Vie.",
+  d(){arcade(4,72);arcade(136,172);well(118,ft(118)+16);herbs(30,fb(30)-14,26,9,1);herbs(76,ft(76)+6,20,8,2);rubble(150,fb(150)-5,3,4);tuft(70,fb(70)-3,4);moss(100,fb(100)-6,8,3,5)}},
+ {n:"C2",nom:"Niches à lampes",mask:gal(43),dark:.5,
+  txt:"Des niches creusées dans la paroi abritent des lampes à huile ; certaines brûlent encore. Des rubans de prière pendent dessous, et au pied du mur on trouve des bols d'offrande et des fleurs séchées.",
+  pour:"La lumière la plus naturelle pour un monastère : chaude, petite, régulière. Elle éclaire les couloirs et dit que quelqu'un est passé ici il n'y a pas si longtemps.",
+  contre:"Des lampes allumées dans un temple abandonné posent la question : qui les entretient ? Une réponse possible : les Oublieux.",
+  jeu:"Décor pur, une lumière par niche allumée. Variante : l'Ingénieur peut les rallumer, comme les braseros de D2.",
+  d(){for(const[x,l]of[[18,1],[44,0],[70,1],[112,1],[140,0],[162,1]])niche(x,l,x);for(const x of[20,72,114,160])offering(x,ft(x)+5,x);slab(92,60,1);offering(48,fb(48)-4,9);rubble(132,fb(132)-5,2,3)}},
+ {n:"C3",nom:"Cellules des moines",mask:gal(47),dark:.66,
+  txt:"Une rangée de portes basses donne sur les cellules. Les battants de bois pourrissent, certains ont été arrachés. Devant, ce qui a été traîné dehors : paillasses, cruches, écuelles, tabourets.",
+  pour:"Raconte la vie quotidienne et la fuite précipitée. Petites pièces basses qui ne gênent pas la lecture. Les portes donnent un rythme régulier, comme un vrai dortoir.",
+  contre:"Les portes sombres ressemblent à des passages. Elles ne doivent pas être confondues avec les vraies portes de quartier.",
+  jeu:"Décor pur. Variante : une cellule sur dix se fouille (une ration, un rouleau).",
+  d(){for(const x of[20,52,84,148])cellDoor(x,x);pallet(36,ft(36)+12);jug(64,ft(64)+8);stool(96,ft(96)+10,false);stool(108,ft(108)+18,true);
+   pallet(124,fb(124)-6);jug(30,fb(30)-4);ell(80,fb(80)-5,2,1,CL[1]);px(79,fb(80)-6,CL[2]);stool(160,fb(160)-4,false)}},
+ {n:"C4",nom:"Réfectoire abandonné",mask:gal(53),dark:.64,
+  txt:"Une longue table de bois court contre la paroi, avec ses bancs dont l'un s'est effondré. Les écuelles sont restées en place, une cruche est renversée. Plus loin, un chaudron froid sur son trépied.",
+  pour:"Le meuble le plus reconnaissable d'une vie en communauté. Il occupe la longueur du couloir sans le boucher. Le bois rappelle la ressource du biome.",
+  contre:"Une seule grande pièce : sa répétition se verrait vite. À réserver aux couloirs larges et aux quartiers calmes.",
+  jeu:"Décor pur. Variante : le chaudron rallumé par un adepte donne une ration aux unités proches.",
+  d(){table(14,ft(14)+14,64,1);table(118,fb(118)-4,46,2);cauldron(96,ft(96)+16);jug(86,ft(86)+18);stool(30,fb(30)-4,true);rubble(150,ft(150)+8,4,3);bones(66,fb(66)-6,3)}},
+ {n:"C5",nom:"Clocher tombé",mask:gal(59),dark:.68,
+  txt:"La cloche du monastère a traversé la voûte. Elle gît sur le flanc, fendue, couverte de vert-de-gris, au milieu des poutres de son joug brisé. Des cordes pendent encore du plafond.",
+  pour:"Un repère unique, visible de loin, qu'on reconnaît sur la minicarte. Bonne pièce pour la salle-seuil d'un quartier.",
+  contre:"Une seule cloche par quartier, sinon elle perd sa force. Grande pièce : elle mange de la place dans un couloir étroit.",
+  jeu:"Décor pur, posé une fois par quartier. Variante : la frapper fait tinter le monastère et attire les errants proches (un piège ou un appât).",
+  d(){bell(96,ft(96)+26);fallenTimber(60,ft(60)+20,.25);fallenTimber(134,fb(134)-8,-.3);for(const[x,l]of[[40,12],[74,18],[150,9]])rope(x,l,x);rubble(116,ft(116)+18,6,6,18);rubble(30,fb(30)-6,2,4)}},
+ {n:"C6",nom:"Ossuaire",mask:gal(61),dark:.6,
+  txt:"Les moines rangeaient leurs morts dans les murs : des rangées de niches où s'alignent les crânes au-dessus des os longs empilés. Quelques cierges brûlent au pied, des os sont tombés au sol.",
+  pour:"Annonce la crypte des abbés et l'arène de l'Œil. Très lisible et très « temple ». Les cierges ajoutent une lumière basse et chaude.",
+  contre:"Macabre : un seul couloir par quartier, sinon tout le biome devient une catacombe. Les os au sol ne doivent pas ressembler à du butin.",
+  jeu:"Décor pur : décalques de paroi, cierges, piles d'os. À placer sur la route du boss.",
+  d(){ossuary(8,72,1);ossuary(104,168,2);for(const x of[20,30,116,152])candle(x,ft(x)+5);bonepile(54,ft(54)+12,1);bonepile(132,fb(132)-6,2);bones(84,fb(84)-6,3);lamp(90,ft(90)+12)}}
+];
+const ROOMS=[
+ {n:"B1",nom:"Chœur de l'Archiprêtre",mask:room,dark:.6,
+  txt:"L'arène est le chœur du monastère. Les stalles de bois se font face de part et d'autre, l'autel est au fond. Les racines l'ont enserré et s'étalent sur le dallage. Des encensoirs se balancent encore et fument.",
+  rec:"Arène du mini-boss 1 (quartier A). L'Archiprêtre reste immobile à l'autel : les racines du décor partent de lui et prolongent celles de ses attaques.",
+  pour:"Le combat se joue dans le lieu le plus sacré du monastère, devant ceux qui chantaient. Les racines du décor annoncent ses racines d'attaque.",
+  contre:"Les racines du décor ne doivent pas être confondues avec les racines annoncées qui immobilisent : elles restent brunes, jamais en surbrillance.",
+  jeu:"Décor pur. Encensoirs animés (balancement et fumée), stalles en sprites.",
+  d(){altar(88,48);for(const[x,l,s]of[[78,30,1],[96,26,2],[70,18,3],[104,22,4],[88,40,5]])root(x,52,l,s);moss(88,62,12,4,2);
+   stalls(22,62,36,1);stalls(118,62,36,2);stalls(22,88,36,3);stalls(118,88,36,4);censer(56,22,1);censer(120,26,2);candelabra(64,56);candelabra(112,56);lectern(88,104)}},
+ {n:"B2",nom:"Salle capitulaire de la Martyre",mask:room,dark:.58,
+  txt:"Là où les moines tenaient leur chapitre, un banc de pierre fait le tour de la salle. Le centre reste nu pour le dôme. Au fond, sous une rosace brisée, le Credo a laissé ses bannières et ses candélabres. Des prie-Dieu renversés et des éclats de vitrail jonchent le bord.",
+  rec:"Arène du mini-boss 2 (quartier B), autour du dôme de 24 cases. Tout le décor est hors du dôme.",
+  pour:"Le banc qui fait le tour dessine la limite de l'arène sans mur. L'or et le carmin du dôme trouvent un cadre : c'est le Credo qui a pris la salle des moines.",
+  contre:"Les éclats de vitrail scintillent : ils doivent rester plus ternes que les balles or et carmin.",
+  jeu:"Décor pur, lumière de la rosace en décalque.",
+  d(){rose(88);chapterBench(24,152,34);chapterSide(18,40,100);chapterSide(155,40,100);for(const x of[40,136])gbanner(x,ft(x)-FACE+2,12);candelabra(28,48);candelabra(148,48);candelabra(28,100);candelabra(148,100);
+   priedieu(40,62,true);priedieu(138,66,false);priedieu(40,96,false);priedieu(136,94,true);shards(52,46,1,5);shards(126,48,2,5);shards(140,80,3,4);runner(82,100,128,12)}},
+ {n:"B3",nom:"Crypte des abbés",mask:room,dark:.6,
+  txt:"Sous l'église, les abbés reposaient sur des tombeaux à gisants. La Bête est montée par là : ses veines descendent des parois et battent jusqu'au cratère d'où sort l'Œil. Des tombeaux sont fendus, des pustules respirent entre les colonnes.",
+  rec:"Arène du boss de fin du biome 1. Le cratère est l'endroit où l'Œil s'ancre ; les veines suivent ses racines.",
+  pour:"Le monastère et la Bête se lisent ensemble : un lieu saint profané. Les battements des veines peuvent suivre les phases de l'Œil et s'accélérer quand il faiblit.",
+  contre:"Le rouge est celui des balles de la Bête : les veines restent sombres et ne s'allument qu'en impulsions brèves.",
+  jeu:"Décor animé par la vue de l'Œil (rythme des impulsions par phase). Aucune collision.",
+  d(){flesh(88,80,26,10,3);flesh(48,58,10,4,1);crater(88,78,10);for(const[x,s,d]of[[40,1,.4],[76,2,.2],[104,3,-.2],[140,4,-.4]])vein(x,ft(x)-6,28,s,d);
+   gisant(36,58,false);gisant(140,58,true);gisant(36,96,true);gisant(140,96,false);column(60,74,16,false);column(116,74,10,true);vein(114,62,12,6,.1);
+   pustule(56,98,3,1);pustule(124,82,3.5,2);ichor(104,100,6,2.5);candle(28,70);candle(150,70);bonepile(70,104,4)}},
+ {n:"B4",nom:"Seuil et trophée",mask:room,dark:.6,
+  txt:"Commun aux trois arènes. À l'entrée, une arche gardée par deux statues de moines dit « arène ». Au fond, un piédestal attend. Quand le boss tombe, un cercle de glyphes s'allume autour et son trophée y reste : ici le crâne de la Bête.",
+  rec:"Entrée et fond des trois arènes. Le trophée change selon le boss : mitre de l'Archiprêtre, voile de la Martyre, crâne de l'Œil.",
+  pour:"Avant le combat, on sait qu'on entre dans une arène ; après, la salle garde la trace de la victoire. Les braseros allumés servent aussi de repère sur la carte.",
+  contre:"L'arche doit rester dans l'axe d'entrée sans rétrécir le passage.",
+  jeu:"Interactif léger : un état « vaincu » par arène (déjà sauvegardé) qui allume le cercle et pose le trophée.",
+  d(){sealRing(88,60,26);dais(88,58,22,10);skullBig(88,60);for(const[x,y]of[[34,48],[142,48],[34,96],[142,96]])brazier(x,y,1);
+   statue(56,106);statue(120,106);column(72,112,22,false);column(104,112,22,false);rect(66,82,44,4,S[3]);rect(66,82,44,1,S[5]);rect(66,85,44,1,S[1]);
+   rect(86,80,5,6,S[4]);px(88,82,GLY);px(88,83,GLY);post.push(()=>blend(88,82,0xd8ffff,.6+.4*Math.sin(T*2)))}}
+];
+
+%%PAGE%%
+</script>

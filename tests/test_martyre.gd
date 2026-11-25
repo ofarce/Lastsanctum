@@ -7,7 +7,29 @@ func _boss(sim: Simulation) -> Enemy:
 	sim.state().temple_layout = {}
 	GameState.menace = Martyre.MENACE
 	Martyre.tick(sim)
+	# Garde épuisée (elle absorbe sinon les WARD_MAX premiers tirs de l'Ingénieur) : les tests ci-dessous portent
+	# sur le reste du duel ; la garde a son propre test.
+	GameState.martyre_ward = 0.0
 	return GameState.martyre
+
+
+func test_ward_absorbs_the_first_shots_then_comes_back() -> void:
+	var sim := game()
+	var e := _boss(sim)
+	var eng := _bare()
+	_into_dome(eng)
+	GameState.martyre_ward = float(Martyre.WARD_MAX)
+	for k in Martyre.WARD_MAX:
+		sim.combat.damage(e, 50.0, eng)
+	check_eq(e.hp, e.max_hp, "la garde absorbe ses %d charges" % Martyre.WARD_MAX)
+	sim.combat.damage(e, 50.0, eng)
+	check(e.hp < e.max_hp, "garde épuisée : le coup porte")
+	check(GameState.martyre_ward < 1.0, "plus de charge entière")
+	Martyre._ward_tick(Martyre.WARD_REGEN)
+	check(GameState.martyre_ward < 1.0, "pas de recharge juste après un coup")
+	GameState.sim_time += Martyre.WARD_DELAY
+	Martyre._ward_tick(Martyre.WARD_REGEN)
+	check(GameState.martyre_ward >= 1.0, "une charge revient après le délai")
 
 
 ## L'Ingénieur tel qu'il est à 500 de menace : sans armure depuis la surcharge de l'Ancre.
@@ -206,7 +228,7 @@ func test_fissure_runs_to_the_aimed_spot_then_erupts() -> void:
 	check(end.distance_to(eng.pos()) < 0.5, "vers la position visée")
 	var before := eng.hp
 	run(sim, float(f[0]["erupt"]) - GameState.sim_time + 0.05)
-	check_near(before - eng.hp, Martyre.FISSURE["damage"] * Martyre.DAMAGE_MULT, 1e-6, "24 dégâts à l'éruption")
+	check_near(before - eng.hp, Combat.BOSS_SHOT_DAMAGE, 1e-6, "dégâts fixes d'un coup de boss à l'éruption")
 	check(eng.stunned_until > GameState.sim_time, "étourdi")
 	run(sim, Martyre.FISSURE["erupt"] + Martyre.FISSURE["cool"] + 0.1)
 	check(GameState.martyre_fx.is_empty(), "la faille s'éteint")
@@ -240,7 +262,7 @@ func test_seals_fall_under_the_engineer() -> void:
 	run(sim, Martyre.SEALS["charge"] * 0.5)
 	check_eq(eng.hp, before, "pas pendant la charge")
 	run(sim, Martyre.SEALS["charge"] * 0.6)
-	check_near(before - eng.hp, Martyre.SEALS["damage"] * Martyre.DAMAGE_MULT, 1e-6, "28 dégâts")
+	check_near(before - eng.hp, Combat.BOSS_SHOT_DAMAGE, 1e-6, "dégâts fixes d'un coup de boss")
 
 
 func test_stunned_engineer_neither_moves_nor_attacks() -> void:
@@ -299,10 +321,10 @@ func test_bullet_hits_once_then_engineer_is_invulnerable() -> void:
 	for k in 3:
 		Martyre.shoot(eng.x - 0.1 * k, eng.z, 0.0, 0.0)
 	sim.tick(DT)
-	check_near(before - eng.hp, Martyre.BULLET["damage"] * Martyre.DAMAGE_MULT, 1e-6, "une seule balle porte")
+	check_near(before - eng.hp, Combat.BOSS_SHOT_DAMAGE, 1e-6, "une seule balle porte")
 	check(GameState.martyre_iframe_until > GameState.sim_time, "invulnérable un instant")
 	run(sim, Martyre.IFRAMES * 0.5)
-	check_near(before - eng.hp, Martyre.BULLET["damage"] * Martyre.DAMAGE_MULT, 1e-6, "les autres le traversent")
+	check_near(before - eng.hp, Combat.BOSS_SHOT_DAMAGE, 1e-6, "les autres le traversent")
 
 
 func test_litanie_walls_leave_the_announced_gap() -> void:

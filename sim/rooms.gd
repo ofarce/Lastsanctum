@@ -11,7 +11,7 @@ extends RefCounted
 ##   avec un nouveau tirage, sauf si elle est sur un chemin protégé : le plus court chemin (en salles) d'un portail
 ##   (portail fixe du plan, ou salle d'un pylône canalisé) à une salle de ressources.
 ##
-## Seul le Temple est en salles pour l'instant (TerrainState.temple_layout).
+## Temple et Veines sont en salles (TerrainState.room_layouts : identifiants globaux, champ « biome »).
 ## Champs ajoutés à la tanière : {room, tier, quarter, repop, cleared_day}.
 
 ## Compositions par niveau. Pas encore de squelettes : leur chaîne et leurs règles sont écrites pour la nuit.
@@ -20,6 +20,16 @@ const COMPOSITIONS := {
 	"M": [["brute", "creep", "creep", "spitter"], ["beast", "beast", "beast", "beast", "beast"], ["scout", "soldier", "shield", "archer"]],
 	"D": [["strazhar", "creep", "creep"], ["brute", "brute", "spitter", "spitter"], ["shield", "shield", "soldier", "archer", "archer"]],
 }
+## Salles oubliées (biome 2, 2026-11-24 ; renommées le 2026-11-25) : leur faune, chauves-souris patinées et tiques de
+## filon (ici hostiles, elles quittent leur filon), dans chaque groupe (demande du 2026-11-25), avec les patrouilles de
+## Byrsa qui y montent. Les tiques neutres restent sur leurs filons et les anguilles dans leurs bassins (sim/wildlife.gd).
+const COMPOSITIONS_VEINES := {
+	"L": [["bat", "bat", "bat"], ["tick", "tick", "bat"], ["bat", "bat", "archer"], ["tick", "creep", "spitter"]],
+	"M": [["bat", "bat", "bat", "bat", "bat"], ["tick", "tick", "tick", "bat", "bat"], ["scout", "soldier", "shield", "bat", "bat"],
+		["brute", "tick", "tick", "spitter"]],
+	"D": [["strazhar", "tick", "tick", "bat", "bat"], ["soldier", "shield", "shield", "tick", "archer"], ["brute", "brute", "bat", "bat", "bat"]],
+}
+const CORRIDOR_GROUPS_VEINES: Array = [["bat", "bat", "bat"], ["tick", "bat"], ["tick", "tick"], ["bat", "bat", "archer"], ["scout", "bat"]]
 const REPOP_NIGHTS := 3
 const REPOP_NIGHTS_C := 2
 
@@ -27,18 +37,17 @@ const REPOP_NIGHTS_C := 2
 ## Une tanière par salle de combat sans pylône du Temple.
 static func dens(st: TerrainState) -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
-	if st.temple_layout.is_empty():
-		return out
-	var lay := st.temple_layout
-	var bonus: Dictionary = lay["threat_bonus"]
-	for room: Dictionary in lay["rooms"]:
-		var tier := encounter_tier(room)
-		if tier == "":
-			continue
-		var c := _center(room)
-		out.append({"x": c.x, "z": c.y, "room": room["id"], "tier": tier, "quarter": room["quarter"],
-			"threat": int(Biomes.LIST[0]["threat"]) + int(bonus.get(room["quarter"], 0)),
-			"kinds": draw(st.seed, room["id"], 0, tier), "repop": 0})
+	for lay: Dictionary in st.room_layouts():
+		var bonus: Dictionary = lay["threat_bonus"]
+		for room: Dictionary in lay["rooms"]:
+			var tier := encounter_tier(room)
+			if tier == "":
+				continue
+			var c := _center(room)
+			var biome := int(room.get("biome", 0))
+			out.append({"x": c.x, "z": c.y, "room": room["id"], "tier": tier, "quarter": room["quarter"], "biome": biome,
+				"threat": int(Biomes.LIST[biome]["threat"]) + int(bonus.get(room["quarter"], 0)),
+				"kinds": draw(st.seed, room["id"], 0, tier, biome), "repop": 0})
 	return out
 
 
@@ -55,16 +64,18 @@ const CORRIDOR_TWO := 30
 ## sûre) ni l'arène du boss.
 static func corridor_dens(st: TerrainState) -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
-	if st.temple_layout.is_empty():
-		return out
-	var rooms: Array = st.temple_layout["rooms"]
-	var bonus: Dictionary = st.temple_layout["threat_bonus"]
 	var r := Rng.new(st.seed ^ 0xc0771d)
-	for l: Dictionary in st.temple_layout["links"]:
+	var links: Array = []
+	for lay: Dictionary in st.room_layouts():
+		links.append_array(lay["links"])
+	for l: Dictionary in links:
 		if l["kind"] != "corridor":
 			continue
-		var a: Dictionary = rooms[l["a"]]
-		var b: Dictionary = rooms[l["b"]]
+		var a: Dictionary = st.room_by_id(l["a"])
+		var b: Dictionary = st.room_by_id(l["b"])
+		var biome := int(a.get("biome", 0))
+		var bonus: Dictionary = (st.veines_layout if biome == 1 else st.temple_layout)["threat_bonus"]
+		var groups: Array = CORRIDOR_GROUPS_VEINES if biome == 1 else CORRIDOR_GROUPS
 		if a["role"] == "antechamber" or b["role"] == "antechamber" or a["kind"] == "boss" or b["kind"] == "boss":
 			continue
 		var path: Array = l["path"]
@@ -73,7 +84,9 @@ static func corridor_dens(st: TerrainState) -> Array[Dictionary]:
 			length += (path[k] as Vector2i).distance_to(path[k + 1])
 		if length < CORRIDOR_MIN:
 			continue
-		var n := 2 if length >= CORRIDOR_TWO else 1
+		# Tout premiers couloirs (sortie de la grotte, hub vers le seuil ouvert) : un seul monstre, léger.
+		var first: bool = l["door"] == "" and (a["role"] in ["entrance", "hub"] or b["role"] in ["entrance", "hub"])
+		var n := 2 if length >= CORRIDOR_TWO and not first else 1
 		for g in n:
 			# Point du couloir à (g + 1) / (n + 1) de sa longueur, hors salle.
 			var want := length * (g + 1) / (n + 1)
@@ -90,8 +103,11 @@ static func corridor_dens(st: TerrainState) -> Array[Dictionary]:
 			if not st.temple_room(w.x, w.y).is_empty() or not st.is_gallery(w.x, w.y):
 				continue
 			var quarter: String = b["quarter"] if a["quarter"] == "R" else a["quarter"]
-			out.append({"x": w.x, "z": w.y, "threat": int(Biomes.LIST[0]["threat"]) + int(bonus.get(quarter, 0)),
-				"kinds": (CORRIDOR_GROUPS[floori(r.next() * CORRIDOR_GROUPS.size())] as Array).duplicate(), "corridor": true})
+			var kinds: Array = (groups[floori(r.next() * groups.size())] as Array).duplicate()
+			if first:
+				kinds = [kinds[0]]
+			out.append({"x": w.x, "z": w.y, "threat": int(Biomes.LIST[biome]["threat"]) + int(bonus.get(quarter, 0)),
+				"kinds": kinds, "corridor": true})
 	return out
 
 
@@ -113,8 +129,8 @@ static func encounter_tier(room: Dictionary) -> String:
 
 ## Composition de la salle `room` à son `repop`-ième repeuplement (déterministe). Doublée (demande du
 ## 2026-11-22) : chaque composition de COMPOSITIONS est levée deux fois.
-static func draw(map_seed: int, room: int, repop: int, tier: String) -> Array:
-	var list: Array = COMPOSITIONS[tier]
+static func draw(map_seed: int, room: int, repop: int, tier: String, biome := 0) -> Array:
+	var list: Array = (COMPOSITIONS_VEINES if biome == 1 else COMPOSITIONS)[tier]
 	var r := Rng.new(map_seed ^ (room * 7349 + repop * 104729 + 0x5a1e))
 	var one: Array = list[floori(r.next() * list.size())]
 	return one + one
@@ -132,11 +148,11 @@ const WAKE_MARGIN := 28.0
 
 ## Rectangle monde de la salle `id` (Rect2 vide si inconnue).
 static func room_rect(st: TerrainState, id: int) -> Rect2:
-	for room: Dictionary in st.temple_layout.get("rooms", []):
-		if room["id"] == id:
-			var rr: Rect2i = room["rect"]
-			return Rect2(Vector2(rr.position) * 4.0, Vector2(rr.size) * 4.0)
-	return Rect2()
+	var room := st.room_by_id(id)
+	if room.is_empty():
+		return Rect2()
+	var rr: Rect2i = room["rect"]
+	return Rect2(Vector2(rr.position) * 4.0, Vector2(rr.size) * 4.0)
 
 
 ## Un allié vivant et visible approche de la salle de la tanière (dans la salle ou à WAKE_MARGIN de ses bords).
@@ -178,13 +194,23 @@ static func spread(st: TerrainState, d: Dictionary, count: int, rng: Rng) -> Arr
 
 ## Tanière de salle, appelée par Roamers.tick : lève le groupe, constate la salle nettoyée, la repeuple.
 ## Vrai si le groupe n'est pas debout (rien d'autre à faire pour lui ce tick).
-static func tick(sim: Simulation, d: Dictionary, index: int) -> bool:
+## Distance (unités) d'un allié à laquelle le groupe d'une salle se forme, dormant (hors de l'écran au zoom courant).
+const SPAWN_R := 90.0
+
+
+static func tick(sim: Simulation, d: Dictionary, index: int, watch: Awaken.Watch = null) -> bool:
 	var st := sim.state()
+	# Plus d'apparition sous les yeux du joueur (Temple sans brouillard, demande du 2026-11-23) : le groupe se forme
+	# dès qu'un allié passe à SPAWN_R de la salle, hors de l'écran, et attend immobile (« dormant ») ; il ne vise et ne
+	# bouge qu'à l'entrée d'un allié dans la salle, ou s'il est attaqué (Roamers.target).
 	if not d.has("members"):
-		if entered(st, d):
+		if watch.seen(Vector2(d["x"], d["z"]), SPAWN_R) if watch != null else Awaken.seen(Vector2(d["x"], d["z"]), SPAWN_R):
 			Roamers._spawn(sim, d, index)
+			d["roused"] = entered(st, d)
 			return false
 		return true
+	if not d.get("roused", false) and entered(st, d):
+		d["roused"] = true
 	var members: Array = d["members"]
 	for k in range(members.size() - 1, -1, -1):
 		if (members[k] as Enemy).hp <= 0.0:
@@ -210,10 +236,10 @@ static func after_clear(st: TerrainState, d: Dictionary, day: int) -> bool:
 
 ## La salle redevient dormante, avec un nouveau tirage.
 static func _reset(st: TerrainState, d: Dictionary) -> void:
-	for key: String in ["members", "cleared_day", "prey", "goal", "rng", "until", "deadline"]:
+	for key: String in ["members", "cleared_day", "prey", "goal", "rng", "until", "deadline", "roused"]:
 		d.erase(key)
 	d["repop"] = int(d["repop"]) + 1
-	d["kinds"] = draw(st.seed, d["room"], d["repop"], d["tier"])
+	d["kinds"] = draw(st.seed, d["room"], d["repop"], d["tier"], int(d.get("biome", 0)))
 
 
 ## Ouvre la porte de quartier `key` (« mb1 », « mb2 ») : ses cases de roche scellée sont creusées (sol repeint,
@@ -237,9 +263,11 @@ static func open_door(sim: Simulation, key: String) -> void:
 ## jusqu'au portail le plus proche. Portails : ceux du plan, et les salles des pylônes canalisés.
 static func protected_rooms(st: TerrainState) -> Dictionary:
 	var out := {}
-	if st.temple_layout.is_empty():
-		return out
-	var rooms: Array = st.temple_layout["rooms"]
+	var rooms: Array = []
+	var links: Array = []
+	for lay: Dictionary in st.room_layouts():
+		rooms.append_array(lay["rooms"])
+		links.append_array(lay["links"])
 	var portal := {}
 	for room: Dictionary in rooms:
 		if room["portal"]:
@@ -250,7 +278,7 @@ static func protected_rooms(st: TerrainState) -> Dictionary:
 			if not room.is_empty():
 				portal[room["id"]] = true
 	var adj := {}
-	for l: Dictionary in st.temple_layout["links"]:
+	for l: Dictionary in links:
 		if l["kind"] != "corridor":
 			continue
 		(adj.get_or_add(l["a"], []) as Array).append(l["b"])
@@ -275,3 +303,31 @@ static func protected_rooms(st: TerrainState) -> Dictionary:
 			out[k] = true
 			k = prev[k]
 	return out
+
+
+## Salle de repos de la route du boss (avant l'antichambre, demande du 2026-11-23) : soins, hors combat. Toute
+## unité alliée vivante dans la salle récupère REST_HEAL PV par seconde tant qu'aucun ennemi n'y est debout.
+const REST_HEAL := 6.0
+
+
+static func rest_tick(sim: Simulation, dt: float) -> void:
+	var st := sim.state()
+	if st == null:
+		return
+	for lay: Dictionary in st.room_layouts():
+		for room: Dictionary in lay["rooms"]:
+			if room["role"] == "rest":
+				_rest_room(room, dt)
+
+
+static func _rest_room(rest: Dictionary, dt: float) -> void:
+	var rr: Rect2i = rest["rect"]
+	var inside := func(x: float, z: float) -> bool: return rr.has_point(Vector2i(floori(x / 4.0), floori(z / 4.0)))
+	for e: Enemy in GameState.enemies:
+		if e.alive() and not e.hidden and inside.call(e.x, e.z):
+			return
+	for u: Unit in GameState.units:
+		if u.alive() and not u.hidden and u.hp < u.max_hp and inside.call(u.x, u.z):
+			u.hp = minf(u.max_hp, u.hp + REST_HEAL * dt)
+			if fmod(GameState.sim_time, 1.0) < dt:
+				Combat.zone(u.x, u.z, 1.2, Color("#6fe07a"))

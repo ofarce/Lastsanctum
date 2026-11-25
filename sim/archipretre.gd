@@ -7,40 +7,37 @@ extends RefCounted
 ## Un prêtre du Temple soudé par les racines de la Bête à l'autel de l'Oratoire envahi, l'arène du quartier A (salle
 ## « mb1 » du plan, RoomLayout). Il dort, invisible, jusqu'à ce qu'un allié entre dans la salle, puis ne quitte plus
 ## l'autel. On le combat avec l'escouade : tout le monde peut le blesser (armure, Catalog.ENEMY).
-## - Racines : trois lignes annoncées au sol filent de l'autel vers les unités les plus proches ; à l'arrivée elles
-##   blessent et immobilisent ROOT.stun secondes.
-## - Nappe : la corruption s'étend de l'autel par vagues et retire des PV à l'Exilé ; les esprits y sont immunisés.
-## - Phase II (moitié des PV) : trois chiens de la Bête jaillissent du bulbe toutes les CALL.every secondes.
-## - Canaliser : quatre places de prière (une par culte). Un esprit de chaque culte debout sur la sienne : la nappe
-##   recule et le bulbe s'ouvre ; les dégâts reçus sont doublés (OPEN_MULT).
+## Attaques (2026-11-23, à la place des racines, de la nappe, de la meute et de la canalisation des quatre cultes) :
+## celles de la phase II de l'Œil de la Matrice, que le joueur retrouvera chez le boss. Il enchaîne rotation() (Regard,
+## Strabisme, Pupilles errantes, Larmes, Cils) avec une fenêtre de souffle WINDOW entre deux, par le moteur de l'Œil
+## (OeilMatrice.host_* : mêmes balles, mêmes annonces, même rendu, centrés sur lui). Il vise l'Exilé s'il est dans
+## l'arène, sinon l'unité la plus proche ; les balles touchent toutes les unités de l'arène (l'Exilé : coup de boss ;
+## les autres : dégâts de la balle après armure, OeilMatrice._hit). Les pupilles errantes se laissent abattre par
+## tout le monde.
 ## - Sa chute ouvre la porte « mb1 » vers le quartier B (RoomEncounters.open_door) et allume le portail de retour de
 ##   l'arène (PortalNet). Il lâche le plan de la Lanterne de Medeina et la Clef de la Nef dorée (Loot).
-## État : GameState.archipretre = {state, seed, e, room, center, altar, places, mode, t0, until, phase, open, nappe,
-## roots, next_root, next_call, alone, burn}. Rendu : world/archipretre/archipretre_view.gd et archipretre_marks.gd.
-## Chiffres de départ proposés par moi (planche), à régler.
+## État : GameState.archipretre = {state, seed, e, rect, room, center, altar, mode, t0, until, idx, next_at,
+## busy_until, alone}. Rendu : world/archipretre/archipretre_view.gd ; attaques : world/oeil/oeil_fx.gd.
 
 const KIND := "archipretre"
 ## Silhouette au sol (unités ; 8 px natifs par unité) : robe de 28 px, 50 px de haut avec le bulbe.
 const BODY := {"half_w": 1.9, "top": 6.2, "foot": 0.6, "melee": 1.6}
-const OPEN_MULT := 2.0
-const PHASE_HP := 0.5
-const PHASE_NAMES := ["I · Les racines", "II · La meute"]
-## Repos entre deux salves de racines, par phase (s).
-const REST := [3.4, 2.6]
-## Racines : nombre, annonce (s), longueur (u), demi-largeur touchée (u), dégâts, immobilisation (s).
-const ROOT := {"count": 3, "warn": 1.1, "length": 30.0, "width": 1.6, "damage": 16.0, "stun": 1.5}
-## Nappe : rayon qui respire entre min et max (u), période (s), dégâts par seconde à l'Exilé, vitesse de retrait.
-const NAPPE := {"min": 8.0, "max": 22.0, "period": 7.0, "dps": 4.0, "ease": 2.5}
-## Meute de phase II : chiens par appel, intervalle (s).
-const CALL := {"count": 3, "every": 25.0, "first": 3.0}
-## Places de prière : décalage depuis l'Archiprêtre (u), rayon où un esprit tient sa place.
-const PLACES := {"sigil": Vector2(-14.0, -4.0), "aether": Vector2(-20.0, 8.0), "indra": Vector2(20.0, 8.0), "medeina": Vector2(0.0, 18.0)}
-const PLACE_R := 3.0
+## Une seule phase : la phase II de l'Œil (nom pour la barre de boss).
+const PHASE_NAMES := ["L’iris"]
+## Attaques de la phase II de l'Œil, dans son ordre.
+static func rotation() -> Array:
+	return OeilMatrice.ROTATION[OeilMatrice.HOST_PHASE]
+
+
+## Délai de la première attaque à l'éveil, fenêtre de souffle entre deux (celle de l'Œil en phase II), durée du
+## geste d'incantation (animation cast).
+const FIRST := 2.0
+const WINDOW := 1.4
+const CAST := 1.1
 ## Sans personne dans la salle pendant ce délai, il se tait (il reste éveillé, sans regagner ses PV).
 const FORGET := 8.0
 
-const QUOTE_WAKE := "Un prêtre du Temple… les racines de la Bête l’ont cousu à l’autel. Il faut les quatre cultes pour l’en arracher."
-const QUOTE_OPEN := "Les quatre cultes prient : le bulbe s’ouvre !"
+const QUOTE_WAKE := "Un prêtre du Temple… les racines de la Bête l’ont cousu à l’autel, et c’est l’Œil qui regarde à travers lui."
 const QUOTE_DONE := "L’Archiprêtre s’effondre. La porte de la Nef dorée s’ouvre."
 
 
@@ -62,18 +59,8 @@ static func center() -> Vector2:
 	return GameState.archipretre.get("center", Vector2.ZERO)
 
 
-static func phase_of(e: Enemy) -> int:
-	return 1 if e.hp <= e.max_hp * PHASE_HP else 0
-
-
-## Bulbe ouvert : les quatre places tenues.
-static func bulb_open() -> bool:
-	return bool(GameState.archipretre.get("open", false))
-
-
-## Dégâts reçus : doublés bulbe ouvert (Combat.damage).
-static func damage_mult() -> float:
-	return OPEN_MULT if bulb_open() else 1.0
+static func phase_of(_e: Enemy) -> int:
+	return 0
 
 
 ## Arène de l'Archiprêtre dans le plan du Temple (salle du mini-boss 1, quartier A), ou {} sans plan.
@@ -91,21 +78,31 @@ static func in_room(p: Vector2) -> bool:
 	return rr.has_point(Vector2i(floori(p.x / 4.0), floori(p.y / 4.0)))
 
 
-## Un esprit du culte `cult` tient la place `at`.
-static func _held(cult: String, at: Vector2) -> bool:
+## (x, z) est dans l'arène, hors de la roche (grow : marge en unités) : là où volent les balles.
+static func in_arena(x: float, z: float, grow := 0.0) -> bool:
+	var r := run()
+	var rr: Rect2i = r.get("rect", Rect2i())
+	if not Rect2(rr.position * 4.0, rr.size * 4.0).grow(grow).has_point(Vector2(x, z)):
+		return false
+	var st: TerrainState = r.get("state")
+	return st != null and st.is_gallery(x, z)
+
+
+## Unités visibles dans l'arène : les cibles des balles.
+static func squad() -> Array[Unit]:
+	var out: Array[Unit] = []
 	for u: Unit in GameState.units:
-		if u.role == cult and u.alive() and not u.hidden and u.pos().distance_to(at) <= PLACE_R:
-			return true
-	return false
-
-
-## Cultes dont la place est tenue (rendu des places, bulbe).
-static func held_cults() -> Array:
-	var out := []
-	for cult: String in run().get("places", {}):
-		if _held(cult, run()["places"][cult]):
-			out.append(cult)
+		if u.alive() and not u.hidden and in_room(u.pos()):
+			out.append(u)
 	return out
+
+
+## L'Exilé dans l'arène, ou null : la cible visée en premier.
+static func exile() -> Unit:
+	for u: Unit in GameState.units:
+		if u.role == "engineer" and u.alive() and not u.hidden and in_room(u.pos()):
+			return u
+	return null
 
 
 static func tick(sim: Simulation) -> void:
@@ -121,10 +118,17 @@ static func tick(sim: Simulation) -> void:
 	var e := boss()
 	if e != null and e.hp <= 0.0 and String(r["mode"]) != "dead":
 		r["mode"] = "dead"
-		r["open"] = false
-		(r["roots"] as Array).clear()
+		r["down_at"] = GameState.sim_time
+		if OeilMatrice.hosted():
+			OeilMatrice.host_clear(true)
 		RoomEncounters.open_door(sim, "mb1")
 		sim.say(QUOTE_DONE, 4.0)
+		OrbitGate.guard_fell(sim)
+	# Les éclats de ses balles finissent de s'éteindre, puis le moteur de l'Œil est rendu.
+	if String(r["mode"]) == "dead" and GameState.oeil_host == KIND:
+		OeilMatrice.host_tick(sim, null, GameState.sim_time, 0.0)
+		if GameState.oeil_fx.is_empty():
+			OeilMatrice.host_end()
 
 
 static func _setup(st: TerrainState, r: Dictionary, room: Dictionary) -> void:
@@ -140,22 +144,11 @@ static func _setup(st: TerrainState, r: Dictionary, room: Dictionary) -> void:
 	var c := Vector2(cx, altar.y + 7.0)
 	r["altar"] = altar
 	r["center"] = c
-	var places := {}
-	var lo := Vector2(rr.position.x * 4.0 + 4.0, rr.position.y * 4.0 + 4.0)
-	var hi := Vector2(rr.end.x * 4.0 - 4.0, rr.end.y * 4.0 - 4.0)
-	for cult: String in PLACES:
-		var p := (c + (PLACES[cult] as Vector2)).clamp(lo, hi)
-		places[cult] = p if st.is_gallery(p.x, p.y) else st.push_out_of_rock(p)
-	r["places"] = places
 	r["mode"] = "sleep"
-	r["phase"] = 0
-	r["open"] = false
-	r["nappe"] = 0.0
-	r["roots"] = []
-	r["next_root"] = INF
-	r["next_call"] = INF
+	r["idx"] = 0
+	r["next_at"] = INF
+	r["busy_until"] = -INF
 	r["alone"] = 0.0
-	r["burn"] = 0.0
 	var e := Enemy.make(KIND, c.x, c.y, 0.0)
 	e.beast = true
 	e.hidden = true
@@ -191,103 +184,39 @@ static func act(sim: Simulation, e: Enemy, dt: float, alive: Array[Unit]) -> voi
 			return
 		e.hidden = false
 		_go(r, "idle", 1.5)
-		r["next_root"] = now + 2.0
+		r["next_at"] = now + FIRST
+		OeilMatrice.host_begin(KIND)
 		sim.say(QUOTE_WAKE, 5.0)
 		Sfx.at("vague", e.x, e.z)
 		Combat.zone(e.x, e.z, 4.0, Color("#a8202e"))
 		return
-	r["alone"] = 0.0 if not here.is_empty() else float(r["alone"]) + dt
-	var phase := phase_of(e)
-	if phase != int(r["phase"]):
-		r["phase"] = phase
-		r["next_call"] = now + float(CALL["first"])
-		sim.say("Le bulbe se fend : la meute de la Bête en sort !", 3.0)
-	if not here.is_empty() and absf(here[0].x - e.x) > 0.5:
-		e.face = -1 if here[0].x < e.x else 1
-	# Canalisation : les quatre places tenues.
-	var was_open := bulb_open()
-	r["open"] = held_cults().size() == PLACES.size()
-	if bulb_open() and not was_open:
-		sim.say(QUOTE_OPEN, 3.0)
-		Combat.zone(e.x, e.z - 5.0, 3.0, Color("#ffe08a"))
-	_nappe(sim, r, alive, now, dt)
-	_land_roots(sim, r, alive, now)
-	if float(r["alone"]) > FORGET:
-		return
-	# Racines : une salve, puis un repos.
-	if now >= float(r["next_root"]) and not here.is_empty():
-		_cast_roots(r, e, here, now)
-		_go(r, "cast", float(ROOT["warn"]))
-		r["next_root"] = now + float(ROOT["warn"]) + float(REST[phase])
-	elif String(r["mode"]) == "cast" and now >= float(r["until"]):
+	# Cible visée : l'Exilé s'il est là, sinon l'unité la plus proche.
+	var u := exile()
+	if u == null and not here.is_empty():
+		u = here[0]
+	if u != null and absf(u.x - e.x) > 0.5:
+		e.face = -1 if u.x < e.x else 1
+	if GameState.oeil_host == KIND:
+		OeilMatrice.host_tick(sim, u, now, dt)
+	if String(r["mode"]) == "cast" and now >= float(r["until"]):
 		_go(r, "idle", 0.0)
-	# Meute de phase II.
-	if phase == 1 and now >= float(r["next_call"]):
-		r["next_call"] = now + float(CALL["every"])
-		_call_pack(sim, e)
-
-
-## La nappe respire entre NAPPE.min et NAPPE.max ; bulbe ouvert, elle se retire. Elle brûle l'Exilé qui y entre.
-static func _nappe(sim: Simulation, r: Dictionary, alive: Array[Unit], now: float, dt: float) -> void:
-	var breath := 0.5 + 0.5 * sin(now * TAU / float(NAPPE["period"]))
-	var goal := 0.0 if bulb_open() else lerpf(float(NAPPE["min"]), float(NAPPE["max"]), breath)
-	r["nappe"] = move_toward(float(r["nappe"]), goal, float(NAPPE["max"]) * dt / float(NAPPE["ease"]))
-	var c := center()
-	for u: Unit in alive:
-		if u.role != "engineer" or u.hidden or u.pos().distance_to(c) > float(r["nappe"]):
-			continue
-		var acc := float(r["burn"]) + dt * float(NAPPE["dps"])
-		while acc >= 1.0:
-			acc -= 1.0
-			sim.combat.damage(u, 1.0)
-		r["burn"] = acc
-
-
-## Une salve : une racine vers chacune des unités les plus proches (au plus ROOT.count), annoncée au sol.
-static func _cast_roots(r: Dictionary, e: Enemy, here: Array[Unit], now: float) -> void:
-	var from := e.pos() + Vector2(0.0, 1.0)
-	for i in mini(int(ROOT["count"]), here.size()):
-		var d := (here[i].pos() - from).normalized()
-		if d == Vector2.ZERO:
-			d = Vector2.DOWN
-		(r["roots"] as Array).append({"a": from, "b": from + d * float(ROOT["length"]), "from": now, "at": now + float(ROOT["warn"])})
-	Sfx.at("vague", e.x, e.z)
-
-
-## Racines arrivées à terme : elles blessent et immobilisent ce qui se tient sur leur ligne.
-static func _land_roots(sim: Simulation, r: Dictionary, alive: Array[Unit], now: float) -> void:
-	var roots: Array = r["roots"]
-	for i in range(roots.size() - 1, -1, -1):
-		var m: Dictionary = roots[i]
-		if now < float(m["at"]):
-			continue
-		if now > float(m["at"]) + 0.5:
-			roots.remove_at(i)
-			continue
-		if m.get("hit", false):
-			continue
-		m["hit"] = true
-		for u: Unit in alive:
-			if u.hidden:
-				continue
-			var p := Geometry2D.get_closest_point_to_segment(u.pos(), m["a"], m["b"])
-			if p.distance_to(u.pos()) <= float(ROOT["width"]):
-				sim.combat.damage(u, Combat.after_armor(u, ROOT["damage"]))
-				u.stunned_until = maxf(u.stunned_until, now + float(ROOT["stun"]))
-				Combat.flash(u.x, u.z, Color("#7e5648"))
-
-
-## Trois chiens de la Bête jaillissent du bulbe, hors vague, à la menace du Temple.
-static func _call_pack(sim: Simulation, e: Enemy) -> void:
-	var st := sim.state()
-	var stats := Catalog.menace_stats(Catalog.menace_tier(GameState.menace) + Biomes.threat_tiers(int(Biomes.LIST[0]["threat"])), true)
-	for k in int(CALL["count"]):
-		var at := st.push_out_of_rock(e.pos() + Vector2.from_angle(PI * (0.25 + 0.25 * k)) * 4.0)
-		var d := Enemy.make("beast", at.x, at.y, 0.6 + 0.2 * k, stats)
-		d.beast = true
-		GameState.enemies.append(d)
-	Combat.zone(e.x, e.z - 4.0, 4.0, Color("#a8202e"))
-	Sfx.at("vague", e.x, e.z)
+	# Salle vide : il se tait, ses balles s'éteignent.
+	r["alone"] = 0.0 if u != null else float(r["alone"]) + dt
+	if float(r["alone"]) > FORGET:
+		if not GameState.oeil_bullets.is_empty() or not GameState.oeil_fx.is_empty():
+			OeilMatrice.host_clear(false)
+		r["busy_until"] = -INF
+		r["next_at"] = now + FIRST
+		return
+	# Attaque suivante de la rotation, puis fenêtre de souffle.
+	if u != null and GameState.oeil_host == KIND and now >= float(r["next_at"]) and now >= float(r["busy_until"]):
+		var p: String = rotation()[int(r["idx"]) % rotation().size()]
+		r["idx"] = int(r["idx"]) + 1
+		var end := OeilMatrice.host_cast(sim, u, p, now)
+		_go(r, "cast", minf(end - now, CAST))
+		r["busy_until"] = end
+		r["next_at"] = end + WINDOW
+		Sfx.at("vague", e.x, e.z)
 
 
 ## Objectif affiché tant qu'il est éveillé (Quests.objective), sinon {}.
@@ -296,6 +225,6 @@ static func objective() -> Dictionary:
 		return {}
 	var e := boss()
 	return {"id": "archipretre", "quest": "L’Archiprêtre aux racines", "interrupt": true,
-		"label": "Canaliser les quatre cultes et abattre l’Archiprêtre",
+		"label": "Abattre l’Archiprêtre aux racines",
 		"quote": "", "done_quote": "",
 		"value": "%d PV" % ceili(e.hp), "progress": 1.0 - e.hp / e.max_hp}

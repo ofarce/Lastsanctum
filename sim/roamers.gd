@@ -131,14 +131,17 @@ static func tick(sim: Simulation, _dt: float) -> void:
 		(R["dens"] as Array[Dictionary]).append_array(RoomEncounters.corridor_dens(st))
 	var now := GameState.sim_time
 	var list: Array[Dictionary] = R["dens"]
+	# Rien ne déplace ni ne tue un allié dans cette boucle : un seul instantané des alliés visibles pour toutes les tanières.
+	var watch := Awaken.watch()
 	for i in list.size():
 		var d := list[i]
 		# Salle : levée à l'entrée d'un allié, nettoyée puis repeuplée (RoomEncounters) ; debout, elle se bat et
 		# fait sa ronde comme un groupe errant.
-		if d.has("room") and RoomEncounters.tick(sim, d, i):
+		if d.has("room") and RoomEncounters.tick(sim, d, i, watch):
 			continue
 		if not d.has("members"):
-			if st.is_gallery_open(d["x"], d["z"]) and Awaken.seen(Vector2(d["x"], d["z"])):
+			# Formé à SPAWN_R (hors de l'écran) plutôt qu'à la vue : plus d'apparition sous les yeux du joueur.
+			if st.is_gallery_open(d["x"], d["z"]) and watch.seen(Vector2(d["x"], d["z"]), RoomEncounters.SPAWN_R):
 				_spawn(sim, d, i)
 			continue
 		var members: Array = d["members"]
@@ -214,6 +217,11 @@ static func _waypoint(st: TerrainState, d: Dictionary) -> Vector2:
 ## Jamais une unité réfugiée dans une salle sûre (TerrainState.safe_at : l'antichambre du boss).
 static func target(e: Enemy, alive: Array[Unit], st: TerrainState = null) -> Unit:
 	var d: Dictionary = e.roam
+	# Groupe de salle dormant : il ne vise personne, sauf s'il est attaqué (il se lève alors).
+	if d.has("room") and not d.get("roused", false):
+		if not e.memo.has("hurt_by"):
+			return null
+		d["roused"] = true
 	var home := Vector2(d["x"], d["z"])
 	var safe := func(u: Unit) -> bool: return st != null and st.safe_at(u.x, u.z)
 	var prey: Unit = d.get("prey")
@@ -254,7 +262,8 @@ static func target(e: Enemy, alive: Array[Unit], st: TerrainState = null) -> Uni
 ## Ronde d'un errant sans cible : il suit l'étape de son groupe, à sa place dans le groupe.
 static func wander(sim: Simulation, e: Enemy, speed: float, dt: float) -> void:
 	var d: Dictionary = e.roam
-	if d["goal"] == null:
+	# Groupe de salle dormant : il attend sur place.
+	if d["goal"] == null or (d.has("room") and not d.get("roused", false)):
 		return
 	var goal: Vector2 = d["goal"] + (e.memo.get("roam_off", Vector2.ZERO) as Vector2)
 	# Groupe de salle : chacun garde son coin de la salle et n'en bouge que de 3 au plus.

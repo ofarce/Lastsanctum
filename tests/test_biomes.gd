@@ -45,7 +45,10 @@ func test_extension_is_deterministic_and_outside_start() -> void:
 				biome2 += 1
 	check(ext > 20000, "galeries dans l'extension (%d)" % ext)
 	check(biome2 > 0, "galeries dans le biome 2")
-	check(a.portals.size() > parity.portals.size(), "portails de l'extension en plus")
+	# Veines en salles (2026-11-24) : un pylône par quartier, plus de quota par bande ; le total ne dépasse plus
+	# forcément celui de la carte de parité, mais l'extension garde les siens.
+	var beyond := a.portals.filter(func(p: Dictionary) -> bool: return not CaveShape.in_start(float(p["x"]), float(p["z"])))
+	check(not beyond.is_empty(), "pylônes dans l'extension (%d sur %d ; parité %d)" % [beyond.size(), a.portals.size(), parity.portals.size()])
 	var seen_ext := false
 	for p: Dictionary in a.portals:
 		var inside := CaveShape.in_start(p["x"], p["z"])
@@ -98,8 +101,11 @@ func test_extension_content_per_biome() -> void:
 			if not CaveShape.in_start(c.x, c.y):
 				pools[Biomes.index_at(c.y)] += 1
 		print("     graine %d (%d ms) : bosquets %s, filons %s, parois %s, bassins %s" % [map_seed, ms, groves, lodes, veins, pools])
+		# Veines en salles (2026-11-24) : leurs salles de ressources ont un filon et un bassin, pas de bosquet
+		# (TerrainState._furnish_temple_rooms) ; le bois reste au Temple.
+		check(groves[0] > 0, "bosquets au Temple")
 		for k in 2:
-			check(groves[k] > 0 and lodes[k] > 0 and veins[k] > 20, "biome %d garni" % k)
+			check(lodes[k] > 0 and veins[k] > 20, "biome %d garni" % k)
 		# Chaque minerai reste dans les biomes qui le portent : pas d'or sur la carte, fer et quartz hors du Temple.
 		for key: Vector2i in st.block_types:
 			var item: String = st.block_types[key]

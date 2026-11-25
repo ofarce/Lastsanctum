@@ -1,0 +1,116 @@
+{
+ "eclusier": {
+  "frame_w": 56,
+  "frame_h": 76,
+  "ax": 26,
+  "ay": 72,
+  "anims": {
+   "full_idle": {
+    "count": 4,
+    "fps": 4,
+    "loop": true
+   },
+   "dry_idle": {
+    "count": 4,
+    "fps": 4,
+    "loop": true
+   },
+   "full_walk": {
+    "count": 4,
+    "fps": 8,
+    "loop": true
+   },
+   "dry_walk": {
+    "count": 4,
+    "fps": 8,
+    "loop": true
+   },
+   "full_harpoon": {
+    "count": 6,
+    "fps": 10,
+    "loop": false
+   },
+   "dry_harpoon": {
+    "count": 6,
+    "fps": 10,
+    "loop": false
+   },
+   "full_vanne": {
+    "count": 6,
+    "fps": 8,
+    "loop": false
+   },
+   "dry_vanne": {
+    "count": 6,
+    "fps": 8,
+    "loop": false
+   },
+   "death": {
+    "count": 8,
+    "fps": 8,
+    "loop": false
+   }
+  }
+ },
+ "patine": {
+  "frame_w": 56,
+  "frame_h": 76,
+  "ax": 28,
+  "ay": 72,
+  "anims": {
+   "idle": {
+    "count": 4,
+    "fps": 4,
+    "loop": true
+   },
+   "walk": {
+    "count": 4,
+    "fps": 8,
+    "loop": true
+   },
+   "cast": {
+    "count": 6,
+    "fps": 10,
+    "loop": false
+   },
+   "ox": {
+    "count": 6,
+    "fps": 8,
+    "loop": false
+   },
+   "idle_ox": {
+    "count": 4,
+    "fps": 4,
+    "loop": true
+   },
+   "walk_ox": {
+    "count": 4,
+    "fps": 8,
+    "loop": true
+   },
+   "death": {
+    "count": 8,
+    "fps": 8,
+    "loop": false
+   }
+  }
+ },
+ "pump": {
+  "frame_w": 40,
+  "frame_h": 34,
+  "ax": 12,
+  "ay": 31,
+  "anims": {
+   "pump_free": {
+    "count": 1,
+    "fps": 1,
+    "loop": true
+   },
+   "pump_held": {
+    "count": 2,
+    "fps": 4,
+    "loop": true
+   }
+  }
+ }
+}

@@ -19,7 +19,7 @@ func test_recipes_match_spec() -> void:
 	check_eq(Recipes.RECIPES["workshop"].size(), 8, "8 recettes à l'Atelier (fibre, arc et flèches partis)")
 	check_eq(Recipes.RECIPES["scierie"].keys(), ["wood_fiber", "plank"], "la Scierie fait la fibre de bois et les planches")
 	check_eq(Recipes.RECIPES["scierie"]["plank"], {"wood": 2}, "planche : 2 bois")
-	check_eq(Recipes.RECIPES["etabli"]["module_analyse"], {"wood_fiber": 50, "plank": 50, "ichor": 5}, "mod Analyse")
+	check_eq(Recipes.RECIPES["etabli"]["module_analyse"], {"wood_fiber": 5, "plank": 5, "ichor": 1}, "mod Analyse")
 	check_eq(Catalog.BUILDINGS["etabli"]["requires"], "scierie", "Établi d'exo débloqué par la Scierie")
 	check_eq(Recipes.RECIPES["archerie"].keys(), ["bow", "arrows"], "l'Archerie fait arcs et flèches")
 	check_eq(Catalog.BUILDINGS["archerie"]["requires"], "scierie", "Archerie débloquée par la Scierie")

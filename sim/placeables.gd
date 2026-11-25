@@ -68,7 +68,7 @@ static func refusal(sim: Simulation, item: String, p: Vector2) -> String:
 		return "%s : aucun en stock." % preload("res://data/recipes.gd").name_of(item)
 	var c := cell_of(p)
 	var mid := center(c)
-	if sim.world and not sim.world.fog.visible_at(mid):
+	if sim.world and not sim.world.fog.known_at(mid):
 		return "Explorez la case avant d’y poser un objet."
 	for k in 4:
 		var q := Vector2(c) * CELL + Vector2(0.6 + 2.8 * (k % 2), 0.6 + 2.8 * (k / 2))

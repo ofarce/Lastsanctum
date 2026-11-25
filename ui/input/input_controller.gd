@@ -70,7 +70,7 @@ func _process(_delta: float) -> void:
 		# le miner) ; rien en combat.
 		var pointer := get_viewport().get_mouse_position()
 		var ui_blocked := not _pointer_inside or get_viewport().gui_get_hovered_control() != null or _box_on
-		_mining_hover.cell = null if ui_blocked else _incarnated_wall(ground(pointer))
+		_mining_hover.cell = null if ui_blocked else _incarnated_wall(pointer)
 		_mining_hover.selected_cells = _visible_mining_cells()
 		_mining_hover.queue_redraw()
 		UnitView.hovered = null if ui_blocked else pick_ally(pointer)
@@ -309,7 +309,7 @@ func _collect_mining_segment(from: Vector2, to: Vector2) -> void:
 func _drag_candidate(pointer: Vector2) -> Variant:
 	if _mining_drag_cells.is_empty() or (GameState.incarnated != null and Simulation.in_combat(GameState.incarnated)):
 		return null
-	var hovered: Variant = _incarnated_wall(ground(pointer)) if GameState.incarnated != null else mining_hover_cell(pointer)
+	var hovered: Variant = _incarnated_wall(pointer) if GameState.incarnated != null else mining_hover_cell(pointer)
 	if hovered != null and _drag_neighbor(Vector2i(hovered["i"], hovered["j"])) != null:
 		return hovered
 	var vis: Variant = world.terrain_state.visual_block(ground(pointer))
@@ -354,21 +354,26 @@ func mining_hover_cell(pointer: Vector2, ui_blocked := false) -> Variant:
 
 
 ## Incarnation : mur minable sous le pointeur (Simulation.incarnated_mining_cell), s'il est découvert.
-func _incarnated_wall(point: Vector2) -> Variant:
-	if GameState.ended or not GameState.hud_mode.is_empty() or not world.fog.visible_at(point):
+func _incarnated_wall(pointer: Vector2) -> Variant:
+	var point := ground(pointer)
+	if GameState.ended or not GameState.hud_mode.is_empty() or not world.fog.known_at(point):
 		return null
 	var cell: Variant = sim.incarnated_mining_cell(GameState.incarnated, point)
-	if cell != null and world.fog.visible_at(Vector2(cell["i"] * 4 + 2, cell["j"] * 4 + 2)):
+	# Filon illimité sous le pointeur (dessin au sol, pas de roche) : sa case la plus proche de l'Exilé.
+	var node: Variant = hit_grove(pointer)
+	if node != null and world.terrain_state.lodes.has(node) and sim.incarnated_can_mine(GameState.incarnated):
+		cell = sim.grove_cell(node)
+	if cell != null and world.fog.known_at(Vector2(cell["i"] * 4 + 2, cell["j"] * 4 + 2)):
 		return cell
 	return null
 
 
 func _mining_cell(point: Vector2) -> Variant:
-	if not world.fog.visible_at(point):
+	if not world.fog.known_at(point):
 		return null
 	# Le dessin de la roche (paroi et dessus remontés), pas son emprise au sol.
 	var target: Variant = world.terrain_state.pointed_cell(point)
-	if target != null and world.fog.visible_at(Vector2(target["i"] * 4 + 2, target["j"] * 4 + 2)):
+	if target != null and world.fog.known_at(Vector2(target["i"] * 4 + 2, target["j"] * 4 + 2)):
 		return target
 	return null
 
@@ -397,7 +402,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		if event is InputEventMouseButton and event.pressed:
 			GameState.hud_chest = {}
 		if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_RIGHT:
-			var wall: Variant = _incarnated_wall(ground(event.position)) if event.pressed else null
+			var wall: Variant = _incarnated_wall(event.position) if event.pressed else null
 			var allies := _incarnated_allies()
 			var box := hit_production_chest(event.position) if event.pressed else {}
 			if not box.is_empty():
@@ -634,7 +639,7 @@ func hit_building(p: Vector2) -> Building:
 	var list := GameState.buildings.duplicate()
 	list.sort_custom(func(a: Building, b: Building) -> bool: return a.z > b.z)
 	for b: Building in list:
-		if not world.fog.visible_at(Vector2(b.x, b.z)):
+		if not world.fog.known_at(Vector2(b.x, b.z)):
 			continue
 		var h := b.half()
 		if absf(b.x - p.x) < h and p.y > b.z - h - h * 1.1 and p.y < b.z + h:
@@ -757,7 +762,7 @@ func _right_click(p: Vector2) -> void:
 	var post := preload("res://sim/placeables.gd").firing_post_at(ground(p))
 	if post.is_empty():
 		post = preload("res://sim/placeables.gd").firing_post_at(ground(p) + Vector2(0.0, 4.0))
-	if not post.is_empty() and not GameState.selected.is_empty() and world.fog.visible_at(Vector2(post["x"], post["z"])):
+	if not post.is_empty() and not GameState.selected.is_empty() and world.fog.known_at(Vector2(post["x"], post["z"])):
 		preload("res://sim/placeables.gd").order_post(sim, post)
 		return
 	# Pylône de Merenor sous le clic : les esprits sélectionnés vont le canaliser.
@@ -781,25 +786,27 @@ func hit_pylon(p: Vector2) -> Dictionary:
 	var m := PylonView.meta()
 	var k := float(world.camera.px)
 	for py: Dictionary in world.terrain_state.portals:
-		if not py["active"] or not world.fog.visible_at(Vector2(py["x"], py["z"])):
+		if not py["active"] or not world.fog.known_at(Vector2(py["x"], py["z"])):
 			continue
 		var origin := project(py["x"], 0.0, py["z"])
 		var r := Rect2(origin - Vector2(float(m["ax"]), float(m["ay"])) * k, Vector2(float(m["frame_w"]), float(m["frame_h"])) * k)
 		if r.has_point(p):
 			return py
-	return Pylons.at(world.terrain_state, ground(p)) if world.fog.visible_at(ground(p)) else {}
+	return Pylons.at(world.terrain_state, ground(p)) if world.fog.known_at(ground(p)) else {}
 
 
-## Bosquet pétrifié visible dont le dessin (emprise 2 × 2 et feuillage au-dessus, GroveView) est sous le point
-## écran : son origine Vector2i, ou null. Bosquets superposés : le plus au sud (dessiné devant) l'emporte.
+## Bosquet pétrifié ou filon illimité visible dont le dessin (emprise 2 × 2 et feuillage ou cristaux au-dessus,
+## GroveView / LodeView) est sous le point écran : son origine Vector2i, ou null. Bosquets superposés : le plus au sud (dessiné devant) l'emporte.
 func hit_grove(p: Vector2) -> Variant:
 	if GameState.ended or not GameState.hud_mode.is_empty():
 		return null
 	var best: Variant = null
-	for origin: Vector2i in world.terrain_state.wood_left:
+	# Filons illimités (LodeView, même cadrage que le bosquet) : posés sur le sol de la galerie, le dessin de la
+	# roche (pointed_cell) ne les voit pas ; ils se désignent par leur dessin, comme le bosquet.
+	for origin: Vector2i in world.terrain_state.wood_left.keys() + world.terrain_state.lodes.keys():
 		var x0 := origin.x * 4.0
 		var z0 := origin.y * 4.0
-		if not world.fog.visible_at(Vector2(x0 + 4.0, z0 + 4.0)):
+		if not world.fog.known_at(Vector2(x0 + 4.0, z0 + 4.0)):
 			continue
 		var a := project(x0 - 1.0, 0.0, z0 - 4.0)
 		var b := project(x0 + 9.0, 0.0, z0 + 8.0)
@@ -815,7 +822,7 @@ func hit_production_chest(p: Vector2) -> Dictionary:
 	var k := float(world.camera.px)
 	for b: Building in GameState.buildings:
 		if not b.complete or not Production.has_chests(b) \
-				or not world.fog.visible_at(Vector2(b.x, b.z)):
+				or not world.fog.known_at(Vector2(b.x, b.z)):
 			continue
 		for kind: String in Production.chest_kinds(b):
 			var pos := Production.chest_pos(b, kind)
@@ -837,7 +844,7 @@ func hit_turret(p: Vector2) -> Variant:
 	list.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return b["x"] + b["z"] < a["x"] + a["z"])
 	var k := float(world.camera.px)
 	for b: Dictionary in list:
-		if not world.fog.visible_at(Vector2(b["x"], b["z"])):
+		if not world.fog.known_at(Vector2(b["x"], b["z"])):
 			continue
 		var q := project(b["x"], 0.0, b["z"])
 		if absf(p.x - q.x) < 44.0 * k and p.y > q.y - 100.0 * k and p.y < q.y + 24.0 * k:

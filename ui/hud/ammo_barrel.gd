@@ -25,16 +25,14 @@ func _ready() -> void:
 
 
 static func available() -> bool:
-	var u := GameState.incarnated
-	return u != null and u.alive() and not u.hidden and not GameState.ended and Ammo.unlocked() \
+	var u := HudModel.hud_exile()
+	return u != null and u.alive() and not GameState.ended and Ammo.unlocked() \
 		and Catalog.gear_weapon(u).has("mana") and not HudModel.incarnated_panel()
 
 
-## Centre de la case principale : à gauche de la barre PV (ExileGallery, HP_W × HP_H, à HP_BOTTOM du bas).
+## Centre de la case principale : dans le losange doré à droite de la console (ExileGallery.gem_center).
 func _center() -> Vector2:
-	var screen := get_viewport_rect().size
-	var left := roundf((screen.x - ExileGallery.HP_W) / 2.0)
-	return Vector2(left - R_MAIN - 8.0, screen.y - ExileGallery.HP_BOTTOM - ExileGallery.HP_H / 2.0)
+	return ExileGallery.gem_center(get_viewport_rect().size, true)
 
 
 func _slot_center(i: int) -> Vector2:

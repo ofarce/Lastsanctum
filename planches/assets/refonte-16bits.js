@@ -57,17 +57,23 @@ const FIG={
 // (caserne, dessinée à l'échelle 1 dans le jeu).
 
 function fig(o){
- const{k,dir='d',f=0,pose='idle'}=o;const T=FIG[k];const b=buf(40,38);
+ const{k,dir='d',f=0,pose='idle'}=o;const T=FIG[k];const PAD=o.pad||[0,0],b=buf(40+2*PAD[0],38+PAD[1]);
+ // o.pad [px, py] : marge autour du cadre (gestes amples). o.step : écart des pieds imposé (fente).
+ // o.free {fa:[a1,a2], ba:[a1,a2], len, st} : bras articulés libres, de profil (animations de tir, tools/lanceurs).
+ // Angles en degrés : 0 = vers le bas, 90 = devant, 180 = en haut, négatif = derrière ; len = longueur d'un segment ;
+ // st = inclinaison du bâton (0 = droit, 90 = couché vers l'avant) ; la dague prolonge l'avant-bras.
+ // Le tampon rendu porte b.an = {hand, handB, top} (main avant, main arrière, pointe du bâton ou de la dague).
+ const FR=dir==='s'?o.free:null,RAD=Math.PI/180;
  const walk=pose==='walk',atk=pose==='atk',strike=pose==='strike',thr=pose==='throw',nw=!!o.nowpn;
  // Marche : 4 poses (f, caserne) ou phase continue o.ph ∈ [0, 1) (ennemis, 12 poses : pas de 2 px, appuis tenus).
  // Chaque phase est distincte : pied levé sur la jambe qui passe, bras en retard de 30°, choc de la tête au contact.
  const PH=walk&&o.ph!==undefined,phi=PH?o.ph*2*Math.PI:0,cs=Math.cos(phi);
- const step=walk?(PH?Math.round(2*Math.sin(phi)):[0,1,0,-1][f]):0;
+ const step=o.step!==undefined?o.step:walk?(PH?Math.round(2*Math.sin(phi)):[0,1,0,-1][f]):0;
  const bob=walk?(PH?(Math.abs(cs)>.7?-1:0):(f%2?-1:0)):0;
  const liftF=PH&&cs>0&&Math.abs(step)<=1?1:0,liftB=PH&&cs<=0&&Math.abs(step)<=1?1:0;
  const armS=PH?1.6*Math.sin(phi-Math.PI/6):step*.8;
  if(PH&&Math.round(o.ph*12)%6===3)o={...o,hd:(o.hd||0)+1};
- const tall=T.tall||0,Yl=bob+3-tall,Y=Yl+(o.ub||0),X=20,S=dir==='s',D=!S;
+ const tall=T.tall||0,Yl=bob+3-tall+PAD[1],Y=Yl+(o.ub||0),X=20+PAD[0],S=dir==='s',D=!S;
  // o.hd : la tête descend d'autant de plus que le buste (respiration en trois temps, sans jour au cou).
  const hx=X+(S?1:0),hy=6+Y+(o.hd||0);
  // ---- dos : cape, réservoir
@@ -88,7 +94,12 @@ function fig(o){
  else{leg(X-5,22+Yl+(step>0?-1:0),5+tall-(step>0?1:0),false);leg(X+1,22+Yl+(step<0?-1:0),5+tall-(step<0?1:0),false)}
  // ---- bras arrière (profil)
  const arm=(ax,ay,dy,s=0)=>{rect(b,ax-1,ay,3,4,T.sleeve,s);blob(b,ax+.5,ay+5+dy,1.8,1.6,T.glove,.1+s)};
- if(S&&!(T.weapon==='bow'))arm(X-2-armS,14+Y,0,-.3);
+ const farm=(sx,sy,a,s)=>{const L=FR.len||2.4,ex=sx+L*Math.sin(a[0]*RAD),ey=sy+L*Math.cos(a[0]*RAD),hx=ex+L*Math.sin(a[1]*RAD),hy=ey+L*Math.cos(a[1]*RAD);
+  for(const[x0,y0,x1,y1]of[[sx,sy,ex,ey],[ex,ey,hx,hy]]){const n=Math.ceil(L*2);for(let i=0;i<=n;i++)blob(b,x0+(x1-x0)*i/n,y0+(y1-y0)*i/n,1.5,1.5,T.sleeve,s)}
+  blob(b,hx,hy,1.8,1.6,T.glove,.1+s);return[hx,hy]};
+ const an={};
+ if(FR)an.handB=farm(X-1,14.5+Y,FR.ba,-.3);
+ else if(S&&!(T.weapon==='bow'))arm(X-2-armS,14+Y,0,-.3);
  // ---- robe longue ou jupe
  if(T.robe){for(let y=19;y<=29;y++){const hw=(S?4.5:5.5)+(y-19)*.32;for(let x=Math.round(X-hw);x<Math.round(X+hw);x++){const u=(x-X+hw)/(2*hw);
    const fold=D&&((x-X+40)%4===0)&&y>22?-.12:0;px(b,x+(S?(y-19)*.1|0:0),y+Y,T.robe,.72-u*.45-(y-19)*.02+fold)}}}
@@ -112,7 +123,8 @@ function fig(o){
   else if(W!=='bow'&&W!=='flamer')arm(X+7,14+Y,-sw);
  }else{
   // o.mid : bras à mi-hauteur, en avant (élan ou armé) ; o.rec : retour de garde, main basse en avant.
-  if(atk&&o.mid&&W!=='bow'&&W!=='flamer'){rect(b,X+1,13+Y,3,3,T.sleeve);blob(b,X+4.5,12+Y,1.8,1.6,T.glove,.15);hand[0]=X+4.5;hand[1]=12+Y}
+  if(FR){}
+  else if(atk&&o.mid&&W!=='bow'&&W!=='flamer'){rect(b,X+1,13+Y,3,3,T.sleeve);blob(b,X+4.5,12+Y,1.8,1.6,T.glove,.15);hand[0]=X+4.5;hand[1]=12+Y}
   else if(o.rec&&!strike&&!thr&&!atk&&W!=='bow'&&W!=='flamer'){rect(b,X+1,15+Y,3,3,T.sleeve);blob(b,X+4.5,18+Y,1.8,1.6,T.glove,.15);hand[0]=X+4.5;hand[1]=18+Y}
   else if(strike&&(W==='sword'||W==='dagger')){rect(b,X+1,15+Y,5,2,T.sleeve);blob(b,X+6.5,16+Y,1.8,1.6,T.glove,.15);hand[0]=X+6.5;hand[1]=16+Y}
   else if(thr){rect(b,X+1,12+Y,5,2,T.sleeve);blob(b,X+6.5,11+Y,1.8,1.6,T.glove,.15)}
@@ -149,6 +161,12 @@ function fig(o){
   }
  }
  // ---- armes et boucliers (au premier plan)
+ // bras libres : bâton incliné tenu par la main avant, ou dague dans le prolongement de l'avant-bras ; le bras avant passe devant la tête
+ if(FR){const W2=T.weapon,sa=(FR.st||0)*RAD,L=FR.len||2.4,h=[X+1.5+L*Math.sin(FR.fa[0]*RAD)+L*Math.sin(FR.fa[1]*RAD),14.5+Y+L*Math.cos(FR.fa[0]*RAD)+L*Math.cos(FR.fa[1]*RAD)];
+  if(W2==='staff'){const tx=h[0]+13*Math.sin(sa),ty=h[1]-13*Math.cos(sa);line(b,h[0]-9*Math.sin(sa),h[1]+9*Math.cos(sa),tx,ty,'wood',.6);
+   blob(b,tx,ty,1.8,1.8,'or',.25);px(b,Math.round(tx),Math.round(ty),'fire',FR.glow?1:.8);an.top=[tx,ty]}
+  if(W2==='dagger'){const da=FR.fa[1]*RAD,tx=h[0]+5*Math.sin(da),ty=h[1]+5*Math.cos(da);line(b,h[0]+1.5*Math.sin(da),h[1]+1.5*Math.cos(da),tx,ty,'iron',.9);an.top=[tx,ty]}
+  an.hand=farm(X+1.5,14.5+Y,FR.fa,0);b.an=an;return b}
  const [hx2,hy2]=hand;
  if(W==='sword'&&!strike&&!nw){if(atk){line(b,hx2,hy2-1,hx2+2,hy2-8,'iron',t=>.95-t*.2);px(b,hx2-1,hy2,'leath',.6);px(b,hx2+1,hy2,'leath',.6);px(b,hx2+2,hy2-9,'iron',1)}
   else{line(b,hx2+.5,hy2+1,hx2+3,hy2+8,'iron',t=>.9-t*.25);px(b,hx2-1,hy2+1,'leath',.55);px(b,hx2+2,hy2+1,'leath',.55)}}
@@ -189,6 +207,12 @@ function fig(o){
  if(strike&&(W==='sword'||W==='dagger')){const L=W==='sword'?9:4;line(b,hx2+1,hy2,hx2+L,hy2+1,'iron',t=>.95-t*.15);px(b,hx2,hy2-1,'leath',.6);px(b,hx2,hy2+1,'leath',.6);
   if(o.swoosh)for(let a=-1.3;a<=.5;a+=.12){const r=W==='sword'?11:7,t=(a+1.3)/1.8;if(t<o.swoosh&&t>=(o.fade||0))px(b,X+1+Math.cos(a)*r,16+Y+Math.sin(a)*r,'bone',.6+t*.4)}}
  return b}
+
+// Penche un tampon vers l'avant (lean > 0) ou l'arrière : chaque rangée glisse d'un nombre entier de pixels, de 0 au sol
+// (gy) à lean px à h px de haut. Les pixels restent nets ; les repères b.an suivent.
+function shear(b,lean,gy,h=19){if(!lean)return b;const o=buf(b.w,b.h),sh=y=>Math.round(lean*Math.max(0,gy-y)/h);
+ for(let y=0;y<b.h;y++){const d=sh(y);for(let x=0;x<b.w;x++){const X=x+d;if(X<0||X>=b.w)continue;o.m[y*b.w+X]=b.m[y*b.w+x];o.s[y*b.w+X]=b.s[y*b.w+x]}}
+ if(b.an){o.an={};for(const k in b.an)o.an[k]=[b.an[k][0]+lean*Math.max(0,gy-b.an[k][1])/h,b.an[k][1]]}return o}
 
 // ---------- Quadrupèdes (profil) ----------
 const QUAD={

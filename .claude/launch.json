@@ -388,6 +388,24 @@
         "planches"
       ],
       "port": 8181
+    },
+    {
+      "name": "lanceurs-export",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "tools/lanceurs/serve.py",
+        "8199"
+      ],
+      "port": 8199
+    },
+    {
+      "name": "archipretre-export",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "tools/archipretre/serve.py",
+        "8201"
+      ],
+      "port": 8201
     }
   ]
 }

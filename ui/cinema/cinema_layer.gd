@@ -75,16 +75,22 @@ func _paint() -> void:
 		_draw_node.draw_rect(Rect2(0, 0, size.x, h), Color.BLACK)
 		_draw_node.draw_rect(Rect2(0, size.y - h, size.x, h), Color.BLACK)
 	var c: Array = Opening.card()
+	if c.is_empty():
+		# Carton d'entrée de biome (sim/biome_card.gd), même dessin que le carton de jour.
+		c = BiomeCard.card()
 	if not c.is_empty():
-		var a: float = c[1]
-		var fs := roundi(size.y * 0.075)
-		var text: String = c[0]
-		var tw := SERIF.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
-		var base := Vector2((size.x - tw) / 2.0, size.y * 0.5 + fs * 0.3)
-		_draw_node.draw_string(SERIF, base + Vector2(2, 2), text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color(0, 0, 0, 0.5 * a))
-		_draw_node.draw_string(SERIF, base, text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color(INK, a))
-		# Deux filets qui s'étirent depuis le carton.
-		var w := size.x * 0.2 * a
-		var y := roundf(size.y * 0.5 - fs * 0.05)
-		_draw_node.draw_rect(Rect2(size.x / 2.0 - tw / 2.0 - 24 - w, y, w, 1), Color(INK, a))
-		_draw_node.draw_rect(Rect2(size.x / 2.0 + tw / 2.0 + 24, y, w, 1), Color(INK, a))
+		_card(c[0], c[1], size)
+
+
+## Carton centré : texte à empattements entre deux filets qui s'étirent avec l'opacité `a`.
+func _card(text: String, a: float, size: Vector2) -> void:
+	var fs := roundi(size.y * 0.075)
+	var tw := SERIF.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+	var base := Vector2((size.x - tw) / 2.0, size.y * 0.5 + fs * 0.3)
+	_draw_node.draw_string(SERIF, base + Vector2(2, 2), text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color(0, 0, 0, 0.5 * a))
+	_draw_node.draw_string(SERIF, base, text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color(INK, a))
+	# Deux filets qui s'étirent depuis le carton.
+	var w := size.x * 0.2 * a
+	var y := roundf(size.y * 0.5 - fs * 0.05)
+	_draw_node.draw_rect(Rect2(size.x / 2.0 - tw / 2.0 - 24 - w, y, w, 1), Color(INK, a))
+	_draw_node.draw_rect(Rect2(size.x / 2.0 + tw / 2.0 + 24, y, w, 1), Color(INK, a))

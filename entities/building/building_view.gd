@@ -78,8 +78,24 @@ func setup(b: Building) -> void:
 	add_child(fp)
 
 
+## Image d'animation (travail, repos) du dernier dessin d'un bâtiment achevé ; (-1, -1) : à redessiner.
+var _drawn := Vector2i(-1, -1)
+
+
 func _process(_delta: float) -> void:
-	queue_redraw()
+	var b := building
+	# Bâtiment achevé (hors Atelier, dont les pièces bougent en continu) : redessin seulement quand l'image
+	# d'animation change ou que l'état de repos est à relire, pas à chaque image.
+	if not b.complete or b.type == "workshop":
+		_drawn = Vector2i(-1, -1)
+		queue_redraw()
+		return
+	var A: Dictionary = _meta["arts"][_art]
+	var t := GameState.sim_time
+	var key := Vector2i(floori(t * float(A["anim"]["fps"])), floori(t * float(A["rest"]["fps"])) if _rest != null else 0)
+	if key != _drawn or (_rest != null and (t - _idle_checked > 0.25 or t < _idle_checked)):
+		_drawn = key
+		queue_redraw()
 
 
 func _draw() -> void:

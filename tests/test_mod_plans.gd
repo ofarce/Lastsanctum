@@ -42,5 +42,6 @@ func test_picking_a_plan_learns_the_recipe() -> void:
 	Loot.picked("plan_lens")
 	check(Recipes.plan_known("module_lens"), "plan ramassé : recette apprise")
 	check(not Recipes.learn("plan_lens"), "un second plan n'apprend rien de neuf")
-	check(not Recipes.plan_known("module_barrel"), "les autres recettes restent masquées")
+	# Barillet double retiré du jeu : une autre recette sur plan sert de témoin.
+	check(not Recipes.plan_known("module_frost"), "les autres recettes restent masquées")
 	GameState.plans.assign(saved)

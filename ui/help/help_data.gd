@@ -86,7 +86,7 @@ const TABS := [
 		"blocks": [
 			{"table": {"head": ["Bâtiment", "À quoi il sert"], "rows": [
 				["Temples", "Les adeptes y prient et produisent le mana de leur culte."],
-				["Atelier · Scierie · Archerie", "Outils et défenses ; fibre de bois ; arcs et flèches."],
+				["Atelier · Scierie · Archerie", "Outils et défenses ; fibre de bois noir ; arcs et flèches."],
 				["Fonderie · Armurerie", "Lingots ; armes et armures faites de lingots. Chacun fabrique en boucle la recette choisie."],
 				["Bibliothèque", "Recherches : grande carte, Arbalestrie modulaire."],
 				["Caserne", "Entraîne les soldats. Chaque soldat réclame son jeu d’armes."],

@@ -3,6 +3,10 @@ class_name Biomes
 ## Chaque biome a une hauteur fixe ; le dernier s'étend jusqu'au bord nord de la carte (et au-delà quand
 ## le monde deviendra infini). Fonctions pures : un biome ne dépend que de z.
 
+## Puissance des monstres par biome (demande du 2026-11-25) : dégâts et vitesse des projectiles +5 % par biome au-delà
+## du Temple (Temple ×1, Salles oubliées ×1,05, …). Lue à la position du monstre à sa création (Enemy.make,
+## Wildlife) et du projectile à son départ (EnemyShots._add, balles des boss).
+const POWER_STEP := 0.05
 ## Paliers de menace ajoutés aux portails par niveau de menace de biome au-delà du premier.
 const THREAT_STEP := 2
 
@@ -25,11 +29,11 @@ const LIST: Array[Dictionary] = [
 		# 2026-11-20 : le Temple ne porte plus que du cuivre (et son bois) ; fer, quartz et or viennent des biomes suivants.
 		"ores": {"copper": [0.0, 0.4]},
 		"decor": {"mountain_rock": 1.37}},
-	# Veines de vert-de-gris (strate validée le 2026-11-20) : le cuivre partout et en majorité, le quartz en
+	# Salles oubliées (ex-Veines de vert-de-gris, renommées le 2026-11-25 ; strate validée le 2026-11-20) : le cuivre partout et en majorité, le quartz en
 	# second, des traces de fer dans le cinquième nord, pas d'or. Plus de bassins (les anguilles y vivront).
 	# « rock » : type de la roche nue de la bande (data/mineable_blocks.gd). Un troisième nombre dans une plage
 	# de minerai est son poids au tirage (1 par défaut).
-	{"id": "biome2", "name": "Veines de vert-de-gris", "height": 336.0, "tier": 1, "threat": 2, "rock": "rock2",
+	{"id": "biome2", "name": "Salles oubliées", "height": 336.0, "tier": 1, "threat": 2, "rock": "rock2",
 		"worms": 9.0, "steps": [40, 90], "radius": [1.6, 2.6], "room": 0.03, "branch": 0.035,
 		"clearings": 1.5, "pools": 1.6, "lodes": 2.5, "veins": 14.0,
 		"ores": {"copper": [0.0, 1.0, 3], "quartz": [0.0, 1.0], "iron": [0.8, 1.0]},
@@ -84,6 +88,11 @@ static func index_at(z: float) -> int:
 		if z >= top:
 			return k
 	return LIST.size() - 1
+
+
+## Multiplicateur de dégâts et de vitesse des projectiles des monstres à la profondeur z.
+static func power_at(z: float) -> float:
+	return 1.0 + POWER_STEP * index_at(z)
 
 
 static func at(z: float) -> Dictionary:

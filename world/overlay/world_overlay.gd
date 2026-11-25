@@ -290,7 +290,7 @@ func _draw_pylons() -> void:
 		_beast_icon.region = Rect2(18, 16, 48, 30)  # corps du chien dans le cadre 84 × 48
 	var kk := float(_cam().px)
 	for p: Dictionary in world.terrain_state.portals:
-		if not p["active"] or not p.has("slots") or not world.fog.visible_at(Vector2(p["x"], p["z"])):
+		if not p["active"] or not p.has("slots") or not world.fog.known_at(Vector2(p["x"], p["z"])):
 			continue
 		var base := _project(p["x"], 0.0, p["z"])
 		var praying: Array = p.get("praying", [])
@@ -429,7 +429,7 @@ func _draw_portals() -> void:
 			travellers.append(u)
 	for n: Dictionary in PortalNet.nodes(st):
 		var at: Vector2 = n["pos"]
-		if not world.fog.visible_at(at):
+		if not world.fog.known_at(at):
 			continue
 		var base := _project(at.x, 0.0, at.y)
 		var orb := base - Vector2(0, ORB_H * kk)

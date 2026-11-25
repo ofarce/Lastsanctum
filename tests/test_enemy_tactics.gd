@@ -85,6 +85,8 @@ func test_reserve_waits_then_attacks_and_releases_if_front_dies() -> void:
 	var u := engineer()
 	u.x = 0
 	u.z = -127
+	# Dégâts ×2 et portée doublée des tireurs : sans réserve de PV, il tombe avant les huit secondes.
+	u.hp = 10000
 	var members := group_at(sim, ["shield", "soldier", "strazhar", "archer"])
 	var champion: Enemy = members[2]
 	sim.combat.update_enemies(DT, [u] as Array[Unit])
@@ -227,4 +229,8 @@ func test_narrow_bent_gallery_uses_column_along_local_path() -> void:
 		if e.tactical_goal != null:
 			check_near(e.tactical_goal.x, 69.0, 0.1, "colonne alignée sur le chemin local")
 			check(sim.state().walkable(e.tactical_goal.x, e.tactical_goal.y), "emplacement dans la galerie")
-	check(members[0].tactical_goal.y < members[2].tactical_goal.y, "bouclier en tête de colonne")
+	# Tête de colonne : la place la plus en avant sur le sens de marche (le chemin vers l'Ancre change avec la carte).
+	if members[0].tactical_goal != null and members[2].tactical_goal != null:
+		var anchor: Vector2 = members[0].tactical_group["anchor"]
+		check(members[0].tactical_goal.distance_to(anchor) < 0.1, "bouclier en tête de colonne")
+		check(members[2].tactical_goal.distance_to(anchor) > members[1].tactical_goal.distance_to(anchor), "tireurs derrière le front")

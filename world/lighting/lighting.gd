@@ -82,6 +82,15 @@ static func flick(t: float, i: float, a: float = 0.06) -> float:
 
 ## collectLights (lighting.js) pour les éléments migrés ; les unités, bâtiments, tourelles et explosions
 ## arrivent par `providers` aux étapes suivantes.
+## Zone du monde utile à l'image en cours (posée par _process le temps de collect) : les fournisseurs de sources
+## fixes s'y limitent. Partout ailleurs (tests, sonde), collect() rend toutes les sources.
+const EVERYWHERE := Rect2(-1e9, -1e9, 2e9, 2e9)
+const DECOR_CELL := 32.0
+## Indices de _decor_lights par case de DECOR_CELL unités.
+var _decor_cells := {}
+var view := EVERYWHERE
+
+
 func collect() -> Array[Dictionary]:
 	var t := GameState.sim_time
 	var L: Array[Dictionary] = []
@@ -108,7 +117,7 @@ func collect() -> Array[Dictionary]:
 	# Œil de la Matrice : lueur carmin de l'œil, plus vive quand il s'ouvre, et la salle qui en rougeoie.
 	if OeilMatrice.active():
 		var eye := TerrainState.eye_room_center()
-		var open: float = OeilMatrice.run().get("open", 0.0)
+		var open: float = GameState.oeil_run.get("open", 0.0)
 		L.append({"x": eye.x, "z": eye.y - 6.0, "r": (14.0 + 8.0 * open) * flick(t, 77.0, 0.06), "rgb": EVIL, "glow": 0.1 + 0.12 * open})
 		for dx: float in [-34.0, 34.0]:
 			L.append({"x": eye.x + dx, "z": eye.y, "r": 12.0, "rgb": EVIL, "glow": 0.05})
@@ -120,10 +129,29 @@ func collect() -> Array[Dictionary]:
 	if _decor_version != world.decor.version:
 		_decor_version = world.decor.version
 		_decor_lights.clear()
+		_decor_cells.clear()
 		for e: Dictionary in world.decor.entries():
 			if e.get("light", false):
+				var cell := Vector2i(floori(float(e["x"]) / DECOR_CELL), floori(float(e["z"]) / DECOR_CELL))
+				if not _decor_cells.has(cell):
+					_decor_cells[cell] = []
+				(_decor_cells[cell] as Array).append(_decor_lights.size())
 				_decor_lights.append({"x": e["x"], "z": e["z"], "r": 4.5, "rgb": ArtStyle.QUARTZ_LIGHT, "glow": 0.14})
-	L.append_array(_decor_lights)
+	if view == EVERYWHERE:
+		L.append_array(_decor_lights)
+	else:
+		# Cases de DECOR_CELL unités sous la zone utile ; rendues dans l'ordre de la liste (indices triés).
+		var hits: Array[int] = []
+		var c0 := (view.position / DECOR_CELL).floor()
+		var c1 := (view.end / DECOR_CELL).floor()
+		for cj in range(int(c0.y), int(c1.y) + 1):
+			for ci in range(int(c0.x), int(c1.x) + 1):
+				hits.append_array(_decor_cells.get(Vector2i(ci, cj), []))
+		hits.sort()
+		for k in hits:
+			var dl := _decor_lights[k]
+			if view.has_point(Vector2(dl["x"], dl["z"])):
+				L.append(dl)
 	# Boules de feu des chiens de la Bête et des squelettes (sim/enemy_shots.gd) : petite lueur rouge qui vacille.
 	for s: Dictionary in GameState.enemy_shots:
 		if s["kind"] == "fire" and s.get("lit", true):
@@ -202,12 +230,18 @@ func _process(_delta: float) -> void:
 	var s := 8.0 * px
 	var dark := PackedVector4Array()
 	_glows.clear()
-	for l in collect():
-		if not world.fog.visible_at(Vector2(l["x"], l["z"])):
-			continue
+	# Sol visible à l'écran, élargi du plus grand rayon des sources fixes (bosquets, filons, champignons, quartz :
+	# 10 unités au plus) : leurs fournisseurs n'émettent que ce qui peut toucher l'écran.
+	view = Rect2(world.camera.ground_from_screen(Vector2.ZERO), Vector2.ZERO).expand(world.camera.ground_from_screen(screen)).grow(12.0)
+	var lights := collect()
+	view = EVERYWHERE
+	for l in lights:
+		# Test d'écran d'abord (quelques opérations), brouillard ensuite : même résultat, les deux sont requis.
 		var p := Proj.project(l["x"], 0.0, l["z"], world.camera.cam, px, screen)
 		var pr: float = l["r"] * s
 		if not (p.x > -pr and p.x < screen.x + pr and p.y > -pr and p.y < screen.y + pr):
+			continue
+		if not world.fog.visible_at(Vector2(l["x"], l["z"])):
 			continue
 		if dark.size() >= MAX_LIGHTS:
 			break
@@ -215,7 +249,8 @@ func _process(_delta: float) -> void:
 		var c: Color = l["rgb"]
 		var w: float = l["glow"]
 		if w > 0.0:
-			_glows.append([p, pr * 0.8, Color(c.r * w, c.g * w, c.b * w, 1.0)])
+			# Alpha 0,5 : lueur douce (dégradé continu, torches des couloirs) ; 1 : paliers tramés.
+			_glows.append([p, pr * 0.8, Color(c.r * w, c.g * w, c.b * w, 0.5 if l.get("soft", false) else 1.0)])
 	_dark_mat.set_shader_parameter("qsize", qsize)
 	var sky := DayNight.sky(GameState.sim_time)
 	var gloom := Weather.gloom()

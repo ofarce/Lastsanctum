@@ -1,0 +1,739 @@
+<title>Décor des Forges mortes</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Cormorant+SC:wght@500;700&display=swap">
+<style>
+/* Planche de jeu, sombre par choix : une rangée par proposition, texte à gauche, vignette en pixels natifs du monde à droite,
+   posée sur le dallage et la roche réels de la grotte. Accent = quartz laiteux, la lumière de l'ardoise tyrienne. */
+:root{--bg:#12141a;--panel:#1a1d26;--line:#2f3440;--fg:#dcdde4;--mute:#8c92a3;--acc:#f0a040;--acc-dk:#7a3a22;
+ --disp:"Cormorant SC",Georgia,serif;--mono:"Share Tech Mono",ui-monospace,monospace;color-scheme:dark}
+body{background:var(--bg);color:var(--fg);font:14px/1.5 system-ui,sans-serif;margin:0;
+ padding-block:24px 60px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+main{max-width:1080px;margin:0 auto;display:flex;flex-direction:column;gap:26px}
+h1{font-family:var(--disp);font-size:2.3rem;line-height:1.1;margin:0;letter-spacing:.04em;text-wrap:balance}
+.lead{color:var(--mute);max-width:70ch;margin:.5rem 0 0}
+.reco{border-left:3px solid var(--acc-dk);padding:2px 0 2px 14px;max-width:76ch}
+.reco p{margin:.3rem 0 0}
+.reco b{color:var(--acc);font-weight:600}
+.tools{position:sticky;top:env(safe-area-inset-top,0px);background:var(--bg);padding:10px 0;z-index:3;display:flex;flex-wrap:wrap;gap:10px;align-items:center;font-family:var(--mono);font-size:12px;border-bottom:1px solid var(--line)}
+.tools span{color:var(--mute)}
+button{font:inherit;font-family:var(--mono);font-size:12px;background:var(--panel);color:var(--fg);border:1px solid var(--line);padding:5px 12px;cursor:pointer}
+button:hover{border-color:var(--acc-dk)}
+button:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+button[aria-pressed="true"]{background:var(--acc-dk);border-color:var(--acc);color:#fff}
+.part{display:flex;flex-direction:column;gap:6px;padding-top:10px}
+.part>h2{font-size:1.9rem}
+.part>p{margin:0;color:var(--mute);max-width:72ch}
+section.m{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,560px);gap:8px 24px;align-items:start;padding-top:22px;border-top:1px solid var(--line)}
+@media (max-width:820px){section.m{grid-template-columns:minmax(0,1fr)}}
+.txt{min-width:0}
+h2{font-family:var(--disp);font-size:1.6rem;line-height:1.15;margin:0;text-wrap:balance}
+h2 i{font-family:var(--mono);font-style:normal;font-size:1rem;color:var(--acc);margin-right:10px}
+.txt p{margin:.45rem 0 0;max-width:60ch}
+.txt dl{margin:.7rem 0 0;display:grid;grid-template-columns:auto minmax(0,1fr);gap:3px 12px;font-size:13px}
+.txt dt{font-family:var(--mono);font-size:12px;color:var(--mute);padding-top:1px}
+.txt dd{margin:0}
+figure{margin:0;background:var(--panel);border:1px solid var(--line);padding:6px;min-width:0}
+canvas{width:100%;max-width:100%;height:auto;image-rendering:pixelated;display:block;background:#000}
+figcaption{font-family:var(--mono);font-size:12px;color:var(--mute);padding-top:5px}
+</style>
+
+<style>
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
+.card{background:#07080c;border:1px solid var(--line);padding:18px 12px 14px;display:flex;flex-direction:column;align-items:center;gap:6px;min-width:0}
+.card .nm{display:flex;align-items:center;gap:10px;width:100%;justify-content:center;font-family:var(--disp);font-size:1.25rem;letter-spacing:.22em;color:#ece5d2;text-align:center}
+.card .nm::before,.card .nm::after{content:"";flex:1 1 0;max-width:46px;height:1px;background:var(--q)}
+.card .sub{font-family:var(--mono);font-size:12px;color:var(--mute);text-align:center}
+.card .gl{display:grid;grid-template-columns:repeat(7,5px);gap:1px;margin-top:6px}
+.card .gl i{width:5px;height:5px;background:transparent}
+.card .gl i.on{background:var(--q)}
+.card .hex{font-family:var(--mono);font-size:11px;color:var(--mute)}
+.q ul{margin:.3rem 0 0;padding-left:1.2rem;max-width:76ch}
+.q li{margin:.25rem 0}
+.lore{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;max-width:1080px}
+.lore div{border-top:1px solid var(--line);padding-top:8px;min-width:0}
+.lore b{font-family:var(--disp);font-size:1.15rem;font-weight:700;color:var(--acc);display:block}
+.lore p{margin:.25rem 0 0;color:var(--mute)}
+.anim{max-width:860px;overflow-x:auto}
+.anim table{border-collapse:collapse;width:100%;font-size:13px}
+.anim th,.anim td{text-align:left;padding:5px 10px 5px 0;border-bottom:1px solid var(--line);vertical-align:top}
+.anim th{font-family:var(--mono);font-size:12px;color:var(--mute);font-weight:400}
+.anim td.k{font-family:var(--mono);font-size:12px;white-space:nowrap}
+.anim .new{color:var(--acc)}
+</style>
+<main>
+<header>
+ <h1>Les Forges mortes · couloirs, salles et repères</h1>
+ <p class="lead">Le biome 3 est la grande fonderie des Tyriens, creusée dans le basalte au-dessus d'une poche de lave. Les fondeurs y coulaient le fer de toute la montagne. Quand la Bête est montée, ils sont partis d'un coup, en laissant les fours chargés et les lingotières pleines. Depuis, personne n'a tenu les feux : le fer a figé dans les rigoles, la rouille a tout pris, et la lave, que plus rien ne canalise, a rouvert la roche. Chaque vignette est dessinée à la taille des pixels du jeu, sur le sol et la roche du biome 3.</p>
+</header>
+
+<div class="lore">
+ <div><b>La fonderie de Tyr</b><p>Fours de brique réfractaire, soufflets de cuir, rigoles de coulée, lingotières de basalte, palans sous la voûte. C'est la couche la plus ancienne, celle du travail.</p></div>
+ <div><b>Le départ des fondeurs</b><p>Outils posés là où on les a lâchés, lingots figés dans leur moule, ferraille et tas de scories. Tout a rouillé sur place.</p></div>
+ <div><b>La lave revenue</b><p>Fissures qui rougeoient dans les parois et le sol, braises qui montent, vieilles coulées refroidies qui ont noyé le bas des halles.</p></div>
+ <div><b>Ce qui y vit encore</b><p>Les Scories vives dorment dans les tas tièdes, les Broutefers rongent les filons, et des esprits d'Aether sont enchaînés aux enclumes : quelqu'un a forgé ici après les Tyriens.</p></div>
+</div>
+
+<div class="reco">
+ <h2>Ma recommandation</h2>
+ <p>Pour les couloirs, <b>F1 Halle des fours</b>, <b>F5 Scories et rouille</b> et <b>F6 Fissures de lave</b> partout : la forge, l'abandon et la lave. <b>F2 Rigoles de coulée</b> et <b>F3 Lingotières</b> près des salles à thème, là où l'on travaillait. <b>F4 Palans et chaînes</b> surtout vers la chapelle de la Martyre du Fer.</p>
+ <p>Pour la lumière, <b>L2 Lanternes de fondeur</b>, fixes sur leur potence : elles gardent le rythme des torches du Temple, et seule leur flamme bouge, avec le mode déjà en jeu. Les braises des fours de F1 donnent en plus des taches rouges basses.</p>
+ <p>Pour les salles, <b>R1 Salle de trempe</b>, <b>R3 Forge aux esprits enchaînés</b> (le lieu de la quête « Les chaînes d'Aether ») et <b>R4 Magasin de la fonderie</b>. Pour les arènes, <b>A1</b> à <b>A4</b>. Pour les repères, <b>Q1 Stèle marquée au fer</b>.</p>
+ <p>Répondez par les numéros, par exemple « F1, F5, F6, L2, R1, R3, A1–A4, Q1 ».</p>
+</div>
+
+<section class="m q" style="grid-template-columns:minmax(0,1fr)">
+ <div class="txt"><h2>Animations en jeu</h2><p>Au biome 2, les gouttes, la fuite, l'aiguille et le balancement des fanaux sont restés figés en jeu : l'export ne prend qu'une image par pièce. Cette fois, chaque animation de la planche a sa façon de passer en jeu, et je la compte dans l'intégration. Trois modes existent déjà ; trois sont à écrire (en orange).</p></div>
+ <div class="anim"><table>
+  <thead><tr><th>Ce qui bouge</th><th>Où</th><th>En jeu</th></tr></thead>
+  <tbody>
+   <tr><td>Flammes des lanternes, braseros, fours rallumés</td><td>L2, F1, arches</td><td class="k">flammes (existant)</td></tr>
+   <tr><td>Braises des fours, fissures de lave, scories tièdes, enclume qui rougit, cercle des trophées</td><td>F1, F5, F6, A1, A4</td><td class="k">pulse (existant)</td></tr>
+   <tr><td>Chaînes, crochets, creuset et cages qui se balancent</td><td>F4, A2</td><td class="k">swing (existant), sprite ancré à son crochet en haut</td></tr>
+   <tr><td>Lave qui glisse dans les rigoles</td><td>F2, L3, A3</td><td class="k new">coulée (nouveau)</td></tr>
+   <tr><td>Braises qui montent des fissures et du haut-fourneau</td><td>F6, A3</td><td class="k new">braises (nouveau)</td></tr>
+   <tr><td>Vapeur du bassin et des vannes de trempe</td><td>R1, A3</td><td class="k new">vapeur (nouveau)</td></tr>
+  </tbody>
+ </table></div>
+</section>
+
+<div class="tools">
+ <button id="pause" type="button" aria-pressed="false">Pause</button>
+ <span>Vignettes en pixels du monde, agrandies ×3 · un personnage mesure environ 36 px</span>
+</div>
+
+<div class="part"><h2>Couloirs des Forges mortes</h2><p>Semés par le générateur dans les galeries, contre les parois, sans jamais bloquer le passage. Chaque famille a son quartier de prédilection.</p></div>
+<div id="listD" style="display:contents"></div>
+
+<div class="part"><h2>Lumière des couloirs</h2><p>Au Temple, les couloirs ont des torches à bras de fer (T2) et un halo doux (H1) ; aux Salles oubliées, des fanaux de Byrsa. Ici la montagne est chaude : trois façons d'éclairer une forge morte.</p></div>
+<div id="listL" style="display:contents"></div>
+
+<div class="part"><h2>Salles à thème</h2><p>Comme les salles à thème du Temple et des Salles oubliées : chacune a son mobilier et une petite récompense, sans nouveau système.</p></div>
+<div id="listS" style="display:contents"></div>
+
+<div class="part"><h2>Arènes des Forges mortes</h2><p>Posées autour de l'aire de combat, jamais au centre : l'enclume du Maître-Forgeron, le dôme de la Martyre du Fer et la lave du Grand Crassier restent lisibles.</p></div>
+<div id="listA" style="display:contents"></div>
+
+<div class="part"><h2>Repères d'entrée de quartier</h2><p>Comme au Temple et aux Salles oubliées : une arche à l'entrée de la salle-seuil et une stèle, qui s'allument au passage d'un allié. Deux façons de les dessiner. Les trois stèles de chaque vignette montrent les trois quartiers.</p></div>
+<div id="listQ" style="display:contents"></div>
+
+<section class="m" style="grid-template-columns:minmax(0,1fr)">
+ <div class="txt"><h2><i>Q</i>Cartons de quartier</h2><p>Le même carton qu'aux deux premiers biomes, en haut de l'écran : 3 s au premier passage avec la ligne de rappel, puis le nom seul 2 s. Couleurs et glyphes proposés pour les quatre quartiers.</p></div>
+ <div class="cards" id="cards"></div>
+</section>
+
+<section class="m q" style="grid-template-columns:minmax(0,1fr)">
+ <div class="txt"><h2>Questions</h2><ul>
+  <li><b>Quelles familles de couloir ?</b> Les six, ou une partie.</li>
+  <li><b>Quelle lumière ?</b> L1, L2 ou L3 (on peut mêler L2 et les braises de L1).</li>
+  <li><b>Quelles salles à thème ?</b> Les récompenses sont de moi, à régler.</li>
+  <li><b>Les arènes</b> A1 à A4 vous conviennent-elles telles quelles ?</li>
+  <li><b>Repères :</b> Q1 ou Q2, et les noms, couleurs et glyphes des quartiers.</li>
+  <li><b>Les quartiers</b> supposent que le biome 3 passe en salles comme le biome 2. Aujourd'hui, ses galeries sont creusées au hasard et n'ont pas de quartiers.</li>
+ </ul></div>
+</section>
+</main>
+
+<script>
+
+/* ---------- palettes ---------- */
+const S=[0x1c1f27,0x2f3440,0x444b5a,0x5d6678,0x7c869a,0xa3adbf];       // ardoise tyrienne
+const I=[0x15161b,0x282a33,0x3d404c,0x585c6b,0x8a8f9f];                // fer sombre
+const Q=[0x8f8a80,0xc9c4b6,0xefeadc];                                  // quartz laiteux
+const WD=[0x2a1d14,0x4a3322,0x6b4a30,0x8c6844];                        // bois
+const BN=[0x6e6a5c,0xa8a28e,0xd8d2bc];                                 // os
+const MS=[0x1f3a24,0x2f5a34,0x4a7d48,0x7fae6a];                        // mousse
+const FR=[0x8a2f10,0xd8651c,0xf0a23a,0xffe08a];                        // feu
+const MB=[0x6c6f78,0x8d9099,0xb4b6bc,0xd6d7da];                        // marbre gris veiné
+const RU=[0x4a2c1e,0x7a4a2c,0x9c6a3c];                                 // rouille
+const WT=[0x0c161d,0x15303a,0x22505c,0x4a8088];                        // eau sombre
+const LN=[0x4c463c,0x7a705c,0xa39678];                                 // lin, paille
+const SAND=0x8a7a5a,GLY=0x7fd6d8,INK=0x0a0b10,TAU=Math.PI*2,FACE=13;
+
+/* ---------- moteur : tampon de matière, contour sombre automatique, lumières par-dessus ---------- */
+let W=0,H=0,buf=null,img=null,M=null,DK=1,T=0,EXPORT=false;const post=[];
+const hs=n=>{const s=Math.sin(n*127.1+311.7)*43758.5453;return s-Math.floor(s)};
+function mix(a,b,k){k=k<0?0:k>1?1:k;const r=(a>>16&255),g=(a>>8&255),bl=a&255;
+ return ((r+((b>>16&255)-r)*k)|0)<<16|((g+((b>>8&255)-g)*k)|0)<<8|((bl+((b&255)-bl)*k)|0)}
+function px(x,y,c){x=Math.round(x);y=Math.round(y);if(x>=0&&y>=0&&x<W&&y<H)buf[y*W+x]=c}
+function rect(x,y,w,h,c){for(let j=0;j<h;j++)for(let i=0;i<w;i++)px(x+i,y+j,c)}
+function ell(cx,cy,rx,ry,c,f){for(let y=Math.floor(cy-ry);y<=Math.ceil(cy+ry);y++)for(let x=Math.floor(cx-rx);x<=Math.ceil(cx+rx);x++){
+ const dx=(x-cx)/rx,dy=(y-cy)/ry;if(dx*dx+dy*dy<=1){const cc=f?f(x,y,dx,dy):c;if(cc!==null&&cc!==undefined)px(x,y,cc)}}}
+function line(x0,y0,x1,y1,c){const n=Math.max(Math.abs(x1-x0),Math.abs(y1-y0),1)|0;for(let i=0;i<=n;i++)px(x0+(x1-x0)*i/n,y0+(y1-y0)*i/n,c)}
+function poly(pts,c){let y0=1e9,y1=-1e9;for(const p of pts){y0=Math.min(y0,p[1]);y1=Math.max(y1,p[1])}
+ for(let y=Math.round(y0);y<=Math.round(y1);y++){const xs=[];for(let i=0;i<pts.length;i++){const a=pts[i],b=pts[(i+1)%pts.length];
+  if((a[1]<=y&&b[1]>y)||(b[1]<=y&&a[1]>y))xs.push(a[0]+(y-a[1])/(b[1]-a[1])*(b[0]-a[0]))}
+  xs.sort((a,b)=>a-b);for(let k=0;k+1<xs.length;k+=2)for(let x=Math.round(xs[k]);x<=Math.round(xs[k+1]);x++)px(x,y,c)}}
+/* décalque à plat (sans contour), assombri comme le sol */
+function blend(x,y,c,a){if(EXPORT){if(a<.5)return;a=1}x=Math.round(x);y=Math.round(y);if(x<0||y<0||x>=W||y>=H)return;const i=(y*W+x)*4;
+ img[i]+=((c>>16&255)*DK-img[i])*a;img[i+1]+=((c>>8&255)*DK-img[i+1])*a;img[i+2]+=((c&255)*DK-img[i+2])*a}
+function gell(cx,cy,rx,ry,c,a){for(let y=Math.floor(cy-ry);y<=Math.ceil(cy+ry);y++)for(let x=Math.floor(cx-rx);x<=Math.ceil(cx+rx);x++){
+ const dx=(x-cx)/rx,dy=(y-cy)/ry;if(dx*dx+dy*dy<=1)blend(x,y,c,a)}}
+function bline(x0,y0,x1,y1,c,a){const n=Math.max(Math.abs(x1-x0),Math.abs(y1-y0),1)|0;for(let i=0;i<=n;i++)blend(x0+(x1-x0)*i/n,y0+(y1-y0)*i/n,c,a)}
+function gring(cx,cy,rx,ry,c,a){for(let i=0;i<90;i++){const an=i/90*TAU;blend(cx+Math.cos(an)*rx,cy+Math.sin(an)*ry,c,a)}}
+/* halo additif en trois paliers */
+function light(cx,cy,rx,ry,c,a){const r=(c>>16&255)*a,g=(c>>8&255)*a,b=(c&255)*a;for(const k of[1,.66,.36]){const RX=rx*k,RY=ry*k;
+ for(let y=Math.max(0,Math.floor(cy-RY));y<=Math.min(H-1,Math.ceil(cy+RY));y++)for(let x=Math.max(0,Math.floor(cx-RX));x<=Math.min(W-1,Math.ceil(cx+RX));x++){
+  const dx=(x-cx)/RX,dy=(y-cy)/RY;if(dx*dx+dy*dy<=1){const i=(y*W+x)*4;img[i]+=r;img[i+1]+=g;img[i+2]+=b}}}}
+function compose(){for(let y=0;y<H;y++)for(let x=0;x<W;x++){const i=y*W+x;let c=buf[i];
+ if(c<0){if(!((x>0&&buf[i-1]>=0)||(x<W-1&&buf[i+1]>=0)||(y>0&&buf[i-W]>=0)||(y<H-1&&buf[i+W]>=0)))continue;c=INK}
+ img[i*4]=(c>>16&255)*DK;img[i*4+1]=(c>>8&255)*DK;img[i*4+2]=(c&255)*DK}}
+const shadow=(x,y,rx,ry)=>{if(!EXPORT)gell(x,y,rx,ry,0x05060a,.38)};
+const ft=x=>{for(let y=0;y<H;y++)if(M(x,y))return y;return H};      // premier pixel de sol sous le mur nord
+const fb=x=>{for(let y=H-1;y>=0;y--)if(M(x,y))return y+1;return 0};  // bord sud du sol
+
+/* ---------- pièces de décor (x, y = pied de l'objet) ---------- */
+function column(x,y,h,brk,m){m=m||[S[1],S[2],S[3],S[4],S[5]];shadow(x+3,y,9,2.5);
+ rect(x-6,y-3,12,3,m[1]);rect(x-6,y-3,12,1,m[3]);rect(x+3,y-3,3,3,m[0]);
+ for(let j=0;j<h;j++){const yy=y-4-j;let w1=3;if(brk&&j>h-5){w1=3-Math.floor(hs(x*3.1+j*1.7)*3)-(h-j<3?2:0);if(w1<-3)continue}
+  for(let i=-4;i<=w1;i++)px(x+i,yy,j%6===5?m[0]:i<-2?m[3]:i<0?m[2]:i<2?m[1]:m[0])}
+ if(!brk){rect(x-6,y-7-h,12,3,m[2]);rect(x-6,y-7-h,12,1,m[4]);rect(x+3,y-6-h,3,2,m[1])}}
+function drum(x,y,m){m=m||S;shadow(x+1,y,9,2);for(let j=0;j<7;j++)rect(x-5,y-7+j,11,1,j<1?m[5]:j<3?m[4]:j<5?m[3]:m[2]);
+ ell(x-5,y-3.5,2.5,3.5,m[3]);ell(x-5,y-3.5,1.1,1.8,m[1]);rect(x,y-6,1,5,m[2]);rect(x+3,y-6,1,5,m[2])}
+function rubble(x,y,seed,n,sp){sp=sp||14;for(let i=0;i<n;i++){const ox=(hs(seed+i*2.3)-.5)*sp,oy=(hs(seed+i*5.1)-.5)*sp*.4,r=1.2+hs(seed+i*9.7)*2.2;
+ ell(x+ox,y+oy,r,r*.75,S[2+(i%2)]);px(x+ox-1,y+oy-r*.75,S[4]);px(x+ox,y+oy-r*.75,S[4])}}
+function boulder(x,y,r){shadow(x+1,y,r+2,r*.4);ell(x,y-r*.7,r,r*.8,0,(xx,yy,dx,dy)=>dx+dy<-.55?S[4]:dx+dy<.1?S[3]:dx+dy<.8?S[2]:S[1]);
+ line(x-r*.3,y-r*.9,x+r*.2,y-r*.3,S[1])}
+function slab(x,y,g,lit){for(let j=0;j<9;j++)for(let i=0;i<14;i++)blend(x-7+i,y-4+j,i===0||j===0?S[4]:i===13||j===8?S[0]:S[2],.92);
+ const G=[[[3,2,10,2],[3,2,3,6],[10,2,10,6],[5,4,8,4]],[[3,6,6,2],[6,2,10,6],[4,4,9,4]],[[3,2,10,6],[10,2,3,6],[6,1,7,1],[6,7,7,7]]][g%3];
+ for(const s of G)bline(x-7+s[0],y-4+s[1],x-7+s[2],y-4+s[3],lit?Q[2]:S[0],1);
+ if(lit)post.push(()=>light(x,y,13,8,Q[1],.07+.03*Math.sin(T*2+x)))}
+function brazier(x,y,lit){shadow(x,y,7,2.2);line(x-4,y,x-2,y-7,I[3]);line(x+4,y,x+2,y-7,I[1]);line(x,y,x,y-6,I[2]);
+ ell(x,y-9,5.4,3.4,0,(xx,yy,dx,dy)=>dy<-.25?null:dx<-.3?I[4]:dx>.5?I[1]:I[3]);rect(x-5,y-10,11,1,I[4]);rect(x-4,y-10,9,1,lit?FR[1]:I[0]);
+ if(lit)post.push(()=>{for(let k=0;k<3;k++){const fx=x+(k-1)*2.6,fh=5+2.5*Math.sin(T*9+k*2.1+x)+2*hs(Math.floor(T*10)+k+x);
+   for(let j=0;j<fh;j++){const w=Math.round((1-j/fh)*1.5),o=Math.round(Math.sin(T*7+j*.8+k)*.7);for(let i=-w;i<=w;i++)blend(fx+i+o,y-11-j,j<fh*.3?FR[3]:j<fh*.65?FR[2]:FR[1],1)}}
+  for(let k=0;k<3;k++){const u=(T*.8+hs(k*3.3+x))%1;blend(x+(hs(k*7.7+x)-.5)*8+Math.sin(T*3+k)*2,y-14-u*16,FR[2],1-u)}
+  light(x,y-6,34,22,FR[1],.085+.015*Math.sin(T*11+x))})}
+function root(x,y,len,seed){let cx=x;for(let j=0;j<len;j++){cx+=(hs(seed+j*1.7)-.5)*1.7;const w=j<len*.45?2:1;for(let i=0;i<w;i++)px(cx+i,y+j,(j+i)%4===0?WD[1]:WD[2]);
+ if(j%7===5&&j<len-3){const d=hs(seed+j)>.5?1:-1;for(let k=1;k<6;k++)px(cx+d*k,y+j+k*.7,WD[1])}}}
+function vine(x,y,len,seed){let cx=x;for(let j=0;j<len;j++){cx+=(hs(seed+j*2.1)-.5)*1.2;blend(cx,y+j,MS[2],1);if(j%3===1)blend(cx+(hs(seed+j)>.5?1:-1),y+j,MS[3],1)}}
+function moss(x,y,rx,ry,seed){for(let i=0;i<rx*ry*1.6;i++){const a=hs(seed+i*1.3)*TAU,r=Math.sqrt(hs(seed+i*2.9));blend(x+Math.cos(a)*r*rx,y+Math.sin(a)*r*ry,i%3?MS[1]:MS[2],.85)}}
+function tuft(x,y,seed){for(let i=-2;i<=2;i++){const h=2+hs(seed+i)*4;line(x+i,y,x+i*1.6,y-h,i%2?MS[2]:MS[3])}}
+function shrooms(x,y,n,seed){for(let i=0;i<n;i++){const ox=(hs(seed+i*3.1)-.5)*12,oy=(hs(seed+i*4.7)-.5)*5,h=1+Math.floor(hs(seed+i)*3);
+  rect(x+ox,y+oy-h,1,h,Q[0]);ell(x+ox,y+oy-h-1,2.2,1.3,Q[1]);px(x+ox-1,y+oy-h-2,Q[2])}
+ post.push(()=>light(x,y-2,15,9,0x9fd6a8,.07+.035*Math.sin(T*1.7+seed)))}
+function puddle(x,y,rx,ry){gell(x,y,rx,ry,WT[1],.9);gell(x-rx*.2,y-ry*.2,rx*.5,ry*.4,WT[2],.7);
+ const u=(T*.5+hs(x))%1;gring(x+rx*.2,y,rx*.7*u,ry*.7*u,WT[3],1-u)}
+function bones(x,y,seed){shadow(x,y+1,7,2);ell(x-4,y-2,2.6,2.3,BN[2]);px(x-5,y-2,INK);px(x-3,y-2,INK);rect(x-5,y,3,1,BN[1]);
+ for(let k=0;k<3;k++){line(x+1+k*2,y-4,x+k*2,y-1,BN[1]);px(x+1+k*2,y-4,BN[2])}line(x-2,y+2,x+7,y+1,BN[1]);if(hs(seed)>.4)line(x+4,y-6,x+9,y-3,BN[0])}
+function sword(x,y,rust){rect(x,y-9,1,8,rust?RU[2]:I[4]);rect(x+1,y-8,1,7,rust?RU[1]:I[3]);rect(x-2,y-10,6,1,I[2]);rect(x,y-13,2,3,WD[1]);px(x,y-14,I[4]);px(x+1,y-14,I[3])}
+function shield(x,y,rust){shadow(x+1,y+1,6,2.5);ell(x,y-1,5.5,3.6,0,(xx,yy,dx,dy)=>{const d=dx*dx+dy*dy;return d>.7?(rust?RU[1]:I[3]):d<.1?I[4]:dx+dy<0?WD[2]:WD[1]});line(x-3,y-3,x+3,y+1,rust?RU[0]:I[1])}
+function banner(x,y,h){rect(x-5,y,11,1,I[3]);px(x-5,y+1,I[2]);px(x+5,y+1,I[2]);
+ for(let j=1;j<=h;j++)for(let i=-3;i<=3;i++){if(j>h-4&&hs(x+i*3.3+j)>.55+(h-j)*.12)continue;const sw=j>h*.5?Math.round(Math.sin(T*1.4+x)*.6):0;
+  px(x+i+sw,y+j,j%6===3?LN[0]:i<-1?LN[2]:i>1?LN[0]:LN[1])}
+ rect(x-1,y+4,3,3,S[1]);px(x,y+5,LN[2])}
+function crate(x,y,brk){shadow(x+1,y,8,2.2);rect(x-6,y-8,12,8,WD[1]);rect(x-6,y-8,12,1,WD[3]);rect(x-6,y-8,1,8,WD[2]);rect(x-6,y-4,12,1,WD[0]);rect(x-1,y-8,1,8,WD[0]);
+ if(brk){poly([[x+2,y-8],[x+6,y-8],[x+6,y-3]],-1);line(x+2,y-8,x+6,y-3,WD[0]);line(x+7,y-1,x+11,y,WD[2])}}
+function quartz(x,y,n,seed,sc){sc=sc||1;for(let i=0;i<n;i++){const ox=(i-(n-1)/2)*3.2*sc+(hs(seed+i)-.5)*2,h=(5+hs(seed+i*3.7)*8)*sc,lean=(hs(seed+i*5.3)-.5)*4;
+  poly([[x+ox-1.6,y],[x+ox-2+lean*.5,y-h*.6],[x+ox+lean,y-h],[x+ox+2+lean*.5,y-h*.55],[x+ox+1.6,y]],Q[1]);
+  line(x+ox-1.6,y,x+ox+lean,y-h,Q[2]);line(x+ox+1.6,y,x+ox+2+lean*.5,y-h*.55,Q[0])}
+ rubble(x,y+1,seed,3,10);post.push(()=>{light(x,y-5*sc,22*sc,13*sc,Q[1],.075+.03*Math.sin(T*1.3+seed));
+  const u=(T*.7+hs(seed))%1;if(u<.25)blend(x+(hs(seed+Math.floor(T*.7))-.5)*8,y-4-hs(seed*2+Math.floor(T*.7))*8*sc,0xffffff,1)})}
+function stalag(x,y,h){shadow(x+1,y,4,1.5);for(let j=0;j<h;j++){const w=Math.max(0,Math.round((1-j/h)*3.2));for(let i=-w;i<=w;i++)px(x+i,y-j,i<-w*.4?S[4]:i>w*.4?S[1]:S[3])}}
+function lamp(x,y){shadow(x,y,4,1.5);rect(x-2,y-1,5,1,I[2]);rect(x,y-9,1,8,I[3]);rect(x-2,y-10,5,1,I[4]);
+ poly([[x-2,y-11],[x,y-17],[x+2,y-11]],Q[1]);line(x-2,y-11,x,y-17,Q[2]);
+ post.push(()=>light(x,y-12,30,20,Q[1],.08+.02*Math.sin(T*1.6+x)))}
+function sarco(x,y,open){shadow(x+1,y+1,15,3);rect(x-12,y-5,24,5,S[1]);rect(x-12,y-5,24,1,S[0]);for(let i=-9;i<=9;i+=6)rect(x+i,y-3,2,2,S[2]);
+ rect(x-12,y-14,24,9,I[0]);if(open){ell(x-4,y-10,2,1.6,BN[1]);rect(x-1,y-10,6,1,BN[0])}
+ const lx=open?x-4:x-12,ly=open?y-17:y-14;
+ rect(lx,ly,24,9,S[3]);rect(lx,ly,24,1,S[5]);rect(lx,ly,1,9,S[4]);rect(lx,ly+8,24,1,S[2]);rect(lx+23,ly,1,9,S[2]);
+ rect(lx+6,ly+3,13,3,S[4]);ell(lx+5,ly+4.5,2,2,S[4]);rect(lx+8,ly+5,10,1,S[2]);if(open)rect(lx,ly+9,24,1,S[1])}
+function dais(x,y,w,h){rect(x-w/2,y-h/2,w,h,S[3]);rect(x-w/2,y-h/2,w,1,S[5]);rect(x-w/2,y-h/2,1,h,S[4]);rect(x-w/2,y+h/2,w,3,S[1]);rect(x-w/2,y+h/2,w,1,S[2]);
+ for(let i=-w/2+3;i<w/2-2;i+=6)px(x+i,y+h/2+1,S[0])}
+function chest(x,y){rect(x-6,y-6,13,6,S[2]);rect(x-6,y-9,13,3,S[4]);rect(x-6,y-9,13,1,S[5]);rect(x-6,y-6,13,1,INK);rect(x+5,y-5,2,5,S[1]);
+ for(let i=-4;i<=4;i+=2)px(x+i,y-3,GLY);rect(x,y-6,1,2,I[4]);
+ post.push(()=>{const p=.6+.4*Math.sin(T*2.4);for(let i=-4;i<=4;i+=2)blend(x+i,y-3,0xd8ffff,p*.7);light(x,y-4,14,9,GLY,.05+.03*p)})}
+function shelf(x,y,w){const h=18;rect(x,y-h,w,h,MB[1]);rect(x,y-h,w,1,MB[3]);rect(x,y-h,1,h,MB[2]);rect(x+w-1,y-h,1,h,MB[0]);
+ for(let r=0;r<3;r++){const yy=y-h+2+r*5;rect(x+2,yy,w-4,4,I[0]);for(let i=x+3;i<x+w-3;i+=2){const k=hs(i*1.3+r*7+x);if(k>.3)rect(i,yy+(k>.7?0:1),1,k>.7?4:3,k>.8?LN[2]:k>.55?LN[1]:Q[0])}}
+ rect(x,y-1,w,1,MB[0])}
+function toppled(x,y){shadow(x+1,y+3,16,4);poly([[x-15,y-5],[x+9,y-12],[x+15,y-3],[x-9,y+4]],MB[1]);line(x-15,y-5,x+9,y-12,MB[3]);line(x-9,y+4,x+15,y-3,MB[0]);
+ for(let k=0;k<3;k++){const ax=x-10+k*8,ay=y-4-k*2.3;poly([[ax,ay],[ax+5,ay-1.5],[ax+7,ay+2],[ax+2,ay+3.5]],I[0])}}
+function scroll(x,y,a){const dx=Math.cos(a)*2.5,dy=Math.sin(a)*1.5;line(x-dx,y-dy,x+dx,y+dy,Q[1]);px(x-dx,y-dy,LN[0]);px(x+dx,y+dy,LN[0])}
+function lectern(x,y){shadow(x,y,6,2);rect(x-3,y-8,6,8,MB[1]);rect(x-3,y-8,2,8,MB[2]);rect(x-4,y-1,8,1,MB[0]);
+ poly([[x-6,y-9],[x+5,y-11],[x+6,y-13],[x-5,y-11]],MB[3]);rect(x-3,y-12,6,1,Q[2]);
+ post.push(()=>{light(x,y-12,30,19,0xe6e8f0,.085+.02*Math.sin(T*2));for(let k=0;k<4;k++){const u=(T*.4+k/4)%1;blend(x+Math.sin(k*2.4+T)*5,y-14-u*14,0xffffff,(1-u)*.9)}})}
+function rack(x,y){rect(x-9,y-12,2,12,WD[1]);rect(x+8,y-12,2,12,WD[1]);rect(x-9,y-9,19,1,WD[3]);rect(x-9,y-3,19,1,WD[2]);
+ for(const i of[-6,-2,2,6]){rect(x+i,y-18,1,17,i===2?WD[2]:I[3]);px(x+i,y-19,I[4]);px(x+i,y-20,I[4]);if(i===2){rect(x+i-2,y-18,5,3,I[3]);rect(x+i-2,y-18,5,1,I[4])}}}
+function dummy(x,y){shadow(x,y,6,2);rect(x-3,y-1,7,1,WD[0]);rect(x,y-12,1,12,WD[1]);rect(x-5,y-11,11,2,WD[2]);
+ ell(x+.5,y-7,3,4,0,(xx,yy,dx)=>dx<-.2?LN[2]:dx>.5?LN[0]:LN[1]);rect(x-2,y-7,5,1,LN[0]);ell(x+.5,y-14.5,2.3,2.3,LN[2]);px(x+2,y-14,LN[0])}
+function stand(x,y){shadow(x,y,5,2);rect(x,y-12,1,12,WD[1]);rect(x-2,y-1,5,1,WD[0]);poly([[x-4,y-13],[x+4,y-13],[x+3,y-5],[x-3,y-5]],I[2]);rect(x-4,y-13,2,8,I[4]);rect(x+2,y-12,2,7,I[1]);
+ rect(x-5,y-14,3,3,I[3]);rect(x+3,y-14,3,3,I[2]);ell(x,y-17,2.4,2.4,I[3]);px(x-1,y-18,I[4])}
+function statue(x,y){shadow(x+1,y,10,2.5);rect(x-7,y-6,14,6,S[2]);rect(x-7,y-6,14,1,S[4]);rect(x+4,y-5,3,5,S[1]);
+ poly([[x-4,y-7],[x-3,y-20],[x+3,y-20],[x+4,y-7]],MB[2]);rect(x-4,y-19,2,12,MB[3]);rect(x+2,y-19,2,12,MB[0]);
+ ell(x,y-22,3.6,3.6,MB[2]);ell(x-1,y-23,2,2,MB[3]);rect(x-1,y-22,3,3,I[0]);rect(x-3,y-14,6,1,MB[3]);rect(x-2,y-13,4,1,Q[1])}
+function menhir(x,y,h){shadow(x+1,y,6,2);for(let j=0;j<h;j++){const k=j/h,w=Math.round(k>.8?3.5-(k-.8)*14:3.5+Math.sin(k*3)*.6);for(let i=-w;i<=w;i++)px(x+i,y-j,k>.82&&i<1?MS[2]:i<-w*.3?S[4]:i>w*.4?S[1]:S[3])}
+ px(x-1,y-h*.5,S[1]);px(x,y-h*.5+1,S[1])}
+function candle(x,y){rect(x,y-3,1,3,Q[2]);post.push(()=>{blend(x,y-4-(Math.sin(T*8+x)>.3?1:0),FR[3],1);blend(x,y-4,FR[2],1);light(x,y-4,9,6,FR[2],.06)})}
+function water(x0,y0,x1,y1,hole){for(let y=y0;y<y1;y++)for(let x=x0;x<x1;x++){if(hole&&hole(x,y))continue;
+  let c=y-y0<3||(hole&&hole(x,y-1))||(hole&&hole(x,y-2))?WT[0]:WT[1];const w=Math.sin(x*.35+y*.9+T*1.6)+Math.sin(x*.13-y*.5-T*1.1);
+  if(w>1.6)c=WT[3];else if(w>1.25)c=WT[2];blend(x,y,c,1)}
+ for(let x=x0-1;x<=x1;x++){blend(x,y0-1,S[4],1);blend(x,y1,S[1],1)}for(let y=y0;y<y1;y++){blend(x0-1,y,S[4],1);blend(x1,y,S[1],1)}}
+function ripple(x,y,ph){const u=(T*.45+ph)%1;gring(x,y,9*u,4*u,WT[3],(1-u)*.9);if(u<.08)blend(x,y-1,0xffffff,.8)}
+function wheel(x,y){shadow(x,y,7,2.2);rect(x-1,y-8,3,8,I[2]);rect(x-1,y-8,1,8,I[4]);ell(x,y-11,5.5,3,0,(xx,yy,dx,dy)=>{const d=dx*dx+dy*dy;return d>.55?I[3]:null});
+ const a=T*.0;line(x-5,y-11,x+5,y-11,I[3]);line(x,y-14,x,y-8,I[3]);px(x,y-11,I[4]);px(x-5,y-12,I[4])}
+
+/* ---------- formes de galerie ---------- */
+const gal=seed=>(x,y)=>{const bx=Math.floor(x/8),top=31+Math.round((hs(seed+bx*.91)-.5)*2)*4-(bx>=13&&bx<=16?12:0),bot=83+Math.round((hs(seed*2+bx*1.3)-.5)*2)*4;return y>=top&&y<bot};
+const room=(x,y)=>{if(x>=16&&x<160&&y>=30&&y<110){const cx=Math.min(x-16,159-x),cy=Math.min(y-30,109-y);return !(cx<8&&cy<8)}
+ if(x>=76&&x<100&&y>=110)return true;return y>=62&&y<82&&x<16};
+
+
+/* ---------- palettes propres à cette planche ---------- */
+const GD=[0x5a3e14,0xa07424,0xd0a038,0xf0cc66,0xfff2b0];              // or du Credo (dôme de la Martyre)
+const RD=[0x2a0809,0x5a1014,0x8e1c20,0xc0302c,0xe2382e];              // chair de la Bête
+const CU=[0x3a1c10,0x6e3a1c,0xa85a2c,0xd88a48,0xf0b878],VG=0x4a9a84;  // cuivre, vert-de-gris
+const OC=[0x4a3424,0x7a5a3a,0xa8865a,0x8a3020];                       // fresque : enduit, ocre, rouge de terre
+const GL=[0x8ab4d8,0xd0a038,0xb8302a,0x6a9a6a];                       // vitrail
+
+/* ---------- pièces des couloirs : le monastère ---------- */
+const BZ=[0x3a2c18,0x5a4a2a,0x8a7040,0xb09458,0xd0b878];               // bronze terni
+const CL=[0x4a2a1a,0x7a4a2c,0xa06a40];                                  // terre cuite
+const FL2=[0xd8c86a,0x9a8ac8,0xc87a6a];                                 // fleurs du préau
+function wallTop(x){return ft(x)-FACE+1}
+function arcade(x0,x1){for(let ax=x0;ax+16<=x1;ax+=16){const cx=ax+8;
+  for(let x=ax+2;x<ax+14;x++){const t=Math.max(wallTop(x),ft(x)-30),f=ft(x),k=(x-cx)/6,top=t+2+(1-Math.sqrt(Math.max(0,1-k*k)))*5;
+   for(let y=Math.round(top);y<f;y++)blend(x,y,y>=f-2?MS[1]:y>=f-4?0x1a2a1c:0x0c0e14,y>=f-2?.85:.9);blend(x,Math.round(top)-1,S[5],.9)}
+  for(const px0 of[ax,ax+14]){const t=wallTop(px0),f=ft(px0);for(let y=t;y<f;y++){blend(px0,y,S[4],1);blend(px0+1,y,S[3],1)}blend(px0,t,S[5],1);blend(px0+1,t,S[5],1)}
+  if(hs(ax)>.5)for(let j=0;j<6;j++)blend(ax+4+hs(ax+j)*8,ft(ax+8)-1-j*.6,MS[2+(j%2)],1)}}
+function well(x,y){shadow(x+1,y+1,10,3);ell(x,y-3,8,4,S[3]);ell(x,y-4,8,4,S[4]);ell(x,y-4,5.5,2.6,WT[0]);gell(x-1,y-4,3,1.2,WT[2],.7);
+ rect(x-8,y-16,2,13,WD[1]);rect(x+7,y-16,2,13,WD[2]);rect(x-9,y-17,19,2,WD[3]);line(x+2,y-15,x+2,y-9,LN[1]);rect(x+1,y-9,3,3,WD[1]);px(x+1,y-9,WD[3])}
+function herbs(x,y,w,h,seed){rect(x,y,w,h,S[3]);rect(x,y,w,1,S[5]);rect(x+1,y+1,w-2,h-2,WD[0]);
+ for(let i=0;i<w*h*.5;i++){const a=x+1+hs(seed+i)*(w-2),b=y+1+hs(seed*2+i)*(h-2);px(a,b,i%3?MS[2]:MS[3]);if(i%7===0)px(a,b-1,FL2[i%3])}
+ for(let k=0;k<3;k++)tuft(x+3+k*(w-6)/2,y+h-1,seed+k)}
+function niche(x,lit,seed){const t=Math.max(wallTop(x)+3,ft(x)-24);for(let j=0;j<8;j++)for(let i=-3;i<=3;i++){if(j<2&&Math.abs(i)>j+1)continue;blend(x+i,t+j,0x0c0e14,.92)}
+ for(let i=-4;i<=4;i++)blend(x+i,t+8,S[5],1);rect(x-1,t+6,3,2,CL[1]);px(x-1,t+6,CL[2]);px(x+2,t+7,CL[0]);px(x-3,t+7,BN[1]);
+ for(let k=0;k<3;k++){const rx=x-3+k*3;for(let j=0;j<4+k;j++)blend(rx+Math.round(Math.sin(T*1.6+k+j*.5)*.4),t+9+j,k===1?0x9a4a3a:LN[1],.85)}
+ if(lit)post.push(()=>{blend(x,t+5-(Math.sin(T*9+seed)>.4?1:0),FR[3],1);blend(x,t+5,FR[2],1);light(x,t+6,18,12,FR[2],.075+.015*Math.sin(T*8+seed))})}
+function offering(x,y,seed){ell(x,y-1,2.4,1.2,CL[1]);px(x-1,y-2,CL[2]);for(let k=0;k<3;k++)px(x-1+k,y-3-hs(seed+k)*2,FL2[k]);ell(x+5,y,1.6,1,CL[0])}
+function cellDoor(x,seed,door){const t=Math.max(wallTop(x)+2,ft(x)-22);for(let y=t;y<ft(x);y++)for(let i=-4;i<=4;i++)blend(x+i,y,0x0a0c12,.95);for(let y=t;y<ft(x);y++){blend(x-5,y,S[5],1);blend(x+5,y,S[1],1)}
+ for(let i=-5;i<=5;i++)blend(x+i,t-1,S[5],1);if(door===undefined?hs(seed)>.4:door){poly([[x+5,ft(x)],[x+7,t+2],[x+11,t+4],[x+9,ft(x)+1]],WD[1]);line(x+7,t+2,x+11,t+4,WD[3]);line(x+8,t+6,x+10,t+7,WD[0]);line(x+8,t+10,x+10,t+11,WD[0])}}
+function pallet(x,y){shadow(x+1,y+1,9,2);rect(x-8,y-4,16,5,LN[1]);rect(x-8,y-4,16,1,LN[2]);for(let i=-6;i<8;i+=3)rect(x+i,y-3,1,4,LN[0]);rect(x-8,y-4,4,2,LN[2])}
+function jug(x,y){shadow(x,y,3,1);ell(x,y-3,2.4,3,0,(xx,yy,dx)=>dx<-.2?CL[2]:CL[1]);rect(x-1,y-7,2,2,CL[1]);px(x+2,y-5,CL[0])}
+function stool(x,y,top){shadow(x,y,4,1.4);if(top){line(x-3,y,x+3,y-2,WD[2]);line(x-2,y-2,x-4,y-5,WD[1]);return}rect(x-3,y-5,7,2,WD[3]);rect(x-3,y-3,1,3,WD[1]);rect(x+3,y-3,1,3,WD[1])}
+function table(x,y,w,seed){shadow(x+w/2,y+2,w/2+3,3);rect(x,y-9,w,5,WD[2]);rect(x,y-9,w,1,WD[3]);rect(x,y-5,w,1,WD[0]);for(const lx of[x+1,x+w-3])rect(lx,y-4,2,4,WD[1]);
+ for(let k=0;k*9+4<w;k++){const bx=x+4+k*9;if(hs(seed+k)>.35){ell(bx,y-7,2,1,CL[1]);px(bx-1,y-8,CL[2])}else{rect(bx,y-9,1,1,CL[0]);line(bx+1,y-8,bx+3,y-7,CL[1])}}
+ rect(x,y+1,w*.6,2,WD[1]);rect(x,y+1,w*.6,1,WD[3]);line(x+w*.65,y+2,x+w-2,y+4,WD[2]);line(x+w*.65,y+3,x+w-2,y+5,WD[0])}
+function cauldron(x,y){shadow(x+1,y+1,8,2.4);gell(x,y+1,7,2.4,0x2a2622,.9);line(x-6,y,x-2,y-12,I[2]);line(x+6,y,x+2,y-12,I[2]);
+ ell(x,y-4,5,4,0,(xx,yy,dx,dy)=>dy<-.55?null:dx<-.3?I[3]:I[1]);ell(x,y-6,5,1.4,I[0]);rect(x-5,y-7,11,1,I[4])}
+function bell(x,y){shadow(x+1,y+2,13,3.5);poly([[x-8,y-11],[x+4,y-14],[x+10,y-1],[x-8,y+2]],BZ[2]);poly([[x-8,y-11],[x-4,y-12],[x-4,y+1],[x-8,y+2]],BZ[3]);
+ ell(x+10,y-7,2.6,6.5,BZ[1]);ell(x+10,y-7,1.6,5,BZ[0]);line(x-8,y-11,x+4,y-14,BZ[4]);line(x-10,y-7,x-8,y-11,BZ[2]);line(x-10,y-7,x-8,y+2,BZ[1]);
+ line(x-2,y-12,x+1,y-6,INK);line(x+1,y-6,x-1,y-1,INK);px(x+4,y-6,VG);px(x+6,y-3,VG);px(x-5,y-4,VG)}
+function rope(x,len,seed){const t=wallTop(x);for(let j=0;j<len;j++){const sw=Math.round(Math.sin(T*1.1+seed)*j/len*1.5);px(x+sw,t+j,j%2?LN[0]:LN[1])}
+ const sw=Math.round(Math.sin(T*1.1+seed)*1.5);px(x+sw-1,t+len,LN[2]);px(x+sw+1,t+len,LN[2]);px(x+sw,t+len+1,LN[2])}
+function ossuary(x0,x1,seed){const top=Math.max(wallTop(x0)+2,ft(x0)-40);for(let x=x0;x<x1;x++){for(let y=top;y<ft(x)-1;y++)blend(x,y,0x0c0e14,.9);blend(x,top-1,S[5],1);blend(x,ft(x)-1,S[4],1)}
+ for(let ry=top,r=0;ry+9<=ft(x0)-1;ry+=10,r++){for(let i=x0;i<x1;i++)blend(i,ry+9,S[3],1);
+  for(let x=x0+2;x<x1-2;x+=5){if(hs(seed+x+r*7.1)>.12){ell(x+1,ry+2.5,1.8,1.6,BN[2]);px(x,ry+2,INK);px(x+2,ry+2,INK);px(x+1,ry+4,BN[0])}
+   for(let i=0;i<5;i++){blend(x+i-1,ry+6,i%4===0?BN[2]:BN[1],1);blend(x+i-1,ry+7,BN[0],1)}}}}
+function bonepile(x,y,seed){shadow(x,y+1,8,2);for(let k=0;k<6;k++){const a=hs(seed+k)*Math.PI,l=4+hs(seed*2+k)*3;line(x-Math.cos(a)*l,y-1-Math.sin(a)*l*.3-k*.4,x+Math.cos(a)*l,y-1+Math.sin(a)*l*.3-k*.4,k%2?BN[1]:BN[2])}
+ ell(x+2,y-4,1.8,1.6,BN[2]);px(x+1,y-4,INK);px(x+3,y-4,INK)}
+/* ---------- pièces des arènes : le monastère ---------- */
+function mitre(x,y){shadow(x+1,y+1,7,2);rect(x-6,y-3,13,3,0x6a1616);rect(x-6,y-3,13,1,GD[2]);poly([[x-4,y-3],[x-3,y-13],[x,y-16],[x+3,y-13],[x+4,y-3]],0xe8e2d0);
+ line(x-3,y-13,x,y-16,0xfff8e8);rect(x,y-14,1,11,GD[2]);rect(x-4,y-7,9,1,GD[3]);px(x,y-10,RD[3])}
+function veil(x,y){shadow(x+1,y+1,9,2);poly([[x-8,y],[x-5,y-9],[x,y-12],[x+5,y-9],[x+8,y],[x+2,y-2],[x-3,y-1]],0x7a1a1a);line(x-5,y-9,x,y-12,GD[3]);line(x,y-12,x+5,y-9,GD[2]);
+ line(x-2,y-10,x-4,y-1,0x5a1010);line(x+2,y-10,x+3,y-2,0x5a1010);for(let i=-7;i<=7;i+=2)px(x+i,y,GD[2])}
+function arch(x,y,sp){column(x-sp/2,y,22,false);column(x+sp/2,y,22,false);const t=y-33;rect(x-sp/2-6,t,sp+12,4,S[3]);rect(x-sp/2-6,t,sp+12,1,S[5]);rect(x-sp/2-6,t+3,sp+12,1,S[1]);
+ rect(x-2,t-2,5,6,S[4]);px(x,t,GLY);px(x,t+1,GLY)}
+
+function stalls(x,y,w,seed){shadow(x+w/2,y+1,w/2+2,2.5);rect(x,y-14,w,10,WD[1]);rect(x,y-14,w,1,WD[3]);for(let i=x;i<x+w;i+=5){rect(i,y-14,1,13,WD[0]);px(i+2,y-15,WD[3]);px(i+2,y-16,WD[2])}
+ rect(x,y-5,w,3,WD[2]);rect(x,y-5,w,1,WD[3]);rect(x,y-2,w,2,WD[0]);if(hs(seed)>.4){poly([[x+w-9,y-14],[x+w-3,y-14],[x+w-5,y-8]],-1)}}
+function censer(x,len,seed){const t=wallTop(x),sw=Math.sin(T*1.2+seed)*2;bline(x,t,x+sw,t+len,I[3],1);const cx=x+sw,cy=t+len;
+ ell(cx,cy+2,2.6,2.2,0,(xx,yy,dx)=>dx<0?GD[2]:GD[1]);rect(cx-2,cy,5,1,GD[3]);px(cx,cy-1,GD[3]);
+ post.push(()=>{for(let k=0;k<5;k++){const u=(T*.35+k/5)%1;gell(cx+Math.sin(T+k*1.7)*2+u*3,cy-1-u*16,1+u*2.2,1+u*1.5,0xb8b4c0,(1-u)*.28)}light(cx,cy+2,12,8,FR[2],.05)})}
+function gisant(x,y,open){shadow(x+1,y+1,15,3);rect(x-12,y-6,24,6,S[2]);rect(x-12,y-6,24,1,S[4]);rect(x+9,y-5,3,5,S[1]);
+ const lx=open?x-6:x-12,ly=open?y-14:y-12;if(open){rect(x-12,y-9,24,3,I[0]);ell(x+4,y-8,2,1.4,BN[1])}
+ rect(lx,ly,24,6,S[3]);rect(lx,ly,24,1,S[5]);ell(lx+4,ly+3,2.4,2.2,MB[2]);px(lx+3,ly+2,MB[3]);rect(lx+7,ly+1,14,4,MB[1]);rect(lx+7,ly+1,14,1,MB[3]);rect(lx+11,ly+2,3,2,MB[3]);rect(lx+20,ly+1,2,4,MB[2]);
+ if(open)line(lx+2,ly+6,lx+22,ly+7,S[0])}
+function chapterBench(x0,x1,y){for(let x=x0;x<x1;x++){blend(x,y,S[5],1);blend(x,y+1,S[3],1);blend(x,y+2,S[3],1);blend(x,y+3,S[1],1);if((x-x0)%12===0){blend(x,y+1,S[1],1);blend(x,y+2,S[1],1)}}}
+function chapterSide(x,y0,y1){for(let y=y0;y<y1;y++){blend(x,y,S[5],1);blend(x+1,y,S[3],1);blend(x+2,y,S[3],1);blend(x+3,y,S[1],1)}}
+/* ---------- pièces des salles de boss ---------- */
+function candelabra(x,y){shadow(x+1,y,6,2);ell(x,y-1,3.2,1.3,GD[1]);rect(x,y-14,1,13,GD[2]);px(x-1,y-8,GD[3]);rect(x-4,y-14,9,1,GD[3]);rect(x-4,y-15,1,1,GD[2]);rect(x+4,y-15,1,1,GD[2]);
+ for(const o of[-4,0,4])rect(x+o,y-18,1,3,Q[2]);post.push(()=>{for(const o of[-4,0,4]){blend(x+o,y-19-(Math.sin(T*8+o+x)>.3?1:0),FR[3],1);blend(x+o,y-19,FR[2],1)}light(x,y-16,26,17,GD[3],.07+.015*Math.sin(T*7+x))})}
+function priedieu(x,y,top){shadow(x+1,y+1,7,2);if(top){poly([[x-6,y-1],[x+5,y-4],[x+6,y-1],[x-5,y+2]],WD[1]);line(x-6,y-1,x+5,y-4,WD[3]);line(x+3,y+1,x+9,y,WD[2]);return}
+ rect(x-5,y-3,11,3,WD[1]);rect(x-5,y-3,11,1,WD[3]);rect(x-5,y-9,1,6,WD[0]);rect(x+5,y-9,1,6,WD[0]);rect(x-5,y-9,11,2,WD[2]);rect(x-5,y-9,11,1,WD[3])}
+function shards(x,y,seed,n){for(let i=0;i<n;i++){const ox=(hs(seed+i*1.9)-.5)*18,oy=(hs(seed+i*3.7)-.5)*8,c=GL[Math.floor(hs(seed+i*5.1)*4)],s=1+hs(seed+i)*1.5;
+  poly([[x+ox,y+oy-s],[x+ox+s*1.4,y+oy],[x+ox-s*.6,y+oy+s*.7]],c);px(x+ox,y+oy-s,0xffffff)}
+ post.push(()=>{const k=Math.floor(T*1.5+seed)%n;blend(x+(hs(seed+k*1.9)-.5)*18,y+(hs(seed+k*3.7)-.5)*8-1,0xffffff,.9)})}
+function rose(x){const t=wallTop(x),face=ft(x)-t,RX=face>20?14:9,RY=face>20?10:6,cy=Math.max(t+6,ft(x)-26);
+ for(let y=cy-RY;y<=cy+RY;y++)for(let i=-RX;i<=RX;i++){const dy=(y-cy)/RY,dx=i/RX;if(dx*dx+dy*dy>1)continue;
+  const br=hs(i*1.3+y*.7)>.72&&i>2;if(br){blend(x+i,y,INK,.9);continue}const a=Math.atan2(dy,dx),ring=Math.sqrt(dx*dx+dy*dy);
+  let c=GL[(Math.floor((a+Math.PI)/TAU*8)+(ring>.5?1:0))%4];if(ring<.22)c=GD[3];if(Math.abs(Math.sin(a*4))<.12||Math.abs(ring-.55)<.08)c=I[0];blend(x+i,y,c,1)}
+ for(let k=0;k<64;k++){const a=k/64*TAU;blend(x+Math.cos(a)*(RX+1),cy+Math.sin(a)*(RY+1),S[5],1)}
+ post.push(()=>{const p=.8+.2*Math.sin(T*.7);for(let j=0;j<46;j++)for(let i=-6;i<=6;i++){const xx=x+i+j*.35,yy=ft(x)+j;if(M(xx,yy)&&hs(i*2.1+j*.3)>.25)blend(xx,yy,GD[4],.05*p*(1-j/46))}})}
+function gbanner(x,y,h){rect(x-5,y,11,1,GD[1]);for(let j=1;j<=h;j++)for(let i=-3;i<=3;i++){if(j>h-3&&hs(x+i*3.3+j)>.5+(h-j)*.15)continue;const sw=j>h*.5?Math.round(Math.sin(T*1.3+x)*.6):0;
+  px(x+i+sw,y+j,i===-3||i===3?GD[1]:j%7===4?RD[3]:0x7a1a1a)}ell(x,y+5,1.6,1.6,GD[3]);px(x,y+5,GD[4])}
+function runner(x,y0,y1,w){for(let y=y0;y<y1;y++)for(let i=0;i<w;i++){if(hs(i*1.7+y*.9)>.93||(y>y1-6&&hs(i+y*3.1)>.5))continue;
+  blend(x+i,y,i===0||i===w-1?GD[1]:i===1||i===w-2?GD[2]:0x6a1616,.82)}}
+function altar(x,y){shadow(x+1,y+1,14,3);rect(x-11,y-8,22,8,S[3]);rect(x-11,y-8,22,1,S[5]);rect(x+8,y-7,3,7,S[1]);rect(x-6,y-8,12,6,0x6a1616);rect(x-6,y-8,12,1,GD[3]);
+ rect(x-6,y-3,12,1,GD[1]);ell(x,y-13,3.2,3.2,GD[2]);ell(x-1,y-14,1.4,1.4,GD[4]);for(let a=0;a<8;a++){const an=a/8*TAU;px(x+Math.cos(an)*5,y-13+Math.sin(an)*5,GD[3])}
+ post.push(()=>light(x,y-12,30,20,GD[3],.06+.02*Math.sin(T*1.4)))}
+function vein(x,y,len,seed,dx){let cx=x,cy=y;const pts=[];for(let j=0;j<len;j++){cx+=dx*.6+(hs(seed+j*1.7)-.5)*1.4;cy+=.7+(hs(seed+j*2.3)-.5)*.6;pts.push([cx,cy,j])}
+ for(const[a,b,j]of pts){const w=j<len*.5?2:1;for(let i=0;i<w;i++)blend(a+i,b,RD[2],1);if(w===2)blend(a,b,RD[1],1)}
+ post.push(()=>{const h=(T*18+seed*7)%(len+20);for(const[a,b,j]of pts)if(Math.abs(j-h)<2.5)blend(a,b,RD[4],1)})}
+function flesh(x,y,rx,ry,seed){for(let i=0;i<rx*ry*2.2;i++){const a=hs(seed+i*1.3)*TAU,r=Math.sqrt(hs(seed+i*2.9));blend(x+Math.cos(a)*r*rx,y+Math.sin(a)*r*ry,r<.5?RD[2]:RD[1],.75)}}
+function pustule(x,y,r,seed){shadow(x+1,y+1,r+1,r*.4);const p=1+.12*Math.sin(T*2.6+seed);ell(x,y-r*.7,r*p,r*.8*p,0,(xx,yy,dx,dy)=>dx+dy<-.6?RD[4]:dx+dy<.3?RD[3]:RD[2]);
+ px(x-r*.4,y-r*1.1,0xffd0c0);post.push(()=>light(x,y-r,r*4,r*2.6,RD[4],.04+.03*Math.sin(T*2.6+seed)))}
+function ichor(x,y,rx,ry){gell(x,y,rx,ry,RD[0],.95);gell(x-rx*.2,y-ry*.15,rx*.55,ry*.45,RD[1],.8);const u=(T*.35+hs(x))%1;gring(x,y,rx*.8*u,ry*.8*u,RD[3],(1-u)*.8)}
+function rib(x,y,dir,h){for(let k=0;k<h;k++){const t=k/h,xx=x+dir*Math.sin(t*Math.PI*.8)*h*.45,yy=y-k;px(xx,yy,t<.15?BN[0]:BN[2]);px(xx+dir,yy,BN[1]);if(t<.6)px(xx-dir,yy,BN[1])}shadow(x,y+1,3,1.2)}
+function crater(x,y,r){gell(x,y,r,r*.45,0x050304,.92);gring(x,y,r,r*.45,RD[2],1);gring(x,y,r+1.5,r*.45+.8,RD[1],.8);for(let k=0;k<7;k++){const a=k/7*TAU+.4;bline(x+Math.cos(a)*r,y+Math.sin(a)*r*.45,x+Math.cos(a)*(r+7+hs(k)*6),y+Math.sin(a)*(r*.45+3+hs(k)*3),RD[1],.9)}
+ post.push(()=>light(x,y,r*2.4,r*1.2,RD[3],.05+.03*Math.sin(T*1.8)))}
+function plate(x,y,a,seed){const c=Math.cos(a),s=Math.sin(a);const P=[[-7,-1],[-3,-4],[3,-4],[7,-1],[5,2],[-5,2]].map(([u,v])=>[x+u*c-v*s*.6,y+u*s*.5+v]);shadow(x+1,y+2,8,2);poly(P,CU[2]);
+ line(P[0][0],P[0][1],P[1][0],P[1][1],CU[4]);line(P[1][0],P[1][1],P[2][0],P[2][1],CU[4]);line(P[2][0],P[2][1],P[3][0],P[3][1],CU[3]);line(P[4][0],P[4][1],P[5][0],P[5][1],CU[0]);
+ px(x-2,y-1,VG);px(x+2,y,VG);px(x+3,y-1,VG)}
+function tick(x,y,seed){shadow(x,y+1,5,1.6);for(let k=-2;k<=2;k++){line(x+k*1.5,y-2,x+k*2.6,y-6-hs(seed+k)*2,0x2a2018);}ell(x,y-2,4,2.6,0,(xx,yy,dx,dy)=>dy<-.2?0x8a7a5a:0x4a3a30);px(x-1,y-3,0xb8a880)}
+function burrow(x,y,r){gell(x,y,r,r*.45,0x050608,.95);gring(x,y,r,r*.45,S[1],1);rubble(x,y+r*.5,x,6,r*2.4);rubble(x,y-r*.5,x*2,4,r*2)}
+function fallenTimber(x,y,a){const dx=Math.cos(a)*12,dy=Math.sin(a)*5;shadow(x+1,y+2,12,2.5);for(let o=0;o<3;o++)line(x-dx,y-dy+o,x+dx,y+dy+o,o===0?WD[3]:o===1?WD[2]:WD[0])}
+function skullBig(x,y){shadow(x+1,y+1,9,2.5);ell(x,y-7,7,6,0,(xx,yy,dx,dy)=>dx+dy<-.5?BN[2]:dx+dy<.5?BN[1]:BN[0]);ell(x-3,y-7,1.8,1.6,INK);ell(x+3,y-7,1.8,1.6,INK);
+ rect(x-3,y-2,7,2,BN[1]);for(let i=-3;i<=3;i+=2)px(x+i,y-1,INK);for(const d of[-1,1])for(let k=0;k<8;k++)px(x+d*(6+k*.9),y-11-k*1.1+k*k*.08,k<4?BN[1]:BN[2]);
+ post.push(()=>{const p=.5+.5*Math.sin(T*1.6);blend(x-3,y-7,RD[4],.5*p);blend(x+3,y-7,RD[4],.5*p)})}
+function sealRing(x,y,r){gring(x,y,r,r*.5,S[4],1);gring(x,y,r-2,r*.5-1,S[1],1);for(let k=0;k<12;k++){const a=k/12*TAU;const gx=x+Math.cos(a)*(r-1),gy=y+Math.sin(a)*(r*.5-.5);blend(gx,gy,GLY,1)}
+ post.push(()=>{const p=.6+.4*Math.sin(T*1.2);for(let k=0;k<12;k++){const a=k/12*TAU;blend(x+Math.cos(a)*(r-1),y+Math.sin(a)*(r*.5-.5),0xd8ffff,.7*p)}light(x,y,r*1.3,r*.7,GLY,.035*p)})}
+
+
+/* ---------- palettes des Forges mortes ---------- */
+const FS=[0x201b1c,0x2b2425,0x382f2e,0x483d3a,0x5c4e48,0x78665c];      // basalte (rampe du biome 3, tools/ardoise)
+const FB=[0x24120e,0x46221a,0x683424,0x8a4a30];                       // brique réfractaire noircie
+const LV=[0x4a1006,0x8a240c,0xd8541e,0xf09a3a,0xffd27a];              // lave, de la croûte au cœur
+const FE=[0x2c3036,0x4a525c,0x6e7884,0x9aa6b2,0xc4ced6];              // fer
+const RS=[0x3a1a10,0x5e2c18,0x7a3a22,0x9c5634];                       // rouille
+const SC=[0x121014,0x221e24,0x363238,0x5a5460];                       // scories vitreuses
+const LE=[0x2a1810,0x4a2c1c,0x6a4228];                                // cuir des soufflets
+const SOOT=0x0a0809,AE=0x8a90ff;
+const QC={A:0xe0703a,B:0xe8b84a,C:0x9eacb8,R:0xd84030};               // couleurs des quartiers proposées
+const QG={A:["..###..",".#...#.","#.....#","#.###.#","#.#.#.#","#.....#","#######"],
+ B:["##..##.","..##..#",".......","##..##.","..##..#",".......","#######"],
+ C:["......#",".....#.","...##..","..#..#.",".##....","#......","#......"],
+ R:["...#...","..#.#..","..#.#..",".#...#.","#..#..#","#.###.#",".#####."]};
+
+/* ---------- aides ---------- */
+function brub(x,y,seed,n,sp){sp=sp||14;for(let i=0;i<n;i++){const ox=(hs(seed+i*2.3)-.5)*sp,oy=(hs(seed+i*5.1)-.5)*sp*.4,r=1.2+hs(seed+i*9.7)*2.2;
+ ell(x+ox,y+oy,r,r*.75,FS[2+(i%2)]);px(x+ox-1,y+oy-r*.75,FS[4]);px(x+ox,y+oy-r*.75,FS[5])}}
+function soot(x,y,w,h){for(let j=0;j<h;j++)for(let i=-w;i<=w;i++){const k=1-j/h-Math.abs(i)/w*.6;if(k>0&&hs(x+i*1.7+j*2.9)<k+.2)blend(x+i,y-j,SOOT,.35+.35*k)}}
+function flames(x,y,n,sp,hgt,seed){for(let k=0;k<n;k++){const fx=x+(k-(n-1)/2)*sp,fh=hgt+2*Math.sin(T*9+k*2.1+seed)+1.5*hs(Math.floor(T*10)+k+seed);
+ for(let j=0;j<fh;j++){const w=Math.round((1-j/fh)*1.5),o=Math.round(Math.sin(T*7+j*.8+k)*.7);for(let i=-w;i<=w;i++)blend(fx+i+o,y-j,j<fh*.3?FR[3]:j<fh*.65?FR[2]:FR[1],1)}}}
+function embers(x,y,n,spread,rise,seed){for(let k=0;k<n;k++){const u=(T*.7+hs(seed+k*3.3))%1;blend(x+(hs(seed+k*7.7)-.5)*spread+Math.sin(T*3+k)*1.5,y-u*rise,u<.5?LV[4]:LV[3],1-u)}}
+function vwheel(x,y){ell(x,y,3.4,3.4,0,(xx,yy,dx,dy)=>dx*dx+dy*dy>.5?I[3]:null);line(x-3,y,x+3,y,I[2]);line(x,y-3,x,y+3,I[2]);px(x,y,RS[3]);px(x-2,y-3,FE[3])}
+function arc(x,t,f,R,fn){for(let y=t;y<f;y++){const dy=y-t;for(let i=-R;i<=R;i++){if(dy<R&&Math.abs(i)>Math.sqrt(R*R-(R-dy)*(R-dy)))continue;fn(x+i,y,i,dy)}}}
+
+/* ---------- pièces : la fonderie de Tyr ---------- */
+// gueule de four maçonnée dans la paroi nord : st 0 froide, 1 braises, 2 rallumée
+function furnace(x,seed,st){const f=ft(x),t=f-22,R=8;soot(x,t+3,7,10);
+ arc(x,t,f,R,(X,Y,i,dy)=>{const row=Math.floor(dy/3),u=i+R+(row%2)*2;px(X,Y,(dy%3===2||u%4===3)?FB[0]:hs(row*5.1+Math.floor(u/4)*2.3+seed)>.5?FB[3]:FB[2])});
+ arc(x,t+8,f,4,(X,Y)=>px(X,Y,st?0x2a0c06:0x07060a));
+ rect(x-6,f-1,13,1,FS[4]);for(let i=-3;i<=3;i++)if(hs(seed+i)>.4)px(x+i,f-2,st?LV[1]:0x3a3436);
+ rect(x+R+1,f-8,4,2,CL[1]);px(x+R+4,f-8,CL[2]);
+ if(st)post.push(()=>{for(let k=0;k<6;k++){const p=.5+.5*Math.sin(T*2.3+k*1.9+seed);blend(x-3+hs(seed+k)*6,f-2-hs(seed+k*2)*4,p>.6?LV[4]:LV[3],.5+.5*p)}
+  if(st===2)flames(x,f-2,3,2.5,5,seed);light(x,f-5,st===2?30:18,st===2?20:11,LV[2],(st===2?.09:.05)+.015*Math.sin(T*3+seed))})}
+// soufflet de cuir entre deux planches, buse de fer ; d = sens, s = échelle
+function bellows(x,y,flat,seed,d,s){d=d||1;s=s||1;const h=(flat?1:4)*s,X=i=>x+d*i*s,Y=j=>y-j*s;shadow(x+d*s,y+1,10*s,2.4*s);
+ poly([[X(-9),Y(1)],[X(4),Y(2)],[X(4),Y(3)],[X(-9),Y(3)]],WD[1]);
+ poly([[X(-9),Y(3)],[X(4),Y(3)],[X(4),Y(4)-h*.4],[X(-9),Y(4)-h]],LE[1]);for(let i=-7;i<3;i+=3)line(X(i),Y(3),X(i),Y(4)-h*(1-(i+9)/13*.6),LE[0]);
+ poly([[X(-10),Y(5)-h],[X(4),Y(5)-h*.4],[X(5),Y(4)-h*.4],[X(-10),Y(4)-h]],WD[2]);line(X(-10),Y(5)-h,X(4),Y(5)-h*.4,WD[3]);
+ line(X(-10),Y(4)-h,X(-14),Y(5)-h,WD[1]);line(X(-10),Y(2),X(-14),Y(2),WD[1]);
+ for(let i=4;i<10;i++){px(X(i),Y(4),I[3]);px(X(i),Y(3),I[2])}px(X(9),Y(4),FE[4])}
+// rigole de coulée creusée dans le dallage : froide (fer figé et rouille) ou chaude (la lave coule) ; y : nombre ou fonction de x
+function rigole(x0,x1,y,hot,seed){const Y=typeof y==='function'?y:x=>y+Math.round(Math.sin(x*.05+seed)*1.2);
+ // points du lit de la rigole ; v = tronçon vertical qui relie deux marches de la paroi
+ const pts=[];let pv=null;for(let x=x0;x<x1;x++){const yy=Y(x);if(pv!==null&&yy!==pv){const s=Math.sign(yy-pv);for(let k=pv+s;k!==yy;k+=s)pts.push([x,k,1])}pts.push([x,yy,0]);pv=yy}
+ for(const[x,yy,v]of pts){if(v){blend(x-2,yy,SOOT,.9);blend(x+2,yy,FS[5],1)}else{blend(x,yy-2,SOOT,.9);blend(x,yy+2,FS[5],1)}
+  for(let j=-1;j<=1;j++){const X=v?x+j:x,YY=v?yy:yy+j;blend(X,YY,hot?LV[1]:hs(X*.7+YY*3.1+seed)>.74?RS[2]:hs(X*1.3+YY*.7+seed)>.8?FE[2]:FE[1],1)}}
+ if(hot)post.push(()=>{for(const[x,yy,v]of pts){const w=Math.sin((x+yy)*.3-T*2.4+seed)+Math.sin((x+yy)*.11+T*.8);blend(x,yy,w>1.1?LV[4]:w>.1?LV[3]:LV[2],1);
+   if(w>.6){if(v){blend(x-1,yy,LV[2],.8);blend(x+1,yy,LV[2],.8)}else{blend(x,yy-1,LV[2],.8);blend(x,yy+1,LV[2],.8)}}}
+  for(let x=x0+8;x<x1;x+=18)light(x,Y(x),16,7,LV[2],.05+.01*Math.sin(T*2+x))})}
+// lingotières de basalte empilées, certaines pleines de fer figé
+function moulds(x,y,n,seed,stack){stack=stack||1;shadow(x+n*2.5,y+1,n*3+2,2);for(let s=0;s<stack;s++){const yy=y-s*4,xx=x+s;
+ rect(xx,yy-4,n*5+1,4,FS[3]);rect(xx,yy-4,n*5+1,1,FS[5]);rect(xx,yy-1,n*5+1,1,FS[1]);
+ if(s===stack-1)for(let i=0;i<n;i++){const fill=hs(seed+i)>.4;rect(xx+1+i*5,yy-3,4,2,fill?FE[1]:SOOT);if(fill){px(xx+1+i*5,yy-3,FE[3]);if(hs(seed+i*3)>.6)px(xx+3+i*5,yy-2,RS[2])}}}}
+function ironBars(x,y,n,seed){for(let i=0;i<n;i++){const ox=(i%3)*5-5,oy=-Math.floor(i/3)*2;rect(x+ox,y+oy-2,4,2,FE[2]);rect(x+ox,y+oy-2,4,1,FE[3]);px(x+ox+3,y+oy-1,FE[0]);if(hs(seed+i)>.5)px(x+ox+1,y+oy-1,RS[2])}}
+function tongs(x,y){line(x-5,y-1,x+4,y-3,I[3]);line(x-5,y-3,x+4,y-1,I[2]);px(x+4,y-3,FE[3]);px(x+4,y-1,FE[3])}
+function hammer(x,y){rect(x,y-1,7,1,WD[2]);rect(x+6,y-3,3,4,I[3]);px(x+6,y-3,FE[3])}
+function fAnvil(x,y){shadow(x+1,y+1,6,2);rect(x-2,y-5,4,5,FS[2]);rect(x-5,y-8,10,3,I[3]);rect(x-5,y-8,10,1,FE[3]);rect(x+5,y-7,3,1,I[2])}
+// poutre de fer sous la voûte, le long de la paroi nord
+function beam(x0,x1){for(let x=x0;x<x1;x++){const t=wallTop(x)-2;px(x,t,I[3]);px(x,t+1,I[2]);px(x,t+2,I[1]);if(x%8===0)px(x,t+1,FE[4])}}
+// chaîne de palan qui pend de la poutre : crochet, creuset ou rien
+function hoist(x,len,seed,end){const t=wallTop(x)-1,sw=Math.sin(T*.8+seed)*1.4;for(let j=0;j<len;j++)px(x+Math.round(sw*j/len),t+j,j%2?I[2]:I[4]);
+ const cx=Math.round(x+sw),cy=t+len;
+ if(end==='hook'){px(cx,cy,I[3]);px(cx,cy+1,I[3]);px(cx+1,cy+2,I[3]);px(cx+2,cy+1,I[3]);px(cx-1,cy+2,I[2])}
+ else if(end==='pot'){line(cx-4,cy+2,cx,cy,I[3]);line(cx+4,cy+2,cx,cy,I[3]);ell(cx,cy+5,4,3.2,0,(xx,yy,dx,dy)=>dy<-.4?null:dx<-.3?FS[4]:FS[2]);ell(cx,cy+3,3.4,1,SOOT);px(cx+3,cy+7,RS[2])}
+ else rect(cx-1,cy,3,2,I[3])}
+
+/* ---------- pièces : le départ des fondeurs ---------- */
+// tas de scories : des blocs vitreux entassés, du haut vers le bas pour que les blocs du pied passent devant
+function slag(x,y,r,seed,warm){shadow(x+1,y+1,r+2,r*.35);const n=Math.round(r*1.8);
+ for(let k=n-1;k>=0;k--){const u=k/n,ox=(hs(seed+k*1.7)-.5)*r*1.8*(1-u*.6),oy=-u*r*.95-hs(seed+k*2.9)*1.2,rr=1.3+hs(seed+k*3.3)*r*.26;
+  ell(x+ox,y+oy-rr*.6,rr,rr*.8,0,(xx,yy,dx,dy)=>{const g=hs(xx*1.9+yy*2.7+seed);return g>.9?SOOT:dx+dy<-.7?SC[3]:dx+dy<.2?SC[2]:SC[1]});
+  if(hs(seed+k*4.1)>.6)px(x+ox-rr*.4,y+oy-rr*1.1,FE[3])}
+ for(let k=0;k<3;k++)px(x-r*.7+hs(seed+k*5.2)*r*1.4,y-1-hs(seed+k*1.1)*2,RS[2]);
+ if(warm)post.push(()=>{for(let k=0;k<3;k++){const p=.5+.5*Math.sin(T*2+k*2+seed);blend(x-r*.5+hs(seed+k*4.4)*r,y-r*.3-hs(seed*2+k)*r*.35,p>.5?LV[3]:LV[2],.5+.5*p)}light(x,y-r*.4,r+6,r*.6,LV[1],.04)})}
+// coulure de rouille sous un crampon planté dans la paroi
+function rustRun(x,seed){const t=wallTop(x)+2,f=ft(x);rect(x-1,t-1,3,2,I[3]);px(x,t-1,FE[3]);
+ for(let y=t+1;y<f;y++){const w=y<t+4?3:y<t+8?2:1,o=y<t+4?-1:0;for(let i=0;i<w;i++)blend(x+o+i,y,(y+seed)%4?RS[1]:RS[2],.8)}gell(x,f+2,3.5,1.2,RS[1],.6)}
+function scrap(x,y,seed){shadow(x+1,y+1,9,2.2);for(let k=0;k<5;k++){const a=(hs(seed+k)-.5)*1.4,len=4+hs(seed+k*2)*6,ox=(hs(seed+k*3)-.5)*11,oy=-2-k*.7;
+  line(x+ox-Math.cos(a)*len/2,y+oy-Math.sin(a)*len/2,x+ox+Math.cos(a)*len/2,y+oy+Math.sin(a)*len/2,k%2?RS[2]:FE[1])}
+ ell(x+2,y-4,2.6,2.6,0,(xx,yy,dx,dy)=>dx*dx+dy*dy>.35?RS[1]:null);px(x+2,y-4,FE[2]);for(let k=0;k<6;k++){const a=k/6*TAU;px(x+2+Math.cos(a)*3.4,y-4+Math.sin(a)*3.4,RS[2])}}
+
+/* ---------- pièces : la lave revenue ---------- */
+// fissure de lave dans la paroi : lit noir de 3 px, cœur de 2 px qui rougeoie, s'élargit vers le pied, deux branches
+function crackW(x,seed){const t=wallTop(x)+1,f=ft(x),pts=[],core=[];let cx=x;
+ const seg=(x0,y0,y1,dir,w0)=>{let c=x0;for(let y=y0;y<y1;y++){c+=(hs(seed+y*1.3+dir*7)-.5)*2+dir*.35;const X=Math.round(c),w=w0+((y-y0)/(y1-y0)>.6?1:0);
+  for(let i=-1;i<=w;i++)blend(X+i,y,i<0||i===w?FS[0]:0x0a0607,1);for(let i=0;i<w;i++)core.push([X+i,y])}return c};
+ seg(x,t,f,0,2);seg(x,t+Math.round((f-t)*.35),t+Math.round((f-t)*.6),1,1);seg(x,t+Math.round((f-t)*.55),t+Math.round((f-t)*.8),-1,1);
+ post.push(()=>{const p=.55+.45*Math.sin(T*1.7+seed);for(const[a,b]of core)blend(a,b,hs(a*.7+b+seed)>.55?LV[4]:LV[3],.5+.5*p);light(x,(t+f)/2,9,10,LV[2],.05*p);embers(x,t+2,3,6,12,seed)})}
+function crackF(x0,x1,y,seed){const pts=[];let cy=y;for(let x=x0;x<x1;x++){cy+=(hs(seed+x*1.3)-.5)*1.4;const Y=Math.round(cy);pts.push([x,Y]);blend(x,Y,0x0a0607,1);blend(x,Y+1,FS[0],.8)}
+ post.push(()=>{const p=.55+.45*Math.sin(T*1.5+seed);for(const[a,b]of pts)if(hs(a*.3+seed)>.25)blend(a,b,hs(a+seed)>.6?LV[3]:LV[2],.45+.5*p);light((x0+x1)/2,y,(x1-x0)*.6,6,LV[2],.04*p)})}
+// vieille coulée refroidie, plate au sol (décalque), croûte cordée
+function coolFlow(x,y,rx,ry,seed){for(let k=0;k<4;k++){const ox=(k-1.5)*rx*.5,oy=(hs(seed+k)-.5)*ry*.6;gell(x+ox,y+oy,rx*.45,ry*.7,FS[1],.95)}
+ for(let k=0;k<6;k++)gring(x+(hs(seed+k*2.1)-.5)*rx*1.4,y+(hs(seed+k*1.3)-.5)*ry*.6,2.5,1.2,FS[3],.7);
+ for(let k=0;k<5;k++)blend(x+(hs(seed+k*3.7)-.5)*rx*1.4,y+(hs(seed+k*1.9)-.5)*ry,LV[1],.8)}
+
+/* ---------- pièces : lumière ---------- */
+// lanterne de fondeur à grille, fixe sur sa potence
+function cageLamp(x,lit,seed){const y=wallTop(x)+3;line(x,y,x+5,y,I[3]);px(x,y+1,I[2]);px(x,y-1,I[2]);
+ const cx=x+5,cy=y+1;rect(cx-2,cy,5,1,I[3]);for(let j=1;j<6;j++){px(cx-2,cy+j,I[2]);px(cx+2,cy+j,I[1]);px(cx-1,cy+j,lit?FR[1]:SOOT);px(cx,cy+j,j%2?I[2]:(lit?FR[2]:SOOT));px(cx+1,cy+j,lit?FR[1]:SOOT)}rect(cx-2,cy+6,5,1,I[3]);px(cx,cy+7,I[2]);
+ if(lit)post.push(()=>{blend(cx,cy+3-(Math.sin(T*7+seed)>.5?1:0),FR[3],1);blend(cx,cy+4,FR[2],1);light(cx,cy+4,26,16,FR[2],.08+.015*Math.sin(T*7+seed))})}
+
+/* ---------- pièces : salles ---------- */
+function steam(x0,x1,y,seed){post.push(()=>{for(let k=0;k<9;k++){const u=(T*.25+k/9)%1,xx=x0+hs(seed+k*2.7)*(x1-x0)+Math.sin(T*.6+k)*4;gell(xx,y-u*18,3+u*5,1.5+u*2.4,0xc8ccd0,(1-u)*u*1.1)}})}
+function blades(x,y,n,seed){for(let i=0;i<n;i++){const bx=x+i*4,h=6+hs(seed+i)*5;rect(bx,y-h,1,h,i%2?FE[2]:FE[3]);px(bx+1,y-h+1,FE[1]);px(bx,y-h,FE[4])}}
+function spirit(x,y,free,seed){const b=Math.round(Math.sin(T*1.3+seed));ell(x,y-9+b,2.6,3.4,0,(xx,yy,dx)=>dx<-.2?(free?0xc8ccff:0x6a6c88):(free?AE:0x4a4c66));px(x-1,y-10+b,free?0xffffff:0x8a8ca8);
+ for(let j=0;j<4;j++)blend(x+Math.sin(T*2+j+seed)*.8,y-5+b+j,free?AE:0x4a4c66,.7-j*.15);if(free)post.push(()=>light(x,y-9,12,9,AE,.06))}
+function chainTo(x0,y0,x1,y1){const n=Math.max(Math.abs(x1-x0),Math.abs(y1-y0))|0;for(let i=0;i<=n;i+=2)px(x0+(x1-x0)*i/n,y0+(y1-y0)*i/n+Math.sin(i/n*Math.PI)*2,(i/2)%2?I[2]:I[4])}
+
+/* ---------- pièces : arènes ---------- */
+function bigAnvil(x,y,hot){shadow(x+1,y+2,14,3.5);rect(x-8,y-7,16,7,FS[3]);rect(x-8,y-7,16,1,FS[5]);rect(x+5,y-6,3,6,FS[1]);
+ rect(x-3,y-12,6,5,I[2]);rect(x-3,y-12,2,5,I[3]);poly([[x-10,y-17],[x+8,y-17],[x+8,y-13],[x-6,y-13]],I[3]);rect(x-10,y-17,18,1,FE[3]);poly([[x+8,y-17],[x+15,y-16],[x+8,y-14]],I[2]);
+ if(hot)post.push(()=>{const p=.5+.5*Math.sin(T*2.2);for(let i=-8;i<8;i++)blend(x+i,y-16,p>.5?LV[3]:LV[2],.35+.55*p);light(x,y-15,22,12,LV[2],.03+.05*p)})}
+function anchorRing(x,y,d,seed){gell(x,y,4,1.6,SOOT,.6);ell(x,y-1,3,1.6,0,(xx,yy,dx,dy)=>dx*dx+dy*dy>.35?I[3]:null);px(x-2,y-2,FE[3]);
+ for(let k=0;k<6;k++){const lx=x+d*(4+k*3),ly=y-1+Math.sin(k+seed);ell(lx,ly,1.6,1,0,(xx,yy,dx,dy)=>dx*dx+dy*dy>.3?(k%2?I[2]:I[3]):null)}}
+function blastFurnace(x,seed){const f=ft(x),t=f-28,R=17;soot(x,t+1,14,6);
+ for(let y=t;y<f;y++){const dy=y-t,half=Math.round(dy<9?R-(9-dy)*1.1:R);for(let i=-half;i<=half;i++){const row=Math.floor(dy/3),u=i+R+(row%2)*2;
+  px(x+i,y,(dy%3===2||u%5===4)?FB[0]:hs(row*5.1+Math.floor(u/5)*2.3+seed)>.55?FB[3]:i>R*.6?FB[1]:FB[2])}}
+ for(const yy of[t+9,f-12])for(let i=-R;i<=R;i++)px(x+i,yy,i%6===0?FE[4]:I[3]);
+ arc(x,f-11,f,6,(X,Y)=>px(X,Y,0x2a0c06));rect(x-2,f,5,3,I[2]);rect(x-2,f,5,1,FE[3]);
+ post.push(()=>{const p=.5+.5*Math.sin(T*1.6);for(let k=0;k<10;k++){const pp=.5+.5*Math.sin(T*2.3+k*1.9);blend(x-5+hs(k*3.1)*10,f-2-hs(k*1.7)*7,pp>.5?LV[4]:LV[3],.5+.5*pp)}
+  flames(x,f-2,3,3,5,seed);embers(x,t+2,4,12,14,seed);const u=(T*.8)%1;blend(x,f+3+u*4,LV[3],1-u*.5);light(x,f-5,40,24,LV[2],.08+.02*p)})}
+function steamValve(x,y,open,seed){shadow(x+1,y+1,6,2);rect(x-2,y-10,4,10,I[2]);rect(x-2,y-10,1,10,FE[3]);rect(x-4,y-2,8,2,I[1]);rect(x+2,y-8,4,2,I[3]);px(x+5,y-8,FE[4]);vwheel(x,y-13);
+ if(open)post.push(()=>{for(let k=0;k<9;k++){const u=(T*.8+k/9)%1;gell(x+7+u*5+Math.sin(k*2.1+T)*1.5,y-8-u*16,1+u*3,1+u*2.2,0xd8dcdc,(1-u)*.45)}})}
+function bigCrucible(x,y,tip,seed){shadow(x+1,y+1,12,3);for(const sx of[-10,10]){rect(x+sx-1,y-17,2,17,I[2]);px(x+sx-1,y-17,FE[3])}rect(x-11,y-18,23,1,I[3]);
+ const tl=tip?3:0;poly([[x-7,y-15+tl],[x+7,y-15-tl],[x+5,y-4-tl*.3],[x-5,y-4+tl*.3]],FS[3]);line(x-7,y-15+tl,x+7,y-15-tl,FS[5]);poly([[x+3,y-14-tl*.6],[x+7,y-15-tl],[x+5,y-4],[x+3,y-5]],FS[1]);
+ for(const sx of[-8,8])px(x+sx,y-11,FE[4]);
+ if(tip){coolFlow(x+14,y+1,9,3,seed);line(x+7,y-15-tl,x+11,y-6,FS[1])}
+ else{ell(x,y-15,6,1.3,SOOT);post.push(()=>{const p=.5+.5*Math.sin(T*1.8+seed);for(let i=-4;i<=4;i++)blend(x+i,y-15,p>.5?LV[3]:LV[2],.6+.3*p);light(x,y-16,14,8,LV[2],.04*p)})}}
+function cage(x,len,seed){const t=wallTop(x)-1,sw=Math.sin(T*.7+seed)*1.2;for(let j=0;j<len;j++)px(x+Math.round(sw*j/len),t+j,j%2?I[2]:I[4]);const cx=Math.round(x+sw),cy=t+len;
+ ell(cx,cy+1,5,1.4,I[3]);for(let i=-4;i<=4;i+=2)for(let j=2;j<12;j++)px(cx+i,cy+j,i<0?I[3]:I[2]);rect(cx-5,cy+12,11,1,I[3]);px(cx-1,cy+12,RS[2])}
+function penitent(x,y,seed){shadow(x+1,y+1,7,2);rect(x-5,y-4,10,4,FS[3]);rect(x-5,y-4,10,1,FS[5]);
+ poly([[x-3,y-5],[x-4,y-12],[x-1,y-16],[x+2,y-15],[x+3,y-5]],FE[1]);rect(x-3,y-12,2,7,FE[2]);ell(x-1,y-17,2.4,2.4,FE[2]);px(x-2,y-18,FE[3]);
+ for(let k=0;k<4;k++)px(x-3+k*2,y-9+k%2,RS[2]);for(const d of[-1,1])for(let k=0;k<5;k++)px(x+d*(4+k),y-8+k*1.2,k%2?I[2]:I[3])}
+function looseLinks(x,y,n,seed){for(let k=0;k<n;k++){const lx=x+(hs(seed+k)-.5)*16,ly=y+(hs(seed+k*2)-.5)*6;ell(lx,ly,1.6,1,0,(xx,yy,dx,dy)=>dx*dx+dy*dy>.3?(k%2?RS[2]:I[3]):null)}}
+function billot(x,y){shadow(x+1,y+1,7,2.2);rect(x-5,y-6,10,6,FS[3]);rect(x-5,y-6,10,1,FS[5]);rect(x+3,y-5,2,5,FS[1]);rect(x-6,y-1,12,1,FS[1])}
+function fSeal(x,y,r){gring(x,y,r,r*.5,FS[4],1);gring(x,y,r-2,r*.5-1,FS[0],1);for(let k=0;k<12;k++){const a=k/12*TAU;blend(x+Math.cos(a)*(r-1),y+Math.sin(a)*(r*.5-.5),LV[1],1)}
+ post.push(()=>{const p=.6+.4*Math.sin(T*1.2);for(let k=0;k<12;k++){const a=k/12*TAU;blend(x+Math.cos(a)*(r-1),y+Math.sin(a)*(r*.5-.5),LV[3],.7*p)}light(x,y,r*1.3,r*.7,LV[2],.035*p)})}
+function trophyHammer(x,y){rect(x-1,y-9,2,9,WD[2]);rect(x-4,y-12,8,4,FE[2]);rect(x-4,y-12,8,1,FE[4]);px(x+3,y-9,FE[0]);line(x-1,y-12,x+1,y-9,SOOT)}
+function trophyLink(x,y){ell(x-2,y-7,2.6,3.4,0,(xx,yy,dx,dy)=>dx*dx+dy*dy>.35?FE[3]:null);ell(x+2,y-3,2.6,3.4,0,(xx,yy,dx,dy)=>dx*dx+dy*dy>.35&&!(dx>.5&&dy<0)?I[3]:null);px(x+4,y-1,RS[2]);px(x-4,y-9,RS[2])}
+function trophyHeart(x,y){ell(x,y-5,4,4,0,(xx,yy,dx,dy)=>hs(xx*1.3+yy*2.1)>.8?SC[0]:dx+dy<-.4?SC[3]:SC[2]);post.push(()=>{const p=.5+.5*Math.sin(T*2.5);for(let k=0;k<5;k++)blend(x-2+hs(k*3.1)*4,y-7+hs(k*1.7)*4,LV[3],.5+.5*p);light(x,y-5,10,7,LV[2],.05+.03*p)})}
+
+/* ---------- pièces : repères ---------- */
+function glyph7(x0,y0,q,lit){QG[q].forEach((row,j)=>[...row].forEach((ch,i)=>{if(ch==='#')px(x0+i,y0+j,lit?QC[q]:FS[1])}))}
+// Q1 : dalle de basalte, glyphe marqué au fer rouge ; Q2 : borne-enclume sur son pilier
+function steleF(x,y,q,v,seed){shadow(x+1,y+1,6,2);
+ if(v===1){const h=22;for(let j=0;j<h;j++)for(let i=-5;i<=5;i++){if(j>h-3&&Math.abs(i)>5-(j-h+3)*2)continue;px(x+i,y-1-j,i<-2?FS[5]:i>2?FS[2]:FS[3])}
+  for(let k=0;k<5;k++)px(x-4+hs(seed+k)*8,y-3-hs(seed*2+k)*6,FS[1]);soot(x,y-20,4,4);glyph7(x-3,y-17,q,true)}
+ else{rect(x-3,y-12,6,12,FS[3]);rect(x-3,y-12,2,12,FS[4]);rect(x+2,y-12,1,12,FS[1]);rect(x-5,y-1,10,1,FS[1]);
+  poly([[x-8,y-21],[x+6,y-21],[x+6,y-13],[x-4,y-13]],I[3]);rect(x-8,y-21,14,1,FE[3]);poly([[x+6,y-21],[x+11,y-20],[x+6,y-18]],I[2]);glyph7(x-3,y-20,q,true)}
+ post.push(()=>light(x,y-15,14,10,QC[q],.07+.03*Math.sin(T*1.6+seed)))}
+function archF(x,y,q,v){
+ if(v===1){for(const sx of[-15,15]){for(let j=0;j<34;j++)for(let i=-3;i<=3;i++){const row=Math.floor(j/3),u=i+3+(row%2)*2;px(x+sx+i,y-1-j,(j%3===2||u%4===3)?FB[0]:i<-1?FB[3]:FB[2])}soot(x+sx,y-35,4,6);shadow(x+sx+1,y+1,5,1.6)}
+  rect(x-19,y-34,39,4,I[3]);rect(x-19,y-34,39,1,FE[3]);rect(x-19,y-31,39,1,I[1]);for(let i=-17;i<=17;i+=6)px(x+i,y-32,FE[4]);
+  rect(x-4,y-42,9,8,I[2]);rect(x-4,y-42,9,1,FE[3]);glyph7(x-3,y-41,q,true);brazier(x-23,y+4,true);brazier(x+23,y+4,true)}
+ else{for(const sx of[-14,14]){rect(x+sx-1,y-36,3,36,I[2]);rect(x+sx-1,y-36,1,36,FE[3]);shadow(x+sx+1,y+1,4,1.4)}
+  rect(x-18,y-38,37,3,I[3]);rect(x-18,y-38,37,1,FE[3]);for(let i=-16;i<=16;i+=5)px(x+i,y-37,FE[4]);
+  for(let j=0;j<8;j++)px(x+8,y-35+j,j%2?I[2]:I[4]);ell(x+8,y-23,4,3,0,(xx,yy,dx,dy)=>dy<-.4?null:dx<-.3?FS[4]:FS[2]);
+  for(let j=0;j<4;j++)px(x-6,y-35+j,I[3]);rect(x-10,y-31,9,9,I[2]);rect(x-10,y-31,9,1,FE[3]);glyph7(x-9,y-30,q,true);brazier(x-23,y+4,true);brazier(x+23,y+4,true)}
+ post.push(()=>light(x,y-32,20,12,QC[q],.06+.02*Math.sin(T*1.3)))}
+
+/* ---------- propositions ---------- */
+const DECOR=[
+ {n:"F1",nom:"Halle des fours",mask:gal(61),dark:.7,
+  txt:"Des gueules de four en brique réfractaire sont maçonnées dans la paroi nord, noircies de suie au-dessus de l'arche. Devant, les soufflets de cuir se sont affaissés, et les tuyères d'argile ne soufflent plus rien. Dans un four sur trois, des braises couvent encore.",
+  pour:"Dit tout de suite « forge ». Annonce les fours tyriens du biome, qu'on rallume avec 20 bois, sans se confondre avec eux : ceux du décor sont petits et bouchés au fond.",
+  contre:"Il faut distinguer un four de décor d'un four qu'on peut rallumer : le four rallumable sera plus grand, seul dans sa salle, avec sa grille.",
+  jeu:"Sprites contre la paroi nord. Les braises prennent le mode « pulse » existant.",
+  d(){furnace(26,1,0);furnace(86,2,1);furnace(146,3,0);bellows(58,ft(58)+14,false,1,1,1.3);bellows(122,fb(122)-6,true,2,-1,1.3);tongs(104,fb(104)-7);brub(40,fb(40)-6,7,4);brub(160,ft(160)+16,3,3)}},
+ {n:"F2",nom:"Rigoles de coulée",mask:gal(67),dark:.66,
+  txt:"Le dallage est creusé de rigoles qui menaient la fonte des fours aux lingotières. Le fer y a figé et rouillé. Plus loin, la lave de la montagne a trouvé le chemin : elle coule encore dans la rigole, très lentement.",
+  pour:"Les rigoles guident l'œil le long du couloir et racontent le travail des fondeurs. La lave qui y coule annonce la vraie lave du biome.",
+  contre:"La lave des rigoles ne brûle pas : elle reste étroite et bordée de pierre, pour ne jamais ressembler aux cases de lave infranchissables (20 dégâts par seconde).",
+  jeu:"Décalques au sol. La rigole chaude demande le mode nouveau « coulée » (la couleur glisse le long de la rigole).",
+  d(){rigole(4,92,ft(4)+19,false,1);rigole(92,172,ft(92)+19,true,2);moulds(28,fb(28)-5,5,3,1);crackF(112,156,fb(112)-11,4);brub(70,fb(70)-6,5,4);slag(150,fb(150)-4,6,7,false)}},
+ {n:"F3",nom:"Lingotières et outils",mask:gal(71),dark:.68,
+  txt:"Devant les fours, les lingotières de basalte sont restées empilées. Certaines sont encore pleines de fer coulé il y a des siècles, piqué de rouille, d'autres sont vides ou fendues. Des pinces et des marteaux traînent à côté.",
+  pour:"Montre le fer, la ressource du biome, sans un mot. Les lingots figés donnent envie de les prendre : c'est la variante.",
+  contre:"Les lingots figés ne doivent pas ressembler aux lingots de fer à ramasser : ils restent dans le moule, gris et rouillés, jamais posés seuls.",
+  jeu:"Décor pur. Variante : une pile se brise pour 2 à 4 fer, une fois.",
+  d(){moulds(14,ft(14)+14,5,1,3);moulds(66,fb(66)-5,4,2,1);moulds(124,ft(124)+13,6,3,2);tongs(60,ft(60)+17);hammer(100,fb(100)-6);ironBars(152,fb(152)-5,5,4);brub(108,ft(108)+15,5,3);rustRun(48,2)}},
+ {n:"F4",nom:"Palans et chaînes",mask:gal(73),dark:.66,
+  txt:"Des poutres de fer courent sous la voûte. Les fondeurs y accrochaient des palans pour porter les creusets : les chaînes pendent encore avec leurs crochets, et un creuset est resté suspendu à mi-hauteur.",
+  pour:"Occupe le haut de l'écran sans gêner le passage. Annonce la Martyre du Fer et ses chaînes.",
+  contre:"Les chaînes doivent rester contre la paroi nord : au milieu du couloir, elles passeraient devant les unités.",
+  jeu:"Les chaînes se balancent avec le mode « swing » existant, à condition d'ancrer le sprite à son crochet en haut, et non au pied du mur comme les fanaux des Salles oubliées.",
+  d(){beam(0,176);hoist(22,10,1,'hook');hoist(58,15,2,'pot');hoist(100,8,3,'hook');hoist(140,13,4,'hook');scrap(82,fb(82)-6,1);brub(30,fb(30)-6,4,4);moulds(150,fb(150)-5,3,6,1)}},
+ {n:"F5",nom:"Scories et rouille",mask:gal(79),dark:.66,
+  txt:"Les tas de scories sont restés là où les fondeurs les ont jetés, contre les parois. La rouille coule des crampons de fer plantés dans le basalte, et la ferraille s'entasse : roues dentées, barres, plaques. Certains tas sont encore tièdes : c'est là que dorment les Scories vives.",
+  pour:"Le biome a l'air abandonné depuis longtemps, mais pas mort. Les tas tièdes annoncent les Scories vives.",
+  contre:"Les tas tièdes ne doivent pas faire croire à un ennemi : leur lueur reste faible et immobile.",
+  jeu:"Décor pur. Les tas tièdes prennent le mode « pulse ».",
+  d(){slag(20,ft(20)+15,8,1,false);slag(150,fb(150)-4,9,2,true);slag(98,ft(98)+13,6,3,true);rustRun(40,1);rustRun(72,2);rustRun(124,3);scrap(60,fb(60)-6,4);scrap(126,ft(126)+17,5);brub(86,fb(86)-6,6,4)}},
+ {n:"F6",nom:"Fissures de lave",mask:gal(83),dark:.64,
+  txt:"Sans fondeurs pour canaliser la chaleur, la lave a rouvert le basalte. Des fissures rougeoient dans les parois et dans le sol, des braises en montent, et une ancienne coulée refroidie a noyé le bas du couloir.",
+  pour:"Le plus chaud des six : la lave est partout, mais toujours enfermée dans la roche. Prépare aux coulées du biome.",
+  contre:"La coulée refroidie du décor ne doit pas être confondue avec le basalte frais qu'une coulée laisse et qu'il faut recreuser : elle reste plate, au sol, sans relief.",
+  jeu:"Décalques et sprites. La lueur des fissures prend le mode « pulse », les braises qui montent demandent le mode nouveau « braises ».",
+  d(){crackW(30,1);crackW(88,2);crackW(146,3);crackF(48,100,ft(48)+24,4);crackF(112,150,fb(112)-11,5);coolFlow(132,fb(132)-8,14,4,6);brub(66,fb(66)-6,7,4);slag(16,fb(16)-4,5,8,true)}}
+];
+const LIGHTS=[
+ {n:"L1",nom:"Braises des fours",mask:gal(89),dark:.42,h:112,
+  txt:"Pas de torches : les fours de la paroi nord gardent leurs braises, un sur deux. La lumière est basse, rouge, et vient du pied du mur.",
+  pour:"Le plus cohérent avec l'abandon : personne n'entretient rien, la chaleur de la montagne suffit. Aucune pièce nouvelle : ce sont les fours de F1.",
+  contre:"Lumière plus faible que les torches du Temple : il faut vérifier que les ennemis et leurs tirs restent lisibles.",
+  jeu:"Un four toutes les 6 cases à la place des torches, un sur deux en braises (mode « pulse »), halo doux rouge.",
+  d(){furnace(20,1,1);furnace(64,2,0);furnace(108,3,1);furnace(152,4,1);brub(40,fb(40)-6,2,3);slag(130,fb(130)-4,6,5,false)}},
+ {n:"L2",nom:"Lanternes de fondeur",mask:gal(97),dark:.42,h:112,
+  txt:"Des lanternes de fer à grille, sur des potences scellées dans la paroi. Elles ne se balancent pas : les fondeurs les voulaient stables au-dessus des coulées.",
+  pour:"Le plus proche des torches T2 du Temple : même place, même rythme. Fixes, elles passent en jeu avec les flammes existantes, sans code nouveau.",
+  contre:"Des lanternes allumées dans une forge abandonnée posent la même question qu'au biome 2 : qui les remplit ?",
+  jeu:"Comme les torches T2 : une lanterne toutes les 6 cases, une sur deux allumée, flammes du mode existant, halo doux (H1).",
+  d(){for(const[x,on]of[[14,1],[56,0],[98,1],[140,1]])cageLamp(x,on,x);rustRun(36,1);rustRun(118,2);brub(80,fb(80)-6,4,3);moulds(150,fb(150)-5,3,2,1)}},
+ {n:"L3",nom:"Rigole de lave murale",mask:gal(101),dark:.4,h:112,
+  txt:"La lave court dans une rigole taillée au pied de la paroi nord, sur toute la longueur du couloir. Elle éclaire par en dessous.",
+  pour:"Une lumière continue, très lisible, qui suit le couloir. Contraste net avec le Temple et les Salles oubliées.",
+  contre:"Beaucoup de lave à l'écran : la vraie lave, celle qui brûle, devra se distinguer (plus large, bordée de croûte noire).",
+  jeu:"Un décalque continu le long des couloirs, animé par le mode nouveau « coulée ».",
+  d(){rigole(0,176,x=>ft(x)+3,true,1);brub(40,fb(40)-6,6,3);slag(130,fb(130)-4,6,5,false);scrap(90,fb(90)-6,2)}}
+];
+const ROOMS=[
+ {n:"R1",nom:"Salle de trempe",mask:room,dark:.6,
+  txt:"Les fondeurs trempaient le fer dans un grand bassin d'eau noire. L'eau est restée, tiède, couverte de vapeur. Des lames jamais finies dépassent encore de la grille au fond du bassin.",
+  rec:"La Chaleur ne s'applique pas dans la salle, et l'escouade y récupère 2 PV/s, comme à la citerne du Temple.",
+  pour:"Une halte au frais au milieu d'un biome qui brûle. Annonce la Trempe du Grand Crassier : la vapeur qui refroidit.",
+  contre:"L'eau ne doit pas ressembler à celle des Salles oubliées : elle est noire et fumante, sans vert.",
+  jeu:"Eau infranchissable, comme la citerne du Temple. La vapeur demande le mode nouveau « vapeur ».",
+  d(){water(50,54,126,94);blades(66,64,6,1);blades(100,86,5,2);steam(54,122,80,3);rack(144,64);moulds(26,100,3,4,2);furnace(32,5,0);fAnvil(146,100);brub(120,104,6,4)}},
+ {n:"R2",nom:"Salle des soufflets",mask:room,dark:.6,
+  txt:"Deux soufflets géants, hauts comme deux hommes, soufflaient dans un four commun par des tuyères d'argile. Leur cuir a tenu.",
+  rec:"Un adepte posté 10 s aux soufflets rallume le four : +80 Forge, une fois par jour.",
+  pour:"Montre l'échelle de la fonderie tyrienne. Même règle que la pompe des Salles oubliées : un adepte posté agit.",
+  contre:"Proche des fours tyriens qu'on rallume avec du bois : celui-ci ne fond rien, il ne donne que de la Forge.",
+  jeu:"Par simple présence, comme la pompe de la citerne. Le four passe en braises une fois soufflé.",
+  d(){furnace(88,1,2);bellows(54,70,false,1,1,1.6);bellows(122,70,false,2,-1,1.6);for(let k=0;k<2;k++){line(70,64+k,80,30+k,CL[1]);line(106,64+k,96,30+k,CL[1])}
+   moulds(30,104,4,3,1);slag(146,102,7,4,true);tongs(84,98);brub(40,56,5,4)}},
+ {n:"R3",nom:"Forge aux esprits enchaînés",mask:room,dark:.6,
+  txt:"Quatre enclumes en cercle autour d'un foyer éteint. À chacune est enchaîné un esprit d'Aether, pâle et figé. Quelqu'un forgeait ici après le départ des Tyriens.",
+  rec:"Le lieu de la quête « Les chaînes d'Aether » : 3 tirs par chaîne, et les esprits libérés rejoignent la base.",
+  pour:"Donne un lieu à la quête déjà validée, et pose dans le décor la question de la quête : qui forge avec des prisonniers ?",
+  contre:"Les esprits enchaînés ne doivent pas ressembler aux esprits d'Aether alliés : ils restent éteints, sans halo, jusqu'à ce qu'on brise leur chaîne.",
+  jeu:"Les chaînes sont des cibles, comme les gardiens de la porte du boss. Brisée, la chaîne tombe et l'esprit s'allume (le dernier montré libre).",
+  d(){brazier(88,78,false);for(const[x,y,fr]of[[52,62,0],[124,62,0],[52,100,0],[124,100,1]]){fAnvil(x,y);const sx=x+(x<88?-12:12);chainTo(x+(x<88?-5:5),y-6,sx,y-4);spirit(sx,y,fr,x+y)}
+   moulds(78,48,4,2,1);scrap(146,82,3);slag(26,82,6,5,false)}},
+ {n:"R4",nom:"Magasin de la fonderie",mask:room,dark:.6,
+  txt:"Le magasin où les Tyriens rangeaient le fer avant de le remonter. Les râteliers ont rouillé, les lingotières sont empilées jusqu'au plafond, et une caisse de lingots est restée scellée.",
+  rec:"La caisse : 10 lingots de fer, une fois.",
+  pour:"Une récompense utile au biome du fer, sur le modèle de l'atelier de Byrsa des Salles oubliées.",
+  contre:"Ressemble à l'atelier de Byrsa : ici tout est en fer et en basalte, sans cuivre.",
+  jeu:"Comme l'atelier de Byrsa : la caisse s'ouvre quand une unité passe à côté.",
+  d(){beam(16,160);hoist(60,12,1,'pot');hoist(116,9,2,'hook');moulds(24,58,4,1,3);moulds(130,58,4,2,3);ironBars(56,96,8,3);ironBars(120,96,6,4);crate(88,84,false);crate(102,86,true);
+   rack(36,100);scrap(146,100,5);rustRun(92,1)}}
+];
+const ARENAS=[
+ {n:"A1",nom:"La Fonderie scellée",mask:room,dark:.6,
+  txt:"Le gardien du sanctum est enchaîné au centre de sa fonderie, à quatre anneaux scellés dans le sol. Son enclume est posée devant lui sur un billot de basalte. Autour : des lingotières, des chaînes de palan et deux fours qui couvent.",
+  rec:"Arène du Maître-Forgeron enchaîné. L'enclume du décor est celle qui rougit à chaque martèlement ; les quatre anneaux tiennent les chaînes qu'il rompt à chaque tiers de ses PV.",
+  pour:"Le décor explique le combat : on voit l'enclume et les chaînes avant le réveil.",
+  contre:"L'enclume et les anneaux sont des pièces du combat : le reste du décor ne doit pas leur ressembler.",
+  jeu:"L'enclume rougit (mode « pulse ») quand il frappe ; un anneau se brise à chaque tiers.",
+  d(){bigAnvil(88,80,true);anchorRing(48,58,1,1);anchorRing(128,58,-1,2);anchorRing(48,100,1,3);anchorRing(128,100,-1,4);furnace(40,1,1);furnace(136,2,1);beam(56,120);hoist(70,8,1,'hook');hoist(106,11,2,'hook');
+   moulds(22,106,3,1,2);moulds(140,106,3,2,1);slag(150,84,5,3,true)}},
+ {n:"A2",nom:"La Chapelle des chaînes",mask:room,dark:.6,
+  txt:"Les fondeurs priaient dans cette nef avant chaque coulée. Après eux, quelqu'un y a enchaîné des pénitents de fer, à genoux autour de l'aire. Des cages pendent de la voûte.",
+  rec:"Arène de la Martyre du Fer, autour du dôme de 18 unités. Tout le décor est hors du dôme.",
+  pour:"Les chaînes et les pénitents annoncent la Croix de chaînes et la Pénitence sans les imiter.",
+  contre:"Les maillons au sol ne doivent pas ressembler à ceux qu'elle sème et qui brûlent : ceux du décor sont froids et rouillés.",
+  jeu:"Décor pur. Les cages prennent le mode « swing », ancrées par le haut.",
+  d(){for(const[x,y]of[[26,58],[150,58],[26,102],[150,102]])penitent(x,y,x+y);cage(52,10,1);cage(124,13,2);gring(88,74,30,12,RS[1],.35);gring(88,74,22,8,RS[0],.3);
+   looseLinks(60,98,5,1);looseLinks(118,52,4,2);brazier(70,44,true);brazier(106,44,true);crackW(88,5)}},
+ {n:"A3",nom:"Le Haut-Fourneau",mask:room,dark:.6,
+  txt:"Le cœur des Forges : un haut-fourneau maçonné dans la paroi nord, dont la gueule rougeoie encore. Des creusets géants sont restés sur leurs potences, l'un renversé. Trois vannes de vapeur percent le bord de la salle.",
+  rec:"Arène du Grand Crassier. Les trois vannes sont celles de la Trempe (E, 2 s) ; la lave de la phase III part des rigoles du sol, par quarts.",
+  pour:"On reconnaît le but de la quête « Le feu de Tyr ». Les vannes se voient avant le combat, comme les pompes de l'Éclusier.",
+  contre:"Le décor du sol (rigoles, coulée refroidie) doit rester plus sombre que la lave du combat.",
+  jeu:"Les vannes lâchent leur vapeur quand l'Exilé les ouvre (mode « vapeur ») ; la gueule du fourneau bat (« pulse ») et crache des braises (« braises »).",
+  d(){blastFurnace(88,1);rigole(20,72,104,false,3);rigole(104,156,104,true,4);steamValve(24,76,true,1);steamValve(152,76,false,2);steamValve(40,106,false,3);
+   bigCrucible(44,56,false,1);bigCrucible(130,56,true,2);slag(150,100,7,5,true);crackF(64,112,92,6)}},
+ {n:"A4",nom:"Seuil et trophées",mask:room,dark:.6,
+  txt:"Commun aux trois arènes. À l'entrée, une arche de fer sur deux piliers-cheminées de brique. Au fond, un billot de basalte attend. Quand le boss tombe, le cercle s'allume en fonte et son trophée y reste : le marteau fendu du Maître-Forgeron, le maillon rompu de la Martyre, le cœur de scorie du Crassier.",
+  rec:"Entrée et fond des trois arènes. Les trois trophées sont montrés côte à côte ; en jeu, un seul par arène.",
+  pour:"La salle garde la trace de la victoire, comme au Temple et aux Salles oubliées, et le trophée rappelle le butin du boss.",
+  contre:"L'arche doit rester dans l'axe d'entrée sans rétrécir le passage.",
+  jeu:"Même état « vaincu » que les autres arènes : il allume le cercle (mode « pulse ») et pose le trophée.",
+  d(){fSeal(88,62,30);for(const[x,f]of[[64,trophyHammer],[88,trophyLink],[112,trophyHeart]]){billot(x,64);f(x,58)}for(const[x,y]of[[34,48],[142,48]])brazier(x,y,1);
+   archF(88,112,"R",1)}}
+];
+const MARKS=[
+ {n:"Q1",nom:"Stèle marquée au fer",mask:room,dark:.62,
+  txt:"Une dalle de basalte dressée, où le glyphe du quartier a été marqué au fer rouge. Il rougit à la couleur du quartier au passage d'un allié, et les braseros de l'arche reprennent. L'arche est faite de deux cheminées de brique et d'un linteau de fer.",
+  pour:"Même lecture qu'au Temple et aux Salles oubliées : le joueur reconnaît le repère tout de suite, dans les matières du biome.",
+  contre:"La stèle reste sobre : la différence tient au basalte et à la brique.",
+  jeu:"Même règle qu'au Temple : éteints, puis allumés pour de bon au passage d'un allié à 20 unités ; carton au premier passage.",
+  d(){archF(88,60,"A",1);steleF(40,56,"A",1,1);steleF(126,56,"B",1,2);steleF(146,56,"C",1,3);crackF(48,80,98,4);brub(120,98,4,4)}},
+ {n:"Q2",nom:"Borne-enclume et portique",mask:room,dark:.62,
+  txt:"Les fondeurs marquaient leurs halles d'une enclume posée sur un pilier, frappée du glyphe du quartier. À l'entrée, un portique de palan : deux montants de fer, une poutre, un creuset pendu et une plaque au glyphe.",
+  pour:"Raconte la fonderie jusque dans les repères. Le fer se lit bien sur le basalte.",
+  contre:"L'enclume-borne ressemble à l'enclume du Maître-Forgeron : elle devra rester petite et sur son pilier.",
+  jeu:"Même règle qu'au Temple ; seuls les dessins changent.",
+  d(){archF(88,60,"A",2);steleF(40,56,"A",2,1);steleF(126,56,"B",2,2);steleF(146,56,"C",2,3);moulds(52,100,3,4,1);slag(120,100,5,5,false)}}
+];
+
+/* ---------- page ---------- */
+const views=[];
+function build(list,host,rows){for(const m of list){const s=document.createElement('section');s.className='m';
+ const dl=rows.map(([k,l])=>`<dt>${l}</dt><dd>${m[k]}</dd>`).join('');
+ s.innerHTML=`<div class="txt"><h2><i>${m.n}</i>${m.nom}</h2><p>${m.txt}</p><dl>${dl}</dl></div><figure></figure>`;
+ const c=document.createElement('canvas'),w=176,h=m.h||(list===DECOR?112:128);c.width=w;c.height=h;c.setAttribute('role','img');c.setAttribute('aria-label',m.nom+' : '+m.txt);
+ s.querySelector('figure').appendChild(c);const cap=document.createElement('figcaption');cap.textContent=m.n+' · '+w+' × '+h+' px du monde';s.querySelector('figure').appendChild(cap);
+ host.appendChild(s);const ctx=c.getContext('2d');views.push({m,w,h,ctx,id:ctx.createImageData(w,h),buf:new Int32Array(w*h),bg:null})}}
+build(DECOR,document.getElementById('listD'),[['pour','Pour'],['contre','Contre'],['jeu','En jeu']]);
+build(ROOMS,document.getElementById('listS'),[['rec','Récompense'],['pour','Pour'],['contre','Contre'],['jeu','En jeu']]);
+
+let FL=null,RK=null;
+const tile=(t,x,y)=>{const i=(((y%t.h)+t.h)%t.h*t.w+((x%t.w)+t.w)%t.w)*4;return t.d[i]<<16|t.d[i+1]<<8|t.d[i+2]};
+function makeBg(v,k){const {w,h}=v,mask=v.m.mask,dk=v.m.dark,d=new Uint8ClampedArray(w*h*4);
+ for(let y=0;y<h;y++)for(let x=0;x<w;x++){let c;
+  if(mask(x,y)){c=tile(FL,x+k*37,y+k*53);for(let j=1;j<=5;j++)if(!mask(x,y-j)){c=mix(c,0x05060a,(6-j)*.085);break}}
+  else{let dist=0;for(let j=1;j<=FACE;j++)if(mask(x,y+j)){dist=j;break}
+   if(dist){const top=FACE-dist,row=Math.floor(top/6);c=mix(FS[2],FS[0],top/FACE*.85);
+    if(top<2)c=top===0?FS[4]:FS[3];else if(top%6===1||(x+row*5)%10===0)c=mix(c,INK,.45);
+    else if(hs(x*.37+row*3.1+Math.floor(x/10)*7)>.82)c=mix(c,FS[3],.35);
+    if(dist<4&&hs(x*1.7+k)>.7)c=mix(c,INK,.5)}
+   else{c=mix(tile(RK,x+k*29,y+k*17),0x07080c,.25);if(mask(x,y-1))c=FS[3];else if(mask(x,y-2))c=mix(c,FS[2],.5)}}
+  const i=(y*w+x)*4;d[i]=(c>>16&255)*dk;d[i+1]=(c>>8&255)*dk;d[i+2]=(c&255)*dk;d[i+3]=255}
+ v.bg=d}
+function draw(v,t){W=v.w;H=v.h;T=t;buf=v.buf;M=v.m.mask;img=v.id.data;img.set(v.bg);buf.fill(-1);post.length=0;DK=v.m.dark;v.m.d();compose();DK=1;for(const f of post)f();v.ctx.putImageData(v.id,0,0)}
+function frame(t){for(const v of views)draw(v,t)}
+let time=2.2,last=0,paused=matchMedia('(prefers-reduced-motion:reduce)').matches,acc=0;
+function loop(now){const dt=Math.min(.1,(now-last)/1000||0);last=now;if(!paused){time+=dt;acc+=dt;if(acc>=1/20){acc=0;frame(time)}}requestAnimationFrame(loop)}
+function load(src){return new Promise(r=>{const im=new Image();im.onload=()=>{const c=document.createElement('canvas');c.width=im.width;c.height=im.height;const x=c.getContext('2d');x.drawImage(im,0,0);
+ r({w:im.width,h:im.height,d:x.getImageData(0,0,im.width,im.height).data})};im.src=src})}
+Promise.all([load("data:image/png;base64,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"),load("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAQAAAADACAIAAABkjyoxAAA6pElEQVR42rV9TYhlR5Ze5MvM9+pVKkupVJakoQTZ0+UhDYN6oc1A44Ux7pVpCwzaJAy1yDZjzJgGz8bTi170xrOxoRlvbForY628kccGg0G0wY0YLTQwtZFMI5C7GVlSTUv1k5WVpcrOWUQq6uT5+eI7cV8lxSXr5X33xo2Ie+LEd77znbWXX7xeSimlLK8sTh6dLq8sSilby+XxyUk9lm9+6l9PHp2WUk5OT5eLRT22E9oV7LGIH/ecp3+9fE185b0Xdu58+ZV7TvF+1BNFf1LX2Vou6+e2N8Bz2fYfHWy//clj1ZPRj+wHt0/UKOCxsCPY/emOo50nUc+nZoJsoduT0XcP9+fvfL7e5oP7LLbNs/qpPMoz2tirq9S+dntcXU3Noe4b4s5+e/3D/Xmd/epe5Oyv7WnH9qf6ie0N+S3ZKrd/bD/U1r710X07G8LjQv/u9MmCHYvD/bm6vppPTJ+D2S/7DVyNtGugZ+S7IS1LKaXOfvcZ3dlf27z28ovX7bzBK4Bsx9HBdh1X/Dw//unPSil/+kd/CM4BNoA8Ru8YsHO1F9xlofvdyM7JD6vVlx9mn7cM/chnr6ZRrm/4Xoztrz/qymT/jB3tc7UXu62ruB/cn5l9Y6gV4Mri6GB774Wdtz95rKwFP7rI/nFHfw2Bc0g+Ue0+fjbb1SPq69Y/b310vzv76+f1n33G9rk7utG3pO2v80Oub/hb7uhkZz/oH97qg7+2BrR1lZ/9sm2XVgDGh6vH+noM2yrSQlu7nrIluBesXRy2heoca/WlH48tQtQP0R4JrLTRnmfAI4+8bWaNZfYe2dVA7qbA3om5/izy86y/W4/V34o8xSmzX/nlys+2niuwEK7NkFeudlFODvdqeL9u2yN9/cinj67v9oDdk2Bfv31+uD+PdvxRnzAreb3y2588lrMfrLGMH9JdE+zvyOfpzX71ibMCZFEUiw5hTAP0i917pOx0dw9Qryy9gpTtB+PUrkm+M9G8VP6nRFf4VZ50zbtYn+qHCMUCGEuEHI6thyRmCD63d1m/vrur7rq5seE6fF9sPv/lvftby+XXT57I4+bGRv3ukydn7nfda+LZv7Vcvnlj9sXm8+99+mC+uSnv1a62ubHx5MmZvU5rTzT73/l8vV7TPV9eszvva0te2dt979MH0k9rLZTXVEd39pdS5pub8qh6WH7XHS8w+9XY1evX3ra9ofrBzn51jh1BOzfavKxtBn0OZlEd92hegfnmjuyaGwews1+azK6HajFsjFWrOfrK3u7/v/MbgNmT3r9F+uqV3ev8/HvXSil/8BdfYBxatdzOtin7otQKAPyT7r1w39oPJdbHrEKy5WBudJ9FIpvA1wD2vrsCzLr7/a3lsvap9U3tDHMwaYNVR3dso95mP4m3dPEEOfsj35qJZqi90NZyaW0t3ofgYwVkI3wdIF31kzZS3R/gHblte+uj+wxqZGd/NDcA2lNXm/osxycn4egsUOyoG9nw9wDqPVOrXmQ/BrBqEqHvxiJUm5sVt7Nk74UdGc/C1+xiSkcH223qd5GWVcUrrE217eExmVQsdgBnI1dC62VtLZcYX5oeG5GtmkXWBc/+EKO4gmw8sBn2aGc/iDF3MSI1+yOMi8GUavQjuhpYo6J2unFl2xsR9i/fRox5Oys2h8CQyD1eCUFvV/Ss9qobzbWzP4pnd7Em1QYfBYp8PjJKwOCGPHJK2kjGNowh3xJbVF5p15924xgriTdLNtRYvAJzb1LndNcWbPWzYzHlp7MHqH2qfD47e4AFZTxgF/nGcwgj5SSzhfF3Iw8bzH7bEhzHsOMRRZpBTMCyoQBvB1hfjLjjc9wZQvoFKGZCrDnMiDMrnl4BJL8ytQJ07Y1rP+T5NYr5kx/+gPGPI897YNfRtVsysgv2fNmfKdxVifbwtp8flyz/KsX/Ab5+an+ysj2A9MMiNqlrg0mvq+sNW/uH/cvI7jI2nrEWsp1tjY7WLtUSu5oBLAusq9GVa4j3nc/Xu/Fg25/AGwbxaWybs3Ou7lgiX9+d/SSLrLuqu89+EQfAQO+z2wNkfVZlJwAepWKNWbsYrYckVhOtjcOWtfL23j1+TsYx+GuOxU8m8jfVlRVFagoXOBv3BTuWtR9999vuLgTPfhL7mzjq4JqNB0tG8qMYU/Rj+V7DHksU1Yr6R7Kt3j1+7v7xyfbW8v7xicTvu+1nWIb8GPGeG4Onj+3Uu7y6sTnmo0DYh2byBJ4R77/OywIZ/GP7B3kFd/YzuOHwG5Vt8xiGNnF9GPiuytLKzgr7rYncT9s/a9+68SqPW43FVrqoZZf7WkppUPfEPajMb3S/G+VGkjimyiBr7CNwTfJNsK219+rGEKe/M3xXR+/8lPeN37WTniq7AmT3AAz2gt9jF3sB+wHGHwBekI2njnnGEVwzPXciGxWR2FqUizdlbwBmgh07HFtY7Q/IXbEnz/ic2m4cAGA+EWLj5rzWSCfOtCR3pS7PzMVY6pjJeGoXQ8Cz/3B//srebt2ldGPkDILRruPG0VNzAiMn7gjiiIq8i4yUp3psIL7bZWE1Mxdd4cIFUvZgAEfvZj9G32JGrvsmpPIBouOA9xwd7QWnPC/Ygw5zZsd2C9lMse7ceHa2n+RHre9cu1Yu86cbz14e2zluPkCJeeRq/tlvuVx5dR3A0Zd3Vy0BLKbGg3dnv5t7ILn+lvffPj862P748bzx5CTPXj0vGD/1vGp0rEfXelVerZ15uD//8HhNtdMy5m2/qacD/XDr5tWPH88/uHNq54M8346jzG0A+RLROdEs3dnero0pcc7AxQuwmC/UGfLtbC1u59SLymP9aztfHsF3wb2A/WjnyLvUf+1e6vw23u3ucvbbp9jc2Lj34Li1WV1T/a7OqeGU83Iun9e9DrD9bj+0tsnnqu2sd6m/qzPrnLh996y1wfaVOj96OjVe8u36+PH8F7++d17O8dXUqA3sDVTPuDOttgesiuqpn6JAKSyZZBQD32OMo8tjwNhzS8UxeHzJxWFSmH0WJwHtr2/jqiJx7k43Sj0bRrpS/ttYfEadf+ECgRa4K4hrxe17KW0/ng3Wctj1pB1d2+CeY61d/dy1l65Fsd+1FqU7+yMvRXpHUT+4fXv/+GH1KNz237p59Ve/vfqLX9+zTxH1beRbuivA4f68Xr+tde4qF63b+B12PSg3X1c+NT9X1fkzFyPHPBywP450vCLshcdAeBwA80kBOlF6ehMux6aiPRZfcnO7MJsVqDMUN/POO6fCWYpnNqbAY3lENSbTrs+wTbvs4C4vi+e38lzap2zQyAXi99EkZjyGV/jnx3nGYxHyAQ6pjPWAaFSK48lEV0B2Nc+tH3je+qT/4x9sFpE5PYW7P+BnDufTlTivehZ9weLi3bUCv+Wuwiaw/Yh3Hmhi8vg3GffAumKH+/N3j5+Ts9mNMzA8VlJHrcRKoEp7tNAqeqWXp1H5p1JGaYXaflmUs7vr49+3SyuARXOBlUph5yC3n19VgBXMag1E0eisZ8XLYmZ31dndfw02p/aL4O7/9j/+51LKP/rv/7qU8p/+7yPFPx2LwzBtm85oGstLmam5ot51a58i5VDXNjQBNhxN7Gih2dYvfG1kJqso2hukrJQVlgO8o4nKeaCdTT2hcLla2Sd95/N1oKOBo7bMKqHi9Hg9ZK6MdfuKp3F4wQVy8/1SKwBQbxywAQM1BMaiht3fo9k/jOHyPBwQGx7jq3bXAZn9Q/riWRyZt/1TYtLd9aplk679/t/7PaBCkcK2I51AcqXj4wMM9s/8ntVUBFvYMW79wPuj0PesXxG9A13DZ8ed4ZwyqMCwDzkWx1D2i1KHlrzCn/zwByDDQ8ZfVqi3zGAX/OdT2J1lQt5q931jqiisJGaU9b4GrFV23/gsuEn2yrYBM16rOUL0VZ6/WzEAYzLkHqDAKiMlr3M/hlF0UZQuDkNGr7uxCP78rF5TNl854gu7Wk/uWI/ZJp7HGsllI21QvOqpywGvdBgDVvmBbpmTiesAWFuHcY/sWE5co5i8BeX7DvTGmOYcH/0Ye0beb3S9kuWVxcULMDb73YynLvu3W2tNfp59o1aV2zHFTx3GCsHcneIrF1EJKuuRMloEKdQEcNGzvj7piblape33WQn42XZG1t/Vsc3+C4T+myNYi+08/pM/+/Mf//RnVt8hyqZrWNAYThz5JHhuqWXHfV4UwSXOUVeW54Oohdvnatt3fHLSYpouU9C2NmpzG/2obeqTevc2l9TRryQQzCXbY64mSPtrVU6oK170LIgNin+k4R/m6NWjlMQiYy7Ylk+066TI+Mrzzbs+DN5NWpuXKmJXVlE9SfmuTb/I9ZwxT3Msksh4JSEXKIXlSf+k64cM+xLduHek/7Mqli8zX/l6yQzHKbtfwlUdBnqg3behUkzsxSoYtJzgKSwyJr9czv43XjqLstLcfp51uRaRz4D5hqSmJ+bAuBiFrzrfY7mUWNlOjZ/UPS+cIj5ZL7mPSi0QMoMVUW3l42p9mevYiLXT/73ZXzHAdz5fr1xRjAt1Ubhufrm95uH+fHvromIDU4P5AgWyLlC2fndljzT0usskI3NEspynVJVs9+6850PafvzdLDOii6h0V/8Um6u7RrXfmdphZAxhTCupshJlXRXmuWr7ZwNcFIZhX7ja4ph/lqrQCLQSsB5E/akKDjw3jqnZaDmVU2q1Rxi8rX6JkbcoSwEzQdy6LEcH202/A8wTi0d1VwOAo8hxbEqpavZHz2XXbV8VYixek40mMnwHd80Z85Wj+0Y8KLAbw747qEmcrRuZ0uSqs7+LKvLrW/QjTb7dg3XXAWYF6M4ld6HL1j4rkSoEboHKwMd6EDaf8JW93QcPL7XSVT2w2f7tk2vPbUX6EcXTrVAZiTLvrk6apmUQtcq2LTrT5ubJoVJ96+ogRCoYUXtkpUo5A6SaA9g1tozBpoXhai4cHWy/vrf41W+vnpfz9z97WJPri6n3GM0Tq43g9rZb/9P2w9ZyWUUfVJape+X2drn97O8BUiyRlOKnrNX17Lgf2BdUphrHqjBegatfujUkcaya10pwe5V/FuyXK+1hfusyrLk7NgdI3BysY34coFtvdGw3444T8ww89ldMNpYbbXHZ2sxdouwcNfYMDk1ix9g7TfHYMXrYYHuX4zix8tWzeAdSUSPbb3UCOHGA6I2RaI8NXXV7R7JQhrndJD8H19k9Otj+D399B1Qszsat5ApQgdSo9slEDX5rw+oGdLgPrdr2cOxiJW/LsHZqigPW/rS8sphFSLDdm3dRC5AB5FazSsUQGL0AVwFXXr+iFmD243y00Bv5Bg1cXllIxYRuXGKY21i+Kd9bMpV45DPKWrxypeLRmEs5ynBM+bVigJkbzdiozXsv7Mgz175149WoBu2U1c1do7M4UoRbp3gWLTJfw6JkzXo+Zlni2iep+Aa/ArTbyTV5gIcytu/K8hFJdIuPO6XWAfcFu1QlUtWgLZxGcYSwujnBLqeNsYJRzeBulTF5fqtGeLHqeTnE3aqVUQub1cfWuhvfIKs1Hh1sy8qKIVofx2GailF37LLHLGsfW+5slWWm5e3rl2qEuXuAMRZN5KFm39eJGgEu+j4cQwB1Drv69wyuQO6M1SJThuoGWP7iymvGMLgWg3etpHYYs7u7JI3YlHWtNrKLGUfo+NHB9ofHa7fvnkXavw3rdcdJaiqqe6k7useqVDzf3Pzgzul8c1Nh2wqzVzGNLj5dVQE/uHNa/6twaxd9t2rYdmxALKXpECqEXo1LdN92fPPG7N3j5768d7+dz2gPZo9W0zv6XM3mo4Pt9z97GLXHvX4UiVLRoarXLZWi5fEiJ5iJpTErwMnp6R9/Z8+u0Vjhx8UTKpzS6sPZH5tXEWX3MxxSbEEj7ncXmQV1LEsvT9Ja/eGYN+AeT7nmMMLb6kYq3iiT9UIiodINATGQ9eu7u9Z7BpFUtz5Ave6tm1d/+Wjj/c8eRqNl31drb9r5t++eff3kyYOHJ1XNvB6/fvLk3oPj83Je1W3VMRpFu0ape0Vx08P9+Rebzz94eFIbE0WI5edqnVT9qay4q51/dLD92s66a/W7tRpc2//1kyev7O0226/miluLoBtNL6baA7imbPOtm1fr0z189OjD47U6duB8tw9xnL61Ye+FnQ/unKraEepbfiCMqfjZzpGs8Yn4AO+R83dJYRfS3uPoUja2SvKsGl6cypbE6zZfp2y4RiXIJbD1sSdigGScnlyRZi5TL+IbKny9cvEwMsNoFGP+I0ZjhlH2iL/Z0HGGy45j5CRiJo9MtCRid7r4leSHjiml2utbXj7IJWhaITXg0NWOxpUlov5nKsu7CKTeAzA/Knw4oE2QwgEm+ppTqh2meKyrYr1Pqdls7yVrJA7XZu1mcQCsjMf4B7IIp+vGhTnB7tO2zIPUyp5tcXdu8X7I8Mzm+4TxEgdYRoyHMLHuTuopSGU4wFXuvgkpmzKsM6fa4+gCMW9zF10Bfl6LX/K+e2plGHtPxt7DKRwvkkOVYtF0Yw4kOo5nG+6TiRUyh9mjY5jVrBvJa5FU19IXT7kfe5yNG5f13rA+XIF1XOSZletbYEasy58BqsWMflvJq7IxCnPAJ+5G66O8Z5xDF+UWyz0hzxPrzkAmsl6G8s6LqwxnOSdlpdpmh/tzhsOYwm1W5cN0swuwJrbt3/qydbVJpu8HVJvVyd2ctS6jxJWukWdaYinp+cim/uX3rxdRgWZsxLueUn8F4Gd/SVZxsnr2pIo8RoGsRZfvfbVMEbqFrx9V+wL2u3qMDVCSlQQGMmK7KmPKU/VHYbFoOmJdBU8XDwTnq9nfXSe7uBZgDTItV2sXnpN6BYhoPANaPTayi7UDsjZPIs1dCHwATyAjqc2nivJxmbhmCs+O+kQqYLpjIUckuwKAVRTY/u5z8av3sGY1XmNn9l2sHj/AyxuxLvRfF5op3t4ohhPKaEBgDL79XgcmVZPLHRsV/aj7oqby8PYnj+vTSRW+EtdKi7SRh6MZVpdbjsXTeb9Y8CuAu+Ip+1q5pdXErLz+J8MhZWIveK/1tD4AydeLOO4K25GcUJfQUjIVLrL6CAM8Fh4rnFKnJMu5YlbCaJWLOFdlRarADevEaCm/1g0gYBPrix0dbM9ADA9z9Eus765q1iKdGTou2FYn8H5H+wGwypd87UFe+60b2+/uYTBvXtYI6yi9Xd4DYA2l7vrQ1HiiWsjdOgDZNSHU5IPRejBebc3UFWIYu4szbruGH+wryEithFaynHjGToC6iwOI9UpaZa0+YCtFrNuGsfBYEI6EDkSmhm0/yRjI1pi6YIOSeizWO1RM98YErNIxst2Rkg9gcqsROtyfv7az/vHj+Qd3Ths909UUspaV5LRW7vgHd06jHgS8RYaliFV6Ioap4orWFraeB/zcNsPqmf/8YKuU8l/+31m7GsgfkKzPN2/Mas9/dDxrrNJo9kfXiTibriYS1koCfa6uXy7ncny1fPG9Tx/ULJHaNocL1N0DgOoGDeMvkHOf3e939S4HOC1ubB+rCg9HK0kcA3/e5aji3IMx7me96fbW0moPdmPDTMxkeAXg92MVLfx3/+Zfyca0ts0Yf4uJCkl/VEaFB7JO5Wply5QDPiaob4Vnf6ukkGotX8MLczmBR1vb1vpWzX6L22Sxl2jWVqSrITzu7Mf7QL49TGsxBghGpEX9peK3bP+lFSBbsUdZpijuOMD5GdN7GqvKqsTPhrNLByr8kDDLcJb2wL5FYTskvp7F1urx59+7JvckE/cALo+hOxMuZYSBvB7Xu7118+rtu2e3757VbCwm7zbKQ23n1Ixe6ePy3rzNL8Oz/3B//vHjeZthKlfVbT/ja0Z+vM11wllXap9jryP7xL1jifOVba7zF5vPn5+Xprkp87Da79Euxf1c5WGpHjh5dKr2JN39ANh9qUzLlk9XvDxp+btTJ5jcX+N6g2O2U2knduOyJALt2iqbJwXaz9jaVcWYp8coUjxZhYoMY+p87eTpGhOYs+zyd9AK4Oo5A5tXdQqqf4Lf18h2lkBtwVU2dteBaPaXUuQe39qqiml8sfn8e58+UM8F2u+uISA/1cU9Ituvcl4j+2o1OyKMpX0LrN7VBFRLeV7OeVSq64/JPrl182rTeog8anc+WB8kwicP9+ev7y1u3z3b3Nh4/7OHUYaxHbv6+1MuEBOjLVDtJ/u+KoRnwFcewJ5JbZyBiOlAjRPGnx7gt3Tv2+3zKZxfubZE3CSMRGE850//6A8r58/WKGB4sqpvnRcArJWp2BYz9mAkUmwtnLWk7pXdT3fvS3ogZLZh9rlSu22c00fuX7NeIo/D4ueqdJuf/PAHA0h6NI76BcC1tjHOk21HhLtn46YMXuGqBk3Mz8Q4t5oxkuk+8FwTV56Kt/yT//O1ip2nVpKU1bOFBbKqrNn6DGN1g2YMtv27r/6OZhouKLw2wsibQiVG2TFPxuLfWM1FtYTR5cQWzsXCGQXMiLsS8S67VgYcawxBYuH2WVp2HsPOKoQig8zE13GhIGdQzY3uXew13RqbpZcv1tkDSKbhSvgbLuYwnLs9EAcYqE1d8vx+XoGCx9RT2v+tXq9dY3EexcTcNCn2xtRTc7/LjBdv+7EXNAMxTh3ZTfp/1n602ATmYxYuC4ThjTFeGdAI6lpZNyba1Y0ClXoZGx+tUTV8u7VcVp6jVDdicp1V+xmEwK42LWYfVgBYoHwGxVYovVq/1vYzK4DeA7hKpa4GhHr/FLsQrAC2SsAY5p3FbVL5VhM1WrrrZCrPmOc2FlHaaCBWwHD3mRXeWjd3ztg9QAqcIOM2TA5Gve/at2686u53mTrP8gWIbLZaE0mMZTjGlJ2pAz4Yj8mA2W/3ElEFkKidVvFqmA+C905dv85lT6h+ALPfvjY8CwPM+Cjn4Y2XziQOdmkPEFU6scxy4HulsAIePZyi+raSypMD9snNje4yaofjpmP5CVndT+XH487Bc6bNt1XVMwb7tDbv1fNevACk/UtVqpmoesfY6cj75/kIE7FXrJXCYN7dHMIpDOosopryOkhPA1cpzVa7ylpJ5V/ZPp9VFMzubJz3Pq5q5vt85k24ZB3FkXmj1Hfd39X5F2HCR6fqE+Y63bZFWinduQI8n+7o2n5jcjnKZb2GqP+jEcHW0D5XUwYoRh9A8QmYWeHal2jsFK/s5NFp5ZCrfpDH2fLKomEFkeKNtWFq7196/H6MwPAx9pS62PCZFich49CF0KAGo9tVHCpJDTwwX3neR1ZTulv5s22X8Zk2HtLBhS4f3bqMtp9n8p2L3rPIHlfQrfE9rK1ybSqwzdHRtRBZu95+r/+661LUJ9EKICttAvut7iXtpbKdXesY2XjV28zz4rFoelvkeIH215xB/nxrs8m5AdZP2c+hOnTXd3SjfSQvYDqPaDgneoyzBLg60UrN7O9drp7rGU/hJg3vm60O/gC2MaY2UJ7Bj3vfGfB3o9l/uD8/eXQKon0hguTFBUHMD6wh/B6AuQ72s6V9lSl2rX8Akujuo6L2K+tI7p1UG+RuJGUX3bX9+OREqX0h1Av65Q3xBLOCWevk/CR3kqAPL6pEMvWtWrWp9z59gGtI1h+c/9/OATvFbi6ByjVz9SlAXUo3/wFw95tFrJ+UUuabm/VI5kwBPv3mxoaqq9nlzavRUS1x+yHSuZAVPlVGntWYcC0dzthSeH+Ug4HHXZrgmi6H8+OiWqbymKsQk9KJ57kMAznEY/rJ6k+y0no3RmEDlmN1U/C9upzhlBZat+elnl8NWXZreBVYBSLiAWDPh4/hKL4QHweM0LlZxAlRrBVVYTxC3KO6UZhBxHA5yLrqJa+G0MWClDJFpJ4JKoKBeS/Zmrwywqpws3Z+o+J0e9vyebq9pzAfBp1zZ4LlC0VIozPHcI0wvsJ4NkYzsA4M6C+stu65fXZXn6KbkczsMkH9xmEmCF+PPjVevFYsr1tKMiyjUZhYy/6iRhhmvLzx0hmo90TyeQZixmOcYRLL6sqmg8IWOGOrq5CuZj+JHQ28AxO1hKfzAlsnD3iJ8q+8xn2qx6o35ahCRBMlq+PZ9R35dTzVX+r3LteyeiAq+wR4makRjZ6r6V/wz7WSPN2JdTj5dynqInK9UusAM9ZNZYjUiqt7vxkY4wZ6RB4q3gPhCmLRqsdUwmL846Yj3dXjr/Vr2y/tvxG/H2s741ywxn3PqqbZCjT1OtV9b0Ub6lNHs7arn0d69lF/ts9b50Q5D0xWhoy+4Tg9s6OTWS7yCuEKAGr9ZXOpsotU1sYzmNXWcvknf/bnJahytXJuGcZDpkRwVGbFwCqa4lpmtYyiB+RrqzX7ZXPZUtijXT3cusUzd/etzJu1bdiiRLlUIQrUY+mAfb1tJ18rKqoz0M3VYmqNqW8dHWxXbpbb2ugTdTVVxT5a/bqV30uvckK0DoMKAFJLtPu2gMzjo4PtukIy6zxYYdT5FUGyd+/sAYY5sQOYdJnAfc/a8il1uVPIjLQ6KatM1mkeXkvHRtmd2QokZNZtUFMii9d1kTebjSiPT5XhiqeiGMXSbL9E3wXR2She233mSLvOxqGBWr8ba4ziiDYObZ9UPW/TXXN1zrq2QLbz1s2r73y+7tZDwP2ZVRmLxsvtn8P9+UfHs/nm5gd3TqsaX9RLbixf9smtm1dVX5HjbtcWdYX2ckb6cxdkuJTuTWQbsmgXg1VPWR/4aBTwa7u2x0YAgEXMZggpfbXIu418wtSeilzrQK2GgevLZpP5feR4NVcHr0Uz7PviWuryPeN9Yqa6VioSnOUkknVno5kKaqm3mHEXF3JZerbfqlfAo0NMLWHGn7bXabWWXS8/padURCaJO/ujZ+zWgpceo539bts0F4iJ7KgRavZACTDxNoBklZCc0+E4QxTN7bI/jk9OXtnbVfmmYP2MuE+qf1wkxN0DTKzBw2hXkngRuebYmhKpFQBkYhSvPh2wgDMX34hynVQ76uosy0xgnJjkq5DoNaOWw8wA99kBQiWf8XB/vr213FpeqiBUenpBEfNPfQKU8yKshrHEGOPH9p6sv9tVE3I1i7qRATD7y2VtIjD71ScoIQbvAexTpXT6o8jcSvYAwzGH7kolvT6pMoDVbXFcfAylWYmes91vuIzXbHuiNUEqzK5cm8PVb+6uSzOAByuLrpDayCd2OZLudUqydiyZmcrEHPDsx5pwlb/5zufr/Oz3V7ZFv3aYuydhLG4qal7t/fLKImK8lljDlFyTK7dK6k0xfN4olxrsl8heehoHkCsAs4+UdSC7e50BNH2KF7va6rM4CsvbyCxmj09zV0ts56J7VXtfvHziiSsPg02tcB3A8RZ8nJF7eZvVBjzI6B3FseEUg6XbR+pY//Fri+rHprHRPFfLCyJjq91YOK7VDmLnhdPdqCtYtfc2qs28n1GfVyaS0poGbGdy9XA1W2UEur3JJLooW9hZAVTtsWr7h3211eYPTIwfM1cAsckudjRQ9yq7ijJ7FVA1cUCZq5tXwNcqHuZjMyAVr7S1fuPll22s1x5v3bz69iePbbzW/R1EZ0tcI9HN92XqBzI1p2w73ar0NYL7+t7i48fz83J+++6ZbbmKBLuzB/RkVPcKRJfdqHwUOVZ9cnSw/eHxWqufFc3+4tVWsznB0ZvcxrRdR8aqI5sV1W/s9nlt55s3Zu8eP9cq19vvgtnf2qlXAPdryvYzvubEOlkAL4/QQ55/Ij26ekLTdsUVa0gm/XBMo/teMWum3bEw9+KvrzadLhJYiGyQKV6D0mvhOaF1ByUZwTMc/3M9n7G4LMNFcfHyLm+U9LAbh74q6Fc0+q2P7jf1vLa7HauxzleIwTgVYFx2MVypmS4rywNmP85ptv1cMcAK6UQ4OEC9ePzN7bHKOW2zH2BT2E9rx7Vv3XjVxtLs7Gfir13M1b5/YD8w4PFHPMraXxK9eRZ60SQGwvCpxlYAWb85u9/o7gTAeuKuAHYco7gH2Z8rwazsmes3Xn5ZVueVnrH0+zc3NqwOD/BrXd/xH3//n5VS/vf//G9dX83dA9Q2AF9f+Y6yDq6tI8/vGdw9BtjhuHXnVc/I/hyb/S7zsdZaVvsoOy4lqFXsKkHdunn19t2z23fP7j04tspOyr5aX7yN4LXntkDN+ujpjg62X9tZl+OI2azufhLcBVWK5xH3lWjY89fvYu0WvUkxQ/m8WKztk9U7GsDd2zXd7G2yVi7gv0hOq3ouUP2AxHPw72rNGc4NwH2iVSGm8GbH4vl8DM5aSpd7ZzlkqbdoynMpBagB7I/f49qapCQO2J39qpYEr/GxEmVPspI5z06P2l9/X1/MFw2Tcq8uP2/rCDhfzl133XGvX0qpa2tbtSMPpHyjTHh8cqI0CasPUG2G8kDkJ/L6Lm4re0pe58mTM3V++/1wf14VBbuzJFKSlHe3fSKfQh6PDrarSKDrP4BndGdMzXH56Hj25b37zZ+pRxfVade0fTs29Wsf3ntw7PZAlOVT7+j6ctIra9eUPbl+fXe3eUi3bl6t+Dd421z/WF3hxZ1r5+fl6vLKfHPzxZ1r//T62ceP5yDakPUQFJpbj2/emL39yeOmiSnnjYv3g7iEi6kr/1X6/VUvtWVsuZqbNo/JovsW0cczRnp6bmQAeMDW6n+x+fx7nz6oNsVi83JfYfdvNm8L582p45s3ZvXuMutN7h/IuQH2MzYuobVBK8lnioK5W43d4s3T2T5VAeYf/q97YI3Gdcmz2usgktAqrjH4D+n5oL9e9rkH9jb2HWjaZ0xFOnK8pEpPCSoLVl/r/vFJ8XJIxhjB3Qi9uuBTbVCVeQQ439FuTKHOUQSuy27PrgMu9sxUDwd1VhhmZeOEArZM6enqMNlzlz5fOGzcbs1j9w1svSdnfzanLxo7wJOv9Yxr/LH2ntWMIPmh3fgGzu44Othe+9F3v60YjgNvXsq+grc8ldNIXo28Ms8/KXReLECQUnXBmsNTw1sDnMcpdS/5tRHHbouoZ5xiuT6LGp6XUKApuNVwnZUyoUJjyWhiZjVU8DrjKqVmazySLDQ5dVxNlCwbeYVYDTO+bdJvby3d3An5vFWo/Sc//MGYDimJcYVxgGE/eIBh32XODNccALFGwBfi8bU3XjpTWHt2ZSMtQqv/riL00zMfpuwZSF6qa+wnVnAaaw9z/gUKBLCILh/Q/XF5ml32IuCKukiWi3sADmaBGjUAWzjcn/9N2frrr85UrBFYDVDvRM2JhuFWFurV5ZVf/Preh8drDQ3k67sMz/7S0/OJ8Bx5TsUx/6ZsVTwHRJpdnKqr+4Tnhm2PRKjraXaer+9cu2bfS4X9j2Vd3T9+KBFJi47ZK7dzGoLL88vBuxfFMVzUX8UiDvfnFaE7Py+pXGfZHhePr+/V3986/2Lz+S9+89WHx2vvf/bwvJzfe3Bs4w/299RYHB1s/9XfPga2H0cM2k80LnWSfXQ8Oz45efDwJDrfvgN4vjGxC+CFtsBCu50NmFxwgVwFOGsbXD695ehjnLjLm49sZAnqfEWKaF2+UIS7Nz+kDmplnIPZr6IHthaV6sNbN6++trNe36uPH8+/vHe/y63CdbhwvkRNBiiekl9kd20cwOUONRS/emsyE6Abb7bzjY9dlMvV0Czqb6d+pPnHZoRlvf8Bv3Nivth0bpK0l1FVmAIrp3efHdSbmYLt4EiZqzzFa/hkmQtZf93V9e+ypiNLlK3nolEgHidZ1XHK/mY6UmbzYyzekuXYuKPYFEfwWA5r/do/KU7UMHYX7dq7mlkkgveX379ew5opDb9iNKzq8LW4JPmz9vKL1wFeMX1OM6yHKbHYsbgEYNJPXK/wesJzP8toFYJCZ2+T4z4xEsJwXshdO8CmZUQ5pUn1lA36LBDirpIrWQtsVRroU2I6A95apGlOrubMbs8qVUZKumNMb/fprH4Wvz5jr5hk3LSdgJz6JdA1xFN05tb1di1NO9Z/Ja7lra5Z/0W12gusaV68Gt8//unPfvzTn+Fa59166BVrB+MEvov/2uogVTMM6tpX/og7MK1qkwqduv5SqybU7hi10K/7yz1d/Vff6jtffvXz7137+feuuWONRvaUrQsfjUvtgTdeOtveWr79yeP7x08rXLUZz/Ca6nHGxKFwdV7LM0lV8yWtLKhPw7BilK+vZmehc3/b+IH71qwA5X+P1TvBx/YOXzzL6Sk5alj9qcSZzVh5E7OGIl1UhnEk+7bq2DVlvhLUbMa8pqfaoG0PANb0iKeR2gWO5ZHZNX0glsnr/EQ1zjC3dIwnkqq95e4+Aft1tVUULKa02sg0s2ezud3YSyT1jma4nhTDUsS7Fsaiu3893J//7qu/46rjkzZb2TN39peenn39ZPf5a4Bb2uaHrEAInjTCiyONBvW5VMB8erVFWMOdXAeA7a/8U6lrS3IzeT08oKbRZkIt4Jmd/VhXD+UE81w/BvNpP5X2hHl/Yzl+ClduT8so5AxoPZBrC8OYGmN0rVA7A7yf1vAPxHbG+MVS77bk60MyZ874KiyR5WsceqW6I6vY7r2wc3Sw3fZqwDuX56jrl55uZlSXN4o9Rbox9r7YStUKhO75YDy6zNmuPetqE5VpWty1zkrV/xmr0kDW/nGZ+rKuI641kZr9BdQHGKsD6Xqlkb1slZzfeOkSo8GNJo6xcIFV5mehuqZUNFpJ3DrFnAWMa96H5vPRmAouY9oCzJuv5tJYjIjB0536AIzyh6sWj3XZ5bGVYm+qbE2braGlWVTErcXS9kxd9Ticvza2F2LsH/YE8N7AbUlUy6z0asCpSEId0EhVDms1l7jWGNNvMr5m13wXd+q+k2AHsrVc9lcAe60uCy8bK+3WzGKwEdWJrspndw9A4kIpHaFhvevIN8N7gOFoJqhBP6ByyWQ+ufVMs+tJNGewd9RuN4vqWIGrN2v0yt6u22K+drzFhhn9SvB5ezDSEwXoNcaFSH86hY1gr52pR49rKkbraituWfstqtOI1yh3TWZw8Lbm2Dy7bjwKWMyol+TDOmS4FdqVibzOARsWYUfPOq90mL+UxcKZeuvddUNxJ5WqRYv5RBxbfmfYjQt1ubFZzIpkpoR7AAYfiPR4o+tg/xhEkYGfau/bChVnI4v8XAF+bdcjd+d0i+OmcJsptlBZ/fKNLoNc/0mkn8n/xnGhcrlWZNcPJKsBueNV8UlXTyCRD8Bz1EgbTKIiA4afXIumsMS66wB4IrBLGWb/20hw5OgrzjBWDpwSux1e58fyPaKxrg8YPctFhRisqStzc3a2t0GdkiiLF6xcNsOrmx+sFMVajRCgtVbinCB5TpSD62YSlyDXzM0vk1lmNVMJ93aUr6z6qmV+yW+5dX9f21mvt645aDaXympK2zECOm3lsiacbHld7l7fW9S0TIw+S20/OytATSA7J2teWENU3cxpVCfYvsd7L+wAWxvptJF2xTJtgKWPsiJSeJG7pj1Tv7yL8eMa6Nguqs+76gwYq2HGiLHNzfP+zd17gEk1hhNGNSh++e//pYtoWV3rGcaGFZcG7NMtAsBwQi89j5n9UdsO9+eS9YpZNCRWrdjF7cNUBfYU8uO23I37kjXfa6y9xt0r0NHqQDI8GabCpOIa4b1BY91eRHjg7Ld7Bjw3cGtDNu43jKn2RoUrgOXiSVam62/xatrZFaBdU2pxAttJcmms39myt4axqdQaEkVUeM6PVBBSPE17stJU7drdru2P1gFFH2J0WqM+JG1/xMXq7pdmWAuy/a5YmRY3wLXRqRrucPZLFnjXc5C3ADZPnlltJxMB7WLVZIzWrmBRfCNaSSqy0eLowILi+AkTtb3gw/bWosYbvdQeb/aDXnVsdtyfMrujcJXj6rPUox8HUDY+MpxMfY6BGuJABWBKvNb1uSXzZCX8nFRsOMXPmYLPTIly2GdpfF61FimcMVpDhmvzpBi40b5OXX/Wtf2p2d+1KMx+QLZeFepx47iA/wSYRbXeYIWiSQ4j5iB1uUCAq5PC0QvNymTYpv04PcwBVNkCzP6hm4PazRuRuD7obSYW1MkHUDV/pmi2ZDmSttohE1fvYvlqFwGQ+zL5Z1VqMSl+ER8/6vIlmTWtmdjpGWHM+oa1XvB13H6Y4Zys+pJFmdS4dou1N0yks/riyyuLibPf5pLWNrz9yeMW+yxBdhjDc2Qix5X7TWZFR1aWr81c/zFZ0SBKGD17l0mVza7Gnps9X84KgIZFbMKoT8IVwM0DXiFHCOSbPiP9uSxuM4AjRdVQVr4+DEeOs5yoMT1nzCPKxhaAvl13HNVoJlYAjIIzHIzI11R12+ubbXfxeC+f1ZjIcirtDCBrqDBn8nOR3EEx55ORGSbXIqXiUXrsbsvd6OYiFzobDs+cw/352rXnrsn3j8n8T2m8WSKKzO1P5Uxl59BAxDF6om4MmL/XRDbUs6vBPLCfKc/sJ6XfMfDs7frrO9vX2i1rPW5VSS+6ij0HT32lHG/1kN15INWVUzUDVV17t1VRPUaMzUmui1uTvcQ6+tFTu+rWvJ427oeIWaTaHLGk+Pa7z0KeI497L+zUeUhyfkhWVT3WWrrt+mvXnrv2x9/Zc9P+h1mcct5YzneXe8PsekkvIuslu9FKHqPoIkgryQ8u0/IcpmRETOeKdqtuWg5P6rnA87ryFhfaoGDlHcvkkA7P2F6we36k8zOGV455XMzuORUdAyzD1DvQZSti1uAre7uqqheIRQ5nzChtZ0ZtN+LddH3viOFysQfo1tMtpVQZ66a3g997pQY+FvNLRUNXuALUJ/3Of/21Yg5avML9a5fjznMbBzzy4ZxdFRpnYtLTo9EqK62L62f3Kio+7bBB7cjxyjYRJ0SqB5PIfaH1SWuggEerSKTF4SMZ5qA7+4upSSz5UW5kmqlejPk8jA5PhMJF1XNlsiyIEw+zYm17bFaaU++ZiM+4WNDWcvlUNdXo5z1lg5L1Aabv35k4JWkLJ9YoAFyRLufRtSLkCjC9+vmYD8l4C9Lwj/FSU/sZd51ZSRVde2WroCrPX7++u+tWs8I4iYvVPHlyBtArXOuqm+9zuD+/fffMRUIKrCsY1bqU50R1zVyMYnNjo/WjxRkiREXhRWRFM1CvzmIgbg+A6nRtxtRqZa2Ooqq9pe7l9gnj/1QEpiam1XJ6KkdP1fmyuJN6LvUsUV0wOYfbGLWWry/mC1At0PWS1ai0yoptl90+YY64/mHttfpg1me17YzaDypSyndAPh2ox1jfAXVs35J1IGWbVX+CrEt5Pn8sXkVKW9dR/rXayy/v3W/3bee3o3sXdZRzox7V+N66efX23bPbd89qJUx5/RLnwdk7un0rp75srawzq+p2trb5NcK60eyovhD/XZK5oNigw1y0KCpXvGwSBhMbYIWM4ZVT4l/Au3CrvIyxo7EXFCkAAGwK5+m7Oe/DrPKLF2BKhHLlcUGlbRj5hSmukTy/YnwYn1lhPbIp+D0Zr0jhS3ZGdtuW5WwWmB7AvAOR756t1Bbt99qVn64A07W8+UwXPJPaPobHrbtYNd4RZrH56Tox/PmpOBrA6GRYZoW1CV3LFcmpF8iiV0wqEg+dWD/ugg0a2cKo7gg/Ngyu0s6sMelCV5LjV7qVIzOrxW267xUeF/fzJjQvlbfb0wG962H2TimlTX0cPylGAa3r/zwjBkBnD4BbPBYrif5q8+4Hqt8wNqDAHEsmX2SMSzzlh/F/2hS0X7Htr2mN9QWYst8osIJGNO4p/4dhmgxoGKN8AMCNYWKKTp1J6LOqHkxFMcd8iRWu+ymvKVt3R05l16bKSU96HSvkkJJTf2CPNMwvSsV/HBSo60VEe/YBlSU53bvYRfeOdneb4sCs8D1hVoBsDQtbD7j6NqCyN/AA8Vxhnj2r7jjQzykMZgwJLCAnuGUDp5gYqbeZzD0g9zpby6WrM5yqG05iStNXgC7GAM4HdlfpNQzrcaRqRQ7Y/ol41wrXtJnlXTS99m6mrGtrS5AR63r8Lh8GsE2i/LKqFdfVXVN/xXltzMzmM18jho+9DuDDkBlS2bpdEc9Hna80f8b0KZhKOZd6ZpGuLc20xN8DRDyK1N6uW8+wyzzN1rdqyftdz2dg/zDm97f+LJcJ4fz+KuLPdKONK9nPkEj3cGxkhbY/uwKrfpu13Uz5Rq8d9wW2qWA/UAKtL7IuJdAJfefzdcB5JKvGRrUOuvbS1t6puc61P1WXWuZptDLYuiY2epXK93VZt3gVkpxNl+mZtcElqOfpf7enB5qqVxD1xtqPvvtt69JN2dPw2qBjGcbq7Wr/JXU2n8VuzOY6r3b/sMJ6AhijA5zNFA42xg0hY8zZPQzIhimlrP/qt1tAzz5iKYKfxqBSHE/MgnQ/B15Nvcvh/gVJznIY3d/dGgIuR7KYWgG2fw7356/vLSoN6/bds/nm5vHJiZurGvXD5sYG5jxGtj+qHgByoy0bV3Fg7ex/+5PHkpvpjqk7Z/A4Sg6i5cl2OadgXqlr3rp5tY7OvQfHEXf16R6AXAGmcLPGtNxAP7o6Yav6AdZOsb6n8NgwWhfxdsYiVqWnudT+yuhh4vGaqISX2ld0NUPBuuFwgbpt4jHELH9mYs0lZg+d2gdHPCWFt64kzuB6PipXsCRzYVMx0YanNQ4iE+FZCe+Df4puj7kUVzBP1hfzRcRTt2xsy60vl7nagK3uaoq4fH3mOu2+948fSva5PNZ/8nfJEa/H+nl033a1k9PTf/H7L1Q6+8NHj5Svgjn0Y1O/rt0PHp64Hia+C2Dw45yEWzevvvXRfcXXV1kN7nwAD/Lh8Zr6VuvzyDvqzh+3u75+8uT23TM1vq0H3HmyvLJYv767W+LaWFiHR7UjyucCui7ZCln2vniGAb0dnJsmn/3oYPuXjzbe/+xh/S+uX2afTtlvsBvBZgxoDalzXN862ncpz6H7XHI+RP1Qa7c9eHhy++5ZpLzkPhczK+S36tSX+WVRVTU31w9pg5LcQBnPAsynsfjuCjMNhv1jN/A5kfXgek0NSgK5I/heAyosMr5rKwANxM7V28vEf3jGl+sfTmTiPF0BSqwfFk39qrDV3afjWoLuxSP8JLLx3d+j9cS1hS2/+cPjtWb4ydnv1p/Es/+Nl85qVu7tu2fWhoGZ0c2ptWudO75ViQ2r6EXrtnRC5pubH9w5nW9uuiuGzR2N1gH7LO2ctra0WpellIq/gdqkIKMdrQAuw6Sx9rOGeQoO8KxXgAhJ6PIrx/Z/JVANG4u9pJiVmMk8gM90951qBejyi923HagVdZkH+GfGa+bU/tp9/prLBsER9YQyD10NnNeeT+kn25pTZbLafTvKMgVu3B08O1CZjmLYmBVTk067Gv9RJLVFu5XKkOVZXYp8B/FvN5b/xktnr+ztFk9fMME8gKPWyQfoht+yFnqsPhTvxzPvQGSbZb2wYc6Jy5mxCbKpHIPUWtfFebPrG64bxMdSIm6PteVWKy6L9vL1Ctav7+5G2EjznI4Otv/qbx+78bni6TbzMX+AC0U6QgVqHWONGuDLykXWxR9k1Bb7yrI9SotYImblsipMt80RaqT+6ka+W2tle9wec/tK9vPWclmj7wzGZTV5FA4jv1v3Ql/eu69q2YOYPdjzyKMcOzVvnyrDuSPh+oi8DUutCd34a3S+2/6U/mYqZ6BbR6e7i+DzpAudicrEFlRlhuxa7aqeydxigEeB67vxvtRPrX/8B3/xxYDvMAMc8QqNRT5iilXbZcmT6z7YCWi10EWfv1kzH8rlWuqFrp4b9a+7i7j0FIuE1qrcAwDVTjz12/rWsib47IU2+2UdSHfcbc3jsAdE/1ttUHd96/7O1yPtV4ls1ovk7jNxgC4enM27HdausQq+JLbAYMyt69w1jdRKsHNlgG3RnnF7a+lqL/P9LKMEqTUqQqIY5Zsxfk2WI+PHARr4rbQUI51NJg4gtTXJa3b3D3wb5LH5weflvDv7XVy/xFqfNfLv+tDt2aNdhNvmxoCQK0DF2oF/LJ9R8SlSvE41+zEH0/aY1ZY9OthuMoZutoaKpuM9ANhDgno58vy/A9F9nU5um864AAAAAElFTkSuQmCC")]).then(([a,b])=>{FL=a;RK=b;views.forEach(makeBg);frame(time);requestAnimationFrame(loop)});
+const bp=document.getElementById('pause');
+function showPause(){bp.setAttribute('aria-pressed',String(paused));bp.textContent=paused?'Reprendre':'Pause'}showPause();
+bp.addEventListener('click',()=>{paused=!paused;showPause()});
+
+build(LIGHTS,document.getElementById('listL'),[['pour','Pour'],['contre','Contre'],['jeu','En jeu']]);
+build(ARENAS,document.getElementById('listA'),[['rec','Où'],['pour','Pour'],['contre','Contre'],['jeu','En jeu']]);
+build(MARKS,document.getElementById('listQ'),[['pour','Pour'],['contre','Contre'],['jeu','En jeu']]);
+
+/* ---------- cartons de quartier ---------- */
+const CARDS=[["A","LES FOURS","Forges mortes · quartier A · exp. 1"],["B","LES COULÉES","Forges mortes · quartier B · exp. 2"],
+ ["C","LA GRANDE VEINE","Forges mortes · quartier C · menace +1"],["R","LE HAUT-FOURNEAU","Forges mortes · route du boss"]];
+const ch=document.getElementById('cards');
+for(const[q,nm,sub]of CARDS){const d=document.createElement('div');d.className='card';const hex='#'+QC[q].toString(16).padStart(6,'0');d.style.setProperty('--q',hex);
+ d.innerHTML=`<div class="nm">${nm}</div><div class="sub">${sub}</div><div class="gl">${QG[q].map(r=>[...r].map(c=>`<i class="${c==='#'?'on':''}"></i>`).join('')).join('')}</div><div class="hex">${q} · ${hex}</div>`;ch.appendChild(d)}
+</script>

@@ -32,9 +32,12 @@ func test_pools_are_rare_and_deep_water_blocks() -> void:
 		s.open.fill(1)
 		s.found = 1
 		check(not s.walkable(x, z), "fosse infranchissable (%s)" % key)
-	for i in s.pools.size():
-		for j in range(i + 1, s.pools.size()):
-			check((s.pools[i]["center"] as Vector2).distance_to(s.pools[j]["center"]) >= 90.0, "bassins espacés")
+	# Bassins des galeries : espacés de 90 unités. Ceux des salles (source du Temple, salles de ressources des Veines)
+	# sont posés par salle, sans cette règle.
+	var loose := s.pools.filter(func(p: Dictionary) -> bool: return s.temple_room((p["center"] as Vector2).x, (p["center"] as Vector2).y).is_empty())
+	for i in loose.size():
+		for j in range(i + 1, loose.size()):
+			check((loose[i]["center"] as Vector2).distance_to(loose[j]["center"]) >= 90.0, "bassins des galeries espacés")
 
 
 func test_shallow_water_stays_walkable() -> void:

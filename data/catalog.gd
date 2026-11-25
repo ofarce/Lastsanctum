@@ -54,11 +54,11 @@ const BUILDINGS := {
 	"ecole": {"name": "École de magie cristallisée", "cost": {"vie": 300}, "deity": "", "requires": "soulwell", "research": "limbo_mastery", "art": "da-ecole", "key": "z", "icon": "spirit", "time": 8.0, "size": 2,
 		"lore": "Au bord du Fleuve des Limbes, des Exilés apprennent à laisser le cristal les gagner : Guérisseuse, Chantre, Envoûteur."},
 	"warehouse": {"name": "Entrepôt logistique", "cost": {"savoir": 50}, "deity": "", "requires": "sigil", "art": "da-warehouse", "key": "p", "icon": "wood", "time": 8.0, "size": 2,
-		"lore": "Les adeptes de Sigil y reçoivent le bois et les minerais pour les ateliers voisins."},
+		"lore": "Les adeptes de Sigil y reçoivent le bois noir et les minerais pour les ateliers voisins."},
 	## Écart voulu (découpage de la fabrication, 2026-11-20) : absents du prototype. La Scierie refend le bois brut,
 	## l'Archerie en tire arcs et flèches (dessins de planches/batiments-v4-propositions.html).
 	"scierie": {"name": "Scierie", "cost": {"forge": 50}, "deity": "", "requires": "aether", "art": "da-scierie", "key": "y", "icon": "wood", "time": 8.0, "size": 2,
-		"lore": "La grande scie d’Aether refend les rondins en fibre de bois, pour l’Archerie et les recettes de niveau supérieur."},
+		"lore": "La grande scie d’Aether refend les rondins en fibre de bois noir, pour l’Archerie et les recettes de niveau supérieur."},
 	"archerie": {"name": "Archerie", "cost": {"forge": 50}, "deity": "", "requires": "scierie", "art": "da-archerie", "key": "j", "icon": "bow", "time": 8.0, "size": 2,
 		"lore": "L’étuve attendrit les lattes, le gabarit les plie : on y fait les arcs et les flèches des archers."},
 	## Écart voulu (intro de la capsule, 2026-11-22, planches/intro-capsule-planche.html) : fabrique les mods de l'Exilé
@@ -120,11 +120,6 @@ const RESEARCH := {
 	# Bibliothèque (2026-11-19) : coût propre (« cost »), sinon MINING_COST.
 	"minimap": {"name": "Minicarte", "building": "library", "requires": [], "cost": {"savoir": 500}, "icon": "move",
 		"desc": "La minicarte reste affichée pendant l’incarnation."},
-	"firing_post": {"name": "Poste de tir", "building": "library", "requires": [], "cost": {"discipline": 500}, "icon": "flag",
-		"desc": "Débloque la fabrication du poste de tir à l’Atelier."},
-	"modular_crossbow": {"name": "Arbalestrie modulaire", "building": "library", "requires": [],
-		"cost": {"forge": 200, "vie": 200, "discipline": 200, "savoir": 200}, "icon": "barillet",
-		"desc": "Débloque cinq munitions pour l’Arbalestrie, à choisir au barillet près de la barre de vie : spirituelles, d’Indra, de Medeina, de Sigil, d’Aether."},
 	# Biome 1 (2026-11-20, planches/biomes-1-2-elements.html) : payées en ressource et en bois (« items », pris au
 	# stock : coffre de base puis sac de l'Ingénieur). « glyph » : objet dont l'icône sert de dessin au bouton.
 	"gallery_props": {"name": "Étais de galerie", "building": "workshop", "requires": [], "cost": {"forge": 150}, "items": {"wood": 60}, "glyph": "pickaxe",
@@ -161,7 +156,7 @@ const RESEARCH := {
 	"limbo_mastery": {"name": "Maîtrise du Fleuve des Limbes", "building": "soulwell", "requires": [], "cost": {"vie": 400}, "items": {"copper_ingot": 10}, "glyph": "copper_ingot",
 		"desc": "Débloque l’École de magie cristallisée et le bâton à focale à l’Atelier."},
 	"palisades": {"name": "Palissades", "building": "library", "requires": [], "cost": {"savoir": 250}, "items": {"wood": 80}, "glyph": "barricade",
-		"desc": "Barricades : + 50 % de PV, y compris celles déjà posées. Elles portent un bardage de bois."},
+		"desc": "Barricades : + 50 % de PV, y compris celles déjà posées. Elles portent un bardage de bois noir."},
 	"fletching": {"name": "Empennage", "building": "caserne", "requires": [], "cost": {"discipline": 200}, "items": {"wood": 100}, "glyph": "arrows",
 		"desc": "Archers : portée + 15 %. Leurs flèches portent une penne blanche."},
 }
@@ -174,7 +169,7 @@ const REGROW_WAVES := 3
 const COPPER_TIPS_DAMAGE := 1.25
 const BALM_HEAL := 8.0
 ## Recettes verrouillées par une recherche : objet → recherche.
-const RECIPE_RESEARCH := {"firing_post": "firing_post", "focus_staff": "limbo_mastery"}
+const RECIPE_RESEARCH := {"focus_staff": "limbo_mastery"}
 
 
 static func research_cost(id: String) -> Dictionary:
@@ -293,7 +288,7 @@ const ADEPT := {
 const MELEE_ADEPT := {"seek": 6.0, "reach": 1.9, "dmg": 4, "cd": 1.1, "status": "En attente · petite attaque au corps à corps"}
 const FIGHT := {
 	"flammes": {"seek": 36.0, "reach": 24.0, "dmg": 6, "cd": 0.3, "splash": 2.2, "continuous": true, "status": "Garde l’Ancre · flammes en continu ; explose à sa mort"},
-	"archer": {"seek": 46.0, "reach": 40.0, "dmg": 11, "cd": 0.95, "melee": {"reach": 2.3, "dmg": 13, "cd": 0.6}, "status": "Garde l’Ancre · arc, puis Charge du Lac au contact"},
+	"archer": {"seek": 36.8, "reach": 32.0, "dmg": 11, "cd": 0.95, "melee": {"reach": 2.3, "dmg": 13, "cd": 0.6}, "status": "Garde l’Ancre · arc, puis Charge du Lac au contact"},
 	"lame": {"seek": 7.0, "reach": 2.2, "dmg": 16, "cd": 0.85, "guard": 0.55, "status": "Garde l’Ancre · mêlée ; moulinet d’orage toutes les 3 frappes"},
 	"sigil": MELEE_ADEPT, "medeina": MELEE_ADEPT, "aether": MELEE_ADEPT, "indra": MELEE_ADEPT,
 	"engineer": {"seek": 6.0, "reach": 1.9, "dmg": 5, "cd": 1.15, "ranged": false, "status": "Prêt à recevoir vos ordres · corps à corps"},
@@ -384,8 +379,12 @@ const ENEMY := {
 	"tick": {"hp": 40, "speed": 1.6, "range": 1.5, "damage": 10, "cd": 1.5, "armor": 4},
 	## Boss de fin du biome 2 (sim/gorge.gd) : armure des anneaux ; dégâts doublés gueule ouverte.
 	"gorge": {"hp": 2400, "speed": 0.0, "range": 0.0, "damage": 30, "cd": 99.0, "armor": 5},
-	## Mini-boss 1 du Temple (sim/archipretre.gd) : immobile à l'autel ; dégâts doublés bulbe ouvert.
+	## Mini-boss 1 du Temple (sim/archipretre.gd) : immobile à l'autel ; il joue les attaques de la phase II de l'Œil.
 	"archipretre": {"hp": 1500, "speed": 0.0, "range": 0.0, "damage": 16, "cd": 99.0, "armor": 3},
+	## Mini-boss des Salles oubliées : l'Éclusier (sim/eclusier.gd ; armure 5 tant que la salle est noyée, 0 à sec) et
+	## la Martyre de la Patine (sim/patine.gd ; dôme, l'Exilé seul).
+	"eclusier": {"hp": 2000, "speed": 1.8, "range": 2.4, "damage": 22, "cd": 2.0, "armor": 5},
+	"patine": {"hp": 2200, "speed": 2.0, "range": 2.4, "damage": 10, "cd": 2.2},
 	## Anguille des puits : immobile dans son bassin (sim/wildlife.gd), sa décharge touche tout ce qui en approche.
 	"eel": {"hp": 60, "speed": 0.0, "range": 13.5, "damage": 16, "cd": 3.0},
 	"bat": {"hp": 18, "speed": 7.0, "range": 1.5, "damage": 6, "cd": 1.2},
@@ -422,11 +421,13 @@ const HERO := {
 }
 ## Fiches des ennemis sélectionnés dans le HUD (écart voulu D14 : le prototype ne sélectionne pas les ennemis).
 const ENEMY_INFO := {
-	"tick": {"name": "Tique de filon", "kind": "FAUNE · VERT-DE-GRIS", "lore": "Collée à son filon, elle se gave de cuivre et perfore de son rostre de fer quiconque vient le lui disputer. Elle n’attaque que ce qui l’approche."},
-	"archipretre": {"name": "L’Archiprêtre aux racines", "kind": "MINI-BOSS · GARDIEN DES CLOÎTRES", "lore": "Un prêtre du Temple que les racines de la Bête ont cousu à l’autel. Son bulbe ne s’ouvre que si les quatre cultes prient ensemble autour de lui."},
+	"tick": {"name": "Tique de filon", "kind": "FAUNE · SALLES OUBLIÉES", "lore": "Collée à son filon, elle se gave de cuivre et perfore de son rostre de fer quiconque vient le lui disputer. Elle n’attaque que ce qui l’approche."},
+	"archipretre": {"name": "L’Archiprêtre aux racines", "kind": "MINI-BOSS · GARDIEN DES CLOÎTRES", "lore": "Un prêtre du Temple que les racines de la Bête ont cousu à l’autel. L’Œil de la Matrice regarde à travers son bulbe, et frappe par lui."},
+	"eclusier": {"name": "L’Éclusier de Byrsa", "kind": "MINI-BOSS · GARDIEN DES PUITS", "lore": "Un ingénieur de Byrsa dans un scaphandre de cuivre plein d’eau, la clef d’écluse plantée comme une hallebarde. Tant que la Grande Écluse est noyée, rien ne le perce ; ses pompes la vident."},
+	"patine": {"name": "La Martyre de la Patine", "kind": "MINI-BOSS · MARTYRE DES ÉCLUSES", "lore": "Une armure d’automate de Byrsa que le vert-de-gris a rongée ; l’or ne reste qu’aux arêtes. Ses balles de cuivre s’arrêtent et deviennent des mines."},
 	"gorge": {"name": "Gorge-Cuivre", "kind": "BOSS · DÉVOREUSE DE FILONS", "lore": "Un mille-pattes cuirassé long comme une galerie. Elle a mangé tous les filons de la grande salle et dort dessous. Ses anneaux arrêtent les coups ; sa gueule, non."},
 	"eel": {"name": "Anguille des puits", "kind": "FAUNE · NEUTRE", "lore": "Une crête d’épines de cuivre lui sort du dos. Elle ne quitte jamais son bassin ; sa décharge frappe tout ce qui s’en approche, Exilés comme ennemis."},
-	"bat": {"name": "Chauve-souris patinée", "kind": "FAUNE · VERT-DE-GRIS", "lore": "Poitrail plaqué de cuivre, ailes trouées. Elles chassent en nuées et piquent droit."},
+	"bat": {"name": "Chauve-souris patinée", "kind": "FAUNE · SALLES OUBLIÉES", "lore": "Poitrail plaqué de cuivre, ailes trouées. Elles chassent en nuées et piquent droit."},
 	"skeleton": {"name": "Squelette à collier", "kind": "ENNEMI · NUIT", "lore": "Ils se lèvent par trois, enchaînés par le cou : aucun ne s’éloigne des deux autres. Frappé, il lâche des éclats d’os et de fer."},
 	"skeleton_bubo": {"name": "Squelette à bubons", "kind": "ENNEMI · NUIT", "lore": "Voûté, couvert de bubons de bile. Chaque coup en fait éclater un, qui brûle tout ce qui l’entoure, sauf les siens."},
 	"skeleton_bomb": {"name": "Squelette explosif", "kind": "ENNEMI · NUIT", "lore": "Une braise lui tient lieu de cœur. Abattu, il tombe à genoux, puis explose et crache dix boules de feu."},
@@ -467,7 +468,7 @@ static func lvl(u: Unit) -> int:
 
 
 static func armor(u: Unit) -> int:
-	return int((lvl_bonus(u) + GearItems.total(u, "armor")) * u.power) + (500 if u.role == "engineer" and not u.unarmored else 0)
+	return int(((lvl(u) - 1) + GearItems.total(u, "armor")) * u.power) + (500 if u.role == "engineer" and not u.unarmored else 0)
 
 
 ## Arme portée par l'Ingénieur sans armure, si elle peut frapper (une arme à munitions en demande une au stock).
@@ -496,8 +497,9 @@ static func damage_mult(u: Unit) -> float:
 	return 2.0 if u != null and u.role == "indra" else 1.0
 
 
-static func lvl_bonus(u: Unit) -> int:
-	return lvl(u) - 1
+## +0,5 dégât par niveau (la défense gagne toujours +1).
+static func lvl_bonus(u: Unit) -> float:
+	return (lvl(u) - 1) * 0.5
 
 
 ## costText : « 20 Savoir + 10 Forge ».

@@ -45,10 +45,14 @@ func _ready() -> void:
 
 
 func _process(_delta: float) -> void:
-	visible = _strength() > 0.0
+	# Motifs prêtés à un autre boss (Martyre.hosted) : ses effets se dessinent sans dôme ni aura.
+	var dome := _strength() > 0.0
+	visible = dome or Martyre.hosted()
+	if _aura != null:
+		_aura.visible = dome
 	if visible:
 		queue_redraw()
-		if _aura != null:
+		if _aura != null and dome:
 			_aura.queue_redraw()
 
 
@@ -136,6 +140,11 @@ static func textures(is_front: bool) -> Array:
 func _draw() -> void:
 	var s := _strength()
 	if s <= 0.0:
+		if Martyre.hosted():
+			if front:
+				MartyreFx.air(self)
+			else:
+				MartyreFx.ground(self)
 		return
 	var c := Proj.nat(GameState.martyre_center.x, 0.0, GameState.martyre_center.y).round()
 	var r := radius_px()

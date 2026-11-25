@@ -66,3 +66,12 @@ func _same(got: Dictionary, want: Dictionary, what: String) -> void:
 
 func game_sim() -> Simulation:
 	return _main.get_node("Simulation")
+
+
+## Les relevés du prototype comptent +1 dégât par niveau ; le jeu, Catalog.lvl_bonus (+0,5 depuis le 2026-11-24).
+## PV attendus d'un ennemi après `hits` coups reçus de `u` : le relevé, rehaussé de l'écart par coup. Un ennemi
+## que le prototype donne mort reste attendu mort.
+func lvl_hp(want_hp: float, u: Unit, hits: int) -> float:
+	if want_hp <= 0.0:
+		return want_hp
+	return want_hp + hits * ((u.level - 1) - Catalog.lvl_bonus(u))

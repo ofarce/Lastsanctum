@@ -235,7 +235,7 @@ static func _land_marks(sim: Simulation, r: Dictionary, alive: Array[Unit], now:
 		var dmg: float = PIERCE["damage"] if m["kind"] == "pierce" else RAIN["damage"]
 		for u: Unit in alive:
 			if not u.hidden and u.pos().distance_to(at) <= float(m["r"]):
-				sim.combat.damage(u, Combat.after_armor(u, dmg))
+				sim.combat.damage(u, Combat.boss_shot(at.y) if u.role == "engineer" else Combat.after_armor(u, dmg * Biomes.power_at(at.y)))
 				Combat.flash(u.x, u.z, Color("#f0b088"))
 		Combat.zone(at.x, at.y, float(m["r"]), Color("#c47b58"))
 		Sfx.at("objet_pose", at.x, at.y)
@@ -298,7 +298,7 @@ static func _furrow_hits(sim: Simulation, r: Dictionary, a: Vector2, b: Vector2,
 		var p := Geometry2D.get_closest_point_to_segment(u.pos(), a, b)
 		if p.distance_to(u.pos()) <= float(FURROW["width"]):
 			hit.append(u)
-			sim.combat.damage(u, Combat.after_armor(u, FURROW["damage"]))
+			sim.combat.damage(u, Combat.boss_shot(u.z) if u.role == "engineer" else Combat.after_armor(u, FURROW["damage"] * Biomes.power_at(u.z)))
 			Combat.flash(u.x, u.z, Color("#f0b088"))
 
 

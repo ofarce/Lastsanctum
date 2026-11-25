@@ -97,6 +97,7 @@ const ROOM_ID0 := 10000
 const ROOM_LABEL := {"hub": "Hub", "antechamber": "Antichambre", "threshold": "Portail", "mb1": "Arène", "mb2": "Arène"}
 ## Noms des quartiers du Temple (planches/quartiers-entrees-propositions.html, validés le 2026-11-22).
 const TEMPLE_QUARTERS := {"A": "Les Cloîtres", "B": "La Nef dorée", "C": "Les Racines", "R": "L’Orbite"}
+const VEINES_QUARTERS := {"A": "Les Puits", "B": "Les Écluses", "C": "La Grande Patine", "R": "L’Antre de la Gorge"}
 
 
 ## Seuil du portail d'une salle : au centre (dans une arène, vers son entrée sud, loin du futur mini-boss).
@@ -114,7 +115,8 @@ static func room_threshold(st: TerrainState, room: Dictionary) -> Vector2:
 
 
 static func room_name(room: Dictionary) -> String:
-	return "%s · %s" % [ROOM_LABEL.get(room["role"], "Portail"), TEMPLE_QUARTERS.get(room["quarter"], "")]
+	var names: Dictionary = VEINES_QUARTERS if int(room.get("biome", 0)) == 1 else TEMPLE_QUARTERS
+	return "%s · %s" % [ROOM_LABEL.get(room["role"], "Portail"), names.get(room["quarter"], "")]
 
 
 ## Nœuds du réseau : l'Ancre, les pylônes canalisés, puis les portails de salle allumés.
@@ -127,8 +129,8 @@ static func nodes(st: TerrainState) -> Array[Dictionary]:
 	for p: Dictionary in st.portals:
 		if linked(p):
 			out.append({"id": int(p["id"]), "pos": threshold(st, p), "pylon": p, "name": pylon_name(st, p), "open": pylon_open(p)})
-	if not st.temple_layout.is_empty() and not GameState.room_portals.is_empty():
-		for room: Dictionary in st.temple_layout["rooms"]:
+	if not GameState.room_portals.is_empty():
+		for room: Dictionary in _all_rooms(st):
 			if room["portal"] and GameState.room_portals.has(room["id"]):
 				out.append({"id": ROOM_ID0 + int(room["id"]), "pos": room_threshold(st, room), "pylon": {}, "name": room_name(room), "open": true})
 	if not out.is_empty():
@@ -334,29 +336,48 @@ static func tick(sim: Simulation, _dt: float) -> void:
 	_announce_assault(sim)
 
 
+## Salles des plans en salles (Temple, Veines), identifiants globaux.
+static func _all_rooms(st: TerrainState) -> Array:
+	var out: Array = []
+	for lay: Dictionary in st.room_layouts():
+		out.append_array(lay["rooms"])
+	return out
+
+
 ## Portails de salle : allumés à la première visite d'un allié.
 static func _light_rooms(sim: Simulation) -> void:
 	var st := sim.state()
-	if st == null or st.temple_layout.is_empty():
+	if st == null:
 		return
-	for room: Dictionary in st.temple_layout["rooms"]:
+	var occupied := {}
+	var have := false
+	for room: Dictionary in _all_rooms(st):
 		if not room["portal"] or GameState.room_portals.has(room["id"]):
 			continue
-		# Arènes des mini-boss : leur portail de retour s'ouvre à la chute du mini-boss, pas à la visite.
+		# Arènes des mini-boss : leur portail de retour s'ouvre à la chute du mini-boss, pas à la visite (Temple :
+		# Archiprêtre, Martyre de Byrsa ; Salles oubliées : Éclusier, Martyre de la Patine).
 		if room["role"] == "mb1" or room["role"] == "mb2":
-			var down := GameState.martyre_state == "defeated" if room["role"] == "mb2" \
-				else String(GameState.archipretre.get("mode", "")) == "dead"
+			var down := false
+			if int(room.get("biome", 0)) == 0:
+				down = GameState.martyre_state == "defeated" if room["role"] == "mb2" \
+					else String(GameState.archipretre.get("mode", "")) == "dead"
+			else:
+				down = Patine.dead() if room["role"] == "mb2" else Eclusier.dead()
 			if down:
 				GameState.room_portals[room["id"]] = true
 				sim.say("Portail de retour ouvert : %s." % room_name(room), 3.0)
 			continue
-		for u: Unit in GameState.units:
-			if u.alive() and not u.hidden and st.temple_room(u.x, u.z).get("id", -1) == room["id"]:
-				GameState.room_portals[room["id"]] = true
-				var at := room_threshold(st, room)
-				Sfx.at("portail", at.x, at.y)
-				sim.say("Portail allumé : %s." % room_name(room), 3.0)
-				break
+		# Salles occupées par un allié visible : calculées une fois par tick, à la première salle à tester.
+		if not have:
+			have = true
+			for u: Unit in GameState.units:
+				if u.alive() and not u.hidden:
+					occupied[st.temple_room(u.x, u.z).get("id", -1)] = true
+		if occupied.has(room["id"]):
+			GameState.room_portals[room["id"]] = true
+			var at := room_threshold(st, room)
+			Sfx.at("portail", at.x, at.y)
+			sim.say("Portail allumé : %s." % room_name(room), 3.0)
 
 
 # ---------------------------------------------------------------- Rappel d'assaut

@@ -1,0 +1,178 @@
+%%HEAD%%<main>
+<header>
+ <h1>Torches des tunnels</h1>
+ <p class="lead">D'après la capture fournie : une petite coupelle claire fixée à la paroi, une flamme de quelques pixels (rouge en pointe, jaune au cœur) et un halo rond et doux qui déborde sur le dallage. Six supports autour de ce modèle, puis trois façons de rendre le halo. Chaque vignette montre la même galerie : la paroi nord vue de face, et une branche qui descend, avec une torche contre le rebord comme sur la capture.</p>
+</header>
+
+<div class="reco">
+ <h2>Ma recommandation</h2>
+ <p><b>T1 Coupelle de pierre</b> partout : c'est la capture, lisible et discrète. <b>T4 Lanterne de moine</b> en complément dans les quartiers du monastère, et <b>T6 Applique du Credo</b> seulement dans les couloirs que le Credo tient encore, pour annoncer ses salles.</p>
+ <p>Pour la lumière, <b>H1 Halo doux</b>, celui de la capture. <b>H3 Halo tramé</b> si l'on veut rester strictement en 16 bits.</p>
+ <p>Répondez par les numéros, par exemple « T1, T4, T6, H1 ».</p>
+</div>
+
+<div class="tools">
+ <button id="pause" type="button" aria-pressed="false">Pause</button>
+ <span>Vignettes en pixels du monde, agrandies ×3 · un personnage mesure environ 36 px</span>
+</div>
+
+<div class="part"><h2>Supports</h2><p>Même flamme, même halo doux ; seul l'objet change. Toutes s'allument d'elles-mêmes : pas d'ordre à donner, pas d'entretien.</p></div>
+<div id="listT" style="display:contents"></div>
+
+<div class="part"><h2>Rendu du halo</h2><p>La torche T1 avec trois rendus de lumière. Le halo n'est qu'une lumière posée sur le sol : il ne change pas la vision ni le brouillard.</p></div>
+<div id="listH" style="display:contents"></div>
+</main>
+
+<script>
+%%ENGINE%%
+/* ---------- palettes propres à cette planche ---------- */
+const GD=[0x5a3e14,0xa07424,0xd0a038,0xf0cc66,0xfff2b0];   // or du Credo
+const BZ=[0x3a2c18,0x5a4a2a,0x8a7040,0xb09458,0xd0b878];   // bronze terni
+const CUP=[0x8a8468,0xc8c09a,0xeee6c0,0xfff8de];           // pierre claire de la coupelle (capture)
+const FLM=[0xb8201a,0xe0501c,0xf49a2a,0xffd860,0xfff6c8]; // flamme : pointe rouge → cœur pâle
+const RIM=[0x6e7a84,0x9aa8b0,0xc4d0d4];                    // briques du rebord (capture)
+
+/* ---------- galerie : un tronçon horizontal et une branche qui descend ---------- */
+const tun=(x,y)=>(y>=40&&y<78&&x<146)||(x>=116&&x<146&&y>=78);
+
+/* ---------- lumière : trois rendus ---------- */
+let HALO='doux';const glows=[];
+const BAY=[0,8,2,10,12,4,14,6,3,11,1,9,15,7,13,5];
+function addPx(x,y,c,f){const i=(y*W+x)*4;img[i]+=(c>>16&255)*f;img[i+1]+=(c>>8&255)*f;img[i+2]+=(c&255)*f}
+function glow(cx,cy,r,c,a){r*=1.3;a*=1.25;const ry=r*.78;
+ if(HALO==='paliers'){light(cx,cy,r,ry,c,a*.42);return}
+ for(let y=Math.max(0,Math.floor(cy-ry));y<=Math.min(H-1,Math.ceil(cy+ry));y++)for(let x=Math.max(0,Math.floor(cx-r));x<=Math.min(W-1,Math.ceil(cx+r));x++){
+  const dx=(x-cx)/r,dy=(y-cy)/ry,d=Math.sqrt(dx*dx+dy*dy);if(d>=1)continue;
+  if(HALO==='tramé'){const v=(1-d)*3.2+BAY[(y&3)*4+(x&3)]/16-.5;const l=Math.max(0,Math.min(3,Math.floor(v)));if(l)addPx(x,y,c,a*l/3);continue}
+  addPx(x,y,c,a*1.35*Math.pow(1-d,1.25))}}
+const flick=(s)=>1+.05*Math.sin(T*13+s)+.04*Math.sin(T*7.3+s*2.1);
+
+/* flamme : x,y = base de la flamme ; s = taille ; pal = couleurs pointe → cœur */
+function flame(x,y,s,pal){pal=pal||FLM;const st=Math.floor(T*12+x*.37),h=Math.round(4*s)+(hs(st)>.55?1:0),sw=Math.sin(T*6+x)*.9;
+ for(let j=0;j<h;j++){const k=j/h,half=k<.3?1:k<.65?1:0,ox=Math.round(sw*k*k);
+  for(let i=-half;i<=half;i++){let c=k>.8?pal[0]:k>.55?pal[1]:pal[2];if(i===0&&k<.45)c=k<.2?pal[4]:pal[3];if(Math.abs(i)===1&&k<.25)c=pal[2];blend(x+i+ox,y-j,c,1)}
+  if(s>1.2&&k<.4){blend(x-2+ox,y-j,pal[1],1);blend(x+2+ox,y-j,pal[1],1)}}
+ if(hs(st*1.7)>.7)blend(x+Math.round(sw)+(hs(st)>.5?1:-1),y-h-1,pal[0],1)}       // étincelle qui s'échappe
+function smoke(x,y,seed){for(let k=0;k<4;k++){const u=(T*.45+k/4+seed)%1;gell(x+Math.sin(T*1.3+k*2)*1.5+u*2,y-u*14,.8+u*1.8,.8+u*1.2,0x8a8a90,(1-u)*.22)}}
+/* une torche : dessine le support (tampon, contour noir) et pousse lumière + flamme */
+function lit(x,y,s,c,r,a,pal,seed){glows.push(()=>glow(x,y+2,r*flick(x+(seed||0)),c,a));post.push(()=>flame(x,y,s,pal))}
+
+/* ---------- supports ---------- */
+/* T1 : coupelle de pierre claire, comme la capture */
+function cup(x,y){rect(x-1,y+1,3,2,I[2]);px(x,y+3,I[1]);                                 // tenon dans la paroi
+ rect(x-3,y-3,7,4,CUP[1]);rect(x-3,y-3,7,1,CUP[3]);rect(x-3,y-2,1,3,CUP[2]);rect(x+3,y-2,1,3,CUP[0]);
+ rect(x-2,y-1,5,1,FLM[2]);px(x-2,y-1,FLM[3]);rect(x-2,y,5,1,CUP[0]);
+ lit(x,y-4,1,0xc8a440,22,.55)}
+/* T2 : bras de fer forgé, coupelle noire */
+function ironArm(x,y){rect(x-1,y-1,3,5,I[2]);px(x-1,y-1,I[4]);rect(x,y-3,1,3,I[3]);px(x+1,y-4,I[3]);px(x+2,y-5,I[3]);px(x-1,y+4,I[1]);
+ rect(x-2,y-7,7,2,I[2]);rect(x-2,y-7,7,1,I[4]);px(x-2,y-8,I[3]);px(x+4,y-8,I[3]);
+ lit(x+1,y-8,1,0xd09040,22,.55)}
+/* T3 : torche de bois fichée dans un anneau, flamme haute et fumée */
+function stick(x,y){rect(x-2,y,5,2,I[2]);rect(x-2,y,5,1,I[4]);                            // anneau
+ for(let j=0;j<8;j++)px(x+Math.round(j*.25)-1,y+3-j,j<2?WD[1]:WD[2]);for(let j=0;j<8;j++)px(x+Math.round(j*.25),y+3-j,WD[1]);
+ rect(x,y-7,3,3,LN[0]);px(x,y-7,LN[1]);px(x+2,y-5,0x2a2018);
+ post.push(()=>smoke(x+1,y-14,x*.01));lit(x+1,y-8,1.45,0xd88a38,26,.6)}
+/* T4 : lanterne de moine pendue à un crochet, un peu de balancement */
+function lantern(x,y){const sw=Math.round(Math.sin(T*1.4+x)*.6);rect(x-1,y-11,4,1,I[3]);px(x+2,y-10,I[3]);
+ for(let j=0;j<3;j++)px(x+2+(j===2?sw:0),y-9+j,j%2?I[2]:I[3]);const lx=x+2+sw,ly=y-6;
+ rect(lx-2,ly,5,1,I[3]);rect(lx-3,ly+1,7,8,I[1]);rect(lx-3,ly+1,7,1,I[4]);rect(lx-3,ly+8,7,1,I[3]);
+ for(const i of[-3,0,3])rect(lx+i,ly+2,1,6,I[2]);
+ post.push(()=>{for(let j=2;j<8;j++)for(const i of[-2,-1,1,2])blend(lx+i,ly+j,j>5?0xf0b050:0xf8d88a,.72);flame(lx,ly+6,.7)});
+ glows.push(()=>glow(lx,ly+6,20*flick(x),0xe8c070,.48))}
+/* T5 : lampe à huile en bronze sur une console de pierre */
+function oilLamp(x,y){rect(x-4,y,9,2,S[4]);rect(x-4,y,9,1,S[5]);rect(x-2,y+2,5,2,S[3]);px(x,y+4,S[2]);
+ ell(x,y-2,3.6,1.6,0,(xx,yy,dx,dy)=>dy<-.3?BZ[4]:dx<0?BZ[3]:BZ[2]);rect(x+3,y-3,2,1,BZ[3]);px(x+5,y-4,BZ[4]);rect(x-5,y-3,1,2,BZ[2]);
+ glows.push(()=>glow(x+5,y-3,15*flick(x),0xd07a30,.5));post.push(()=>flame(x+5,y-5,.65))}
+/* T6 : applique dorée du Credo, flamme plus blanche */
+const FLW=[0xd0602a,0xf0a040,0xffe08a,0xfff6d0,0xffffff];
+function credo(x,y){rect(x-1,y-1,3,6,GD[1]);px(x-1,y-1,GD[3]);px(x,y+5,GD[0]);ell(x,y+1,1.4,1.4,GD[3]);px(x,y+1,0x8e1c20);
+ poly([[x-4,y-6],[x+4,y-6],[x+2,y-3],[x-2,y-3]],GD[2]);rect(x-4,y-6,9,1,GD[4]);rect(x+1,y-5,2,2,GD[1]);px(x-4,y-7,GD[3]);px(x+4,y-7,GD[3]);
+ lit(x,y-7,1.15,0xf0d070,24,.55,FLW)}
+
+/* ---------- pose : paroi nord vue de face, rebord de la branche vu de dessus ---------- */
+function place(f,north,side){const F=ft(0);for(const x of north)f(x,F-6);for(const y of side)f(117,y)}
+const TORCH=[
+ {n:"T1",nom:"Coupelle de pierre",f:cup,
+  txt:"Le modèle de la capture. Une coupelle de pierre claire, à peine plus large qu'une main, scellée dans la paroi par un tenon de fer. La flamme lèche le rebord et l'éclaire d'orange.",
+  pour:"Fidèle à la référence. La pierre claire se lit même hors du halo, ce qui aide à repérer la torche de loin.",
+  contre:"Très simple : elle ne dit pas grand-chose du monastère.",
+  jeu:"Un sprite fixe, flamme animée à part (5 images), une lumière par torche."},
+ {n:"T2",nom:"Bras de fer",f:ironArm,
+  txt:"Une platine noire vissée au mur, un bras recourbé, une coupelle de fer. La flamme est plus haute et un peu détachée de la paroi.",
+  pour:"Plus austère, s'accorde au fer sombre des portes et des grilles.",
+  contre:"Le fer se perd dans la pierre sombre : seule la flamme se voit hors de la lumière.",
+  jeu:"Même coût que T1."},
+ {n:"T3",nom:"Torche fichée",f:stick,
+  txt:"Un manche de bois enveloppé de toile goudronnée, planté de biais dans un anneau. Grande flamme, un filet de fumée qui monte.",
+  pour:"La plus « torche » des six, la plus vivante. La fumée donne du mouvement aux couloirs vides.",
+  contre:"Plus haute : elle mord sur la partie haute de la paroi. La fumée ajoute un peu de bruit à l'image.",
+  jeu:"Sprite + flamme + fumée en particules légères."},
+ {n:"T4",nom:"Lanterne de moine",f:lantern,
+  txt:"Une lanterne de fer à vitres de corne, pendue à un crochet. Elle oscille doucement. La lumière passe par les vitres, plus jaune et plus feutrée.",
+  pour:"Raconte le monastère : on éclairait les couloirs de nuit pour aller aux offices. Le balancement attire l'œil sans clignoter.",
+  contre:"Lumière plus faible que les autres : à réserver aux quartiers calmes.",
+  jeu:"Sprite qui se balance (2 images suffisent) + vitres en décalque."},
+ {n:"T5",nom:"Lampe à huile",f:oilLamp,
+  txt:"Une lampe de bronze à bec, posée sur une console taillée dans la paroi. Petite flamme, halo court et orangé.",
+  pour:"La plus discrète. Bonne pour les couloirs étroits où un grand halo écraserait tout.",
+  contre:"Petite : à 1× elle risque de n'être qu'un point.",
+  jeu:"Même coût que T1, halo plus court."},
+ {n:"T6",nom:"Applique du Credo",f:credo,
+  txt:"Une applique dorée frappée du sceau carmin du Credo, flamme plus blanche. Le Credo a rallumé les couloirs qu'il tient.",
+  pour:"Utilise l'or réservé au Credo : on sait qu'on approche de ses salles avant de voir un ennemi.",
+  contre:"Ne convient qu'aux couloirs tenus par le Credo ; ailleurs elle brouille le code des couleurs.",
+  jeu:"Même coût que T1. Peut s'éteindre quand la salle voisine est nettoyée."}
+];
+for(const t of TORCH){t.mask=tun;t.dark=.42;t.d=function(){place(this.f,[22,72],[100])}}
+const HALOS=[
+ {n:"H1",nom:"Halo doux",halo:'doux',txt:"Un dégradé continu, comme sur la capture. La flamme reste nette, la lumière est floue.",
+  pour:"La référence. Le plus agréable à l'œil, le plus « chaud ».",contre:"Un dégradé lisse jure un peu avec les pixels nets du reste."},
+ {n:"H2",nom:"Halo en paliers",halo:'paliers',txt:"Trois cercles nets de plus en plus clairs vers la flamme, la méthode des lampes du sanctum.",
+  pour:"Déjà utilisé ailleurs dans le jeu : cohérent avec les autres lumières.",contre:"Les bords des paliers se voient quand la flamme vacille."},
+ {n:"H3",nom:"Halo tramé",halo:'tramé',txt:"Les paliers sont fondus par une trame ordonnée, à la façon des jeux 16 bits.",
+  pour:"Garde la douceur de H1 avec des pixels francs.",contre:"La trame scintille légèrement quand le rayon vacille."}
+];
+for(const h of HALOS){h.mask=tun;h.dark=.42;h.d=function(){place(cup,[22,72],[100])}}
+
+/* ---------- fond : dallage, paroi nord, briques claires du rebord ---------- */
+let FL=null,RK=null;
+const tile=(t,x,y)=>{const i=(((y%t.h)+t.h)%t.h*t.w+((x%t.w)+t.w)%t.w)*4;return t.d[i]<<16|t.d[i+1]<<8|t.d[i+2]};
+function brick(x,y,vert){const u=vert?y:x,v=vert?x:y,seg=Math.floor(u/6);if(u%6===5)return RIM[0];return (v&1)?RIM[1]:(hs(seg*3.1+v)>.6?RIM[2]:mix(RIM[2],RIM[1],.4))}
+function makeBg(v,k){const {w,h}=v,mask=v.m.mask,dk=v.m.dark,d=new Uint8ClampedArray(w*h*4);
+ for(let y=0;y<h;y++)for(let x=0;x<w;x++){let c;
+  if(mask(x,y)){c=tile(FL,x+k*37,y+k*53);for(let j=1;j<=5;j++)if(!mask(x,y-j)){c=mix(c,0x05060a,(6-j)*.085);break}
+   if(!mask(x-1,y)||!mask(x+1,y))c=mix(c,0x05060a,.3)}
+  else{let dist=0;for(let j=1;j<=FACE;j++)if(mask(x,y+j)){dist=j;break}
+   if(dist){const top=FACE-dist,row=Math.floor(top/6);c=mix(S[2],S[0],top/FACE*.85);
+    if(top<2)c=top===0?S[4]:S[3];else if(top%6===1||(x+row*5)%10===0)c=mix(c,INK,.45);
+    else if(hs(x*.37+row*3.1+Math.floor(x/10)*7)>.82)c=mix(c,S[3],.35);
+    if(dist<4&&hs(x*1.7+k)>.7)c=mix(c,INK,.5)}
+   else if(mask(x+1,y)||mask(x+2,y)||mask(x-1,y)||mask(x-2,y))c=brick(x,y,true);
+   else if(mask(x,y-1)||mask(x,y-2))c=brick(x,y,false);
+   else c=mix(tile(RK,x+k*29,y+k*17),0x07080c,.45)}
+  const i=(y*w+x)*4;d[i]=(c>>16&255)*dk;d[i+1]=(c>>8&255)*dk;d[i+2]=(c&255)*dk;d[i+3]=255}
+ v.bg=d}
+
+/* ---------- page ---------- */
+const views=[];
+function build(list,host,rows){for(const m of list){const s=document.createElement('section');s.className='m';
+ const dl=rows.map(([k,l])=>m[k]?`<dt>${l}</dt><dd>${m[k]}</dd>`:'').join('');
+ s.innerHTML=`<div class="txt"><h2><i>${m.n}</i>${m.nom}</h2><p>${m.txt}</p><dl>${dl}</dl></div><figure></figure>`;
+ const c=document.createElement('canvas'),w=176,h=112;c.width=w;c.height=h;c.setAttribute('role','img');c.setAttribute('aria-label',m.nom+' : '+m.txt);
+ s.querySelector('figure').appendChild(c);const cap=document.createElement('figcaption');cap.textContent=m.n+' · '+w+' × '+h+' px du monde';s.querySelector('figure').appendChild(cap);
+ host.appendChild(s);const ctx=c.getContext('2d');views.push({m,w,h,ctx,id:ctx.createImageData(w,h),buf:new Int32Array(w*h),bg:null})}}
+build(TORCH,document.getElementById('listT'),[['pour','Pour'],['contre','Contre'],['jeu','En jeu']]);
+build(HALOS,document.getElementById('listH'),[['pour','Pour'],['contre','Contre']]);
+
+function draw(v,t){W=v.w;H=v.h;T=t;buf=v.buf;M=v.m.mask;img=v.id.data;img.set(v.bg);buf.fill(-1);post.length=0;glows.length=0;HALO=v.m.halo||'doux';
+ DK=v.m.dark;v.m.d();compose();DK=1;for(const f of glows)f();for(const f of post)f();v.ctx.putImageData(v.id,0,0)}
+function frame(t){for(const v of views)draw(v,t)}
+let time=2.2,last=0,paused=matchMedia('(prefers-reduced-motion:reduce)').matches,acc=0;
+function loop(now){const dt=Math.min(.1,(now-last)/1000||0);last=now;if(!paused){time+=dt;acc+=dt;if(acc>=1/20){acc=0;frame(time)}}requestAnimationFrame(loop)}
+function load(src){return new Promise(r=>{const im=new Image();im.onload=()=>{const c=document.createElement('canvas');c.width=im.width;c.height=im.height;const x=c.getContext('2d');x.drawImage(im,0,0);
+ r({w:im.width,h:im.height,d:x.getImageData(0,0,im.width,im.height).data})};im.src=src})}
+Promise.all([load("%%SOL%%"),load("%%ROCHE%%")]).then(([a,b])=>{FL=a;RK=b;views.forEach(makeBg);frame(time);requestAnimationFrame(loop)});
+const bp=document.getElementById('pause');
+function showPause(){bp.setAttribute('aria-pressed',String(paused));bp.textContent=paused?'Reprendre':'Pause'}showPause();
+bp.addEventListener('click',()=>{paused=!paused;showPause()});
+</script>

@@ -161,8 +161,8 @@
    "cols": 6,
    "rows": 1,
    "count": 6,
-   "note": "tir de l’Arbalestrie (0,5 s), 12 i/s (tête : +1 px sur les images 1 et 2)",
-   "fps": 12
+   "note": "tir de l’Arbalestrie, Coup sec : le canon seul recule de 4 px et revient en ressort, 6 images à 24 i/s (tête fixe)",
+   "fps": 24
   },
   "c_idle_d": {
    "y": 1872,
@@ -199,37 +199,151 @@
    "cols": 6,
    "rows": 1,
    "count": 6,
-   "note": "tir de l’Arbalestrie vers le sud (de face), canon à la hanche pointé vers le bas, 12 i/s",
-   "fps": 12
+   "note": "tir de l’Arbalestrie vers le sud (de face), canon à la hanche pointé vers le bas, 24 i/s",
+   "fps": 24
   },
   "c_shoot_u": {
    "y": 2208,
    "cols": 6,
    "rows": 1,
    "count": 6,
-   "note": "tir de l’Arbalestrie vers le nord (de dos), canon levé, 12 i/s",
+   "note": "tir de l’Arbalestrie vers le nord (de dos), canon levé, 24 i/s",
+   "fps": 24
+  },
+  "idle_dr": {
+   "y": 2256,
+   "cols": 12,
+   "rows": 2,
+   "count": 24,
+   "note": "repos de trois quarts face (diagonale bas-droite ; miroir pour bas-gauche)",
+   "fps": 12
+  },
+  "walk_dr": {
+   "y": 2352,
+   "cols": 12,
+   "rows": 1,
+   "count": 12,
+   "note": "marche de trois quarts face"
+  },
+  "idle_ur": {
+   "y": 2400,
+   "cols": 12,
+   "rows": 2,
+   "count": 24,
+   "note": "repos de trois quarts dos (diagonale haut-droite ; miroir pour haut-gauche)",
+   "fps": 12
+  },
+  "walk_ur": {
+   "y": 2496,
+   "cols": 12,
+   "rows": 1,
+   "count": 12,
+   "note": "marche de trois quarts dos"
+  },
+  "c_idle_dr": {
+   "y": 2544,
+   "cols": 12,
+   "rows": 2,
+   "count": 24,
+   "note": "repos de trois quarts face, Arbalestrie sur l’épaule droite",
+   "fps": 12
+  },
+  "c_walk_dr": {
+   "y": 2640,
+   "cols": 12,
+   "rows": 1,
+   "count": 12,
+   "note": "marche de trois quarts face, Arbalestrie sur l’épaule"
+  },
+  "c_idle_ur": {
+   "y": 2688,
+   "cols": 12,
+   "rows": 2,
+   "count": 24,
+   "note": "repos de trois quarts dos, Arbalestrie sur l’épaule droite",
+   "fps": 12
+  },
+  "c_walk_ur": {
+   "y": 2784,
+   "cols": 12,
+   "rows": 1,
+   "count": 12,
+   "note": "marche de trois quarts dos, Arbalestrie sur l’épaule"
+  },
+  "shoot_dr": {
+   "y": 2832,
+   "cols": 6,
+   "rows": 1,
+   "count": 6,
+   "note": "décharge du gantelet de trois quarts face (diagonale bas-droite), 12 i/s",
+   "fps": 12
+  },
+  "shoot_ur": {
+   "y": 2880,
+   "cols": 6,
+   "rows": 1,
+   "count": 6,
+   "note": "décharge du gantelet de trois quarts dos (diagonale haut-droite), 12 i/s",
+   "fps": 12
+  },
+  "c_shoot_dr": {
+   "y": 2928,
+   "cols": 6,
+   "rows": 1,
+   "count": 6,
+   "note": "tir de l’Arbalestrie de trois quarts face, tube à 45° vers le bas, 24 i/s",
+   "fps": 24
+  },
+  "c_shoot_ur": {
+   "y": 2976,
+   "cols": 6,
+   "rows": 1,
+   "count": 6,
+   "note": "tir de l’Arbalestrie de trois quarts dos, tube à 45° vers le haut, 24 i/s",
+   "fps": 24
+  },
+  "fall": {
+   "y": 3024,
+   "cols": 8,
+   "rows": 1,
+   "count": 8,
+   "note": "mort Foudroyé : coup reçu, bascule en vol (3), couché sur le dos, lumières allumées / éteintes (7 = pose finale) ; images centrées sur le corps",
    "fps": 12
   },
   "helm": {
-   "y": 2256,
+   "y": 3072,
    "cols": 4,
    "rows": 1,
    "count": 4,
    "note": "calque du casque de combat : fermeture 25 / 50 / 75 / 100 % (tête au repos, décaler de dy)"
   },
   "helm_d": {
-   "y": 2304,
+   "y": 3120,
    "cols": 4,
    "rows": 1,
    "count": 4,
    "note": "casque de face : fermeture 25 / 50 / 75 / 100 % (tête au repos, décaler de head_dy)"
   },
   "helm_u": {
-   "y": 2352,
+   "y": 3168,
    "cols": 4,
    "rows": 1,
    "count": 4,
    "note": "casque de dos : fermeture 25 / 50 / 75 / 100 % (tête au repos, décaler de head_dy)"
+  },
+  "helm_dr": {
+   "y": 3216,
+   "cols": 4,
+   "rows": 1,
+   "count": 4,
+   "note": "casque de trois quarts face : fermeture 25 / 50 / 75 / 100 % (décaler de head_dy)"
+  },
+  "helm_ur": {
+   "y": 3264,
+   "cols": 4,
+   "rows": 1,
+   "count": 4,
+   "note": "casque de trois quarts dos : fermeture 25 / 50 / 75 / 100 % (décaler de head_dy)"
   }
  },
  "aim": {
@@ -655,23 +769,23 @@
   "c_shoot_d": [
    [
     29,
+    34
+   ],
+   [
+    29,
+    34
+   ],
+   [
+    29,
+    36
+   ],
+   [
+    29,
     38
    ],
    [
     29,
-    37
-   ],
-   [
-    29,
-    37
-   ],
-   [
-    29,
-    37
-   ],
-   [
-    29,
-    37
+    39
    ],
    [
     29,
@@ -680,12 +794,12 @@
   ],
   "c_shoot_u": [
    [
-    29,
-    14
+    28,
+    18
    ],
    [
-    29,
-    17
+    28,
+    18
    ],
    [
     29,
@@ -693,15 +807,389 @@
    ],
    [
     29,
+    19
+   ],
+   [
+    28,
+    18
+   ],
+   [
+    29,
+    19
+   ]
+  ],
+  "c_idle_dr": [
+   [
+    13,
+    23
+   ],
+   [
+    13,
+    23
+   ],
+   [
+    13,
+    23
+   ],
+   [
+    13,
+    23
+   ],
+   [
+    13,
+    23
+   ],
+   [
+    13,
+    23
+   ],
+   [
+    13,
+    23
+   ],
+   [
+    13,
+    23
+   ],
+   [
+    13,
+    23
+   ],
+   [
+    13,
+    23
+   ],
+   [
+    13,
+    23
+   ],
+   [
+    13,
+    23
+   ],
+   [
+    13,
+    24
+   ],
+   [
+    13,
+    24
+   ],
+   [
+    13,
+    24
+   ],
+   [
+    13,
+    24
+   ],
+   [
+    13,
+    24
+   ],
+   [
+    13,
+    24
+   ],
+   [
+    13,
+    24
+   ],
+   [
+    13,
+    24
+   ],
+   [
+    13,
+    24
+   ],
+   [
+    13,
+    24
+   ],
+   [
+    13,
+    24
+   ],
+   [
+    13,
+    24
+   ]
+  ],
+  "c_walk_dr": [
+   [
+    13,
+    23
+   ],
+   [
+    13,
+    23
+   ],
+   [
+    13,
+    22
+   ],
+   [
+    13,
+    22
+   ],
+   [
+    13,
+    22
+   ],
+   [
+    13,
+    23
+   ],
+   [
+    13,
+    23
+   ],
+   [
+    13,
+    22
+   ],
+   [
+    13,
+    22
+   ],
+   [
+    13,
+    22
+   ],
+   [
+    13,
+    22
+   ],
+   [
+    13,
+    22
+   ]
+  ],
+  "c_idle_ur": [
+   [
+    30,
+    21
+   ],
+   [
+    30,
+    21
+   ],
+   [
+    30,
+    21
+   ],
+   [
+    30,
+    21
+   ],
+   [
+    30,
+    21
+   ],
+   [
+    30,
+    21
+   ],
+   [
+    30,
+    21
+   ],
+   [
+    30,
+    21
+   ],
+   [
+    30,
+    21
+   ],
+   [
+    30,
+    21
+   ],
+   [
+    30,
+    21
+   ],
+   [
+    30,
+    21
+   ],
+   [
+    30,
+    22
+   ],
+   [
+    30,
+    22
+   ],
+   [
+    30,
+    22
+   ],
+   [
+    30,
+    22
+   ],
+   [
+    30,
+    22
+   ],
+   [
+    30,
+    22
+   ],
+   [
+    30,
+    22
+   ],
+   [
+    30,
+    22
+   ],
+   [
+    30,
+    22
+   ],
+   [
+    30,
+    22
+   ],
+   [
+    30,
+    22
+   ],
+   [
+    30,
+    22
+   ]
+  ],
+  "c_walk_ur": [
+   [
+    30,
+    21
+   ],
+   [
+    31,
+    21
+   ],
+   [
+    31,
     20
    ],
    [
-    29,
-    19
+    30,
+    20
    ],
    [
-    29,
-    19
+    30,
+    20
+   ],
+   [
+    30,
+    21
+   ],
+   [
+    30,
+    21
+   ],
+   [
+    31,
+    20
+   ],
+   [
+    31,
+    20
+   ],
+   [
+    30,
+    20
+   ],
+   [
+    30,
+    20
+   ],
+   [
+    30,
+    20
+   ]
+  ],
+  "c_shoot_dr": [
+   [
+    30,
+    33
+   ],
+   [
+    30,
+    33
+   ],
+   [
+    30,
+    34
+   ],
+   [
+    32,
+    36
+   ],
+   [
+    32,
+    36
+   ],
+   [
+    32,
+    36
+   ]
+  ],
+  "c_shoot_ur": [
+   [
+    30,
+    21
+   ],
+   [
+    30,
+    21
+   ],
+   [
+    30,
+    22
+   ],
+   [
+    32,
+    20
+   ],
+   [
+    32,
+    20
+   ],
+   [
+    32,
+    20
+   ]
+  ],
+  "c_shoot": [
+   [
+    36,
+    27
+   ],
+   [
+    36,
+    27
+   ],
+   [
+    38,
+    27
+   ],
+   [
+    40,
+    27
+   ],
+   [
+    41,
+    27
+   ],
+   [
+    40,
+    27
    ]
   ]
  },
@@ -748,8 +1236,8 @@
   ],
   "c_shoot_d": [
    0,
-   1,
-   1,
+   0,
+   0,
    0,
    0,
    0
@@ -796,8 +1284,104 @@
   ],
   "c_shoot_u": [
    0,
+   0,
+   0,
+   0,
+   0,
+   0
+  ],
+  "c_idle_dr": [
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
    1,
    1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   0,
+   0,
+   0
+  ],
+  "c_walk_dr": [
+   0,
+   1,
+   -1,
+   -1,
+   -1,
+   0,
+   0,
+   0,
+   -1,
+   -1,
+   -1,
+   -1
+  ],
+  "c_idle_ur": [
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   1,
+   0,
+   0,
+   0
+  ],
+  "c_walk_ur": [
+   0,
+   1,
+   -1,
+   -1,
+   -1,
+   0,
+   0,
+   0,
+   -1,
+   -1,
+   -1,
+   -1
+  ],
+  "c_shoot_dr": [
+   0,
+   0,
+   0,
+   0,
+   0,
+   0
+  ],
+  "c_shoot_ur": [
+   0,
+   0,
+   0,
    0,
    0,
    0

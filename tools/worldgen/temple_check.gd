@@ -40,7 +40,8 @@ func _ready() -> void:
 			wall_open += 1
 	_check(wall_open == 0, "aucun mur creux (%d)" % wall_open)
 	# (Hors du monde, aucune galerie n'est encore découverte : walkable serait faux partout.)
-	# mb1 et mb2 scellées jusqu'à la chute de leur mini-boss (Archiprêtre, Martyre).
+	# mb1 et mb2 scellées jusqu'à la chute de leur mini-boss : Archiprêtre et Martyre au Temple, Éclusier et Martyre
+	# de la Patine dans les Salles oubliées (« @veines », 2026-11-25).
 	for key: Vector2i in st.door_cells:
 		var closed: bool = st.doors_closed[st.door_cells[key]]
 		_check(closed, "porte %s (%s) fermée" % [key, st.door_cells[key]])
@@ -54,8 +55,8 @@ func _ready() -> void:
 	for p: Dictionary in temple_pylons:
 		var room := st.temple_room(p["x"], p["z"])
 		_check(not room.is_empty() and room["pylon"], "pylône %d dans une salle à pylône" % p["id"])
-	# Salles à thème : quinze, dans des salles du plan.
-	_check(st.theme_rooms.size() == TerrainState.THEME_ROOMS, "%d salles à thème" % st.theme_rooms.size())
+	# Salles à thème : quinze au Temple, six aux Salles oubliées (citernes et ateliers), dans des salles du plan.
+	_check(st.theme_rooms.size() == TerrainState.THEME_ROOMS + TerrainState.VEINES_THEME_ROOMS, "%d salles à thème" % st.theme_rooms.size())
 	for t: Dictionary in st.theme_rooms:
 		_check(not st.temple_room(t["x"], t["z"]).is_empty(), "salle à thème %s dans une salle" % t["kind"])
 	# Filons et bosquets du Temple.
@@ -73,6 +74,7 @@ func _ready() -> void:
 		var room := st.temple_room(d["x"], d["z"])
 		_check(not room.is_empty() and room["kind"] == "combat", "tanière (%.0f, %.0f) dans un combat" % [d["x"], d["z"]])
 	print("Tanières : %d au Temple sur %d" % [temple_dens.size(), dens.size()])
+	_check_veines(st)
 	_render(st, temple_dens, out)
 	print("Échecs : %d" % _fails)
 	get_tree().quit(1 if _fails > 0 else 0)
@@ -100,6 +102,41 @@ func _explain_leak(st: TerrainState, room: Dictionary) -> void:
 				if (pool["center"] as Vector2).distance_to(p) < TerrainState.POOL_RADIUS + 3.0:
 					why.append("bassin")
 			print("   fuite en (%d, %d) : %s" % [i, j, ", ".join(why) if not why.is_empty() else "?"])
+
+
+## Veines en salles (2026-11-24) : plan présent, salles reliées à l'Ancre par la porte de l'Œil (sauf secrètes), murs
+## pleins, trois pylônes dans leurs salles, la Gorge au centre de l'arène du boss, filons et bassins.
+func _check_veines(st: TerrainState) -> void:
+	var lay := st.veines_layout
+	_check(not lay.is_empty(), "plan des Veines présent")
+	if lay.is_empty():
+		return
+	var cut := 0
+	for room: Dictionary in lay["rooms"]:
+		var c := Vector2((room["rect"] as Rect2i).get_center()) * 4.0 + Vector2(2, 2)
+		var d := st.path_at(c.x, c.y)
+		if room["kind"] == "secret":
+			_check(d < 0.0, "Veines : salle secrète %d isolée" % room["id"])
+		elif d < 0.0:
+			cut += 1
+			print("   Veines : salle %d (%s %s, %s) coupée de l'Ancre" % [room["id"], room["kind"], room["role"], room["quarter"]])
+	_check(cut == 0, "Veines : toutes les salles reliées à l'Ancre (%d coupées)" % cut)
+	var fz := TerrainState.frontier_z()
+	var pyl := st.portals.filter(func(p: Dictionary) -> bool: return p["z"] < fz)
+	_check(pyl.size() == 3, "Veines : 3 pylônes (%d)" % pyl.size())
+	for p: Dictionary in pyl:
+		_check(st.temple_room(p["x"], p["z"]).get("pylon", false), "Veines : pylône %d dans une salle à pylône" % p["id"])
+	_check(st.gorge_room != null and st.temple_room((st.gorge_room as Vector2).x, (st.gorge_room as Vector2).y).get("kind", "") == "boss", "Veines : la Gorge dort dans l'arène du boss")
+	var lodes := st.lodes.keys().filter(func(k: Vector2i) -> bool: return k.y * 4.0 < fz)
+	var pools := st.pools.filter(func(p: Dictionary) -> bool: return (p["center"] as Vector2).y < fz)
+	print("Veines : %d salles, %d filons (%s), %d bassins, %d pylônes" % [lay["rooms"].size(), lodes.size(),
+		", ".join(lodes.map(func(k: Vector2i) -> String: return st.lodes[k])), pools.size(), pyl.size()])
+	_check(lodes.size() >= 3, "Veines : au moins 3 filons")
+	var wall_open := 0
+	for key: Vector2i in lay["walls"]:
+		if st.is_gallery(key.x * 4.0 + 2.0, key.y * 4.0 + 2.0) and not st.door_cells.has(key):
+			wall_open += 1
+	_check(wall_open == 0, "Veines : murs pleins (%d creux)" % wall_open)
 
 
 func _check(ok: bool, what: String) -> void:

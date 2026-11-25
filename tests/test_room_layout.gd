@@ -158,19 +158,37 @@ func test_walls_have_no_breach() -> void:
 
 
 func test_hard_rooms_are_further_from_the_threshold() -> void:
-	# Dans chaque quartier, les combats légers sont en moyenne plus près du seuil que les moyens.
+	# Dans chaque quartier, les combats légers sont en moyenne plus près du seuil que les moyens. « Près » se compte
+	# en salles à traverser (couloirs du plan), comme le fait RoomLayout pour ranger les combats : à vol d'oiseau, une
+	# salle voisine du seuil peut n'être atteinte qu'au bout d'un long détour.
 	for lay in _layouts():
 		var rooms: Array = lay["rooms"]
+		var next := {}
+		for l: Dictionary in lay["links"]:
+			for pair: Array in [[l["a"], l["b"]], [l["b"], l["a"]]]:
+				if not next.has(pair[0]):
+					next[pair[0]] = []
+				(next[pair[0]] as Array).append(pair[1])
 		for q: String in ["A", "B"]:
 			var thr: Dictionary = rooms.filter(func(r: Dictionary) -> bool: return r["quarter"] == q and r["role"] == "threshold")[0]
-			var c0: Vector2 = Vector2((thr["rect"] as Rect2i).get_center())
+			var hops := {thr["id"]: 0}
+			var queue: Array = [thr["id"]]
+			while not queue.is_empty():
+				var at: int = queue.pop_front()
+				for n: int in next.get(at, []):
+					if not hops.has(n) and rooms[n]["quarter"] == q:
+						hops[n] = int(hops[at]) + 1
+						queue.append(n)
 			var mean := func(t: String) -> float:
 				var sel := rooms.filter(func(r: Dictionary) -> bool: return r["quarter"] == q and r["tier"] == t)
 				var s := 0.0
 				for r: Dictionary in sel:
-					s += c0.distance_to(Vector2((r["rect"] as Rect2i).get_center()))
+					check(hops.has(r["id"]), "%s : salle %d reliée au seuil dans son quartier" % [q, r["id"]])
+					s += float(hops.get(r["id"], 0))
 				return s / maxf(1.0, sel.size())
-			check(float(mean.call("L")) < float(mean.call("M")), "%s : légers avant moyens (graine %d)" % [q, lay["seed"]])
+			var light: float = mean.call("L")
+			var medium: float = mean.call("M")
+			check(light <= medium, "%s : légers avant moyens (graine %d : %.2f et %.2f salles du seuil)" % [q, lay["seed"], light, medium])
 
 
 func test_temple_keeps_the_cave_and_the_eye() -> void:

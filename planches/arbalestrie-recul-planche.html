@@ -46,6 +46,8 @@ textarea{background:var(--field);color:var(--ink);border:1px solid var(--line);b
 <p class="sub">Cinq façons de faire sentir chaque tir dans l'arme et dans le corps de l'Ingénieur. Tout est visuel : ni la cadence, ni les dégâts, ni la position réelle de l'Ingénieur ne changent. Les scènes sont en pixels natifs du jeu, avec le vrai dessin du Templier ; la balle, le souffle au sol et la douille sont ceux déjà en jeu.</p>
 <div class="note"><b>Mode d'emploi.</b> Chaque carte montre la scène de profil, les tirs de face et de dos à droite, puis les huit premières images posées une à une (24 images/s, trait cyan = bouche du canon au repos). Jugez d'abord en <b>Rafale</b> : à 6 tirs/s, seules les quatre premières images ont le temps de passer. Les pistes peuvent se cumuler si elles ne touchent pas la même partie du corps. « Copier le bilan » produit le texte à me coller.</div>
 
+<div class="note" style="margin-top:8px"><b>Choix du 23/11 : A · Coup sec, intégré en jeu (la Bascule, d’abord choisie, a été retirée).</b> La planche reste pour référence.</div>
+
 <div class="bar">
   <span class="lab">Vitesse</span>
   <button id="sp1" data-speed="1" class="on">× 1</button><button id="sp2" data-speed="0.35">× 0,35</button><button id="sp3" data-speed="0.1">× 0,1</button>
@@ -130,9 +132,9 @@ function mk(i,{rec=[0],ang=[0],lean=[0],dy=[0],ub=[0],hx=[0],hy=[0],lb=[0],lf=[0
 const REST=mk(99,{});
 const SLIDE=[.7,1,1,.9,.8,.6,.45,.3,.15,0],CLIMB=[.35,1,.8,.55,.3,.1,-.12,0];
 const PROPS=[
- {id:'now',ref:true,name:'Actuel',tag:'référence',
-  pose(i){const k=i>>1;if(k>5)return{o:REST,ox:0};const o=ENG_ANIMS.c_shoot.f(k);return{o:{...o,hd:[0,0]},ox:0}},
-  desc:'Ce qui est en jeu : la première image ne bouge pas, puis le canon recule de 2 px et remonte de 4°, le pied arrière cale. À 12 images/s, la rafale ne montre que deux images par tir : le recul se lit à peine.',
+ {id:'now',ref:true,name:'Avant',tag:'référence, tir d’avant la Bascule',
+  pose(i){const k=i>>1;if(k>5)return{o:REST,ox:0};return{o:{cannon:{ang:[0,-4,-2,-1,0,0][k],rec:[0,2,1.5,1,.5,0][k],flash:k<2},legB:{x:[0,-1.5,-2,-1.5,-1,0][k]},coat:[0,2,2,1,0,0][k],dy:k===1||k===2?1:0,rune:k<2?1:.7,hd:[0,0]},ox:0}},
+  desc:'Le tir d’avant le choix de la Bascule : la première image ne bouge pas, puis le canon recule de 2 px et remonte de 4°, le pied arrière cale. À 12 images/s, la rafale ne montre que deux images par tir : le recul se lit à peine.',
   spec:'12 i/s · recul 0 → 2 → 1,5 → 1 → 0,5 → 0 px en 0,5 s'},
  {id:'sec',name:'A · Coup sec',tag:'l’arme seule',
   pose(i){return{o:mk(i,{rec:[4,4,2,0,-1,0]}),ox:0}},

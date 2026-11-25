@@ -29,6 +29,17 @@ static func boss_fight() -> bool:
 	if Gorge.active():
 		var eng := Capsule.engineer()
 		return eng != null and not eng.hidden and eng.pos().distance_to(Gorge.center()) <= Gorge.ROOM + 4.0
+	# Mini-boss des Salles oubliées : l'Éclusier éveillé (l'Ingénieur dans sa salle), la Patine en duel.
+	if Patine.duelist() != null:
+		return true
+	if Eclusier.active():
+		var eng := Capsule.engineer()
+		if eng != null and not eng.hidden and Eclusier.in_room(eng.pos()):
+			return true
+	# Archiprêtre aux racines éveillé, l'Ingénieur dans son arène.
+	if Archipretre.active():
+		var eng := Capsule.engineer()
+		return eng != null and not eng.hidden and Archipretre.in_room(eng.pos())
 	return false
 
 

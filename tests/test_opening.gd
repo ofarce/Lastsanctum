@@ -57,7 +57,7 @@ func test_capsule_intro() -> void:
 	_run(sim, Opening.LINK_LEN + 0.2)
 	check_eq(Opening.stage(), "awake")
 	check(Capsule.powered() and not Opening.cinematic(), "capsule allumée, commandes rendues")
-	check(GameState.door_closed and not GameState.shield_up, "ni bouclier, ni porte")
+	check(not GameState.door_closed and not GameState.shield_up and sim.state().walkable(0.0, -78.0), "ni bouclier, porte sud ouverte")
 	check_eq(GameState.next_wave, DayNight.first_wave(0.0), "premier assaut à 9 h du jour 2")
 	check(Capsule.toggle(sim), "E : Sortir")
 	check(not GameState.in_capsule and not eng.hidden and GameState.incarnated == eng, "dehors et incarné")

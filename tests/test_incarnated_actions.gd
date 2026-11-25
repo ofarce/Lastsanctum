@@ -79,17 +79,12 @@ func test_library_research_minimap_and_firing_post() -> void:
 	var lib := built("library", -26.0, -118.0)
 	staff(sim, lib)
 	var ws := built("workshop", 24.0, -118.0)
-	check(not Simulation.recipe_unlocked("firing_post"), "poste de tir verrouillé au départ")
-	check(not Simulation.can_craft(ws, "firing_post"), "Atelier : pas de poste de tir")
+	check(Simulation.recipe_unlocked("firing_post"), "poste de tir disponible sans recherche")
 	GameState.res["savoir"] = 499.0
 	check(not Simulation.can_research(lib, "minimap"), "Minicarte : 500 Savoir requis")
 	GameState.res["savoir"] = 500.0
-	GameState.res["discipline"] = 500.0
 	sim.start_research(lib, "minimap")
 	check_near(GameState.res["savoir"], 0.0, 1e-6, "500 Savoir payés")
-	sim.start_research(lib, "firing_post")
-	check_near(GameState.res["discipline"], 0.0, 1e-6, "500 Discipline payés")
 	run(sim, Catalog.RESEARCH_TIME * 3.0)
 	check(GameState.research_done.has("minimap"), "Minicarte achevée")
-	check(GameState.research_done.has("firing_post"), "Poste de tir achevé")
-	check(Simulation.can_craft(ws, "firing_post"), "Atelier : poste de tir débloqué")
+	check(Simulation.can_craft(ws, "firing_post"), "Atelier : poste de tir disponible")

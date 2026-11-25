@@ -38,6 +38,10 @@ static func _boss() -> Enemy:
 		return Gorge.boss()
 	if Archipretre.active():
 		return Archipretre.boss()
+	if Eclusier.active():
+		return Eclusier.boss()
+	if Patine.active():
+		return Patine.boss()
 	return null
 
 
@@ -76,8 +80,12 @@ func _draw() -> void:
 	var f := clampf(e.hp / maxf(1.0, e.max_hp), 0.0, 1.0)
 	var gorge := e.kind == Gorge.KIND
 	var priest := e.kind == Archipretre.KIND
-	var title := "GORGE-CUIVRE" if gorge else "ARCHIPRÊTRE AUX RACINES" if priest else "ŒIL DE LA MATRICE" if eye else "MARTYRE DE BYRSA"
+	var lock := e.kind == Eclusier.KIND
+	var patina := e.kind == Patine.KIND
+	var title := "GORGE-CUIVRE" if gorge else "ARCHIPRÊTRE AUX RACINES" if priest else "ŒIL DE LA MATRICE" if eye \
+		else "ÉCLUSIER DE BYRSA" if lock else "MARTYRE DE LA PATINE" if patina else "MARTYRE DE BYRSA"
 	var phase := "Phase %s" % (Gorge.PHASE_NAMES[Gorge.phase_of(e)] if gorge else Archipretre.PHASE_NAMES[Archipretre.phase_of(e)] if priest \
+		else Eclusier.PHASE_NAMES[Eclusier.phase_of(e)] if lock else Patine.PHASE_NAMES[int(Patine.run().get("phase", 0))] if patina \
 		else OeilMatrice.PHASE_NAMES[int(OeilMatrice.run().get("phase", 0))] if eye \
 		else Martyre.PHASE_NAMES[mini(GameState.martyre_phase, Martyre.PHASE_NAMES.size() - 1)])
 	var hp := "%d / %d" % [ceili(e.hp), roundi(e.max_hp)]
@@ -116,6 +124,19 @@ func _draw() -> void:
 			draw_rect(r, RED)
 			draw_rect(Rect2(r.position, Vector2(r.size.x, 3.0)), RED_LIGHT)
 			draw_rect(Rect2(r.position + Vector2(0.0, r.size.y - 3.0), Vector2(r.size.x, 3.0)), Color(0.45, 0.04, 0.03))
+	# Garde de la Martyre : WARD_MAX losanges d'or sous la barre, celui qui se recharge se remplit.
+	if e.kind == Martyre.KIND:
+		var ward := GameState.martyre_ward
+		for i in Martyre.WARD_MAX:
+			var c := Vector2(w / 2.0 + (i - (Martyre.WARD_MAX - 1) / 2.0) * 18.0, bar.end.y + 7.0)
+			var pts := PackedVector2Array([c + Vector2(0, -6), c + Vector2(6, 0), c + Vector2(0, 6), c + Vector2(-6, 0)])
+			draw_colored_polygon(pts, FRAME)
+			var k := clampf(ward - i, 0.0, 1.0)
+			if k > 0.0:
+				var r := 4.0 * k if k < 1.0 else 4.0
+				var q := PackedVector2Array([c + Vector2(0, -r), c + Vector2(r, 0), c + Vector2(0, r), c + Vector2(-r, 0)])
+				draw_colored_polygon(q, RIM if k >= 1.0 else Color(RIM, 0.5))
+			draw_polyline(pts + PackedVector2Array([pts[0]]), RIM, 1.0)
 	# Bouclier qui se resserre (phase III) : liseré qui rougeoie.
 	if not eye and GameState.sim_time - GameState.martyre_shrink_at < Martyre.SHRINK:
 		var g := 0.5 + 0.5 * sin(GameState.sim_time * 18.0)

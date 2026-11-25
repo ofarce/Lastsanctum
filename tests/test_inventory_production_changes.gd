@@ -11,7 +11,7 @@ func test_batches_transport_and_inventory() -> void:
 	archerie.recipe = "arrows"
 	Production.put_into(archerie.input_box, "wood", 1)
 	run(sim, 10.0)
-	check_eq(Production.count_in(archerie.output_box, "arrows"), 5, "un bois produit 5 flèches")
+	check_eq(Production.count_in(archerie.output_box, "arrows"), 3, "un bois produit 3 flèches")
 	archerie.input_box.clear()
 	Production.put_into(archerie.input_box, "wood", 1)
 	archerie.output_box.clear()

@@ -154,14 +154,29 @@ func _ready() -> void:
 	gmarks.world = self
 	add_child(gmarks)
 	move_child(gmarks, ysort.get_index() + 1)
-	# Archiprêtre aux racines (sim/archipretre.gd) : nappe et places de prière sous les sprites, racines par-dessus.
+	# Mini-boss des Salles oubliées : eau et pompes de la Grande Écluse, sol, mur et mines de la Nef verte sous les
+	# sprites ; chaîne du harpon, balles de cuivre et mur avant du dôme par-dessus.
 	for is_air: bool in [false, true]:
-		var am := ArchipretreMarks.new()
-		am.name = "ArchipretreMarksAir" if is_air else "ArchipretreMarksGround"
-		am.world = self
-		am.air = is_air
-		add_child(am)
-		move_child(am, ysort.get_index() + (1 if is_air else 0))
+		var efx := EclusierFx.new()
+		efx.name = "EclusierFxAir" if is_air else "EclusierFxGround"
+		efx.world = self
+		efx.ground = not is_air
+		add_child(efx)
+		move_child(efx, ysort.get_index() + (1 if is_air else 0))
+		var pfx := PatineFx.new()
+		pfx.name = "PatineFxAir" if is_air else "PatineFxGround"
+		pfx.world = self
+		pfx.ground = not is_air
+		add_child(pfx)
+		move_child(pfx, ysort.get_index() + (1 if is_air else 0))
+	# Repères d'entrée de quartier (sim/quarter_marks.gd) : stèles et arches dans le tri en profondeur ; carton.
+	var qm := QuarterMarksLayer.new()
+	qm.name = "QuarterMarks"
+	qm.world = self
+	add_child(qm)
+	var qc := QuarterCard.new()
+	qc.name = "QuarterCard"
+	add_child(qc)
 	# Séquence d'ouverture (sim/opening.gd) : remparts et onde au sol sous les sprites ; portail, bouclier,
 	# canons et fumées par-dessus.
 	for is_air: bool in [false, true]:
@@ -178,6 +193,12 @@ func _ready() -> void:
 		capsule.ground = is_ground
 		add_child(capsule)
 		move_child(capsule, ysort.get_index() + (0 if is_ground else 1))
+	# Feu follet du retour de l'Ingénieur (world/capsule/engineer_fall_view.gd), par-dessus les sprites.
+	var fall_air := EngineerFallView.new()
+	fall_air.name = "EngineerFallAir"
+	fall_air.air = true
+	add_child(fall_air)
+	move_child(fall_air, ysort.get_index() + 1)
 	# Puits de l'Ancre tyrienne, sous les sprites (le reste est trié avec eux : _attach_visuals).
 	var anchor_well := AnchorView.new()
 	anchor_well.name = "AnchorWell"
@@ -292,8 +313,14 @@ func reset_world(seed: int) -> void:
 	_build_generated_decor(seed)
 	decor.builder = _build_runtime_node
 	_special = _loader.special
+	_cull_cells.clear()
+	_cull_shown.clear()
+	_cull_live_cells.clear()
+	_cull_live_shown.clear()
+	_cull_key = Vector3i(0, 0, -1)
 	for e: Dictionary in decor.entries():
 		_attach_visuals(e)
+		_cull_register(e)
 	terrain_state.reset_digging()
 	terrain_state.generate_galleries(seed)
 	# Images de la jungle (sol par zone, rivière) calculées en parallèle du reste ; _build_ambience les attend.
@@ -321,6 +348,7 @@ func reset_world(seed: int) -> void:
 		var ore := preload("res://world/terrain/ore_view.gd").new()
 		ore.setup(terrain_state, key)
 		ysort.add_child(ore)
+		_cull_register_live(ore, key.x * 4.0 + 2.0, key.y * 4.0 + 2.0)
 	_build_ambience()
 	sanctum_view.reset()
 	flora_view = null
@@ -344,11 +372,19 @@ func reset_world(seed: int) -> void:
 		cap.name = "Capsule" + part.capitalize()
 		cap.layer = part
 		ysort.add_child(cap)
+	# Corps de l'Ingénieur tombé, trié avec les sprites.
+	var fall := EngineerFallView.new()
+	fall.name = "EngineerFall"
+	ysort.add_child(fall)
 	terrain_ops = TerrainOps.new(terrain_state, decor, TerrainPainter.new(terrain, terrain_state))
 	terrain_ops.reshape_cave()
 	# Galeries reliées (2026-11-22) : tout est ouvert dès le départ, le brouillard seul cache.
 	if terrain_state.groves:
 		terrain_ops.open_all_galleries()
+		# Temple sans brouillard : le sol encore à peindre reste sous le voile, et se découvre case par case.
+		for c: Vector2 in terrain_ops.painter.queued():
+			fog.veil_cell(c)
+		terrain_ops.painter.on_painted = fog.unveil_cell
 	print("Graine des galeries : %d (%d réseaux avant raccords, %d pylônes)" % [seed, terrain_state.count, terrain_state.portals.size()])
 	apply_view()
 
@@ -448,7 +484,85 @@ func _decor_view() -> Rect2i:
 	return Rect2i(c0, c1 - c0 + Vector2i.ONE).grow(DECOR_MARGIN)
 
 
+# ---------------------------------------------------------------- Décor fixe hors de vue
+## Le décor d'origine (plusieurs milliers de nœuds) et les parois ajoutées par le creusement restent dans le tri en
+## profondeur toute la partie : hors de vue, ils sont cachés (ni triés ni testés par le moteur à chaque image).
+## Index par case de CULL_CELL unités ; mis à jour seulement quand la caméra change de case ou de zoom.
+
+const CULL_CELL := 32.0
+## Marge autour de l'écran (unités) : plus que le plus grand sprite du décor (235 pixels natifs, soit 30 unités).
+const CULL_MARGIN := 48.0
+var _cull_cells := {}
+var _cull_shown := {}
+var _cull_live_cells := {}
+var _cull_live_shown := {}
+var _cull_key := Vector3i(0, 0, -1)
+var _cull_rect := Rect2()
+
+
+func _cull_register(e: Dictionary) -> void:
+	var node: Node2D = e.get("node")
+	if node == null or DecorRegistry.is_fixed(e):
+		return
+	var c := Vector2i(floori(float(e.get("bx", e["x"])) / CULL_CELL), floori(float(e.get("bz", e["z"])) / CULL_CELL))
+	if not _cull_cells.has(c):
+		_cull_cells[c] = []
+		_cull_shown[c] = true
+	(_cull_cells[c] as Array).append(node)
+	if not _cull_shown[c]:
+		node.visible = false
+
+
+func _cull_decor() -> void:
+	if camera == null:
+		return
+	var ss := get_viewport_rect().size
+	var key := Vector3i(floori(camera.cam.x / 8.0), floori(camera.cam.y / 8.0), camera.px * 100000 + int(ss.x) * 7 + int(ss.y))
+	if key == _cull_key:
+		return
+	_cull_key = key
+	var r := Rect2(camera.ground_from_screen(Vector2.ZERO), Vector2.ZERO).expand(camera.ground_from_screen(ss))
+	# Marge + le pas de la clef (8 unités) : valable tant que la caméra reste dans sa case de clef.
+	_cull_rect = r.grow(CULL_MARGIN + 8.0)
+	for c: Vector2i in _cull_cells:
+		var want := _cull_rect.intersects(Rect2(Vector2(c) * CULL_CELL, Vector2(CULL_CELL, CULL_CELL)))
+		if want == _cull_shown[c]:
+			continue
+		_cull_shown[c] = want
+		var kept: Array = []
+		for n: Variant in _cull_cells[c]:
+			if is_instance_valid(n):
+				(n as Node2D).visible = want
+				kept.append(n)
+		_cull_cells[c] = kept
+	for c: Vector2i in _cull_live_cells:
+		var want := _cull_rect.intersects(Rect2(Vector2(c) * CULL_CELL, Vector2(CULL_CELL, CULL_CELL)))
+		if want == _cull_live_shown[c]:
+			continue
+		_cull_live_shown[c] = want
+		var kept: Array = []
+		for n: Variant in _cull_live_cells[c]:
+			if is_instance_valid(n):
+				# Endormi : caché, plus de _process. Réveillé : son _process décide seul de sa visibilité.
+				(n as Node2D).set_process(want)
+				if not want:
+					(n as Node2D).visible = false
+				kept.append(n)
+		_cull_live_cells[c] = kept
+
+
+## Vue qui règle elle-même sa visibilité dans _process (minerai, ambiances des galeries) : loin de l'écran, elle est
+## cachée et son _process coupé ; elle reprend à l'approche de la caméra.
+func _cull_register_live(node: Node2D, x: float, z: float) -> void:
+	var c := Vector2i(floori(x / CULL_CELL), floori(z / CULL_CELL))
+	if not _cull_live_cells.has(c):
+		_cull_live_cells[c] = []
+		_cull_live_shown[c] = true
+	(_cull_live_cells[c] as Array).append(node)
+
+
 func _stream_decor() -> void:
+	_cull_decor()
 	var view := _decor_view()
 	if view == _gen_view:
 		return
@@ -496,6 +610,7 @@ func _build_runtime_node(e: Dictionary) -> Node:
 	var node := _loader.make_node(e)
 	e["node"] = node
 	_attach_visuals(e)
+	_cull_register(e)
 	return node
 
 
@@ -618,9 +733,29 @@ func open_breach() -> void:
 const PAINT_BUDGET_MS := 8.0
 
 
+## Dernière remise en tête de file de la zone vue (ms) ; intervalle entre deux.
+var _paint_focus_at := 0
+## Il restait du sol à peindre dans la zone vue à la dernière remise en tête de file.
+var _paint_in_view := true
+## Budget par image quand tout ce qui est à l'écran est déjà peint.
+const PAINT_IDLE_MS := 2.0
+const PAINT_FOCUS_MS := 400
+
+
 func _process(_delta: float) -> void:
 	if terrain_ops and terrain_ops.painter.pending() > 0:
-		terrain_ops.painter.process(PAINT_BUDGET_MS)
+		# Ce qui est à l'écran se peint d'abord (Temple sans brouillard : le sol pas encore peint se voyait en noir).
+		var now_ms := Time.get_ticks_msec()
+		if now_ms - _paint_focus_at > PAINT_FOCUS_MS and camera != null:
+			_paint_focus_at = now_ms
+			var ss := camera.screen_size()
+			var r := Rect2(camera.ground_from_screen(Vector2.ZERO), Vector2.ZERO)
+			for c: Vector2 in [Vector2(ss.x, 0.0), Vector2(0.0, ss.y), ss]:
+				r = r.expand(camera.ground_from_screen(c))
+			_paint_in_view = terrain_ops.painter.prioritize(r.grow(8.0)) > 0
+		# Plein budget tant qu'il reste du sol à peindre à l'écran ; sinon le reste de la carte se peint en fond, sans
+		# peser sur chaque image.
+		terrain_ops.painter.process(PAINT_BUDGET_MS if _paint_in_view else PAINT_IDLE_MS)
 	fog.refresh(terrain_state)
 	if GameState.hud_enemy and not fog.visible_at(GameState.hud_enemy.pos()):
 		GameState.hud_enemy = null
@@ -759,9 +894,17 @@ func _sync_enemies() -> void:
 		_enemy_meta = EnemyArt.all()
 	var live := {}
 	for e: Enemy in GameState.enemies + GameState.enemy_corpses:
-		if (e.hp <= 0.0 and not e.dead) or not (_enemy_meta.has(e.role) or e.kind == OeilMatrice.KIND or e.kind == Gorge.KIND or e.kind == Archipretre.KIND):
+		if (e.hp <= 0.0 and not e.dead) or not (_enemy_meta.has(e.role) or e.kind == OeilMatrice.KIND or e.kind == Gorge.KIND or e.kind == Archipretre.KIND \
+				or e.kind == Eclusier.KIND or e.kind == Patine.KIND):
 			continue
 		live[e] = true
+		# Mini-boss des Salles oubliées (world/miniboss2/).
+		if not _enemy_views.has(e) and (e.kind == Eclusier.KIND or e.kind == Patine.KIND):
+			var mv: Node2D = EclusierView.new() if e.kind == Eclusier.KIND else PatineView.new()
+			ysort.add_child(mv)
+			mv.call("setup", e, self)
+			_enemy_views[e] = mv
+			continue
 		if not _enemy_views.has(e) and e.kind == Archipretre.KIND:
 			var av := ArchipretreView.new()
 			ysort.add_child(av)
@@ -839,10 +982,13 @@ func building_view(b: Building) -> BuildingView:
 ## Rai de lumière de chaque bosquet pétrifié : lumière chaude et pâle au centre de l'emprise.
 func _grove_lights() -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
+	var view := lighting.view
 	for origin: Vector2i in terrain_state.wood_left:
-		out.append({"x": origin.x * 4.0 + 4.0, "z": origin.y * 4.0 + 4.0, "r": 10.0, "rgb": Color8(255, 241, 210), "glow": 0.12})
+		if view.has_point(Vector2(origin.x * 4.0 + 4.0, origin.y * 4.0 + 4.0)):
+			out.append({"x": origin.x * 4.0 + 4.0, "z": origin.y * 4.0 + 4.0, "r": 10.0, "rgb": Color8(255, 241, 210), "glow": 0.12})
 	for origin: Vector2i in terrain_state.lodes:
-		out.append({"x": origin.x * 4.0 + 4.0, "z": origin.y * 4.0 + 4.0, "r": 10.0, "rgb": Color8(255, 241, 210), "glow": 0.12})
+		if view.has_point(Vector2(origin.x * 4.0 + 4.0, origin.y * 4.0 + 4.0)):
+			out.append({"x": origin.x * 4.0 + 4.0, "z": origin.y * 4.0 + 4.0, "r": 10.0, "rgb": Color8(255, 241, 210), "glow": 0.12})
 	return out
 
 
@@ -869,23 +1015,27 @@ func _build_ambience() -> void:
 		var m := MushroomView.new()
 		m.setup(terrain_state, d)
 		ysort.add_child(m)
+		_cull_register_live(m, d["x"], d["z"])
 	for key: String in ["vines", "roots"]:
 		for d: Dictionary in ambience[key]:
 			var v := VineView.new()
 			v.setup(terrain_state, d, key == "roots")
 			ysort.add_child(v)
+			_cull_register_live(v, d["x"], d["z"])
 	for pair: Array in [["bats", FaunaView.Kind.BATS], ["beetles", FaunaView.Kind.BEETLES], ["salamanders", FaunaView.Kind.SALAMANDER]]:
 		for d: Dictionary in ambience[pair[0]]:
 			var f := FaunaView.new()
 			f.setup(terrain_state, d, pair[1])
 			ysort.add_child(f)
+			_cull_register_live(f, d["x"], d["z"])
 
 
 ## Lueur des champignons : pulsée, plus vive autour des lanternes ; seulement dans les galeries ouvertes.
 func _ambience_lights() -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
+	var view := lighting.view
 	for d: Dictionary in ambience.get("mushrooms", []):
-		if not terrain_state.is_gallery_open(d["x"], d["z"]):
+		if not view.has_point(Vector2(d["x"], d["z"])) or not terrain_state.is_gallery_open(d["x"], d["z"]):
 			continue
 		var k := 0.5 + 0.5 * sin(GameState.sim_time * 2.0 - float(d["x"]) * 0.32)
 		out.append({"x": d["x"], "z": d["z"], "r": (6.0 if d["lantern"] else 4.5) * (0.85 + 0.15 * k), "rgb": Color8(220, 240, 205), "glow": 0.08 + 0.05 * k})

@@ -12,6 +12,8 @@ const VISIBILITY := [1.0, 0.6, 0.2]
 const RADIUS := 5 * CELL_SIZE
 ## Rayon au-delà duquel la zone de détection d'une unité n'est plus suivie (poste de tir + Empennage : 36,5).
 const MAX_RADIUS := 12 * CELL_SIZE
+## Vision de l'Exilé incarné : le double de RADIUS.
+const PLAYER_RADIUS := 2 * RADIUS
 const WALL_DEPTH := 2 * 4
 const WIDTH := RADIUS * 2 + 1
 # Les rayons relatifs, par rayon de vision, sont partagés entre toutes les sources et les parties :
@@ -21,8 +23,9 @@ static var _kits := {}
 var image := Image.create(SIZE.x, SIZE.y, false, Image.FORMAT_RGBA8)
 # Zone explorée hors de vue : 20 % de visibilité.
 const EXPLORED_ALPHA := 204
-## Le Temple (biome 1, jungle comprise : tout ce qui est au sud de la frontière de l'Œil) n'a pas de brouillard
-## (demande du 2026-11-22) : rangée de l'image à partir de laquelle tout est découvert et visible.
+## Le Temple (biome 1, jungle comprise : tout ce qui est au sud de la frontière de l'Œil) est découvert d'emblée
+## (demande du 2026-11-22) : rangée de l'image à partir de laquelle tout est exploré. Depuis le 2026-11-23, ce qui
+## n'est pas dans le champ de vision y garde le voile d'exploration (EXPLORED_ALPHA), comme une zone déjà visitée.
 static var clear_row := maxi(0, ceili(Biomes.north_z(0) - CaveShape.WORLD_Z0))
 var _explored_pixels: PackedByteArray
 var _current_visibility := PackedByteArray()
@@ -62,16 +65,90 @@ func reset_exploration() -> void:
 		var y0 := maxi(0, ceili(CaveShape.mountain_edge(wx) + 1.0) - ORIGIN.y)
 		for y in range(y0, SIZE.y):
 			_explored_pixels[(y * SIZE.x + x) * 4 + 3] = EXPLORED_ALPHA
-	# Temple sans brouillard : entièrement découvert, en clair.
-	for y in range(clear_row, SIZE.y):
-		for x in SIZE.x:
-			_explored_pixels[(y * SIZE.x + x) * 4 + 3] = 0
+	_clear_temple()
 	image.set_data(SIZE.x, SIZE.y, false, Image.FORMAT_RGBA8, _explored_pixels)
 	_current_visibility.resize(SIZE.x * SIZE.y)
 	_current_visibility.fill(0)
 	_pixels = PackedByteArray()
 	_sources.clear()
 	_wall_built = false
+
+
+## Temple entièrement découvert : voile d'exploration partout hors de vue (les murs pleins restent à 255). Au nord de
+## clear_row, un dégradé de CLEAR_FADE rangées remonte vers le brouillard ; il ne fonce jamais une zone déjà explorée.
+const CLEAR_FADE := 16
+
+
+func _clear_temple() -> void:
+	for y in range(maxi(0, clear_row - CLEAR_FADE), SIZE.y):
+		var a := EXPLORED_ALPHA if y >= clear_row \
+			else EXPLORED_ALPHA + roundi((255.0 - EXPLORED_ALPHA) * float(clear_row - y) / float(CLEAR_FADE + 1))
+		for x in SIZE.x:
+			var i := (y * SIZE.x + x) * 4 + 3
+			var e := _explored_pixels[i]
+			# Sauvegarde d'avant le 2026-11-23 : le sol du Temple y était à 0 (clair même hors de vue).
+			if (y >= clear_row and e < 255 and e != a) or (y < clear_row and a < e):
+				_explored_pixels[i] = a
+
+
+## Temple sans brouillard, mais pas sur du sol encore à peindre (il se verrait en noir) : World voile les cases mises
+## en file de peinture (veil_cell), puis le peintre les découvre une à une (unveil_cell), d'abord à l'écran.
+var _cells_dirty := false
+
+
+func _set_cell_alpha(c: Vector2, a: int) -> void:
+	var x0 := int(c.x) - ORIGIN.x
+	var y0 := int(c.y) - ORIGIN.y
+	if y0 + CELL_SIZE <= clear_row:
+		return
+	for y in range(maxi(y0, clear_row), mini(y0 + CELL_SIZE, SIZE.y)):
+		for x in range(maxi(x0, 0), mini(x0 + CELL_SIZE, SIZE.x)):
+			var i := (y * SIZE.x + x) * 4 + 3
+			_explored_pixels[i] = a
+			# La case se découvre aussi tout de suite à l'image (sinon tache noire au départ, où rien ne recompose les
+			# sources) : en clair dans le champ de vision, sous le voile d'exploration au-dehors.
+			if not _pixels.is_empty():
+				_pixels[i] = 0 if a < 255 and _current_visibility[i >> 2] > 0 else a
+	_cells_dirty = true
+
+
+## Cases voilées en attente de peinture (Vector2i de case) : le masque des murs ne les découvre pas avant le peintre.
+var _veiled := {}
+## Cases découvertes avant que le terrain soit connu (pas encore de refresh) : masque des murs à reposer.
+var _unveiled: Array[Vector2i] = []
+var _st: TerrainState
+
+
+func _cell_tile(c: Vector2) -> Vector2i:
+	return Vector2i(floori((c.x - ORIGIN.x) / CELL_SIZE), floori((c.y - ORIGIN.y) / CELL_SIZE))
+
+
+func veil_cell(c: Vector2) -> void:
+	_veiled[_cell_tile(c)] = true
+	_set_cell_alpha(c, 255)
+
+
+## Découvre la case peinte, sauf si c'est de la roche massive : elle garde aussitôt son voile de mur plein
+## (sinon le voile des murs ne revenait qu'au minage, quand _paint_walls repasse autour des unités).
+func unveil_cell(c: Vector2) -> void:
+	var tile := _cell_tile(c)
+	_veiled.erase(tile)
+	if _st == null:
+		_unveiled.append(tile)
+		_set_cell_alpha(c, EXPLORED_ALPHA)
+		return
+	_set_cell_alpha(c, 255 if _full_rock(_st, tile) else EXPLORED_ALPHA)
+
+
+## Case de 4 sans sol à son centre, ainsi que ses 8 voisines.
+func _full_rock(st: TerrainState, tile: Vector2i) -> bool:
+	for j in range(-1, 2):
+		for i in range(-1, 2):
+			var wx := float(ORIGIN.x + (tile.x + i) * CELL_SIZE) + 2.0
+			var wz := float(ORIGIN.y + (tile.y + j) * CELL_SIZE) + 2.0
+			if st.ground(wx, wz):
+				return false
+	return true
 
 
 ## Zones explorées (canal alpha de l'image), pour la sauvegarde.
@@ -83,6 +160,8 @@ func set_explored_data(data: PackedByteArray) -> void:
 	if data.size() != _explored_pixels.size():
 		return
 	_explored_pixels = data
+	# Une sauvegarde d'avant le Temple sans brouillard le remettrait : on le redégage.
+	_clear_temple()
 	image.set_data(SIZE.x, SIZE.y, false, Image.FORMAT_RGBA8, _explored_pixels)
 	_pixels = PackedByteArray()
 	_sources.clear()
@@ -119,6 +198,12 @@ func refresh(st: TerrainState) -> void:
 		if turret["complete"]:
 			sources[Vector3i(floori(turret["x"]), floori(turret["z"]), r)] = true
 	var rebuild := _pixels.is_empty()
+	_st = st
+	if not _unveiled.is_empty():
+		for tile in _unveiled:
+			if _full_rock(st, tile):
+				_set_cell_alpha(Vector2(ORIGIN + tile * CELL_SIZE), 255)
+		_unveiled.clear()
 	if _terrain_version != st.version:
 		_sources.clear()
 		_solid_tiles.clear()
@@ -129,6 +214,12 @@ func refresh(st: TerrainState) -> void:
 		_paint_walls(st, true)
 		rebuild = true
 	if sources.size() == _sources.size() and _sources.has_all(sources.keys()):
+		# Cases du Temple découvertes au fil de la peinture : l'image suit sans recomposer les sources.
+		if _cells_dirty and not _pixels.is_empty():
+			_cells_dirty = false
+			image.set_data(SIZE.x, SIZE.y, false, Image.FORMAT_RGBA8, _pixels)
+			texture.update(image)
+			revision += 1
 		return
 
 	# Réutilise le champ de vision des sources immobiles ; élimine les anciennes positions.
@@ -182,6 +273,7 @@ func refresh(st: TerrainState) -> void:
 					_apply(key, square)
 		for key in added:
 			_apply(key, whole)
+	_cells_dirty = false
 	image.set_data(SIZE.x, SIZE.y, false, Image.FORMAT_RGBA8, _pixels)
 	if texture == null:
 		texture = ImageTexture.create_from_image(image)
@@ -205,6 +297,9 @@ static func vision_radius(u: Unit) -> int:
 		detect = Catalog.unit_reach(u) + Combat.ENGAGE_MARGIN
 	# Lanterne de Medeina (sim/mods.gd) : quelques cases de plus.
 	var bonus := Mods.vision_bonus(u)
+	# L'Exilé incarné (le joueur) voit deux fois plus loin (2026-11-23).
+	if u == GameState.incarnated:
+		return maxi(PLAYER_RADIUS, ceili(detect / CELL_SIZE) * CELL_SIZE) + bonus
 	if detect <= RADIUS:
 		return RADIUS + bonus
 	return mini(MAX_RADIUS, ceili(detect / CELL_SIZE) * CELL_SIZE + bonus)
@@ -228,11 +323,12 @@ func _apply(key: Vector3i, clip: Rect2i) -> void:
 				if y < clear_row:
 					_pixels[alpha_index] = 0
 					_explored_pixels[alpha_index] = EXPLORED_ALPHA
-				else:
-					_pixels[alpha_index] = _explored_pixels[alpha_index]
+				elif _explored_pixels[alpha_index] < 255:
+					# Temple : clair dans le champ de vision ; mur plein et sol encore à peindre restent voilés.
+					_pixels[alpha_index] = 0
 
 
-## Masque des murs pleins dans la zone sans brouillard, écrit dans _explored_pixels (255 = mur plein, 0 = clair).
+## Masque des murs pleins du Temple, écrit dans _explored_pixels (255 = mur plein, EXPLORED_ALPHA = galerie).
 ## `whole` : toute la zone ; sinon seulement autour des unités (là où l'on creuse), pour rester bon marché.
 const WALL_WINDOW := 64
 func _paint_walls(st: TerrainState, whole: bool) -> void:
@@ -266,9 +362,12 @@ func _paint_walls(st: TerrainState, whole: bool) -> void:
 				var k := j * bw + i
 				var full := rock[k] and rock[k - 1] and rock[k + 1] and rock[k - bw] and rock[k + bw] \
 					and rock[k - bw - 1] and rock[k - bw + 1] and rock[k + bw - 1] and rock[k + bw + 1]
-				var a := 255 if full else 0
+				var a := 255 if full else EXPLORED_ALPHA
 				var tx := (big.position.x + i) * CELL_SIZE
 				var ty := (big.position.y + j) * CELL_SIZE
+				# Sol encore à peindre : le voile reste jusqu'au peintre (unveil_cell).
+				if a < 255 and _veiled.has(Vector2i(big.position.x + i, big.position.y + j)):
+					continue
 				var probe := (mini(maxi(ty, clear_row) + 1, SIZE.y - 1) * SIZE.x + mini(tx + 1, SIZE.x - 1)) * 4 + 3
 				if _explored_pixels[probe] == a:
 					continue
@@ -397,8 +496,17 @@ func explored_at(point: Vector2) -> bool:
 	return Rect2i(Vector2i.ZERO, SIZE).has_point(p) and _explored_pixels[(p.y * SIZE.x + p.x) * 4 + 3] < 255
 
 
+## Dans le champ de vision actuel. Depuis le 2026-11-23, le Temple suit la même règle : hors de vue, ses créatures,
+## tirs et butins sont cachés sous le voile d'exploration.
 func visible_at(point: Vector2) -> bool:
+	var p := Vector2i(point.floor()) - ORIGIN
+	return Rect2i(Vector2i.ZERO, SIZE).has_point(p) and _current_visibility[p.y * SIZE.x + p.x] > 0
+
+
+## Connu du joueur pour y agir (bâtir, miner, cliquer un bâtiment, un pylône ou un bosquet) : dans le champ de
+## vision, ou n'importe où dans le Temple, entièrement découvert.
+func known_at(point: Vector2) -> bool:
 	var p := Vector2i(point.floor()) - ORIGIN
 	if p.y >= clear_row and Rect2i(Vector2i.ZERO, SIZE).has_point(p):
 		return true
-	return Rect2i(Vector2i.ZERO, SIZE).has_point(p) and _current_visibility[p.y * SIZE.x + p.x] > 0
+	return visible_at(point)

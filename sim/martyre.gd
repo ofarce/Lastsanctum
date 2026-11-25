@@ -29,6 +29,9 @@ extends RefCounted
 ## S'il ressort du bouclier, elle regagne le centre et attend, sans se soigner ; ses balles et gestes en cours
 ## s'éteignent. Effets : GameState.martyre_fx et martyre_bullets (rendu : world/arena/martyre_fx.gd).
 ## L'objectif « Éliminer la Martyre de Byrsa en combat singulier » (Quests) dure jusqu'à sa mort.
+## Motifs prêtés (2026-11-23) : une fois tombée, l'Œil de la Matrice joue ses quatre motifs en phases I et III
+## (host_begin, host_start, host_tick) avec les mêmes listes et le même rendu ; centre et rayon sont alors ceux de
+## sa salle, les balles partent de son pourtour et s'éteignent à ses parois (hosted).
 
 const KIND := "martyre"
 const MENACE := 500
@@ -116,6 +119,29 @@ const MOTE := 0.9
 const QUOTE_WAIT := "Un dôme d’or s’est levé au sud. La Martyre de Byrsa m’attend : personne d’autre ne peut passer."
 const QUOTE_DUEL := "Ses salves laissent toujours une brèche : je dois la lire, m’y glisser, puis frapper quand elle reprend son souffle."
 const QUOTE_DONE := "La Martyre est tombée et son dôme avec elle. Les assauts vont reprendre."
+
+
+## Garde : absorbe WARD_MAX tirs de l'Ingénieur ; après WARD_DELAY s sans coup, une charge revient toutes les
+## WARD_REGEN s.
+const WARD_MAX := 5
+const WARD_DELAY := 2.0
+const WARD_REGEN := 1.5
+
+
+## Un coup de l'Ingénieur : la garde l'absorbe s'il lui reste une charge entière.
+static func ward_absorbs(e: Enemy) -> bool:
+	GameState.martyre_ward_hit_at = GameState.sim_time
+	if GameState.martyre_ward < 1.0:
+		return false
+	GameState.martyre_ward -= 1.0
+	GameState.martyre_ward_absorb_at = GameState.sim_time
+	Sfx.at("bouclier_dore", e.x, e.z)
+	return true
+
+
+static func _ward_tick(dt: float) -> void:
+	if GameState.sim_time - GameState.martyre_ward_hit_at >= WARD_DELAY:
+		GameState.martyre_ward = minf(float(WARD_MAX), GameState.martyre_ward + dt / WARD_REGEN)
 
 
 ## La Martyre est sur le terrain, vivante : bouclier levé, vagues suspendues.
@@ -217,10 +243,10 @@ static func tick(sim: Simulation) -> void:
 				_extinguish(GameState.sim_time, true)
 				GameState.martyre_fx.assign(GameState.martyre_fx.filter(func(f: Dictionary) -> bool: return f["type"] == "mote"))
 				GameState.martyre = null
-				# Dans son arène : sa chute ouvre la porte de la route du boss (clef du mini-boss 2).
+				# Dans son arène : sa chute éteint sa veilleuse ; la porte de l'Orbite s'ouvre si l'Archiprêtre est
+				# déjà tombé (sim/orbit_gate.gd, les deux gardiens sont demandés).
 				if GameState.martyre_arena and sim.state() != null:
-					RoomEncounters.open_door(sim, "mb2")
-					sim.say("La porte de l’Orbite s’ouvre : la route de l’Œil est libre.", 4.0)
+					OrbitGate.guard_fell(sim)
 				return
 			var u := duelist()
 			if GameState.martyre_state == "waiting" and u != null:
@@ -272,6 +298,7 @@ static func spawn(sim: Simulation, at := SPAWN, arena := false) -> Enemy:
 	var e := Enemy.make(KIND, p.x, p.y, 1.0)
 	e.face = -1
 	GameState.martyre_arena = arena
+	GameState.martyre_host = ""
 	# Dans son arène, elle est hors vague (comme les gardiens) : la fin d'assaut ne l'attend pas.
 	e.beast = arena
 	GameState.enemies.append(e)
@@ -292,6 +319,8 @@ static func spawn(sim: Simulation, at := SPAWN, arena := false) -> Enemy:
 	GameState.martyre_radius = RADIUS
 	GameState.martyre_shrink_at = INF
 	GameState.martyre_iframe_until = -INF
+	GameState.martyre_ward = float(WARD_MAX)
+	GameState.martyre_ward_hit_at = -INF
 	Combat.zone(p.x, p.y, 6.0, Color("#f0cc66"))
 	Combat.flash(p.x, p.y, Color("#e2382e"))
 	Sfx.play("martyre")
@@ -311,6 +340,7 @@ static func act(sim: Simulation, e: Enemy, dt: float) -> void:
 	e.cooldown -= dt
 	e.stun = 0.0
 	var now := GameState.sim_time
+	_ward_tick(dt)
 	_shrink(e, now)
 	var u := duelist()
 	_resolve_staff(sim, e, u, now)
@@ -416,7 +446,7 @@ static func _start(sim: Simulation, e: Enemy, u: Unit, id: String, now: float) -
 	match id:
 		"fissure":
 			_start_strike(e, u, "fissure", now)
-			var at := e.pos() + Vector2(e.face * STAFF_REACH, 0.0)
+			var at := _staff(e, u.pos())
 			return now + maxf(STRIKE_TIME, IMPACT + minf(at.distance_to(u.pos()), FISSURE["range"]) / FISSURE["speed"]) + 0.4
 		"larmes":
 			_cast(e, u, now)
@@ -440,8 +470,16 @@ static func _start(sim: Simulation, e: Enemy, u: Unit, id: String, now: float) -
 
 
 static func _cast(e: Enemy, u: Unit, now: float) -> void:
-	e.face = -1 if u.x < e.x else 1
+	if not hosted():
+		e.face = -1 if u.x < e.x else 1
 	e.cast_started = now
+
+
+## Point d'où part la fissure : le bout du bâton devant elle ; pour un hôte, son pourtour face à la position visée.
+static func _staff(e: Enemy, aim: Vector2) -> Vector2:
+	if hosted():
+		return OeilMatrice.emit((aim - center()).angle())
+	return e.pos() + Vector2(e.face * STAFF_REACH, 0.0)
 
 
 static func _halo(e: Enemy, now: float) -> void:
@@ -449,12 +487,15 @@ static func _halo(e: Enemy, now: float) -> void:
 
 
 static func _start_strike(e: Enemy, u: Unit, kind: String, now: float) -> void:
-	e.face = -1 if u.x < e.x else 1
-	e.attack_started = now
-	e.cooldown = Catalog.ENEMY[KIND]["cd"]
 	GameState.martyre_hit_at = now + IMPACT
 	GameState.martyre_hit_kind = kind
 	GameState.martyre_aim = u.pos()
+	# Un hôte n'a ni bâton ni geste de frappe : seule la faille part, au même délai.
+	if hosted():
+		return
+	e.face = -1 if u.x < e.x else 1
+	e.attack_started = now
+	e.cooldown = Catalog.ENEMY[KIND]["cd"]
 	GameState.martyre_busy_until = now + STRIKE_TIME
 
 
@@ -463,7 +504,7 @@ static func _resolve_staff(sim: Simulation, e: Enemy, u: Unit, now: float) -> vo
 	if now < GameState.martyre_hit_at:
 		return
 	GameState.martyre_hit_at = INF
-	var at := e.pos() + Vector2(e.face * STAFF_REACH, 0.0)
+	var at := _staff(e, GameState.martyre_aim)
 	Combat.zone(at.x, at.y, 2.6, Color("#e2382e"))
 	if GameState.martyre_hit_kind == "fissure":
 		var to: Vector2 = GameState.martyre_aim
@@ -481,7 +522,7 @@ static func _resolve_staff(sim: Simulation, e: Enemy, u: Unit, now: float) -> vo
 				"at": now, "erupt": now + length / FISSURE["speed"], "seed": (int(now * 1000.0) + i * 977) % 10000,
 				"hit": false, "embers": 0})
 		return
-	if u != null and Combat.dist(e, u) <= e.reach + DODGE:
+	if not hosted() and u != null and Combat.dist(e, u) <= e.reach + DODGE:
 		if hurt_engineer(sim, u, DAMAGE, now):
 			Combat.flash(u.x, u.z, Color("#e17b63"))
 
@@ -522,8 +563,9 @@ static func _run_events(sim: Simulation, e: Enemy, u: Unit, now: float) -> void:
 				var a := (u.pos() - e.pos()).angle()
 				for j in LARMES["count"]:
 					var aj: float = a + (j - (LARMES["count"] - 1) / 2.0) * LARMES["spread"]
-					var b := shoot(e.x, e.z, aj, LARMES["speed"] * k,
-						{"big": true, "acc": LARMES["acc"], "min": LARMES["min"], "r0": 1.5})
+					var from := OeilMatrice.emit(aj) if hosted() else e.pos()
+					var b := shoot(from.x, from.y, aj, LARMES["speed"] * k,
+						{"big": true, "acc": LARMES["acc"], "min": LARMES["min"], "r0": 0.0 if hosted() else 1.5})
 					b["dir"] = aj
 					b["fuse"] = now + LARMES["fuse"] + j * LARMES["stagger"]
 			"wall_warn":
@@ -532,8 +574,8 @@ static func _run_events(sim: Simulation, e: Enemy, u: Unit, now: float) -> void:
 				var th: float = ev["th"]
 				var p := Vector2(-sin(th), cos(th))
 				var r := radius()
-				var g := clampf((u.pos() - center()).dot(p) + (sim.rng.randf() * 2.0 - 1.0) * LITANIE["jitter"],
-					-r * LITANIE["reach"], r * LITANIE["reach"])
+				var lim: float = _span(p) * LITANIE["reach"]
+				var g := clampf((u.pos() - center()).dot(p) + (sim.rng.randf() * 2.0 - 1.0) * LITANIE["jitter"], -lim, lim)
 				var fire: float = now + LITANIE["warn"]
 				GameState.martyre_fx.append({"type": "lane", "th": th, "g": g, "at": now, "fire": fire,
 					"until": fire + 2.0 * r / (LITANIE["speed"] * k)})
@@ -555,10 +597,27 @@ static func _wall(th: float, g: float, k: float, now: float) -> void:
 	while s <= r:
 		if absf(s - g) >= LITANIE["gap"]:
 			var at := center() + n * (r + 0.75) + p * s
-			var b := shoot(at.x, at.y, th + PI, v)
-			b["hide"] = true
-			b["until"] = now + (2.0 * r + 2.0) / v
+			if hosted():
+				# Salle d'un hôte : la balle sort de la paroi, là où sa ligne entre dans la salle (ou pas du tout).
+				var d := 0.0
+				while d <= 2.0 * r and not OeilMatrice.in_room(at.x, at.y, -0.3):
+					at -= n
+					d += 1.0
+				if d <= 2.0 * r:
+					var hb := shoot(at.x, at.y, th + PI, v)
+					hb["until"] = now + (2.0 * r + 2.0) / v
+			else:
+				var b := shoot(at.x, at.y, th + PI, v)
+				b["hide"] = true
+				b["until"] = now + (2.0 * r + 2.0) / v
 		s += LITANIE["step"]
+
+
+## Demi-étendue de l'arène le long de l'axe unitaire p : le rayon du dôme ; pour un hôte, celle de sa salle ovale.
+static func _span(p: Vector2) -> float:
+	if hosted():
+		return Vector2(TerrainState.EYE_ROOM_RX * p.x, TerrainState.EYE_ROOM_RZ * p.y).length()
+	return radius()
 
 
 ## Nouvelle balle : position, direction, vitesse (u/s) ; o : big, acc (u/s²), min, r0 (départ décalé).
@@ -578,9 +637,15 @@ static func ring(x: float, z: float, n: int, v: float, off: float) -> void:
 
 ## Coup porté à l'Ingénieur, sauf pendant son invulnérabilité ; renvoie s'il a porté.
 static func hurt_engineer(sim: Simulation, u: Unit, amount: float, now: float) -> bool:
+	# Motifs prêtés : le coup compte pour l'hôte (son invulnérabilité, son soin à la touche).
+	if hosted():
+		if not OeilMatrice.hurt_engineer(sim, u, amount, now):
+			return false
+		OeilMatrice._heal_on_hit()
+		return true
 	if now < GameState.martyre_iframe_until:
 		return false
-	sim.combat.damage(u, amount * DAMAGE_MULT)
+	sim.combat.damage(u, Combat.boss_shot(u.z))
 	GameState.martyre_iframe_until = now + IFRAMES
 	return true
 
@@ -615,7 +680,11 @@ static func update_bullets(sim: Simulation, u: Unit, now: float, dt: float) -> v
 				if now < b["until"]:
 					keep.append(b)
 				continue
-		if dc > r + BULLET["edge"] or now >= b["until"]:
+		if now >= b["until"] or (not OeilMatrice.in_room(b["x"], b["z"], 0.5) if hosted() else dc > r + BULLET["edge"]):
+			# Fin de l'éclat (ShotEnds « or ») : fêlure sur la paroi du dôme, ou poussière d'or en fin de vie.
+			var mode := "range" if now >= b["until"] else "wall"
+			GameState.martyre_fx.append({"type": "end", "mode": mode, "x": b["x"], "z": b["z"], "vx": b["vx"], "vz": b["vz"],
+				"at": now, "until": now + float(ShotEnds.DUR["or"][0 if mode == "wall" else 1])})
 			continue
 		if u != null:
 			var big: bool = b["big"]
@@ -684,6 +753,61 @@ static func update_fx(sim: Simulation, u: Unit, now: float) -> void:
 				if now < f["until"]:
 					keep.append(f)
 	GameState.martyre_fx = keep
+
+
+# ---------------------------------------------------------------- Motifs prêtés
+
+## Boss qui joue ses motifs (son KIND), ou "".
+static func host() -> String:
+	return GameState.martyre_host
+
+
+static func hosted() -> bool:
+	return GameState.martyre_host != ""
+
+
+## `who` prend le moteur des motifs : arène centrée en c, de rayon r (étendue des murs de la Litanie).
+static func host_begin(who: String, c: Vector2, r: float) -> void:
+	GameState.martyre_host = who
+	GameState.martyre_center = c
+	GameState.martyre_radius = r
+	GameState.martyre_shrink_at = INF
+	GameState.martyre_phase = 0
+	GameState.martyre_hit_at = INF
+	GameState.martyre_cast_at = INF
+	GameState.martyre_fx.clear()
+	GameState.martyre_bullets.clear()
+	GameState.martyre_events.clear()
+
+
+## L'hôte e lance le motif id ("fissure", "larmes", "rosace", "litanie") sur u ; renvoie l'instant où il finit.
+static func host_start(sim: Simulation, e: Enemy, u: Unit, id: String, now: float) -> float:
+	return _start(sim, e, u, id, now)
+
+
+## À chaque pas de l'hôte : gestes datés, effets et vol des balles, à la vitesse de sa phase. e null (hôte tombé) :
+## seuls les effets en cours finissent.
+static func host_tick(sim: Simulation, e: Enemy, u: Unit, now: float, dt: float, phase: int) -> void:
+	GameState.martyre_phase = clampi(phase, 0, PHASE_SPEED.size() - 1)
+	if e != null:
+		_resolve_staff(sim, e, u, now)
+		_resolve_cast(e, u, now)
+		_run_events(sim, e, u, now)
+	update_fx(sim, u, now)
+	update_bullets(sim, u, now, dt)
+
+
+## Balles, gestes et annonces de l'hôte éteints (en éclats si motes) ; une faille en cours finit de refroidir.
+static func host_clear(motes: bool) -> void:
+	_extinguish(GameState.sim_time, motes)
+	GameState.martyre_hit_at = INF
+	GameState.martyre_cast_at = INF
+
+
+static func host_end() -> void:
+	host_clear(false)
+	GameState.martyre_fx.clear()
+	GameState.martyre_host = ""
 
 
 ## Réaction aux coups (animation martyre_hit), au plus toutes les HURT_EVERY secondes.

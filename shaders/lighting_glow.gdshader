@@ -21,5 +21,9 @@ float bayer(vec2 frag, vec2 anchor, float cell) {
 void fragment() {
 	float t = distance(UV, vec2(0.5)) * 2.0;
 	float g = floor(max(0.0, 1.0 - t) * STEPS + bayer(FRAGCOORD.xy, origin, px)) / STEPS;
+	// Lueur douce (alpha du quadrilatère < 0,75) : dégradé continu, halo H1 des torches de couloir.
+	if (COLOR.a < 0.75) {
+		g = min(1.0, 1.35 * pow(max(0.0, 1.0 - t), 1.25));
+	}
 	COLOR = vec4(COLOR.rgb * g, 1.0);
 }

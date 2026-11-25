@@ -18,17 +18,17 @@ function ik2(x0,y0,x1,y1,l1,l2,dir){let dx=x1-x0,dy=y1-y0,d=Math.hypot(dx,dy)||.
 const lerp=(a,b,t)=>a+(b-a)*t,lerp2=(p,q,t)=>[lerp(p[0],q[0],t),lerp(p[1],q[1],t)],ease=t=>t<.5?2*t*t:1-2*(1-t)*(1-t);
 
 // ---------- Tête (visage validé, inchangé) ----------
-function engHead(b,hx,hy,dir,o,exil){const S=dir==='s',U=dir==='u';
- if(U){blob(b,hx,hy,4.4,4.4,'skin',-.05);blob(b,hx,hy,4.8,4.6,'hair',.1,(x,y)=>y<=hy+3);px(b,hx-2,hy-4,'hair',1);px(b,hx-1,hy-4,'hair',.9);if(exil)px(b,hx+2,hy-1,'hair',.85);return}
+function engHead(b,hx,hy,dir,o,exil){const S=dir==='s',U=dir[0]==='u',Q=dir.length>1;
+ if(U){blob(b,hx,hy,4.4,4.4,'skin',-.05);blob(b,hx,hy,4.8,4.6,'hair',.1,(x,y)=>y<=hy+3&&!(Q&&x>=hx+3&&y>=hy-1));if(Q){px(b,hx+3,hy,'skin',.3);px(b,hx+4,hy-1,'hair',.05)}px(b,hx-2,hy-4,'hair',1);px(b,hx-1,hy-4,'hair',.9);if(exil)px(b,hx+2,hy-1,'hair',.85);return}
  blob(b,hx,hy,4.4,4.3,'skin',.08);rect(b,hx-(S?2:3),hy+2,S?6:7,3,'skin',.05);
  if(S){blob(b,hx-.6,hy-1.2,4.8,3.8,'hair',.1,(x,y)=>y<=hy-1||x<=hx-1);rect(b,hx-4,hy+1,3,2,'hair',.05);px(b,hx+1,hy-4,'hair',1);px(b,hx+2,hy-4,'hair',.9);if(exil)px(b,hx+3,hy-3,'hair',.7)}
- else{blob(b,hx,hy-1.2,4.9,3.8,'hair',.1,(x,y)=>y<=hy-2||(x<=hx-4||x>=hx+4)&&y<=hy+2);
+ else{blob(b,hx,hy-1.2,4.9,3.8,'hair',.1,(x,y)=>y<=hy-2||(Q?x<=hx-3:(x<=hx-4||x>=hx+4))&&y<=hy+2);
   px(b,hx-2,hy-4,'hair',.05);px(b,hx-2,hy-3,'hair',.05);px(b,hx-1,hy-4,'hair',1);px(b,hx,hy-4,'hair',1);px(b,hx+1,hy-3,'hair',.85);if(exil)px(b,hx+2,hy-2,'hair',.7)}
  const eye=ex=>{if(o.blink){px(b,ex,hy,'skin',.12);px(b,ex+1,hy,'skin',.12)}else if(o.hurt){px(b,ex,hy,'eye',.1);px(b,ex+1,hy,'eye',.1)}else{px(b,ex,hy,'eye',.1);px(b,ex+1,hy,'eye',.98)}px(b,ex,hy-1,'hair',.05);px(b,ex+1,hy-1,'hair',.05)};
- if(S)eye(hx+2);else{eye(hx-3);eye(hx+1)}
- if(!S){px(b,hx-3,hy-2,'scar',.6);px(b,hx-2,hy+1,'scar',.6);px(b,hx-2,hy+2,'scar',.5)}else px(b,hx,hy+1,'scar',.6);
+ if(S)eye(hx+2);else if(Q){eye(hx-1);px(b,hx+3,hy,o.blink?'skin':'eye',o.blink?.12:.1);px(b,hx+3,hy-1,'hair',.05)}else{eye(hx-3);eye(hx+1)}
+ if(!S){const q=Q?1:0;px(b,hx-3+q,hy-2,'scar',.6);px(b,hx-2+q,hy+1,'scar',.6);px(b,hx-2+q,hy+2,'scar',.5)}else px(b,hx,hy+1,'scar',.6);
  if(exil){if(S){px(b,hx+1,hy+4,'hair',.45);px(b,hx+3,hy+4,'hair',.45);px(b,hx,hy+3,'hair',.35)}else for(const dx of[-3,-1,1,3])px(b,hx+dx,hy+4,'hair',.45)}
- for(let x=-1;x<=1;x++)if(!S||x>=0)px(b,hx+x+(S?2:0),hy+3,'skin',.12)}
+ for(let x=-1;x<=1;x++)if(!S||x>=0)px(b,hx+x+(S?2:Q?1:0),hy+3,'skin',.12)}
 
 // ---------- Profil ----------
 // o : body 'templier' | 'exil' ; dy = bassin abaissé (px) ; ub = buste abaissé ; lean = épaules avancées (px) ;
@@ -106,40 +106,48 @@ function engSide(o){
  return b}
 
 // ---------- Face et dos ----------
-// o : dir 'd' | 'u' ; dy (négatif = se hausse) ; ub ; hd ; liftL, liftR = pied levé (px) ; sw = balancement des bras (px) ;
+// o : dir 'd' | 'u' | 'dr' | 'ur' (trois quarts de face / de dos, tourné vers la droite : épaule proche devant le
+// buste, épaule et jambe éloignées derrière et 1 px plus haut, tête, cercle et canon décalés) ; stepL, stepR = pied
+// avancé (px, trois quarts) ; dy (négatif = se hausse) ; ub ; hd ; liftL, liftR = pied levé (px) ; sw = balancement des bras (px) ;
 // sway = pans du manteau ; aim {rec, pulse, flash} ; rune ; glow ; blink.
 function engFront(o){
- const b=buf(48,48),TP=(o.body||'templier')==='templier',U=o.dir==='u',D=!U,X=24;
+ const b=buf(48,48),TP=(o.body||'templier')==='templier',U=o.dir[0]==='u',D=!U,Q=o.dir.length>1?1:0,X=24,C=X+(Q?(D?2:-1):0);
  const dy=o.dy||0,Yb=dy+(o.ub||0),hd=o.hd||[0,0],glow=o.glow??.7,rune=o.rune??.7,sw=o.sw||0,sway=o.sway||0,aim=o.aim,r=aim?(aim.rec||0):0;
- const leg=(lx,lift,hole)=>{const ly=37+dy,len=5-dy-lift;
-  if(TP){rect(b,lx,ly,4,len,'wool');rect(b,lx,ly+len,4,3,'iron');px(b,lx+1,ly+len-1,'iron',.9);px(b,lx+1,ly+len+1,'cy',.55);if(lift>=2)px(b,lx+1,ly+2,'wool',.95)}
-  else{rect(b,lx,ly,4,len,'wool');for(let x=0;x<4;x++)if((x+lx)%2===0)px(b,lx+x,ly+len,'wool',.35);
+ const leg=(lx,lift,hole,far)=>{const s=far?-.2:0,ly=37+dy,len=5-dy-lift-(far?1:0);
+  if(TP){rect(b,lx,ly,4,len,'wool',s);rect(b,lx,ly+len,4,3,'iron',s);px(b,lx+1,ly+len-1,'iron',.9+s);px(b,lx+1,ly+len+1,'cy',.55+s);if(lift>=2)px(b,lx+1,ly+2,'wool',.95+s);
+   if(Q&&D){px(b,lx+4,ly+len+1,'iron',.5+s);px(b,lx+4,ly+len+2,'iron',.4+s)}}
+  else{rect(b,lx,ly,4,len,'wool',s);if(Q&&D)px(b,lx+4,ly+len+2,'skin',.3);for(let x=0;x<4;x++)if((x+lx)%2===0)px(b,lx+x,ly+len,'wool',.35);
    if(hole){px(b,lx+1,ly+2,'skin',.55);px(b,lx+2,ly+2,'skin',.4);px(b,lx+1,ly+1,'wool',.15)}
    for(let x=1;x<3;x++)if((x+lx)%2)px(b,lx+x,ly+len,'skin',.5);
    px(b,lx+1,ly+len+1,'skin',.6);px(b,lx+2,ly+len+1,'skin',.45);rect(b,lx,ly+len+2,4,1,'skin',.1)}};
- leg(X-5,o.liftL||0,!U);leg(X+1,o.liftR||0,false);
- const arm=(ax,d)=>{if(TP){rect(b,ax-1,29+Yb,3,4+Math.max(0,d),'wool');blob(b,ax+.5,34+Yb+d,1.9,1.7,'iron',.1);px(b,ax+.5,34+Yb+d,'cy',glow)}
-  else{rect(b,ax-1,29+Yb,3,4+Math.max(0,d),'skin',-.05);blob(b,ax+.5,34+Yb+d,1.7,1.6,'skin',.05)}};
+ const sL=o.stepL||0,sR=o.stepR||0,L=X-8,Rr=X+7;
+ if(!Q){leg(X-5,o.liftL||0,!U);leg(X+1,o.liftR||0,false)}
+ else if(D){leg(X+sR,o.liftR||0,false,true);leg(X-5+sL,o.liftL||0,true)}
+ else{leg(X-4+sL,o.liftL||0,false,true);leg(X+1+sR,o.liftR||0,false)}
+ const arm=(ax,d,far)=>{const s=far?-.22:0;if(TP){rect(b,ax-1,29+Yb,3,4+Math.max(0,d),'wool',s);blob(b,ax+.5,34+Yb+d,1.9,1.7,'iron',.1+s);px(b,ax+.5,34+Yb+d,'cy',glow+s)}
+  else{rect(b,ax-1,29+Yb,3,4+Math.max(0,d),'skin',-.05+s);blob(b,ax+.5,34+Yb+d,1.7,1.6,'skin',.05+s)}};
+ if(Q&&!o.cshoot)arm(D?Rr-1:L+1,D?-sw:sw,true); // trois quarts : bras éloigné derrière le buste
  if(TP){
   for(const s of[-1,1])blob(b,X+s*3.2+(s>0?Math.max(0,sway):Math.min(0,sway)),38.5+Yb,3,3.5,'wool',-.05,(x,y)=>y>=36+Yb);
-  blob(b,X,32+Yb,6.5,5,'suit',.05);
-  if(D){for(const[u,v]of[[0,-1],[1,0],[0,1],[-1,0]])px(b,X+u,31+Yb+v,'cy',rune);px(b,X,31+Yb,'cy',Math.min(1,rune+.3))}
-  else{rect(b,X-2,29+Yb,4,5,'iron',.05);px(b,X,31+Yb,'cy',Math.min(1,rune+.1))}
+  blob(b,X,32+Yb,Q?6:6.5,5,'suit',.05);
+  if(D){for(const[u,v]of[[0,-1],[1,0],[0,1],[-1,0]])px(b,C+u,31+Yb+v,'cy',rune);px(b,C,31+Yb,'cy',Math.min(1,rune+.3))}
+  else{rect(b,C-2,29+Yb,4-Q,5,'iron',.05);px(b,C-Q,31+Yb,'cy',Math.min(1,rune+.1))}
   rect(b,X-6,35+Yb,12,2,'iron',-.05);
  }else{
   rect(b,X-5,35+Yb,10,3,'wool',.05);for(let x=-5;x<5;x++)px(b,X+x,35+Yb,'leath',(x&1)?.45:.7);if(D){px(b,X+1,36+Yb,'leath',.6);px(b,X+1,37+Yb,'leath',.4)}
-  blob(b,X,31.5+Yb,6,4.6,'skin',.02);
-  if(D){for(let x=1;x<=4;x++){px(b,X-x,31+Yb,'skin',.2);px(b,X+x-1,31+Yb,'skin',.25)}px(b,X,29+Yb,'skin',.35);px(b,X,30+Yb,'skin',.3);
-   for(const yy of[33,34]){px(b,X-2,yy+Yb,'skin',.3);px(b,X+1,yy+Yb,'skin',.3)}px(b,X-5,33+Yb,'scar',.55);px(b,X-4,34+Yb,'scar',.45)}
-  else{for(let yy=28;yy<=34;yy++)px(b,X,yy+Yb,'skin',.3);px(b,X-3,29+Yb,'skin',.25);px(b,X+3,29+Yb,'skin',.25);px(b,X-2,30+Yb,'skin',.3);px(b,X+2,30+Yb,'skin',.3);
-   for(const[u,v]of[[-3,32],[-2,33],[2,31],[3,32]])px(b,X+u,v+Yb,'scar',.55)}
-  blob(b,X-5.8,28+Yb,2.8,2.2,'skin',.12);blob(b,X+5.8,28+Yb,2.8,2.2,'skin',.08);rect(b,X-2,25+Yb,4,3,'skin',.1);
-  if(D){px(b,X-3,27+Yb,'skin',.3);px(b,X-2,27+Yb,'skin',.32);px(b,X+2,27+Yb,'skin',.32);px(b,X+3,27+Yb,'skin',.3)}
+  blob(b,X,31.5+Yb,Q?5.6:6,4.6,'skin',.02);
+  if(D){for(let x=1;x<=4;x++){px(b,C-x,31+Yb,'skin',.2);px(b,C+x-1,31+Yb,'skin',.25)}px(b,C,29+Yb,'skin',.35);px(b,C,30+Yb,'skin',.3);
+   for(const yy of[33,34]){px(b,C-2,yy+Yb,'skin',.3);px(b,C+1,yy+Yb,'skin',.3)}px(b,C-5,33+Yb,'scar',.55);px(b,C-4,34+Yb,'scar',.45)}
+  else{for(let yy=28;yy<=34;yy++)px(b,C,yy+Yb,'skin',.3);px(b,C-3,29+Yb,'skin',.25);px(b,C+3,29+Yb,'skin',.25);px(b,C-2,30+Yb,'skin',.3);px(b,C+2,30+Yb,'skin',.3);
+   for(const[u,v]of[[-3,32],[-2,33],[2,31],[3,32]])px(b,C+u,v+Yb,'scar',.55)}
+  blob(b,X-(Q?(D?5.4:4.6):5.8),28+Yb,2.8,2.2,'skin',.12);blob(b,X+(Q?(D?4.6:5.4):5.8),28+Yb,2.8,2.2,'skin',.08);rect(b,X-2+Q,25+Yb,4,3,'skin',.1);
+  if(D){px(b,C-3,27+Yb,'skin',.3);px(b,C-2,27+Yb,'skin',.32);px(b,C+2,27+Yb,'skin',.32);px(b,C+3,27+Yb,'skin',.3)}
  }
- const L=X-8,Rr=X+7,GL=TP?'iron':'skin',FL=TP?'cy':'linen',SL=TP?'wool':'skin',can=o.cannon,cs=o.cshoot;
+ const GL=TP?'iron':'skin',FL=TP?'cy':'linen',SL=TP?'wool':'skin',can=o.cannon,cs=o.cshoot;
  const hand=(x,y,s)=>{blob(b,x,y,1.9,1.7,GL,.12+(s||0));if(TP)px(b,x,y,'cy',glow+(s||0))};
  // Arbalestrie de face : portée sur l'épaule droite (côté gauche de l'image), main sur la poignée.
- if(!cs){
+ if(Q){if(!(D&&can)&&!cs&&!aim)arm(D?L+1:Rr-1,U&&can?-1:D?sw:-sw)}
+ else if(!cs){
  if(!(D&&can))arm(L,sw); // de face au canon : bras gauche de l'image dessiné avec l'arme, après la capuche
  if(D&&can)arm(Rr,-sw);
  else if(U&&can)arm(Rr,-1);
@@ -149,31 +157,75 @@ function engFront(o){
   if(aim.flash)for(const[u,v,l]of[[0,3,1],[1,3,.9],[0,4,.8],[-1,4,.7],[2,4,.7],[0,5,.6],[-2,5,.5],[3,5,.5]])px(b,X+4+u,34+Yb-r*.5+v,FL,l)}
  else arm(Rr,-sw);
  }
- if(TP){blob(b,X,27.5+Yb,8.5,2.8,'linen',.1);if(D)for(let x=-2;x<=2;x++)px(b,X+x,26+Yb,'linen',.55);else blob(b,X,26+Yb,3.4,2.4,'linen',.2)}
- if(D&&can){const a=can.ang??-118,G=[L+1.5,32.5+Yb+(can.dy||0)];
-  rect(b,L-1,29+Yb,3,3,SL,.05);cannonDraw(b,G[0],G[1],a,true);hand(G[0],G[1])}
+ if(TP){blob(b,X,27.5+Yb,Q?7.6:8.5,2.8,'linen',.1);if(D)for(let x=-2;x<=2;x++)px(b,X+x+Q,26+Yb,'linen',.55);else blob(b,X-Q,26+Yb,3.4,2.4,'linen',.2)}
+ if(D&&can){const a=can.ang??-118,G=[L+1.5+Q,32.5+Yb+(can.dy||0)];
+  rect(b,L-1+Q,29+Yb,3,3,SL,.05);cannonDraw(b,G[0],G[1],a,true);hand(G[0],G[1])}
+ // Trois quarts : éclat le long de la diagonale (v = 1 vers le bas, −1 vers le haut).
+ const DFL=[[0,0,1],[1,1,1],[1,0,.85],[0,1,.85],[2,2,.8],[3,3,.6],[3,1,.5],[1,3,.5]];
+ // Décharge du gantelet de trois quarts : bras proche tendu en diagonale, recul le long du bras.
+ if(Q&&aim){const v=D?1:-1,S0=D?[X-5,30+Yb]:[X+6,29.5+Yb],H=D?[X+6-r*.7,35.5+Yb-r*.7]:[X+10-r*.7,24+Yb+r*.7];
+  capsule(b,S0[0],S0[1],H[0],H[1],1.6,SL,0);blob(b,H[0],H[1],2.1,1.9,GL,.2);if(TP)px(b,H[0],H[1],'cy',aim.pulse?1:.8);
+  if(aim.flash)for(const[u,w,l]of DFL)px(b,H[0]+2+u,H[1]+v*(2+w),FL,l)}
+ // Tir de l'Arbalestrie de trois quarts : tube à 45° (vers le bas à droite de face, vers le haut à droite de dos),
+ // légèrement raccourci ; recul le long du tube.
+ if(Q&&cs){const v=D?1:-1,r=cs.rec||0,K=.85,c=.7071,G=[X+4-r*c,(D?30:28)+Yb-v*r*c];
+  if(D)capsule(b,X-5,30+Yb,G[0]-1,G[1]+1,1.6,SL,0);else capsule(b,X+6,29.5+Yb,G[0]+1,G[1]+1,1.6,SL,0);
+  cannonDraw(b,G[0],G[1],v*45,D,-9,K);hand(G[0],G[1]);hand(G[0]+4*c,G[1]+v*4*c+1,-.1);
+  if(cs.flash){const mx=G[0]+(11.5*K+1)*c,my=G[1]+v*(11.5*K+1)*c;for(const[u,w,l]of DFL)px(b,mx+u,my+v*w,'cy',l)}}
  // Tir de l'Arbalestrie vers le sud (de face) : canon à la hanche droite (droite de l'image), pointé
  // vers le bas le long de la jambe, raccourci (K) ; recul vers le haut.
- if(D&&cs){const r=cs.rec||0,K=.7,G=[X+7,32+Yb-r],T=[G[0]-.5,G[1]+4.2];
+ if(D&&cs&&!Q){const r=cs.rec||0,K=.7,G=[X+7,32+Yb-r],T=[G[0]-.5,G[1]+4.2];
   capsule(b,X+6.5,29.5+Yb,G[0]+.5,G[1]-1,1.6,SL,0);
   capsule(b,X-6.5,29.5+Yb,X-6,33+Yb,1.7,SL,-.05);capsule(b,X-6,33+Yb,T[0]-1.5,T[1],1.4,SL,-.08);
   cannonDraw(b,G[0],G[1],90,true,-9,K);hand(G[0],G[1]-.5);hand(T[0]-1.5,T[1],-.05);
   if(cs.flash){const mx=G[0],my=G[1]+11.5*K+1;for(const[u,v,l]of[[0,0,1],[0,1,1],[-1,1,.85],[1,1,.85],[0,2,.8],[-2,2,.55],[2,2,.55],[0,3,.6]])px(b,mx+u,my+v,'cy',l)}}
  // Tir vers le nord (de dos) : canon levé devant lui, le tube dépasse au-dessus de l'épaule droite ; recul vers le bas.
- if(U&&cs){const r=cs.rec||0,K=.8,G=[X+6,27+Yb+r];
+ if(U&&cs&&!Q){const r=cs.rec||0,K=.8,G=[X+6,27+Yb+r];
   rect(b,L-1,29+Yb,3,3,SL,-.05);rect(b,Rr-1,25+Yb+r,3,6,SL);
   cannonDraw(b,G[0],G[1],-90,false,-9,K);hand(G[0],G[1]+1,-.1);
   if(cs.flash){const mx=G[0],my=G[1]-11.5*K-1;for(const[u,v,l]of[[0,0,1],[0,-1,1],[-1,-1,.85],[1,-1,.85],[0,-2,.8],[-2,-2,.55],[2,-2,.55],[0,-3,.6]])px(b,mx+u,my+v,'cy',l)}}
  // Arbalestrie de dos : portée sur l'épaule droite, seule la partie qui dépasse de l'épaule se voit.
- if(U&&can){const a=can.ang??-62;cannonDraw(b,X+4.5,31+Yb+(can.dy||0),a,false,1.5)}
- engHead(b,X+hd[0],21+Yb+hd[1],o.dir,o,!TP);
+ if(U&&can){const a=can.ang??-62;cannonDraw(b,X+4.5-Q,31+Yb+(can.dy||0),a,false,1.5)}
+ engHead(b,X+hd[0]+Q,21+Yb+hd[1],o.dir,o,!TP);
  for(const[x,y,m,l]of o.fx||[])px(b,x,y,m,l);
  return b}
 // Arbalestrie (cannonA) dont la poignée est en (hx, hy), tube orienté de ang degrés ; flip = dessus du tube de l'autre
 // côté ; from = ne dessine que la partie au-delà de u = from (le reste est caché par le corps) ; k = raccourci du tube.
 function cannonDraw(b,hx,hy,ang,flip,from=-9,k=1){const c=Math.cos(ang*DEG),sn=Math.sin(ang*DEG),f=flip?-1:1;
  for(let y=0;y<48;y++)for(let x=0;x<48;x++){const dx=x+.5-hx,dy=y+.5-hy,u=(dx*c+dy*sn)/k;if(u<from)continue;const r=cannonA(u,f*(-dx*sn+dy*c));if(r)px(b,x,y,r[0],r[1])}}
-function eng(o){return o.dir==='d'||o.dir==='u'?engFront(o):engSide(o)}
+// ---------- Chute (planches/ingenieur-mort-planche.html, M2 « Foudroyé ») ----------
+// Tampon tourné de `deg` degrés autour du milieu du corps (24, 31), au plus proche voisin : le contour est posé
+// après, au rendu, donc il reste net.
+function spinBuf(b,deg){const o=buf(b.w,b.h),c=Math.cos(deg*DEG),s=Math.sin(deg*DEG),cx=24,cy=31;
+ for(let y=0;y<b.h;y++)for(let x=0;x<b.w;x++){const u=x+.5-cx,v=y+.5-cy,sx=Math.floor(cx+u*c+v*s),sy=Math.floor(cy-u*s+v*c);
+  if(sx<0||sy<0||sx>=b.w||sy>=b.h)continue;const j=sy*b.w+sx;if(b.m[j]<0)continue;o.m[y*b.w+x]=b.m[j];o.s[y*b.w+x]=b.s[j]}
+ return o}
+// Couché sur le dos, tête à gauche, vu de trois quarts dessus ; milieu du corps en (24, 33). o.lit = lumières de l'exo.
+function engDown(o){const b=buf(48,48),TP=(o.body||'templier')==='templier',lit=!!o.lit,SL=TP?'wool':'skin',cy=(x,y,l)=>px(b,x,y,lit?'cy':'iron',lit?l:.2);
+ if(TP){capsule(b,20,36.5,31,37.5,1.9,'wool',-.18);blob(b,16,33,2.6,4.6,'linen',-.1)}            // pan du manteau étalé, capuche
+ // bras éloigné, jeté vers le haut à côté de la tête
+ capsule(b,18.5,29.5,21,26.5,1.8,SL,-.25);capsule(b,21,26.5,24.5,24.5,1.6,SL,-.28);
+ if(TP){blob(b,25.5,24.3,2,1.8,'iron',-.2);cy(25,24,.8)}else blob(b,25.3,24.3,1.8,1.7,'skin',-.2);
+ // jambes : l'éloignée d'abord, puis la proche, légèrement écartées
+ const leg=(hx,hy,kx,ky,ax,ay,s)=>{capsule(b,hx,hy,kx,ky,2.4,'wool',s);
+  if(TP){capsule(b,kx,ky,ax,ay,2.05,'wool',s);rect(b,Math.round(ax)-1,Math.round(ay)-2,3,4,'iron',s);cy(Math.round(ax),Math.round(ay)-1,.55)}
+  else{capsule(b,kx,ky,ax,ay,1.5,'skin',s-.05);capsule(b,kx,ky,(kx+ax)/2,(ky+ay)/2,2.1,'wool',s);rect(b,Math.round(ax),Math.round(ay)-2,2,3,'skin',s+.1)}};
+ leg(27,31.5,32,30,37.5,29.5,-.22);leg(27,34,32.5,35,38.5,36,0);
+ // buste
+ if(TP){blob(b,21.5,32.5,6.4,4.7,'suit',.05);blob(b,20,31.5,3.4,2.6,'suit',.14);rect(b,26,29,2,8,'iron',-.05);
+  for(const[u,v]of[[0,-1],[1,0],[0,1],[-1,0],[0,0]])cy(20+u,32+v,u||v?.85:1);
+  blob(b,16.6,32.5,2,4.2,'linen',.1)}
+ else{blob(b,21.3,32.5,5.9,4.5,'skin',.02);blob(b,20,31.5,3.3,2.5,'skin',.1);rect(b,26,29,3,8,'wool',.05);for(let y=29;y<37;y++)px(b,26,y,'leath',(y&1)?.45:.7);
+  px(b,20,34,'skin',.25);px(b,22,34,'skin',.28);px(b,18,31,'skin',.25)}
+ // tête : visage vers le ciel, crâne à gauche, yeux clos
+ blob(b,11.5,32.5,4.3,4.4,'skin',.08);blob(b,10.6,32.2,4.7,4.8,'hair',.1,(x,y)=>x<=9||y<=29);px(b,8,29,'hair',1);px(b,9,28,'hair',.9);
+ px(b,12,31,'skin',.12);px(b,12,34,'skin',.12);px(b,11,31,'hair',.05);px(b,11,34,'hair',.05);px(b,14,33,'scar',.6);px(b,14,35,'skin',.12);
+ if(!TP){px(b,15,31,'hair',.45);px(b,15,34,'hair',.45)}
+ // bras proche, tombé le long du corps
+ capsule(b,18.5,36,22,38.5,1.9,SL,0);capsule(b,22,38.5,25.5,39.5,1.65,SL,-.03);
+ if(TP){capsule(b,24,39,25.5,39.5,1.75,'iron',0);blob(b,27,39.6,2.1,1.9,'iron',.1);cy(27,39,.8)}else blob(b,27,39.6,1.9,1.8,'skin',.05);
+ return b}
+function eng(o){if(o.down)return engDown(o);const b=o.dir?engFront(o):engSide(o);return o.spin?spinBuf(b,o.spin):b}
 
 // ---------- Animations ----------
 // Pied d'une jambe au fil du pas (p ∈ [0, 1)) : appui qui recule de +3,5 à −3,5 px, puis passage levé de 2 px.
@@ -188,6 +240,7 @@ const pulse=(i,n)=>.6+.35*Math.sin(i/n*2*Math.PI);
 function walkPose(i){const ph=i/12,c=Math.cos(2*Math.PI*ph-.4);
  return{legF:walkLeg(ph),legB:walkLeg(ph+.5),dy:Math.cos(4*Math.PI*ph)>.3?1:0,lean:1,coat:1+.9*Math.cos(4*Math.PI*ph-1),
   armF:{a:-30*c,e:14+14*Math.max(0,-c)},armB:{a:30*c,e:14+14*Math.max(0,c)}}}
+const SHOOT_REC=[4,4,2,0,-1,0];
 const ENG_ANIMS={
  idle:{n:72,cols:12,fps:12,note:'repos : souffle en quatre temps, cercle runique qui bat, clignements, geste d’attente toutes les 6 s',
   f:(i,TP)=>{const o={...breath(i,24),blink:i===30||i===31||i===67,rune:pulse(i,24)};
@@ -245,24 +298,44 @@ const ENG_ANIMS={
  c_walk_d:{n:12,cols:12,note:'marche de face, Arbalestrie en travers qui balance',f:i=>({...frontWalk(i,'d'),cannon:{ang:-118-2*Math.sin(i/12*4*Math.PI)}})},
  c_idle_u:{n:24,cols:12,fps:12,note:'repos de dos, Arbalestrie sur l’épaule',f:i=>({dir:'u',...breath(i,24),rune:pulse(i,24),cannon:{}})},
  c_walk_u:{n:12,cols:12,note:'marche de dos, Arbalestrie sur l’épaule',f:i=>({...frontWalk(i,'u'),cannon:{ang:-62+2*Math.sin(i/12*4*Math.PI)}})},
- c_shoot_d:{n:6,cols:6,fps:12,note:'tir de l’Arbalestrie vers le sud (de face), canon raccourci pointé vers le bas',f:i=>({dir:'d',cshoot:{rec:[0,2,1.5,1,.5,0][i],flash:i<2},ub:i===1||i===2?1:0,rune:i<2?1:.7})},
- c_shoot_u:{n:6,cols:6,fps:12,note:'tir de l’Arbalestrie vers le nord (de dos), canon levé',f:i=>({dir:'u',cshoot:{rec:[0,2,1.5,1,.5,0][i],flash:i<2},ub:i===1||i===2?1:0})},
- c_shoot:{n:6,cols:6,fps:12,note:'tir de l’Arbalestrie : pied arrière qui cale, manteau soufflé',
-  f:i=>({cannon:{ang:[0,-4,-2,-1,0,0][i],rec:[0,2,1.5,1,.5,0][i],flash:i<2},legB:{x:[0,-1.5,-2,-1.5,-1,0][i]},coat:[0,2,2,1,0,0][i],dy:i===1||i===2?1:0,rune:i<2?1:.7})},
+ c_shoot_d:{n:6,cols:6,fps:24,note:'tir de l’Arbalestrie vers le sud (de face), canon raccourci pointé vers le bas ; recul du Coup sec',f:i=>({dir:'d',cshoot:{rec:SHOOT_REC[i],flash:i<2},rune:i<2?1:.7})},
+ c_shoot_u:{n:6,cols:6,fps:24,note:'tir de l’Arbalestrie vers le nord (de dos), canon levé ; recul du Coup sec',f:i=>({dir:'u',cshoot:{rec:SHOOT_REC[i],flash:i<2}})},
+ // Trois quarts (diagonales) : de face vers le bas à droite (dr), de dos vers le haut à droite (ur) ; miroir pour la gauche.
+ idle_dr:{n:24,cols:12,fps:12,note:'repos de trois quarts face (diagonale bas-droite ; miroir pour bas-gauche)',f:i=>({dir:'dr',...breath(i,24),blink:i===19||i===20,rune:pulse(i,24)})},
+ walk_dr:{n:12,cols:12,note:'marche de trois quarts face',f:i=>frontWalk(i,'dr')},
+ idle_ur:{n:24,cols:12,fps:12,note:'repos de trois quarts dos (diagonale haut-droite ; miroir pour haut-gauche)',f:i=>({dir:'ur',...breath(i,24),rune:pulse(i,24)})},
+ walk_ur:{n:12,cols:12,note:'marche de trois quarts dos',f:i=>frontWalk(i,'ur')},
+ c_idle_dr:{n:24,cols:12,fps:12,note:'repos de trois quarts face, Arbalestrie sur l’épaule droite',f:i=>({dir:'dr',...breath(i,24),blink:i===19||i===20,rune:pulse(i,24),cannon:{ang:-124}})},
+ c_walk_dr:{n:12,cols:12,note:'marche de trois quarts face, Arbalestrie sur l’épaule',f:i=>({...frontWalk(i,'dr'),cannon:{ang:-124-2*Math.sin(i/12*4*Math.PI)}})},
+ c_idle_ur:{n:24,cols:12,fps:12,note:'repos de trois quarts dos, Arbalestrie sur l’épaule droite',f:i=>({dir:'ur',...breath(i,24),rune:pulse(i,24),cannon:{ang:-56}})},
+ c_walk_ur:{n:12,cols:12,note:'marche de trois quarts dos, Arbalestrie sur l’épaule',f:i=>({...frontWalk(i,'ur'),cannon:{ang:-56+2*Math.sin(i/12*4*Math.PI)}})},
+ shoot_dr:{n:6,cols:6,fps:12,note:'décharge du gantelet de trois quarts face (diagonale bas-droite)',f:i=>({dir:'dr',aim:{rec:[0,2,1.5,1,.5,0][i],flash:i<2,pulse:i<3},ub:i===1||i===2?1:0,rune:i<2?1:.7})},
+ shoot_ur:{n:6,cols:6,fps:12,note:'décharge du gantelet de trois quarts dos (diagonale haut-droite)',f:i=>({dir:'ur',aim:{rec:[0,2,1.5,1,.5,0][i],flash:i<2,pulse:i<3},ub:i===1||i===2?1:0})},
+ c_shoot_dr:{n:6,cols:6,fps:24,note:'tir de l’Arbalestrie de trois quarts face, tube à 45° vers le bas ; recul du Coup sec',f:i=>({dir:'dr',cshoot:{rec:SHOOT_REC[i],flash:i<2},rune:i<2?1:.7})},
+ c_shoot_ur:{n:6,cols:6,fps:24,note:'tir de l’Arbalestrie de trois quarts dos, tube à 45° vers le haut ; recul du Coup sec',f:i=>({dir:'ur',cshoot:{rec:SHOOT_REC[i],flash:i<2}})},
+ // Coup sec (planches/arbalestrie-recul-planche.html, piste A) : le canon seul claque de 4 px en arrière dès l'image
+ // du tir, revient et dépasse d'1 px vers l'avant ; le corps ne bouge pas. 6 images à 24 i/s.
+ // Mort « Foudroyé » (planches/ingenieur-mort-planche.html, M2) : 0 = coup reçu, 1 à 3 = corps soulevé qui bascule
+ // (22, 45, 68°), 4 à 7 = couché sur le dos, lumières de l'exo allumées / éteintes en alternance (7 = pose finale).
+ // Images centrées sur le milieu du corps ; la trajectoire est jouée par le jeu (world/capsule/engineer_fall_view.gd).
+ fall:{n:8,cols:8,fps:12,note:'mort : coup reçu, bascule en vol (3), couché sur le dos, lumières qui grésillent puis s’éteignent',
+  f:i=>i<4?{...ENG_ANIMS.hit.f(i?1:0),spin:-22.5*i}:{down:true,lit:i===4||i===6}},
+ c_shoot:{n:6,cols:6,fps:24,note:'tir de l’Arbalestrie, Coup sec : le canon seul recule de 4 px et revient en ressort',
+  f:i=>({cannon:{ang:0,rec:SHOOT_REC[i],flash:i<2},rune:i<2?1:.7})},
 };
 function frontWalk(i,dir){const p=i/12*2*Math.PI,s=Math.sin(p);
- return{dir,liftL:Math.round(2.4*Math.max(0,s)),liftR:Math.round(2.4*Math.max(0,-s)),dy:Math.abs(s)>.5?-1:0,sw:Math.round(2*Math.sin(p-.5)),sway:Math.round(Math.sin(p-.8)),hd:[0,i%6===1?1:0]}}
+ return{dir,liftL:Math.round(2.4*Math.max(0,s)),liftR:Math.round(2.4*Math.max(0,-s)),dy:Math.abs(s)>.5?-1:0,sw:Math.round(2*Math.sin(p-.5)),sway:Math.round(Math.sin(p-.8)),stepL:Math.round(1.3*Math.cos(p)),stepR:-Math.round(1.3*Math.cos(p)),hd:[0,i%6===1?1:0]}}
 // Image i de l'animation, pour le corps « templier » ou « exil ».
 function engFrame(name,i,body='templier'){const a=ENG_ANIMS[name];return eng({body,...a.f(i%a.n,body==='templier')})}
 // Casque de combat de face (dir 'd') ou de dos ('u'), calque seul, p = 0 relevé → 1 fermé : les plaques montent du
 // col comme de profil (helmetLayer, engineer-cannon.js). Tête au repos en (24, 21) ; décaler de la hauteur de tête.
-function helmetFront(p,dir){const b=buf(48,48);if(p<=0)return b;const hx=24,hy=21,top=hy+6-p*11.5,D=dir==='d';
+function helmetFront(p,dir){const b=buf(48,48);if(p<=0)return b;const Q=dir.length>1?1:0,hx=24+Q,hy=21,top=hy+6-p*11.5,D=dir[0]==='d';
  blob(b,hx,hy-.3,5.3,5.3,'iron',.12,(x,y)=>y>=top);
  if(hy+2>=top-2)rect(b,hx-5,hy+2,11,3,'iron',-.05);
  for(const y of[hy-3,hy+1])if(y>=top)for(let x=hx-4;x<=hx+4;x++)px(b,x,y,'iron',.35);
- if(D){if(p>=.75)for(let x=hx-3;x<=hx+3;x++)px(b,x,hy,'cy',p>=1?(Math.abs(x-hx)<=1?1:.75):.45);
-  if(p>=1)px(b,hx,hy+2,'iron',.8)}
- else for(let y=Math.ceil(Math.max(top,hy-4));y<=hy+3;y++)px(b,hx,y,'iron',.6);
+ if(D){if(p>=.75)for(let x=hx-3+2*Q;x<=hx+3+Q;x++)px(b,x,hy,'cy',p>=1?(Math.abs(x-hx-Q)<=1?1:.75):.45);
+  if(p>=1)px(b,hx+Q,hy+2,'iron',.8)}
+ else for(let y=Math.ceil(Math.max(top,hy-4));y<=hy+3;y++)px(b,hx-Q,y,'iron',.6);
  if(top<=hy-5)px(b,hx,hy-5,'cy',.8);
  for(let x=hx-4;x<=hx+4;x++)if(hy+5>=top)px(b,x,hy+5,'brz',.6);
  return b}

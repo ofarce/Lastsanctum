@@ -20,7 +20,7 @@ const NAMES := {"mining_seal": "Sceau de minage", "plan_analyse": "Plan de mod �
 const TEXTS := {
 	"cannon": "L'arme de base de tous les Exilés, la vôtre n'ayant pas survécu au voyage temporel. Consomme de l'énergie spirituelle à chaque tir. Faites-en bon usage.",
 	"mining_seal": "Un sceau commun qui vous permet de miner la roche et certains minéraux basiques.",
-	"plan_analyse": "Le plan d'un module d'exo tyrien. Une fois fabriqué à l'Établi d'exo (50 fibres de bois, 50 planches, 5 ichor), il affiche les PV des ennemis à l'écran.",
+	"plan_analyse": "Le plan d'un module d'exo tyrien. Une fois fabriqué à l'Établi d'exo (5 fibres de bois noir, 5 planches, 1 ichor), il affiche les PV des ennemis à l'écran.",
 	"combinaison": "Une combinaison sommaire commune à tous les Exilés, votre armure n'ayant pas supporté le voyage temporel. Il existe peut-être des moyens de la renforcer ?",
 }
 

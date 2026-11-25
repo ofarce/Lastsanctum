@@ -1,0 +1,432 @@
+<meta charset="utf-8">
+<meta name="claude:viewport-fit-sides" content="cover">
+<title>Mort et retour de l'Ingénieur</title>
+<style>
+/* Planche de propositions, même habillage sombre que les autres planches du projet : une séquence complète en tête,
+   puis quatre temps (mort, retour, attente, résurrection) de trois pistes chacun, en pixels natifs du jeu. */
+:root{--bg:#14161b;--panel:#1d2028;--line:#2c313c;--ink:#e6e8ee;--mute:#9aa1b0;--acc:#7ab0ff;--cy:#5fd0ee;
+  --ok:#5fbf7a;--redo:#e0b04a;--no:#e0583a;--btn:#2a2f3a;--field:#171a21;--on:#26364f;--onl:#3e5d8a;color-scheme:dark}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,sans-serif}
+main{max-width:1460px;margin:0 auto;padding-block:24px 60px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+h1{font-size:26px;margin:0 0 4px;text-wrap:balance}
+h2{font-size:19px;margin:30px 0 2px;text-wrap:balance}
+h2 .n{color:var(--cy);font:600 14px/1 ui-monospace,monospace;margin-right:8px}
+.sub{color:var(--mute);margin:0 0 14px;max-width:980px}
+.lead{color:#c9cdd6;margin:0 0 12px;max-width:980px;font-size:14px}
+.note{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px 14px;color:#c9cdd6;font-size:14px;max-width:980px}
+.note b{color:var(--ink)}
+.bar{position:sticky;top:env(safe-area-inset-top,0px);background:var(--bg);padding:8px 0;z-index:5;display:flex;gap:6px;flex-wrap:wrap;align-items:center;border-bottom:1px solid var(--line);margin:14px 0}
+.lab{color:var(--mute);font-size:13px;margin-left:8px}
+.bar .lab:first-child{margin-left:0}
+button{background:var(--btn);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:5px 10px;cursor:pointer;font:inherit;font-size:13px}
+button:hover{border-color:#4a5262}
+button.on{background:var(--on);border-color:var(--onl)}
+button:focus-visible,textarea:focus-visible{outline:2px solid var(--acc);outline-offset:1px}
+#tally{margin-left:auto;font-size:13px;color:var(--mute)}
+canvas.px{image-rendering:pixelated;width:100%;height:auto;display:block;border-radius:4px;background:#000}
+.seq{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px 14px;display:grid;grid-template-columns:minmax(0,960px) minmax(240px,1fr);gap:16px;align-items:start}
+@media(max-width:1100px){.seq{grid-template-columns:minmax(0,1fr)}}
+.seq .stage{min-width:0;display:flex;flex-direction:column;gap:6px}
+.track{display:flex;gap:2px;height:22px;position:relative;font:11px/22px ui-monospace,monospace;color:var(--mute)}
+.track span{background:var(--field);border:1px solid var(--line);border-radius:3px;overflow:hidden;white-space:nowrap;text-indent:6px;min-width:0}
+.track span.now{color:var(--ink);border-color:var(--onl);background:var(--on)}
+.track i{position:absolute;top:-2px;bottom:-2px;width:2px;background:var(--cy);border-radius:1px}
+.pick{display:flex;flex-direction:column;gap:10px;min-width:0}
+.pick .row{display:flex;flex-direction:column;gap:4px}
+.pick .row>span{font-size:12px;color:var(--mute)}
+.pick .opts{display:flex;gap:6px;flex-wrap:wrap}
+.pick .opts button{flex:1 1 0;min-width:96px;text-align:left}
+.pick .tot{font:12px/1.5 ui-monospace,monospace;color:var(--mute)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,330px),1fr));gap:14px}
+.grid.wide{grid-template-columns:repeat(auto-fill,minmax(min(100%,560px),1fr))}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px 14px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.card[data-v="garder"]{border-color:#2f6a40}.card[data-v="revoir"]{border-color:#7a6226}.card[data-v="rejeter"]{border-color:#7a3a2a;opacity:.75}
+.card.inseq{box-shadow:inset 0 2px 0 var(--cy)}
+.card h3{margin:0;font-size:16px;display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
+.card h3 .tag{font:12px/1 ui-monospace,monospace;color:var(--mute);font-weight:400}
+.card h3 button{margin-left:auto;font-size:12px;padding:3px 8px}
+.card p{margin:0;color:#c9cdd6;font-size:14px}
+.spec{font:12px/1.45 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--mute)}
+.verdict{display:flex;gap:6px;flex-wrap:wrap;margin-top:auto}
+.verdict button{flex:1 1 0;min-width:0}
+.verdict button.sel[data-v="garder"]{background:#1f3a28;border-color:var(--ok)}
+.verdict button.sel[data-v="revoir"]{background:#3a321b;border-color:var(--redo)}
+.verdict button.sel[data-v="rejeter"]{background:#3a2019;border-color:var(--no)}
+textarea{background:var(--field);color:var(--ink);border:1px solid var(--line);border-radius:6px;font:inherit;font-size:13px;padding:6px 8px;resize:vertical;min-height:32px;width:100%;box-sizing:border-box}
+#out{margin-top:10px;min-height:190px;font-family:ui-monospace,monospace}
+ul.q{margin:6px 0 0;padding-left:20px;color:#c9cdd6;font-size:14px;max-width:980px}
+</style>
+<main>
+<h1>Mort et retour de l'Ingénieur</h1>
+<p class="sub">Quatre temps, trois pistes par temps : la chute, le retour vers la capsule, les 20 secondes d'attente, puis la résurrection dans le Puits de lumière. Tout est dessiné en pixels natifs du jeu, avec le vrai rig de l'Ingénieur et la capsule telle qu'elle est en jeu.</p>
+<div class="note"><b>Mode d'emploi.</b> La séquence en tête enchaîne une piste de chaque temps : changez-les à droite, ou avec « Voir dans la séquence » sur une carte. Les cartes du dessous rejouent chaque temps seul, en partant de la piste choisie pour le temps d'avant. Rien ne change dans les règles : 20 s d'attente, PV au maximum au retour, E pour sortir. « Copier le bilan » produit le texte à me coller.</div>
+
+<div class="note" style="margin-top:8px"><b>Choix du 23/11 : M2 Foudroyé → R2 Le feu follet → A2 Les quatre bornes → S3 Le souffle.</b> Intégré en jeu le 23/11 : tout se joue dans les 20 s du délai, le vol du feu follet dure 1 s quelle que soit la distance, et la caméra le suit si l'Ingénieur était incarné. La planche reste pour référence.</div>
+
+<div class="bar">
+  <span class="lab">Vitesse</span>
+  <button id="sp1" data-speed="1" class="on">× 1</button><button id="sp2" data-speed="0.35">× 0,35</button><button id="sp3" data-speed="0.1">× 0,1</button>
+  <button id="pause">Pause</button>
+  <span class="lab">Corps</span>
+  <button id="bd1" data-body="templier" class="on">Templier</button><button id="bd2" data-body="exil">Chausses de l'Exil</button>
+  <span class="lab">Attente</span>
+  <button id="w1" data-wait="6" class="on">Abrégée · 6 s</button><button id="w2" data-wait="20">Réelle · 20 s</button>
+  <button id="copy">Copier le bilan</button>
+  <span id="tally"></span>
+</div>
+<textarea id="out" readonly hidden></textarea>
+
+<section class="seq" aria-label="Séquence complète">
+  <div class="stage">
+    <canvas class="px" id="seqc" width="240" height="104"></canvas>
+    <div class="track" id="track"></div>
+  </div>
+  <div class="pick" id="pick"></div>
+</section>
+
+<div id="sections"></div>
+
+<h2>Questions ouvertes</h2>
+<ul class="q">
+  <li><b>Caméra.</b> Le joueur est désincarné à la mort. La caméra peut rester sur le corps, ou glisser vers la capsule en suivant le trait ou le feu follet (les pistes R1 et R2 s'y prêtent, R3 marche à toute distance sans voyage).</li>
+  <li><b>Mort loin de la capsule.</b> Dans la planche les deux lieux tiennent dans un même écran. En jeu, le voyage sortirait de l'écran : R1 et R2 demandent alors une durée fixe (pas une vitesse), sinon l'attente de 20 s serait rognée.</li>
+  <li><b>Corps au sol.</b> Les trois retours font disparaître le corps : rien à fouiller, rien à piétiner pour les ennemis.</li>
+  <li><b>Boss.</b> Tombé en duel, le boss retrouve ses forces : la piste d'attente pourrait le rappeler (lueur rouge sur le voyant), je ne l'ai pas dessiné.</li>
+</ul>
+</main>
+<script src="assets/engineer-colosse.js"></script>
+<script src="assets/engineer-exile.js"></script>
+<script src="assets/engineer-cannon.js"></script>
+<script src="assets/engineer-ragged.js"></script>
+<script src="assets/engineer-maj.js"></script>
+<script>
+(()=>{'use strict';
+// ====================== Scène ======================
+// Deux fois le fond de la capsule (120 × 104) côte à côte : capsule à gauche (pied en 60, 62), lieu de la mort à droite.
+const W=240,H=104,CX=60,OY=53,DX=188,DY=76;
+const K='#0b090b',IRON=['#1e232b','#2c333d','#3e4652','#58626f','#7d8896'],BRZ=['#3a2512','#5c3d1d','#8a5f2e','#c08a48','#e8c07a'],
+ CY=['#1d4f66','#2f86a8','#5fd0ee','#9fe6ff','#f2fcff'],STONE=['#272d37','#333a46','#404955','#4a5361','#5a6474'],AMBER='#ffcf6a';
+let G=null,BODY='templier',WAITD=6,CUR=null;
+const cl=(x,a=0,b=1)=>Math.max(a,Math.min(b,x)),ph=(t,a,b)=>cl((t-a)/(b-a)),fr=x=>x-Math.floor(x),
+ hash=n=>fr(Math.sin(n*127.1+311.7)*43758.5453),eo=x=>1-(1-x)*(1-x),TAU=Math.PI*2;
+function Q(x,y,w,h,col,a=1){w=Math.round(w);h=Math.round(h);if(w<=0||h<=0||a<=0)return;G.globalAlpha=Math.min(1,a);G.fillStyle=col;G.fillRect(Math.round(x),Math.round(y),w,h);G.globalAlpha=1}
+const P=(x,y,col,a=1)=>Q(x,y,1,1,col,a);
+function EL(cx,cy,rx,ry,col,a=1){const n=Math.floor(ry);for(let y=-n;y<=n;y++){const hw=Math.round(rx*Math.sqrt(Math.max(0,1-(y/(ry+.5))**2)));Q(cx-hw,cy+y,2*hw+1,1,col,a)}}
+function RING(cx,cy,rx,ry,col,a=1,half=0){if(a<=0)return;const n=Math.ceil(rx*8)+8,seen=new Set();
+ for(let i=0;i<n;i++){const g=i/n*TAU,s=Math.sin(g);if(half===-1&&s>0)continue;if(half===1&&s<=0)continue;
+  const x=Math.round(cx+Math.cos(g)*rx),y=Math.round(cy+s*ry),k=x+','+y;if(seen.has(k))continue;seen.add(k);P(x,y,col,a)}}
+function line(x0,y0,x1,y1,col,a=1,w=1){const n=Math.max(Math.abs(x1-x0),Math.abs(y1-y0),1);for(let i=0;i<=n;i++)Q(Math.round(x0+(x1-x0)*i/n)-(w>>1),Math.round(y0+(y1-y0)*i/n)-(w>>1),w,w,col,a)}
+function clip(x,y,w,h,fn){if(w<=0||h<=0)return;G.save();G.beginPath();G.rect(Math.round(x),Math.round(y),Math.round(w),Math.round(h));G.clip();fn();G.restore()}
+const BG=new Image();BG.src='assets/capsule/fond.png';
+function bg(){if(BG.complete&&BG.naturalWidth){G.drawImage(BG,0,0);G.save();G.translate(240,0);G.scale(-1,1);G.drawImage(BG,0,0);G.restore()}else Q(0,0,W,H,'#2a2f38')}
+
+// ====================== Ingénieur ======================
+const SC=new Map(),TC=new Map();
+// Pose du rig (engineer-maj.js) rendue en image 48 × 48, pieds en (24, 45). off = lumières cyan éteintes.
+function pose(o,off){o={body:BODY,...o};const k=JSON.stringify(o)+(off?'#':'');let c=SC.get(k);if(c)return c;
+ const b=eng(o);if(off){const ci=MAT.indexOf('cy'),ii=MAT.indexOf('iron');for(let i=0;i<b.m.length;i++)if(b.m[i]===ci){b.m[i]=ii;b.s[i]=.2}}
+ c=render(b,1);SC.set(k,c);return c}
+function anim(name,i,off){const a=ENG_ANIMS[name];i=((Math.floor(i)%a.n)+a.n)%a.n;return pose(a.f(i,BODY==='templier'),off)}
+const TINT={rim:['source-in',CY[3],1],light:['source-atop',CY[3],.5],white:['source-in','#f2fcff',1],cyan:['source-atop',CY[2],.62],grey:['source-in','#353b47',1],ghost:['source-in',CY[4],1],holo:['source-in',CY[1],1]};
+function tint(c,mode){let m=TC.get(c);if(!m){m={};TC.set(c,m)}if(m[mode])return m[mode];
+ const d=document.createElement('canvas');d.width=c.width;d.height=c.height;const x=d.getContext('2d');x.drawImage(c,0,0);
+ const[op,col,a]=TINT[mode];x.globalCompositeOperation=op;x.globalAlpha=a;x.fillStyle=col;x.fillRect(0,0,d.width,d.height);return m[mode]=d}
+function spr(c,fx,fy,o={}){const a=o.a??1;if(a<=0)return;G.save();G.globalAlpha=Math.min(1,a);G.translate(Math.round(fx),Math.round(fy));if(o.rot)G.rotate(o.rot);G.drawImage(c,-24,-45);G.restore()}
+// Rendu « baigné de lumière » de l'occupant de la capsule (celui du jeu).
+function bathed(c,fx,fy,a=1){for(const[dx,dy]of[[1,0],[-1,0],[0,-1]])spr(tint(c,'rim'),fx+dx,fy+dy,{a:.55*a});spr(c,fx,fy,{a});spr(tint(c,'light'),fx,fy,{a:.9*a})}
+const shadow=(x,y,rx,a)=>EL(Math.round(x),y,rx,1,'#000',a);
+function alive(S){shadow(DX,DY,5,.35);spr(anim('idle',S.T*12),DX,DY)}
+function dust(x,y,t,n,seed){if(t<0||t>.6)return;for(let i=0;i<n;i++){const g=hash(seed+i)*Math.PI,sp=8+hash(seed+i+7)*14;
+ P(x+Math.cos(g)*sp*eo(t/.6),y-Math.sin(g)*sp*.35*eo(t/.6)-1,i&1?'#9aa1b0':'#6d7482',(1-t/.6)*.9)}}
+function hitFx(t,x,y){if(t>.1)return;const r=2+Math.round(t*40);for(const[u,v]of[[1,0],[-1,0],[0,1],[0,-1],[1,1],[-1,-1],[1,-1],[-1,1]])line(x+u*2,y+v*2,x+u*r,y+v*r,'#ffffff',1-t*6)}
+function wisp(x,y,s,T){x=Math.round(x);y=Math.round(y);if(s<=0)return;Q(x-2,y-2,5,5,CY[2],.25*s);Q(x-1,y-2,3,5,CY[2],.3*s);Q(x-2,y-1,5,3,CY[2],.3*s);
+ if(s>.5){Q(x-1,y-1,3,3,CY[3]);Q(x,y-2,1,5,CY[3],.8);Q(x-2,y,5,1,CY[3],.8)}P(x,y,CY[4]);
+ const g=Math.floor(T*14);P(x+(g%3)-1,y+((g*5)%3)-1,CY[4],.9)}
+
+// ====================== Capsule · Puits de lumière ======================
+const GLASS=[];for(let y=4;y<=57;y++){const hw=Math.round(8+Math.max(0,(y-40)/17)*4);GLASS.push([y,60-hw,59+hw])}
+// Colonne : k = hauteur (0 à 1), m = opacité, ws = largeur relative.
+function beam(t,k,m,o={}){if(k<=0||m<=0)return;const top=Math.round(57-53*k),ws=o.ws??1,pu=o.pulse===false?1:.8+.2*Math.sin(t*Math.PI);
+ for(const[y,a,b]of GLASS){if(y<top)continue;const hw=(b-a+1)/2*ws;if(hw<.5)continue;const x0=Math.round(60-hw),x1=Math.round(60+hw)-1,fade=cl((y-top)/12);
+  for(let x=x0;x<=x1;x++){const d=Math.abs(x+.5-60)/hw,s=.5+.5*Math.sin(x*1.7+(y+t*30)*.5);
+   Q(x,y,1,1,d<.25?CY[4]:s>.7?CY[3]:CY[2],m*(d>.8?.22:d>.5?.4:.66)*fade*pu*(.75+.25*s))}}
+ if(k>=1&&ws>=1)for(let i=0;i<6;i++){const f=(t*.9+i/6)%1;P(53+((i*5)%14),Math.round(56-f*48),CY[4],m*(1-f))}
+ if(k<1)Q(60-7*ws,top,14*ws,1,CY[4],.9*m)}
+// Colonne libre (retour R3) : même trame, au-dessus d'un point quelconque.
+function column(cx,y0,y1,hw,t,m){if(hw<.5||m<=0)return;for(let y=y0;y<=y1;y++)for(let x=Math.round(cx-hw);x<Math.round(cx+hw);x++){
+ const d=Math.abs(x+.5-cx)/hw,s=.5+.5*Math.sin(x*1.7+(y+t*30)*.5);Q(x,y,1,1,d<.25?CY[4]:s>.7?CY[3]:CY[2],m*(d>.8?.22:d>.5?.4:.66)*(.75+.25*s))}}
+function pylon(x,y,on){const h=6;Q(x-2,y-h,5,h+1,K);Q(x-1,y-h+1,3,h-1,IRON[2]);Q(x-1,y-h+1,1,h-1,IRON[3]);Q(x-2,y-h-2,5,3,K);Q(x-1,y-h-1,3,1,BRZ[3]);
+ if(on)Q(x-2,y-h-6,5,5,CY[2],.3);Q(x-1,y-h-5,3,3,K);Q(x,y-h-5,1,3,on?CY[4]:'#4a515d');P(x-1,y-h-4,on?CY[3]:'#3a414c');P(x+1,y-h-4,on?CY[2]:'#2b313a')}
+const PYL=[[45,55],[75,55],[47,63],[73,63]];
+// o : t, lit (halo au sol), pit (lueur du fond), beam / beamK / ws (colonne), pyl [4], lamp (couleur), flash,
+// ground() sous les bornes, occ() dans la colonne, veil (voile devant l'occupant).
+function capDraw(o){const t=o.t,lit=o.lit??1,m=o.beam??1,bk=o.beamK??1,pyl=o.pyl||[1,1,1,1],pit=o.pit??1;
+ EL(60,63,17,3,'#000',.38);
+ if(lit>0){const a=lit*(.15+.06*Math.sin(t*Math.PI));EL(60,62,20,5,CY[2],a);EL(60,62,14,3,CY[3],a*.8)}
+ EL(60,58,16,6,K);EL(60,58,15,5,STONE[4]);EL(60,58,14,5,STONE[3]);EL(60,59,13,4,STONE[1]);EL(60,60,11,3,STONE[0]);EL(60,61,9,2,'#0b0e14');
+ RING(60,59,13,4,STONE[2],1,1);RING(60,60,11,5,STONE[2],1,1);
+ if(pit>0){EL(60,61,9,2,CY[2],.7*pit);EL(60,61,5,1,CY[4],.8*pit);EL(60,58,14,4,CY[1],.18*pit)}
+ if(o.ground)o.ground();
+ pylon(...PYL[0],pyl[0]);pylon(...PYL[1],pyl[1]);
+ beam(t,bk,m,{ws:o.ws});
+ if(o.flash>0)for(const[y,a,b]of GLASS)Q(a,y,b-a+1,1,CY[4],o.flash*.9);
+ if(o.occ){o.occ();if(o.veil!==false)beam(t,bk,.16*m,{ws:o.ws})}
+ pylon(...PYL[2],pyl[2]);pylon(...PYL[3],pyl[3]);
+ Q(56,63,8,3,K);Q(57,64,6,1,STONE[2]);const lc=o.lamp||AMBER;Q(58,63,4,4,lc,.28);Q(59,64,2,2,lc);
+ if(m>=1&&bk>=1)for(let i=0;i<4;i++){const k=(t*.35+i*.25)%1;P(59+(i%2?3:-2)+Math.round(Math.sin(t*2+i*1.7)*2),Math.round(2-k*16),i%2?CY[3]:CY[4],1-k)}}
+const capIdle=S=>capDraw({t:S.T});
+// Capsule vue depuis un temps de retour : au repos avant l'arrivée, puis état de départ de la piste d'attente + éclat.
+function capAt(S,arrived,flash){if(!arrived){capIdle(S);return}CUR.A.draw({t:0,k:0,T:S.T});
+ if(flash>0){EL(60,61,9,2,CY[4],flash);RING(60,62,8+30*(1-flash),(8+30*(1-flash))*.3,CY[3],flash);for(const[y,a,b]of GLASS)if(y>30)Q(a,y,b-a+1,1,CY[4],flash*.5*(y-30)/27)}}
+function occupied(S,open=true){const bob=Math.round(Math.sin(S.T*1.6));capDraw({t:S.T,lamp:CY[3],occ:()=>{EL(60,57,3,1,CY[4],.25);bathed(open?anim('idle',S.T*12):pose({blink:true}),CX,OY+bob)}})}
+
+// ====================== 1 · Mort ======================
+// rest(o) dessine la pose finale : o.t (temps local pour les clignotements), o.a, o.mode (teinte), o.dy, o.shell.
+// box = emprise à l'écran de la pose finale [x0, y0, x1, y1], point de départ des pistes de retour.
+function drawRest(c,x,y,o,e={}){const a=o.a??1,yy=y+(o.dy||0);if(o.mode){spr(tint(c,o.mode),x,yy,{a,rot:e.rot});return}
+ spr(c,x,yy,{a,rot:e.rot});if(e.grey>0)spr(tint(c,'grey'),x,yy,{a:a*e.grey,rot:e.rot});if(e.cy)spr(tint(c,'cyan'),x,yy,{a,rot:e.rot})}
+const flick=tt=>tt<.1||(tt>.2&&tt<.27)||(tt>.4&&tt<.44);
+const M=[
+{id:'M1',name:'Genou à terre',dur:1.7,
+ desc:"La mort sobre. Le coup le rejette en arrière, il pose un genou, la tête tombe. Le cercle runique et les gantelets clignotent trois fois puis s'éteignent, et le corps perd sa couleur.",
+ spec:"touché 3 images (12 i/s) · agenouillement 12 images (24 i/s, l'animation « kneel » jouée à l'envers) · extinction 0,45 s · 2 poses nouvelles",
+ box:[DX-12,DY-29,DX+12,DY+1],
+ draw(S){capIdle(S);const t=S.t;if(t<0){alive(S);return}
+  shadow(DX,DY,5,.35);
+  if(t<.25){const i=Math.floor(t*12),c=anim('hit',i);spr(c,DX-(i<2?2:1),DY);if(t<.07)spr(tint(c,'white'),DX-2,DY,{a:.85});hitFx(t,DX+7,DY-20);return}
+  if(t<.75){spr(anim('kneel',Math.max(24,35-Math.floor((t-.25)*24))),DX-1,DY);return}
+  this.rest({t});dust(DX+4,DY,t-.75,7,3)},
+ rest(o={}){const tt=o.t==null?9:o.t-.75,on=flick(tt),low=tt>=.35;
+  const c=pose({...KNEEL,ub:1,hd:low?[2,4]:[1,2],blink:true,armF:{to:[28.5,low?42:40]},armB:{to:[24.5,42]},rune:on?1:.2,glow:on?1:.2},!on);
+  drawRest(c,DX-1,DY,o,{grey:cl((tt-.5)/.6)*.5})}},
+{id:'M2',name:'Foudroyé',dur:1.5,
+ desc:"La mort violente. Un arrêt sur image blanc, puis le corps est soulevé et retombe sur le dos deux blocs plus loin, rebondit, glisse. Les lumières de l'exo grésillent et meurent.",
+ spec:"arrêt 0,08 s · vol 0,47 s (4 crans de rotation) · rebond 2 px, glissade 3 px · 1 pose couchée nouvelle",
+ box:[DX-41,DY-11,DX-11,DY+3],
+ draw(S){capIdle(S);const t=S.t;if(t<0){alive(S);return}
+  if(t<.08){shadow(DX,DY,5,.35);const c=anim('hit',0);spr(c,DX-2,DY);spr(tint(c,'white'),DX-2,DY,{a:.9});hitFx(t,DX+7,DY-20);return}
+  if(t<.55){const k=(t-.08)/.47,rot=-Math.round(k*4)/4*Math.PI/2,x=DX-2-10*k,y=DY-4*k-Math.sin(k*Math.PI)*9,c=anim('hit',1);
+   shadow(x-10*k,DY,5+5*k,.3);if(k>.15){const j=k-.14;spr(tint(c,'white'),DX-2-10*j,DY-4*j-Math.sin(j*Math.PI)*9,{rot:-Math.round(j*4)/4*Math.PI/2,a:.25})}
+   spr(c,x,y,{rot});return}
+  this.rest({t});dust(DX-26,DY+2,t-.55,10,11)},
+ rest(o={}){const tt=o.t==null?9:o.t-.55,on=flick(tt-.15),b=tt<.2?-Math.round(Math.sin(tt/.2*Math.PI)*2):0,sl=-3*eo(cl(tt/.3));
+  const c=pose({blink:true,hd:[-1,0],armF:{a:40,e:25},armB:{a:-35,e:10},legB:{x:-2.5},legF:{x:1},rune:on?1:.2,glow:on?1:.2},!on);
+  if(!o.mode)EL(DX-23+Math.round(sl),DY+2,15,2,'#000',.3*(o.a??1));
+  drawRest(c,DX-12+sl,DY-4+b,o,{rot:-Math.PI/2,grey:cl((tt-.6)/.5)*.4})}},
+{id:'M3',name:'Stase',dur:1.3,
+ desc:"La mort retenue. Il part à la renverse, mais l'exo le fige avant le sol : une coque de lumière se referme sur lui, il reste suspendu, penché, passé au cyan. Dit tout de suite que ce n'est pas fini.",
+ spec:"touché 0,1 s · chute retenue 0,3 s · coque fermée à 0,4 s, éclat 0,25 s · lévitation 3 px · 1 pose penchée nouvelle",
+ box:[DX-22,DY-45,DX+6,DY+1],
+ shell(p,flash,a){if(p<=0||a<=0)return;const cx=DX-9,cy=DY-21,hw=14,hh=25,sh=12,q=cl(p*2),r=cl(p*2-1);
+  if(p>=1)for(let y=-hh;y<=hh;y++){const w=Math.round(hw*Math.min(1,(hh-Math.abs(y))/(hh-sh)));Q(cx-w,cy+y,2*w+1,1,CY[2],a*(.1+.5*flash))}
+  for(const sy of[-1,1])for(const sx of[-1,1]){line(cx,cy+sy*hh,Math.round(cx+sx*hw*q),Math.round(cy+sy*(hh-(hh-sh)*q)),CY[3],a);
+   if(r>0)line(cx+sx*hw,cy+sy*sh,cx+sx*hw,Math.round(cy+sy*sh*(1-r)),CY[3],a)}
+  if(p>=1){const g=fr(NOW*.5)*4,s=Math.floor(g),f=g-s,sx=s<2?1:-1,sy=s%2?1:-1;P(Math.round(cx+sx*hw*f),Math.round(cy+sy*(hh-(hh-sh)*f)),CY[4],a)}},
+ draw(S){capIdle(S);const t=S.t;if(t<0){alive(S);return}
+  if(t<.1){shadow(DX,DY,5,.35);const c=anim('hit',0);spr(c,DX-2,DY);spr(tint(c,'white'),DX-2,DY,{a:.9});hitFx(t,DX+7,DY-20);return}
+  if(t<.4){const k=(t-.1)/.3;shadow(DX-2-3*k,DY,5-k,.32);spr(anim('hit',1),DX-2-2*k,DY-3*k,{rot:-Math.round(k*3)/3*.5});this.shell(cl((k-.35)/.65)*.999,0,1);return}
+  this.rest({t})},
+ rest(o={}){const tt=o.t==null?9:o.t-.4,a=o.a??1,bob=Math.round(Math.sin(NOW*1.6)),sa=a*(o.shell??1);
+  const c=pose({...ENG_ANIMS.hit.f(1),hurt:false,blink:true});
+  if(!o.mode){shadow(DX-7,DY,4,.3*a);RING(DX-7,DY,10,3,CY[2],.5*sa)}
+  drawRest(c,DX-4,DY-3+bob,o,{rot:-.5,cy:true});this.shell(1,cl(1-tt/.25),sa)}},
+];
+let NOW=0;
+
+// ====================== 2 · Retour à la capsule ======================
+function trait(ax,ay,bx,by,k,alpha,T){if(k<=0||alpha<=0)return;const seg=28,n=Math.max(1,Math.ceil(seg*k));let px=ax,py=ay,hx=ax,hy=ay;
+ for(let i=1;i<=n;i++){const f=Math.min(i/seg,k),x=ax+(bx-ax)*f,y=ay+(by-ay)*f+Math.sin(f*19+Math.floor(T*12)*1.7)*1.6*Math.sin(f*Math.PI);
+  line(Math.round(px),Math.round(py),Math.round(x),Math.round(y),CY[3],.35*alpha,3);line(Math.round(px),Math.round(py),Math.round(x),Math.round(y),CY[4],.9*alpha);px=x;py=y;hx=x;hy=y}
+ if(k<1){Q(hx-2,hy-2,5,5,CY[3],.5);Q(hx-1,hy-1,3,3,CY[4]);for(let j=0;j<4;j++){const g=T*9+j*TAU/4;P(hx+Math.cos(g)*4,hy+Math.sin(g)*2,CY[4])}}}
+const R=[
+{id:'R1',name:'Le trait',dur:1.3,arr:1.0,
+ desc:"Le corps blanchit et s'enfonce dans un glyphe au sol, puis un trait d'énergie file sur le dallage jusqu'au puits. C'est le trait de la séquence d'ouverture, rejoué dans l'autre sens.",
+ spec:"blanchit 0,2 s · s'enfonce 0,3 s · trait 0,6 s · éclat du puits 0,3 s · durée 1,3 s",
+ draw(S){const t=S.t,m=CUR.M,b=m.box,cx=Math.round((b[0]+b[2])/2),rw=(b[2]-b[0])/2+3;capAt(S,t>=this.arr,1-ph(t,this.arr,this.dur));
+  if(t<0){m.rest({});return}
+  if(t<.9){const a=t<.45?ph(t,0,.2):1-ph(t,.45,.9);EL(cx,b[3],rw,2,CY[2],.3*a);RING(cx,b[3],rw,3,CY[3],a);RING(cx,b[3],rw-3,2,CY[4],a*.6)}
+  if(t<.45){const w=ph(t,0,.2),s=ph(t,.15,.45),top=b[1]-2+(b[3]-b[1]+4)*s;
+   clip(b[0]-10,top,b[2]-b[0]+20,b[3]-top+6,()=>{m.rest({shell:1-w});m.rest({mode:'white',a:w,shell:0})});
+   if(s>0)Q(cx-rw+2,top,2*rw-4,1,CY[4],.9)}
+  if(t>=.4)trait(cx,b[3]+1,CX,65,ph(t,.4,this.arr),1-ph(t,this.arr,this.dur),S.T)}},
+{id:'R2',name:'Le feu follet',dur:2.1,arr:1.75,
+ desc:"Le corps se défait en grains de lumière, de la tête aux pieds. Ils se rassemblent en un feu follet qui s'élève, traverse la salle en cloche et plonge dans la colonne. Le plus lisible, le plus lent.",
+ spec:"dissolution 0,6 s (36 grains) · vol 0,8 s · plongée 0,25 s · éclat 0,35 s · durée 2,1 s",
+ draw(S){const t=S.t,m=CUR.M,b=m.box,cx=(b[0]+b[2])/2,w0=[cx,b[1]-9];capAt(S,t>=this.arr,1-ph(t,this.arr,this.dur));
+  if(t<0){m.rest({});return}
+  if(t<.75){const d=ph(t,0,.6),top=b[1]-2+(b[3]-b[1]+4)*d;
+   clip(b[0]-10,top,b[2]-b[0]+20,b[3]-top+6,()=>m.rest({shell:1-ph(t,0,.15)}));
+   if(d<1)Q(b[0],top,b[2]-b[0],1,CY[4],.8);
+   for(let i=0;i<36;i++){const ri=hash(i),age=t-ri*.6;if(age<0||age>.4)continue;const k=age/.4,e=k*k,x0=b[0]+hash(i+9)*(b[2]-b[0]),y0=b[1]+ri*(b[3]-b[1]);
+    P(x0+(w0[0]-x0)*e+Math.sin(k*6+i)*3*(1-k),y0+(w0[1]-y0)*e,i%3?CY[3]:CY[4],1-k*.3)}
+   wisp(w0[0],w0[1]+Math.sin(S.T*5),ph(t,.1,.7),S.T);return}
+  if(t<this.arr){const pos=k=>{k=cl(k);if(k<.76){const u=k/.76,e=u*u*(3-2*u),c=[(w0[0]+CX)/2,-22];
+     return[(1-e)*(1-e)*w0[0]+2*e*(1-e)*c[0]+e*e*CX,(1-e)*(1-e)*w0[1]+2*e*(1-e)*c[1]+e*e*8]}const u=(k-.76)/.24;return[CX,8+50*u*u]};
+   const k=ph(t,.75,this.arr);for(let j=9;j>=1;j--){const q=k-j*.022;if(q<0)continue;const[x,y]=pos(q);Q(x-(j<4?1:0),y-(j<4?1:0),j<4?3:1,j<4?3:1,j<3?CY[3]:CY[2],1-j/10)}
+   const[x,y]=pos(k);wisp(x,y,1,S.T)}}},
+{id:'R3',name:'La colonne jumelle',dur:1.5,arr:1.05,
+ desc:"Une colonne de lumière, la même que celle de la capsule, tombe sur le corps et l'aspire vers le haut. Elle se pince et s'éteint au moment où la capsule s'embrase. Aucun voyage : marche à n'importe quelle distance.",
+ spec:"chute de la colonne 0,25 s · montée du corps 0,7 s · pincement 0,25 s · éclat de la capsule 0,45 s · durée 1,5 s",
+ draw(S){const t=S.t,m=CUR.M,b=m.box,cx=Math.round((b[0]+b[2])/2),bot=b[3];capAt(S,t>=this.arr,1-ph(t,this.arr,this.dur));
+  if(t<0){m.rest({});return}
+  const hw=Math.max(8,(b[2]-b[0])/2+2)*(1-ph(t,1.0,1.25)),y1=Math.round(bot*ph(t,0,.25));
+  if(t>.25&&t<1.2){const a=1-ph(t,.9,1.2);EL(cx,bot,hw+4,2,CY[2],.3*a);const r=ph(t,.25,.8);RING(cx,bot,8+22*r,(8+22*r)*.3,CY[3],1-r)}
+  column(cx,0,y1,hw,S.T,.8);if(t<.25)Q(cx-hw,y1,2*hw,1,CY[4],.9);
+  if(t<.3){m.rest({shell:1-ph(t,0,.2)});m.rest({mode:'white',a:ph(t,.1,.3),shell:0})}
+  else if(t<1.0){const k=ph(t,.3,1.0);m.rest({mode:'white',dy:-Math.round(k*k*70),a:1-ph(t,.65,1.0),shell:0});
+   for(let i=0;i<8;i++){const f=fr(S.T*1.6+i/8);P(cx-hw+2+hash(i)*(2*hw-4),bot-f*bot,CY[4],1-f)}}
+  column(cx,0,y1,hw,S.T,.16);
+  if(t>=1.2&&t<1.4)Q(cx,0,1,bot,CY[4],1-ph(t,1.2,1.4))}},
+];
+
+// ====================== 3 · Attente ======================
+const A=[
+{id:'A1',name:'La silhouette se recompose',
+ desc:"La colonne baisse d'un ton et reconstruit l'Ingénieur ligne par ligne, des pieds à la tête. La hauteur de la silhouette est la jauge : on lit le temps restant sans chiffre. Les couleurs reviennent dans les deux dernières secondes.",
+ spec:"colonne à 50 % · silhouette cyan, trait de balayage · 0 à 90 % du délai = hauteur, 90 à 100 % = couleurs · voyant cyan qui bat",
+ draw(S){const k=cl(S.k),T=S.T,bob=Math.round(Math.sin(T*1.6)),fy=OY+bob,lv=fy-32*ph(k,0,.9);
+  capDraw({t:T,beam:.5,lamp:fr(T*1.2)<.5?CY[3]:CY[0],occ:()=>{const c=pose({blink:true});
+   clip(36,lv,48,fy-lv+3,()=>{for(const[dx,dy]of[[1,0],[-1,0],[0,-1],[0,1]])spr(tint(c,'rim'),CX+dx,fy+dy,{a:.8});spr(tint(c,'holo'),CX,fy,{a:.8});spr(tint(c,'light'),CX,fy,{a:.25+.15*Math.sin(T*4)});
+    const col=ph(k,.9,1);if(col>0)bathed(c,CX,fy,col)});
+   if(k>0&&k<.9){Q(51,lv,18,1,CY[4],.9);P(50,lv,CY[3]);P(69,lv,CY[3]);
+    for(let i=0;i<5;i++){const f=fr(T*1.4+i/5);P(54+((i*7)%12),57-(57-lv)*f,CY[4],.9*(1-f*.5))}}}})}},
+{id:'A2',name:'Les quatre bornes',
+ desc:"La colonne se réduit à un filet où flotte le feu follet. Les bornes se rallument une à une, cinq secondes chacune, et lancent des arcs vers lui : il grossit à chaque borne. Un compte à rebours en quatre crans, lisible de loin.",
+ spec:"colonne en filet à 22 % · 4 bornes × 5 s, la borne en charge clignote · arcs aléatoires · feu follet de 3 à 7 px",
+ draw(S){const k=cl(S.k),T=S.T,ord=[0,1,3,2],n=Math.min(4,Math.floor(k*4+1e-6)),pyl=[0,0,0,0];
+  for(let r=0;r<4;r++)pyl[ord[r]]=r<n?1:r===n?(fr(T*5)<.5?1:0):0;
+  const oy=34+Math.round(Math.sin(T*1.6)*2);
+  capDraw({t:T,beam:.22,ws:.4,pit:.35+.65*k,lit:.3+.7*k,pyl,lamp:AMBER,veil:false,occ:()=>{
+   for(let r=0;r<n;r++){const i=ord[r],g=Math.floor(T*10)+i*13;if(hash(g)<.5)continue;const p=PYL[i];let x=p[0],y=p[1]-10;
+    for(let s=1;s<=4;s++){const nx=s===4?CX:Math.round(p[0]+(CX-p[0])*s/4+(hash(g+s)-.5)*5),ny=s===4?oy:Math.round(p[1]-10+(oy-p[1]+10)*s/4+(hash(g+s+5)-.5)*5);line(x,y,nx,ny,CY[4],.85);x=nx;y=ny}}
+   const s=.35+.65*k;wisp(CX,oy,s,T);if(k>.5)Q(CX-2,oy-2,5,5,CY[3],.35);
+   for(let j=0;j<2;j++){const g=T*3+j*Math.PI,r=4+3*k;P(CX+Math.cos(g)*r,oy+Math.sin(g)*r*.5,CY[4],.9)}}})}},
+{id:'A3',name:'Le battement',
+ desc:"La colonne s'éteint. Le fond du puits bat comme un cœur, lentement puis de plus en plus vite, et chaque battement pousse un jet de lumière plus haut que le précédent. Autour de la margelle, un cercle de repères se remplit.",
+ spec:"battement double, de 0,7 à 2,2 par seconde · jet de 8 à 37 px · anneau de 24 repères au sol · bornes qui pulsent avec le cœur",
+ draw(S){const k=cl(S.k),T=S.T,f=fr(WAITD*(.7*k+.75*k*k)),bt=Math.max(cl(1-f/.18),f>.28?.6*cl(1-(f-.28)/.18):0),on=bt>.35?1:0;
+  capDraw({t:T,beam:.85*Math.min(1,bt*1.6),beamK:(.15+.55*k)*(.4+.6*bt),pit:.2+.8*bt,lit:.15+.6*bt,pyl:[on,on,on,on],lamp:on?CY[3]:CY[0],
+   ground:()=>{for(let i=0;i<24;i++){const g=-Math.PI/2+i/24*TAU,x=Math.round(60+Math.cos(g)*23),y=Math.round(60+Math.sin(g)*8),l=i/24<k;
+     Q(x,y,l?2:1,1,l?CY[3]:'#1b2028',l?1:.9);if(l&&i===Math.floor(k*24-.001))Q(x-1,y-1,4,3,CY[2],.4)}
+    if(f<.6)RING(60,62,10+24*f/.6,(10+24*f/.6)*.3,CY[3],(1-f/.6)*.6)}})}},
+];
+
+// ====================== 4 · Résurrection ======================
+const SR=[
+{id:'S1',name:"L'éclair",dur:.9,
+ desc:"Le plus court. La colonne claque au blanc, l'onde court sur le dallage, et il est là, encore blanc une fraction de seconde, puis dans ses couleurs. C'est l'éclair de l'allumage de la capsule, donc déjà connu du joueur.",
+ spec:"éclair 0,3 s · secousse 0,12 s · silhouette blanche 0,15 s, couleurs à 0,45 s · onde au sol 0,65 s · durée 0,9 s",
+ draw(S){const t=S.t,T=S.T;if(t<0){CUR.A.draw({k:1,T});return}if(t>=this.dur){occupied(S);return}
+  const sh=t<.12?(Math.floor(t*40)%2?1:-1):0,rk=ph(t,.05,.7),bob=Math.round(Math.sin(T*1.6));G.save();G.translate(sh,0);
+  capDraw({t:T,flash:1-ph(t,0,.3),lamp:CY[3],ground:()=>{const r=8+36*rk;RING(60,62,r,r*.3,CY[3],1-rk);RING(60,62,r-3,(r-3)*.3,CY[4],(1-rk)*.5)},
+   occ:()=>{const c=anim('idle',T*12),y=OY+bob-Math.round(3*(1-ph(t,.1,.35)));bathed(c,CX,y);spr(tint(c,'white'),CX,y,{a:t<.15?1:[.7,.4,.15,0][Math.min(3,Math.floor((t-.15)/.1))]})}});
+  G.restore()}},
+{id:'S2',name:'La descente',dur:1.7,
+ desc:"Une graine de lumière en haut de la colonne prend la forme de l'Ingénieur et descend en freinant, deux images rémanentes derrière elle. Arrivé au-dessus du puits, les couleurs le gagnent de la tête aux pieds et il ouvre les yeux.",
+ spec:"éclat 0,15 s · descente 0,9 s avec freinage · couleurs tête → pieds 0,5 s · anneau à l'arrivée · durée 1,7 s",
+ draw(S){const t=S.t,T=S.T;if(t<0){CUR.A.draw({k:1,T});return}if(t>=this.dur){occupied(S);return}
+  const d=eo(ph(t,.15,1.05)),bob=t>1.05?Math.round(Math.sin(T*1.6)):0,fy=Math.round(24+(OY-24)*d)+bob,rk=ph(t,1.05,1.6);
+  capDraw({t:T,flash:.6*(1-ph(t,0,.15)),lamp:CY[3],ground:()=>{if(t>=1.05){const r=8+26*rk;RING(60,62,r,r*.3,CY[3],1-rk)}},
+   occ:()=>{const c=pose({blink:t<1.5}),w=tint(c,'white');
+    if(t<.2){wisp(CX,8,1,T);return}
+    for(let j=2;j>=1;j--)spr(tint(c,'ghost'),CX,fy-Math.round(7*j*(1-d)),{a:(1-d)*.3/j});
+    const ck=ph(t,.95,1.45),cut=fy-32+34*ck;bathed(c,CX,fy);
+    clip(36,cut,48,fy-cut+4,()=>spr(w,CX,fy));if(ck>0&&ck<1)Q(52,cut,16,1,CY[4],.9);
+    if(t>=1.05&&t<1.4)for(let i=0;i<8;i++){const g=i/8*TAU,r=(t-1.05)*40;P(CX+Math.cos(g)*r,57+Math.sin(g)*r*.3,CY[4],1-(t-1.05)/.35)}}})}},
+{id:'S3',name:'Le souffle',dur:1.6,
+ desc:"La colonne se resserre sur la silhouette jusqu'à s'éteindre : un instant de noir, seul le corps blanc reste. Puis tout repart d'un coup, souffle au sol, bornes, colonne. Il ouvre les yeux, et le cercle runique se rallume en dernier.",
+ spec:"resserrement 0,45 s · noir 0,15 s · souffle à 0,6 s (anneau, 16 grains, poussière) · yeux à 1,0 s · cercle runique à 1,15 s · durée 1,6 s",
+ draw(S){const t=S.t,T=S.T;if(t<0){CUR.A.draw({k:1,T});return}if(t>=this.dur){occupied(S);return}
+  const dark=t>=.45&&t<.6,after=t>=.6,ws=after?1:1-.8*eo(ph(t,0,.45)),bob=after?Math.round(Math.sin(T*1.6)):0,fy=OY+bob,rk=ph(t,.6,1.2),lit=t>=1.15;
+  const sh=t>=.6&&t<.72?(Math.floor(t*40)%2?1:-1):0;G.save();G.translate(sh,0);
+  capDraw({t:T,beam:dark?0:1,ws,pit:dark?0:1,lit:dark?0:1,pyl:dark?[0,0,0,0]:[1,1,1,1],lamp:dark?CY[0]:CY[3],flash:after?.8*(1-ph(t,.6,.85)):0,
+   ground:()=>{if(after&&rk<1){const r=8+40*rk;RING(60,62,r,r*.3,CY[4],1-rk);RING(60,62,r-2,(r-2)*.3,CY[3],(1-rk)*.7);
+     for(let i=0;i<16;i++){const g=i/16*TAU+.2,q=(10+34*eo(rk))*(.8+.4*hash(i));P(60+Math.cos(g)*q,62+Math.sin(g)*q*.3-Math.sin(rk*Math.PI)*3*hash(i+3),i&1?CY[3]:'#9aa1b0',1-rk)}}},
+   occ:()=>{const c=lit?anim('idle',T*12):pose({blink:t<1.0,rune:.2,glow:.2},true);
+    if(!after){spr(tint(c,'white'),CX,fy,{a:ph(t,0,.35)});return}
+    bathed(c,CX,fy);spr(tint(c,'white'),CX,fy,{a:1-ph(t,.6,.9)});
+    if(t>=1.15&&t<1.4&&BODY==='templier'){const a=1-ph(t,1.15,1.4),x=CX+3,y=fy-14;Q(x-3,y,7,1,CY[4],a);Q(x,y-3,1,7,CY[4],a);Q(x-1,y-1,3,3,CY[4],a)}}});
+  G.restore()}},
+];
+const PHASES=[{k:'M',name:'Mort',list:M,lead:"Là où il tombe. La pose finale est celle que les pistes de retour font disparaître."},
+ {k:'R',name:'Retour à la capsule',list:R,lead:"Du corps au puits. Ces cartes partent de la mort choisie dans la séquence, et la capsule finit dans l'état de départ de l'attente choisie.",wide:true},
+ {k:'A',name:'Attente',list:A,lead:"Les 20 secondes. Chaque piste doit dire deux choses sans texte : il revient, et dans combien de temps. La bannière du haut annonce déjà le délai."},
+ {k:'S',name:'Résurrection',list:SR,lead:"Le retour, à la fin du délai. Toutes finissent sur l'état déjà en jeu : l'Ingénieur en lévitation dans la colonne, PV au maximum, « E : Sortir »."}];
+
+// ====================== Choix, verdicts ======================
+const KEY='ingenieur-mort-v1';let store={};try{store=JSON.parse(localStorage.getItem(KEY)||'{}')||{}}catch(e){}
+const SEL={M:M[1],R:R[1],A:A[1],S:SR[2]};
+for(const p of PHASES){const id=store._sel&&store._sel[p.k],f=p.list.find(x=>x.id===id);if(f)SEL[p.k]=f}
+function save(){store._sel={M:SEL.M.id,R:SEL.R.id,A:SEL.A.id,S:SEL.S.id};try{localStorage.setItem(KEY,JSON.stringify(store))}catch(e){}tally()}
+const verdicts=()=>Object.entries(store).filter(([k])=>k!=='_sel').map(([,s])=>s.v);
+function tally(){const v=verdicts();document.getElementById('tally').innerHTML=
+ `<b style="color:var(--ok)">${v.filter(x=>x==='garder').length}</b> gardés · <b style="color:var(--redo)">${v.filter(x=>x==='revoir').length}</b> à revoir · <b style="color:var(--no)">${v.filter(x=>x==='rejeter').length}</b> rejetés`}
+function verdict(card,id,title){card.dataset.id=id;card.dataset.title=title;const s=store[id]||{};
+ const box=document.createElement('div');box.className='verdict';
+ for(const[v,l]of[['garder','Garder'],['revoir','À revoir'],['rejeter','Rejeter']]){
+  const b=document.createElement('button');b.dataset.v=v;b.textContent=l;b.id='v-'+id+'-'+v;if(s.v===v)b.classList.add('sel');
+  b.onclick=()=>{const cur=store[id]||{};cur.v=cur.v===v?undefined:v;store[id]=cur;card.dataset.v=cur.v||'';
+   box.querySelectorAll('button').forEach(x=>x.classList.toggle('sel',x.dataset.v===cur.v));save()};box.append(b)}
+ const t=document.createElement('textarea');t.id='n-'+id;t.placeholder='Note (facultative)';t.value=s.note||'';t.rows=1;
+ t.oninput=()=>{const cur=store[id]||{};cur.note=t.value;store[id]=cur;save()};
+ if(s.v)card.dataset.v=s.v;card.append(box,t)}
+document.getElementById('copy').onclick=()=>{
+ const lines=['Bilan · planches/ingenieur-mort-planche.html',`Séquence choisie : ${PHASES.map(p=>SEL[p.k].id+' '+SEL[p.k].name).join(' → ')}`];
+ document.querySelectorAll('.card[data-id]').forEach(c=>{const s=store[c.dataset.id]||{};
+  lines.push(`- ${c.dataset.title} : ${s.v?({garder:'GARDER',revoir:'À REVOIR',rejeter:'REJETER'})[s.v]:'sans avis'}${s.note?' · '+s.note:''}`)});
+ const o=document.getElementById('out');o.hidden=false;o.value=lines.join('\n');o.select();
+ try{navigator.clipboard.writeText(o.value).catch(()=>{})}catch(e){}};
+
+// ====================== Mise en page ======================
+const figs=[],el=(t,c,h)=>{const e=document.createElement(t);if(c)e.className=c;if(h!=null)e.innerHTML=h;return e};
+const pick=document.getElementById('pick'),track=document.getElementById('track'),secs=document.getElementById('sections');
+const fmt=x=>x.toFixed(1).replace('.',',');
+function refresh(){document.querySelectorAll('[data-pick]').forEach(b=>{const[k,id]=b.dataset.pick.split(':');b.classList.toggle('on',SEL[k].id===id)});
+ document.querySelectorAll('.card[data-id]').forEach(c=>c.classList.toggle('inseq',Object.values(SEL).some(s=>s.id===c.dataset.id)));
+ const d=durs();track.innerHTML='';['Vivant',...PHASES.map(p=>SEL[p.k].id+' · '+p.name)].forEach((n,i)=>{const s=el('span','',n);s.style.flex=(i===3?Math.min(d[i],6):d[i])+' 1 0';track.append(s)});
+ track.append(el('i'));tot.textContent=`mort ${fmt(SEL.M.dur)} s + retour ${fmt(SEL.R.dur)} s + attente 20 s + résurrection ${fmt(SEL.S.dur)} s. Le retour et la résurrection se jouent dans les 20 s du délai ou s'y ajoutent : à trancher.`}
+const PRE=1.2,HOLD=.6,POST=2.6,durs=()=>[PRE,SEL.M.dur+HOLD,SEL.R.dur,WAITD,SEL.S.dur+POST];
+let tot;
+for(const p of PHASES){const row=el('div','row');row.append(el('span','',p.name));const o=el('div','opts');
+ for(const x of p.list){const b=el('button','',`<b>${x.id}</b> ${x.name}`);b.dataset.pick=p.k+':'+x.id;b.id='pick-'+x.id;b.onclick=()=>choose(p.k,x,false);o.append(b)}row.append(o);pick.append(row)}
+tot=el('div','tot');pick.append(tot);
+let seqT0=0,T=0;
+function choose(k,x,jump){SEL[k]=x;save();refresh();if(jump){seqT0=T;document.querySelector('.seq').scrollIntoView({behavior:'smooth',block:'center'})}}
+PHASES.forEach((p,pi)=>{secs.append(el('h2','',`<span class="n">${pi+1}</span>${p.name}`),el('p','lead',p.lead));
+ const grid=el('div','grid'+(p.wide?' wide':''));secs.append(grid);
+ for(const x of p.list){const card=el('article','card'),h=el('h3','',`${x.name}<span class="tag">${x.id}${x.dur?' · '+fmt(x.dur)+' s':''}</span>`);
+  const b=el('button','','Voir dans la séquence');b.id='see-'+x.id;b.onclick=()=>choose(p.k,x,true);h.append(b);
+  const c=el('canvas','px');c.width=p.wide?240:120;c.height=H;
+  card.append(h,c,el('p','',x.desc),el('div','spec',x.spec));verdict(card,x.id,x.id+' '+x.name);grid.append(card);
+  figs.push({ctx:c.getContext('2d'),k:p.k,x,ox:p.k==='M'?120:0,cv:c})}});
+const seqc=document.getElementById('seqc'),seqg=seqc.getContext('2d');
+
+// ====================== Rendu ======================
+function begin(g,ox){G=g;G.setTransform(1,0,0,1,-ox,0);G.globalAlpha=1;G.imageSmoothingEnabled=false;G.clearRect(0,0,W,H);bg()}
+function drawCard(f){begin(f.ctx,f.ox);CUR={...SEL,[f.k]:f.x};const x=f.x;
+ if(f.k==='A'){const t=T%(WAITD+.8);x.draw({t,k:t/WAITD,T});return}
+ const pre=f.k==='M'?.9:.7,post=f.k==='S'?1.8:f.k==='M'?1.3:.9,t=T%(pre+x.dur+post)-pre;
+ if(f.k==='R'&&t>=x.dur){CUR.A.draw({t:0,k:0,T});return}
+ x.draw({t,T})}
+function drawSeq(){begin(seqg,0);CUR=SEL;const d=durs(),sum=d.reduce((a,b)=>a+b,0);let t=(T-seqT0)%sum,i=0,u=t;if(u<0)u=t=0;
+ while(i<4&&u>=d[i]){u-=d[i];i++}
+ if(i<=1)SEL.M.draw({t:t-PRE,T});else if(i===2)SEL.R.draw({t:u,T});else if(i===3)SEL.A.draw({t:u,k:u/WAITD,T});else SEL.S.draw({t:u,T});
+ const sp=track.querySelectorAll('span'),cur=track.querySelector('i');sp.forEach((s,j)=>s.classList.toggle('now',j===i));
+ if(sp[i]&&cur){const r=sp[i];cur.style.left=(r.offsetLeft+r.offsetWidth*cl(u/d[i]))+'px'}}
+let last=performance.now(),paused=false,speed=1;
+const vis=new Set();const io='IntersectionObserver'in window?new IntersectionObserver(es=>{for(const e of es)e.isIntersecting?vis.add(e.target):vis.delete(e.target)},{rootMargin:'200px'}):null;
+if(io){figs.forEach(f=>io.observe(f.cv));io.observe(seqc)}
+function frame(all){NOW=T;all=all===true||!io;if(all||vis.has(seqc))drawSeq();for(const f of figs)if(all||vis.has(f.cv))drawCard(f)}
+function loop(now){const dt=Math.min(.1,(now-last)/1000);last=now;if(!paused){T+=dt*speed;frame()}requestAnimationFrame(loop)}
+const group=(sel,fn)=>document.querySelectorAll(sel).forEach(b=>b.onclick=()=>{document.querySelectorAll(sel).forEach(x=>x.classList.toggle('on',x===b));fn(b);frame(true)});
+group('[data-speed]',b=>speed=+b.dataset.speed);
+group('[data-body]',b=>{BODY=b.dataset.body});
+group('[data-wait]',b=>{WAITD=+b.dataset.wait;seqT0=T;refresh()});
+const pb=document.getElementById('pause');pb.onclick=()=>{paused=!paused;pb.textContent=paused?'Lecture':'Pause';pb.classList.toggle('on',paused)};
+if(matchMedia('(prefers-reduced-motion: reduce)').matches){speed=.35;document.querySelectorAll('[data-speed]').forEach(x=>x.classList.toggle('on',x.dataset.speed==='0.35'))}
+// Aperçu figé pour les captures : #t=secondes fige l'horloge.
+const hm=/^#t=([\d.]+)$/.exec(location.hash);if(hm){T=+hm[1];paused=true}
+refresh();tally();BG.onload=()=>frame(true);frame(true);requestAnimationFrame(loop);
+window.__planche={set:t=>{T=t;paused=true;frame(true)},choose};
+})();
+</script>

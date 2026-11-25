@@ -1,0 +1,620 @@
+<title>Porte de l’Orbite</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Cormorant+SC:wght@500;700&display=swap">
+<style>
+/* Planche de jeu, sombre par choix (comme les autres planches) : une piste par section, séquence animée ×4 à gauche,
+   texte à droite, puis les trois états fixes (2, 1, 0) en ×2. Accent = or de la Nef, second = améthyste de la Martyre. */
+:root{--bg:#101218;--panel:#181b24;--line:#2c313d;--fg:#dcdde4;--mute:#8c92a3;--gold:#ddb457;--ame:#a062c0;--crim:#d04040;
+ --sky:#5a6ad0;--deep:#141c6a;--rim:#e6e8f4;--edge:#0a0c26;
+ --disp:"Cormorant SC",Georgia,serif;--mono:"Share Tech Mono",ui-monospace,monospace;color-scheme:dark}
+body{background:var(--bg);color:var(--fg);font:14px/1.5 system-ui,sans-serif;margin:0;
+ padding-block:24px 60px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+main{max-width:1100px;margin:0 auto;display:flex;flex-direction:column;gap:28px}
+h1{font-family:var(--disp);font-size:2.4rem;line-height:1.1;margin:0;letter-spacing:.04em;text-wrap:balance}
+.lead{color:var(--mute);max-width:74ch;margin:.5rem 0 0}
+.reco{border-left:3px solid var(--gold);padding:2px 0 2px 14px;max-width:78ch}
+.reco p{margin:.3rem 0 0}.reco b{color:var(--gold);font-weight:600}
+section.m{display:flex;flex-direction:column;gap:14px;padding-top:24px;border-top:1px solid var(--line)}
+.row{display:flex;flex-wrap:wrap;gap:16px 26px;align-items:flex-start}
+.seqfig{display:flex;flex-direction:column;gap:8px;width:512px;max-width:100%}
+.txt{flex:1 1 300px;min-width:0}
+h2{font-family:var(--disp);font-size:1.7rem;margin:0;letter-spacing:.03em;text-wrap:balance}
+h2 small{font-family:var(--mono);font-size:.85rem;color:var(--gold);letter-spacing:.08em;margin-right:.6em}
+.txt p{margin:.45rem 0;max-width:62ch}
+.txt ul{margin:.4rem 0;padding-left:1.1em;color:var(--mute)}
+.txt li{margin:.2rem 0}.txt li b{color:var(--fg);font-weight:600}
+.spec{font-family:var(--mono);font-size:12px;color:var(--mute);margin-top:.6rem}
+canvas{display:block;width:100%;height:auto;image-rendering:pixelated;image-rendering:crisp-edges;background:#000;border:1px solid var(--line)}
+.states{display:flex;flex-wrap:wrap;gap:12px}
+.st{display:flex;flex-direction:column;gap:6px;width:256px;max-width:100%}
+.cap{font-family:var(--mono);font-size:11px;color:var(--mute);letter-spacing:.04em}
+.cap b{color:var(--fg);font-weight:400}
+/* Bannière bleue du jeu (SnesBanner) */
+.ban{background:linear-gradient(var(--sky),var(--deep));border:2px solid var(--rim);outline:2px solid var(--edge);
+ box-shadow:inset 0 0 0 1px #8a90b8;padding:7px 12px;min-height:2.9em;font-family:var(--mono);font-size:13px;color:#fff;
+ text-shadow:1px 1px 0 #10123a;display:flex;gap:10px;align-items:center}
+.ban .ic{display:flex;gap:4px;flex:none}
+.ban .ic i{width:11px;height:11px;transform:rotate(45deg) scale(.8);display:block;border:1px solid #10123a}
+.ban .ic i.a{background:var(--gold)}.ban .ic i.m{background:var(--ame)}
+.ban .ic i.off{background:#3a3e58;opacity:.7}
+.ban.quiet{opacity:.35}
+.q{border:1px solid var(--line);background:var(--panel);padding:14px 18px;max-width:84ch}
+.q h2{font-size:1.35rem}.q ol{margin:.5rem 0 0;padding-left:1.2em}.q li{margin:.3rem 0}
+.bar{display:flex;gap:10px;align-items:center;font-family:var(--mono);font-size:12px;color:var(--mute)}
+button{font:inherit;background:var(--panel);color:var(--fg);border:1px solid var(--line);padding:5px 12px;cursor:pointer}
+button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+</style>
+<main>
+<header>
+<h1>Porte de l’Orbite</h1>
+<p class="lead">La porte qui ferme la route de l’Œil, et ce qu’elle montre quand on s’en approche : il reste deux gardiens, puis un seul, puis aucun et elle s’ouvre. Quatre pistes, toutes au pixel dans les rampes du jeu, sans trame ni lissage, lueurs en paliers, 24 images par seconde. La porte fait 44 × 76 px dans une paroi du monastère, soit environ deux fois la définition d’une paroi actuelle. Or = l’Archiprêtre (couleur de la Clef de la Nef dorée), améthyste = la Martyre (couleur de son dôme). La séquence tue un gardien, puis l’autre, puis ouvre ; l’ordre des morts s’inverse à chaque tour.</p>
+</header>
+<div class="reco"><p><b>Ma recommandation : A « Sceaux et chaînes ».</b> On compte les gardiens d’un coup d’œil (deux disques, deux chaînes), chaque mort se voit de loin (le sceau éclate, la chaîne tombe), et le reste de la porte reste un simple vantail du monastère. C « Rosace à deux yeux » est la plus liée à l’Œil si tu veux annoncer le boss dès la porte.</p></div>
+<div class="bar"><button id="pause" type="button">Pause</button><span>Le texte de la bannière sous chaque séquence suit l’état de la porte.</span></div>
+
+<section class="m"><div class="row">
+ <div class="seqfig"><canvas data-p="A" data-seq="1" width="128" height="120"></canvas><div class="ban" data-ban="A"></div></div>
+ <div class="txt"><h2><small>A</small>Sceaux et chaînes</h2>
+ <p>Deux vantaux de chêne cerclés de fer, barrés par deux chaînes. Au milieu de chaque chaîne pend le sceau d’un gardien : l’œil en bulbe de l’Archiprêtre en or, le halo de la Martyre en améthyste. Chaque sceau bat doucement et éclaire la paroi.</p>
+ <ul><li><b>À la mort</b> : éclair blanc, le sceau se fend, éclate en morceaux qui tombent sur le seuil et en cendre qui monte. La chaîne casse et ses deux moitiés se balancent sur leurs anneaux.</li>
+ <li><b>À zéro</b> : la fente entre les vantaux s’allume, puis ils pivotent vers l’intérieur. La lueur rouge de la crypte sort sur les dalles.</li></ul>
+ <p class="spec">sceau Ø 17 px · chaîne 3 px · éclat 0,6 s · ouverture 3 s</p></div>
+</div>
+<div class="states"><div class="st"><canvas data-p="A" data-n="2" width="128" height="120"></canvas><div class="cap"><b>2</b> · deux sceaux battent</div></div>
+<div class="st"><canvas data-p="A" data-n="1" width="128" height="120"></canvas><div class="cap"><b>1</b> · l’Archiprêtre est tombé</div></div>
+<div class="st"><canvas data-p="A" data-n="0" width="128" height="120"></canvas><div class="cap"><b>0</b> · ouverte</div></div></div></section>
+
+<section class="m"><div class="row">
+ <div class="seqfig"><canvas data-p="B" data-seq="1" width="128" height="120"></canvas><div class="ban" data-ban="B"></div></div>
+ <div class="txt"><h2><small>B</small>Les deux veilleuses</h2>
+ <p>Une herse de fer. De part et d’autre, une niche où un moine de pierre agenouillé tient une coupe allumée, une par gardien. Chaque flamme envoie sa lumière dans une rigole gravée dans l’arc, jusqu’à la clef de voûte où brille le losange d’or de la porte actuelle, moitié or, moitié améthyste.</p>
+ <ul><li><b>À la mort</b> : la flamme monte d’un coup, vacille, s’éteint en fumée. La lumière se retire de la rigole et sa moitié du losange s’éteint.</li>
+ <li><b>À zéro</b> : la clef de voûte jette un dernier éclat et la herse remonte cran par cran, avec de la poussière.</li></ul>
+ <p class="spec">flamme 14 px · rigole 1 px · herse 9 barreaux · 26 crans</p></div>
+</div>
+<div class="states"><div class="st"><canvas data-p="B" data-n="2" width="128" height="120"></canvas><div class="cap"><b>2</b> · deux veilleuses</div></div>
+<div class="st"><canvas data-p="B" data-n="1" width="128" height="120"></canvas><div class="cap"><b>1</b> · une seule brûle</div></div>
+<div class="st"><canvas data-p="B" data-n="0" width="128" height="120"></canvas><div class="cap"><b>0</b> · herse levée</div></div></div></section>
+
+<section class="m"><div class="row">
+ <div class="seqfig"><canvas data-p="C" data-seq="1" width="128" height="120"></canvas><div class="ban" data-ban="C"></div></div>
+ <div class="txt"><h2><small>C</small>Rosace à deux yeux</h2>
+ <p>Deux vantaux de bronze et une serrure ronde au milieu, coupée en deux : un œil d’or, un œil d’améthyste. Ils regardent autour d’eux et clignent. Chaque œil tient un gros pêne qui entre dans le jambage.</p>
+ <ul><li><b>À la mort</b> : l’œil s’écarquille, sa paupière de pierre se ferme et se fend, puis le pêne recule dans la rosace avec un choc qui secoue la porte.</li>
+ <li><b>À zéro</b> : la rosace tourne d’un demi-tour, la fente s’allume et les vantaux glissent dans la paroi.</li></ul>
+ <p class="spec">rosace Ø 27 px · pêne 11 × 4 px · choc 2 px, 0,15 s</p></div>
+</div>
+<div class="states"><div class="st"><canvas data-p="C" data-n="2" width="128" height="120"></canvas><div class="cap"><b>2</b> · deux yeux ouverts</div></div>
+<div class="st"><canvas data-p="C" data-n="1" width="128" height="120"></canvas><div class="cap"><b>1</b> · un œil fermé, un pêne rentré</div></div>
+<div class="st"><canvas data-p="C" data-n="0" width="128" height="120"></canvas><div class="cap"><b>0</b> · vantaux glissés</div></div></div></section>
+
+<section class="m"><div class="row">
+ <div class="seqfig"><canvas data-p="D" data-seq="1" width="128" height="120"></canvas><div class="ban" data-ban="D"></div></div>
+ <div class="txt"><h2><small>D</small>Membrane de l’Œil</h2>
+ <p>L’arc est bouché par une chair veinée qui respire, comme la crypte de l’Œil. Deux grosses veines arrivent par le sol, une de chaque arène, et nourrissent deux pustules sur la membrane. Un battement remonte chaque veine toutes les secondes.</p>
+ <ul><li><b>À la mort</b> : la pustule gonfle et crève, la veine grise et sèche depuis son bout jusqu’à la porte, et ne bat plus.</li>
+ <li><b>À zéro</b> : la membrane frémit puis s’ouvre en fente verticale, comme une paupière, avec des gouttes au bord.</li></ul>
+ <p class="spec">veine 3 px · battement 1,1 s · fente jusqu’à 40 × 68 px</p></div>
+</div>
+<div class="states"><div class="st"><canvas data-p="D" data-n="2" width="128" height="120"></canvas><div class="cap"><b>2</b> · deux veines battent</div></div>
+<div class="st"><canvas data-p="D" data-n="1" width="128" height="120"></canvas><div class="cap"><b>1</b> · une veine sèche</div></div>
+<div class="st"><canvas data-p="D" data-n="0" width="128" height="120"></canvas><div class="cap"><b>0</b> · paupière ouverte</div></div></div></section>
+
+<div class="q"><h2>Questions</h2><ol>
+<li>Quelle piste (A, B, C ou D), ou quel mélange ?</li>
+<li>Aujourd’hui la porte de l’Orbite (mb2) ne dépend que de la Martyre, et la porte mb1 de l’Archiprêtre. La planche suppose que la porte du boss demande <b>les deux</b> gardiens. Je change la règle comme ça ?</li>
+<li>Texte de la bannière à l’approche : « Deux gardiens tiennent encore la porte : l’Archiprêtre et la Martyre. », puis « Un gardien tient encore la porte : la Martyre. ». Avec les deux losanges de couleur à gauche, éteints pour un gardien tombé. Ça te va ?</li>
+<li>Définition : la porte en ×2 comme ici, ou en ×3 comme l’Archiprêtre (132 px de large) ?</li>
+</ol></div>
+</main>
+
+<script>
+'use strict';
+const W = 128, H = 120, FL = 100, SY = 46, R0 = 22, CXA = 64;
+const RAMP = {
+  dark: ['#05040a', '#0e1016', '#141821', '#1a1f29', '#232a36', '#2c3542', '#3c4757', '#5a6678'],
+  stone: ['#1c1b17', '#2c2c27', '#3d3d35', '#525046', '#6a6858', '#85826d', '#a29e85', '#c0bba0', '#dad4b8'],
+  wood: ['#120a06', '#1f120a', '#311c10', '#462818', '#5e3820', '#784a2c', '#94603a'],
+  iron: ['#0b0c10', '#16181e', '#232830', '#363c48', '#4f5666', '#6c7484', '#9aa2b2', '#c4ccd8'],
+  a: ['#2a1c08', '#4a3410', '#6e4e18', '#946c24', '#b98c34', '#ddb457', '#f0d68a', '#fff2c0', '#ffffff'],
+  m: ['#180a22', '#2c1440', '#45205e', '#62307e', '#8048a0', '#a062c0', '#c890e0', '#ecd0f8', '#ffffff'],
+  flesh: ['#140608', '#2a0810', '#4a1020', '#6a1828', '#8a2234', '#a8303e', '#c84a50', '#e07a70', '#f4b0a0'],
+  crim: ['#05040a', '#140308', '#2a0610', '#4a0c1a', '#781832', '#a82838', '#d04040', '#f07850'],
+  ash: ['#1a1a1e', '#2e2e34', '#46464e', '#64646c', '#8a8a92', '#b4b4ba', '#dcdce0'],
+  bronze: ['#140e08', '#241810', '#3a2816', '#54391e', '#704e28', '#8e6834', '#b08a4c', '#d4b070'],
+  white: ['#f0d68a', '#fff2c0', '#ffffff'],
+};
+const hx = s => [parseInt(s.slice(1, 3), 16), parseInt(s.slice(3, 5), 16), parseInt(s.slice(5, 7), 16)];
+for (const k in RAMP) RAMP[k] = RAMP[k].map(hx);
+const OUT = hx('#0e1016'), RED = hx('#c8344a'), PUP = hx('#140d12'), WHITE = hx('#ffffff');
+const clamp = (v, a = 0, b = 1) => v < a ? a : v > b ? b : v;
+const ease = u => u < .5 ? 2 * u * u : 1 - (-2 * u + 2) ** 2 / 2;
+function rp(n, v) { const r = RAMP[n]; let i = Math.round((v || 0) * (r.length - 1)); return r[i < 0 ? 0 : i >= r.length ? r.length - 1 : i]; }
+function hs(x, y, s) { let h = (x * 374761393 + y * 668265263 + s * 982451653) | 0; h = Math.imul(h ^ (h >>> 13), 1274126177); return ((h ^ (h >>> 16)) >>> 0) / 4294967296; }
+function vn(x, y, s) {
+  const xi = Math.floor(x), yi = Math.floor(y), fx = x - xi, fy = y - yi, u = fx * fx * (3 - 2 * fx), v = fy * fy * (3 - 2 * fy);
+  const a = hs(xi, yi, s), b = hs(xi + 1, yi, s), c = hs(xi, yi + 1, s), d = hs(xi + 1, yi + 1, s);
+  return a + (b - a) * u + (c - a) * v + (a - b - c + d) * u * v;
+}
+
+// ---- tampon courant -------------------------------------------------------------------------------------
+let D = null, OX = 0, OY = 0;
+function S(x, y, c) { x = Math.floor(x); y = Math.floor(y); if (x < 0 || y < 0 || x >= W || y >= H) return; const i = (y * W + x) * 4; D[i] = c[0]; D[i + 1] = c[1]; D[i + 2] = c[2]; D[i + 3] = 255; }
+function inAp(x, y) { x = Math.floor(x); y = Math.floor(y); return y < FL && y >= 24 && x >= 42 && x < 86 && (y >= SY || (x + .5 - CXA) ** 2 + (y + .5 - SY) ** 2 <= R0 * R0); }
+// pixel de porte : décalé par la secousse, jamais hors de l'embrasure
+function SD(x, y, c) { const X = Math.floor(x) + OX, Y = Math.floor(y) + OY; if (inAp(X, Y)) S(X, Y, c); }
+function dim(x, y, f) { x = Math.floor(x); y = Math.floor(y); if (x < 0 || y < 0 || x >= W || y >= H) return; const i = (y * W + x) * 4; D[i] *= f; D[i + 1] *= f; D[i + 2] *= f; }
+// lueur en paliers (4 anneaux), additive
+function glow(cx, cy, r, c, a, sy = 1) {
+  if (a <= 0) return;
+  const x0 = Math.max(0, Math.floor(cx - r)), x1 = Math.min(W - 1, Math.ceil(cx + r)), y0 = Math.max(0, Math.floor(cy - r * sy)), y1 = Math.min(H - 1, Math.ceil(cy + r * sy));
+  for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
+    const d = Math.hypot(x + .5 - cx, (y + .5 - cy) / sy); if (d >= r) continue;
+    const q = Math.ceil((1 - d / r) * 4) / 4, m = a * q * q, i = (y * W + x) * 4;
+    D[i] += c[0] * m; D[i + 1] += c[1] * m; D[i + 2] += c[2] * m;
+  }
+}
+function disc(cx, cy, r, fn, door = false) {
+  for (let y = Math.floor(cy - r - 1); y <= cy + r + 1; y++) for (let x = Math.floor(cx - r - 1); x <= cx + r + 1; x++) {
+    const dx = x + .5 - cx, dy = y + .5 - cy, d = Math.hypot(dx, dy); if (d > r) continue;
+    const c = fn(dx, dy, d); if (c) (door ? SD : S)(x, y, c);
+  }
+}
+function line(x0, y0, x1, y1, c, door = false) {
+  const n = Math.max(1, Math.ceil(Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0))));
+  for (let i = 0; i <= n; i++) (door ? SD : S)(x0 + (x1 - x0) * i / n, y0 + (y1 - y0) * i / n, c);
+}
+
+// ---- décor fixe : paroi, arc, sol -----------------------------------------------------------------------
+function ringAt(x, y) { // pierre de l'arc : 'v' voussoir (avec indice), 'j' jambage, null sinon
+  const px = x + .5, py = y + .5;
+  if (py < SY) { const d = Math.hypot(px - CXA, py - SY); if (d > R0 && d <= R0 + 7) return { k: 'v', d: d - R0, a: Math.atan2(SY - py, px - CXA) }; return null; }
+  if (y < FL && ((x >= 35 && x < 42) || (x >= 86 && x < 93))) return { k: 'j', d: x < 42 ? 42 - px : px - 86 };
+  return null;
+}
+function drawBase(extra) {
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    let c;
+    if (y < 14) c = rp('dark', .12 + vn(x / 7, y / 5, 1) * .22 + (y === 13 ? .25 : 0));
+    else if (y < FL) {
+      const row = Math.floor((y - 14) / 9), off = row % 2 ? 8 : 0, col = Math.floor((x + off) / 16), lx = (x + off) % 16, ly = (y - 14) % 9;
+      if (ly === 8 || lx === 15) c = RAMP.dark[1];
+      else { let v = .34 + (hs(col, row, 2) - .5) * .16 + (ly === 0 ? .1 : 0) - (y - 14) / 86 * .08 + (vn(x / 5, y / 5, 3) - .5) * .14; c = rp('dark', v); }
+    } else {
+      const u = (x - 64) / (y - 62) * 38, row = [100, 103, 107, 112, 118].findIndex(r => y < r);
+      const jt = Math.abs(((u / 14) % 1 + 1) % 1) < .08 || [100, 103, 107, 112, 118].includes(y);
+      let v = .3 + (vn(x / 6, y / 3, 4) - .5) * .14 - (y < 102 ? .1 : 0) + (hs(Math.floor(u / 14), row, 5) - .5) * .1;
+      c = jt ? RAMP.dark[2] : rp('dark', v);
+      if (y < 103 && x >= 34 && x < 94) c = y === 100 ? RAMP.stone[5] : rp('stone', .38 + (vn(x / 4, 1, 6) - .5) * .2 - (y - 100) * .06);
+    }
+    S(x, y, c);
+    const r = ringAt(x, y);
+    if (r) {
+      let v;
+      if (r.k === 'v') {
+        const seg = r.a / (Math.PI / 9), f = seg % 1;
+        if (f < .07 || f > .95 || r.d > 6.5) { S(x, y, RAMP.stone[1]); continue; }
+        v = .5 + (hs(Math.floor(seg), 0, 7) - .5) * .12 + (r.d < 1.2 ? .2 : 0) - r.d * .02 + Math.sin(r.a) * .06;
+      } else {
+        const ry = (y - SY) % 9; if (ry === 8 || r.d > 6.5) { S(x, y, RAMP.stone[1]); continue; }
+        v = .46 + (hs(Math.floor((y - SY) / 9), x < 64 ? 0 : 1, 8) - .5) * .12 + (r.d < 1 ? .2 : 0) + (ry === 0 ? .08 : 0);
+      }
+      S(x, y, rp('stone', v + (vn(x / 3, y / 3, 9) - .5) * .12));
+    }
+  }
+  // clef de voûte
+  for (let y = 14; y < 28; y++) for (let x = 58; x < 70; x++) {
+    const w = 6 - (y - 14) * .1; if (Math.abs(x + .5 - 64) > w) continue;
+    const edge = Math.abs(x + .5 - 64) > w - 1 || y === 14 || y === 27;
+    S(x, y, edge ? RAMP.stone[1] : rp('stone', .58 + (y === 15 ? .12 : 0) + (vn(x / 3, y / 3, 10) - .5) * .12));
+  }
+  if (extra) extra();
+}
+// le fond derrière la porte : noir, avec la crypte rouge qui respire quand on la laisse voir (k)
+function interior(t, k) {
+  const pulse = .85 + .15 * Math.sin(t * 2.2);
+  for (let y = 24; y < FL; y++) for (let x = 42; x < 86; x++) {
+    if (!inAp(x, y)) continue;
+    const d = Math.hypot((x + .5 - 64) / 1.25, y + .5 - 94);
+    const g = Math.round(clamp(1 - d / 40) * k * pulse * 7) / 7;
+    let c = g > 0 ? rp('crim', g) : RAMP.dark[0];
+    if (y >= 86 && (y === 89 || y === 93 || y === 97) && g > .1) c = rp('crim', g - .15);
+    S(x, y, c);
+  }
+}
+
+// ---- particules (fonctions pures du temps) ----------------------------------------------------------------
+function debris(ox, oy, age, seed, n, ramp, v0, floorY = 99, life = 2.4) {
+  if (age < 0 || age > life) return;
+  const fade = age > life - .6 ? (life - age) / .6 : 1;
+  for (let i = 0; i < n; i++) {
+    const a = -Math.PI * (.1 + .8 * hs(i, 1, seed)), sp = v0 * (.4 + .8 * hs(i, 2, seed));
+    const vx = Math.cos(a) * sp * (hs(i, 3, seed) < .5 ? -1 : 1), vy = Math.sin(a) * sp, g = 140;
+    const x0 = ox + (hs(i, 4, seed) - .5) * 8, y0 = oy + (hs(i, 5, seed) - .5) * 8;
+    const disc2 = vy * vy + 2 * g * (floorY - y0), tl = (-vy + Math.sqrt(Math.max(0, disc2))) / g, tt = Math.min(age, tl);
+    const x = x0 + vx * tt, y = Math.min(floorY, y0 + vy * tt + .5 * g * tt * tt);
+    const c = rp(ramp, (.35 + hs(i, 6, seed) * .4) * fade + .05);
+    S(x, y, c); if (hs(i, 7, seed) < .5) S(x + 1, y, rp(ramp, .2 * fade + .05));
+  }
+}
+function motes(ox, oy, age, seed, n, ramp, life = 1.8, spread = 7, rise = 16) {
+  for (let i = 0; i < n; i++) {
+    const st = hs(i, 1, seed) * .5, a = age - st; if (a < 0 || a > life) continue;
+    const l = a / life, x = ox + (hs(i, 2, seed) - .5) * spread + Math.sin(a * 3 + i) * 2 * l, y = oy - a * rise * (.6 + hs(i, 3, seed) * .6);
+    S(x, y, rp(ramp, .75 - l * .6));
+  }
+}
+// chaîne : maillons de 3 px le long d'une courbe, l'anneau sur la normale
+function chain(pts, door = true, v = 1) {
+  let acc = 0;
+  for (let i = 1; i < pts.length; i++) {
+    const [x0, y0] = pts[i - 1], [x1, y1] = pts[i], L = Math.hypot(x1 - x0, y1 - y0), nx = -(y1 - y0) / (L || 1), ny = (x1 - x0) / (L || 1);
+    for (let s = 0; s < L; s += .7) {
+      const x = x0 + (x1 - x0) * s / L, y = y0 + (y1 - y0) * s / L, k = Math.floor((acc + s) / 3), ph = (acc + s) % 3;
+      if (k % 2 === 0) { S(x - nx, y - ny, rp('iron', .75 * v)); S(x + nx, y + ny, rp('iron', .35 * v)); if (ph > 1.4 && ph < 2) S(x, y, RAMP.iron[0]); else if (ph < .7 || ph > 2.3) S(x, y, rp('iron', .5 * v)); }
+      else S(x, y, rp('iron', .6 * v));
+    }
+    acc += L;
+  }
+}
+function sag(x0, y0, x1, y1, s) { const p = []; for (let i = 0; i <= 12; i++) { const u = i / 12; p.push([x0 + (x1 - x0) * u, y0 + (y1 - y0) * u + s * 4 * u * (1 - u)]); } return p; }
+
+// ---- emblèmes ---------------------------------------------------------------------------------------------
+function emblem(cx, cy, k, v, door) {
+  const R = k, put = door ? SD : S;
+  if (k === 'a') { // œil en bulbe sur tige
+    disc(cx, cy - 1, 3.4, (dx, dy, d) => d > 2.6 ? rp(R, .3 * v) : rp(R, (.8 - dy * .05) * v), door);
+    if (v > .5) { put(cx - .5, cy - 1.5, RED); put(cx + .5, cy - 1.5, RED); put(cx - .5, cy - .5, RED); put(cx + .5, cy - .5, PUP); }
+    for (let y = 2; y <= 4; y++) put(cx, cy + y, rp(R, .55 * v));
+    put(cx - 1, cy + 4, rp(R, .45 * v)); put(cx + 1, cy + 4, rp(R, .45 * v)); put(cx - 2, cy + 5, rp(R, .35 * v)); put(cx + 2, cy + 5, rp(R, .35 * v));
+  } else { // halo à rayons au-dessus d'une tête
+    for (let a = 0; a <= Math.PI; a += .12) put(cx + Math.cos(a) * 4, cy + 1 - Math.sin(a) * 4, rp(R, .85 * v));
+    disc(cx, cy + 1.5, 1.6, () => rp(R, .95 * v), door);
+    for (const a of [.35, .9, 1.5708, 2.24, 2.8]) put(cx + Math.cos(a) * 6, cy + 1 - Math.sin(a) * 6, rp(R, .7 * v));
+    for (let x = -2; x <= 2; x++) put(cx + x, cy + 4, rp(R, .5 * v));
+  }
+}
+
+// ---- état d'une vue ---------------------------------------------------------------------------------------
+// da / dm : temps depuis la mort de l'Archiprêtre / de la Martyre (−1 en vie) ; op : temps depuis l'ouverture
+const CYC = 17;
+function seqState(T) {
+  const cyc = Math.floor(T / CYC), t = T - cyc * CYC, first = cyc % 2 ? 'm' : 'a';
+  const d1 = t - 2.5, d2 = t - 6.5, st = { da: -1, dm: -1, op: t >= 9 ? t - 9 : -1, fade: t > 15.6 ? (t - 15.6) / 1.4 : t < .4 ? 1 - t / .4 : 0, first };
+  st[first === 'a' ? 'da' : 'dm'] = d1 >= 0 ? d1 : -1; st[first === 'a' ? 'dm' : 'da'] = d2 >= 0 ? d2 : -1;
+  return st;
+}
+const FIXED = { 2: { da: -1, dm: -1, op: -1, fade: 0 }, 1: { da: 60, dm: -1, op: -1, fade: 0 }, 0: { da: 60, dm: 60, op: 60, fade: 0 } };
+
+// ======================================================================================================
+// A — Sceaux et chaînes
+// ======================================================================================================
+const A = {
+  base() { drawBase(() => { for (const y of [55, 79]) for (const x of [40, 87]) disc(x, y, 1.6, (dx, dy, d) => d > 1 ? rp('iron', .55 - dy * .1) : RAMP.iron[0]); }); },
+  wood(X, y, th) {
+    const lx = X < 64 ? X - 42 : 85 - X, plank = Math.floor(lx / 5.5), pe = lx % 5.5;
+    if ((y >= 40 && y < 43) || (y >= 68 && y < 71) || (y >= 92 && y < 95)) {
+      const top = y === 40 || y === 68 || y === 92, stud = (Math.floor(lx) % 6 === 3) && (y === 41 || y === 69 || y === 93);
+      return rp('iron', (stud ? .85 : top ? .55 : .35) - th * .25);
+    }
+    let v = .5 + (hs(plank, 0, 3) - .5) * .16 + (vn(X * .7, y * .09 + plank * 3, 4) - .5) * .32 - (70 - y) / 90 * .08 - th * .3;
+    if (pe < .9) v = .1; if (lx > 20.6) v = .05;
+    return rp('wood', v);
+  },
+  frame(t, st) {
+    const op = st.op, light = op < 0 ? 0 : clamp((op - .6) / 1.6);
+    interior(t, light);
+    let th = 0; if (op >= 0) { const u = clamp((op - .8) / 2.2); th = ease(u) * 1.3; }
+    OX = op > .7 && op < .85 ? (Math.floor(op * 60) % 2 ? 1 : -1) : 0; OY = 0;
+    const w = 22 * Math.cos(th), ed = Math.round(3 * Math.sin(th));
+    for (let y = 24; y < FL; y++) for (let x = 42; x < 86; x++) {
+      if (x < 64) { const lx = x - 42; if (lx < w) { const X = 42 + lx / w * 22; if (inAp(X, y)) SD(x, y, this.wood(X, y, th)); } else if (lx < w + ed && inAp(x, y)) SD(x, y, rp('wood', .2)); }
+      else { const lx = 85 - x; if (lx < w) { const X = 85 - lx / w * 22; if (inAp(X, y)) SD(x, y, this.wood(X, y, th)); } else if (lx < w + ed && inAp(x, y)) SD(x, y, rp('wood', .2)); }
+    }
+    // brûlures laissées par les sceaux (sur le bois, avant qu'il ne pivote)
+    if (th === 0) for (const [age, cy] of [[st.da, 58], [st.dm, 82]]) if (age >= .6) disc(64, cy, 7, (dx, dy, d) => { dim(64 + dx - .5, cy + dy - .5, d < 5 ? .55 : .75); return null; });
+    // fente qui s'allume avant l'ouverture
+    if (op >= 0 && op < 1.6) { const k = op < .8 ? op / .8 : 1 - (op - .8) / .8; for (let y = 25; y < FL; y++) if (inAp(63, y)) { S(63, y, rp('a', .4 + k * .5)); S(64, y, rp('a', .3 + k * .5)); } glow(64, 62, 22, RAMP.a[5], .35 * k, 1.8); }
+    for (const g of [{ k: 'a', y: 55, sy: 58, age: st.da, seed: 11 }, { k: 'm', y: 79, sy: 82, age: st.dm, seed: 23 }]) this.guard(t, g);
+    if (light > 0) glow(64, 104, 34, RAMP.crim[5], .35 * light, .45);
+  },
+  guard(t, g) {
+    const { k, y, sy, age } = g;
+    if (age < .6) {
+      chain(sag(40, y, 56, sy - 1, 2), false); chain(sag(72, sy - 1, 87, y, 2), false);
+      const pulse = .5 + .5 * Math.sin(t * 2.4 + (k === 'm' ? 1.7 : 0));
+      if (age < 0) {
+        glow(64, sy, 20, RAMP[k][5], .22 + .12 * pulse);
+        disc(64, sy, 8.5, (dx, dy, d) => d > 7.7 ? OUT : d > 6.6 ? rp(k, .72 - dy * .04) : rp(k, .38 - dy * .03 + (d < 2 ? .02 : 0)));
+        emblem(64, sy, k, .9 + .1 * pulse);
+      } else if (age < .25) {
+        glow(64, sy, 30, WHITE, .7 * (1 - age / .25) + .2);
+        disc(64, sy, 8.5 + age * 6, (dx, dy, d) => d > 7.7 + age * 6 ? rp(k, .8) : rp('white', .6 + d * .02));
+      } else {
+        const p = (age - .25) / .35;
+        glow(64, sy, 16, RAMP[k][4], .3 * (1 - p));
+        disc(64, sy, 8.5, (dx, dy, d) => d > 7.7 ? OUT : rp('ash', .55 - dy * .04));
+        for (let j = 0; j < 6; j++) { const a = j * 1.05 + .3, L = p * 8; for (let s = 0; s < L; s += .6) S(64 + Math.cos(a) * s + Math.sin(s * 2 + j) * .6, sy + Math.sin(a) * s, RAMP.ash[0]); }
+      }
+    } else {
+      const a2 = age - .6, phi = Math.PI / 2 - Math.PI / 2 * Math.exp(-2.6 * a2) * Math.cos(7 * a2), L = 21;
+      chain([[40, y], [40 + Math.cos(phi) * L, y + Math.sin(phi) * L]], false, .85);
+      chain([[87, y], [87 - Math.cos(phi) * L, y + Math.sin(phi) * L]], false, .85);
+      debris(64, sy, a2, g.seed, 10, 'ash', 60, 99, 2.6);
+      motes(64, sy, a2, g.seed + 5, 16, 'ash', 1.8);
+      if (a2 < .25) glow(64, sy, 24, RAMP[k][6], .5 * (1 - a2 / .25));
+    }
+  },
+};
+
+// ======================================================================================================
+// B — Les deux veilleuses
+// ======================================================================================================
+const NICHE = { a: 21, m: 107 };
+function groovePath(side) {
+  const p = [], nx = side === 'a' ? 21 : 106, sgn = side === 'a' ? -1 : 1, add = (x, y) => { x = Math.round(x); y = Math.round(y); const l = p[p.length - 1]; if (!l || l[0] !== x || l[1] !== y) p.push([x, y]); };
+  for (let y = 39; y >= 34; y--) add(nx, y);
+  const a0 = Math.asin(12 / 27), xs = 64 + sgn * Math.cos(a0) * 27;
+  for (let x = nx; side === 'a' ? x <= xs : x >= xs; x += side === 'a' ? 1 : -1) add(x, 34);
+  for (let a = a0; a <= Math.PI / 2 - .2; a += .02) add(64 + sgn * Math.cos(a) * 27 - (side === 'a' ? 0 : 1), SY - Math.sin(a) * 27);
+  return p;
+}
+const GROOVE = { a: groovePath('a'), m: groovePath('m') };
+const B = {
+  base() {
+    drawBase(() => {
+      for (const k of ['a', 'm']) {
+        const cx = NICHE[k];
+        for (let y = 40; y < 88; y++) for (let x = cx - 9; x <= cx + 9; x++) {
+          const dx = x + .5 - cx, top = y + .5 < 48 ? Math.hypot(dx, y + .5 - 48) : Math.abs(dx);
+          if (top > 9) continue;
+          S(x, y, top > 8 ? RAMP.stone[1] : top > 7 ? rp('stone', .45) : rp('dark', .05 + (y - 40) / 48 * .12 + (vn(x / 3, y / 3, 12) - .5) * .06));
+        }
+        for (let x = cx - 9; x <= cx + 9; x++) { S(x, 88, RAMP.stone[5]); S(x, 89, RAMP.stone[3]); }
+        // moine agenouillé : capuche, dos, coupe tendue
+        for (let y = 60; y < 88; y++) for (let x = cx - 9; x <= cx + 9; x++) {
+          const dx = x + .5 - cx; let inside = false, v = .45;
+          if (y < 71) { inside = Math.hypot(dx, (y + .5 - 66) * 1.1) < 5; v = .5 - (y - 60) * .01 + (dx < -1 ? .1 : -.05); if (inside && Math.hypot(dx, y + .5 - 68) < 2.6) v = .12; }
+          else { const hw = 5 + (y - 71) * .25; inside = Math.abs(dx) < hw; v = .42 + (dx < 0 ? .08 : -.06) + (Math.floor(x) % 4 === 0 ? -.07 : 0); }
+          if (inside) S(x, y, rp('stone', v + (vn(x / 2, y / 2, 13) - .5) * .1));
+        }
+        for (let x = cx - 4; x <= cx + 4; x++) { S(x, 62, RAMP.stone[6]); S(x, 63, RAMP.stone[4]); S(x, 64, RAMP.stone[3]); }
+        for (let x = cx - 2; x <= cx + 2; x++) S(x, 65, RAMP.stone[2]);
+        for (const [x, y] of GROOVE[k]) S(x, y, RAMP.stone[0]);
+      }
+    });
+  },
+  flame(cx, by, h, w, k, t, seed, v = 1) {
+    for (let y = Math.floor(by - h); y < by; y++) {
+      const rel = clamp((by - y) / h), hw = w * Math.pow(1 - rel, .7) * (.7 + .3 * Math.sin(rel * 3.1)), xo = Math.sin(t * 9 + rel * 5 + seed) * rel * 1.6;
+      for (let x = Math.floor(cx - w - 2); x <= cx + w + 2; x++) {
+        const dd = Math.abs(x + .5 - cx - xo) / Math.max(.4, hw); if (dd > 1) continue;
+        const heat = (1 - dd) * (1 - rel * .6) + (vn(x / 2, y / 2 + t * 6, seed) - .5) * .3;
+        if (heat < .08) continue;
+        S(x, y, rp(k, clamp(.35 + heat * .9) * v));
+      }
+    }
+  },
+  frame(t, st) {
+    const op = st.op, light = op < 0 ? .22 : .22 + .78 * clamp(op / 2);
+    interior(t, light);
+    // herse : 26 crans de 3 px, avec un à-coup par cran
+    let off = 0; if (op > .7) { const n = Math.min(26, Math.floor((op - .7) / .08)); off = -n * 3; OY = 0; OX = 0; if (n < 26 && ((op - .7) % .08) < .02) OY = 1; }
+    for (let y = 20; y < FL; y++) for (let x = 42; x < 86; x++) {
+      const yy = y - off; if (yy < 20 || yy >= FL) continue;
+      const bx = (x - 43) % 5, isBar = bx === 0 || bx === 1, isH = [44, 66, 88].some(h => yy >= h && yy < h + 2);
+      if (!isBar && !isH) continue;
+      if (isBar && yy >= 96 && bx === 1 && !isH) continue;
+      if (isBar && yy >= 98 && bx === 0) { if (yy === 99) continue; }
+      const c = isH && !isBar ? rp('iron', yy % 2 ? .3 : .55) : rp('iron', bx === 0 ? .55 : .3);
+      SD(x, y, c);
+    }
+    if (op > .7 && op < 3) for (let i = 0; i < 14; i++) { const a = (op - .7 - hs(i, 1, 31) * 1.6); if (a > 0 && a < .9) S(44 + hs(i, 2, 31) * 40, 24 + a * a * 90, rp('ash', .5)); }
+    for (const k of ['a', 'm']) this.guard(t, k, k === 'a' ? st.da : st.dm);
+    // clef de voûte : losange moitié or, moitié améthyste
+    const kf = op >= 0 ? clamp(1 - op / 1.2) : 1, flash = op >= 0 && op < .4 ? 1 - op / .4 : 0;
+    for (let j = 0; j < 7; j++) { const w = 3 - Math.abs(j - 3); for (let i = 3 - w; i <= 3 + w; i++) {
+      const k = i < 3 ? 'a' : i > 3 ? 'm' : null, dead = k ? (k === 'a' ? st.da : st.dm) >= 1.3 : false;
+      const c = flash > 0 ? rp('white', .5 + flash * .5) : !k ? RAMP.stone[6] : dead ? RAMP.stone[1] : rp(k, (.6 + .25 * Math.sin(t * 2.4)) * kf + .1);
+      S(61 + i, 16 + j, c); } }
+    for (const k of ['a', 'm']) { const dead = (k === 'a' ? st.da : st.dm) >= 1.3; if (!dead) glow(k === 'a' ? 63 : 66, 19, 10, RAMP[k][5], .25 * kf); }
+    if (flash > 0) glow(64, 19, 26, WHITE, .5 * flash);
+  },
+  guard(t, k, age) {
+    const cx = NICHE[k], L = GROOVE[k].length, seed = k === 'a' ? 3 : 7;
+    let f = 1, fl = 1, h = 13;
+    if (age >= 0) { f = 1 - clamp((age - .3) / 1); if (age < .3) { h = 13 + age / .3 * 8; } else if (age < .9) { fl = 1 - (age - .3) / .6; h = 13 * fl; } else { fl = 0; } }
+    const n = Math.floor(f * L);
+    for (let i = 0; i < n; i++) { const [x, y] = GROOVE[k][i]; S(x, y, rp(k, .55 + (Math.abs(i - ((t * 34) % (L + 8))) < 2 ? .4 : 0))); }
+    if (fl > 0) {
+      const flick = .85 + .15 * vn(t * 6, 0, seed);
+      glow(cx, 55, 26 * flick * (.4 + .6 * fl), RAMP[k][5], .4 * fl);
+      this.flame(cx, 62, Math.max(2, h * flick), 3.6, k, t, seed, 1);
+    }
+    if (age >= .8) motes(cx, 60, age - .8, seed * 5, 12, 'ash', 2.4, 3, 9);
+  },
+};
+
+// ======================================================================================================
+// C — Rosace à deux yeux
+// ======================================================================================================
+const C = {
+  base() { drawBase(() => { for (const [x0] of [[36], [87]]) for (let y = 59; y < 66; y++) for (let x = x0; x < x0 + 5; x++) S(x, y, y === 59 || y === 65 ? RAMP.stone[2] : RAMP.dark[0]); }); },
+  leaf(u, y) {
+    const lx = u < 64 ? u - 42 : 85 - u, frameP = lx < 2 || (y < 50 && !inAp(u, y - 2)) || y > 96;
+    const panel = (y > 72 && y < 93 && lx > 4 && lx < 18), inset = panel && (lx < 5 || lx > 17 || y < 74 || y > 91);
+    let v = .45 + (vn(u / 4, y / 6, 14) - .5) * .16 - (FL - y) / 120 * .1;
+    if (frameP) v = .62; if (inset) v = .2; else if (panel) v = .4;
+    if (lx > 20.5) v = .08;
+    if (y > 28 && y < 46 && lx > 5 && lx < 17 && Math.abs((lx - 11) * 1.5) + Math.abs(y - 37) < 9) v = Math.abs((lx - 11) * 1.5) + Math.abs(y - 37) > 7.5 ? .65 : .3;
+    return rp('bronze', v);
+  },
+  eye(cx, cy, k, t, age, sh) {
+    // ouvert 1 → fermé 0 ; clignement toutes les ~4 s tant qu'il vit
+    let open = 1, wide = 0, dead = false;
+    if (age < 0) { const b = (t + (k === 'a' ? 0 : 1.9)) % 4.1; if (b < .16) open = Math.abs(b - .08) / .08; }
+    else if (age < .2) { wide = age / .2; }
+    else if (age < .6) { open = 1 - (age - .2) / .4; }
+    else { open = 0; dead = true; }
+    const ry = 3.2 * open + wide * .8, look = age < 0 ? Math.round(Math.sin(t * .8 + (k === 'a' ? 0 : 2)) * 1.4) : 0;
+    for (let y = cy - 5; y <= cy + 5; y++) for (let x = cx - 6; x <= cx + 6; x++) {
+      const dx = x + .5 - cx, dy = y + .5 - cy, almond = Math.abs(dx) / 5.2 + Math.abs(dy) / 3.6;
+      if (almond > 1) continue;
+      if (almond > .82) { SD(x + sh, y, rp('bronze', .7)); continue; }
+      const visible = Math.abs(dy) < ry * (1 - Math.abs(dx) / 5.6);
+      if (!visible) { SD(x + sh, y, dead ? rp('ash', .45 + (dy < 0 ? .1 : 0)) : rp('bronze', .5 + (dy < 0 ? .08 : -.05))); continue; }
+      const id = Math.hypot(dx - look, dy);
+      SD(x + sh, y, id < 1 ? (k === 'a' ? RED : WHITE) : id < 2.6 ? rp(k, .75 + wide * .2) : rp(k, .3 + wide * .3));
+    }
+    if (dead) { for (let i = -4; i <= 4; i++) SD(cx + i + sh, cy + (i % 3 === 0 ? 1 : 0), RAMP.ash[0]); }
+    if (!dead && open > .3) glow(cx + sh, cy, 12, RAMP[k][5], .25 + .25 * wide);
+  },
+  frame(t, st) {
+    const op = st.op, light = op < 0 ? 0 : clamp((op - 1) / 1.6);
+    interior(t, light);
+    const s = op < 0 ? 0 : Math.round(23 * ease(clamp((op - 1.2) / 2)));
+    // secousse au retour d'un pêne
+    OX = 0; OY = 0;
+    for (const a of [st.da, st.dm]) if (a >= 1 && a < 1.15) OX = Math.round(Math.sin(a * 90) * 2 * (1.15 - a) / .15);
+    for (let y = 24; y < FL; y++) for (let x = 42; x < 86; x++) {
+      if (!inAp(x, y)) continue;
+      const uL = x + s, uR = x - s;
+      if (uL < 64 && inAp(uL, y)) SD(x, y, this.leaf(uL, y));
+      else if (uR >= 64 && inAp(uR, y)) SD(x, y, this.leaf(uR, y));
+    }
+    // pênes
+    for (const [k, age, dir] of [['a', st.da, -1], ['m', st.dm, 1]]) {
+      const ext = age < .6 ? 1 : age < 1 ? 1 - ease((age - .6) / .4) : 0, L = Math.round(13 * ext);
+      for (let i = 0; i < L; i++) for (let j = 0; j < 4; j++) { const x = 64 + dir * (13 + i) - (dir < 0 ? 1 : 0); S(x + OX, 60 + j, rp('iron', j === 0 ? .75 : j === 3 ? .25 : .5)); }
+      if (age >= 1 && age < 1.6) motes(dir < 0 ? 40 : 88, 62, age - 1, k === 'a' ? 41 : 43, 8, 'ash', .6, 4, 10);
+    }
+    // rosace coupée en deux : chaque moitié suit son vantail, la couronne crantée tourne avant
+    const rot = op < 0 ? 0 : ease(clamp(op / 1.2)) * Math.PI;
+    for (const half of [-1, 1]) {
+      const cx = 64 + half * s, k = half < 0 ? 'a' : 'm', age = half < 0 ? st.da : st.dm;
+      disc(cx, 62, 13.5, (dx, dy, d) => {
+        if ((half < 0) !== (dx < 0)) return null;
+        if (d > 12.6) return OUT;
+        if (d > 10) { const a = Math.atan2(dy, dx) - rot, notch = ((a / (Math.PI / 6)) % 1 + 1) % 1 < .25; return rp('bronze', notch ? .3 : .72 - dy * .02); }
+        if (Math.abs(dx) < .6) return OUT;
+        return rp('bronze', .3);
+      }, true);
+      this.eye(64 + half * 5.5, 62, k, t, age, half * s);
+    }
+    if (op >= 0 && op < 1.8) { const kk = op < 1.2 ? op / 1.2 : 1 - (op - 1.2) / .6; for (let y = 25; y < FL; y++) if (inAp(64, y)) S(64, y, rp('a', .4 + kk * .5)); glow(64, 62, 24, RAMP.a[5], .3 * kk, 1.6); }
+    if (light > 0) glow(64, 104, 34, RAMP.crim[5], .35 * light, .45);
+  },
+};
+
+// ======================================================================================================
+// D — Membrane de l'Œil
+// ======================================================================================================
+function bez(p0, p1, p2, p3) { const o = []; for (let i = 0; i <= 80; i++) { const u = i / 80, a = (1 - u) ** 3, b = 3 * u * (1 - u) ** 2, c = 3 * u * u * (1 - u), d = u ** 3; o.push([a * p0[0] + b * p1[0] + c * p2[0] + d * p3[0], a * p0[1] + b * p1[1] + c * p2[1] + d * p3[1]]); } return o; }
+const VEIN = { a: bez([-2, 112], [22, 116], [30, 96], [52, 72]), m: bez([130, 112], [106, 116], [98, 96], [76, 72]) };
+const PUS = { a: [52, 72], m: [76, 72] };
+let MEMB = null;
+const Dm = {
+  base() {
+    drawBase();
+    MEMB = new Float32Array(W * H);
+    for (let y = 24; y < FL; y++) for (let x = 42; x < 86; x++) {
+      if (!inAp(x, y)) continue;
+      let e = 9; for (let k = 1; k < 4; k++) if (!inAp(x - k, y) || !inAp(x + k, y) || !inAp(x, y - k) || !inAp(x, y + k)) { e = k; break; }
+      let v = .46 + (vn(x / 5, y / 5, 21) - .5) * .3 - (e < 4 ? (4 - e) * .09 : 0);
+      if (Math.abs(vn(x / 8, y / 8, 22) - .5) < .03 || Math.abs(vn(x / 5, y / 7, 23) - .5) < .02) v = -1;
+      MEMB[y * W + x] = v;
+    }
+  },
+  frame(t, st) {
+    const op = st.op, slit = op < 0 ? 0 : ease(clamp((op - .6) / 2.2)), light = slit;
+    interior(t, light);
+    const beat = (.5 + .5 * Math.sin(t * 1.6)), q = op >= 0 && op < .8 ? Math.round(Math.sin(op * 70) * 1) : 0;
+    const hw = 20 * slit, hh = 36 * Math.min(1, slit * 1.6);
+    for (let y = 24; y < FL; y++) for (let x = 42; x < 86; x++) {
+      const v0 = MEMB[y * W + x]; if (!inAp(x, y)) continue;
+      const ex = hw > 0 ? Math.hypot((x + .5 - 64) / Math.max(.5, hw), (y + .5 - 64) / Math.max(1, hh)) : 9;
+      if (ex < 1) continue;
+      let c;
+      if (ex < 1.12) c = rp('flesh', ex < 1.05 ? .85 : .3);
+      else if (v0 < 0) c = rp('flesh', .2 + beat * .06);
+      else c = rp('flesh', v0 + beat * .06 + (vn(x / 3, y / 3 - t * .3, 24) > .82 ? .3 : 0));
+      S(x + (y % 2 ? q : -q), y, c);
+    }
+    if (op > .8 && op < 4.5) for (let i = 0; i < 6; i++) { const a = (op - .8 - i * .5) % 1.6; if (a < 0) continue; const x = 64 + (hs(i, 1, 51) - .5) * hw * 1.4; const y0 = 64 - hh + 2; S(x, y0 + a * a * 60, rp('flesh', .6)); }
+    for (const k of ['a', 'm']) this.guard(t, k, k === 'a' ? st.da : st.dm, slit);
+    if (light > 0) glow(64, 104, 34, RAMP.crim[5], .35 * light, .45);
+  },
+  guard(t, k, age, slit) {
+    const P = VEIN[k], n = P.length, grey = age < .3 ? 0 : clamp((age - .3) / 1.3);
+    const ng = Math.floor(grey * n), inMem = i => inAp(P[i][0], P[i][1]);
+    for (let i = 0; i < n; i++) {
+      const [x, y] = P[i]; if (slit > .3 && inMem(i)) continue;
+      if (i < ng) { S(x, y, rp('ash', .35)); S(x, y + 1, rp('ash', .2)); continue; }
+      S(x, y - 1, rp(k, .55)); S(x, y, rp(k, .35)); S(x, y + 1, rp(k, .18)); S(x - 1, y, rp(k, .3));
+    }
+    let r = 5, burst = false;
+    if (age < 0) {
+      const u = ((t + (k === 'm' ? .55 : 0)) % 1.1) / .9;
+      if (u < 1) { const i = Math.floor(u * (n - 1)), [x, y] = P[i]; if (!(slit > .3 && inMem(i))) { disc(x, y, 1.6, () => rp(k, .95)); glow(x, y, 7, RAMP[k][5], .3); } }
+      if (u > .9) r = 6;
+    } else if (age < .3) r = 5 + age / .3 * 2.5; else burst = true;
+    const [px, py] = PUS[k];
+    if (slit > .2) return;
+    if (!burst) {
+      glow(px, py, 14, RAMP[k][5], .2 + (age >= 0 ? .4 : 0));
+      disc(px, py, r, (dx, dy, d) => d > r - .9 ? rp('flesh', .25) : (dx < -1 && dy < -1 && d < 2.6) ? (d < 1.4 ? WHITE : rp(k, .85)) : rp(k, .55 - dy * .05), true);
+    } else {
+      disc(px, py, 4, (dx, dy, d) => d > 3 ? rp('flesh', .35) : d > 1.5 ? rp('flesh', .12) : RAMP.flesh[0], true);
+      debris(px, py, age - .3, k === 'a' ? 61 : 67, 12, k, 70, 101, 1.8);
+      if (age < .5) glow(px, py, 18, RAMP[k][6], .5 * (1 - (age - .3) / .2));
+    }
+  },
+};
+
+const PISTES = { A, B, C, D: Dm };
+const BASES = {};
+for (const k in PISTES) { const img = new ImageData(W, H); D = img.data; PISTES[k].base(); BASES[k] = new Uint8ClampedArray(img.data); }
+
+// ---- bannière ---------------------------------------------------------------------------------------------
+function banner(el, st) {
+  const aD = st.da >= .6, mD = st.dm >= .6, n = 2 - aD - mD;
+  const key = n + (aD ? 'a' : '') + (mD ? 'm' : '') + (st.op >= 0);
+  if (el.dataset.k === key) return; el.dataset.k = key;
+  const txt = st.op >= 0 ? 'La porte de l’Orbite s’ouvre : la route de l’Œil est libre.'
+    : n === 2 ? 'Deux gardiens tiennent encore la porte : l’Archiprêtre et la Martyre.'
+    : n === 1 ? 'Un gardien tient encore la porte : ' + (aD ? 'la Martyre.' : 'l’Archiprêtre.') : '';
+  el.classList.toggle('quiet', !txt);
+  el.innerHTML = `<span class="ic"><i class="a${aD ? ' off' : ''}"></i><i class="m${mD ? ' off' : ''}"></i></span><span>${txt || '—'}</span>`;
+}
+
+// ---- boucle -----------------------------------------------------------------------------------------------
+const views = [], still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+let playing = !still, clock = 0, last = performance.now();
+const io = new IntersectionObserver(es => { for (const e of es) { const v = views.find(x => x.c === e.target); if (v) v.vis = e.isIntersecting; } }, { rootMargin: '100px' });
+document.querySelectorAll('canvas[data-p]').forEach(c => {
+  const v = { c, g: c.getContext('2d'), img: new ImageData(W, H), p: c.dataset.p, seq: !!c.dataset.seq, n: c.dataset.n, vis: true, f: -1,
+    ban: c.dataset.seq ? document.querySelector(`[data-ban="${c.dataset.p}"]`) : null };
+  views.push(v); io.observe(c);
+});
+function render(v, T) {
+  const f = Math.floor(T * 24); if (f === v.f) return; v.f = f; const t = f / 24;
+  const st = v.seq ? seqState(t) : FIXED[v.n];
+  D = v.img.data; D.set(BASES[v.p]); OX = 0; OY = 0;
+  PISTES[v.p].frame(t, st);
+  if (st.fade > 0) { const k = 1 - Math.ceil(clamp(st.fade) * 4) / 4; for (let i = 0; i < D.length; i += 4) { D[i] *= k; D[i + 1] *= k; D[i + 2] *= k; } }
+  v.g.putImageData(v.img, 0, 0);
+  if (v.ban) banner(v.ban, st);
+}
+function tick(now) {
+  if (playing) clock += (now - last) / 1000; last = now;
+  for (const v of views) if (v.vis) render(v, v.seq ? clock + 1 : clock);
+  requestAnimationFrame(tick);
+}
+// image de repos : la séquence montre l'instant où un gardien vient de tomber
+if (still) clock = 3.6;
+for (const v of views) render(v, v.seq ? clock + 1 : clock);
+requestAnimationFrame(tick);
+const pb = document.getElementById('pause');
+pb.textContent = playing ? 'Pause' : 'Lecture';
+pb.addEventListener('click', () => { playing = !playing; pb.textContent = playing ? 'Pause' : 'Lecture'; });
+</script>

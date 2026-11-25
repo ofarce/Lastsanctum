@@ -26,7 +26,11 @@ func _ready() -> void:
 
 
 func _process(_delta: float) -> void:
-	if not GameState.door_closed and _opened_at == INF and GameState.opening_stage != "":
+	# Ouverte en permanence (Opening.DOOR_OPEN) : battants rabattus dès le départ, sans animation.
+	if Opening.DOOR_OPEN and not GameState.door_closed:
+		if _opened_at == INF:
+			_opened_at = -1e6
+	elif not GameState.door_closed and _opened_at == INF and GameState.opening_stage != "":
 		_opened_at = GameState.sim_time
 	if GameState.door_closed:
 		_opened_at = INF

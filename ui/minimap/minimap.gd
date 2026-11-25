@@ -282,6 +282,19 @@ func refresh() -> void:
 				var q := map_pt(e.x, e.z)
 				if q.x >= 1.0 and q.y >= 1.0 and q.x < W - 2.0 and q.y < H - 2.0:
 					fill_rect(_frame, q.x - 1.0, q.y - 1.0, 2.0, 2.0, Color("#5fd8e8"))
+	# Repères d'entrée de quartier (sim/quarter_marks.gd) : le glyphe du quartier sur sa stèle, terne tant qu'elle est
+	# éteinte, à la couleur du quartier ensuite.
+	for m: Dictionary in QuarterMarks.marks(st):
+		if m["kind"] != "stele":
+			continue
+		var q: String = m["quarter"]
+		var col: Color = QuarterMarks.COLOR[q] if GameState.quarter_lit.has(q) else (QuarterMarks.COLOR[q] as Color).darkened(0.55)
+		var g := map_pt(m["x"], m["z"]) - Vector2(3.0, 3.0)
+		for j in 7:
+			var row: String = QuarterMarks.GLYPH[q][j]
+			for i in 7:
+				if row[i] == "#" and g.x + i >= 0.0 and g.y + j >= 0.0 and g.x + i < W and g.y + j < H:
+					fill_rect(_frame, g.x + i, g.y + j, 1.0, 1.0, col)
 	_tex.update(_frame)
 	# Trapèze : coins de l'écran au-dessus du bandeau, projetés au sol.
 	var cam := world.camera

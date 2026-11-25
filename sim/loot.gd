@@ -44,6 +44,10 @@ const ITEMS := {
 	"key_source": {"name": "Goutte-source", "color": Color("#a9cfc0"), "desc": "Une goutte de la source du Fleuve. Le Sceau de sang la demande."},
 	"key_amber": {"name": "Ambre-mère", "color": Color("#d07a2a"), "desc": "Le noyau du Cœur-Racine. Le Sceau d’orichalque le demande."},
 	"key_council": {"name": "Sceau du Concile", "color": Color("#ddb457"), "desc": "Repris à l’Inquisiteur Bomilcar. Le Sceau d’or le demande."},
+	# Mini-boss des Salles oubliées (2026-11-25) : clefs de leurs portes, ouvertes à leur chute ; hublot pour une quête.
+	"key_locks": {"name": "Clef des Écluses", "color": Color("#c87a42"), "desc": "Arrachée à l’Éclusier de Byrsa. La porte des Écluses s’est ouverte à sa chute."},
+	"key_gorge": {"name": "Clef de la Gorge", "color": Color("#5e8f80"), "desc": "Tombée de la Martyre de la Patine. La route de la Gorge-Cuivre s’est ouverte à sa chute."},
+	"porthole": {"name": "Hublot de scaphandre", "color": Color("#74cad6"), "desc": "Le hublot embué de l’Éclusier, encore plein d’eau. Quelqu’un, à Byrsa, le reconnaîtra peut-être."},
 	"key_ramparts": {"name": "Clef des remparts", "color": Color("#ddb457"), "desc": "Elle ouvre les rues de Byrsa."},
 }
 
@@ -69,11 +73,13 @@ const TABLE := {
 	# Plus de fer dans le Temple (2026-11-20) : le champion porte du cuivre, mais ses pièces sont les seules
 	# peu communes et rares du biome.
 	"strazhar": [{"item": "copper_greatsword", "chance": 1.0}, {"item": "copper_armor", "chance": 0.1},
-		{"pick": ["plan_scale", "plan_ember", "plan_lens", "plan_barrel"], "chance": 0.2}],
+		{"pick": ["plan_scale", "plan_ember", "plan_lens"], "chance": 0.2}],
 	# Boss du Temple : le plan de leur module d'exo, toujours (fabriqué ensuite à l'Établi d'exo).
 	"martyre": [{"item": "plan_veil", "chance": 1.0}],
 	"archipretre": [{"item": "plan_wisp", "chance": 1.0}, {"item": "key_nave", "chance": 1.0}],
-	"oeil": [{"item": "plan_iris", "chance": 1.0}],
+	"oeil": [{"item": "plan_magnet", "chance": 1.0}],
+	"eclusier": [{"item": "plan_frost", "chance": 1.0}, {"item": "key_locks", "chance": 1.0}, {"item": "porthole", "chance": 1.0}],
+	"patine": [{"item": "plan_patine", "chance": 1.0}, {"item": "key_gorge", "chance": 1.0}],
 	"gorge": [{"item": "plan_drill", "chance": 1.0}, {"item": "copper", "chance": 1.0, "n": [8, 12]}, {"item": "key_waters", "chance": 1.0}],
 }
 
@@ -160,13 +166,20 @@ static func owner_of(e: Enemy, item: String) -> String:
 	return e.bearer if Gear.is_gear(item) and Gear.slot_of(item) != Gear.MODULE else ""
 
 
+## Objet commun (rareté « normal ») hors mods : tombe toujours (100 %).
+static func always_drops(item: String) -> bool:
+	if rarity_of(item) != "normal":
+		return false
+	return not (Gear.is_gear(item) and Gear.slot_of(item) == Gear.MODULE)
+
+
 ## Tire les lignes d'une table (TABLE, CACHES) : liste d'objets.
 static func roll_rows(rows: Array, r: RandomNumberGenerator) -> Array[String]:
 	var out: Array[String] = []
 	for row: Dictionary in rows:
-		if r.randf() >= float(row["chance"]):
-			continue
 		var item: String = row["item"] if row.has("item") else row["pick"][r.randi() % (row["pick"] as Array).size()]
+		if not always_drops(item) and r.randf() >= float(row["chance"]):
+			continue
 		var count: Variant = row.get("n", 1)
 		if count is Array:
 			count = r.randi_range(int(count[0]), int(count[1]))
@@ -201,7 +214,7 @@ const CACHES := {
 		{"pick": ["plan_seal", "plan_wisp", "plan_chant", "plan_sack"], "chance": 0.5}],
 	"bridge": [{"item": "copper", "chance": 1.0, "n": [6, 10]}, {"pick": ["gear_gloves", "gear_boots", "gear_hood"], "chance": 0.6},
 		{"item": "copper_shield", "chance": 0.25},
-		{"pick": ["plan_lens", "plan_barrel", "plan_frost", "plan_anchor", "plan_echo"], "chance": 0.4}],
+		{"pick": ["plan_lens", "plan_frost", "plan_anchor", "plan_echo", "plan_iris"], "chance": 0.4}],
 }
 
 

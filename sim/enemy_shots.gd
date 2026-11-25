@@ -29,6 +29,8 @@ extends RefCounted
 ## Rendu : EffectsDrawer._enemy_shots.
 
 ## Annonce du tir (s), divisée par la cadence de la vague.
+## Dégâts fixes d'un projectile d'ennemi ordinaire sur l'Exilé incarné (100 PV).
+const SHOT_DAMAGE := 12.0
 const WINDUP := {"archer": 0.4, "soldier": 0.45, "spitter": 0.5}
 const ARCHER_CLOSE := 3.0
 const ARCHER_CLOSE_WINDUP := 2.0
@@ -63,6 +65,15 @@ const VOLLEY := {
 	"eel": {"every": 4.0, "range": 13.5, "count": 8, "ring": true, "speed": 5.0, "r": 0.35, "shot": "ichor", "damage": 0.5},
 }
 const MOUTH_AHEAD := 3.0
+## Geste de tir (atlas cast de tools/lanceurs, choix du 2026-11-23). release : s entre le début du geste et le départ
+## de la boule ; ahead : départ de la boule devant l'ennemi (unités, 8 px par unité). À tenir égaux au manifeste des
+## ennemis (cast.release, cast.from). Le chien garde MOUTH_AHEAD et SPIT.warn, calés sur le même geste.
+const CAST := {
+	"spitter": {"release": 0.5, "ahead": 3.2},
+	"creep": {"release": 0.4167, "ahead": 1.7},
+	"brute": {"release": 0.625, "ahead": 3.9},
+	"skeleton_bomb": {"release": 0.4583, "ahead": 1.5},
+}
 const MOUTH_UP := 0.25
 const HIT := 0.375
 ## Motifs statiques : distance maximale de l'Exilé incarné pour qu'ils se forment.
@@ -112,13 +123,23 @@ static func fire(sim: Simulation, e: Enemy, aim: Vector2) -> void:
 			var u := GameState.incarnated
 			if u != null and u.alive() and not u.hidden:
 				aim = u.pos()
+			# Les orbes quittent la pointe du bâton abattu (geste « L'élévation »).
+			from = muzzle(e, aim)
 			var a := (aim - from).angle()
 			var n: int = ORB["count"]
 			for i in n:
 				var b: float = a + (i - (n - 1) / 2.0) * ORB["spread"]
-				_add({"kind": "orb", "x": e.x, "z": e.z, "vx": cos(b) * ORB["speed"], "vz": sin(b) * ORB["speed"],
+				_add({"kind": "orb", "x": from.x, "z": from.y, "vx": cos(b) * ORB["speed"], "vz": sin(b) * ORB["speed"],
 					"r": ORB["r"], "dmg": e.damage, "born": now, "until": now + ORB["life"], "seed": sim.rng.randi()})
 			Sfx.at("sort_lumiere", e.x, e.z)
+
+
+## Point au sol d'où part la boule d'un geste de tir : devant l'ennemi, du côté de to, jamais au-delà de la moitié
+## de l'écart (tir à bout portant).
+static func muzzle(e: Enemy, to: Vector2) -> Vector2:
+	var dx := to.x - e.x
+	var side := signf(dx) if absf(dx) > 0.3 else float(e.face)
+	return Vector2(e.x + side * minf(float(CAST[e.kind]["ahead"]), absf(dx) * 0.5), e.z)
 
 
 ## L'Exilé incarné, s'il peut être visé (vivant, visible), sinon null.
@@ -215,6 +236,7 @@ static func spit(sim: Simulation, e: Enemy, target: Unit, aim: Vector2, d: float
 		return
 	e.spit_at = now + SPIT["every"] + sim.rng.randf() * SPIT["jitter"]
 	e.spit_fire_at = now + SPIT["warn"]
+	e.cast_started = now
 	e.spit_target = target
 	e.spit_core = target == null
 
@@ -260,14 +282,27 @@ static func _volley(sim: Simulation, e: Enemy, u: Unit, now: float) -> void:
 	if at == -INF:
 		e.memo["volley_at"] = now + sim.rng.randf() * float(V["every"])
 		return
-	if now < at:
+	# Geste de tir : il commence release s avant le tir (même cadence qu'avant), l'ennemi tourné vers sa cible.
+	var lead: float = float(CAST[e.kind]["release"]) / maxf(e.pace, 0.01) if CAST.has(e.kind) else 0.0
+	var armed: bool = e.memo.get("volley_armed", false)
+	if now < at - (0.0 if armed else lead):
 		return
 	var from := e.pos()
 	var d := u.pos().distance_to(from)
 	if d > float(V["range"]) or not sim.combat.clear_shot(from, u.pos()):
-		e.memo["volley_at"] = now + 0.3
+		e.memo["volley_at"] = now + 0.3 + lead
+		e.memo["volley_armed"] = false
 		return
+	if lead > 0.0 and not armed:
+		e.memo["volley_armed"] = true
+		e.memo["volley_at"] = now + lead
+		e.cast_started = now
+		e.face = -1 if u.x < e.x else 1
+		return
+	e.memo["volley_armed"] = false
 	e.memo["volley_at"] = now + float(V["every"])
+	if lead > 0.0:
+		from = muzzle(e, u.pos())
 	var n: int = V["count"]
 	var a := (u.pos() - from).angle()
 	var spd: float = V["speed"]
@@ -280,6 +315,17 @@ static func _volley(sim: Simulation, e: Enemy, u: Unit, now: float) -> void:
 
 
 static func _add(b: Dictionary) -> void:
+	# +5 % de vitesse par biome (Biomes.power_at) au point de départ, portée inchangée : le vol raccourcit d'autant ;
+	# « pw » relève aussi le barème fixe contre l'Exilé (_hurt). Les annonces (sans vitesse) ne bougent pas.
+	var pw := Biomes.power_at(float(b["z"]))
+	b["pw"] = pw
+	if pw != 1.0:
+		var moving := float(b.get("vx", 0.0)) != 0.0 or float(b.get("vz", 0.0)) != 0.0
+		if moving:
+			b["vx"] = float(b["vx"]) * pw
+			b["vz"] = float(b["vz"]) * pw
+		if (moving or b["kind"] == "pilum") and b.has("until") and b.has("born"):
+			b["until"] = float(b["born"]) + (float(b["until"]) - float(b["born"])) / pw
 	GameState.enemy_shots.append(b)
 	if GameState.enemy_shots.size() > MAX:
 		GameState.enemy_shots.pop_front()
@@ -310,6 +356,7 @@ static func tick(sim: Simulation, dt: float) -> void:
 				keep.append(b)
 			continue
 		if now >= b["until"]:
+			_end(b, "range")
 			continue
 		b["x"] += b["vx"] * dt
 		b["z"] += b["vz"] * dt
@@ -319,8 +366,8 @@ static func tick(sim: Simulation, dt: float) -> void:
 			Combat.flash(b["x"], b["z"], Color("#e17b63"))
 			continue
 		if ts != null and not ts.walkable(b["x"], b["z"]) and not ts.water_at(b["x"], b["z"]):
-			# Extinction : petit éclair gris (piste 5·B ; avant : jaune #f0cc66, la couleur des annonces).
-			Combat.flash(b["x"], b["z"], EXTINCT, EXTINCT_SIZE)
+			# Écrasement propre à chaque tir (planche « Fin des projectiles », 2026-11-23 ; avant : éclair gris EXTINCT).
+			_end(b, "wall")
 			continue
 		# Boule de feu : elle touche aussi la cible qu'elle visait (adepte), sans invulnérabilité.
 		var tg: Variant = b.get("target")
@@ -334,7 +381,7 @@ static func tick(sim: Simulation, dt: float) -> void:
 			var dx: float = u.x - b["x"]
 			var dz: float = u.z - b["z"]
 			var d2 := dx * dx + dz * dz
-			if d2 < reach * reach and _hurt(sim, u, b["dmg"], now):
+			if d2 < reach * reach and _hurt(sim, u, b["dmg"], now, float(b.get("pw", 1.0))):
 				if b["kind"] == "arrow":
 					Sfx.at("fleche_impact", u.x, u.z)
 				continue
@@ -360,7 +407,7 @@ static func tick(sim: Simulation, dt: float) -> void:
 		Combat._fx({"type": "arrowhit", "x": at.x, "z": at.y, "age": 0.0, "duration": 0.24, "seed": sim.rng.randi()})
 		Sfx.at("fleche_impact", at.x, at.y)
 		if u != null and u.pos().distance_to(at) < PILUM["radius"]:
-			_hurt(sim, u, b["dmg"], now)
+			_hurt(sim, u, b["dmg"], now, float(b.get("pw", 1.0)))
 		# Éclats en croix, alignés sur le jet.
 		var a := (at - Vector2(b["x"], b["z"])).angle()
 		var n: int = PILUM["shards"]
@@ -368,6 +415,14 @@ static func tick(sim: Simulation, dt: float) -> void:
 			var c: float = a + i * TAU / n
 			_add({"kind": "shard", "x": at.x, "z": at.y, "vx": cos(c) * PILUM["shard_speed"], "vz": sin(c) * PILUM["shard_speed"],
 				"r": PILUM["shard_r"], "dmg": b["dmg"] * PILUM["shard_damage"], "born": now, "until": now + PILUM["shard_life"]})
+
+
+## Fin d'une balle sans touche : contre la roche (« wall ») ou au bout de sa durée de vie (« range »). Dessin seul
+## (ShotEnds, calque des tirs ennemis) ; la balle a déjà quitté la liste.
+static func _end(b: Dictionary, mode: String) -> void:
+	var kind: String = b["kind"] if ShotEnds.DUR.has(b["kind"]) else "shard"
+	Combat._fx({"type": "shot_end", "kind": kind, "mode": mode, "x": b["x"], "z": b["z"], "vx": b["vx"], "vz": b["vz"],
+		"scale": b.get("scale", 1.0), "age": 0.0, "duration": ShotEnds.DUR[kind][0 if mode == "wall" else 1]})
 
 
 ## Fin de l'annonce de l'anneau d'ichor : les gouttes partent du rayon ICHOR.r0 autour du corps.
@@ -381,9 +436,10 @@ static func _ichor_ring(b: Dictionary, now: float) -> void:
 
 
 ## Coup porté à l'Exilé incarné, sauf pendant son invulnérabilité ; renvoie s'il a porté.
-static func _hurt(sim: Simulation, u: Unit, dmg: float, now: float) -> bool:
+static func _hurt(sim: Simulation, u: Unit, dmg: float, now: float, pw: float = 1.0) -> bool:
 	if now < GameState.martyre_iframe_until:
 		return false
-	sim.combat.hit_unit(u, dmg)
+	# Barème fixe contre l'Exilé : 12 par projectile d'ennemi ordinaire, +5 % par biome (pw).
+	sim.combat.hit_unit(u, SHOT_DAMAGE * pw if u.role == "engineer" else dmg)
 	GameState.martyre_iframe_until = now + IFRAMES
 	return true

@@ -1,8 +1,8 @@
 class_name PackBar
 extends Control
 ## Paquetage de l'Ingénieur (ses 10 cases, Unit.inventory), toujours affiché en bas de l'écran.
-## Désincarné : rangée centrée juste au-dessus du bandeau de commandement. Incarné : sur la même rangée que la barre
-## d'objets (ItemBar), à sa droite, l'ensemble centré sous la barre de PV. Cases 16 bits de la barre d'objets.
+## Désincarné : rangée centrée juste au-dessus du bandeau de commandement. Incarné : seule rangée de la console, centrée
+## sous la barre de PV (ExileGallery). Cases dessinées par ItemBar.paint_case.
 ## Survol : bulle avec le nom et la quantité. Clic gauche : ouvre l'inventaire (touche C). Masqué pendant la
 ## cinématique d'ouverture, les menus de construction et tant que l'Ingénieur n'a pas de paquetage.
 
@@ -41,11 +41,19 @@ static func available() -> bool:
 
 ## Incarné sans panneau de bâtiment ouvert : le bandeau est masqué, la rangée se loge au bas de l'écran.
 static func in_row() -> bool:
-	return GameState.incarnated != null and not HudModel.incarnated_panel()
+	return HudModel.hud_exile() != null and not HudModel.incarnated_panel()
 
 
 static func width() -> float:
 	return COUNT * SLOT + (COUNT - 1) * GAP
+
+
+## Lignes de la rangée incarnée (2 avec le Sac sans fond), 0 si le paquetage n'est pas dans la rangée.
+static func rows() -> int:
+	if not (available() and in_row()):
+		return 0
+	var u := engineer()
+	return 2 if u and u.inventory_capacity > COUNT else 1
 
 
 ## Largeur que la barre d'objets doit céder à droite quand les deux partagent la rangée du bas (0 sinon).
@@ -57,11 +65,7 @@ func _slot(i: int) -> Rect2:
 	var screen := get_viewport_rect().size
 	var x0 := roundf((screen.x - width()) / 2.0)
 	var y := screen.y - ItemBar.MARGIN - SLOT
-	if in_row():
-		if ItemBar.available():
-			var tools := ItemBar.COUNT * SLOT + (ItemBar.COUNT - 1) * GAP
-			x0 = roundf((screen.x - tools - row_extra()) / 2.0) + tools + SEP
-	else:
+	if not in_row():
 		y = float(get_parent().get("hud_bottom")) - ABOVE - SLOT
 	# Sac sans fond : la seconde rangée (cases 11 à 20) au-dessus de la première.
 	return Rect2(x0 + (i % COUNT) * (SLOT + GAP), y - (i / COUNT) * (SLOT + GAP), SLOT, SLOT)
@@ -123,7 +127,7 @@ func _draw() -> void:
 	for i in _count():
 		var r := _slot(i)
 		var stack := _stack(i)
-		ItemBar.paint_case(self, r, not stack.is_empty(), _hover == i)
+		ItemBar.paint_case(self, r, not stack.is_empty(), _hover == i, in_row())
 		if stack.is_empty():
 			continue
 		var item: String = stack["item"]
@@ -155,7 +159,7 @@ func _tip(slot: Rect2, text: String) -> void:
 	# Incarné : au-dessus de la barre de PV, pour ne pas la masquer.
 	var top := slot.position.y - 8.0 - 28.0
 	if in_row():
-		top -= ItemBar.HP_GAP + ExileGallery.HP_H
+		top = ExileGallery.console_top(get_viewport_rect().size) - 8.0 - 28.0
 	var r := Rect2(roundf(slot.get_center().x - w / 2.0), top, w, 28.0)
 	r.position.x = clampf(r.position.x, 8.0, get_viewport_rect().size.x - 8.0 - w)
 	SnesBanner.paint(self, r)

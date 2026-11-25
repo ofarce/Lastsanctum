@@ -29,12 +29,12 @@ static func sound(id: String) -> String:
 
 
 static func unlocked() -> bool:
-	return GameState.research_done.has(RESEARCH)
+	return true
 
 
 ## Munition en service : la munition choisie si la recherche est faite, sinon les balles spirituelles.
 static func current() -> String:
-	return GameState.ammo if unlocked() and AMMO.has(GameState.ammo) else "spirit"
+	return GameState.ammo if AMMO.has(GameState.ammo) else "spirit"
 
 
 ## Molette : munition suivante (`step` = ±1), en boucle.

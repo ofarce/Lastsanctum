@@ -84,6 +84,10 @@ static func air(ci: CanvasItem) -> void:
 				_seal_sky(ci, f, now)
 			"mote":
 				_mote(ci, f, now)
+			"end":
+				var g := Proj.nat(f["x"], 0.0, f["z"]).round()
+				ShotEnds.draw(ci, 1.0, "or", f["mode"], g - Vector2(0.0, Martyre.BULLET["lift"]), g.y,
+					Proj.nat(f["vx"], 0.0, f["vz"]), now - float(f["at"]))
 	_bullets(ci, now)
 	_hitbox(ci, now)
 	# Étoiles d'étourdissement au-dessus de l'Ingénieur.
@@ -409,10 +413,12 @@ static func _lane(ci: CanvasItem, f: Dictionary, now: float) -> void:
 		var u := -R
 		while u <= R:
 			var at := c + n * u + p * (g + e)
-			if at.distance_to(c) <= R - 2.0 and (warn or posmod(int(u) >> 2, 3) == 0):
+			var shown := OeilMatrice.in_room(at.x / Proj.K, at.y / Proj.K, -0.3) if Martyre.hosted() else at.distance_to(c) <= R - 2.0
+			if shown and (warn or posmod(int(u) >> 2, 3) == 0):
 				_px(ci, at, ramp(LIGHT, 0.55 + 0.4 * pulse if warn else 0.35, Vector2(u, 0.0)))
 			u += 4.0
-	if not warn:
+	# Pan du bord embrasé : seulement sur le dôme (un hôte n'en a pas).
+	if not warn or Martyre.hosted():
 		return
 	var q := -1.3
 	while q <= 1.3:

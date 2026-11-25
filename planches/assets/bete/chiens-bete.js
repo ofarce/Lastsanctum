@@ -88,6 +88,15 @@ function pose(V,anim,t){
   P.jaw=.08+.35*growl+.06*Math.sin(TAU*ph*8)*growl;P.snarl=growl;P.pitch=-.03*growl;
   P.tailA=.15+.12*Math.sin(TAU*ph);P.tailW=.15*Math.sin(TAU*ph*2);P.ear=growl;P.maw2=.25*growl+.1*(1+Math.sin(TAU*ph*3))/2;
   P.drool=ph>.18&&ph<.46?(ph-.18)/.28:-1;
+ }else if(anim==='cast'||anim==='cast_run'){
+  // crachat « Le hurlement » (tools/lanceurs, 18 images) : la tête monte vers la voûte, gueule entrouverte, la gorge
+  // rougeoie, puis elle se rabat et crache (image 7). cast_run : même cou sur les pattes de la charge.
+  const u=cl(t/.75),up=sm(0,.34,u),snap=u<.36?0:cl((u-.36)/.05),back=sm(.58,.9,u),hi=up*(1-snap*snap);
+  if(anim==='cast_run'){const w=pose(V,'walk',t);Object.assign(P,w)}
+  else{P.feet=planted(V,[1.2,1,-1.2,-.8]);P.bob=.6+1.6*hi-1.2*snap*(1-back);P.rx=-1.2*hi+3*snap*(1-back);P.pitch=.05*hi-.04*snap*(1-back)}
+  P.neckA=-1.25*hi+.22*snap*(1-back);P.headP=-1.2*hi+.2*snap*(1-back);
+  P.jaw=.25+.3*up*(1-snap)+.95*snap*(1-sm(.5,.8,u));P.snarl=1;P.ear=1;P.maw2=.3+.5*snap*(1-back);
+  P.tailA=.15-.5*hi+.5*snap*(1-back);P.throat=u<.36?up:Math.max(0,1-(u-.36)/.12);
  }else if(anim==='attack'){ // ramassé, bond de 15 px en cloche, morsure à l'atterrissage, secousse, petit saut de retour
   const u=t/.75,c=sm(0,.3,u),a=cl((u-.3)/.3),air=u>.3&&u<.6,hold=sm(.6,.66,u)*(1-sm(.72,.78,u)),r=cl((u-.76)/.24);
   const J=12,H=8;const jx=J*ease(a)*(1-ease(r)),jy=-H*Math.sin(Math.PI*a)-2.4*Math.sin(Math.PI*r);
@@ -233,6 +242,10 @@ function draw(V,anim,t){
   if(V.eyes===3){for(const[ox,oy,s]of[[-1.2,-1.6,1],[.4,-2.2,.9],[1.6,-1.2,.85],[-.2,-.6,.7],[-2.4,-.4,.6]])dot(b,hc.x+ox,hc.y+oy,'fire',s)}
   // bave
   if(P.drool>=0){const x=tip.x-1.6,y0=tip.y+V.snoutR*.6+1;const L2=1+P.drool*4;for(let y=0;y<L2;y++)dot(b,x,y0+y,'pale',.85-y*.08);if(P.drool>.75)dot(b,x,y0+L2+1.5,'pale',.7)}
+  // gorge qui rougeoie avant le crachat (P.throat 0 à 1 : la braise monte du poitrail à la gueule)
+  if(P.throat>0){const n=Math.round(P.throat*6);for(let i=0;i<n;i++){const k=i/5;over(b,lerp(nb.x+1,hc.x,k),lerp(nb.y+V.neckR*.6,hc.y+V.head*.5,k),'fire',.55+.08*i);if(i>2)over(b,lerp(nb.x+1,hc.x,k),lerp(nb.y+V.neckR*.6,hc.y+V.head*.5,k)-1,'fire',.5)}
+   if(P.throat>.5&&jaw>.12)dot(b,lerp(hinge.x,tip.x,.45),lerp(hinge.y,(tip.y+jtip.y)/2,.45),'fire',.95)}
+  b.an={mouth:[(tip.x+jtip.x)/2+2.5*Math.cos(ha+jaw*.45),(tip.y+jtip.y)/2+2.5*Math.sin(ha+jaw*.45)]};
   return{hc,tip}};
  // ordre : patte loin, queue, corps, pattes près, tête
  leg(0);leg(1);tail();const T=torso();
@@ -314,5 +327,7 @@ function melt(b,k,V){const o=buf(b.w,b.h);const bi=MAT.indexOf('bone'),fire=MAT.
 const cache=new Map();
 function frame(v,anim,t){const A=ANIMS.find(a=>a.id===anim),i=Math.min(A.frames-1,Math.floor(t*24+1e-6)%A.frames),key=v+'|'+anim+'|'+i;
  let c=cache.get(key);if(!c){const V=VARIANTS.find(x=>x.id===v);c=render(draw(V,anim,i/24),1);cache.set(key,c)}return c}
-return{VARIANTS,ANIMS,frame,FW,FH,AX,AY,STRIDE,G};
+// Tampon brut d'une pose (repères b.an compris), pour les exports qui posent un effet sur un repère.
+const raw=(v,anim,t)=>draw(VARIANTS.find(x=>x.id===v),anim,t);
+return{VARIANTS,ANIMS,frame,raw,FW,FH,AX,AY,STRIDE,G};
 })();

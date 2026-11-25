@@ -8,9 +8,8 @@ const GearItems := preload("res://data/gear_items.gd")
 const ItemIcon := preload("res://ui/inventory/item_icon.gd")
 const SLOT := 40.0
 const GAP := 6.0
-## Marge sous la barre (bord bas de l'écran) et écart avec la barre de PV au-dessus.
+## Marge sous la barre (bord bas de l'écran).
 const MARGIN := 18.0
-const HP_GAP := 6.0
 const COUNT := 3
 ## Pixel des balles dessinées dans la case (comme le barillet).
 const ICON_PX := 3.0
@@ -28,13 +27,13 @@ func _ready() -> void:
 
 
 static func available() -> bool:
-	var u := GameState.incarnated
-	return u != null and u.alive() and not u.hidden and u.role == "engineer" and not GameState.ended \
+	var u := HudModel.hud_exile()
+	return u != null and u.alive() and u.role == "engineer" and not GameState.ended \
 		and not HudModel.incarnated_panel()
 
 
 static func has_crossbow() -> bool:
-	return GearItems.weapon(GameState.incarnated).get("piece", "") == "cannon"
+	return GearItems.weapon(HudModel.hud_exile()).get("piece", "") == "cannon"
 
 
 func _slot(i: int) -> Rect2:
@@ -89,7 +88,7 @@ func _draw() -> void:
 	for i in COUNT:
 		var r := _slot(i)
 		var filled := not _name_of(i).is_empty()
-		paint_case(self, r, filled, _hover == i)
+		paint_case(self, r, filled, _hover == i, true)
 		if not filled:
 			continue
 		var c := r.get_center()
@@ -103,8 +102,11 @@ func _draw() -> void:
 
 
 ## Case carrée 16 bits (mêmes teintes que le barillet) : contour sombre, liseré blanc, fond bleu en bandes.
-## Partagée avec le paquetage (ui/hud/pack_bar.gd).
-static func paint_case(ci: CanvasItem, r: Rect2, filled: bool, hover: bool) -> void:
+## Partagée avec le paquetage (ui/hud/pack_bar.gd). `iron` : case de la console incarnée (fer sombre biseauté).
+static func paint_case(ci: CanvasItem, r: Rect2, filled: bool, hover: bool, iron := false) -> void:
+	if iron:
+		_iron_case(ci, r, filled, hover)
+		return
 	ci.draw_rect(Rect2(r.position + Vector2(3, 4), r.size), Color(0, 0, 0, 0.35))
 	ci.draw_rect(r, SnesBanner.EDGE)
 	ci.draw_rect(r.grow(-1.0), SnesBanner.RIM if filled else SnesBanner.RIM_LO)
@@ -118,6 +120,25 @@ static func paint_case(ci: CanvasItem, r: Rect2, filled: bool, hover: bool) -> v
 			col if filled else col.darkened(0.55))
 	if hover and filled:
 		ci.draw_rect(r.grow(-1.0), Color.WHITE, false, 2.0)
+
+
+## Case de fer de la console : contour noir, biseau clair en haut à gauche et sombre en bas à droite,
+## fond creusé ; survol = liseré doré.
+static func _iron_case(ci: CanvasItem, r: Rect2, filled: bool, hover: bool) -> void:
+	ci.draw_rect(r, ExileGallery.IRON_EDGE)
+	ci.draw_rect(r.grow(-1.0), ExileGallery.IRON_LIGHT if filled else ExileGallery.IRON_HI)
+	ci.draw_rect(Rect2(r.position + Vector2(2, 2), r.size - Vector2(3, 3)), ExileGallery.IRON_DK)
+	ci.draw_rect(Rect2(r.position + Vector2(2, 2), r.size - Vector2(4, 4)), ExileGallery.IRON)
+	var inner := r.grow(-4.0)
+	ci.draw_rect(inner, ExileGallery.IRON_EDGE)
+	var well := inner.grow(-1.0)
+	var bands := 6
+	for k in bands:
+		var t := float(k) / (bands - 1)
+		var col := Color("#262a33").lerp(Color("#121419"), t) if filled else Color("#16181d").lerp(Color("#0c0d11"), t)
+		ci.draw_rect(Rect2(well.position.x, well.position.y + roundf(k * well.size.y / bands), well.size.x, ceilf(well.size.y / bands)), col)
+	if hover and filled:
+		ci.draw_rect(r.grow(-1.0), ExileGallery.GOLD_HI, false, 2.0)
 
 
 ## La balle en service, dessinée comme en vol (EffectsDrawer), en pixels de ICON_PX.
@@ -137,7 +158,7 @@ func _tip(slot: Rect2, text: String) -> void:
 	var f := HudStyle.font()
 	var w := f.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, 13).x + 24.0
 	# Au-dessus de la barre de PV, pour ne pas la masquer.
-	var top := slot.position.y - HP_GAP - ExileGallery.HP_H - 8.0 - 28.0
+	var top := ExileGallery.console_top(get_viewport_rect().size) - 8.0 - 28.0
 	var r := Rect2(roundf(slot.get_center().x - w / 2.0), top, w, 28.0)
 	r.position.x = clampf(r.position.x, 8.0, get_viewport_rect().size.x - 8.0 - w)
 	SnesBanner.paint(self, r)

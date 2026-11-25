@@ -31,7 +31,13 @@ func test_repeated_vault_mining_and_solid_ore_drop() -> void:
 	var sim := game()
 	var st := sim.state()
 	# Gisement inépuisable : une case d'un filon au sol (le cuivre garanti de la réserve n'existe plus).
+	# Le premier filon de cuivre (les filons de fer et d'or ont rejoint la liste : le premier n'est plus forcément du cuivre).
 	var key: Vector2i = st.lodes.keys()[0]
+	for origin: Vector2i in st.lodes:
+		if st.lodes[origin] == "copper":
+			key = origin
+			break
+	check_eq(st.lodes[key], "copper", "un filon de cuivre sur la carte")
 	# Sa clairière est dans une galerie pas encore découverte : on les ouvre toutes.
 	st.open = st.mask.duplicate()
 	st.found = st.count

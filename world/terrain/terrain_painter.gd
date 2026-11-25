@@ -76,9 +76,11 @@ static func _sample(tex: PackedByteArray, p: Vector2i) -> PackedByteArray:
 
 ## digCell : terre creusée (avec éclats d'ardoise), bords assombris côté roche (bandes '#0008').
 func paint_dug_cell(i: int, j: int) -> void:
-	# Ordre du prototype : une révélation antérieure est entièrement peinte avant cette case.
+	# Ordre du prototype : une révélation antérieure se peint avant cette case. Seules les cases en file qui touchent
+	# la case creusée ou ses voisines sont peintes sur-le-champ : vider toute la file (le sol de la carte entière en
+	# début de partie) gelait le jeu plusieurs secondes au premier coup de pioche.
 	if not _queue.is_empty():
-		finish()
+		_finish_near(Rect2(i * 4.0 - 4.0, j * 4.0 - 4.0, 12.0, 12.0))
 	_blit_dug_cell(i, j)
 	# Les voisines déjà creusées gardaient leur bande sombre côté nouvelle case : on les repeint.
 	for d: Vector2i in [Vector2i(-1, 0), Vector2i(1, 0), Vector2i(0, -1), Vector2i(0, 1)]:
@@ -118,12 +120,22 @@ var _queue: Array[Vector2] = []
 
 
 ## Passe en tête de file les cases de la zone (ouverture de toutes les galeries : la grotte d'abord).
-func prioritize(zone: Rect2) -> void:
+func prioritize(zone: Rect2) -> int:
 	var first: Array[Vector2] = []
 	var rest: Array[Vector2] = []
 	for c in _queue:
 		(first if zone.has_point(c) else rest).append(c)
 	_queue = first + rest
+	return first.size()
+
+
+## Appelé avec le coin (x, z) de chaque case peinte depuis la file (World : le brouillard du Temple la découvre).
+var on_painted: Callable
+
+
+## Cases encore en file (coins x, z).
+func queued() -> Array[Vector2]:
+	return _queue
 
 
 func pending() -> int:
@@ -136,8 +148,27 @@ func process(budget_ms: float) -> int:
 	while not _queue.is_empty() and Time.get_ticks_usec() < deadline:
 		var c: Vector2 = _queue.pop_front()
 		_paint_region_cell(c.x, c.y)
+		if on_painted.is_valid():
+			on_painted.call(c)
 	terrain.flush()
 	return _queue.size()
+
+
+## Peint tout de suite les cases en file qui touchent `zone` ; le reste garde sa place dans la file.
+func _finish_near(zone: Rect2) -> void:
+	var rest: Array[Vector2] = []
+	var x0 := zone.position.x - 4.0
+	var x1 := zone.end.x
+	var z0 := zone.position.y - 4.0
+	var z1 := zone.end.y
+	for c in _queue:
+		if c.x > x0 and c.x < x1 and c.y > z0 and c.y < z1:
+			_paint_region_cell(c.x, c.y)
+			if on_painted.is_valid():
+				on_painted.call(c)
+		else:
+			rest.append(c)
+	_queue = rest
 
 
 ## Peint toute la file sans limite de temps (captures, tests, chargement).
@@ -145,6 +176,8 @@ func finish() -> void:
 	while not _queue.is_empty():
 		var c: Vector2 = _queue.pop_front()
 		_paint_region_cell(c.x, c.y)
+		if on_painted.is_valid():
+			on_painted.call(c)
 	terrain.flush()
 
 

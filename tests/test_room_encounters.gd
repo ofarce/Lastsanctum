@@ -15,17 +15,22 @@ func _state() -> TerrainState:
 func test_one_encounter_per_combat_room() -> void:
 	var st := _state()
 	var dens := RoomEncounters.dens(st)
-	var rooms: Array = st.temple_layout["rooms"]
+	# Tous les plans en salles (Temple, puis Veines de vert-de-gris depuis le 2026-11-24).
+	var rooms: Array = []
+	for lay: Dictionary in st.room_layouts():
+		rooms.append_array(lay["rooms"])
 	# Depuis le 2026-11-22 : combats sans pylône, salles de ressources (gardées) et secrètes ont leur rencontre.
 	var guarded := rooms.filter(func(r: Dictionary) -> bool: return RoomEncounters.encounter_tier(r) != "")
 	check_eq(dens.size(), guarded.size(), "une rencontre par salle gardée")
 	check(dens.size() > rooms.filter(func(r: Dictionary) -> bool: return r["kind"] == "combat" and not r["pylon"]).size(), "plus que les seuls combats")
 	for d in dens:
-		var room: Dictionary = rooms[d["room"]]
+		var room: Dictionary = st.room_by_id(d["room"])
+		var biome := int(room.get("biome", 0))
 		check_eq(st.temple_room(d["x"], d["z"]).get("id", -1), d["room"], "salle %d : tanière au centre" % d["room"])
 		check_eq(d["tier"], RoomEncounters.encounter_tier(room), "niveau de la salle")
-		check(_doubled(d["tier"], d["kinds"]), "composition du niveau %s, levée deux fois" % d["tier"])
-		var expected := int(Biomes.LIST[0]["threat"]) + (1 if room["quarter"] == "C" else 0)
+		check(_doubled(d["tier"], d["kinds"], biome), "composition du niveau %s, levée deux fois" % d["tier"])
+		var bonus: Dictionary = st.room_layouts()[biome]["threat_bonus"]
+		var expected := int(Biomes.LIST[biome]["threat"]) + int(bonus.get(room["quarter"], 0))
 		check_eq(d["threat"], expected, "menace de la salle %d (%s)" % [d["room"], room["quarter"]])
 
 
@@ -82,7 +87,7 @@ func test_cleared_room_repopulates_after_nights() -> void:
 		check(RoomEncounters.after_clear(st, d, 10 + nights), "repeuplée après %d nuits" % nights)
 		check(not d.has("members") and not d.has("cleared_day"), "redevenue dormante")
 		check_eq(d["repop"], 1, "un repeuplement")
-		check(_doubled(d["tier"], d["kinds"]), "nouveau tirage du même niveau")
+		check(_doubled(d["tier"], d["kinds"], int(d.get("biome", 0))), "nouveau tirage du même niveau")
 	var guarded := dens.filter(func(d: Dictionary) -> bool: return prot.has(d["room"]))
 	for d: Dictionary in guarded:
 		d["members"] = []
@@ -91,8 +96,8 @@ func test_cleared_room_repopulates_after_nights() -> void:
 
 
 ## Composition de COMPOSITIONS[tier] levée deux fois (RoomEncounters.draw, 2026-11-22).
-static func _doubled(tier: String, kinds: Array) -> bool:
-	for one: Array in RoomEncounters.COMPOSITIONS[tier]:
+static func _doubled(tier: String, kinds: Array, biome := 0) -> bool:
+	for one: Array in (RoomEncounters.COMPOSITIONS_VEINES if biome == 1 else RoomEncounters.COMPOSITIONS)[tier]:
 		if one + one == kinds:
 			return true
 	return false

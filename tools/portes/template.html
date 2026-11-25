@@ -1,0 +1,285 @@
+%%HEAD%%<main>
+<header>
+ <h1>Portes des tunnels</h1>
+ <p class="lead">Deux familles de portes pour le Temple. Les <b>portes intactes</b> ferment chaque bouche de tunnel qui part de la grotte de départ : ce sont les portes que les moines ont laissées, que l'Exilé retrouve en état. Les <b>portes détruites</b> marquent l'entrée de chaque quartier (A, B, C) : le Credo est passé par là avant nous. Chaque porte détruite est la ruine d'un modèle intact, pour que les deux familles parlent la même langue.</p>
+</header>
+
+<div class="reco">
+ <h2>Ma recommandation</h2>
+ <p><b>P1 Vantaux cerclés</b> aux bouches de la grotte : c'est la porte la plus lisible, ouverte comme fermée, et ses deux battants montrent bien le passage. Pour l'usage, <b>F2 Porte qui garde</b> : elle s'ouvre devant les alliés et oblige les meutes à la briser, ce qui donne une vraie raison d'avoir des portes.</p>
+ <p>Aux entrées de quartier, la ruine du même modèle, <b>R1 Vantaux enfoncés</b>, avec le glyphe du quartier sur la clef de voûte. On lit alors l'histoire d'un coup d'œil : la grotte a tenu, les quartiers sont tombés.</p>
+ <p>Répondez par les numéros, par exemple « P1, F2, R1 ». On peut aussi prendre une ruine d'un autre modèle que la porte intacte.</p>
+</div>
+
+<div class="tools">
+ <button id="pause" type="button" aria-pressed="false">Pause</button>
+ <span>Quartier des ruines :</span>
+ <button type="button" class="q" data-q="A" aria-pressed="true">A · Cloîtres</button>
+ <button type="button" class="q" data-q="B" aria-pressed="false">B · Nef dorée</button>
+ <button type="button" class="q" data-q="C" aria-pressed="false">C · Racines</button>
+ <span>Pixels du monde agrandis ×4</span>
+</div>
+
+<div class="part"><h2>Où vont les portes</h2><p>Plan schématique d'une bande du Temple, d'ouest en est : quartier A, route du boss R, quartier B, quartier C. Les bouches de la grotte sont trouvées là où un couloir ou une galerie franchit le bord de la grotte ; leur nombre dépend de la graine.</p></div>
+<figure class="plan">
+<svg viewBox="0 0 640 300" role="img" aria-label="Plan : la grotte en bas de la route R, ses bouches fermées par des portes intactes, et les entrées des quartiers A, B et C marquées par des portes détruites.">
+ <g font-family="Share Tech Mono,monospace" font-size="12" fill="var(--mute)">
+  <rect x="20" y="20" width="140" height="210" fill="none" stroke="var(--line)"/>
+  <rect x="180" y="20" width="140" height="210" fill="none" stroke="var(--line)"/>
+  <rect x="340" y="20" width="140" height="210" fill="none" stroke="var(--line)"/>
+  <rect x="500" y="20" width="120" height="250" fill="none" stroke="var(--line)"/>
+  <text x="30" y="38">A · Cloîtres</text><text x="190" y="38">R · route du boss</text><text x="350" y="38">B · Nef dorée</text><text x="510" y="38">C · Racines</text>
+  <!-- salles -->
+  <rect x="225" y="120" width="50" height="30" fill="var(--panel)" stroke="var(--acc-dk)"/><text x="232" y="139">hub</text>
+  <rect x="60" y="150" width="60" height="34" fill="var(--panel)" stroke="#f0a040"/><text x="66" y="171" fill="#f0a040">seuil A</text>
+  <rect x="380" y="150" width="60" height="34" fill="var(--panel)" stroke="#58a8f0"/><text x="386" y="171" fill="#58a8f0">seuil B</text>
+  <rect x="530" y="150" width="60" height="34" fill="var(--panel)" stroke="#e04048"/><text x="536" y="171" fill="#e04048">seuil C</text>
+  <ellipse cx="250" cy="238" rx="62" ry="26" fill="var(--panel)" stroke="var(--acc)"/><text x="214" y="243" fill="var(--fg)">grotte de départ</text>
+  <!-- couloirs -->
+  <path d="M250 212 V150" stroke="var(--mute)" stroke-width="6" fill="none"/>
+  <path d="M225 135 H120 V150" stroke="var(--mute)" stroke-width="6" fill="none"/>
+  <path d="M275 135 H410 V150" stroke="var(--mute)" stroke-width="6" fill="none"/>
+  <path d="M312 244 H560 V184" stroke="var(--mute)" stroke-width="6" fill="none"/>
+  <path d="M190 244 H150 V200" stroke="var(--mute)" stroke-width="3" stroke-dasharray="4 4" fill="none"/>
+  <!-- porte mb1 existante -->
+  <rect x="326" y="128" width="8" height="14" fill="#ddb457"/><text x="300" y="118" fill="#ddb457">mb1</text>
+  <!-- portes intactes -->
+  <g fill="var(--acc)"><rect x="243" y="204" width="14" height="6"/><rect x="314" y="237" width="6" height="14"/><rect x="180" y="237" width="6" height="14"/></g>
+  <!-- portes détruites -->
+  <g stroke-width="3" fill="none"><path d="M112 144 l16 0 M115 141 l4 6 M124 140 l-3 7" stroke="#f0a040"/><path d="M402 144 l16 0 M405 141 l4 6 M414 140 l-3 7" stroke="#58a8f0"/><path d="M552 190 l16 0 M555 187 l4 6 M564 186 l-3 7" stroke="#e04048"/></g>
+ </g>
+ <g font-family="Share Tech Mono,monospace" font-size="12" fill="var(--fg)">
+  <rect x="20" y="282" width="14" height="6" fill="var(--acc)"/><text x="40" y="290">porte intacte (bouche de la grotte)</text>
+  <path d="M300 285 l16 0" stroke="#f0a040" stroke-width="3"/><text x="324" y="290">porte détruite (entrée de quartier)</text>
+  <path d="M520 285 h18" stroke="var(--mute)" stroke-width="3" stroke-dasharray="4 4"/><text x="544" y="290">galerie</text>
+ </g>
+</svg>
+<figcaption>La porte détruite du quartier B est au seuil, derrière la porte à clef mb1, qui ne change pas.</figcaption>
+</figure>
+
+<div class="part"><h2>Portes intactes · bouches de la grotte</h2><p>Chaque vignette montre une bouche vue depuis la grotte : la paroi nord de la grotte, le tunnel qui part vers le nord, et la porte qui s'ouvre puis se referme en boucle.</p></div>
+<div id="listP" style="display:contents"></div>
+
+<div class="part"><h2>Usage des portes intactes</h2><p>Indépendant du modèle choisi.</p></div>
+<div class="uses">
+ <div class="use"><h3><i>F1</i>Décor ouvert</h3><p>Les portes restent ouvertes. Elles ne servent qu'à marquer les bouches de la grotte.</p><p class="mute">Aucun risque pour l'équilibrage, aucun travail de règles. Mais une porte qu'on ne ferme jamais déçoit un peu.</p></div>
+ <div class="use"><h3><i>F2</i>Porte qui garde</h3><p>Fermée par défaut. Elle s'ouvre seule devant un allié et se referme derrière lui. Les ennemis doivent la briser, comme une barricade à PV ; elle se relève d'elle-même à l'aube.</p><p class="mute">Fait de la grotte une vraie place forte : les meutes des pylônes perdent du temps à chaque bouche. Les squelettes, qui viennent par le sud, ne sont pas concernés. Il faut régler ses PV ; je proposerais ceux d'une palissade.</p></div>
+ <div class="use"><h3><i>F3</i>Jour et nuit</h3><p>Ouvertes le jour, fermées à la tombée de la nuit, toutes ensemble. Les alliés passent toujours ; les ennemis les brisent.</p><p class="mute">Lisible et lié au rythme de la menace. Mais les portes claquent toutes à la fois, ce qui peut enfermer dehors un ennemi qu'on poursuivait.</p></div>
+</div>
+
+<div class="part"><h2>Portes détruites · entrées des quartiers</h2><p>Même cadre, posé où le couloir entre dans la salle-seuil du quartier. Décor seul : on passe à travers. La clef de voûte porte le glyphe du quartier, à sa couleur (boutons en haut pour changer). Chaque ruine reprend un modèle intact.</p></div>
+<div id="listR" style="display:contents"></div>
+</main>
+
+<script>
+%%ENGINE%%
+/* ---------- palettes propres à cette planche ---------- */
+const OAK=[0x2a1a10,0x46301e,0x684629,0x8a6238,0xa88050];  // chêne des vantaux
+const CHR=[0x121010,0x231c18,0x3a2c22,0x5a4030];           // bois calciné
+const EMB=[0x6a1808,0xb83814,0xf07a28,0xffc860];          // braises
+const QC={A:0xf0a040,B:0x58a8f0,C:0xe04048};
+const GLYPH={A:["#######","#.....#","#.###.#","#.#.#.#","#.#...#","#.#####","#......"],
+ B:["#..#..#","#..#..#","#..#..#","#######","...#...","...#...","..###.."],
+ C:["..###..",".#...#.","#..#..#","#.###.#","#..#..#",".#...#.","..###.."]};
+let QUARTER='A';
+
+/* ---------- scène : la grotte en bas, un tunnel qui part vers le nord ---------- */
+const XL=48,XR=80,YB=58,DH=16;               // bouche du tunnel : 32 px de large, pied de porte en YB, porte de 16 px
+const scene=(x,y)=>{if(y>=YB&&y<86){const ex=Math.min(x-3,124-x),ey=Math.min(y-YB,85-y);if(ex<0)return false;return !(ex<5&&ey<5&&ex+ey<5)}
+ return x>=XL&&x<XR&&y<YB};
+
+/* cycle : fermée 1,8 s, s'ouvre 0,9 s, ouverte 1,8 s, se referme 0,9 s */
+function cyc(){const u=(T%5.4)/5.4*5.4;const s=k=>k*k*(3-2*k);
+ if(u<1.8)return 0;if(u<2.7)return s((u-1.8)/.9);if(u<4.5)return 1;return 1-s((u-4.5)/.9)}
+
+/* ---------- cadre de pierre : montants, linteau, clef de voûte ---------- */
+function jambs(){for(const x0 of[XL-4,XR]){rect(x0,YB-DH-1,4,DH+1,S[3]);rect(x0,YB-DH-1,1,DH+1,S[4]);rect(x0+3,YB-DH-1,1,DH+1,S[1]);
+  for(let j=YB-DH+4;j<YB;j+=5)rect(x0,j,4,1,S[2]);rect(x0-1,YB-2,6,2,S[2]);rect(x0-1,YB-2,6,1,S[4])}}
+function lintel(broken){const y=YB-DH-5;for(let i=XL-5;i<XR+5;i++){if(broken&&i>XL+9&&i<XL+15)continue;
+  for(let j=0;j<4;j++)px(i,y+j,j===0?S[5]:j===3?S[1]:((i-XL)%10===0?S[2]:S[3]))}
+ if(broken){px(XL+9,y+4,S[2]);px(XL+15,y,S[1]);rect(XL+10,y+3,5,1,S[1])}}
+function keystone(q,cracked){const cx=(XL+XR)/2,y=YB-DH-15;rect(cx-6,y,12,11,S[3]);rect(cx-6,y,12,1,S[5]);rect(cx-6,y,1,11,S[4]);rect(cx+5,y,1,11,S[1]);
+ const g=GLYPH[q||'A'];for(let j=0;j<7;j++)for(let i=0;i<7;i++)if(g[j][i]==='#')px(cx-4+i,y+2+j,S[1]);
+ if(cracked)line(cx+2,y,cx-1,y+10,INK);
+ post.push(()=>{const col=q?QC[q]:Q[2],a=q?(.55+.25*Math.sin(T*2.3)):(.9);
+  for(let j=0;j<7;j++)for(let i=0;i<7;i++)if(g[j][i]==='#'&&!(cracked&&i>3&&j>3&&hs(i*3+j)>.4))blend(cx-4+i,y+2+j,col,a);
+  if(q)light(cx,y+5,9,7,col,.05)})}
+
+/* battant qui pivote vers le nord autour de hx ; dir = +1 vers l'est, -1 vers l'ouest ; painter(u,v) → couleur | null */
+function leaf(hx,dir,L,h,ang,painter,drop){const w=Math.max(1,Math.round(L*Math.cos(ang))),lift=L*Math.sin(ang)*.42;drop=drop||0;
+ for(let i=0;i<w;i++){const k=i/w,u=Math.min(L-1,Math.floor(k*L)),dy=-Math.round(lift*k)+Math.round(drop*k);
+  for(let v=0;v<h;v++){const c=painter(u,v,L,h);if(c===null||c===undefined)continue;px(hx+dir*i,YB-h+v+dy,mix(c,INK,ang*.5))}}}
+const oak=(u,v,L,h)=>{if(v===0||u===L-1)return OAK[3];if(v===3||v===h-4)return u%5===2?I[4]:I[2];if(u%5===4)return OAK[1];return v<2?OAK[3]:OAK[2]};
+const ironBars=(u,v,L,h)=>{if(v===1||v===h-2)return I[3];if(v===h-6)return I[2];if(u%3===1)return v<3?I[4]:I[3];
+ if(v<5&&((u%6===3&&v===3)||(u%6===4&&v===2)||(u%6===2&&v===2)))return I[3];return null};
+
+/* ---------- portes intactes (o = ouverture 0..1) ---------- */
+function p1(o){jambs();lintel();keystone();const a=o*1.35;leaf(XL,1,16,DH,a,oak);leaf(XR-1,-1,16,DH,a,oak);
+ if(o<.05){rect(XL+14,YB-9,4,2,I[4]);px(XL+15,YB-7,I[2])}}
+function p2(o){const rise=Math.round(o*(DH-2));
+ for(let x=XL;x<XR;x++)for(let y=YB-DH;y<YB;y++){const yy=y+rise,v=yy-(YB-DH);if(yy>=YB)continue;
+  const bar=(x-XL)%4===1,cross=v%5===2;if(bar||cross)px(x,y,bar?((x-XL)%8===1?I[4]:I[3]):I[2])}
+ for(let x=XL+1;x<XR;x+=4)if(YB-rise<YB)px(x,YB-rise,I[4]);
+ jambs();lintel();keystone();rect(XL-4,YB-DH-1,1,1,I[3])}
+function p3(o){const off=Math.round(o*30);
+ for(let x=XL;x<XR;x++){const sx=x-off;if(sx<XL)continue;const u=sx-XL;for(let v=0;v<DH;v++){
+   let c=v===0?S[5]:u===0?S[4]:u===31?S[1]:S[3];if(v===DH-1)c=S[1];if((u===15||u===16)&&v>2&&v<DH-2)c=S[2];px(x,YB-DH+v,c)}}
+ const gx=XL+12-off;if(gx+7>XL)post.push(()=>{const g=GLYPH.A;for(let j=0;j<7;j++)for(let i=0;i<7;i++)if(g[j][i]==='#'&&gx+i>=XL&&gx+i<XR)blend(gx+i,YB-DH+4+j,GLY,.7+.2*Math.sin(T*2))});
+ for(let x=XL;x<XR;x+=2)blend(x,YB,S[1],.8);
+ jambs();lintel();keystone()}
+function p4(o){jambs();lintel();keystone();const a=o*1.35;leaf(XL,1,16,DH,a,ironBars);leaf(XR-1,-1,16,DH,a,ironBars)}
+function p5(o){const dx0=XL+9,dw=14;
+ for(let x=XL;x<XR;x++)for(let y=YB-DH-1;y<YB;y++){const inDoor=x>=dx0&&x<dx0+dw&&(y>=YB-DH+4||Math.hypot(x+.5-(dx0+dw/2),y-(YB-DH+4))<dw/2);
+  if(inDoor)continue;const row=Math.floor((YB-y)/4),off=row%2?3:0;let c=(y-(YB-DH-1))%4===0?S[2]:((x-XL+off)%8===0?S[1]:S[3]);if(hs(x*.7+row*3)>.85)c=S[4];px(x,y,c)}
+ const a=o*1.35;leaf(dx0,1,dw,DH-1,a,(u,v,L,h)=>{const r=dw/2,dy=v-3;if(dy<0&&Math.hypot(u+.5-r,dy)>r-.2)return null;if(u===L-1||u===0)return OAK[3];if(u%4===3)return OAK[1];if(v===6||v===h-3)return I[2];return OAK[2]});
+ jambs();lintel();keystone();
+ rect(XR-3,YB-DH-2,1,4,I[3]);post.push(()=>{blend(XR-3,YB-DH+3,FR[3],1);light(XR-3,YB-DH+3,14,10,FR[2],.06)})}
+function p6(o){const stake=(x,h,c)=>{for(let j=0;j<h;j++){const w=j>h-3?0:1;for(let i=-w;i<=w;i++)px(x+i,YB-1-j,i<0?OAK[3]:i>0?OAK[1]:c)}};
+ for(let k=0;k<4;k++){const x=XL+1+k*3;stake(x,DH+1+Math.round(hs(k)*3),OAK[2])}
+ for(let k=0;k<4;k++){const x=XR-2-k*3;stake(x,DH+1+Math.round(hs(k+9)*3),OAK[2])}
+ rect(XL,YB-5,12,1,LN[1]);rect(XL,YB-12,12,1,LN[1]);rect(XR-12,YB-5,12,1,LN[1]);rect(XR-12,YB-12,12,1,LN[1]);
+ const a=o*1.4;leaf(XL+12,1,8,DH+2,a,(u,v,L,h)=>{if(v<2&&u%3!==1)return null;if(v===4||v===h-4)return LN[1];return u%3===1?OAK[3]:u%3===0?OAK[2]:OAK[1]});
+ leaf(XR-13,-1,8,DH+2,a,(u,v,L,h)=>{if(v<2&&u%3!==1)return null;if(v===4||v===h-4)return LN[1];return u%3===1?OAK[3]:u%3===0?OAK[2]:OAK[1]});
+ for(const x of[XL-3,XR+2]){rect(x,YB-DH-4,2,DH+4,OAK[2]);rect(x,YB-DH-4,1,DH+4,OAK[3]);px(x,YB-DH-5,OAK[3])}}
+
+/* ---------- portes détruites ---------- */
+function splinters(x,y,seed,n){for(let i=0;i<n;i++){const ox=Math.round((hs(seed+i*2.7)-.5)*22),oy=Math.round(hs(seed+i*4.1)*10),l=1+Math.round(hs(seed+i)*3),d=hs(seed+i*6.3)>.5?1:-1;
+ for(let j=0;j<l;j++)px(x+ox+j*d,y+oy+(j>>1),j?OAK[2]:OAK[3])}}
+function dust(seed){post.push(()=>{for(let k=0;k<5;k++){const u=(T*.18+k/5+seed)%1;blend(XL+4+hs(k*7.1+seed)*26+Math.sin(T+k)*2,YB-2-u*20,0x9a96a0,(1-u)*.35)}})}
+function r1(){jambs();lintel(true);keystone(QUARTER,true);
+ leaf(XL,1,16,DH,.35,(u,v,L,h)=>{if(u>11&&v>h-5)return null;if(u>13&&v<4)return null;return oak(u,v,L,h)},5);
+ // second battant arraché, à plat sur le sol de la salle
+ for(let j=0;j<8;j++)for(let i=0;i<17;i++){const x=XR-6+i-Math.round(j*.6),y=YB+4+j;if(i>14&&j<3)continue;if(i<2&&j>5)continue;
+  px(x,y,j===0?OAK[3]:j===7?OAK[1]:(i===4||i===12)?I[2]:i%4===3?OAK[1]:OAK[2])}
+ rect(XR+5,YB+3,3,1,I[3]);splinters(XL+16,YB+1,3,9);rubble(XL+20,YB+3,5,4,10);rubble(XR+10,YB-1,8,3,8);dust(.2)}
+function r2(){// herse coincée de biais à mi-hauteur, barreaux du milieu arrachés, bouts tordus
+ for(let x=XL;x<XR;x++){const k=(x-XL)/(XR-XL),bot=YB-4-Math.round(k*7),bar=(x-XL)%4===1,gap=x>=XL+13&&x<XL+22;
+  for(let y=YB-DH;y<bot;y++){const v=y-(YB-DH);if(gap&&v>3)continue;
+   if(bar)px(x,y,(x-XL)%8===1?I[4]:I[3]);else if(v%5===2)px(x,y,I[2])}
+  if(bar&&!gap)px(x,bot,I[4])}
+ for(const [x,d] of[[XL+10,-1],[XL+23,1]]){for(let j=0;j<5;j++)px(x+Math.round(d*j*j*.18),YB-DH+4+j,I[4])}
+ line(XL+14,YB+5,XL+26,YB+2,I[4]);line(XL+15,YB+6,XL+27,YB+3,I[2]);line(XL+5,YB+8,XL+11,YB+10,I[4]);line(XL+18,YB+9,XL+21,YB+12,I[3]);
+ jambs();lintel();keystone(QUARTER,true);rubble(XR-4,YB+2,11,4,10);dust(.5)}
+function r3(){for(let x=XL;x<XR;x++){const u=x-XL;for(let v=0;v<DH;v++){if(v>DH-1-u*.55+2)continue;if(u+v*1.6>30)continue;
+  let c=v===0?S[5]:u===0?S[4]:S[3];if((u===15||u===16)&&v>2)c=S[2];px(x,YB-DH+v,c)}}
+ line(XL,YB-2,XL+19,YB-DH,INK);
+ for(const [cx,cy,r] of[[XL+22,YB+3,3.4],[XL+28,YB+6,2.6],[XL+16,YB+7,2.2],[XR+2,YB+4,3]])boulder(cx,cy,r);
+ post.push(()=>{const g=GLYPH[QUARTER],a=.45+.3*Math.sin(T*3.1+Math.sin(T*7));for(let j=0;j<7;j++)for(let i=0;i<7;i++)if(g[j][i]==='#'&&i+j<8)blend(XL+5+i,YB-DH+4+j,QC[QUARTER],a)});
+ jambs();lintel(true);keystone(QUARTER,true);dust(.8)}
+function r4(){jambs();lintel();keystone(QUARTER,true);
+ leaf(XR-1,-1,16,DH,.6,(u,v,L,h)=>{if(u>9&&v<6)return null;if(u>12)return null;const c=ironBars(u,v,L,h);return c&&(u+v)%7===0?RU[1]:c},3);
+ for(let i=0;i<5;i++){const x=XL+3+i*4;line(x,YB+2+i%2,x+7,YB+6+(i%3),i%2?I[3]:RU[1])}
+ for(const [x,l,s] of[[XL-2,DH-2,1],[XR+1,DH-4,2],[XL+30,9,3]])vine(x,YB-DH-2,l,s);
+ moss(XL+8,YB+3,7,2,4);moss(XR-6,YB+1,5,2,9);dust(.1)}
+function r5(){const dx0=XL+9,dw=14;
+ for(let x=XL;x<XR;x++)for(let y=YB-DH-1;y<YB;y++){const inDoor=x>=dx0-2&&x<dx0+dw+3&&y>=YB-DH-1+Math.abs(x-(dx0+dw/2))*.25-(x>dx0+dw-2?-3:0);
+  if(inDoor)continue;if(x>XR-9&&y<YB-DH+4+(x-XR+9))continue;const row=Math.floor((YB-y)/4),off=row%2?3:0;
+  let c=(y-(YB-DH-1))%4===0?S[2]:((x-XL+off)%8===0?S[1]:S[3]);if(Math.hypot(x-(dx0+dw/2),y-(YB-8))<dw*.75)c=mix(c,CHR[1],.55);px(x,y,c)}
+ for(let j=0;j<7;j++)for(let i=0;i<13;i++){if(i>10&&j<2)continue;px(dx0+i-2+Math.round(j*.4),YB+3+j,j===0?CHR[3]:i%4===3?CHR[0]:CHR[2])}
+ jambs();lintel(true);keystone(QUARTER,true);rubble(XR-2,YB+2,6,5,12);
+ post.push(()=>{for(let k=0;k<6;k++){const f=Math.sin(T*3+k*2.1)>.2;blend(dx0+1+hs(k*3.3)*12,YB+4+hs(k*5.7)*5,f?EMB[2]:EMB[1],f?.95:.6)}
+  light(dx0+5,YB+6,14,6,EMB[2],.05);
+  for(let k=0;k<3;k++){const u=(T*.35+k/3)%1;gell(dx0+6+Math.sin(T+k)*2,YB+2-u*18,1+u*2,1+u*1.4,0x6a6a72,(1-u)*.25)}})}
+
+/* ---------- propositions ---------- */
+const P=[
+ {n:"P1",nom:"Vantaux cerclés",f:p1,
+  txt:"Deux battants de chêne noirci, cerclés de deux bandes de fer cloutées, dans un cadre d'ardoise. Ils s'ouvrent vers le tunnel, comme une porte de chapelle.",
+  pour:"La plus lisible : fermée, c'est une porte ; ouverte, les battants s'effacent contre les parois et le passage reste entier.",
+  contre:"Classique. Le bois tranche un peu sur l'ardoise, à doser avec la teinte du sol.",
+  jeu:"Deux battants en 5 images d'ouverture, cadre et clef de voûte fixes. Battants repris par R1."},
+ {n:"P2",nom:"Herse",f:p2,
+  txt:"Une herse de fer qui monte dans le linteau. On voit le tunnel à travers les barreaux, même fermée.",
+  pour:"Ferme sans cacher : on voit venir la meute derrière. Très parlante en défense.",
+  contre:"Plus militaire que monastique. Les barreaux fins scintillent un peu quand ils montent.",
+  jeu:"Un sprite qui glisse vers le haut, coupé par le linteau. Ruine : R2."},
+ {n:"P3",nom:"Dalle à glyphe",f:p3,
+  txt:"Une dalle d'ardoise d'un seul bloc, gravée d'un glyphe tyrien en quartz, qui coulisse dans la paroi. Des rainures au sol marquent sa course.",
+  pour:"La plus tyrienne : rien de bois ni de fer, la pierre et la lumière du quartz. Le glyphe peut dire où mène le tunnel.",
+  contre:"Fermée, elle se confond un peu avec la paroi ; c'est le glyphe qui la signale.",
+  jeu:"Un sprite qui glisse vers l'est, glyphe en décalque. Ruine : R3."},
+ {n:"P4",nom:"Grille de cloître",f:p4,
+  txt:"Deux battants de fer forgé à volutes, comme les grilles qui fermaient le chœur des moines.",
+  pour:"Légère et ajourée, elle laisse passer la vue et la lumière. Rappelle le monastère sans alourdir.",
+  contre:"Paraît fragile : si elle doit encaisser des coups (F2), on y croit moins.",
+  jeu:"Même pivot que P1, peint en barreaux. Ruine : R4."},
+ {n:"P5",nom:"Porte basse murée",f:p5,
+  txt:"La bouche est murée de moellons et ne garde qu'une porte basse en plein cintre, avec une veilleuse à côté. Une porte de cellule.",
+  pour:"La plus intime : on sent que les moines vivaient là. La veilleuse aide à repérer les bouches dans la pénombre.",
+  contre:"La porte est plus étroite que le tunnel : un goulot visuel, même si le passage reste de 3 cases en jeu.",
+  jeu:"Mur fixe, un battant cintré, une veilleuse. Ruine : R5."},
+ {n:"P6",nom:"Palissade de l'Exilé",f:p6,
+  txt:"Pas une porte des moines : une palissade de pieux ligaturés que l'Exilé a dressée lui-même, avec une porte de pieux au milieu.",
+  pour:"Raconte que la grotte est à nous. S'accorde avec les palissades et barricades déjà en jeu.",
+  contre:"Pas de ruine qui lui réponde : les quartiers ont été pris avant l'arrivée de l'Exilé.",
+  jeu:"Pieux fixes, deux petits battants. Peut se poser à la main comme une barricade."}
+];
+const R=[
+ {n:"R1",nom:"Vantaux enfoncés",f:r1,
+  txt:"La ruine de P1. Un battant pend de travers, la planche du bas arrachée ; l'autre a été jeté à plat dans la salle. Éclats et gravats, un bloc du linteau tombé.",
+  pour:"On lit le coup de bélier. Le battant au sol donne du relief à la salle-seuil.",
+  contre:"Le battant au sol prend de la place : il faut le garder hors des chemins des unités, ou le poser en décalque.",
+  jeu:"Deux sprites fixes, poussière animée."},
+ {n:"R2",nom:"Herse tordue",f:r2,
+  txt:"La ruine de P2. La herse est restée coincée à mi-hauteur, de biais, et les barreaux du milieu ont été arrachés. Deux barreaux traînent au sol.",
+  pour:"Très lisible, même petite. Le trou au milieu montre où l'on passe.",
+  contre:"Militaire, comme P2.",
+  jeu:"Un sprite fixe."},
+ {n:"R3",nom:"Dalle fendue",f:r3,
+  txt:"La ruine de P3. La dalle s'est fendue en biais ; le morceau du haut tient encore dans sa rainure, le reste a roulé en blocs. La moitié du glyphe brille encore, à la couleur du quartier, en vacillant.",
+  pour:"Le glyphe qui grésille annonce le quartier mieux qu'un carton. Très tyrien.",
+  contre:"Les blocs au sol ressemblent aux éboulis du décor : moins « porte » que R1 ou R2.",
+  jeu:"Sprite fixe, glyphe animé en décalque."},
+ {n:"R4",nom:"Grille envahie",f:r4,
+  txt:"La ruine de P4. Un battant a disparu, l'autre est tordu et rouillé. Les barreaux tombés sont pris dans la mousse, des lianes descendent du linteau.",
+  pour:"La plus ancienne des ruines : dit l'abandon plus que le combat. Bien pour le quartier C, les Racines.",
+  contre:"Peu violente : on ne sent pas que le Credo est passé.",
+  jeu:"Sprite fixe, mousse et lianes en décalque."},
+ {n:"R5",nom:"Porte brûlée",f:r5,
+  txt:"La ruine de P5. Le mur a cédé d'un côté, le cintre est éventré, la porte calcinée gît au sol avec des braises qui couvent encore. Un filet de fumée.",
+  pour:"La plus vivante : les braises et la fumée attirent l'œil de loin. On sent que c'est récent.",
+  contre:"Des braises qui couvent depuis des années, c'est peu crédible ; ou alors le Credo vient de passer.",
+  jeu:"Sprite fixe, braises (3 images) et fumée légère."}
+];
+for(const m of P){m.mask=scene;m.dark=.8;m.d=function(){this.f(cyc())}}
+for(const m of R){m.mask=scene;m.dark=.72;m.d=function(){this.f()}}
+
+/* ---------- page ---------- */
+const views=[];
+function build(list,host,rows){for(const m of list){const s=document.createElement('section');s.className='m';
+ const dl=rows.map(([k,l])=>m[k]?`<dt>${l}</dt><dd>${m[k]}</dd>`:'').join('');
+ s.innerHTML=`<div class="txt"><h2><i>${m.n}</i>${m.nom}</h2><p>${m.txt}</p><dl>${dl}</dl></div><figure></figure>`;
+ const c=document.createElement('canvas'),w=128,h=88;c.width=w;c.height=h;c.setAttribute('role','img');c.setAttribute('aria-label',m.nom+' : '+m.txt);
+ s.querySelector('figure').appendChild(c);const cap=document.createElement('figcaption');cap.textContent=m.n+' · '+w+' × '+h+' px du monde';s.querySelector('figure').appendChild(cap);
+ host.appendChild(s);const ctx=c.getContext('2d');views.push({m,w,h,ctx,id:ctx.createImageData(w,h),buf:new Int32Array(w*h),bg:null})}}
+build(P,document.getElementById('listP'),[['pour','Pour'],['contre','Contre'],['jeu','En jeu']]);
+build(R,document.getElementById('listR'),[['pour','Pour'],['contre','Contre'],['jeu','En jeu']]);
+
+let FL=null,RK=null;
+const tile=(t,x,y)=>{const i=(((y%t.h)+t.h)%t.h*t.w+((x%t.w)+t.w)%t.w)*4;return t.d[i]<<16|t.d[i+1]<<8|t.d[i+2]};
+function makeBg(v,k){const {w,h}=v,mask=v.m.mask,dk=v.m.dark,d=new Uint8ClampedArray(w*h*4);
+ for(let y=0;y<h;y++)for(let x=0;x<w;x++){let c;
+  if(mask(x,y)){c=tile(FL,x+k*37,y+k*53);for(let j=1;j<=5;j++)if(!mask(x,y-j)){c=mix(c,0x05060a,(6-j)*.085);break}
+   if(!mask(x-1,y)||!mask(x+1,y))c=mix(c,0x05060a,.3);if(y<YB)c=mix(c,0x05060a,Math.min(.55,(YB-y)/110))}
+  else{let dist=0;for(let j=1;j<=FACE;j++)if(mask(x,y+j)){dist=j;break}
+   if(dist){const top=FACE-dist,row=Math.floor(top/6);c=mix(S[2],S[0],top/FACE*.85);
+    if(top<2)c=top===0?S[4]:S[3];else if(top%6===1||(x+row*5)%10===0)c=mix(c,INK,.45);
+    else if(hs(x*.37+row*3.1+Math.floor(x/10)*7)>.82)c=mix(c,S[3],.35);
+    if(dist<4&&hs(x*1.7+k)>.7)c=mix(c,INK,.5)}
+   else if(mask(x+1,y)||mask(x-1,y))c=S[2];
+   else{c=mix(tile(RK,x+k*29,y+k*17),0x07080c,.25);if(mask(x,y-1))c=S[3];else if(mask(x,y-2))c=mix(c,S[2],.5)}}
+  const i=(y*w+x)*4;d[i]=(c>>16&255)*dk;d[i+1]=(c>>8&255)*dk;d[i+2]=(c&255)*dk;d[i+3]=255}
+ v.bg=d}
+function draw(v,t){W=v.w;H=v.h;T=t;buf=v.buf;M=v.m.mask;img=v.id.data;img.set(v.bg);buf.fill(-1);post.length=0;DK=v.m.dark;v.m.d();compose();DK=1;for(const f of post)f();v.ctx.putImageData(v.id,0,0)}
+function frame(t){for(const v of views)draw(v,t)}
+let time=2.2,last=0,paused=matchMedia('(prefers-reduced-motion:reduce)').matches,acc=0;
+function loop(now){const dt=Math.min(.1,(now-last)/1000||0);last=now;if(!paused){time+=dt;acc+=dt;if(acc>=1/20){acc=0;frame(time)}}requestAnimationFrame(loop)}
+function load(src){return new Promise(r=>{const im=new Image();im.onload=()=>{const c=document.createElement('canvas');c.width=im.width;c.height=im.height;const x=c.getContext('2d');x.drawImage(im,0,0);
+ r({w:im.width,h:im.height,d:x.getImageData(0,0,im.width,im.height).data})};im.src=src})}
+Promise.all([load("%%SOL%%"),load("%%ROCHE%%")]).then(([a,b])=>{FL=a;RK=b;views.forEach(makeBg);frame(time);requestAnimationFrame(loop)});
+const bp=document.getElementById('pause');
+function showPause(){bp.setAttribute('aria-pressed',String(paused));bp.textContent=paused?'Reprendre':'Pause'}showPause();
+bp.addEventListener('click',()=>{paused=!paused;showPause()});
+for(const b of document.querySelectorAll('button.q'))b.addEventListener('click',()=>{QUARTER=b.dataset.q;
+ for(const o of document.querySelectorAll('button.q'))o.setAttribute('aria-pressed',String(o===b));frame(time)});
+</script>

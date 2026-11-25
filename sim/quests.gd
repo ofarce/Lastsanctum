@@ -87,6 +87,12 @@ func objective() -> Dictionary:
 	boss = Archipretre.objective()
 	if not boss.is_empty():
 		return boss
+	boss = Eclusier.objective()
+	if not boss.is_empty():
+		return boss
+	boss = Patine.objective()
+	if not boss.is_empty():
+		return boss
 	match quest:
 		"anchor":
 			var p := clampf(GameState.orb_progress / Simulation.ORB_TIME, 0.0, 1.0)

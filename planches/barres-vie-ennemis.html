@@ -1,0 +1,149 @@
+<title>Barres de vie des ennemis</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Cormorant+SC:wght@500;700&display=swap">
+<style>
+/* Planche de jeu, sombre par choix : une rangée par piste, texte à gauche, scène en pixels natifs ×4 à droite
+   avec les vrais sprites ennemis, et la barre seule agrandie ×8 en dessous. Accent = rouge sang de la barre. */
+:root{--bg:#12141a;--panel:#1a1d26;--line:#2f3440;--fg:#dcdde4;--mute:#8c92a3;--acc:#e0645a;--acc-dk:#6a2a26;
+ --disp:"Cormorant SC",Georgia,serif;--mono:"Share Tech Mono",ui-monospace,monospace;color-scheme:dark}
+body{background:var(--bg);color:var(--fg);font:14px/1.5 system-ui,sans-serif;margin:0;
+ padding-block:24px 60px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+main{max-width:1080px;margin:0 auto;display:flex;flex-direction:column;gap:26px}
+h1{font-family:var(--disp);font-size:2.3rem;line-height:1.1;margin:0;letter-spacing:.04em;text-wrap:balance}
+.lead{color:var(--mute);max-width:72ch;margin:.5rem 0 0}
+.reco{border-left:3px solid var(--acc-dk);padding:2px 0 2px 14px;max-width:76ch}
+.reco p{margin:.3rem 0 0}.reco b{color:var(--acc);font-weight:600}
+section.m{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,600px);gap:10px 24px;align-items:start;padding-top:22px;border-top:1px solid var(--line)}
+@media (max-width:860px){section.m{grid-template-columns:minmax(0,1fr)}}
+.txt{min-width:0}
+h2{font-family:var(--disp);font-size:1.6rem;margin:0;letter-spacing:.03em;text-wrap:balance}
+h2 small{font-family:var(--mono);font-size:.8rem;color:var(--acc);letter-spacing:.08em;margin-right:.6em}
+.txt p{margin:.4rem 0;max-width:62ch}
+.txt ul{margin:.4rem 0;padding-left:1.1em;color:var(--mute)}
+.txt li b{color:var(--fg);font-weight:600}
+.spec{font-family:var(--mono);font-size:12px;color:var(--mute);margin-top:.6rem}
+.fig{display:flex;flex-direction:column;gap:8px;min-width:0}
+canvas{display:block;width:100%;max-width:600px;height:auto;image-rendering:pixelated;image-rendering:crisp-edges;background:#000;border:1px solid var(--line)}
+.cap{font-family:var(--mono);font-size:11px;color:var(--mute);letter-spacing:.04em}
+.q{border:1px solid var(--line);background:var(--panel);padding:14px 18px;max-width:80ch}
+.q h2{font-size:1.3rem}.q ol{margin:.5rem 0 0;padding-left:1.2em}.q li{margin:.25rem 0}
+</style>
+<main>
+<header>
+<h1>Barres de vie des ennemis</h1>
+<p class="lead">Cinq pistes d’après ta capture : cadre noir épais, rouge vif avec un liseré clair en haut, fond rouge éteint, et une petite pastille ronde suspendue sous le milieu. Chaque scène montre les vrais sprites du jeu (soldat, archer, squelette, chien de la Bête) en pixels natifs ×4 ; ils prennent des coups en boucle pour voir la barre bouger. Les boss gardent leur grande barre en haut d’écran.</p>
+</header>
+<div class="reco"><p><b>Ma recommandation : E « Sceau d’état » avec la traîne de B.</b> La forme de la capture reste intacte, et la pastille devient utile : elle dit d’un coup d’œil qui porte du butin, qui est un alpha, qui est ralenti ou maudit. La traîne rend chaque coup lisible sans chiffre.</p></div>
+
+<section class="m"><div class="txt"><h2><small>A</small>Médaillon</h2>
+<p>La capture reproduite telle quelle. La pastille prend la couleur de la faction.</p>
+<ul><li><b>Credo</b> : or terni</li><li><b>Bête</b> : pourpre</li><li><b>Morts</b> (squelettes) : vert d’os</li><li><b>Faune</b> : ardoise</li></ul>
+<p class="spec">cadre 1 px noir · remplissage 2 px · liseré clair 1 px · pastille Ø 5 px</p></div>
+<div class="fig"><canvas data-p="A" width="150" height="66"></canvas><canvas data-z="A" width="75" height="11"></canvas><div class="cap">scène ×4 · barres seules ×8 à 100 %, 55 %, 20 %</div></div></section>
+
+<section class="m"><div class="txt"><h2><small>B</small>Médaillon à traîne</h2>
+<p>A, plus la part perdue qui reste visible : un éclat blanc deux images, puis une bande ambre qui fond après 0,3 s. Un gros coup se lit à la longueur de la traîne, sans attendre le chiffre de dégâts.</p>
+<p class="spec">éclat blanc 2 images · traîne ambre · fonte 0,3 s après le coup</p></div>
+<div class="fig"><canvas data-p="B" width="150" height="66"></canvas><canvas data-z="B" width="75" height="11"></canvas><div class="cap">scène ×4 · barres seules ×8</div></div></section>
+
+<section class="m"><div class="txt"><h2><small>C</small>Cartouche Sarcelle</h2>
+<p>Même rouge, mais le cadre reprend la Sarcelle et le laiton des panneaux du HUD, avec des coins en laiton et une pastille en losange serti. Plus cohérent avec l’interface, un peu moins brut que la capture.</p>
+<p class="spec">cadre sarcelle · coins laiton · losange 5 px</p></div>
+<div class="fig"><canvas data-p="C" width="150" height="66"></canvas><canvas data-z="C" width="75" height="11"></canvas><div class="cap">scène ×4 · barres seules ×8</div></div></section>
+
+<section class="m"><div class="txt"><h2><small>D</small>Médaillon à crans</h2>
+<p>A, avec un cran sombre tous les 25 % (ou tous les 20 PV, au choix). On compte les coups qu’il reste. La largeur suit la taille de l’ennemi : 14 px petit, 18 px moyen, 24 px grand.</p>
+<p class="spec">cran 1 px · 3 largeurs selon la taille du corps</p></div>
+<div class="fig"><canvas data-p="D" width="150" height="66"></canvas><canvas data-z="D" width="75" height="11"></canvas><div class="cap">scène ×4 · barres seules ×8</div></div></section>
+
+<section class="m"><div class="txt"><h2><small>E</small>Sceau d’état</h2>
+<p>A, mais la pastille porte l’information du moment au lieu de la faction :</p>
+<ul><li><b>Faction</b> : couleur de A au repos</li><li><b>Porteur de butin</b> : or avec une étincelle</li><li><b>Alpha</b> : pastille plus grande, couronne à trois pointes, barre plus large</li><li><b>Ralenti</b> : bleu glacier</li><li><b>Maudit</b> : violet qui pulse</li><li><b>Étourdi</b> : blanc qui clignote</li><li><b>Armure</b> : liseré acier au lieu du liseré rouge clair</li></ul>
+<p class="spec">ordre de priorité : étourdi › maudit › ralenti › butin › faction</p></div>
+<div class="fig"><canvas data-p="E" width="150" height="66"></canvas><canvas data-z="E" width="75" height="11"></canvas><div class="cap">scène ×4 : alpha, porteur de butin, maudit, ralenti · barres seules ×8</div></div></section>
+
+<div class="q"><h2>À trancher</h2><ol>
+<li>Quelle piste, ou quel mélange (par exemple E + traîne de B) ?</li>
+<li>Barre toujours affichée, comme sur ta capture, ou seulement une fois l’ennemi blessé ?</li>
+<li>Pastille sous la barre (capture) ou à gauche de la barre, pour gagner de la hauteur dans les mêlées serrées ?</li>
+</ol></div>
+</main>
+<script>
+const SPR={"soldier": {"src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACgAAAAqCAYAAADBNhlmAAADEUlEQVR4nO2YQUhacRjAf46QEHEmMWSUkyFjSEREiDSTHXYaY+wQg2CMMTrE6LBdduzQYYedOowRO0SLFmMMtkNEk9EhZIiIvYW8RUhz7RESIk5EIqK3g/rQLHpP/xVBv4t/v7/Cz+/7f+99PrjgggsuOF+0O93qWTscSbvTrU7OzKsiJVua+bLLbK0RKQLB/r6mhA5iWLBaarY3qMVjW5tMpFNirKowJOgyW9XZ3iDeXi9yXNbiA8vTuJNR5MkYwYCfBw+f8PXTtJpJp0ynKgilTA0sTzNwyN6gv4XHUS+LG7O07qSbdQPgkt4PusxW9bnTzYvkUt3e32RUWy/2moWIVdAtaHdZj5U7CXQLQknmoFCnx6etvT09jIwOizEro/sMribTpnv3h9XX46NabGn8lbYek67w59cX2tqu8SwgrsyGmqSrtYXA1cuw/Zvw1j8GR4ZQ4isAjLPG+6Fb3O3YFyYHBksMoMRXUOIrJdEq/L6bwqSqMSQ4l1BM41MhItE1AC17gBYTjeHr4FxCMQGq/xTkoAHBbo9T/RCP18QsySiyJPFy7A3ZTA63u0OYoKESd3ucdVPKSV8HdWew2+NUf8qrQL2ULEksh2Nizco0NG51enx8+/wOQBMLBvqYD0XEmZXRNW1UZ6+aSiZlSQJKsk/77Ux9DDMTVlByO01PM7rP4MGyHiUnGkMlPq4h1uVkUzKHYfhOUk0lexXCuXZmQ2IldQmWBwVNSJakGrlKo8yHIvzYyAsV1F3ivWIGr2MBNhfYSW7U7PmcsBQpcPsGfJd2z0YQIB7dqIstRQrCZA5Dl6DLbFWHW9w4Fly8XUvgs9mI5vP4bDa282btPUChmBUqaLhJfDZbzetJ01QXnwa6Sry5WzBNpFMq5T/mj4bvEAz0sRyOcR2YDkXIFUtncd+yd/qCFUko3faCgfrHG5X9Dkur0IdHhoeFfDbPfmKRxHoGeznWZYe8w6KmskWTktsxzYQVVcR9GBo8g4n1jLaWUrm6fVFy0GSTHCYnmoZ+qdthqTtnqWxRWNbOFf8Beos2CCK8ymsAAAAASUVORK5CYII=", "w": 40, "h": 42, "ax": 15, "ay": 40, "hh": 33, "bb": [9, 7, 23, 41]}, "archer": {"src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACgAAAAqCAYAAADBNhlmAAADe0lEQVR4nO2YQWgjVRiAv5SwhFDcbKlLKN01h6HWWErsYYlQPOyhlLWUpXiQWjxIDosE9FBWqKClB1mWPS6lyJ7ELWwRvYguRXIoIZQQkhjS2VLGGLNDWGuIcQghhJDnIc7Ybpo2M8lWhHwQeO//X8LH/9689zLQp0+fPn36dIPNypcmJbc4KZ5Snln6vZ4yKbmFqB22fHLy96KdeDcMmJX7WU61zd9dC7atrlU6FjxN7qkSNdpzM/6eSpqq4EkcldPZXL3BqMvRE0lTgk+VaIvQFema0fb6fNwKBljfVnl8f7EnkvZOB6aUZ7a5+YC4uxY0YqG1L4z2Z8nL/PbkOy5deoU//4iy92ilWzfA5DazODEqvrz/CQDh/F9Mj1xEjScA2I3uA7CdzvEwEeP113xsrd5gNriJWqpa3n5Mr0E1nkCNJ5geuXgs7r82btXhVDoS9Epu4ZXc4mEixsL6D0a19OrBvxU8ymxws+u1eOYa9Epusfckyd6jFa687EEtVW3bDrvwnyGnk062z/VEsFLUeO9NHwBvSS4iGU2kq3VeDd4xxjiVKHPzASYcdpLVeldCz9PRFPs8Lnwel9E/acOem/GTfk5OLVVtyw/i3AtMWZ7mjrcZgLWPZwH4Zes2F6beMeJyMonrcB+tqOEcesmKR28Ej1KLf4MyIOH1+QCYXFhiYwF2wjE+/egWdsAz5BT1RuN8BBdu+ltijfRj5CP9nXDMaH+72qz2gazw9bbC5vh1luI7Ilcrm9oTOxY8kBXGvNKxvi6ZPigAkM2WiGQ0fv09w4+fN5eAnrOKqSnWpTpheUuhUtQAuPOBD8KmvAwsr0E4Xp1kttSSzxYrNv3pXdwPodbMH3lnCmaLFdt6KCcI5fjw+lUmxoZbpk2Xi2T+o6c4W6zYvCN28W5gCGhQc5SO5ccmIbRbZv7yAD8lu1tzlgR14tFMSyy0W247ftTlEPcCUyw/iFu+0XQsKOfrtpWNggDYuDpDLJ8D4FC7QKRSZHC42hzoHLbi0RZT1y05X7eVC462OTlfb6lSav/QoloTS/9J9OpFNe3Uce9Pj/JVWD3fC+t588IEb44Pdl09sLBRDww2GF9ykT4oMIWzGcvWiGQaIlus9PzVh6WT5LQTRCuUePuNCVJquevqQZdH3UnH2z9SohdyYPHtlmfI2XI7fhHT+7/gb/NBhtd2MOsFAAAAAElFTkSuQmCC", "w": 40, "h": 42, "ax": 15, "ay": 40, "hh": 30, "bb": [8, 10, 28, 41]}, "shield": {"src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACgAAAAqCAYAAADBNhlmAAADIklEQVR4nO2YT0iTYRzHP4sxIsaYQ0Qk1xCJGCIxZOygO4gHiagOIRKdRMJTFESFQocgD9EhIkJEpIN4iuoQY0h4kA7jReYaa4kMWa8vIjJExhhDpLeD7vXdn9b7zyjY5/I87/Nv331/v+d5nw2aNGnSpMk/jc3MZK/DKaufxYOCqfXqoXtBtaiFQFhpX90WebmTtVykXc9gr8MpLwTC+AN+0vG00j4QHcEXm2VurATbVsrTKRCOnBqIjjBAT03f9EQrkzM5Ob19aJmLZ7QO9Dqc8r12H/eTD2r6tmKzSn3o8ln8HXa5ZpBBNAt0tpb+KO400BwKf4ddjs4HAegM3anoqxY5PCZgVZh1LeLvsMvTE60Egl0ALL896XuSaOPH9w+0tFxgf1+0LAd1LXSr57w8+/oRAJ9XnjEUnkKKrwEQE9YBWEqJLKakv79JykjxNaT4GkPhqYr2UPCSVZoq0CVwMSXZns4vKW6V3YMTB61G9zl4HD451EBcvWPG6KbRPcnfYZe/pecq2qp3cVzYrJk3OZMzJFJXiHu722uc0SLODJpD3NvdLn9NJ49ELd+wVEQjdO9igM7Bj8SFTeLCJi9eJZX2snueSEBpW44VTAnU5KDavTLXHyfZyggEbgLitCkRjdDs4FZGaPh8Wug6ZrSIKofXEwmwdyVuTJUKQzlYJp1IkE4kgJP8e+dZUUqz+QcaBSYzO7ar18YVMWph1QyGnBWlWTSH+LCYw++JgBihlDlyayPp5mLvPhzfbsqsbot01VnjVAVC7SEsFSWkGASCv58zGHIafotoFuh1OOVxuw9PxMub9RRBlwshnyfo8iHk83C3do4V+QcGNknQ5aooAR6OSsolVo1Z9wwJrIdaLEC2J2vFsoCO24z6B/vt8SHC/X2sfFkF4NNSjMNijuh8sCJPzboHOhwUDwo28aBgc3udhPv7zHymLnSHOL+X52cqSvL9Au7dddy76/S4oVhyMPq8TclFK9wDAzdqgNRGTqknsvtKfSOdYHhMAozfoKsxJLCMWhxAbidry9UfahhD39LnOVdzs87uFS3/6+2/4Bd+/j8g47U6WgAAAABJRU5ErkJggg==", "w": 40, "h": 42, "ax": 15, "ay": 40, "hh": 31, "bb": [9, 9, 27, 41]}, "skeleton": {"src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAAA0CAYAAAA62j4JAAAC60lEQVR4nO2ZMWjbQBSGf5VQQjAajAg3lGDoLdUQSjGhhBAyZehQTIfQqXjwEErw0CFkCMGUDiVDJw+heHC3kpZggofSyZQQghHBGNdeFDDuIqiHYkIRSeF1CKeemqTtEN3RcB8ISycZvff0v3fvJMBgMBgMBoPBYDAYNOFyRrpt0ILLGbmcEZ0GJPZ126QM4bi8+e268iDcUHkzgcsZfe61LjxXWisoTYkxVTcSXOb8Uc/DzFweAPA4dw8AqOsHVtL2aFHAUc/747FKEo/w77ic0e5O5dz4YfMAAND41MTb2iHCkxDfw+Prp4CuH1gPHxViY7LzAMAmx5Q4rxWXM9qurEcbnQaxX1WFUHmUHZaJHJtMhXj/oYVOoxy7pvSyAhUFEFAcAIdl6MXmL2c9L178up0WKq+3MD93H8Ogr8Q2pdPgMOhb66srlFvKx8a7nVa032mUMZkKMVRkk/I+YBj0rdp2lb5+OYjGxDR4MpE9lw7XDpcz8tt1otOA0rZDadshv12ntO1QoViitO3Q0yeLyoqgcgUIjnoemnvV6Li5V8XJRBaL0z+i6fDaIlQgFCBUUCiWlD59QKMCDpsH2Hq1HB3fvpPFs2IW5ef7ukxSh8tZ9KRlFahsgLQivwvw2/XIcdEdupyR3DAlifbFkLwOaOy3AQDFjQo8z0Ntu5p4Q6RlweFyRrMPlmMVv7Hfjtpfh2WovJgCAKzWfAxGYWJ2ankfAAA3v50Vu4X5mXPO55byWPl4DADYzHFM2eM0ZY8nkhLalpwuZ7QwOw3gLAjyAshhGRoGfUs4vZnjAJJRgzYFCETey4i8H4xCazAKrdWaDwDI33UwZY8rK5CJIk+FcvW/7HqRBhvzt6jrB/9/EGSn5W8Df/vfVStASyco8l/u+d+9+bdV4GAUWhj1r8wWrTVArv660F4EdaM8AJH8L6j+4rxKe7QpoLRWwMLsdMzh3Z2K8k9j2lphsS9qwEVjBoPBYDAYDEnyE5uzm/mbO4weAAAAAElFTkSuQmCC", "w": 64, "h": 52, "ax": 32, "ay": 43, "hh": 31, "bb": [27, 12, 47, 44]}, "beast": {"src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAFQAAAAwCAYAAACPDl2NAAAEgElEQVR4nO2aQUgjZxTH/ylhDrt7CEGWECIEG4pOi+Sgu0WWIrsgZQ9B9tCDiEgbPcyWnKRIEAmlLLJICyI5uFJ2IYRCYQ9BFtlDsT2I7UoJA/0IJaRDV0SohFDaixS/HtI3fjOZmOjuTGbp94OQ+Gbyzfj3vf/7XiIgkUgkEolEIpFIJBKJRCKRSCQSiaT3BHp9A90QDSo8FA+DVY8C0aDCD/85MZ/pHDUU5vb3sUb9jfj9PCUaVPhGLMar+hZXExG+EYtxikWDCgeaYv6+XbQ8dh4ucTUU5k5Cu8lbXl7soqiJiCnG8q0ZlJ5uWo7nItcRDSp8+5v1lvcODKvIZzXks5pj9rpF0KsLdUJNRDirHgXEn0tPN6Ec/gkA+BBA/9AIfs7NYi+moqYzAMDesNqylvH5xzidXMDA8Nl5aijMvbAAX3gMiZe6lwaJGg0qfPzKtZZz55c0U6gBBzH7P4ji5Q+H6A+t42XjUzNe0xm0B3kA7nprTwUVs1IUtWHUkYtcx9xv+7h5dRA//l0BAHz/1Vlp20WlrCwUS5i58iviy187XpOEdUtUTz1U9EQSUIwRe1uPAQA3rw6az3OjE5ZzqJRrOkNNZzidXEClzDA9lcLp5IIZt0Pe6pavvva/EnlVO09M3UsDxyfNYJ8CiuXn0ygUS3j04jnufzKD5HdnYryTmW25TqXcPD6YVB3jTsfsuJGpr3UxNRTm+awG7UEev/zB8O5QEgDAqkcBNRTmJCA1GgDov3Mb3z5Zx/uxsxKmzBJfE6Jg57HPqubrETXRcmzXOHCl7F3p8vms1izR4xMSlm+vf4mazvD20Ajur85gcWoWADA3OoHllUVLCW98kTfXml/SAFiF3GdVjKgJi2jtIDEpWwvFkmtiAi6VfD6roVAsYXoqZenENZ2Z8fN4mFsDAHyWy1jilTLrKOKucdASG4vHAACPXjzH3OjEmyUo0BR1LB7D8sqiJU5Z2M7/iEqZOXpjN2I6CWU2oD4FOD5xddvkSsmzRj0AA7ydF4rlZ/c3O916Zsf7AYDGKy/VEU+2TaKwIk7Ngh4EiX/Z7PQaT0dPcSNe05tlLWagvYEAr1bqvcBVQZ280m4DJKpTVnYqd2pAfhETcHn0pObklHl2SFT7DqBQLAFw7t5+EpJwNUOpOYkxUdR2G3c9+Bc+eu8GAGB6KmWK6kcB7Xhyg+LcTBlr90+7Tzplqh9L3I5ngmbujpsTDmAV8MZxHT/1hQE0S7udTZAt+KkJ2XG9y9PkVCmztuMiiUnsGgemsKKgFg824MkHxhfFs23TYFI1vbAdLZlngOO/zb+9oY3FY74U1fWboU5PniiWrZ3zxsbM3XHLhAX4a/9JuJ6h1OmnhZg4IXUShY6tPdvhGTQz3TJhGeDoUyB+9tpLPBk9WaMeoO9z7KWbW9UcP7V3WmPt2Y7zGovprtbwAk9HT9omUWPaNQ4wcd4bulgjt6oht7Lpmwz1FDUU5unkMFdDYV7Vt8x/XrjsGrSOX7KzJ1CTURORSwshDgr/azElkgvzL2A1mpaRGQn7AAAAAElFTkSuQmCC", "w": 84, "h": 48, "ax": 36, "ay": 44, "hh": 28, "bb": [19, 18, 64, 46]}, "tick": {"src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAoCAYAAAC4h3lxAAACbUlEQVR4nO2WMWgTYRTHf5GaQTPUEo7aIZSqR7kWKaWUCCHWoqGIQ+0QcKkdg0opLi7aoYNTqUEXEZG2bhlKcVCpWoocIqFDac8QDglHkaOEUDKIQzp8DjbHNTZWc5dB+H5w8L6P7957/++9exxIJBKJRCKRSCQSiUTSEAG/HIU0VRy2/z1n+hbjMHxxHtJUsZ5dcdZvvm4AsJbd4kP6ZVNFHPPqoDb5Ws4MDdatjh94EnBU8m6CHUpTRHiuQLVdqra7faqkHk4STyUJdijCLSQSbhVa2wkRCbc2LM6zAIDF66PMXEs667XsFgvKcc4pp7iSiALQd76beCrJ2USMYIciIuFW8Wz6Dp9eTBPrVWlURIvX5NeyW5zcCzI+liBq5blZ3APg4orhJA+wsZkH4OroMJf7NWf/VnrJU3zP0yGkqWJmqJ8FWujJmQCMjyUAmC2XD5y1CzZ91jfGxxLMlsu8e/CER7dvsJ4roBsm26XyP+fjuYXaikXH/qKpDGhd3MtbACirWZTVLHbBxi7YzPVrFIcHmVh6j12wOX3pwgFf4fZO4X7+Jr7nFqrSkzPRDZM0MJUcYXFpBd0wqfR2g2UDMGHZ7JoF2tQudvdttE7uP38FwNzjp9ydTDn2cmZeAJR2rLqV8U1ALQNaFwC6kWcnGHT2K3YxsAsCoL1ScZIFWM7Ms5yZd85+1D8DEI9FRT0RvgvYLpUD6cxbMZUcQTdMYr3qb/1dsYu/7P3J82PzNbphUqr5BuKx6JEV8GWM1hGBW0QjY7K0YwX+lDw0SYCbqeRIU/378pNVvd3aMei+9Xojst67EolE8n/wE8ZW+45YbRuYAAAAAElFTkSuQmCC", "w": 48, "h": 40, "ax": 23, "ay": 34, "hh": 17, "bb": [15, 19, 42, 34]}, "brute": {"src": "data:image/png;base64,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", "w": 48, "h": 46, "ax": 24, "ay": 43, "hh": 39, "bb": [1, 6, 47, 45]}, "strazhar": {"src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEQAAAAwCAYAAACooNxlAAAGlklEQVR4nO2ZcWgTVxzHPw0hlHJUF0IpQUNJR5FMRIKGTFwZRSSDub9GsTJkiEiR4NwoIpuIjDFkDHFSRIrIGM6Vsn/GBitDCtvEhZsEEQ0SNJR2lCBHcCGEEEJuf9ze6931Tq9JOreRLxx5ebl7994339/3/X530EUXXXTRRRdddNFFF110sbGIhf36i57DvwKxsF+Phf360vwevdOk+Do52D+BWNivz19LrOnr1Pj+Tg30IpA6oiLISR1RdYDcSqOnnTH/UwoxK8GuEtHXrlr+M4SYQyV1RAWcSflfIBJQ9EhA0WNhvy7aIcUnDzAI0Z9+qQtD1Z9+KU1VtM19rc7lhXlILOzXK1ovANfjowC8Nj/Or6k5AP7YlyP/uATA9PcV/Um5ySuxozzIXWU5M+M4pvh9/prhKa34yT9KSCSg6ABKqMaD3FW5eIGJobN8s/ix/P7eoTTBTT7SBxTyy3V+ulu3nL81eYz5a52dY1uO7AWRgKIroRoVrVcqAeDyw/sc37Zdfn9tftzx+vcOpQEIbvKRX65TKDZc7xUd9PPT3ToD/b6Wd5sNI0So4Xp81BIKAndWlmT7/XtTruOI8Pj80j2+uDH93POyaoEPr2gtE9LxXUYY4/X4qFTExNBZwCBBHALPIsOMsaQi1WKHm6e0grYJEUoQu8SD3FWux0cti0/091tIeB4+is4C3hZqPierFtY7/TVoy1SFEt7J/qKb1ZDo7/c8xnJmhq3JY5a+yRtlTwt9dddRAMZK+1gI3uS3bw3SP/wkDhTXsxSJlj1EkHFnZYld4YgnBajlsiRLhMqzVGAmYiFTAWDqxA7ZN55WXa99VGyiVZrrXl9LhEQCin5ycMjTuWq5LNvmLdUMOyl2RQgyxpIK8UTU9V6nP8kyvn8zC5kKN+/WWjLWdYeMVzIEEZ/NbgFYExZmbE0e47tLpzn/lQbA6cMhwCBCK69us+e/0jjtcH08EZUkCvJaxboZtBMiwkB8Dh42JjQxdQ5w9gihCNG/nJnh1q0VADJZzUJCodggOuiXbYHESO+auWnlBqF+f8vqgHUqxIkM8flW2ges/jvC8Oam3QswJ/9IxkPkH5fIL1uzUjMZj4pNytXammuflJsM9DfaegTQ8i5j9gYnnDi4hfzjEuNplblpqxq8olBs8Nudq/K7uDZ1RHVdtFZpeh7fCZ7zELM67GQY6liLkeEgqd19gLEYt61UhIsdgoyJobNMDJ2VpH46Gdqw56lt5SHTh4z6Y/rxDCPDQcdzRoaDjKdVhrSwNFhBxiopq34gwuXrH64ABhniPiLj/Ww2Cle0dqbuCk8KcVKHmCRA+qVjxkL+LtftSO3uY9sbT8mqBU+7gRMZAMe3bZd5zEappKXU/fi27eSyOcthN0EzRoaDjAwH5bYqyFjIVFjIVMhkNSamzpHJapT+XPUAMxkXZu8DsCsc4dTBP1qZtic8lxC7Om5XnVUw2Rgjv1x3VcnE1DnmphMWZaj5Gmq+JqvYL25My0xUhIcg4tTb7wKwY8dhqZJ9O3s7rpKOPiCabIxx+cf78IZBivCVTFZjb2aGrFpgLKlQrRuekYzD3r1hx51HqOODg9u5MHufU2/vYj7f5PLDUwC456vtwXPImNVhL+Htle3DHzeTX66TyWpkshpTJ3ZYvCOT1aSS3Aq3XDYn26kRH5uOj1Jo5tZVOLYCTwoRZCzVKz0AF4uL+snBoWcWdOfPxGXbyUjnfq5yZjhItd5LVi041ihmUoANJwNaNNWleqXnYnHRko+o5bI8zNurExlqvsaTcpMTFw1Cq/VePr90T57rJXlrt2Zxg6cUNxJQdKEOe/+ePmv+Yc817BNX8zVLaR5SfPqlkxH5e1+gJtWyeG4zYBipwOSc4SEDe0qMJZW2KlsneFKIExmi/3a1xO1qiW8WP5blvRMZyXgIrdzgUdGaWmuVZo9QCiANF1a9SZAgPgXENt5JtP0Icale6VFCNUsFG09EiSeijCUVwCAD4M3XB0kfUNi/M4B4AQVrSbl1a8VitnbvGNhjGLJTxdsuOrrtPu+xn1uO4oboUY3ZCwEAVFOoADJcOo2OxF0s7Nc/nQxZ+hYyFdR8jcRIL8FNhhDN71WcHvGFFJ+ePqAw/3uV1O4+Sn82HRcuxrX7USfQsYHMGeO+nb3cvFv7+/mEjyflJi8P+iz+4baIkOLT9+80VFEoNp4ZFp00U4ENeVEVC/vXvFcNKT7d6z9p9peBfneb6zQZXTjgL7czmR72rPkvAAAAAElFTkSuQmCC", "w": 68, "h": 48, "ax": 33, "ay": 45, "hh": 36, "bb": [8, 11, 55, 47]}};
+const IMG={};for(const k in SPR){const i=new Image();i.src=SPR[k].src;IMG[k]=i;}
+const FAC={credo:"#d9a441",bete:"#b24bd6",morts:"#a6d07e",faune:"#8ea4b4"};
+const RM=matchMedia("(prefers-reduced-motion: reduce)").matches;
+function rng(s){return()=>{s=(s*1664525+1013904223)>>>0;return s/4294967296;};}
+// Dallage du monastère : ardoise sombre, joints, grain.
+const FLOOR=(()=>{const c=document.createElement("canvas");c.width=150;c.height=66;const g=c.getContext("2d");const r=rng(7);
+ g.fillStyle="#262a33";g.fillRect(0,0,150,66);
+ for(let row=0;row<7;row++){const y=row*10-2,off=(row%2)*8;for(let x=-16+off;x<150;x+=16){
+  const t=r();g.fillStyle=t<.3?"#2b3039":t<.7?"#2e333d":"#323844";g.fillRect(x+1,y+1,15,9);
+  g.fillStyle="#3a404c";g.fillRect(x+1,y+1,15,1);g.fillStyle="#1d2028";g.fillRect(x+1,y+9,15,1);
+  for(let n=0;n<5;n++){g.fillStyle=r()<.5?"#252931":"#383e4a";g.fillRect(x+2+((r()*13)|0),y+2+((r()*6)|0),1,1);}}}
+ return c;})();
+function px(g,x,y,c,w=1,h=1){g.fillStyle=c;g.fillRect(x|0,y|0,w,h);}
+const DISC=[".XXX.","XXXXX","XXXXX","XXXXX",".XXX."],DIAM=["..X..",".XXX.","XXXXX",".XXX.","..X.."];
+function shade(hex,k){const n=parseInt(hex.slice(1),16);let r=n>>16,g=n>>8&255,b=n&255;
+ const f=v=>Math.max(0,Math.min(255,Math.round(k>0?v+(255-v)*k:v*(1+k))));return`rgb(${f(r)},${f(g)},${f(b)})`;}
+function gem(g,cx,top,col,shape,ring,big){const m=shape==="diam"?DIAM:DISC;const s=big?7:5;
+ const mask=big?[".XXXXX.","XXXXXXX","XXXXXXX","XXXXXXX","XXXXXXX","XXXXXXX",".XXXXX."]:m;
+ const x0=cx-(s>>1),y0=top+1;
+ for(let y=-1;y<=s;y++)for(let x=-1;x<=s;x++){const on=(yy,xx)=>yy>=0&&yy<s&&xx>=0&&xx<s&&mask[yy][xx]==="X";
+  if(!on(y,x)&&(on(y-1,x)||on(y+1,x)||on(y,x-1)||on(y,x+1)))px(g,x0+x,y0+y,ring);}
+ for(let y=0;y<s;y++)for(let x=0;x<s;x++)if(mask[y][x]==="X"){
+  let c=col;if(y>=s-1||(y>=s-2&&(x===0||x===s-1)))c=shade(col,-.45);else if(y<=1&&x<=2)c=shade(col,.25);px(g,x0+x,y0+y,c);}
+ px(g,x0+1+(big?1:0),y0+1,shade(col,.75));}
+// Barre : cadre 1 px, intérieur 3 px (liseré + 2 rangs de rouge), largeur w.
+function bar(g,cx,y,w,o){const x=cx-(w>>1),iw=w-2,P=o.style;
+ const frame=P==="C"?"#1d5250":"#0c0606";px(g,x,y,frame,w,5);
+ if(P!=="C"){px(g,x-1,y+1,"rgba(0,0,0,.35)",1,3);px(g,x+w,y+1,"rgba(0,0,0,.35)",1,3);}
+ px(g,x+1,y+1,"#5a1c17",iw,1);px(g,x+1,y+2,"#44130f",iw,2);
+ const f=Math.max(0,Math.round(iw*o.frac));
+ if(o.trail!=null){const t=Math.round(iw*o.trail);if(t>f){const c=o.flash?"#fff4e6":"#f0b44e";px(g,x+1+f,y+1,o.flash?c:"#ffd884",t-f,1);px(g,x+1+f,y+2,c,t-f,2);}}
+ if(f>0){px(g,x+1,y+1,o.armor?"#d4dbe3":"#ff7e64",f,1);px(g,x+1,y+2,"#d2302a",f,1);px(g,x+1,y+3,"#a52320",f,1);}
+ if(P==="D"){for(const q of[.25,.5,.75]){const cx2=x+1+Math.round(iw*q);px(g,cx2,y+1,"#1c0807",1,3);}}
+ if(P==="C"){for(const[a,b]of[[x,y],[x+w-1,y],[x,y+4],[x+w-1,y+4]])px(g,a,b,"#d8b46a");}
+ if(o.crown){const k="#f2c94c";px(g,cx-3,y-2,k,1,2);px(g,cx,y-3,k,1,3);px(g,cx+3,y-2,k,1,2);px(g,cx-3,y-1,k,7,1);px(g,cx,y-3,"#fff6c8");}
+ const ring=P==="C"?"#d8b46a":"#0c0606";gem(g,cx,y+3,o.gem,P==="C"?"diam":"disc",ring,o.big);
+ if(o.spark){const s=o.spark;px(g,cx+3,y+3,"#fffbe0");if(s>.5){px(g,cx+3,y+2,"#fff2a8");px(g,cx+4,y+3,"#fff2a8");px(g,cx+3,y+4,"#fff2a8");px(g,cx+2,y+3,"#fff2a8");}}}
+const CAST=[{k:"soldier",x:20,fac:"credo"},{k:"archer",x:55,fac:"credo"},{k:"skeleton",x:90,fac:"morts"},{k:"beast",x:126,fac:"bete"}];
+const STATE_E=["alpha","loot","curse","slow"];
+function mk(){return CAST.map((c,i)=>({...c,hp:[100,62,35,80][i],tr:[100,62,35,80][i],hitAt:-9,dead:-1}));}
+const scenes=[...document.querySelectorAll("canvas[data-p]")].map(c=>({c,g:c.getContext("2d"),P:c.dataset.p,u:mk(),next:.6+Math.random()}));
+const zooms=[...document.querySelectorAll("canvas[data-z]")].map(c=>({c,g:c.getContext("2d"),P:c.dataset.z}));
+function width(P,u,st){if(P==="D")return u.k==="beast"?24:u.k==="skeleton"?18:14;if(st==="alpha")return 22;return u.k==="beast"?20:16;}
+function gemFor(P,fac,st,t){if(P!=="E")return FAC[fac];
+ if(st==="stun")return Math.floor(t*4)%2?"#ffffff":FAC[fac];
+ if(st==="curse"){const k=.5+.5*Math.sin(t*5);return shade("#9b4be0",k*.35);}
+ if(st==="slow")return"#7fd3ff";if(st==="loot")return"#f2c94c";return FAC[fac];}
+function draw(s,t){const g=s.g;g.imageSmoothingEnabled=false;g.drawImage(FLOOR,0,0);
+ for(const u of s.u){const d=SPR[u.k],fy=60,img=IMG[u.k];
+  g.fillStyle="rgba(8,9,12,.55)";g.beginPath();g.ellipse(u.x,fy,u.k==="beast"?13:7,u.k==="beast"?3:2.5,0,0,7);g.fill();
+  const hurt=t-u.hitAt<.12;if(u.dead<0&&img.complete){g.globalAlpha=1;g.drawImage(img,Math.round(u.x-d.ax+(hurt?1:0)),fy-d.ay);
+   if(hurt){g.globalCompositeOperation="source-atop";}}
+  g.globalCompositeOperation="source-over";
+  if(u.dead>=0)continue;
+  const st=s.P==="E"?STATE_E[CAST.findIndex(c=>c.k===u.k)]:null;
+  const w=width(s.P,u,st),top=fy-d.ay+d.bb[1]-9-(st==="alpha"?1:0);
+  bar(g,Math.round(u.x),top,w,{style:s.P,frac:u.hp/100,trail:s.P==="B"?u.tr/100:null,flash:t-u.hitAt<.07,
+   gem:gemFor(s.P,u.fac,st,t),crown:st==="alpha",big:st==="alpha",spark:st==="loot"?(Math.sin(t*3)*.5+.5):0});}}
+function drawZoom(z,t){const g=z.g;g.fillStyle="#1a1d24";g.fillRect(0,0,75,11);
+ const fr=[1,.55,.2],xs=[13,37,61];
+ for(let i=0;i<3;i++){let o={style:z.P,frac:fr[i],gem:FAC.credo};
+  if(z.P==="B"&&i===1){const ph=(t%2.4);o.trail=ph<.3?.85:Math.max(.55,.85-(ph-.3)*1.2);o.flash=ph<.07;}
+  if(z.P==="B"&&i===2){o.trail=.2;}
+  if(z.P==="E"){if(i===1)o.armor=true;if(i===2)o.gem=gemFor("E","credo","stun",t);}
+  bar(g,xs[i],2,z.P==="D"?18:16,o);}}
+function step(s,dt,t){s.next-=dt;for(const u of s.u){
+ if(u.dead>=0){if(t-u.dead>.9){u.dead=-1;u.hp=u.tr=100;}continue;}
+ if(t-u.hitAt>.3)u.tr=Math.max(u.hp,u.tr-110*dt);}
+ if(s.next<=0){s.next=.7+Math.random()*.8;const live=s.u.filter(u=>u.dead<0);const u=live[(Math.random()*live.length)|0];
+  if(u){u.tr=Math.max(u.tr,u.hp);u.hp-=10+Math.random()*22;u.hitAt=t;if(u.hp<=0){u.hp=0;u.dead=t+.35;}}}
+ for(const u of s.u)if(u.dead>t)u.dead=u.dead; }
+let last=performance.now();
+function frame(now){const t=now/1000,dt=Math.min(.05,(now-last)/1000);last=now;
+ for(const s of scenes){if(!RM)step(s,dt,t);draw(s,t);}for(const z of zooms)drawZoom(z,t);
+ if(!RM)requestAnimationFrame(frame);}
+Promise.all(Object.values(IMG).map(i=>i.decode().catch(()=>{}))).then(()=>requestAnimationFrame(frame));
+</script>

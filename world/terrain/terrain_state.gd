@@ -103,6 +103,13 @@ var vault_open := false
 ## Hors parité JS (groves) : le Temple n'a plus de vers, mais ~40 salles taillées d'après RoomLayout.build_temple.
 ## Plan du Temple (résultat de RoomLayout) ; vide en parité JS.
 var temple_layout := {}
+## Plan des Veines de vert-de-gris (biome 2, RoomLayout.build sur RoomLayout.band_rect(1), 2026-11-24) ; vide en parité
+## JS. Ses salles portent des identifiants globaux décalés de VEINES_ID0 (salles et couloirs : room_by_id) ; chaque
+## salle des deux plans porte son biome (« biome » : 0 Temple, 1 Veines).
+var veines_layout := {}
+const VEINES_ID0 := 1000
+## Palier de menace des pylônes des Veines, par quartier (quotas d'avant : 4 et 5).
+const VEINES_PYLON_TIER := {"A": 4, "B": 4, "C": 5}
 ## Case (Vector2i) → id de la salle du plan qui la couvre (salles taillées et grotte, pas les couloirs).
 var room_at := {}
 ## Murs de quartier : cases impossibles à creuser (comme la roche de frontière).
@@ -161,9 +168,19 @@ func is_dug(x: float, z: float) -> bool:
 ## ground, grove_at, lode_at, water_at, River.blocks, walls, _in_solid, pylon_at et la porte de l'Œil, mais la
 ## case n'est calculée qu'une fois et les tests de cases sont écrits sur place.
 func walkable(x: float, z: float) -> bool:
-	if not ground(x, z):
-		return false
 	var c := Vector2i(floori(x / 4.0), floori(z / 4.0))
+	if z < -204.0:
+		# Au nord de la salle (CaveShape.in_cave s'arrête à z = −204 ; couloir, brèche, réserve et dehors sont plus
+		# au sud encore) : le sol n'est qu'une galerie ouverte ou une case creusée, testées sur place.
+		var open_here := false
+		if found != 0:
+			var gi := floori(x - CaveShape.WORLD_X0)
+			var gj := floori(z - CaveShape.WORLD_Z0)
+			open_here = gi >= 0 and gj >= 0 and gi < GAL_W and gj < GAL_H and open[gj * GAL_W + gi] == 1
+		if not open_here and (dug.is_empty() or not dug.has(c)):
+			return false
+	elif not ground(x, z):
+		return false
 	if not grove_cells.is_empty() and grove_cells.has(c):
 		return false
 	if not lode_cells.is_empty() and lode_cells.has(c):
@@ -479,6 +496,7 @@ func generate_galleries(new_seed: int) -> void:
 	pylon_cells.clear()
 	theme_rooms.clear()
 	temple_layout = {}
+	veines_layout = {}
 	room_at.clear()
 	room_walls.clear()
 	door_cells.clear()
@@ -506,6 +524,8 @@ func generate_galleries(new_seed: int) -> void:
 	if groves:
 		_generate_extension(Rng.new(new_seed ^ 0xe7e7))
 		_carve_temple_rooms(new_seed)
+		_carve_veines_rooms(new_seed)
+		_carve_forge_rooms(Rng.new(new_seed ^ 0x5a2e))
 	_clearings.clear()
 	if groves and int(prebuilt.get("seed", -1)) == new_seed:
 		river = prebuilt["river"]
@@ -545,6 +565,8 @@ func generate_galleries(new_seed: int) -> void:
 		_connect_networks()
 		_place_pylons()
 		_place_temple_theme_rooms(Rng.new(new_seed ^ 0x5a2c))
+		_place_veines_theme_rooms(Rng.new(new_seed ^ 0x5a2d))
+		_place_forge_theme_rooms()
 		_compute_path_d()
 		_seal_closed_doors()
 	_generate_ores()
@@ -556,8 +578,8 @@ func _generate_extension(r: Rng) -> void:
 	var base := floori(r.next() * 1e9)
 	_ext = true
 	for k in Biomes.LIST.size():
-		# Le Temple est taillé en salles (_carve_temple_rooms) : pas de vers.
-		if k == 0:
+		# Temple et Veines sont taillés en salles (_carve_temple_rooms, _carve_veines_rooms) : pas de vers.
+		if k <= 1:
 			continue
 		_band_limits(k)
 		var b: Dictionary = Biomes.LIST[k]
@@ -612,8 +634,8 @@ func _carve_extension_features(map_seed: int) -> void:
 	_ext = true
 	var vault := Vector2((CaveShape.VAULT_X0 + CaveShape.VAULT_X1) / 2.0, (CaveShape.VAULT_Z0 + CaveShape.VAULT_Z1) / 2.0)
 	for k in Biomes.LIST.size():
-		# Le Temple meuble ses salles de ressources à part (_furnish_temple_rooms).
-		if k == 0:
+		# Temple et Veines meublent leurs salles de ressources à part (_furnish_temple_rooms).
+		if k <= 1:
 			continue
 		_band_limits(k)
 		var b: Dictionary = Biomes.LIST[k]
@@ -811,6 +833,17 @@ func _plant_grove(origin: Vector2i) -> void:
 ## Salle de la Gorge-Cuivre : un point de galerie de la moitié nord du biome 2, loin des bassins, élargi en disque.
 func _carve_gorge_room(r: Rng) -> void:
 	gorge_room = null
+	# Veines en salles : la Gorge dort au centre de l'arène du boss.
+	if not veines_layout.is_empty():
+		for room: Dictionary in veines_layout["rooms"]:
+			if room["kind"] == "boss":
+				var c := Vector2((room["rect"] as Rect2i).get_center()) * 4.0
+				var was := _ext
+				_ext = true
+				_stamp(c.x, c.y, GORGE_ROOM)
+				_ext = was
+				gorge_room = c
+		return
 	var k := Biomes.index_of("biome2")
 	if k < 1:
 		return
@@ -864,7 +897,8 @@ func _generate_lodes() -> void:
 		var o: Vector2i = spot[0]
 		if [Vector2i(0, 0), Vector2i(1, 0), Vector2i(0, 1), Vector2i(1, 1)].any(func(d: Vector2i) -> bool: return pylon_cells.has(o + d)):
 			continue
-		if groves and not TEMPLE_ORES.has(Blocks.ORES[spot[1]]):
+		# Le Temple ne porte que du cuivre (TEMPLE_ORES) ; ailleurs, le minerai de la bande.
+		if groves and o.y * 4.0 > frontier_z() and not TEMPLE_ORES.has(Blocks.ORES[spot[1]]):
 			continue
 		_plant_lode(o, Blocks.ORES[spot[1]])
 
@@ -1402,7 +1436,7 @@ func _classify(full := false) -> void:
 				v = K_BASE
 			elif frontier_cell(floori(c.x / 4.0), floori(c.y / 4.0)):
 				v = K_WALL
-			elif not temple_layout.is_empty() and c.y > fz + FRONTIER_HALF:
+			elif (not temple_layout.is_empty() and c.y > fz + FRONTIER_HALF) or (not veines_layout.is_empty() and c.y < fz - FRONTIER_HALF):
 				# Temple en salles : ses salles sont déjà reliées par leurs couloirs ; aucun raccord ni boucle n'y
 				# perce la roche (les salles secrètes restent derrière leur fissure, les murs de quartier entiers).
 				# K_HARD : la roche y est infranchissable pour les raccords, les salles et couloirs restent ouverts.
@@ -1705,11 +1739,21 @@ func _place_pylons() -> void:
 			var k := _cell_index(Vector2((cc.x - 1) * 4.0 + 2.0, (cc.y - 1) * 4.0 + 2.0))
 			chosen.append(_cell_center(k) / 4.0)
 			_add_pylon(k, TEMPLE_PYLON_TIER[room["quarter"]])
+	# Veines en salles : de même, un pylône par quartier.
+	if not veines_layout.is_empty():
+		for room: Dictionary in veines_layout["rooms"]:
+			if not room["pylon"]:
+				continue
+			var rr: Rect2i = room["rect"]
+			var cc := rr.position + rr.size / 2
+			var k := _cell_index(Vector2((cc.x - 1) * 4.0 + 2.0, (cc.y - 1) * 4.0 + 2.0))
+			chosen.append(_cell_center(k) / 4.0)
+			_add_pylon(k, VEINES_PYLON_TIER[room["quarter"]])
 	for Q: Array in PYLON_QUOTAS:
 		var band: int = Q[0]
 		if band == 1 and not frontier:
 			continue
-		if band == 0 and not temple_layout.is_empty():
+		if (band == 0 and not temple_layout.is_empty()) or (band == 1 and not veines_layout.is_empty()):
 			continue
 		var lo: int = half if Q[1] == HALF else Q[1]
 		var hi: int = half if Q[2] == HALF else Q[2]
@@ -1922,6 +1966,8 @@ func _carve_theme_rooms(r: Rng) -> void:
 ## couloirs et salles secrètes (la fissure, elle, reste à creuser). Note les murs de quartier et les portes.
 func _carve_temple_rooms(map_seed: int) -> void:
 	temple_layout = RoomLayout.build_temple(map_seed ^ 0x7e3b)
+	for room: Dictionary in temple_layout["rooms"]:
+		room["biome"] = 0
 	# Les vers des Veines n'ont pas de borne sud (band_range(1)) et descendent parfois sous la frontière : au
 	# Temple, seul le plan creuse. La salle de l'Œil et son couloir sont taillés plus tard (_carve_frontier).
 	for j in range(maxi(0, ceili(frontier_z() + FRONTIER_HALF - CaveShape.WORLD_Z0)), GAL_H):
@@ -1967,6 +2013,53 @@ func _carve_temple_rooms(map_seed: int) -> void:
 	_any_door_closed = doors_closed.values().has(true)
 
 
+## Veines de vert-de-gris en salles (2026-11-24) : gabarit RoomLayout.build sur leur bande (A | route | B | C), arrivée
+## par le couloir de l'Œil (x = 0, qui rejoint le couloir scellé du sud), salles et couloirs taillés, murs de quartier.
+## Portes « mb1@veines » et « mb2@veines » fermées jusqu'à la chute de l'Éclusier et de la Martyre de la Patine. L'arène du boss est celle de la Gorge-Cuivre (_carve_gorge_room).
+func _carve_veines_rooms(map_seed: int) -> void:
+	var k := Biomes.index_of("biome2")
+	if k != 1:
+		return
+	var lay := RoomLayout.build(RoomLayout.band_rect(1), map_seed ^ 0x5e1a, 0.0)
+	for room: Dictionary in lay["rooms"]:
+		room["id"] = int(room["id"]) + VEINES_ID0
+		room["biome"] = 1
+	for l: Dictionary in lay["links"]:
+		l["a"] = int(l["a"]) + VEINES_ID0
+		l["b"] = int(l["b"]) + VEINES_ID0
+	var doors := {}
+	for key: String in lay["doors"]:
+		doors[key + "@veines"] = lay["doors"][key]
+	lay["doors"] = doors
+	veines_layout = lay
+	var open_case := func(c: Vector2i) -> void:
+		for uz in 4:
+			for ux in 4:
+				var i := gal_idx(c.x * 4.0 + ux, c.y * 4.0 + uz)
+				if i >= 0:
+					mask[i] = 1
+	for room: Dictionary in lay["rooms"]:
+		var rr: Rect2i = room["rect"]
+		for j in range(rr.position.y, rr.end.y):
+			for i in range(rr.position.x, rr.end.x):
+				room_at[Vector2i(i, j)] = room["id"]
+				open_case.call(Vector2i(i, j))
+	for l: Dictionary in lay["links"]:
+		if l["kind"] == "corridor":
+			for c in RoomLayout.corridor_cells(l["path"]):
+				open_case.call(c)
+	for c in RoomLayout.corridor_cells(lay["arrival"]):
+		open_case.call(c)
+	room_walls.merge(lay["walls"])
+	# Fermées jusqu'à la chute de leur mini-boss (2026-11-25) : mb1@veines (vers les Écluses) l'Éclusier de Byrsa
+	# (sim/eclusier.gd), mb2@veines (route de la Gorge) la Martyre de la Patine (sim/patine.gd).
+	for key: String in doors:
+		doors_closed[key] = true
+		for c: Vector2i in doors[key]:
+			door_cells[c] = key
+	_any_door_closed = doors_closed.values().has(true)
+
+
 ## Une porte fermée est de la roche scellée : ses cases redeviennent pleines et impossibles à creuser (on voit un
 ## mur) ; RoomEncounters.open_door les creuse à l'ouverture. Appelée en fin de génération, après les chemins depuis
 ## l'Ancre : pylônes, tanières et meutes des Veines se placent comme si la porte était ouverte.
@@ -1984,15 +2077,33 @@ func _seal_closed_doors() -> void:
 
 ## Salle du plan du Temple sous (x, z), ou {} (couloir, roche, autre biome, parité JS).
 func temple_room(x: float, z: float) -> Dictionary:
-	if temple_layout.is_empty():
+	if temple_layout.is_empty() and veines_layout.is_empty():
 		return {}
 	var id: Variant = room_at.get(Vector2i(floori(x / 4.0), floori(z / 4.0)))
-	return {} if id == null else temple_layout["rooms"][id]
+	return {} if id == null else room_by_id(id)
+
+
+## Salle d'identifiant global `id` (Temple, ou Veines à partir de VEINES_ID0), ou {}.
+func room_by_id(id: int) -> Dictionary:
+	if id >= VEINES_ID0:
+		var v: Array = veines_layout.get("rooms", [])
+		return v[id - VEINES_ID0] if id - VEINES_ID0 < v.size() else {}
+	var t: Array = temple_layout.get("rooms", [])
+	return t[id] if id >= 0 and id < t.size() else {}
+
+
+## Plans en salles de la carte (Temple, Veines), non vides.
+func room_layouts() -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	for lay: Dictionary in [temple_layout, veines_layout]:
+		if not lay.is_empty():
+			out.append(lay)
+	return out
 
 
 ## Salle sûre (antichambre du boss) : rien n'y apparaît, et les errants n'y visent ni n'y poursuivent personne.
 func safe_at(x: float, z: float) -> bool:
-	if temple_layout.is_empty():
+	if temple_layout.is_empty() and veines_layout.is_empty():
 		return false
 	return temple_room(x, z).get("role", "") == "antechamber"
 
@@ -2000,12 +2111,29 @@ func safe_at(x: float, z: float) -> bool:
 ## Une tanière d'errants peut-elle être posée en (x, z) ? Pas dans le Temple en salles : ses salles de combat ont
 ## leurs rencontres (sim/rooms.gd) ; ailleurs, partout où Roamers le permet.
 func den_allowed(_x: float, z: float) -> bool:
-	return temple_layout.is_empty() or z <= frontier_z() + FRONTIER_HALF
+	if not temple_layout.is_empty() and z > frontier_z() + FRONTIER_HALF:
+		return false
+	return veines_layout.is_empty() or z <= Biomes.north_z(1) or z > frontier_z() - FRONTIER_HALF
 
 
 ## Salles de ressources du Temple : un filon de cuivre à gauche, un bosquet à droite ; un bassin dans la source de C.
 func _furnish_temple_rooms(r: Rng) -> void:
 	var copper := Blocks.ORES.find("copper")
+	# Veines : un filon du minerai de sa profondeur dans la bande (cuivre, puis fer au nord) contre la paroi ouest de la
+	# salle de ressources, un bassin (anguilles) à l'est.
+	for room: Dictionary in veines_layout.get("rooms", []):
+		if room["kind"] != "resource":
+			continue
+		var rr: Rect2i = room["rect"]
+		var mid := rr.position.y + rr.size.y / 2
+		var items := Biomes.ores_at(1, Biomes.depth(1, mid * 4.0)).filter(func(o: String) -> bool: return LODE_ORES.has(o))
+		var tier := Blocks.ORES.find(items[floori(r.next() * items.size())]) if not items.is_empty() else copper
+		var lode := Vector2i(rr.position.x + 1, mid - 1)
+		for o: Vector2i in [Vector2i.ZERO, Vector2i(1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
+			if _grove_fits(lode + o):
+				_lode_spots.append([lode + o, tier])
+				break
+		_add_pool(r, Vector2(rr.end.x - 3.5, mid + 0.5) * 4.0)
 	for room: Dictionary in temple_layout["rooms"]:
 		var rr: Rect2i = room["rect"]
 		var mid := rr.position.y + rr.size.y / 2
@@ -2053,6 +2181,112 @@ func _place_temple_theme_rooms(r: Rng) -> void:
 							water_cells[Vector2i(ci + di, cj + dj)] = true
 			theme_rooms.append({"kind": kind, "x": ci * 4.0 + 2.0, "z": cj * 4.0 + 2.0, "half": half})
 			break
+
+
+## Salles à thème des Salles oubliées (planches/salles-oubliees-decor-propositions.html, R1 et R3 choisis le
+## 2026-11-25) : VEINES_THEME_ROOMS salles du plan des Veines, citerne des Tyriens (bassin comme la citerne du Temple,
+## pompe de Byrsa) et atelier de Byrsa en alternance ; mêmes salles candidates qu'au Temple.
+const VEINES_THEME_KINDS := ["vcistern", "vworkshop"]
+const VEINES_THEME_ROOMS := 6
+
+
+func _place_veines_theme_rooms(r: Rng) -> void:
+	if veines_layout.is_empty():
+		return
+	var candidates: Array = (veines_layout["rooms"] as Array).filter(func(o: Dictionary) -> bool:
+		return not o["fixed"] and not o["pylon"] and (o["kind"] == "secret" or o["kind"] == "combat" or (o["kind"] == "calm" and o["role"] != "spring")))
+	for i in range(candidates.size() - 1, 0, -1):
+		var j := floori(r.next() * (i + 1))
+		var t: Variant = candidates[i]
+		candidates[i] = candidates[j]
+		candidates[j] = t
+	var used := {}
+	for n in VEINES_THEME_ROOMS:
+		var kind: String = VEINES_THEME_KINDS[n % VEINES_THEME_KINDS.size()]
+		var half := Vector2i(3, 2) if kind == "vcistern" else Vector2i(2, 1)
+		for room: Dictionary in candidates:
+			var rr: Rect2i = room["rect"]
+			if used.has(room["id"]) or rr.size.x < half.x * 2 + 3 or rr.size.y < half.y * 2 + 3:
+				continue
+			used[room["id"]] = true
+			var ci := rr.position.x + rr.size.x / 2
+			var cj := rr.position.y + rr.size.y / 2
+			if kind == "vcistern":
+				for dj in range(-1, 2):
+					for di in range(-2, 3):
+						if di != 0 or dj < 0:
+							water_cells[Vector2i(ci + di, cj + dj)] = true
+			theme_rooms.append({"kind": kind, "x": ci * 4.0 + 2.0, "z": cj * 4.0 + 2.0, "half": half})
+			break
+
+
+## Salles à thème des Forges mortes (planches/forges-mortes-decor-propositions.html, R1, R3 et R4 choisis le
+## 2026-11-25) : forge aux esprits enchaînés (une seule), salle de trempe (bassin comme la citerne), magasin de la
+## fonderie. Le biome 3 n'est pas taillé en salles (ses galeries sont des vers) : les salles y sont taillées, 7 × 5
+## cases à cheval sur une galerie, avant la numérotation des réseaux (elles s'ouvrent avec leur galerie), puis
+## rangées dans theme_rooms une fois pylônes, clairières et filons posés (celles qui tombent dessus sont écartées).
+const FORGE_THEME_KINDS := ["fspirits", "ftrempe", "fstore", "ftrempe", "fstore", "ftrempe"]
+const FORGE_THEME_GAP := 72.0
+const FORGE_ROOM_HALF := Vector2i(3, 2)
+var _forge_rooms: Array[Dictionary] = []
+
+
+func _carve_forge_rooms(r: Rng) -> void:
+	_forge_rooms.clear()
+	var k := Biomes.index_of("forges")
+	if k < 0:
+		return
+	var was := _ext
+	_ext = true
+	_band_limits(k)
+	var lim := band_range(k)
+	var half := FORGE_ROOM_HALF
+	var ext := Vector2(half.x * 4.0 + 6.0, half.y * 4.0 + 6.0)
+	var tries := 0
+	# Trois de plus que nécessaire : certaines seront écartées par les pylônes, clairières et filons.
+	while _forge_rooms.size() < FORGE_THEME_KINDS.size() + 3 and tries < 6000:
+		tries += 1
+		var ci := floori((CaveShape.WORLD_X0 + 32.0 + r.next() * (GAL_W - 64)) / 4.0)
+		var cj := floori((lim.x + 16.0 + r.next() * (lim.y - lim.x - 32.0)) / 4.0)
+		var c := Vector2(ci * 4.0 + 2.0, cj * 4.0 + 2.0)
+		if not is_gallery(c.x, c.y):
+			continue
+		var fits := true
+		for o: Vector2 in [Vector2(-1, -1), Vector2(1, -1), Vector2(-1, 1), Vector2(1, 1), Vector2(0, -1), Vector2(0, 1)]:
+			if not _allowed(c.x + o.x * ext.x, c.y + o.y * ext.y):
+				fits = false
+		if not fits or _forge_rooms.any(func(o: Dictionary) -> bool: return Vector2(o["x"], o["z"]).distance_to(c) < FORGE_THEME_GAP):
+			continue
+		for dj in range(-half.y, half.y + 1):
+			for di in range(-half.x, half.x + 1):
+				for uz in 4:
+					for ux in 4:
+						var gi := gal_idx((ci + di) * 4.0 + ux, (cj + dj) * 4.0 + uz)
+						if gi >= 0:
+							mask[gi] = 1
+		_forge_rooms.append({"x": c.x, "z": c.y, "ci": ci, "cj": cj})
+	_band_limits(0)
+	_ext = was
+
+
+func _place_forge_theme_rooms() -> void:
+	var n := 0
+	for fr: Dictionary in _forge_rooms:
+		if n >= FORGE_THEME_KINDS.size():
+			break
+		var c := Vector2(fr["x"], fr["z"])
+		if portals.any(func(p: Dictionary) -> bool: return Vector2(p["x"], p["z"]).distance_to(c) < PYLON_CHAMBER + 22.0) \
+				or _clearings.any(func(p: Vector2) -> bool: return p.distance_to(c) < 30.0) \
+				or _lode_spots.any(func(s: Array) -> bool: return Vector2((s[0] as Vector2i) * 4).distance_to(c) < 30.0):
+			continue
+		var kind: String = FORGE_THEME_KINDS[n]
+		n += 1
+		if kind == "ftrempe":
+			for dj in range(-1, 2):
+				for di in range(-2, 3):
+					if di != 0 or dj < 0:
+						water_cells[Vector2i(int(fr["ci"]) + di, int(fr["cj"]) + dj)] = true
+		theme_rooms.append({"kind": kind, "x": c.x, "z": c.y, "half": FORGE_ROOM_HALF})
 
 
 func _m(i: int, j: int) -> bool:

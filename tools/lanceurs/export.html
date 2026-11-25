@@ -1,0 +1,84 @@
+<!doctype html><meta charset="utf-8"><title>Export des tirs</title>
+<body style="background:#28322c;color:#ddd;font:13px sans-serif">
+<p id="log">Export…</p>
+<script src="/planches/assets/engineer-colosse.js"></script>
+<script src="/planches/assets/refonte-16bits.js"></script>
+<script src="/planches/assets/boss/brute-strazhar.js"></script>
+<script src="/planches/assets/bete/chiens-bete.js"></script>
+<script>
+'use strict';
+// Animations de tir des cinq lanceurs de boule, choisies sur planches/lanceurs-boule-animations-propositions.html
+// (2026-11-23) : Thuriféraire « L'élévation », Fanatique « La fronde », Aberration « Le revers », Chien « Le hurlement »,
+// Squelette explosif « Le souffle ». Les gestes sont rejoués sur les rigs des sprites du jeu (refonte-16bits.js,
+// brute-strazhar.js, chiens-bete.js, squelettes-planche.html), pas sur les silhouettes de la planche.
+// Écrit <ennemi>_cast.png (pieds campés) et <ennemi>_cast_run.png (mêmes bras ou cou sur les jambes de la marche,
+// pour les tirs en mouvement), plus la clé cast / cast_run du manifeste. À ouvrir depuis tools/lanceurs/serve.py.
+// La boule qui grossit pendant la charge est peinte dans l'atlas, sur le repère du geste (main, bâton, gueule) ;
+// à l'image « release » elle disparaît : le jeu fait partir la vraie boule de « from ».
+const FPS=24,COLS=12,RAD=Math.PI/180;
+const lerp=(a,b,t)=>a+(b-a)*t;
+// Clés : [part de la durée, paramètres, 1 = détente accélérée]. Les tableaux s'interpolent terme à terme.
+function poseAt(keys,u){let i=0;while(i<keys.length-2&&u>=keys[i+1][0])i++;const A=keys[i],B=keys[i+1];let k=Math.max(0,Math.min(1,(u-A[0])/(B[0]-A[0])));k=B[2]?k*k:k*k*(3-2*k);
+ const p={};for(const n in A[1]){const a=A[1][n],b=B[1][n]??a;p[n]=Array.isArray(a)?a.map((v,j)=>lerp(v,b[j],k)):lerp(a,b,k)}return p}
+const full=(base,keys)=>[[0,base],...keys.map(([t,o,e])=>[t,{...base,...o},e]),[1,base]];
+const HB={lean:0,cr:0,hy:0,step:0,fa:[5,5],ba:[-8,4],len:2.4,st:0};
+const HUMANS={
+ // L'élévation : le bâton monte à deux mains au-dessus de la tête, l'orbe au zénith, puis s'abat droit devant.
+ spitter:{k:'spitter',n:24,rel:12,c0:4,at:'top',ball:'orb',name:'L’élévation',attack:true,keys:full(HB,[
+  [.2,{cr:2,fa:[55,110],ba:[35,95],len:3.4,st:-5}],[.43,{cr:-1,hy:-1,lean:-1,fa:[150,172],ba:[150,176],len:4.5,st:-8}],
+  [.5,{cr:3,lean:4,hy:1,fa:[75,86],ba:[60,82],len:4.5,st:78,step:1},1],[.63,{cr:3,lean:4.5,hy:1,fa:[70,80],ba:[55,75],len:4.5,st:86,step:1}],
+  [.84,{cr:1,lean:1.5,fa:[40,70],ba:[5,20],len:3.2,st:25}]])},
+ // La fronde : grand moulinet du bras par-dessus l'épaule ; l'orbe suit la main tout le tour et part au sommet de l'arc.
+ creep:{k:'creep',n:18,rel:10,c0:2,at:'hand',ball:'orb',name:'La fronde',run:true,keys:[[0,HB],
+  [.2,{...HB,fa:[-60,-30],ba:[10,25],lean:-1,len:3.5}],[.4,{...HB,fa:[-150,-120],ba:[40,60],lean:-2.5,cr:1,len:4.2}],[.5,{...HB,fa:[-200,-175],ba:[30,50],lean:-1,len:4.5}],
+  [10/18,{...HB,fa:[-265,-255],ba:[-40,-20],lean:3.5,step:2,len:4.5},1],[.74,{...HB,fa:[-310,-290],ba:[-30,-10],lean:4,cr:1,step:2,len:4}],[1,{...HB,fa:[-355,-355]}]]},
+};
+// ---------- boules (palettes du jeu : orbe or et carmin cerclée de noir, braise rouge à cœur blanc)
+function disc(c,x,y,r,col){if(r<=.2)return;c.fillStyle=col;for(let j=Math.floor(y-r);j<=y+r;j++){const dy=j+.5-y,w=r*r-dy*dy;if(w<0)continue;const hw=Math.sqrt(w),x0=Math.round(x-hw),x1=Math.round(x+hw);if(x1>x0)c.fillRect(x0,j,x1-x0,1)}}
+function ball(c,type,x,y,k,i){x=Math.round(x);y=Math.round(y);
+ if(type==='orb'){disc(c,x,y,5.5*k,'#000');disc(c,x,y,4.5*k,'#58101e');disc(c,x,y,3.5*k,'#c2384a');disc(c,x,y,2.2*k,'#e2b83a');disc(c,x-.5,y-.5,1*k,'#fff0a0')}
+ else{disc(c,x,y,6.3*k,'#2a040c');disc(c,x,y,4.8*k,'#d42a3a');disc(c,x,y,3*k,'#ff8a7a');disc(c,x,y,1.5*k,i%2?'#fff':'#ffd8d0')}}
+// Une case : sprite, puis boule de charge (de c0 à rel exclu) sur le repère, entourée de trois étincelles qui convergent.
+function cell(A,W,H,i,spr,ox,oy,an){const c=document.createElement('canvas');c.width=W;c.height=H;const g=c.getContext('2d');g.drawImage(spr,ox,oy);
+ if(i>=A.c0&&i<A.rel){const k=Math.pow((i-A.c0+1)/(A.rel-A.c0),.8),x=an[0]+ox,y=an[1]+oy;ball(g,A.ball,x,y,.25+.75*Math.min(1,k),i);
+  for(let j=0;j<3;j++){const a=i/FPS*9+j*2.1,r=(1-k)*9+3;g.fillStyle=A.ball==='orb'?'#fff0a0':'#ff8a7a';g.fillRect(Math.round(x+Math.cos(a)*r),Math.round(y+Math.sin(a)*r*.7),1,1)}}
+ return c}
+const JOBS=[];   // {kind, key, A, W, H, ax, ay, draw(i) → {spr, ox, oy, an}}
+// ---------- humanoïdes : cadre 88 × 62, pieds en (44, 57)
+const PADH=[24,20];
+for(const[kind,A]of Object.entries(HUMANS))for(const run of(A.run?[false,true]:[false])){
+ JOBS.push({kind,key:run?'cast_run':'cast',A,W:88,H:62,ax:44,ay:57,draw:i=>{const p=poseAt(A.keys,i/A.n);
+  const o={k:A.k,dir:'s',pad:PADH,ub:Math.round(p.cr),hd:Math.round(p.hy),free:{fa:p.fa,ba:p.ba,len:p.len,st:p.st,glow:i>=A.c0&&i<=A.rel}};
+  if(run){o.pose='walk';o.ph=(i%12)/12}else o.step=Math.round(p.step);
+  const b=shear(fig(o),p.lean,33+PADH[1]);return{spr:render(b,1),ox:0,oy:4,an:b.an[A.at]}}})}
+// ---------- Aberration : cadre 88 × 54, pieds en (44, 51)
+const BR={n:29,rel:15,c0:5,at:'fist',ball:'orb',name:'Le revers',run:true};
+for(const run of[false,true])JOBS.push({kind:'brute',key:run?'cast_run':'cast',A:BR,W:88,H:54,ax:44,ay:51,draw:i=>{const b=G1.bruteBuf(1,run?'cast_run':'cast',i/FPS);return{spr:render(b,1),ox:0,oy:0,an:b.an.fist}}});
+// ---------- Chien de la Bête : cadre du rig (84 × 48, pieds en (36, 44))
+const DG={n:18,rel:7,c0:1,at:'mouth',ball:'fire',name:'Le hurlement',run:true};
+for(const run of[false,true])JOBS.push({kind:'beast',key:run?'cast_run':'cast',A:DG,W:CHIENS.FW,H:CHIENS.FH,ax:CHIENS.AX,ay:CHIENS.AY,draw:i=>{const b=CHIENS.raw('C',run?'cast_run':'cast',i/FPS);return{spr:render(b,1),ox:0,oy:0,an:b.an.mouth}}});
+(async()=>{
+ // ---------- Squelette explosif : moteur de sa planche, isolé ; cadre 64 × 52, tampon posé en (10, 10), pieds en (32, 43)
+ const src=await (await fetch('/planches/squelettes-planche.html')).text();
+ const SK=new Function(src.slice(src.indexOf('<script>')+8,src.indexOf('// ---------- Fonds ----------'))+'\nreturn{frame,render}')();
+ const SB={n:19,rel:11,c0:5,at:'mouth',ball:'fire',name:'Le souffle',run:true};
+ for(const run of[false,true])JOBS.push({kind:'skeleton_bomb',key:run?'cast_run':'cast',A:SB,W:64,H:52,ax:32,ay:43,draw:i=>{const F=SK.frame('exp',run?'cast_run':'cast',i/FPS,{atlas:true});
+  const c=document.createElement('canvas');c.width=64;c.height=52;const g=c.getContext('2d');F.pre.forEach(f=>f(g,10,10));g.drawImage(SK.render(F.b),10,10);F.fx.forEach(f=>f(g,10,10));
+  return{spr:c,ox:0,oy:0,an:[F.b.head[0]+14.5,F.b.head[1]+13.5]}}});
+ const meta={},log=document.getElementById('log');
+ for(const J of JOBS){const A=J.A,rows=Math.ceil(A.n/COLS),cv=document.createElement('canvas');cv.width=J.W*COLS;cv.height=J.H*rows;const c=cv.getContext('2d');let from=null;
+  for(let i=0;i<A.n;i++){const d=J.draw(i);if(i===A.rel)from=d.an;c.drawImage(cell(A,J.W,J.H,i,d.spr,d.ox,d.oy,d.an),(i%COLS)*J.W,((i/COLS)|0)*J.H)}
+  // ax/ay : pieds dans la case ; release : départ de la boule (s) ; from : point de départ en px depuis les pieds
+  // (x vers l'avant, y vers le haut) ; attack : joué par le coup lui-même (EnemyShots.WINDUP), pas par cast_started.
+  const m={frame_w:J.W,frame_h:J.H,cols:COLS,rows,count:A.n,fps:FPS,duration:+(A.n/FPS).toFixed(4),ax:J.ax,ay:J.ay,release:+(A.rel/FPS).toFixed(4),
+   from:[+(from[0]+(J.kind==='skeleton_bomb'?0:0)-J.ax).toFixed(1),+(J.ay-from[1]).toFixed(1)],name:A.name};
+  if(J.A===HUMANS.spitter||J.A===HUMANS.creep)m.from[1]=+(J.ay-4-from[1]).toFixed(1);   // tampon humain posé 4 px plus bas
+  if(A.attack)m.attack=true;
+  (meta[J.kind]=meta[J.kind]||{})[J.key]=m;
+  const blob=await new Promise(r=>cv.toBlob(r,'image/png'));
+  const r=await fetch('/cast-export/'+J.kind+'_'+J.key+'.png',{method:'POST',body:blob});if(!r.ok)throw new Error(J.kind+' '+r.status);
+  cv.style.cssText='display:block;margin:6px 0;image-rendering:pixelated;width:'+cv.width*2+'px';document.body.append(J.kind+' · '+J.key+' · '+A.name,cv)}
+ const r=await fetch('/cast-export/cast.json',{method:'POST',body:JSON.stringify(meta)});if(!r.ok)throw new Error('manifeste '+r.status);
+ log.textContent='Export terminé : '+JSON.stringify(meta);document.title='fini';
+})().catch(e=>{document.getElementById('log').textContent='ERREUR '+e.message+' '+(e.stack||'');document.title='erreur'});
+</script>

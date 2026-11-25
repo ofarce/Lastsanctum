@@ -1,0 +1,556 @@
+<title>Éclusier et Martyre de la Patine</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=VT323&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Planche de rendu 16 bits des deux mini-boss des Salles oubliées (biome 2), validés sur
+   mini-boss-temple-veines-propositions.html (V1 Éclusier de Byrsa, M1 Martyre de la Patine). Trois silhouettes par
+   boss, chacune dans ses deux états de combat, à l'échelle de l'Exilé ; accessoires ; arènes vues de dessus.
+   Même petit moteur que les planches de l'Archiprêtre (rampes, ombre en haut à gauche, contour sélectif).
+   Une seule ambiance sombre, comme les autres planches de jeu.
+   Mise en page : colonne de 1120 px, une section par boss, silhouettes en cartes côte à côte qui passent en colonne. */
+:root{
+  color-scheme:dark;
+  --bg:#101718; --panel:#16201f; --panel2:#1d2a29; --line:#2c3d3b;
+  --fg:#e4e2da; --mute:#93a7a1; --ink:#0a0f0f;
+  --patina:#86b0a1; --copper:#c0703f; --gold:#ddb457; --mine:#5fe08a; --water:#5ab8c8;
+  --display:"VT323","Courier New",monospace; --body:"IBM Plex Sans",system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.55 var(--body);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 72px}
+.wrap{max-width:1120px;margin:0 auto;display:flex;flex-direction:column;gap:52px}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0;line-height:1.12;font-weight:400}
+h1{font-size:clamp(38px,6vw,60px)}
+h2{font-size:clamp(30px,4.4vw,42px)}
+h3{font-size:24px}
+p{margin:0;max-width:72ch}
+.lede{color:var(--mute);font-size:16px}
+.eyebrow{font-family:var(--display);font-size:18px;letter-spacing:.08em;text-transform:uppercase;color:var(--mute)}
+.stack{display:flex;flex-direction:column;gap:14px}
+.grid{display:grid;grid-template-columns:minmax(0,1fr);gap:14px}
+.prop{background:var(--panel);border:2px solid var(--line);padding:18px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.prop .tag{font-family:var(--display);font-size:17px;color:var(--mute)}
+.prop.reco{border-color:var(--patina);box-shadow:0 0 0 1px var(--patina) inset}
+.prop.reco .tag::after{content:" · MA PRÉFÉRENCE";color:var(--patina)}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end}
+figure{margin:0;display:flex;flex-direction:column;gap:4px;align-items:center}
+.stage{background:#172322;border:3px solid var(--ink);padding:8px;display:flex;align-items:flex-end;gap:8px;max-width:100%;overflow-x:auto;
+  background-image:linear-gradient(#20302e 1px,transparent 1px),linear-gradient(90deg,#20302e 1px,transparent 1px);background-size:16px 16px}
+.stage canvas{image-rendering:pixelated;display:block}
+figcaption{font-size:12.5px;color:var(--mute);text-align:center}
+ul.l{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px;font-size:14px}
+.plus{color:#7fd08a} .moins{color:#e08a7a}
+.arena{display:grid;grid-template-columns:minmax(0,1fr) minmax(260px,.8fr);gap:20px;align-items:start}
+@media(max-width:760px){.arena{grid-template-columns:1fr}}
+.arena svg{width:100%;height:auto;border:3px solid var(--ink);background:#121b1b}
+.q{background:var(--panel);border:2px solid var(--line);padding:14px 18px}
+.q ul{margin:6px 0 0;padding-left:18px;display:flex;flex-direction:column;gap:6px}
+.kit{display:flex;flex-wrap:wrap;gap:14px}
+.rule{background:var(--panel2);border-left:3px solid var(--copper);padding:10px 14px;font-size:14px}
+.rule.m{border-left-color:var(--mine)}
+</style>
+
+<div class="wrap">
+
+<header class="stack">
+  <span class="eyebrow">Planche de rendu · 25 novembre 2026 · mini-boss des Salles oubliées · rien n’est intégré</span>
+  <h1>L’Éclusier de Byrsa et la Martyre de la Patine</h1>
+  <p class="lede">Les deux mini-boss du biome 2, tels que validés sur la planche des mini-boss : l’Éclusier garde la porte du quartier A (la Grande Écluse, salle noyée), la Martyre de la Patine celle de la route du boss (la Nef verte, sous son dôme). Trois silhouettes pour chacun, dessinées à la taille du jeu (8 px par unité) et montrées ici ×4, à côté de l’Exilé. Choisis une silhouette par boss ; le reste (attaques, règles, butin) ne change pas.</p>
+</header>
+
+<!-- ================= ÉCLUSIER ================= -->
+<section class="stack">
+  <span class="eyebrow">Mini-boss 1 · quartier A · la Grande Écluse</span>
+  <h2>L’Éclusier de Byrsa</h2>
+  <p>Un ingénieur de Byrsa en scaphandre de cuivre, une clef d’écluse géante à la main. 2 000 PV, armure 5, l’escouade entre avec l’Exilé.</p>
+  <div class="rule"><b>Les pompes</b> : trois pompes au bord de la salle. Un adepte posté à une pompe fait baisser l’eau. Salle sèche : son scaphandre se vide et son armure tombe à 0. Chaque silhouette est donc dessinée <b>scaphandre plein</b> (armure 5, hublot rempli d’eau) et <b>scaphandre vidé</b> (armure 0, hublot vide, tuyaux pendants).</div>
+  <div class="grid">
+    <article class="prop reco" id="e1">
+      <span class="tag">E1 · LE SCAPHANDRE TRAPU</span>
+      <div class="row"><div class="stage" data-draw="e1"></div></div>
+      <ul class="l">
+        <li class="plus">Silhouette ronde, lisible de loin : le hublot dit à lui seul s’il est en armure ou non.</li>
+        <li class="plus">La clef sur l’épaule sert aussi au geste « ouverture des vannes » (il la tourne dans le sol).</li>
+        <li class="moins">Peu de hauteur : il paraît moins grand que l’Archiprêtre.</li>
+      </ul>
+    </article>
+    <article class="prop" id="e2">
+      <span class="tag">E2 · LE PORTE-CLEF</span>
+      <div class="row"><div class="stage" data-draw="e2"></div></div>
+      <ul class="l">
+        <li class="plus">Plus haut, la clef plantée comme une hallebarde ; le harpon au poing gauche se voit avant le tir.</li>
+        <li class="plus">Réservoir dorsal : il se vide de la même façon que le hublot.</li>
+        <li class="moins">Tête-cloche étroite : le hublot est plus petit à l’écran.</li>
+      </ul>
+    </article>
+    <article class="prop" id="e3">
+      <span class="tag">E3 · LA POMPE DORSALE</span>
+      <div class="row"><div class="stage" data-draw="e3"></div></div>
+      <ul class="l">
+        <li class="plus">Une roue de pompe dans le dos, qui tourne quand il ouvre les vannes : on lit le moment de l’attaque.</li>
+        <li class="plus">Silhouette penchée de machiniste, différente des humanoïdes du Temple.</li>
+        <li class="moins">Le plus large : il cache une partie de l’eau derrière lui.</li>
+      </ul>
+    </article>
+  </div>
+
+  <h3>Accessoires</h3>
+  <div class="kit">
+    <figure><div class="stage" data-draw="pump"></div><figcaption>Pompe : au repos, puis tenue par un adepte (eau qui baisse)</figcaption></figure>
+    <figure><div class="stage" data-draw="harpoon"></div><figcaption>Harpon à chaîne : annonce, chaîne tendue, chaîne brisée (3 tirs)</figcaption></figure>
+    <figure><div class="stage" data-draw="water"></div><figcaption>Eau : calme, puis électrisée (phase II, 15 dégâts/s)</figcaption></figure>
+  </div>
+
+  <div class="arena">
+    <svg viewBox="0 0 480 360" role="img" aria-label="La Grande Écluse vue de dessus : un quart de la salle noyé, trois pompes au bord, l’Éclusier au centre">
+      <defs>
+        <pattern id="wv" width="14" height="10" patternUnits="userSpaceOnUse"><path d="M0 6 q3.5 -4 7 0 t7 0" fill="none" stroke="#5ab8c8" stroke-width="1.4" opacity=".55"/></pattern>
+      </defs>
+      <rect x="20" y="20" width="440" height="320" fill="#24302e" stroke="#0a0f0f" stroke-width="6"/>
+      <rect x="20" y="20" width="220" height="160" fill="#16404a"/>
+      <rect x="20" y="20" width="220" height="160" fill="url(#wv)"/>
+      <text x="130" y="104" fill="#9fd8e0" font-family="VT323,monospace" font-size="20" text-anchor="middle">quart noyé</text>
+      <text x="130" y="124" fill="#9fd8e0" font-family="VT323,monospace" font-size="15" text-anchor="middle">marche ralentie · anguilles</text>
+      <g fill="#c0703f" stroke="#0a0f0f" stroke-width="2">
+        <rect x="26" y="226" width="22" height="30"/><rect x="432" y="104" width="22" height="30"/><rect x="229" y="312" width="22" height="22"/>
+      </g>
+      <g fill="#e4e2da" font-family="VT323,monospace" font-size="16">
+        <text x="56" y="246">pompe</text><text x="372" y="124">pompe</text><text x="258" y="330">pompe</text>
+      </g>
+      <circle cx="240" cy="180" r="20" fill="#c0703f" stroke="#ddb457" stroke-width="3"/>
+      <text x="240" y="216" fill="#ddb457" font-family="VT323,monospace" font-size="17" text-anchor="middle">Éclusier</text>
+      <path d="M240 180 L330 250" stroke="#ddb457" stroke-width="2" stroke-dasharray="5 4"/>
+      <circle cx="336" cy="255" r="8" fill="#5fd8e8" stroke="#0a0f0f" stroke-width="2"/>
+      <text x="336" y="282" fill="#5fd8e8" font-family="VT323,monospace" font-size="16" text-anchor="middle">Exilé · harpon</text>
+      <g fill="#86b0a1"><ellipse cx="80" cy="60" rx="10" ry="4"/><ellipse cx="190" cy="150" rx="10" ry="4"/></g>
+      <rect x="226" y="20" width="28" height="8" fill="#ddb457"/>
+      <text x="240" y="44" fill="#ddb457" font-family="VT323,monospace" font-size="15" text-anchor="middle">porte mb1 (clef des Écluses)</text>
+    </svg>
+    <div class="stack">
+      <h3>La Grande Écluse</h3>
+      <ul class="l">
+        <li><b>Ouverture des vannes</b> : l’eau monte dans un quart de la salle, tiré au hasard parmi les trois qui n’ont pas de porte. Marche ralentie de moitié, et l’Exilé passe à portée des anguilles du bassin.</li>
+        <li><b>Harpon à chaîne</b> : annoncé 0,6 s (trait doré), il attire une unité jusqu’à lui ; trois tirs sur la chaîne la brisent.</li>
+        <li><b>Phase II, court-circuit</b> (sous 50 % de PV) : l’eau s’électrise, 15 dégâts par seconde à tout ce qui s’y trouve, alliés comme anguilles.</li>
+        <li><b>Pompes</b> : un adepte posté baisse l’eau d’un quart ; les trois tenues, la salle est sèche et son armure tombe à 0.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ================= MARTYRE DE LA PATINE ================= -->
+<section class="stack">
+  <span class="eyebrow">Mini-boss 2 · route du boss · la Nef verte</span>
+  <h2>La Martyre de la Patine</h2>
+  <p>L’armure d’automate de Byrsa a viré au vert-de-gris ; l’or ne reste qu’aux arêtes polies par ses gestes. 2 200 PV, sous un dôme où l’Exilé entre seul, comme la Martyre de Byrsa au Temple.</p>
+  <div class="rule m"><b>Polir</b> : les balles qui n’ont rien touché s’arrêtent et restent 6 s en mines vertes. Un tir de l’Exilé sur une mine la fait disparaître, et les mines nettoyées rechargent son Voile. Chaque silhouette est dessinée <b>au repos</b> et en <b>phase II, oxydation</b> (fissures vertes allumées, juste avant qu’elle fasse éclater toutes les mines en croix).</div>
+  <div class="grid">
+    <article class="prop reco" id="p1">
+      <span class="tag">P1 · L’AUTOMATE VERDI</span>
+      <div class="row"><div class="stage" data-draw="p1"></div></div>
+      <ul class="l">
+        <li class="plus">La silhouette de la Martyre de Byrsa, reconnaissable, mais rongée : on comprend qu’on affronte « la même, plus loin ».</li>
+        <li class="plus">Cape de mousse de cuivre, arêtes dorées : fidèle à la planche validée.</li>
+        <li class="moins">Proche de la Martyre du Temple : moins de surprise.</li>
+      </ul>
+    </article>
+    <article class="prop" id="p2">
+      <span class="tag">P2 · LE RELIQUAIRE</span>
+      <div class="row"><div class="stage" data-draw="p2"></div></div>
+      <ul class="l">
+        <li class="plus">Un disque de cuivre dans le dos, d’où partent ses anneaux de balles : le geste se lit sur le disque.</li>
+        <li class="plus">Mitre haute, plus solennelle.</li>
+        <li class="moins">Le disque grandit la silhouette : elle masque plus de balles derrière elle.</li>
+      </ul>
+    </article>
+    <article class="prop" id="p3">
+      <span class="tag">P3 · LA STATUE QUI MARCHE</span>
+      <div class="row"><div class="stage" data-draw="p3"></div></div>
+      <ul class="l">
+        <li class="plus">Lourde, épaules couvertes de mousse, fissures vertes qui s’allument en phase II : la phase se voit de loin.</li>
+        <li class="moins">Plus massive que l’Archiprêtre : son dôme paraîtra plus petit.</li>
+      </ul>
+    </article>
+  </div>
+
+  <h3>Accessoires</h3>
+  <div class="kit">
+    <figure><div class="stage" data-draw="mines"></div><figcaption>Balle de cuivre → mine verte → mine polie (disparaît) → éclat en croix (phase II)</figcaption></figure>
+  </div>
+
+  <div class="arena">
+    <svg viewBox="0 0 480 360" role="img" aria-label="La Nef verte vue de dessus : un dôme, deux anneaux de balles qui tournent en sens inverse, des mines vertes posées">
+      <rect x="20" y="20" width="440" height="320" fill="#24302e" stroke="#0a0f0f" stroke-width="6"/>
+      <circle cx="240" cy="180" r="150" fill="#1b2b28" stroke="#86b0a1" stroke-width="3" stroke-dasharray="8 5"/>
+      <circle cx="240" cy="180" r="62" fill="none" stroke="#c0703f" stroke-width="2"/>
+      <circle cx="240" cy="180" r="98" fill="none" stroke="#c0703f" stroke-width="2" opacity=".7"/>
+      <path d="M240 118 a62 62 0 0 1 54 32" fill="none" stroke="#ddb457" stroke-width="3" marker-end="url(#ar)"/>
+      <path d="M240 278 a98 98 0 0 1 -86 -50" fill="none" stroke="#ddb457" stroke-width="3" marker-end="url(#ar)"/>
+      <defs><marker id="ar" viewBox="0 0 8 8" refX="6" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L8 4 L0 8 z" fill="#ddb457"/></marker></defs>
+      <g fill="#5fe08a" stroke="#0a0f0f" stroke-width="1.5">
+        <circle cx="140" cy="110" r="6"/><circle cx="330" cy="96" r="6"/><circle cx="360" cy="230" r="6"/><circle cx="170" cy="268" r="6"/>
+        <circle cx="120" cy="196" r="6"/><circle cx="300" cy="300" r="6"/><circle cx="388" cy="160" r="6"/>
+      </g>
+      <circle cx="240" cy="180" r="16" fill="#48726a" stroke="#ddb457" stroke-width="3"/>
+      <text x="240" y="210" fill="#ddb457" font-family="VT323,monospace" font-size="17" text-anchor="middle">Martyre</text>
+      <circle cx="300" cy="300" r="12" fill="none" stroke="#5fd8e8" stroke-width="2"/>
+      <circle cx="262" cy="318" r="8" fill="#5fd8e8" stroke="#0a0f0f" stroke-width="2"/>
+      <path d="M262 318 L296 302" stroke="#5fd8e8" stroke-width="2"/>
+      <text x="262" y="346" fill="#5fd8e8" font-family="VT323,monospace" font-size="16" text-anchor="middle">l’Exilé polit une mine</text>
+      <text x="420" y="320" fill="#5fe08a" font-family="VT323,monospace" font-size="16" text-anchor="end">mines (6 s)</text>
+    </svg>
+    <div class="stack">
+      <h3>La Nef verte</h3>
+      <ul class="l">
+        <li><b>Pluie de cuivre</b> : deux anneaux de balles cuivrées qui tournent en sens inverse.</li>
+        <li><b>Vert-de-gris</b> : toute balle qui finit sa course sans toucher s’arrête et reste 6 s en mine verte. Une mine touche comme une balle. L’arène se remplit si on ne polit pas.</li>
+        <li><b>Phase II, oxydation</b> (sous 50 % de PV) : toutes les mines éclatent ensemble, chacune en croix de quatre éclats.</li>
+        <li><b>Polir</b> : un tir de l’Exilé efface une mine ; chaque mine polie recharge un peu son Voile.</li>
+        <li>Butin : clef de la Gorge et le mod <b>Mines de patine</b> (rare).</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section class="q">
+  <h3>À choisir</h3>
+  <ul>
+    <li>Une silhouette pour l’Éclusier : E1, E2 ou E3 (je préfère E1).</li>
+    <li>Une silhouette pour la Martyre de la Patine : P1, P2 ou P3 (je préfère P1).</li>
+    <li>Pour coder l’Éclusier, il faut d’abord les salles noyées (eau, marche ralentie) et la pompe tenue par un adepte. Elles n’existent pas encore : je les ferai dans la même passe, sur le modèle validé du biome 2.</li>
+  </ul>
+</section>
+
+</div>
+
+<script>
+'use strict';
+// ---------- Palettes (rampes sombre → clair) ----------
+const R = {
+  copper: ['#24120a', '#5e2e16', '#9a5028', '#c87a42', '#eab07a'],
+  verd:   ['#0e1a1a', '#1f3433', '#365a55', '#5e8f80', '#9fcab8'],
+  gold:   ['#2a1e08', '#6a4c18', '#a87c2a', '#ddb457', '#fff0b0'],
+  iron:   ['#0e1214', '#22292c', '#3a4448', '#5a6a6e', '#8a9a9c'],
+  glass:  ['#0a1a22', '#174652', '#2f8494', '#74cad6', '#dcfbff'],
+  water:  ['#08161c', '#12343e', '#1f5a68', '#3a8a9a', '#8ed6e0'],
+  bolt:   ['#1a2a40', '#3a6ab0', '#7ab8ff', '#cfe8ff', '#ffffff'],
+  mossc:  ['#0e1812', '#1c3226', '#2f5240', '#4a7a5e', '#7eaa8a'],
+  ivory:  ['#26261f', '#5e5c52', '#9e9a8c', '#d0ccbc', '#f2efe4'],
+  mine:   ['#06200f', '#11582e', '#2aa452', '#78e098', '#e0ffe8'],
+  stone:  ['#121a1a', '#2c3a3a', '#4a5c5a', '#7a8e8a', '#c0ccc8'],
+  suit:   ['#0e1a20', '#1e3a44', '#2f5a66', '#4a8290', '#8cc4cc'],
+  cy:     ['#0a3a48', '#1f9fb8', '#5ce8ff', '#c8fbff', '#ffffff'],
+  hair:   ['#0e0a08', '#1e1610', '#2e2218', '#423226', '#5e4a3a'],
+  eskin:  ['#5a2c1c', '#a0583a', '#d88e62', '#f4c093', '#ffe2bf'],
+  ember:  ['#3a1408', '#8a3a10', '#d8742a', '#ffb060', '#fff0c0'],
+};
+const MAT = Object.keys(R);
+
+// ---------- Tampon de pixels et formes ----------
+function buf(w, h) { return { w, h, m: new Int8Array(w * h).fill(-1), s: new Float32Array(w * h) }; }
+function put(b, x, y, mat, s) { x |= 0; y |= 0; if (x < 0 || y < 0 || x >= b.w || y >= b.h) return; b.m[y * b.w + x] = mat === null ? -1 : MAT.indexOf(mat); b.s[y * b.w + x] = s; }
+function get(b, x, y) { if (x < 0 || y < 0 || x >= b.w || y >= b.h) return -1; return b.m[y * b.w + x]; }
+// ellipse ombrée, lumière en haut à gauche ; mat null = trou
+function blob(b, cx, cy, rx, ry, mat, bias = 0) {
+  for (let y = Math.floor(cy - ry); y <= Math.ceil(cy + ry); y++) for (let x = Math.floor(cx - rx); x <= Math.ceil(cx + rx); x++) {
+    const dx = (x + .5 - cx) / rx, dy = (y + .5 - cy) / ry, d = dx * dx + dy * dy; if (d > 1) continue;
+    const nz = Math.sqrt(1 - Math.min(d, 1)); put(b, x, y, mat, (-dx * .55 - dy * .65 + nz * .75) * .62 + .28 + bias);
+  }
+}
+function rect(b, x0, y0, w, h, mat, bias = 0) { for (let y = y0; y < y0 + h; y++) for (let x = x0; x < x0 + w; x++) { const u = (x - x0 + .5) / w, v = (y - y0 + .5) / h; put(b, x, y, mat, .75 - u * .45 - v * .2 + bias); } }
+// trapèze : largeur w0 en haut, w1 en bas
+function trap(b, cx, y0, h, w0, w1, mat, bias = 0) {
+  for (let y = y0; y < y0 + h; y++) { const v = (y - y0) / h, w = w0 + (w1 - w0) * v;
+    for (let x = Math.floor(cx - w / 2); x <= Math.ceil(cx + w / 2); x++) { const u = (x - (cx - w / 2)) / w; put(b, x, y, mat, .8 - u * .5 - v * .15 + bias); } }
+}
+// polyligne épaisse (tuyau, chaîne, hampe) qui passe de w0 à w1
+function line(b, pts, w0, w1, mat, bias = -.05) {
+  const n = pts.length - 1;
+  for (let k = 0; k < n; k++) {
+    const [x0, y0] = pts[k], [x1, y1] = pts[k + 1], L = Math.hypot(x1 - x0, y1 - y0), steps = Math.max(1, Math.ceil(L * 2));
+    for (let s = 0; s <= steps; s++) { const t = s / steps, x = x0 + (x1 - x0) * t, y = y0 + (y1 - y0) * t, w = w0 + (w1 - w0) * ((k + t) / n);
+      blob(b, x, y, Math.max(.6, w / 2), Math.max(.6, w / 2), mat, bias); }
+  }
+}
+function px(b, x, y, mat, s) { put(b, x, y, mat, s); }
+function rng(seed) { let s = seed >>> 0; return () => (s = (s * 1664525 + 1013904223) >>> 0) / 4294967296; }
+// taches d'une matière sur une autre (patine sur le cuivre, mousse sur la cape)
+function speck(b, onMat, toMat, rate, seed) {
+  const r = rng(seed), m = MAT.indexOf(onMat);
+  for (let i = 0; i < b.w * b.h; i++) if (b.m[i] === m && r() < rate) { b.m[i] = MAT.indexOf(toMat); b.s[i] = .3 + r() * .45; }
+}
+// arêtes polies : pixels de onMat dont le voisin du haut ou de gauche n'est pas onMat
+function edges(b, onMat, toMat, rate, seed) {
+  const r = rng(seed), m = MAT.indexOf(onMat), out = [];
+  for (let y = 0; y < b.h; y++) for (let x = 0; x < b.w; x++) {
+    if (b.m[y * b.w + x] !== m) continue;
+    if ((get(b, x - 1, y) !== m || get(b, x, y - 1) !== m) && r() < rate) out.push(y * b.w + x);
+  }
+  for (const i of out) { b.m[i] = MAT.indexOf(toMat); b.s[i] = .75; }
+}
+// fissure : marche au hasard depuis un point
+function crack(b, x, y, n, mat, seed, onlyOn) {
+  const r = rng(seed), on = onlyOn ? onlyOn.map(k => MAT.indexOf(k)) : null;
+  for (let i = 0; i < n; i++) {
+    if (!on || on.includes(get(b, x | 0, y | 0))) put(b, x, y, mat, .55 + r() * .4);
+    x += r() < .5 ? -1 : 1; y += r() < .7 ? 1 : 0;
+  }
+}
+
+// ---------- Rendu (paliers francs, contour sélectif) ----------
+function render(b, scale) {
+  const c = document.createElement('canvas'); c.width = b.w * scale; c.height = b.h * scale;
+  const g = c.getContext('2d');
+  const col = (i) => { const r = R[MAT[b.m[i]]]; const v = Math.max(0, Math.min(.999, b.s[i])) * (r.length - 1.0001); return r[Math.min(Math.max(Math.round(v), 1), r.length - 1)]; };
+  for (let y = 0; y < b.h; y++) for (let x = 0; x < b.w; x++) { const i = y * b.w + x; if (b.m[i] < 0) continue; g.fillStyle = col(i); g.fillRect(x * scale, y * scale, scale, scale); }
+  for (let y = 0; y < b.h; y++) for (let x = 0; x < b.w; x++) {
+    if (b.m[y * b.w + x] >= 0) continue; let best = -1;
+    for (const [dx, dy] of [[0, 1], [1, 0], [-1, 0], [0, -1]]) { const j = get(b, x + dx, y + dy); if (j >= 0) { best = j; break; } }
+    if (best >= 0) { g.fillStyle = R[MAT[best]][0]; g.fillRect(x * scale, y * scale, scale, scale); }
+  }
+  return c;
+}
+function glow(c, x, y, r, rgb, a, scale) {
+  const g = c.getContext('2d'); g.globalCompositeOperation = 'lighter';
+  const gr = g.createRadialGradient(x * scale, y * scale, 0, x * scale, y * scale, r * scale);
+  gr.addColorStop(0, `rgba(${rgb},${a})`); gr.addColorStop(1, `rgba(${rgb},0)`); g.fillStyle = gr; g.fillRect(0, 0, c.width, c.height);
+  g.globalCompositeOperation = 'source-over';
+}
+
+// ---------- L'Exilé, pour l'échelle ----------
+function exile() {
+  const b = buf(18, 32);
+  blob(b, 9, 30, 6, 1.4, 'stone', -.4);
+  rect(b, 6, 18, 2, 11, 'suit'); rect(b, 10, 18, 2, 11, 'suit');
+  trap(b, 9, 9, 10, 9, 8, 'suit');
+  blob(b, 4, 13, 1.8, 3.4, 'suit'); blob(b, 14, 13, 1.8, 3.4, 'suit');
+  blob(b, 9, 5, 3.6, 3.8, 'eskin'); blob(b, 9, 3, 3.8, 2.2, 'hair');
+  px(b, 9, 12, 'cy', .9); px(b, 8, 12, 'cy', .6);
+  return b;
+}
+
+// ================= Éclusier =================
+// hublot : anneau doré, verre plein d'eau (reflet, bulle) ou vide (fer sombre, goutte)
+function porthole(b, cx, cy, r, dry) {
+  blob(b, cx, cy, r + 1.4, r + 1.3, 'gold');
+  if (dry) { blob(b, cx, cy, r, r * .95, 'iron', -.35); px(b, cx, cy + r - 1, 'water', .7); }
+  else { blob(b, cx, cy, r, r * .95, 'glass', .05); px(b, cx - 2, cy - 2, 'glass', .99); px(b, cx - 1, cy - 3, 'glass', .99); px(b, cx + 1, cy + 1, 'glass', .9); }
+  for (const [dx, dy] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) px(b, cx + dx * (r + .8), cy + dy * (r + .6), 'iron', .8);
+}
+function e1(dry) {
+  const b = buf(60, 68), g = 64, sag = dry ? 2 : 0;
+  blob(b, 28, g + 1, 20, 2.4, 'stone', -.45);
+  if (dry) blob(b, 27, g, 15, 1.6, 'water', .2);
+  // bottes
+  rect(b, 17, g - 20, 8, 14, 'copper', -.05); rect(b, 31, g - 20, 8, 14, 'copper', -.12);
+  blob(b, 21, g - 3, 6, 2.8, 'iron'); blob(b, 35, g - 3, 6, 2.8, 'iron', -.05);
+  // tuyaux dans le dos (sous le corps)
+  if (dry) { line(b, [[17, g - 46], [9, g - 40], [8, g - 30], [10, g - 22]], 2.6, 2, 'verd'); line(b, [[39, g - 46], [46, g - 40], [47, g - 28]], 2.6, 2, 'verd'); }
+  else { line(b, [[17, g - 48], [8, g - 46], [6, g - 36], [10, g - 28]], 2.8, 2.2, 'verd'); line(b, [[39, g - 48], [48, g - 46], [49, g - 36]], 2.8, 2.2, 'verd'); }
+  // torse rond (gonflé d'eau) ou affaissé
+  const ty = g - 30 + sag;
+  blob(b, 28, ty, 15, dry ? 11 : 13, 'copper');
+  rect(b, 14, ty + 6, 28, 3, 'verd', -.05);
+  for (let k = 0; k < 7; k++) px(b, 16 + k * 4, ty + 7, 'gold', .85);
+  // bras et gants
+  blob(b, 11, ty + 2, 4.6, 8, 'copper', -.05); blob(b, 45, ty + 2, 4.6, 8, 'copper', -.12);
+  blob(b, 10, ty + 10, 3.6, 3, 'iron'); blob(b, 46, ty + 10, 3.6, 3, 'iron');
+  // collerette et casque
+  blob(b, 28, ty - 12, 11, 3, 'gold', -.05);
+  blob(b, 28, ty - 21, 10, 9.5, 'copper', .05);
+  porthole(b, 28, ty - 20, 4.6, dry);
+  // clef d'écluse sur l'épaule droite
+  line(b, [[42, ty - 8], [52, ty - 36]], 3, 3, 'gold');
+  blob(b, 53, ty - 40, 5, 5, 'gold'); blob(b, 53, ty - 40, 2.2, 2.2, null);
+  rect(b, 39, ty - 6, 3, 5, 'gold', -.1); rect(b, 42, ty - 4, 3, 3, 'gold', -.1);
+  speck(b, 'copper', 'verd', .08, 3);
+  return b;
+}
+function e2(dry) {
+  const b = buf(56, 76), g = 72;
+  blob(b, 26, g + 1, 18, 2.4, 'stone', -.45);
+  if (dry) blob(b, 26, g, 13, 1.5, 'water', .2);
+  // clef plantée (hampe à droite)
+  line(b, [[44, g], [44, 8]], 3, 3, 'gold');
+  blob(b, 44, 6, 5, 5, 'gold'); blob(b, 44, 6, 2.2, 2.2, null); rect(b, 45, 14, 5, 3, 'gold'); rect(b, 45, 19, 4, 3, 'gold');
+  // réservoir dorsal (à gauche, derrière)
+  rect(b, 9, 24, 8, 22, 'verd'); blob(b, 13, 24, 4, 2, 'verd', .1);
+  if (!dry) rect(b, 11, 30, 4, 14, 'glass', -.05); else rect(b, 11, 40, 4, 4, 'glass', -.1);
+  // jambes
+  rect(b, 18, g - 24, 6, 20, 'copper', -.05); rect(b, 28, g - 24, 6, 20, 'copper', -.12);
+  blob(b, 21, g - 3, 5, 2.6, 'iron'); blob(b, 31, g - 3, 5, 2.6, 'iron', -.05);
+  // corps en cloche
+  trap(b, 26, 28, dry ? 22 : 20, 14, dry ? 20 : 24, 'copper');
+  rect(b, 15, g - 26, 22, 3, 'verd');
+  for (let k = 0; k < 5; k++) px(b, 17 + k * 4, g - 25, 'gold', .85);
+  // bras gauche au harpon, bras droit sur la clef
+  blob(b, 14, 34, 3.6, 7, 'copper', -.05); blob(b, 39, 32, 3.6, 6, 'copper', -.12); blob(b, 42, 36, 3, 2.6, 'iron');
+  line(b, [[12, 40], [3, 30]], 2, 2, 'iron'); px(b, 2, 29, 'iron', .9); px(b, 1, 30, 'iron', .9); px(b, 3, 28, 'iron', .9);
+  blob(b, 12, 41, 3, 2.6, 'iron');
+  // tête-cloche
+  blob(b, 26, 27, 9, 2.6, 'gold', -.05);
+  trap(b, 26, 9, 17, 10, 16, 'copper', .05); blob(b, 26, 10, 5.5, 3.5, 'copper', .1);
+  porthole(b, 26, 18, 3.6, dry);
+  line(b, [[20, 12], [12, 18], [11, 24]], 2.2, 2, 'verd');
+  speck(b, 'copper', 'verd', .08, 5);
+  return b;
+}
+function e3(dry) {
+  const b = buf(66, 66), g = 62;
+  blob(b, 32, g + 1, 22, 2.4, 'stone', -.45);
+  if (dry) blob(b, 32, g, 16, 1.6, 'water', .2);
+  // roue de pompe dans le dos
+  blob(b, 22, 22, 13, 13, 'gold', -.05); blob(b, 22, 22, 10, 10, 'iron', -.2);
+  for (let k = 0; k < 6; k++) { const a = k * Math.PI / 3 + (dry ? .3 : 0); line(b, [[22, 22], [22 + Math.cos(a) * 9.5, 22 + Math.sin(a) * 9.5]], 1.6, 1.6, 'gold'); }
+  blob(b, 22, 22, 2.4, 2.4, 'copper', .1);
+  // jambes fléchies
+  line(b, [[30, g - 20], [26, g - 10], [28, g - 3]], 6, 5, 'copper'); line(b, [[40, g - 20], [44, g - 10], [42, g - 3]], 6, 5, 'copper', -.12);
+  blob(b, 28, g - 2, 5.5, 2.6, 'iron'); blob(b, 43, g - 2, 5.5, 2.6, 'iron', -.05);
+  // buste penché vers la droite
+  blob(b, 36, g - 28, 14, dry ? 10 : 12, 'copper');
+  rect(b, 24, g - 22, 24, 3, 'verd');
+  for (let k = 0; k < 6; k++) px(b, 26 + k * 4, g - 21, 'gold', .85);
+  // bras-harpon long vers l'avant
+  line(b, [[46, g - 30], [56, g - 26], [62, g - 30]], 4, 3, 'copper', -.1);
+  line(b, [[60, g - 30], [65, g - 34]], 1.6, 1.6, 'iron'); px(b, 64, g - 36, 'iron', .9); px(b, 65, g - 33, 'iron', .9);
+  blob(b, 26, g - 24, 3.6, 6, 'copper', -.05); blob(b, 25, g - 17, 3, 2.6, 'iron');
+  // casque petit, en avant
+  blob(b, 46, g - 42, 7.5, 7, 'copper', .05); blob(b, 46, g - 36, 8, 2.2, 'gold');
+  porthole(b, 48, g - 42, 3.4, dry);
+  line(b, [[40, g - 44], [30, g - 40], [24, g - 32]], 2.2, 2, 'verd');
+  speck(b, 'copper', 'verd', .08, 9);
+  return b;
+}
+function pump(held) {
+  const b = buf(40, 34);
+  blob(b, 12, 31, 11, 1.8, 'stone', -.45);
+  rect(b, 4, 12, 16, 18, 'copper'); blob(b, 12, 12, 8, 3, 'copper', .1);
+  blob(b, 12, 20, 4.4, 4.4, 'gold'); blob(b, 12, 20, 2.4, 2.4, held ? 'glass' : 'iron', held ? .1 : -.2);
+  line(b, [[12, 8], [12, 2], [20, 2]], 2, 2, 'iron');
+  line(b, [[20, 26], [30, 30], [38, 30]], 3, 3, 'verd');
+  if (held) { blob(b, 34, 26, 4, 2, 'water', .1); blob(b, 30, 9, 3, 3, 'eskin'); rect(b, 27, 12, 6, 10, 'ivory', -.1); line(b, [[27, 14], [20, 4]], 1.6, 1.6, 'ivory'); }
+  speck(b, 'copper', 'verd', .07, 2);
+  return b;
+}
+function harpoon(k) {
+  const b = buf(44, 20);
+  if (k === 0) { for (let x = 2; x < 42; x += 3) px(b, x, 10, 'gold', .9); blob(b, 40, 10, 2, 2, 'gold', .2); }
+  else {
+    const n = k === 2 ? 3 : 0;
+    for (let x = 2; x < 38; x += 2) { if (k === 2 && x > 16 && x < 22) continue; blob(b, x, 10 + (k === 2 && x > 20 ? (x - 20) * .25 : 0), 1.1, .9, 'iron', .1); }
+    line(b, [[38, 10], [43, 10]], 1.6, 1.6, 'iron'); px(b, 42, 8, 'iron', .9); px(b, 42, 12, 'iron', .9);
+    if (k === 2) { px(b, 18, 7, 'ember', .9); px(b, 20, 13, 'ember', .9); px(b, 19, 9, 'ember', .99); }
+  }
+  return b;
+}
+function water(zap) {
+  const b = buf(40, 22), r = rng(zap ? 7 : 3);
+  for (let y = 2; y < 20; y++) for (let x = 0; x < 40; x++) put(b, x, y, 'water', .35 + .25 * Math.sin((x + y * 2) * .6) + r() * .1);
+  for (let k = 0; k < 6; k++) { const x = 3 + k * 7; px(b, x, 6 + (k % 3) * 4, 'water', .95); px(b, x + 1, 6 + (k % 3) * 4, 'water', .95); }
+  if (zap) { let x = 4, y = 4; for (let i = 0; i < 40; i++) { put(b, x, y, 'bolt', .7 + r() * .3); x += 1; y += r() < .5 ? -1 : 1; y = Math.max(3, Math.min(18, y)); } }
+  return b;
+}
+
+// ================= Martyre de la Patine =================
+function p1(ox) {
+  const b = buf(56, 76), g = 72;
+  blob(b, 28, g + 1, 18, 2.4, 'stone', -.45);
+  // cape de mousse de cuivre derrière
+  trap(b, 28, 20, 50, 18, 34, 'mossc', -.05);
+  speck(b, 'mossc', 'verd', .12, 4);
+  // jambes et jupe d'écailles
+  rect(b, 21, g - 18, 5, 16, 'verd', -.05); rect(b, 30, g - 18, 5, 16, 'verd', -.12);
+  blob(b, 23, g - 2, 4, 2.2, 'verd'); blob(b, 33, g - 2, 4, 2.2, 'verd', -.05);
+  trap(b, 28, 38, 18, 14, 22, 'verd');
+  for (let y = 41; y < 56; y += 4) for (let x = 19; x < 38; x += 4) px(b, x + ((y >> 2) & 1) * 2, y, 'verd', .9);
+  // torse, épaulières
+  trap(b, 28, 22, 17, 18, 14, 'verd', .05);
+  blob(b, 17, 24, 5, 4, 'verd', .05); blob(b, 39, 24, 5, 4, 'verd', -.05);
+  // bras levés, mains ouvertes (elle lance ses anneaux)
+  line(b, [[15, 26], [9, 18], [7, 10]], 4, 3, 'verd'); line(b, [[41, 26], [47, 18], [49, 10]], 4, 3, 'verd', -.12);
+  blob(b, 7, 8, 2.6, 2.4, 'ivory'); blob(b, 49, 8, 2.6, 2.4, 'ivory', -.05);
+  // heaume, fente dorée
+  blob(b, 28, 15, 6.5, 7, 'verd', .08); rect(b, 25, 15, 7, 1, 'gold', .2);
+  blob(b, 28, 8, 2, 3, 'gold', .1);
+  edges(b, 'verd', 'gold', .3, 11);
+  if (ox) { crack(b, 26, 26, 14, 'mine', 3, ['verd']); crack(b, 32, 40, 12, 'mine', 8, ['verd']); crack(b, 20, 44, 10, 'mine', 5, ['verd']); }
+  return b;
+}
+function p2(ox) {
+  const b = buf(60, 80), g = 76;
+  blob(b, 30, g + 1, 18, 2.4, 'stone', -.45);
+  // disque de cuivre dans le dos et ses billes
+  blob(b, 30, 22, 17, 17, 'copper', -.08); blob(b, 30, 22, 12, 12, 'copper', .12);
+  for (let k = 0; k < 8; k++) { const a = k * Math.PI / 4; blob(b, 30 + Math.cos(a) * 14.5, 22 + Math.sin(a) * 14.5, 1.8, 1.8, ox ? 'mine' : 'gold', .2); }
+  speck(b, 'copper', 'verd', .14, 6);
+  // robe longue
+  trap(b, 30, 32, 40, 14, 26, 'verd');
+  trap(b, 30, 34, 38, 4, 6, 'ivory', -.05);
+  // bras croisés sur la poitrine
+  blob(b, 24, 38, 4, 3, 'verd', .05); blob(b, 36, 38, 4, 3, 'verd', -.08); blob(b, 30, 40, 3, 2.2, 'ivory');
+  // tête et mitre
+  blob(b, 30, 28, 5.5, 5.5, 'verd', .05); rect(b, 27, 28, 7, 1, 'gold', .2);
+  trap(b, 30, 10, 14, 4, 11, 'verd', .1); rect(b, 29, 11, 2, 12, 'gold', .1);
+  edges(b, 'verd', 'gold', .3, 13);
+  if (ox) { crack(b, 26, 46, 16, 'mine', 2, ['verd']); crack(b, 35, 52, 14, 'mine', 4, ['verd']); }
+  return b;
+}
+function p3(ox) {
+  const b = buf(64, 74), g = 70;
+  blob(b, 32, g + 1, 22, 2.6, 'stone', -.45);
+  // jambes massives
+  rect(b, 20, g - 20, 9, 18, 'verd', -.05); rect(b, 35, g - 20, 9, 18, 'verd', -.12);
+  blob(b, 24, g - 2, 6, 2.8, 'verd'); blob(b, 40, g - 2, 6, 2.8, 'verd', -.05);
+  // tronc large
+  trap(b, 32, 22, 30, 30, 24, 'verd');
+  // épaules couvertes de mousse
+  blob(b, 15, 24, 9, 7, 'mossc', .05); blob(b, 49, 24, 9, 7, 'mossc', -.05);
+  speck(b, 'mossc', 'verd', .1, 7);
+  // bras pendants, poings lourds
+  rect(b, 8, 28, 7, 20, 'verd', -.05); rect(b, 49, 28, 7, 20, 'verd', -.12);
+  blob(b, 11, 50, 4.5, 4, 'ivory', -.05); blob(b, 52, 50, 4.5, 4, 'ivory', -.1);
+  // tête enfoncée, fente
+  blob(b, 32, 17, 7, 6.5, 'verd', .08); rect(b, 28, 17, 9, 1, 'gold', .2);
+  edges(b, 'verd', 'gold', .22, 17);
+  const cr = [[24, 26], [36, 30], [30, 40], [22, 44], [40, 46]];
+  cr.forEach(([x, y], i) => crack(b, x, y, ox ? 14 : 6, ox ? 'mine' : 'iron', 20 + i, ['verd']));
+  return b;
+}
+function mines() {
+  const b = buf(70, 18);
+  blob(b, 6, 9, 2.6, 2.6, 'copper', .15);
+  blob(b, 22, 9, 3.4, 3.4, 'mine', .05); px(b, 21, 8, 'mine', .99);
+  for (const [dx, dy] of [[-5, 0], [5, 0], [0, -5], [0, 5]]) px(b, 22 + dx, 9 + dy, 'mine', .6);
+  for (const [dx, dy] of [[-2, -2], [2, -1], [-1, 2], [3, 2]]) px(b, 38 + dx, 9 + dy, 'mine', .45);
+  blob(b, 56, 9, 2, 2, 'mine', .3);
+  for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) for (let k = 3; k <= 7; k += 2) blob(b, 56 + dx * k, 9 + dy * k, 1.1, 1.1, 'mine', .3);
+  return b;
+}
+
+// ---------- Mise en scène ----------
+const S = 4;
+function scene(el, items) {
+  for (const it of items) {
+    const f = document.createElement('figure');
+    const c = render(it.b, it.s || S);
+    if (it.glow) for (const gl of it.glow) glow(c, gl[0], gl[1], gl[2], gl[3], gl[4], it.s || S);
+    f.appendChild(c);
+    if (it.cap) { const fc = document.createElement('figcaption'); fc.textContent = it.cap; f.appendChild(fc); }
+    el.appendChild(f);
+  }
+}
+const ex = () => ({ b: exile(), cap: 'Exilé' });
+const DRAW = {
+  e1: [{ b: e1(false), cap: 'plein · armure 5', glow: [[28, 14, 8, '120,220,230', .25]] }, { b: e1(true), cap: 'vidé · armure 0' }, ex()],
+  e2: [{ b: e2(false), cap: 'plein · armure 5', glow: [[26, 18, 7, '120,220,230', .25]] }, { b: e2(true), cap: 'vidé · armure 0' }, ex()],
+  e3: [{ b: e3(false), cap: 'plein · armure 5', glow: [[48, 20, 7, '120,220,230', .25]] }, { b: e3(true), cap: 'vidé · armure 0' }, ex()],
+  pump: [{ b: pump(false), cap: 'libre' }, { b: pump(true), cap: 'tenue' }],
+  harpoon: [{ b: harpoon(0), cap: 'annonce' }, { b: harpoon(1), cap: 'tendue' }, { b: harpoon(2), cap: 'brisée' }],
+  water: [{ b: water(false), cap: 'eau' }, { b: water(true), cap: 'court-circuit', glow: [[20, 11, 16, '140,190,255', .35]] }],
+  p1: [{ b: p1(false), cap: 'repos' }, { b: p1(true), cap: 'oxydation', glow: [[28, 40, 22, '90,230,140', .28]] }, ex()],
+  p2: [{ b: p2(false), cap: 'repos', glow: [[30, 22, 18, '230,150,80', .18]] }, { b: p2(true), cap: 'oxydation', glow: [[30, 30, 24, '90,230,140', .28]] }, ex()],
+  p3: [{ b: p3(false), cap: 'repos' }, { b: p3(true), cap: 'oxydation', glow: [[32, 38, 24, '90,230,140', .3]] }, ex()],
+  mines: [{ b: mines(), cap: 'balle · mine · polie · éclat', glow: [[22, 9, 8, '90,230,140', .3], [56, 9, 10, '90,230,140', .3]] }],
+};
+document.querySelectorAll('[data-draw]').forEach(el => scene(el, DRAW[el.dataset.draw]));
+</script>

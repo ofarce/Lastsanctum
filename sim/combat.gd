@@ -7,6 +7,8 @@ extends RefCounted
 ## Les effets (rivet, flèche, carreau, explosion, impacts, zones) sont des données dans GameState.effects ;
 ## WorldOverlay les dessine.
 
+## Dégâts fixes d'un coup de boss sur l'Exilé incarné (100 PV) ; Combat.boss_shot ajoute +5 % par biome.
+const BOSS_SHOT_DAMAGE := 20.0
 ## VOLLEY : départs décalés des trois carreaux du Tireur.
 const VOLLEY := [0.0, 0.13, 0.26]
 
@@ -17,6 +19,11 @@ var tactics: RefCounted
 ## Journal d'événements (vagues, morts, niveaux) pour les parties scriptées ; vide si log_events est faux.
 var log_events := false
 var events: PackedStringArray = []
+
+
+## Barème des coups de boss sur l'Exilé à la profondeur z : +5 % par biome (Biomes.power_at).
+static func boss_shot(z: float) -> float:
+	return BOSS_SHOT_DAMAGE * Biomes.power_at(z)
 
 
 func _init(s: Simulation) -> void:
@@ -60,7 +67,7 @@ static func target_closest(source: Variant, list: Array, range_ := 1e9, observer
 		var dz: float = t.z - sz
 		if dz >= d or dz <= -d:
 			continue
-		if t.hp <= 0.0 or t.hidden or Martyre.blocks(source, t) or OeilMatrice.blocks(source, t):
+		if t.hp <= 0.0 or t.hidden or Martyre.blocks(source, t) or OeilMatrice.blocks(source, t) or Patine.blocks(source, t):
 			continue
 		var nd := sqrt(dx * dx + dz * dz)
 		if nd < d and (observer_world == null or observer_world.fog.visible_at(t.pos())):
@@ -80,7 +87,18 @@ func damage(t: Unit, amount: float, src: Unit = null, delay := 0.0) -> void:
 		if not Martyre.can_hurt(src):
 			return
 		if amount > 0.0:
+			if Martyre.ward_absorbs(t as Enemy):
+				return
 			Martyre.hurt(t as Enemy)
+	# Dôme de la Martyre de la Patine (sim/patine.gd) : seul l'Exilé, sous le dôme, l'atteint.
+	if t is Enemy and (t as Enemy).kind == Patine.KIND:
+		if not Patine.can_hurt(src):
+			return
+		if amount > 0.0:
+			(t as Enemy).hurt_at = GameState.sim_time
+	# Éclusier de Byrsa : éclair de blessure (sa vue).
+	if t is Enemy and (t as Enemy).kind == Eclusier.KIND and amount > 0.0:
+		(t as Enemy).hurt_at = GameState.sim_time
 	# Salle de l'Œil de la Matrice : seul l'Ingénieur, dans la salle, l'atteint ; l'œil ouvert encaisse double.
 	if t is Enemy and ((t as Enemy).kind == OeilMatrice.KIND or (t as Enemy).kind == OeilMatrice.PUPIL_KIND):
 		if not OeilMatrice.can_hurt(src):
@@ -91,9 +109,8 @@ func damage(t: Unit, amount: float, src: Unit = null, delay := 0.0) -> void:
 	# Gorge-Cuivre : dégâts doublés dans la gueule ouverte.
 	if t is Enemy and (t as Enemy).kind == Gorge.KIND and amount > 0.0:
 		amount *= Gorge.damage_mult()
-	# Archiprêtre aux racines : dégâts doublés bulbe ouvert (les quatre cultes prient).
+	# Archiprêtre aux racines : éclair de blessure (sa vue).
 	if t is Enemy and (t as Enemy).kind == Archipretre.KIND and amount > 0.0:
-		amount *= Archipretre.damage_mult()
 		(t as Enemy).hurt_at = GameState.sim_time
 	# Voile de la Martyre (module d'exo) : le coup est absorbé en entier.
 	if amount > 0.0 and not t.is_enemy() and Loot.veil_absorbs(t):
@@ -291,6 +308,9 @@ func clear_shot(a: Vector2, b: Vector2) -> bool:
 	var ts: Variant = sim.world.terrain_state if sim != null and sim.world != null else null
 	if ts == null:
 		return true
+	# Porte de la grotte fermée (CaveDoors) : elle arrête flèches, pilums et sorts comme un mur.
+	if not GameState.cave_doors.is_empty() and CaveDoors.blocks(a, b):
+		return false
 	var n := ceili(a.distance_to(b) / 0.5)
 	for k in range(1, n):
 		var p := a.lerp(b, float(k) / n)
@@ -300,7 +320,7 @@ func clear_shot(a: Vector2, b: Vector2) -> bool:
 ## Départ des projectiles en pixels natifs (devant, hauteur) depuis le pied, sur les sprites de la refonte.
 const ENEMY_BOW := Vector2(7.0, 14.0)
 const ENEMY_PILUM := Vector2(3.0, 21.0)
-const ENEMY_STAFF := Vector2(2.0, 31.0)
+const ENEMY_STAFF := Vector2(26.0, 14.0)  # pointe du bâton abattu (geste « L'élévation », manifeste cast.from)
 
 
 ## arrow : flèche de l'archer, puis étincelles à l'impact. `from` : départ (devant, hauteur) en pixels natifs.
@@ -478,11 +498,24 @@ func gear_attack(u: Unit, point: Vector2) -> void:
 		_ball(u, dir, dmg * float(A["mult"]), ammo)
 
 
+## Balle sans cible : elle s'écrase sur la roche, ou s'éteint au bout de BALL_RANGE (planche « Fin des projectiles »,
+## 2026-11-23 ; dessin dans ShotEnds). `delay` : durée du vol avant la fin.
+func _ball_end(u: Unit, d: Vector2, end: Vector2, delay: float, ammo: String) -> void:
+	var mode := "range" if end.distance_to(Vector2(u.x, u.z)) >= BALL_RANGE - 0.01 else "wall"
+	var dur: float = ShotEnds.DUR[ammo][0 if mode == "wall" else 1] if ShotEnds.DUR.has(ammo) else 0.3
+	_fx({"type": "cballhit", "x": end.x, "z": end.y, "age": -delay, "duration": dur, "seed": _seed(), "ammo": ammo,
+		"end": mode, "dx": d.x, "dz": d.y})
+
+
 ## Une balle de l'Arbalestrie (ou du canon) de `u` dans la direction `d`, avec les effets de la munition.
 func _ball(u: Unit, d: Vector2, dmg: float, ammo: String) -> void:
 	var A: Dictionary = Ammo.AMMO[ammo]
 	var hit := ball_target(u, d)
 	var end: Vector2 = hit["end"]
+	# Mini-boss des Salles oubliées : chaîne du harpon de l'Éclusier (trois touches la brisent), mines de la Patine
+	# (polies au passage).
+	Eclusier.chain_shot(Vector2(u.x, u.z), end)
+	Patine.polish(u, Vector2(u.x, u.z), end)
 	var dur := maxf(0.04, end.distance_to(Vector2(u.x, u.z)) / BALL_SPEED)
 	var ball := {"type": "cball", "x": u.x, "z": u.z, "tx": end.x, "tz": end.y, "age": 0.0, "duration": dur, "seed": _seed(), "ammo": ammo}
 	# Arbalestrie : la balle sort de la bouche du canon (dessin seul, la trajectoire simulée ne change pas).
@@ -490,10 +523,13 @@ func _ball(u: Unit, d: Vector2, dmg: float, ammo: String) -> void:
 		ball["muz"] = u.face if u.face != 0 else 1
 	_fx(ball)
 	Sfx.at("fleche_impact", end.x, end.y, dur)
-	_fx({"type": "cballhit", "x": end.x, "z": end.y, "age": -dur, "duration": 0.45 if ammo == "indra" else 0.3, "seed": _seed(), "ammo": ammo})
 	var target: Enemy = hit["enemy"]
 	if target == null:
+		_ball_end(u, d, end, dur, ammo)
+		# Mines de patine (sim/mods.gd) : le tir manqué laisse une mine là où il s'arrête.
+		Mods.patine_drop(u, end - d * 0.4, dmg)
 		return
+	_fx({"type": "cballhit", "x": end.x, "z": end.y, "age": -dur, "duration": 0.45 if ammo == "indra" else 0.3, "seed": _seed(), "ammo": ammo})
 	var before := target.hp
 	damage(target, dmg, u, dur)
 	# Lentille de souffle (sim/mods.gd) : le carreau traverse et touche le suivant sur sa ligne.
@@ -505,9 +541,10 @@ func _ball(u: Unit, d: Vector2, dmg: float, ammo: String) -> void:
 		var e2: Vector2 = nxt["end"]
 		var dur2 := dur + maxf(0.02, from.distance_to(e2) / BALL_SPEED)
 		_fx({"type": "cball", "x": from.x, "z": from.y, "tx": e2.x, "tz": e2.y, "age": -dur, "duration": dur2 - dur, "seed": _seed(), "ammo": ammo})
-		_fx({"type": "cballhit", "x": e2.x, "z": e2.y, "age": -dur2, "duration": 0.3, "seed": _seed(), "ammo": ammo})
 		if tgt == null:
+			_ball_end(u, d, e2, dur2, ammo)
 			break
+		_fx({"type": "cballhit", "x": e2.x, "z": e2.y, "age": -dur2, "duration": 0.3, "seed": _seed(), "ammo": ammo})
 		damage(tgt, dmg, u, dur2)
 		pierced.append(tgt)
 	var dealt := before - target.hp
@@ -566,7 +603,7 @@ func ball_target(u: Unit, d: Vector2, skip: Array[Enemy] = []) -> Dictionary:
 func archer_target(u: Unit, range_: float) -> Variant:
 	var near: Array = []
 	for e: Enemy in GameState.enemies:
-		if e.hp <= 0.0 or e.hidden or Martyre.blocks(u, e) or OeilMatrice.blocks(u, e):
+		if e.hp <= 0.0 or e.hidden or Martyre.blocks(u, e) or OeilMatrice.blocks(u, e) or Patine.blocks(u, e):
 			continue
 		var d := dist(e, u)
 		if d < range_ and (sim.world == null or sim.world.fog.visible_at(e.pos())):
@@ -828,6 +865,8 @@ const SHIELD_CHARGE := {"sight": 24.0, "speed": 2.2}
 func update_enemies(dt: float, alive: Array[Unit]) -> void:
 	tactics.update(dt, alive)
 	var core := {"x": CaveShape.CORE.x, "z": CaveShape.CORE.y}
+	# Bêtes en chasse : leur proie ne change qu'au tick de la faune, après cette boucle.
+	var hunters := Wildlife.hunting()
 	for e: Enemy in GameState.enemies:
 		if e.hp <= 0.0 or e.neutral:
 			continue
@@ -842,6 +881,12 @@ func update_enemies(dt: float, alive: Array[Unit]) -> void:
 			continue
 		if e.kind == Archipretre.KIND:
 			Archipretre.act(sim, e, dt, alive)
+			continue
+		if e.kind == Eclusier.KIND:
+			Eclusier.act(sim, e, dt, alive)
+			continue
+		if e.kind == Patine.KIND:
+			Patine.act(sim, e, dt)
 			continue
 		# Pupilles errantes : menées par l'Œil (OeilMatrice.update_fx).
 		if e.kind == OeilMatrice.PUPIL_KIND:
@@ -866,11 +911,11 @@ func update_enemies(dt: float, alive: Array[Unit]) -> void:
 		if roaming:
 			target = Roamers.target(e, alive, sim.state())
 		# Attaqué par une bête de la jungle : il riposte.
-		var wild := Wildlife.attacker_of(e)
+		var wild := Wildlife.attacker_of(e, hunters)
 		if wild and (target == null or dist(wild, e) < dist(target, e)):
 			target = wild
 		# Rien ne frappe à travers le bouclier de la Martyre.
-		if target != null and (Martyre.blocks(e, target) or OeilMatrice.blocks(e, target)):
+		if target != null and (Martyre.blocks(e, target) or OeilMatrice.blocks(e, target) or Patine.blocks(e, target)):
 			target = null
 		var is_core := target == null
 		# Credo sans arme de tir : cible détectée, il se rue au contact (Catalog.CREDO_RUSH).
@@ -878,7 +923,7 @@ func update_enemies(dt: float, alive: Array[Unit]) -> void:
 		# Porte-bouclier (2026-11-22) : il fonce sur l'Exilé incarné qu'il voit pour le frapper au contact.
 		if e.kind == "shield":
 			var ex := GameState.incarnated
-			if ex != null and ex.alive() and not ex.hidden and dist(ex, e) < SHIELD_CHARGE["sight"] and not Martyre.blocks(e, ex):
+			if ex != null and ex.alive() and not ex.hidden and dist(ex, e) < SHIELD_CHARGE["sight"] and not Martyre.blocks(e, ex) and not Patine.blocks(e, ex):
 				target = ex
 				is_core = false
 				rush = SHIELD_CHARGE["speed"]
@@ -903,6 +948,20 @@ func update_enemies(dt: float, alive: Array[Unit]) -> void:
 						flash(float(bar["x"]), float(bar["z"]), Color("#ff8a7a"))
 						Sfx.at("flammes", e.x, e.z)
 				continue
+		# Porte de la grotte fermée (CaveDoors) : sans autre cible, ou si sa cible est derrière, il la frappe.
+		if not GameState.cave_doors.is_empty():
+			var door := CaveDoors.touched(e)
+			if door >= 0 and (is_core or CaveDoors.between(door, e.pos(), Vector2(target.x, target.z))):
+				if e.cooldown <= 0.0:
+					var dm := CaveDoors.mid(door)
+					e.attack_started = GameState.sim_time
+					e.face = -1 if dm.x < e.x else 1
+					e.cooldown = Catalog.ENEMY[e.kind]["cd"]
+					CaveDoors.hit(sim, door, e.damage)
+					if e.kind == "beast":
+						flash(dm.x, dm.y, Color("#ff8a7a"))
+						Sfx.at("flammes", e.x, e.z)
+				continue
 		var tx: float = core["x"] if is_core else target.x
 		var tz: float = core["z"] if is_core else target.z
 		var d := Combat.hyp(e.x - tx, e.z - tz)
@@ -921,6 +980,9 @@ func update_enemies(dt: float, alive: Array[Unit]) -> void:
 		# Brume : les tireurs portent moins loin dehors.
 		var reach := e.reach * Weather.reach_at(e.x, e.z) if RANGED_KINDS.has(e.kind) else e.reach
 		if e.kind == "archer" and d > MELEE_REACH and not clear_shot(e.pos(), aim):
+			reach = minf(reach, MELEE_REACH)
+		# Pilum, sort : pas plus à travers une porte fermée de la grotte (l'archer est déjà retenu ci-dessus).
+		elif RANGED_KINDS.has(e.kind) and d > MELEE_REACH and not GameState.cave_doors.is_empty() and CaveDoors.blocks(e.pos(), aim):
 			reach = minf(reach, MELEE_REACH)
 		# Chien : il s'arrête à distance de tir, ou s'approche encore tant qu'un mur lui cache sa cible.
 		if e.kind == "beast":
@@ -1020,8 +1082,17 @@ func _move_enemy(e: Enemy, goal: Vector2, speed: float, dt: float) -> void:
 	var direction := next - e.pos()
 	var separation := Vector2.ZERO
 	var here := e.pos()
+	var ex := e.x
+	var ez := e.z
 	for other: Enemy in GameState.enemies:
 		if other == e or other.hp <= 0.0:
+			continue
+		# Écart net sur un axe (marge au-delà de l'arrondi des Vector2) : écarté sans construire de vecteur.
+		var gx := ex - other.x
+		if gx >= 1.26 or gx <= -1.26:
+			continue
+		var gz := ez - other.z
+		if gz >= 1.26 or gz <= -1.26:
 			continue
 		var away := here - other.pos()
 		# Trop loin sur un axe pour gêner (la longueur est au moins |x| et |y|).

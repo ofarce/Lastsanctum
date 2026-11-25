@@ -176,7 +176,7 @@ func _draw_network(r: Rect2) -> void:
 			_dashed(_to_map(r, Vector2(a["pos"])), _to_map(r, Vector2(b["pos"])), LINK_HOT if hot else Color(LINK, 0.55), 3.0 if hot else 2.0, t * 20.0 if hot else 0.0)
 	# Pylônes sauvages découverts : rouge sourd, hors du réseau.
 	for p: Dictionary in st.portals:
-		if p.get("active", false) and not PortalNet.linked(p) and world.fog.visible_at(Vector2(p["x"], p["z"])):
+		if p.get("active", false) and not PortalNet.linked(p) and world.fog.known_at(Vector2(p["x"], p["z"])):
 			_node_icon(_to_map(r, Vector2(p["x"], p["z"])), "wild", t)
 	for n: Dictionary in nodes:
 		var q := _to_map(r, n["pos"])

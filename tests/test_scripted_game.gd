@@ -21,12 +21,15 @@ func _play() -> PackedStringArray:
 	u.tz = u.z
 	sim.order_orb(u)
 	GameState.core_hp = 1e6
+	var guards: Array[Unit] = []
 	for spot: Array in [["paladin", -3.0], ["paladin", 3.0], ["shooter", -6.0], ["shooter", 0.0], ["shooter", 6.0]]:
 		var a := sim.spawn("Garde", spot[1], -100.0, spot[0])
 		a.hp = 1e5
 		a.max_hp = a.hp
+		guards.append(a)
 	for i in STEPS:
 		sim.tick(STEP)
+		_sortie(guards)
 		# Assaut repoussé : on saute la nuit jusqu'à la veille du suivant.
 		if GameState.next_wave > GameState.sim_time + 1.0 and GameState.orb_active:
 			GameState.sim_time = GameState.next_wave - 0.5
@@ -35,6 +38,30 @@ func _play() -> PackedStringArray:
 	var log := sim.combat.events.duplicate()
 	sim.combat.log_events = false
 	return log
+
+
+## Les tireurs ennemis portent plus loin que la garde ne voit (Thuriféraire : 40, Tireur : détection 20) : un
+## assaillant qui s'arrête hors de vue tiendrait l'assaut ouvert sans fin. La garde marche donc sur l'assaillant le
+## plus proche tant qu'il est hors de sa détection, puis tient sa place (comme un joueur qui fait une sortie).
+func _sortie(guards: Array[Unit]) -> void:
+	for g in guards:
+		if not g.alive():
+			continue
+		var best: Enemy = null
+		var bd := INF
+		for e: Enemy in GameState.enemies:
+			if e.hp <= 0.0 or e.beast or e.neutral:
+				continue
+			var d := Combat.hyp(e.x - g.x, e.z - g.z)
+			if d < bd:
+				bd = d
+				best = e
+		if best != null and bd > float(Catalog.HERO[g.role]["seek"]) * 0.8:
+			g.tx = best.x
+			g.tz = best.z
+		else:
+			g.tx = g.x
+			g.tz = g.z
 
 
 func test_scripted_waves_deterministic() -> void:

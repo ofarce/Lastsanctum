@@ -76,8 +76,12 @@ func test_abilities_match_js() -> void:
 		var fx: Dictionary = GameState.effects[-1]
 		var wfx: Dictionary = want["effect"]
 		snap["effect"] = [fx["type"], r4(fx["x"]), r4(fx["z"]), r4(fx.get("r", 0.0)), (fx["color"] as Color).to_html(false)]
-		want = want.duplicate()
+		want = want.duplicate(true)
 		want["effect"] = [wfx["type"], wfx["x"], wfx["z"], wfx.get("r", 0.0), String(wfx["color"]).trim_prefix("#")]
+		# Égide du Paladin (niveau 2) : seuls coups du relevé, un par ennemi entamé (bonus de niveau : lvl_hp).
+		for k in (want["enemies"] as Array).size():
+			if float(want["enemies"][k][2]) < [100.0, 100.0, 300.0][k]:
+				want["enemies"][k][2] = lvl_hp(float(want["enemies"][k][2]), p, 1)
 		check(_same_quiet(snap, want), "compétence %d (%s) : %s ≠ %s" % [i + 1, who.role, snap, want])
 		i += 1
 

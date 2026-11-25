@@ -55,6 +55,8 @@ var _wave_trigger := Button.new()
 var _archer_spawn := Button.new()
 var _mods_give := Button.new()
 var _age_open := Button.new()
+var _archi_go := Button.new()
+var _biome2_go := Button.new()
 ## Seul bouton de debug visible au départ : il déplie les autres, qu'un clic ailleurs replie.
 var _debug_toggle := Button.new()
 var _debug_open := false
@@ -375,6 +377,10 @@ func _build_top() -> void:
 		"Met un exemplaire de chaque mod dans le paquetage de l’Ingénieur, le reste dans le réseau des coffres", _give_mods)
 	_debug_button(_age_open, "AgeOpen", "Ouvrir l’âge suivant",
 		"Ouvre l’âge de métal en cours (cuivre, puis fer) sans miner ni vaincre son boss", _open_next_age)
+	_debug_button(_archi_go, "ArchiGo", "Aller à l’Archiprêtre",
+		"Découvre l’Oratoire envahi, l’arène du quartier A du Temple, et y conduit l’Ingénieur", _go_archi)
+	_debug_button(_biome2_go, "Biome2Go", "Aller aux Salles oubliées",
+		"Pose l’Ingénieur dans la salle d’entrée du biome 2 (Salles oubliées), sans passer par l’Œil", _go_biome2)
 	_debug_button(_debug_toggle, "DebugToggle", "DEBUG", "Affiche les boutons de debug", func() -> void:
 		_set_debug_open(not _debug_open))
 	_set_debug_open(false)
@@ -427,7 +433,7 @@ func _debug_button(b: Button, node_name: String, label: String, tip: String, act
 
 func _debug_buttons() -> Array[Button]:
 	return [_resource_boost, _fast_construction, _crafted_item_boost, _martyre_spawn, _oeil_go,
-		_minimap_unlock, _wave_trigger, _archer_spawn, _mods_give, _age_open]
+		_minimap_unlock, _wave_trigger, _archer_spawn, _mods_give, _age_open, _archi_go, _biome2_go]
 
 
 func _set_debug_open(open: bool) -> void:
@@ -492,6 +498,64 @@ func _go_oeil() -> void:
 			u.tz = at.y
 			u.force_move = false
 	world.camera.set_view(c + Vector2(0.0, 4.0), 3)
+	refresh()
+
+
+## Debug : découvre l'arène de l'Archiprêtre aux racines (salle « mb1 » du plan du Temple) et pose l'Ingénieur à
+## son entrée sud, face à l'autel ; son entrée dans la salle éveille le mini-boss (Archipretre.act).
+func _go_archi() -> void:
+	var st := world.terrain_state
+	var room := Archipretre.arena_room(st)
+	if room.is_empty():
+		sim.say("Pas d’arène de l’Archiprêtre sur cette carte.", 2.0)
+		return
+	var rr: Rect2i = room["rect"]
+	var cx := rr.position.x * 4.0 + rr.size.x * 2.0
+	var c := Vector2(cx, rr.position.y * 4.0 + 15.0)
+	# Au sud de la salle, en remontant vers l'autel tant que la case est dans la roche.
+	var at := Vector2(cx, (rr.position.y + rr.size.y) * 4.0 - 6.0)
+	while not st.is_gallery(at.x, at.y) and at.y > c.y + 8.0:
+		at.y -= 2.0
+	world.terrain_ops.reveal_gallery(at.x, at.y)
+	if world.terrain_ops.painter:
+		world.terrain_ops.painter.terrain.flush()
+	for u: Unit in GameState.units:
+		if u.role == "engineer" and u.alive():
+			u.x = at.x
+			u.z = at.y
+			u.tx = at.x
+			u.tz = at.y
+			u.force_move = false
+	world.camera.set_view((c + at) * 0.5, 3)
+	refresh()
+
+
+## Debug : l'Ingénieur est posé au centre de la salle d'entrée du plan des Salles oubliées (biome 2), découverte,
+## caméra sur lui. Les portes et la roche ne bougent pas : on en revient à pied par le couloir de l'Œil.
+func _go_biome2() -> void:
+	var st := world.terrain_state
+	var room := {}
+	if not st.veines_layout.is_empty():
+		for r: Dictionary in st.veines_layout["rooms"]:
+			if r["role"] == "entrance":
+				room = r
+				break
+	if room.is_empty():
+		sim.say("Pas de plan des Salles oubliées sur cette carte.", 2.0)
+		return
+	var rr: Rect2i = room["rect"]
+	var at := st.push_out_of_rock(Vector2(rr.position.x * 4.0 + rr.size.x * 2.0, rr.position.y * 4.0 + rr.size.y * 2.0))
+	world.terrain_ops.reveal_gallery(at.x, at.y)
+	if world.terrain_ops.painter:
+		world.terrain_ops.painter.terrain.flush()
+	for u: Unit in GameState.units:
+		if u.role == "engineer" and u.alive():
+			u.x = at.x
+			u.z = at.y
+			u.tx = at.x
+			u.tz = at.y
+			u.force_move = false
+	world.camera.set_view(at, 3)
 	refresh()
 
 
@@ -757,6 +821,10 @@ func _layout_debug() -> void:
 	_mods_give.size = Vector2(230, 38)
 	_age_open.position = Vector2(254, dbg_y + 264.0)
 	_age_open.size = Vector2(230, 38)
+	_archi_go.position = Vector2(254, dbg_y + 220.0)
+	_archi_go.size = Vector2(230, 38)
+	_biome2_go.position = Vector2(254, dbg_y + 176.0)
+	_biome2_go.size = Vector2(230, 38)
 
 
 ## Debug : un exemplaire de chaque mod (data/gear_items.gd, champ « module ») au paquetage de l'Ingénieur, puis au
@@ -1008,7 +1076,7 @@ func _layout_actions(m: Vector2) -> void:
 
 ## Incarné en Ingénieur, sans bâtiment ni allié ouvert : menu de construction et de pose en bas à droite.
 func _incarnated_menu() -> bool:
-	var inc := GameState.incarnated
+	var inc := HudModel.hud_exile()
 	return inc != null and inc.role == "engineer" and not HudModel.incarnated_panel() and not GameState.ended
 
 
@@ -1209,7 +1277,7 @@ func _process(delta: float) -> void:
 	_notice.position.y = _notice_top()
 	mod_reveal.anchor_y = _res_panel.position.y + _res_panel.size.y + 8.0 + _sky_card.size.y
 	# Incarnation : mode action pur, sans bandeau de commandement.
-	var free := GameState.incarnated == null
+	var free := HudModel.hud_exile() == null
 	# Incarné : le bandeau ne revient que pour les options d'un bâtiment ouvert au clic droit.
 	var full_bar := free or HudModel.incarnated_panel()
 	# Recherche « Minicarte » : incarné, seule la minicarte reste affichée (le reste du bandeau est masqué).
@@ -1383,6 +1451,12 @@ func _apply_view(v: Dictionary) -> void:
 		_portrait_key = v["portrait_key"]
 		if _portrait_key.begins_with("enemy-"):
 			_portrait.texture = _enemy_portrait(_portrait_key.substr(6))
+		elif _portrait_key.begins_with("lode-"):
+			# Filon illimité : son minerai dans filons.png, cadré en carré sur les cristaux.
+			var lt := AtlasTexture.new()
+			lt.atlas = LodeView.LODE_SPRITES
+			lt.region = Rect2(maxi(0, LodeView.LODE_FRAMES.find(_portrait_key.substr(5))) * 96, 8, 96, 96)
+			_portrait.texture = lt
 		elif _portrait_key == "grove":
 			# Bosquet pétrifié : premier état (intact) de bosquet.png, cadré en carré sur le feuillage.
 			var at := AtlasTexture.new()

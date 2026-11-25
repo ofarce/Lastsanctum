@@ -52,9 +52,7 @@ func test_engineer_opens_chest_and_gets_starting_gear() -> void:
 	check(GameState.mining_seal and GameState.capsule_gift, "Sceau de minage remis")
 	check(GameState.plans.has("analyse"), "plan « Analyse » appris")
 	check_eq(Production.count_in(engineer().inventory, "plan_analyse"), 1, "plan « Analyse » dans le paquetage")
-	var scouts := GameState.enemies.filter(func(e: Enemy) -> bool:
-		return e.kind == "scout" and Vector2(e.x, e.z).distance_to(Capsule.INTRUDER_AT) < 30.0)
-	check(scouts.size() >= Capsule.INTRUDERS.size(), "éclaireurs d'essai à la porte sud (%d)" % scouts.size())
+	check(GameState.enemies.is_empty(), "plus d'éclaireurs d'essai à l'ouverture du Coffre")
 	ItemStorage.deposit("rock", engineer(), engineer().pos())
 	check_eq(GameState.base_inventory, [{"item": "rock", "quantity": 1}], "objets vers la réserve")
 	var asked := [0]

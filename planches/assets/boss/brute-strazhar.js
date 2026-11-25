@@ -49,14 +49,22 @@ function brutePose(anim,t){
  if(anim==='death'){const f=sm(0,.12,t),d=sm(.2,.95,t),dn=ease(d);
   return{bob:Math.round(-f*2*(1-d)+dn*9),lean:Math.round(-f*2*(1-d)+dn*3),fF:L2(L2(rF,[11,-13],f),[16,5],dn),fB:L2(L2(rB,[-12,-12],f),[-14,5],dn),lF:[dn*3,0],lB:[-dn*3,0],
    glow:t<.9?(Math.floor(t*14)%2?1:.15)*(1-d*.7):0,dead:t>=.9,shock:t>.8&&t<1.05?(t-.8)/.25:0}}
+ // tir « Le revers » (tools/lanceurs, 29 images) : le bras d'arme s'enroule en travers du torse, puis balaie à
+ // l'horizontale ; les orbes quittent le poing tendu (image 15). cast_run : mêmes bras sur les jambes de la marche.
+ if(anim==='cast'||anim==='cast_run'){const u=cl(t/(29/24)),K=[[0,rF,rB,0,0,.5],[.2,[2,-12],[-13,-7],-1,1,.8],[.44,[-9,-15],[-6,-4],-3,2,1],
+   [.52,[27,-14],[-16,-10],4,1,1,1],[.64,[25,-21],[-17,-11],5,1,.7],[.86,[17,-11],[-13,-8],2,0,.6],[1,rF,rB,0,0,.5]];
+  let i=0;while(i<K.length-2&&u>=K[i+1][0])i++;const A=K[i],B=K[i+1];let k=cl((u-A[0])/(B[0]-A[0]));k=B[6]?k*k:ease(k);
+  const w=anim==='cast_run'?brutePose('walk',t):{lF:[0,0],lB:[0,0]};
+  return{bob:Math.round(lerp(A[4],B[4],k))+(w.bob||0),lean:Math.round(lerp(A[3],B[3],k)),sway:w.sway||0,fF:L2(A[1],B[1],k),fB:L2(A[2],B[2],k),lF:w.lF,lB:w.lB,step:w.step,
+   glow:lerp(A[5],B[5],k),pad:[20,8]}}
  // attaque : lève les deux poings (0 à 0,12 s), les tient (jusqu'à 0,40 s), s'abat (0,46 s), se redresse (1,05 s)
  const up=sm(0,.12,t),down=sm(.40,.46,t),rec=sm(.62,1.05,t),hiF=[7,-31],hiB=[-3,-30],loF=[17,4],loB=[9,5];
  const fF=t<.40?L2(rF,hiF,up):rec>0?L2(loF,rF,rec):L2(hiF,loF,down),fB=t<.40?L2(rB,hiB,up):rec>0?L2(loB,rB,rec):L2(hiB,loB,down);
  const hold=t>.12&&t<.40;
  return{bob:t<.40?-Math.round(up*2):Math.round(2*down*(1-rec)),lean:t<.40?-Math.round(up):Math.round(3*down*(1-rec)),fF,fB,lF:[0,0],lB:[0,0],
   glow:hold?1:.6,glint:hold?(t-.12)/.28:0,shock:t>.46&&t<.66?(t-.46)/.2:0,hit:t>.44&&t<.5}}
-function brute(V,anim,t){const b=buf(BW,BH),p=brutePose(anim,t),cx=BAX+(p.sway||0)+(p.lean||0),cy=BG-18+(p.bob||0),g=BG;
- const leg=(s,l,bias)=>{const fx=BAX+s*6+l[0],fy=g-1-l[1];seg(b,cx+s*5,cy+9,fx,fy-3,3.3,3.5,'brz2',bias+.05);blob(b,fx+1,fy-1,4.6,2.6,bias<0?'brz2':'or',bias<0?.25:-.05);over(b,fx-2,fy,'brz2',.4)};
+function brute(V,anim,t){const p=brutePose(anim,t),PAD=p.pad||[0,0],AX0=BAX+PAD[0],g=BG+PAD[1],b=buf(BW+2*PAD[0],BH+PAD[1]),cx=AX0+(p.sway||0)+(p.lean||0),cy=g-18+(p.bob||0);
+ const leg=(s,l,bias)=>{const fx=AX0+s*6+l[0],fy=g-1-l[1];seg(b,cx+s*5,cy+9,fx,fy-3,3.3,3.5,'brz2',bias+.05);blob(b,fx+1,fy-1,4.6,2.6,bias<0?'brz2':'or',bias<0?.25:-.05);over(b,fx-2,fy,'brz2',.4)};
  const arm=(s,f,bias)=>{const S=[cx+s*(V.hump&&s<0?8:9.5),cy-5],F=[cx+f[0],cy+9+f[1]+ -(p.bob||0)],thin=V.hammer&&s<0,ham=V.hammer&&s>0;
   const E=ik(S,F,10,10,s>0?-1:1);
   const far=bias<0,fm=far?'brz2':'or',fb=far?.3:.02;
@@ -90,8 +98,8 @@ function brute(V,anim,t){const b=buf(BW,BH),p=brutePose(anim,t),cx=BAX+(p.sway||
  if(p.glint){const k=p.glint,on=Math.floor(k*6)%2===0;if(on){star(b,FF[0]+1,FF[1]-5,'core',2);star(b,FB[0],FB[1]-5,'core',1)}}
  if(p.hit)star(b,FF[0]+2,g-2,'core',3);
  if(p.shock)shock(b,(FF[0]+FB[0])/2+2,g,p.shock);
- if(p.step)for(let i=0;i<3;i++)dot(b,BAX-8+i*8+hash(i,2)*3,g-1-(i%2),'dust2',.7);
- return b}
+ if(p.step)for(let i=0;i<3;i++)dot(b,AX0-8+i*8+hash(i,2)*3,g-1-(i%2),'dust2',.7);
+ b.an={fist:[FF[0]+3,FF[1]]};return b}
 
 // =====================================================================================================
 // Strazhar · champion de Byrsa, à quatre pattes partout (cadre 68 × 48, pieds en (33, 45))
@@ -184,4 +192,6 @@ function frame(unit,vi,anim,t){const A=ANIMS[unit][anim],n=Math.round(A.len*24),
  if(!cache.has(key))cache.set(key,render(unit==='brute'?brute(BRUTES[vi],anim,i/24):straz(STRAZ[vi],anim,i/24),1));return cache.get(key)}
 // Image à l'instant t exact (export : phases de marche régulières), sans cache.
 const at=(unit,vi,anim,t)=>render(unit==='brute'?brute(BRUTES[vi],anim,t):straz(STRAZ[vi],anim,t),1);
-return{BRUTES,STRAZ,ANIMS,frame,at,SIZE:{brute:{w:BW,h:BH,ax:BAX,ay:BG},straz:{w:SW,h:SH,ax:SAX,ay:SG}}}})();
+// Tampon brut de la Brute (repères b.an compris), pour les exports qui posent un effet sur un repère.
+const bruteBuf=(vi,anim,t)=>brute(BRUTES[vi],anim,t);
+return{BRUTES,STRAZ,ANIMS,frame,at,bruteBuf,SIZE:{brute:{w:BW,h:BH,ax:BAX,ay:BG},straz:{w:SW,h:SH,ax:SAX,ay:SG}}}})();

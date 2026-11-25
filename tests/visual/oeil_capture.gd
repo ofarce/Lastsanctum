@@ -27,7 +27,9 @@ func _ready() -> void:
 	var world: World = main.get_node("World")
 	sim.new_game(20261114)
 	var st := world.terrain_state
-	var eng: Unit = GameState.units[0]
+	GameState.opening_stage = ""
+	GameState.in_capsule = false
+	var eng := Capsule.engineer()
 	eng.hidden = false
 	eng.unarmored = true
 	GameState.portal_start = -100

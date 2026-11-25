@@ -104,8 +104,6 @@ func _draw() -> void:
 		_magnet(u, t)
 	if _on("lens"):
 		_lens(t)
-	if _on("barrel"):
-		_barrel(t)
 	if _on("frost"):
 		_frost(t)
 	if _on("seal"):
@@ -205,19 +203,6 @@ func _lens(t: float) -> void:
 	_px(c + Vector2(-1, 0), BRASS[1])
 	_px(c + Vector2(2, 1), BRASS[1])
 	_px(c, GLASS[4], 0.4 + 0.6 * maxf(0.0, sin(t * 1.7)))
-
-
-## Second barillet à deux chambres sur l'Arbalestrie : cyan et carmin ; la chambre du prochain tir luit.
-func _barrel(t: float) -> void:
-	var c: Vector2 = XBOW.get(_vdir, XBOW[""])[1]
-	_px(c + Vector2(-1, -1), BRASS[1])
-	_px(c + Vector2(0, -1), BRASS[2])
-	_px(c + Vector2(1, -1), BRASS[1])
-	var next_prev := not GameState.barrel_flip
-	_px(c + Vector2(-1, 0), CYAN, 1.0 if not next_prev else 0.55)
-	_px(c + Vector2(1, 0), CARMIN, 1.0 if next_prev else 0.55)
-	_px(c, BRASS[0])
-	_px(c + Vector2(0, 1), BRASS[1])
 
 
 ## Culasse givrée ; au changement de munition, petite fumée froide qui monte.

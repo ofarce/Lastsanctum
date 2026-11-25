@@ -101,7 +101,7 @@ static func _spawn(l: Dictionary) -> void:
 	e.tactical_last_hp = e.hp
 	e.speed = K["speed"]
 	e.reach = K["range"]
-	e.damage = K["damage"]
+	e.damage = K["damage"] * Biomes.power_at(l["z"])
 	e.armor = K["armor"]
 	e.beast = true
 	e.neutral = true
@@ -131,9 +131,13 @@ static func aggro(e: Enemy) -> float:
 
 
 ## Proie la plus proche de la bête, sur son territoire : unité visible ou ennemi des vagues.
-static func prey(e: Enemy, alive: Array[Unit]) -> Unit:
+## `box` (facultatif, bounds()) : hors du cadre des proies possibles élargi de la portée, la réponse est null sans
+## parcourir personne.
+static func prey(e: Enemy, alive: Array[Unit], box: PackedFloat64Array = PackedFloat64Array()) -> Unit:
 	var leash: float = KINDS[e.kind]["leash"]
 	var reach := aggro(e)
+	if box.size() == 4 and (e.x < box[0] - reach or e.x > box[1] + reach or e.z < box[2] - reach or e.z > box[3] + reach):
+		return null
 	var best: Unit = null
 	var bd := INF
 	var ex := e.x
@@ -157,7 +161,7 @@ static func prey(e: Enemy, alive: Array[Unit]) -> Unit:
 		var dz := o.z - ez
 		if dz >= reach or dz <= -reach:
 			continue
-		if o == e or o.neutral or o.hp <= 0.0:
+		if o == e or o.neutral or o.hp <= 0.0 or o.kind == Eclusier.KIND:
 			continue
 		var d := Combat.hyp(dx, dz)
 		if d < reach and d < bd and o.pos().distance_to(e.home) < leash + reach:
@@ -166,16 +170,42 @@ static func prey(e: Enemy, alive: Array[Unit]) -> Unit:
 	return best
 
 
+## Cadre [x0, x1, z0, z1] de tout ce qu'une bête peut prendre pour proie : unités visibles de `alive`, ennemis non
+## neutres debout. Une marge d'une unité couvre ce qui bougerait pendant le tick de la faune.
+static func bounds(alive: Array[Unit]) -> PackedFloat64Array:
+	var x0 := INF
+	var x1 := -INF
+	var z0 := INF
+	var z1 := -INF
+	for u in alive:
+		if u.hidden:
+			continue
+		x0 = minf(x0, u.x)
+		x1 = maxf(x1, u.x)
+		z0 = minf(z0, u.z)
+		z1 = maxf(z1, u.z)
+	for o: Enemy in GameState.enemies:
+		if o.neutral or o.hp <= 0.0:
+			continue
+		x0 = minf(x0, o.x)
+		x1 = maxf(x1, o.x)
+		z0 = minf(z0, o.z)
+		z1 = maxf(z1, o.z)
+	return PackedFloat64Array([x0 - 1.0, x1 + 1.0, z0 - 1.0, z1 + 1.0])
+
+
 static func tick(sim: Simulation, dt: float, alive: Array[Unit]) -> void:
+	var box := bounds(alive)
 	for e: Enemy in GameState.enemies:
-		if not e.neutral or e.hp <= 0.0:
+		# Anguilles de la Grande Écluse (sim/eclusier.gd) : cachées tant que leur quart est sec.
+		if not e.neutral or e.hp <= 0.0 or e.hidden:
 			continue
 		e.cooldown -= dt
 		if e.stun > 0.0:
 			e.stun -= dt
 			continue
 		# Une bête blessée se retourne contre son agresseur s'il est à portée de vue.
-		var target: Unit = prey(e, alive)
+		var target: Unit = prey(e, alive, box)
 		e.wild_target = target
 		var goal := e.home if target == null else target.pos()
 		var d := Combat.hyp(goal.x - e.x, goal.y - e.z)
@@ -218,7 +248,7 @@ static func _zap(sim: Simulation, e: Enemy, alive: Array[Unit]) -> void:
 			Combat.flash(u.x, u.z, Color("#c0dcff"))
 			hit = true
 	for o: Enemy in GameState.enemies.duplicate():
-		if o != e and not o.neutral and o.hp > 0.0 and Combat.hyp(o.x - e.x, o.z - e.z) <= e.reach:
+		if o != e and not o.neutral and o.hp > 0.0 and o.kind != Eclusier.KIND and Combat.hyp(o.x - e.x, o.z - e.z) <= e.reach:
 			sim.combat.damage(o, e.damage)
 			Combat.flash(o.x, o.z, Color("#c0dcff"))
 			hit = true
@@ -228,8 +258,19 @@ static func _zap(sim: Simulation, e: Enemy, alive: Array[Unit]) -> void:
 
 
 ## Bête neutre qui attaque cet ennemi des vagues (pour qu'il riposte), ou null.
-static func attacker_of(o: Enemy) -> Enemy:
-	for e: Enemy in GameState.enemies:
+## `among` : bêtes à examiner, dans l'ordre de GameState.enemies (Combat.update_enemies passe hunting(), calculé une
+## fois par tick ; par défaut tous les ennemis).
+static func attacker_of(o: Enemy, among: Array = GameState.enemies) -> Enemy:
+	for e: Enemy in among:
 		if e.neutral and e.hp > 0.0 and e.wild_target == o:
 			return e
 	return null
+
+
+## Bêtes qui ont une proie (wild_target, posé par tick), dans l'ordre de GameState.enemies.
+static func hunting() -> Array:
+	var out: Array = []
+	for e: Enemy in GameState.enemies:
+		if e.neutral and e.wild_target != null:
+			out.append(e)
+	return out

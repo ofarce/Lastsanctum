@@ -1,12 +1,13 @@
 class_name UnitFeel
 extends RefCounted
 ## Fluidité commune à UnitView et AdeptView (planches/unites-maj-propositions.html, pistes F1 à F3) :
-## phase de marche qui part d'un appui et finit son pas à l'arrêt, demi-tour en trois images, et, pour les vues
+## phase de marche qui part d'un appui et finit son pas à l'arrêt, demi-tour net (un pixel d'affaissement), et, pour les vues
 ## dessinées à la main (AdeptView), éclair et recul des coups encaissés.
 
-## Demi-tour : durée (s) et largeurs successives du sprite (signe : ancien côté, puis nouveau).
+## Demi-tour : durée (s) de l'affaissement d'un pixel. Le sprite passe d'un côté à l'autre d'un coup : plus de largeurs
+## intermédiaires (effet « feuille de papier » refusé le 2026-11-23). L'Ingénieur pivote par ses poses de trois quarts
+## (UnitView._head_step).
 const TURN := 0.09
-const TURN_STEPS: Array[float] = [-0.6, 0.25, 0.6]
 ## Arrêt : tolérance sans déplacement avant de conclure à l'arrêt (s), puis durée maximale pour finir le pas.
 const STOP_GRACE := 0.05
 const SETTLE_MAX := 0.14
@@ -61,18 +62,14 @@ func step(dist: float, stride: float, dt: float) -> void:
 		wp += adv
 
 
-## Largeur signée à donner au sprite pour le regard `face` (±1) : ±1 au repos, valeurs de TURN_STEPS pendant
-## les TURN s qui suivent un changement de côté.
+## Largeur signée à donner au sprite pour le regard `face` (±1) ; relève l'instant du changement de côté (turning).
 func turn(face: int, now: float) -> float:
 	if _face == 0:
 		_face = face
 	if face != _face:
 		_face = face
 		_turn_t = now
-	var p := (now - _turn_t) / TURN
-	if p < 0.0 or p >= 1.0:
-		return float(face)
-	return face * TURN_STEPS[mini(TURN_STEPS.size() - 1, floori(p * TURN_STEPS.size()))]
+	return float(face)
 
 
 func turning(now: float) -> bool:

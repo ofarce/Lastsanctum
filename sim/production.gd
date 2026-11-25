@@ -110,6 +110,24 @@ static func count_in(items: Array, item: String) -> int:
 	return n
 
 
+## Exemplaires de `item` pour une formation : l'objet lui-même et ses équivalents (épées, boucliers ramassés).
+static func count_for(items: Array, item: String) -> int:
+	var n := count_in(items, item)
+	for alt: String in Recipes.CASERNE_SUBSTITUTES.get(item, []):
+		n += count_in(items, alt)
+	return n
+
+
+## Retire `n` exemplaires de `item` pour une formation, en prenant les équivalents après l'objet lui-même.
+static func take_for(items: Array, item: String, n: int) -> int:
+	var got := take_from(items, item, n)
+	for alt: String in Recipes.CASERNE_SUBSTITUTES.get(item, []):
+		if got >= n:
+			break
+		got += take_from(items, alt, n - got)
+	return got
+
+
 static func has_items(items: Array, cost: Dictionary) -> bool:
 	for k: String in cost:
 		if count_in(items, k) < int(cost[k]):
@@ -312,14 +330,17 @@ func _train(b: Building, dt: float) -> void:
 		return
 	var items := Recipes.caserne_cost(b.queue[0], 4)
 	var n := at_post(b)
-	if n == 0 or not has_items(b.input_box, items):
+	if n == 0:
 		return
+	for k: String in items:
+		if count_for(b.input_box, k) < int(items[k]):
+			return
 	b.train += dt * n * Mods.work_mult(Vector2(b.x, b.z))
 	if b.train < Catalog.CASERNE_TIME:
 		return
 	b.train = 0.0
 	for k: String in items:
-		take_from(b.input_box, k, int(items[k]))
+		take_for(b.input_box, k, int(items[k]))
 	sim.spawn_trained(b, b.queue.pop_front())
 
 
@@ -521,7 +542,7 @@ func try_miner(u: Unit, cells: Array) -> bool:
 	return true
 
 
-## Recette fabriquée en boucle ; la même recette une seconde fois l'arrête.
+## Recette fabriquée en boucle (un mod : une seule fois) ; la même recette une seconde fois l'arrête.
 func select_recipe(b: Building, item: String) -> void:
 	if b == null or not b.complete or not Recipes.RECIPES.get(b.type, {}).has(item):
 		return
@@ -535,7 +556,8 @@ func select_recipe(b: Building, item: String) -> void:
 		return
 	b.recipe = "" if b.recipe == item else item
 	b.craft = 0.0
-	sim.say("%s · %s" % [b.def()["name"], ("fabrique en boucle : " + Recipes.name_of(item)) if b.recipe != "" else "fabrication arrêtée"], 2.0)
+	var mode := "fabrique une fois : " if Recipes.PLANS.has(item) else "fabrique en boucle : "
+	sim.say("%s · %s" % [b.def()["name"], (mode + Recipes.name_of(item)) if b.recipe != "" else "fabrication arrêtée"], 2.0)
 
 
 ## Ancien « Vider le coffre rouge » : le coffre rouge fait partie du réseau, il n'y a plus rien à rapporter.

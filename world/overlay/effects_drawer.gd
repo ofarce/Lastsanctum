@@ -205,6 +205,7 @@ func draw_all(now: float) -> void:
 			"cball": _cball(e)
 			"xbow_fire": _xbow_fire(e)
 			"cballhit": _cball_hit(e)
+			"shot_end": pass
 			"aether_wave": _aether_wave(e)
 			"heal_motes": _heal_motes(e)
 			"skel_bile", "skel_boom": _skel_wave(e)
@@ -642,17 +643,36 @@ const XBOW_MUZZLE_D := Vector2(7.0, -4.0)
 const XBOW_BREECH_D := Vector2(7.0, -14.0)
 const XBOW_MUZZLE_U := Vector2(6.0, -28.0)
 const XBOW_BREECH_U := Vector2(6.0, -17.0)
+## Tir en diagonale (c_shoot_dr / c_shoot_ur, tube à 45°) : bouche et culasse.
+const XBOW_MUZZLE_DR := Vector2(11.0, -7.0)
+const XBOW_BREECH_DR := Vector2(4.0, -14.0)
+const XBOW_MUZZLE_UR := Vector2(11.0, -24.0)
+const XBOW_BREECH_UR := Vector2(4.0, -17.0)
+
+
+## Pose de tir pour la direction `d` (x, z du monde) : "" (profil), "dr" / "ur" (trois quarts), "d" / "u" (face / dos),
+## par secteurs de 45° ; la gauche ou la droite vient du miroir.
+static func shot_pose(d: Vector2) -> String:
+	var a := rad_to_deg(atan2(absf(d.y), absf(d.x)))
+	if a < 22.5:
+		return ""
+	var v := "d" if d.y > 0.0 else "u"
+	return v + "r" if a < 67.5 else v
 
 
 ## Bouche (ou culasse) de l'Arbalestrie par rapport aux pieds, pour un tir dans la direction `d` (x, z du monde) :
-## même règle que la pose de UnitView (surtout vers le sud ou le nord : de face ou de dos, sinon de profil).
+## même règle que la pose de UnitView (shot_pose).
 static func xbow_point(face: float, d: Vector2, breech := false) -> Vector2:
 	var m := XBOW_BREECH if breech else XBOW_MUZZLE
-	if absf(d.y) > absf(d.x) * 1.2:
-		if d.y > 0.0:
+	match shot_pose(d):
+		"d":
 			m = XBOW_BREECH_D if breech else XBOW_MUZZLE_D
-		else:
+		"u":
 			m = XBOW_BREECH_U if breech else XBOW_MUZZLE_U
+		"dr":
+			m = XBOW_BREECH_DR if breech else XBOW_MUZZLE_DR
+		"ur":
+			m = XBOW_BREECH_UR if breech else XBOW_MUZZLE_UR
 	return Vector2(m.x * face, m.y)
 const XBOW_SMOKE: Array[Color] = [Color("#c9cdd6"), Color("#9aa1b0"), Color("#6d7482")]
 ## Vitesse de la balle à l'écran, en pixels natifs par seconde (Combat.BALL_SPEED × 8).
@@ -715,6 +735,13 @@ func _xbow_fire(e: Dictionary) -> void:
 	if t >= 0.02 and t < 0.1:
 		var q := (t - 0.02) / 0.08
 		_shock_arc(M + d * (3.0 + q * 6.0), d, 4, Color(Color("#e9fbff"), 0.7 * (1.0 - q)))
+	# --- Coup sec (planches/arbalestrie-recul-planche.html, piste A) : traînée claire là où le fût vient de reculer.
+	if t < 2.0 / 24.0:
+		var a0 := 0.5 if t < 1.0 / 24.0 else 0.22
+		for k in range(1, 5):
+			for j in range(-2, 2):
+				var p := M - d * float(k) + side * float(j) * face
+				npx(p.x, p.y, Color(C[4] if C.size() > 4 else Color("#c8fbff"), a0 * (1.0 - k / 6.0)))
 	# --- Culasse
 	var R := Rng.new(sd)
 	var shell_v := Vector2(-face * (22.0 + R.next() * 14.0), -58.0 - R.next() * 12.0)
@@ -977,6 +1004,14 @@ func _cball_hit(e: Dictionary) -> void:
 	var n := Proj.nat(e["x"], 1.3, e["z"]) + world.native_offset
 	var x := jr(n.x)
 	var y := jr(n.y)
+	# Balle sans cible : fin propre à la munition, contre la roche ou au bout de sa portée (ShotEnds), à l'échelle
+	# de la balle en vol.
+	if e.has("end") and ShotEnds.DUR.has(e.get("ammo", "spirit")):
+		var dir := Proj.nat(e["dx"], 0.0, e["dz"])
+		ci.draw_set_transform(Vector2(x + 0.5, y + 0.5) * px * (1.0 - BALL_SCALE), 0.0, Vector2(BALL_SCALE, BALL_SCALE))
+		ShotEnds.draw(ci, px, e.get("ammo", "spirit"), e["end"], Vector2(x, y), y + 1.3 * Proj.KH / BALL_SCALE, dir, age, false)
+		ci.draw_set_transform(Vector2.ZERO)
+		return
 	match String(e.get("ammo", "spirit")):
 		"indra": _hit_indra(x, y, age, p)
 		"medeina": _hit_medeina(x, y, p)
@@ -1276,7 +1311,18 @@ const BONE_RISE := 0.12
 ## « Visibilité des balles », 2026-11-20). ci : nœud du calque, repère de l'écran.
 func draw_enemy_layer(now: float) -> void:
 	px = float(world.camera.px)
+	_shot_ends()
 	_enemy_shots(now)
+
+
+## Fins des tirs ennemis (ShotEnds) : écrasement contre la roche ou extinction en fin de portée, sous les balles en vol.
+func _shot_ends() -> void:
+	for e: Dictionary in GameState.effects:
+		if e["type"] != "shot_end" or not world.fog.visible_at(Vector2(e["x"], e["z"])):
+			continue
+		var g := nat_p(e["x"], e["z"])
+		ShotEnds.draw(ci, px, e["kind"], e["mode"], g - Vector2(0.0, SHOT_LIFT), g.y, nat_p(e["x"] + e["vx"], e["z"] + e["vz"]) - g,
+			e["age"], true, e.get("scale", 1.0))
 
 
 ## Halo pâle sous une balle, centré sur q (pixels natifs à l'écran).
@@ -1402,14 +1448,12 @@ func _spit_warn(en: Enemy, now: float) -> void:
 		return
 	var w: float = clampf(1.0 - (en.spit_fire_at - now) / float(EnemyShots.SPIT["warn"]), 0.0, 1.0)
 	var g := nat_p(m.x, m.y)
-	var q := g - Vector2(0.0, SHOT_LIFT)
 	var tg: Variant = en.spit_target
 	if tg != null and tg.alive():
 		var d: Vector2 = (tg.pos() - m).normalized()
 		var g0 := g + d * 4.0
 		_dash_line(g0, g0 + d * SPIT_LINE * w, FIREBALL[2], 0.6)
-	ci.draw_circle(q * px, (2.0 + 3.0 * w) * px, Color(FIREBALL[3], 0.25 + 0.45 * w))
-	npx(q.x, q.y, FIREBALL[4] if int(now * 30.0) % 2 == 0 else FIREBALL[5])
+	# La braise qui grossit est peinte dans l'atlas du geste (beast_cast, tête levée) : ici, seulement le trait de visée.
 
 
 ## Goutte d'ichor : disque de 7 px un peu étiré dans le sens du vol d, cœur décalé vers la lumière (haut gauche).

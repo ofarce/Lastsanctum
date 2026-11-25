@@ -1,0 +1,402 @@
+<meta charset="utf-8">
+<meta name="claude:viewport-fit-sides" content="cover">
+<title>Fin des projectiles</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;600&display=swap" rel="stylesheet">
+<style>
+/* Planche : fin de vie de chaque projectile (écrasement sur un mur, extinction en fin de portée).
+   Mise en page : cartes à largeur fixe de 180 px natifs (×3), deux scènes en boucle puis deux bandes d'images clés.
+   Aucune ressource externe : les tirs sont portés depuis EffectsDrawer, le décor est dessiné ici. */
+:root{--bg:#0c0d10;--panel:#14161b;--line:#2c3038;--txt:#e2dccb;--mut:#9a9ca2;--acc:#5ce8ff;--gold:#d0a038;--ok:#5fbf7a;--redo:#e0b04a;--no:#e0583a;
+ --btn:#1c1f26;--btn-on:#12303a;--field:#101217;--spec:#b8ad92;--stage:#07080a;
+ --display:'Pixelify Sans',system-ui,sans-serif;--mono:ui-monospace,Menlo,monospace;color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--txt);font:15px/1.45 var(--display)}
+header,main,.bar{max-width:1320px;margin:auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+header{padding-block:18px}main{padding-block:0 80px}
+h1{margin:0;font-weight:600;letter-spacing:.08em;font-size:26px;color:var(--acc);text-wrap:balance}
+h2{font-weight:600;font-size:20px;color:var(--gold);margin:36px 0 6px;letter-spacing:.05em;text-wrap:balance}
+p.lead{color:var(--mut);margin:6px 0 0;max-width:1040px}p.lead b{color:var(--txt);font-weight:600}
+code{font:13px var(--mono);color:#c8bfa6}
+.rules{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr));gap:10px;margin-top:14px}
+.rules div{background:var(--panel);border:1px solid var(--line);padding:10px 12px;font-size:14px;color:var(--mut)}.rules b{color:var(--gold);display:block;font-weight:600}
+button{font:inherit;color:var(--txt);background:var(--btn);border:1px solid var(--line);padding:5px 11px;cursor:pointer}
+button:hover{border-color:#3a6470}button[aria-pressed=true]{border-color:var(--acc);background:var(--btn-on)}
+button:focus-visible,textarea:focus-visible{outline:2px solid var(--gold);outline-offset:1px}
+.bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);border-bottom:1px solid var(--line);display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding-block:8px}
+#tally{margin-left:auto;color:var(--mut);font-size:13px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,572px),1fr));gap:14px;margin-top:12px}
+.card{background:var(--panel);border:1px solid var(--line);display:flex;flex-direction:column;min-width:0}
+.vis{width:min(100%,540px);display:flex;flex-direction:column;gap:2px}
+.duo{display:grid;grid-template-columns:1fr 1fr;gap:0}
+.duo figure,.strips figure{margin:0;display:flex;flex-direction:column;min-width:0}
+figcaption{font-size:12px;color:var(--mut);padding:3px 14px 2px}
+.duo figcaption{order:-1;color:var(--gold);font-size:13px;padding-top:8px}
+canvas{image-rendering:pixelated;display:block;width:100%;height:auto;background:var(--stage)}
+.cap{padding:10px 14px 12px;display:flex;flex-direction:column;gap:7px}
+.cap b.t{color:var(--acc);font-weight:600;font-size:18px}.cap p{margin:0;color:var(--mut);font-size:14px}.cap p b{color:var(--txt);font-weight:600}
+.who{font-size:13px;color:var(--mut)}
+.spec{font:12px/1.5 var(--mono);color:var(--spec)}
+.vrow{display:flex;gap:6px;align-items:center}.vrow span{flex:0 0 58px;font-size:13px;color:var(--gold)}
+.vrow button{flex:1 1 0;min-width:0;font-size:13px;padding-inline:4px}
+.vrow button.sel[data-v=garder]{background:#1f3a28;border-color:var(--ok)}.vrow button.sel[data-v=revoir]{background:#3a321b;border-color:var(--redo)}.vrow button.sel[data-v=rejeter]{background:#3a2019;border-color:var(--no)}
+textarea{background:var(--field);color:var(--txt);border:1px solid var(--line);font:13px system-ui,sans-serif;padding:6px 8px;resize:vertical;min-height:32px;width:100%}
+#out{display:none;margin-top:10px;min-height:200px;font-family:var(--mono)}
+</style>
+<header><h1>FIN DES PROJECTILES</h1>
+<p class="lead">Aujourd’hui, une balle ennemie qui touche la roche laisse le même <b>petit éclair gris</b> quelle qu’elle soit, et une balle en bout de course <b>disparaît d’une image à l’autre</b>. Les balles de l’Arbalestrie rejouent sur la roche leur impact sur un ennemi. Cette planche donne à chaque projectile deux fins qui lui sont propres : <b>contre un mur</b> et <b>en fin de portée</b>. Chaque carte rejoue les deux en boucle, à la vraie vitesse du tir (8 px par unité, ×3 à l’écran), puis les détaille en six images clés. Le bouton <b>Actuel</b> rejoue ce que fait le jeu aujourd’hui, pour comparer.</p>
+<div class="rules">
+ <div><b>Le mur renvoie</b>L’écrasement est sec et tourné : tout repart à l’opposé du mur, et une trace reste un instant sur la roche. Les scènes montrent un mur à droite ; en jeu le dessin suit le sens du vol.</div>
+ <div><b>La portée éteint</b>La fin de course est molle : la balle retombe, se vide ou s’efface sur place, sans éclat projeté. On doit lire d’un coup d’œil qu’elle ne fait plus mal.</div>
+ <div><b>Court et discret</b>Entre 0,2 et 0,55 s, sans couleur d’annonce (carmin pointillé) ni halo. Les balles tirées par dizaines ont les fins les plus brèves.</div>
+ <div><b>Sans effet sur les règles</b>Collisions, vitesses, portées et dégâts ne changent pas. La balle cesse de toucher à l’instant où l’animation commence.</div>
+</div></header>
+<div class="bar"><button id="cur" aria-pressed="false">Actuel</button><button id="slow" aria-pressed="false">Ralenti ×0,25</button><button id="pause" aria-pressed="false">Pause</button><span id="tally"></span></div>
+<main>
+<h2>1 · Tirs des ennemis</h2>
+<p class="lead">Les six dessins de <code>EnemyShots</code>. Ils s’éteignent sur la roche (pas sur l’eau) et à la fin de leur durée de vie.</p>
+<div class="grid" id="s1"></div>
+<h2>2 · Duel de la Martyre</h2>
+<p class="lead">Le « mur » est ici la paroi du dôme. Aujourd’hui l’éclat y laisse une poussière d’or qui monte. Les balles de l’Œil utilisent la braise des chiens et reprennent donc sa carte.</p>
+<div class="grid" id="s2"></div>
+<h2>3 · Balles de l’Arbalestrie</h2>
+<p class="lead">Les cinq munitions, dessinées ×1,5 comme en jeu. Elles volent à 320 px/s jusqu’à 80 unités : la fin de portée se voit surtout à l’air libre, dans la jungle.</p>
+<div class="grid" id="s3"></div>
+<h2>4 · Reprises : flèche et éclat d’os en fin de portée</h2>
+<p class="lead">« Retombée » et « Culbute » sont à revoir. Les deux faisaient tourner le projectile avant de le coucher au sol. Trois autres pistes pour chacun : <b>A</b> il se plante debout, <b>B</b> il s’efface en vol sans tomber, <b>C</b> il descend à plat et glisse.</p>
+<div class="grid" id="s4"></div>
+<h2>Bilan</h2><p class="lead">Les choix sont gardés dans ce navigateur. « Copier le bilan » produit le texte à me renvoyer.</p>
+<p><button id="copy">Copier le bilan</button></p><textarea id="out" aria-label="Bilan à copier"></textarea>
+</main>
+<script>
+'use strict';
+const INK='#0a0a0c',SHADOW='rgba(0,0,0,0.4)',TAU=Math.PI*2;
+const ARROW={shaft:'#6c4c2e',head:'#d6d9dc',tip:'#bcdcff',fl:'#ac3438'};
+const SPARK=['#18448e','#2e6cc8','#64a2f4','#bcdcff'];
+const ORB=['#58101e','#c2384a','#e2b83a','#fff0a0'];
+const FB=['#5a0a14','#a8182a','#d42a3a','#ff8a7a','#ffffff','#ffd8d0','#2a040c'];
+const ICH=['#0e0614','#4a1e66','#9a62d0','#f4eaff'];
+const BONE=['#140808','#a02838','#b8a888','#e4d8bc','#ffffff'];
+const IRON=['#3a4250','#d6dce8'];
+const LIGHT=['#3a280c','#6a4a16','#a07424','#d0a038','#f0cc66','#fff2b0','#fffbe8'];
+const CY=['#0a2a33','#12596b','#1f9fb8','#5ce8ff','#c8fbff','#ffffff'];
+const SMOKE=['#c9cdd6','#9aa1b0','#6d7482'];
+const PAL={indra:['#2a1204','#7a3208','#d0680e','#ff9a2a','#ffd08a','#fff4e0'],medeina:['#0c2410','#1f5a26','#3c9a3e','#6fd36b','#c4f5b0','#f4fff0'],
+ sigil:['#1e1f24','#4a4c54','#8a8c94','#c4c3bf','#e8e4da','#ffffff'],aether:['#0e1030','#2a2e7a','#4f55c8','#8a8cf0','#c8c8ff','#ffffff']};
+const RING8=[[-1,-1],[0,-1],[1,-1],[-1,0],[1,0],[-1,1],[0,1],[1,1]];
+const RIM12=[[-1,-2],[0,-2],[1,-2],[-1,2],[0,2],[1,2],[-2,-1],[-2,0],[-2,1],[2,-1],[2,0],[2,1]];
+const CROSS5=[[0,0],[-1,0],[1,0],[0,-1],[0,1]],DIAG=[[-2,-2],[2,-2],[2,2],[-2,2]];
+const BAYER=[[.5,8.5,2.5,10.5],[12.5,4.5,14.5,6.5],[3.5,11.5,1.5,9.5],[15.5,7.5,13.5,5.5]].map(r=>r.map(v=>v/16));
+const W=90,H=48,WX=66,RX=48,GY=36;
+
+// --- pixels natifs : c = contexte courant, GA = opacité tramée appliquée à tout le dessin
+let c=null,GA=1;
+function P(x,y,col){const ix=Math.round(x),iy=Math.round(y);if(GA<1&&BAYER[iy&3][ix&3]>=GA)return;c.fillStyle=col;c.fillRect(ix,iy,1,1)}
+function D(x,y,col,a){const ix=Math.round(x),iy=Math.round(y);if(BAYER[iy&3][ix&3]<a*GA){c.fillStyle=col;c.fillRect(ix,iy,1,1)}}
+function disc(cx,cy,r,col,a){ell(cx,cy,r,r,col,a)}
+function ell(cx,cy,rx,ry,col,a){if(rx<.4||ry<.4)return;const x0=Math.round(cx),y0=Math.round(cy),n=Math.floor(ry);for(let y=-n;y<=n;y++){const h=Math.floor(rx*Math.sqrt(Math.max(0,1-y*y/(ry*ry))));for(let x=-h;x<=h;x++)a===undefined?P(x0+x,y0+y,col):D(x0+x,y0+y,col,a)}}
+function ring(cx,cy,rx,ry,col,a,n){n=n||Math.max(8,Math.ceil(Math.max(rx,ry)*7));for(let k=0;k<n;k++){const t=TAU*k/n;D(cx+Math.cos(t)*rx,cy+Math.sin(t)*ry,col,a)}}
+function pts(x,y,list,col,a){for(const q of list)a===undefined?P(x+q[0],y+q[1],col):D(x+q[0],y+q[1],col,a)}
+function hash(a,b){const v=Math.sin(a*12.9898+b*78.233)*43758.5453;return v-Math.floor(v)}
+function rng(seed){let s=(seed*2654435761>>>0)||1;return()=>{s^=s<<13;s>>>=0;s^=s>>>17;s^=s<<5;s>>>=0;return s/4294967296}}
+function clamp(v,a,b){return Math.max(a,Math.min(b,v))}
+const fade=(p,k)=>clamp((1-p)*(k||1),0,1);
+// particule lancée de (x,y) à la vitesse (vx,vy), pesanteur g, arrêtée au sol gy
+function shot(x,y,vx,vy,g,a,gy){let X=x+vx*a,Y=y+vy*a+.5*g*a*a;if(gy!==undefined&&Y>gy)Y=gy;return[X,Y]}
+function halo(q){const g=c.createRadialGradient(q.x+.5,q.y+.5,0,q.x+.5,q.y+.5,6);g.addColorStop(0,'rgba(255,240,219,0.35)');g.addColorStop(1,'rgba(255,240,219,0)');c.fillStyle=g;c.fillRect(q.x-6,q.y-6,13,13)}
+function shadow(x,g){for(let i=-1;i<=1;i++)P(x+i,g,SHADOW)}
+
+// --- projectiles en vol (portés de EffectsDrawer, vol vers la droite)
+function arrowAt(q,ux,uy){
+ for(let i=-1;i<12;i++){P(q.x-ux*i+uy,q.y-uy*i-ux,INK);P(q.x-ux*i-uy*2,q.y-uy*i+ux*2,INK)}
+ for(let i=0;i<11;i++){P(q.x-ux*i,q.y-uy*i,i<3?ARROW.head:ARROW.shaft);P(q.x-ux*i-uy,q.y-uy*i+ux,i<3?'#a2a6ab':'#3e2a18')}
+ P(q.x+ux,q.y+uy,ARROW.tip);P(q.x+ux*2,q.y+uy*2,'#fff');
+ for(const sg of[-1,1])P(q.x-ux-uy*sg*1.5,q.y-uy+ux*sg*1.5,ARROW.head);
+ for(const sg of[-1,1])for(let i=8;i<12;i++)P(q.x-ux*i-uy*sg*2,q.y-uy*i+ux*sg*2,ARROW.fl)}
+function orbAt(q,s){s=s===undefined?1:s;disc(q.x,q.y,5.5*s,'#000');disc(q.x,q.y,4.5*s,ORB[0]);disc(q.x,q.y,3.5*s,ORB[1]);disc(q.x,q.y,2.2*s,ORB[2]);disc(q.x-.5,q.y-.5,1*Math.max(s,.6),ORB[3])}
+function fireAt(q,t,S){S=S||1;const F=rng(7);
+ for(let i=6;i>2;i--)D(q.x-i*3.3*S+(F()-.5)*4.5*S,q.y+Math.sin(t*22+i*1.7)*2.2,FB[i>4?0:1],1.15-i*.15);
+ for(let i=6;i>2;i--)disc(q.x-i*1.5*S,q.y,(3.9-(i-3)*.9)*S,FB[1]);
+ disc(q.x,q.y,6.3*S,FB[6]);disc(q.x,q.y,4.8*S,FB[2]);disc(q.x+1.5*S,q.y,3*S,FB[3]);disc(q.x+1.5*S,q.y,1.5*S,(((t*16+F())%2)+2)%2<1?FB[4]:FB[5])}
+function ichorAt(q,dx,dy,a){for(let y=-3;y<4;y++)for(let x=-3;x<4;x++){const u=(x*dx+y*dy)/1.2,v=-x*dy+y*dx,r=Math.hypot(u,v);if(r>3.1)continue;const ri=Math.hypot(x+.5,y+.5);
+ const col=r>2.3?ICH[0]:ri<.9?ICH[3]:ri<1.7?ICH[2]:ICH[1];a===undefined?P(q.x+x,q.y+y,col):D(q.x+x,q.y+y,col,a)}}
+function boneAt(q,dx,dy){const nx=-dy,ny=dx;for(let i=-1;i<7;i++){P(q.x-dx*i+nx,q.y-dy*i+ny,BONE[0]);P(q.x-dx*i-nx,q.y-dy*i-ny,BONE[0])}
+ P(q.x+dx*2,q.y+dy*2,BONE[0]);for(let i=0;i<6;i++)P(q.x-dx*i,q.y-dy*i,i<1?BONE[4]:i<3?BONE[3]:i<4?BONE[2]:BONE[1]);P(q.x+dx,q.y+dy,BONE[4])}
+function ironAt(q){for(const o of[[-1,0],[1,0],[0,-1],[0,1]])P(q.x+o[0],q.y+o[1],IRON[0]);P(q.x-2,q.y,IRON[0]);P(q.x,q.y,IRON[1]);P(q.x+1,q.y,'#fff')}
+let _shard=null;
+function shardTex(){if(_shard)return _shard;const n=19,sc=1.5,h=9,cv=document.createElement('canvas');cv.width=cv.height=n;const x2=cv.getContext('2d'),lvl=new Uint8Array(n*n);
+ const px=(x,y,col)=>{x2.fillStyle=col;x2.fillRect(x,y,1,1)};
+ for(let y=0;y<n;y++)for(let x=0;x<n;x++){const u=(x-h)/sc,v=(y-h)/sc,q=Math.abs(u)/3.7+Math.abs(v)/1.8;if(q>1)continue;lvl[y*n+x]=1;px(x,y,q<.42?'#fff':(q<.72?(u>0?LIGHT[6]:LIGHT[5]):(u>0?LIGHT[4]:LIGHT[3])))}
+ for(let k=2;k<4;k++){const mark=[];for(let y=0;y<n;y++)for(let x=0;x<n;x++){if(lvl[y*n+x])continue;for(const d of[[1,0],[-1,0],[0,1],[0,-1]]){const X=x+d[0],Y=y+d[1];if(X>=0&&Y>=0&&X<n&&Y<n&&lvl[Y*n+X]==k-1){mark.push([x,y]);break}}}
+  for(const[x,y]of mark){lvl[y*n+x]=k;px(x,y,'#1e0e04')}}
+ return _shard=cv}
+function lozenge(x,y,rx,ry,core){for(let j=-Math.ceil(ry);j<=Math.ceil(ry);j++)for(let i=-Math.ceil(rx);i<=Math.ceil(rx);i++){const q=Math.abs(i)/rx+Math.abs(j)/ry;if(q<=1)P(x+i,y+j,q<core?'#fff':q<.75?LIGHT[5]:LIGHT[4])}}
+function rim(x,y,col){pts(x,y,RIM12,col)}
+function ballSpirit(x,y,age){rim(x,y,CY[4]);pts(x,y,RING8,INK);P(x,y,'#5b6068');const R=rng(31+Math.floor((age+10)*30)*7);
+ for(let k=0;k<3;k++){if(R()<.25)continue;const a=R()*TAU;let sx=x+Math.round(Math.cos(a)*2),sy=y+Math.round(Math.sin(a)*2);
+  for(let s=0;s<2;s++){P(sx,sy,s==0?'#e9fbff':CY[3]);const b=a+(s&1?.9:-.9);sx+=Math.round(Math.cos(b));sy+=Math.round(Math.sin(b))}}}
+function indraCore(x,y,C,inner){for(let b=-2;b<3;b++)for(let a=-2;a<3;a++){if(Math.abs(a)==2&&Math.abs(b)==2)continue;P(x+a,y+b,Math.abs(a)<2&&Math.abs(b)<2?inner:INK)}}
+function ballIndra(x,y,age){const C=PAL.indra,R=rng(17+Math.floor((age+10)*30)*7);
+ for(let i=1;i<7;i++){const a=1-i/7;D(x-(2+i),y,i<3?C[3]:C[2],a);D(x-(2+i),y+(i%2?1:-1),C[2],a*.6)}
+ indraCore(x,y,C,C[3]);P(x,y,C[5]);P(x+1,y,C[4]);P(x-1,y-1,C[4]);P(x,y-1,C[5]);P(x+1,y+1,C[2]);P(x-1,y+1,C[2]);
+ if(R()<.4)P(x-(4+Math.floor(R()*3)),y-2-Math.floor(R()*2),C[4])}
+function seed(x,y){const C=PAL.medeina;rim(x,y,C[4]);pts(x,y,RING8,INK);P(x,y,C[3]);D(x-1,y-1,C[4],.8)}
+function ballMedeina(x,y,age){const C=PAL.medeina;seed(x,y);for(let k=0;k<2;k++){const a=age*18+k*Math.PI;P(x+Math.round(Math.cos(a)*3),y+Math.round(Math.sin(a)*2),k?C[4]:C[3])}
+ for(let i=1;i<4;i++)D(x-(2+i*2),y+Math.round(i*.6+Math.sin(age*20+i)),C[2],.6-i*.15)}
+function marble(x,y,age){const C=PAL.sigil;rim(x,y,C[5]);pts(x,y,[[-1,-1],[0,-1],[-1,0]],C[3]);pts(x,y,[[1,-1],[1,0],[-1,1],[0,1],[1,1]],INK);P(x,y,C[4]);const ph=Math.floor((age+10)*24)%3;P(x-1+ph,y-1+Math.min(ph,1),C[5])}
+function ballSigil(x,y,age){const C=PAL.sigil;marble(x,y,age);for(const k of[[4,.8],[5,.5],[8,.5]])D(x-k[0],y,k[0]<8?C[4]:C[3],k[1])}
+function astre(x,y){const C=PAL.aether;rim(x,y,C[4]);pts(x,y,RING8,INK);P(x,y,C[4])}
+function orbit(x,y,rx,ry,col,a){for(let k=0;k<12;k++){const t=k/12*TAU,ox=Math.round(Math.cos(t)*rx),oy=Math.round(Math.sin(t)*ry);if(Math.abs(ox)>1||Math.abs(oy)>1)D(x+ox,y+oy,col,a)}}
+function ballAether(x,y,age){const C=PAL.aether;orbit(x,y,3.5,1.5,C[2],.55);astre(x,y);P(x+Math.round(Math.cos(age*14)*3.5),y+Math.round(Math.sin(age*14)*1.5),C[5]);D(x-4,y,C[2],.4)}
+
+// --- ce que fait le jeu aujourd'hui
+function sphere(x,y,r,col,a){if(r<.5)return;c.save();c.globalAlpha=a;const g=c.createRadialGradient(x-r*.3,y-r*.3,0,x,y,r);g.addColorStop(0,'#f2f3eb');g.addColorStop(.45,col);g.addColorStop(1,'#090c14');c.fillStyle=g;c.beginPath();c.arc(x,y,r,0,TAU);c.fill();c.restore()}
+const CUR={
+ enemy:{dur:.22,wall(h,a,p){sphere(h.x+1,h.y,2.6*(1-p),'#8a8e98',(1-p)*.9)},range(){}},
+ mote:{dur:.9,both(h,a,p){c.save();c.globalAlpha=1-p;P(h.x,h.y-p*10,'#f0cc66');c.restore()}},
+ spirit:{dur:.3,both(h,a,p){const x=h.x,y=h.y;if(p<.4){pts(x,y,CROSS5,CY[5]);pts(x,y,[[-3,-2],[2,-3],[3,2],[-2,3],[0,-4]],CY[3])}else pts(x,y-Math.round(p*3),[[-2,-2],[-1,-2],[1,-1],[2,-1],[0,-3]],'#c7c7bd',.6*(1-p))}},
+ indra:{dur:.45,both(h,a,p){const x=h.x,y=h.y,C=PAL.indra;if(p<.3){for(let i=-3;i<4;i++){const col=Math.abs(i)<2?C[5]:C[3];P(x+i,y,col);P(x,y+i,col)}pts(x,y,DIAG,C[4])}
+  const r=Math.round(3+p*5);for(let k=0;k<16;k++){const t=k/16*TAU;D(x+Math.round(Math.cos(t)*r),y+Math.round(Math.sin(t)*r*.6),C[2],.7*(1-p))}
+  for(const v of[[-9,-22,1],[7,-26,2],[12,-16,3]]){let yy=y+v[1]*a+60*a*a;if(yy>y+8)yy=y+8-Math.abs(Math.sin(a*12))*2;D(x+v[0]*a*1.6,yy,v[2]%2?C[4]:C[3],1-p)}}},
+ medeina:{dur:.3,both(h,a,p){const x=h.x,y=h.y,C=PAL.medeina;if(p<.5){pts(x,y,CROSS5,C[5]);pts(x,y,DIAG,C[3])}else pts(x,y-Math.round(p*3),[[-1,-2],[1,-3],[0,-4]],C[3],1-p)}},
+ sigil:{dur:.3,both(h,a,p){const x=h.x,y=h.y,C=PAL.sigil;if(p<.4)pts(x,y,CROSS5,C[5]);const dd=Math.round(2+p*3);pts(x,y,[[-dd,0],[dd,0],[0,-dd],[0,dd]],C[4],1-p)}},
+ aether:{dur:.3,both(h,a,p){const x=h.x,y=h.y,C=PAL.aether;if(p<.5){pts(x,y,CROSS5,C[4]);P(x,y,C[5])}pts(x,y-Math.round(p*2),DIAG,C[3],1-p)}},
+};
+
+// --- les douze projectiles. h : {x,y centre de la balle à l'instant de sa fin, g sol, wx face du mur} ; a âge (s), p = a/dur
+function clipWall(h,f){c.save();c.beginPath();c.rect(0,0,h.wx,H);c.clip();f();c.restore()}
+const DEFS=[
+{sec:'s1',id:'fleche',name:'Flèche',who:'Archer du Credo · 136 px/s · portée 32 unités',speed:136,nose:3,cur:'enemy',
+ fly(q,g){halo(q);shadow(q.x,g);for(let i=3;i<9;i++)P(q.x-i,g,SHADOW);arrowAt(q,1,0)},
+ wall:{dur:.55,name:'Fichée',desc:'La pointe s’enfonce de 3 px dans la roche, le fût vibre en s’amortissant, trois éclats de pierre retombent. La flèche reste plantée puis s’efface en trame.',
+  draw(h,a,p){const w=Math.sin(a*70)*.16*Math.exp(-a*11);GA=p<.55?1:fade((p-.55)/.45);clipWall(h,()=>arrowAt({x:h.wx+2,y:h.y},Math.cos(w),Math.sin(w)));GA=1;
+   if(a<.05)pts(h.wx-1,h.y,[[0,-1],[0,0],[0,1],[-1,0]],'#fff');
+   [[-30,-28],[-18,-44],[-42,-6]].forEach((v,i)=>{const s=shot(h.wx-1,h.y,v[0],v[1],170,a,h.g);D(s[0],s[1],i==1?'#565c6c':'#8a8e98',fade(p,1.4))})}},
+ range:{dur:.5,name:'Retombée',desc:'À bout de course la flèche pique du nez, tombe sur 8 px et se couche au sol dans un petit nuage, puis s’efface. Son ombre la rejoint.',
+  draw(h,a,p){const k=clamp(a/.2,0,1),x=h.x+8*k,y=h.y+(h.g-1-h.y)*k*k,an=a<.2?k*.95:0;
+   for(let i=-1;i<=1;i++)D(x+i-3,h.g,'#000',.4*fade(p,1.2));GA=a<.24?1:fade((a-.24)/.26);arrowAt({x,y:a<.2?y:h.g-2},Math.cos(an),Math.sin(an));GA=1;
+   if(a>=.2&&a<.36){const e=(a-.2)/.16;for(const sx of[-1,1])D(x+sx*(2+e*4),h.g-1-e*2,'#8a8e98',.7*(1-e))}}}},
+{sec:'s1',id:'orbe',name:'Orbe',who:'Thuriféraire, Fanatique, Brute · 40 à 56 px/s',speed:56,nose:5,cur:'enemy',
+ fly(q,g,t){halo(q);shadow(q.x,g);const R=rng(3);for(let i=3;i>0;i--)disc(q.x-(3+i*3)+(R()-.5)*2,q.y+Math.sin(t*14+i)*1.2,1.5,ORB[i>1?1:2]);orbAt(q)},
+ wall:{dur:.42,name:'Écrasée',desc:'L’orbe s’aplatit en galette contre la paroi (2 images), crève en sept gouttes carmin et or qui giclent à l’opposé, et laisse une coulure sombre qui pâlit.',
+  draw(h,a,p){const x=h.wx-3;ell(h.wx+1,h.y,1.5,4+p*2,ORB[0],fade(p,1.1));
+   if(a<.07){ell(x,h.y,3.5,8,'#000');ell(x,h.y,2.6,7,ORB[0]);ell(x,h.y,2,5.6,ORB[1]);ell(x+1,h.y,1,3.6,ORB[2]);return}
+   if(a<.14)disc(x,h.y,2.2,ORB[3]);
+   for(let i=0;i<7;i++){const an=Math.PI/2+(i+.5)/7*Math.PI,sp=34+hash(i,2)*22,s=shot(x,h.y,Math.cos(an)*sp,Math.sin(an)*sp,130,a,h.g);D(s[0],s[1],i%2?ORB[2]:ORB[1],fade(p,1.5));D(s[0],s[1]+1,ORB[0],fade(p,1.2))}}},
+ range:{dur:.48,name:'Dissipée',desc:'L’orbe ralentit et se vide du bord vers le cœur : cerne, carmin, or, puis un dernier point pâle. Trois volutes carmin montent de sa place.',
+  draw(h,a,p){const x=h.x+5*(1-(1-p)*(1-p)),s=1-p;if(p<.86)orbAt({x,y:h.y},s);else D(x,h.y,ORB[3],fade((p-.86)/.14));
+   for(let i=0;i<3;i++){const st=.15+i*.12;if(p>st){const e=(p-st)/(1-st);D(x-3+i*3+Math.sin(a*16+i*2)*1.2,h.y-2-e*(9+i*2),i==1?ORB[2]:ORB[1],.9*(1-e))}}}}},
+{sec:'s1',id:'braise',name:'Braise',who:'Chiens de la Bête, squelette explosif, balles de l’Œil · 86 px/s · ×1,6 pour l’alpha des meutes',speed:86,nose:6,cur:'enemy',
+ fly(q,g,t){halo(q);fireAt(q,t);c.fillStyle=SHADOW;c.fillRect(q.x-5,g,11,1);c.fillRect(q.x-3,g+1,7,1)},
+ wall:{dur:.55,name:'Gerbe et suie',desc:'Éclair blanc aplati, une flamme lèche la paroi vers le haut, neuf escarbilles retombent en rebondissant au sol. Une tache de suie reste sur la roche et pâlit.',
+  draw(h,a,p){const x=h.wx-3;ell(h.wx+1,h.y,2.4,5.5,'#0a080a',.85*fade(p,1.2));
+   if(a<.06){ell(x,h.y,3.6,8.5,FB[6]);ell(x,h.y,2.8,7.4,FB[2]);ell(x+1,h.y,1.6,5,FB[3]);ell(x+1,h.y,.9,3.4,FB[4]);return}
+   if(a<.3){const e=a/.3;const n=Math.round(5+e*7),f=e<.6?1:fade((e-.6)/.4);for(let j=0;j<=n;j++){const k=j/n,col=k<.3?FB[5]:k<.6?FB[3]:FB[2];D(h.wx-1,h.y+3-j,col,f);if(k<.55)D(h.wx-2,h.y+3-j+((j+Math.floor(a*30))%2),k<.3?FB[3]:FB[1],f)}}
+   for(let i=0;i<9;i++){const an=Math.PI/2+(i+.5)/9*Math.PI,sp=30+hash(i,5)*45;let s=shot(x,h.y,Math.cos(an)*sp,Math.sin(an)*sp-12,160,a);if(s[1]>h.g)s[1]=h.g-Math.abs(Math.sin(a*14+i))*2.5*(1-p);
+    D(s[0],s[1],p<.25?FB[4]:p<.5?FB[3]:p<.75?FB[2]:FB[1],fade(p*p,1.3))}}},
+ range:{dur:.5,name:'Étouffée',desc:'La braise rétrécit, son cœur blanc vire au rouge sombre, il ne reste qu’un tison. Trois bouffées de fumée grise montent, une dernière étincelle saute.',
+  draw(h,a,p){const x=h.x+6*(1-(1-p)*(1-p)),q={x,y:h.y};
+   for(let i=0;i<3;i++){const st=.18+i*.14;if(p>st){const e=(p-st)/(1-st);disc(x-3+i*3+Math.sin(a*9+i)*1.5,h.y-3-e*(10+i*2),1.4+e*1.4,SMOKE[2-i%2],.6*(1-e))}}
+   if(p<.3)fireAt(q,a,1-p*1.2);else if(p<.62){const s=1-(p-.3)*1.6;disc(x,h.y,4.4*s,FB[6]);disc(x,h.y,3*s,FB[1]);disc(x,h.y,1.5*s,p<.45?FB[3]:FB[2])}else{disc(x,h.y,2,FB[0],fade((p-.62)/.38,1.4));if(p<.8)P(x,h.y,FB[1])}
+   if(p>.45&&p<.7){const e=(p-.45)/.25;P(x+3+e*2,h.y-4-e*5,e<.6?'#fff':FB[3])}}}},
+{sec:'s1',id:'ichor',name:'Goutte d’ichor',who:'Anneau du Fanatique, tique, squelette à bubons, anguille, faune du biome 2 · 28 à 48 px/s',speed:48,nose:3,cur:'enemy',
+ fly(q,g){halo(q);shadow(q.x,g);ichorAt(q,1,0)},
+ wall:{dur:.55,name:'Coulure',desc:'La goutte s’étale en tache verticale sur la paroi, deux filets coulent vers le bas, trois gouttelettes repartent en arrière. Le tout s’efface en trame.',
+  draw(h,a,p){const x=h.wx-1,k=clamp(a/.06,0,1),ry=2.5+k*2.5,f=fade(p,1.7);ell(x,h.y,2.2,ry+1,ICH[0],f);ell(x,h.y,1.3,ry,ICH[1],f);ell(x-1,h.y-1,.6,ry-2,ICH[2],f);D(x-1,h.y-2,ICH[3],f);
+   [[0,7,30],[-1,5,22]].forEach((d,i)=>{const n=Math.min(d[1],Math.floor(a*d[2]));for(let j=0;j<=n;j++)D(x+d[0],h.y+ry+j,j==n?ICH[2]:ICH[1],f)});
+   [[-26,-32],[-38,-8],[-16,8]].forEach(v=>{const s=shot(x-2,h.y,v[0],v[1],160,a,h.g);D(s[0],s[1],ICH[2],fade(p,1.5));D(s[0],s[1]+1,ICH[0],fade(p,1.5))})}},
+ range:{dur:.5,name:'Flaque',desc:'La goutte perd sa portance, tombe en s’étirant et s’écrase en petite flaque violette de 9 px, avec deux éclaboussures. La flaque s’efface, sans danger.',
+  draw(h,a,p){const T=.14;if(a<T){const k=a/T;ichorAt({x:Math.round(h.x+3*k),y:Math.round(h.y+(h.g-2-h.y)*k*k)},0,1);shadow(h.x+3*k,h.g);return}
+   const x=h.x+3,e=clamp((a-T)/.08,0,1),f=fade(p,2.2);ell(x,h.g,3+e*2,1.6,ICH[0],f);ell(x,h.g,2+e*2,.8,ICH[1],f);D(x-1,h.g,ICH[2],f);D(x+1,h.g,ICH[2],f);if(e<1)D(x,h.g-1,ICH[3],1);
+   if(a<T+.16){const j=(a-T)/.16;for(const sx of[-1,1])D(x+sx*(3+j*3),h.g-1-Math.sin(j*Math.PI)*4,ICH[2],1-j*.5)}}}},
+{sec:'s1',id:'os',name:'Éclat d’os',who:'Sillage du Strazhar, squelette · 40 à 56 px/s',speed:56,nose:3,cur:'enemy',
+ fly(q,g){halo(q);shadow(q.x,g);boneAt(q,1,0)},
+ wall:{dur:.38,name:'Brisé',desc:'Un trait blanc sur la paroi, puis l’éclat casse en trois : la pointe, l’os, la chair. Les morceaux tournoient, retombent au sol et s’effacent.',
+  draw(h,a,p){if(a<.05)pts(h.wx-1,h.y,[[0,-2],[0,-1],[0,0],[0,1],[0,2],[-1,0]],'#fff');D(h.wx,h.y,INK,fade(p,1.5));
+   [[-40,-36,BONE[4],BONE[3]],[-25,-56,BONE[3],BONE[2]],[-52,-10,BONE[2],BONE[1]]].forEach((v,i)=>{const s=shot(h.wx-2,h.y,v[0],v[1],230,a,h.g),land=s[1]>=h.g,an=land?0:a*26+i*2,f=fade(p,1.6);
+    D(s[0],s[1],v[2],f);D(s[0]+Math.round(Math.cos(an)),s[1]+Math.round(Math.sin(an)),v[3],f);D(s[0],s[1]+1,BONE[0],f*.8)})}},
+ range:{dur:.4,name:'Culbute',desc:'L’éclat fait un tour complet en tombant, rebondit une fois de 2 px et reste couché au sol avant de s’effacer.',
+  draw(h,a,p){const T=.18;if(a<T){const k=a/T,an=k*TAU;boneAt({x:h.x+6*k,y:h.y+(h.g-1-h.y)*k*k},Math.cos(an),Math.sin(an));shadow(h.x+6*k,h.g);return}
+   const j=clamp((a-T)/.09,0,1);GA=fade((p-.6)/.4);boneAt({x:h.x+6+j*2,y:h.g-1-Math.sin(j*Math.PI)*2},1,0);GA=1}}},
+{sec:'s1',id:'fer',name:'Éclat de fer',who:'Éclats du pilum, couronne du porte-bouclier, éclaireur, chauve-souris, félin · 48 à 96 px/s',speed:96,nose:2,cur:'enemy',
+ fly(q,g){halo(q);shadow(q.x,g);ironAt(q)},
+ wall:{dur:.24,name:'Étincelle',desc:'Croix blanche d’une image, trois étincelles bleutées filent en arrière, l’éclat ricoche et tombe. La plus brève : ces éclats partent par couronnes de dix.',
+  draw(h,a,p){const x=h.wx-2;if(a<.05){pts(x,h.y,CROSS5,'#fff');pts(x,h.y,[[-2,-2],[-2,2]],'#ffe08a')}
+   [[-70,-44],[-86,8],[-36,-78]].forEach(v=>{const s=shot(x,h.y,v[0],v[1],0,a),col=p<.3?'#fff':p<.6?SPARK[3]:SPARK[2];D(s[0],s[1],col,fade(p,1.6));D(s[0]-v[0]*.012,s[1]-v[1]*.012,SPARK[1],fade(p,1.1))});
+   const r=shot(x,h.y,-46,-22,240,a,h.g);D(r[0],r[1],IRON[1],fade(p,2));D(r[0]+1,r[1],IRON[0],fade(p,2))}},
+ range:{dur:.2,name:'Reflet',desc:'Un reflet en croix, puis le losange se réduit à un point de fer clair, un point sombre, rien. Aucune retombée.',
+  draw(h,a,p){const x=h.x+3*p;if(p<.35){ironAt({x,y:h.y});pts(x,h.y,[[0,-2],[0,2],[2,0]],'#fff')}else if(p<.7){P(x,h.y,IRON[1]);P(x-1,h.y,IRON[0])}else D(x,h.y,IRON[0],fade((p-.7)/.3,1.5))}}},
+{sec:'s2',id:'or',name:'Éclat d’or',who:'La Martyre · environ 50 px/s · s’arrête à la paroi du dôme',speed:50,nose:6,lift:17,cur:'mote',dome:true,
+ fly(q,g){c.fillStyle='rgba(8,4,2,0.45)';c.fillRect(q.x-3,g,7,1);c.fillRect(q.x-2,g-1,5,3);c.drawImage(shardTex(),q.x-9,q.y-9)},
+ wall:{dur:.42,name:'Fêlure du dôme',desc:'La paroi s’illumine d’un trait blanc qui s’allonge de part et d’autre, quatre paillettes glissent le long du dôme, deux retombent à l’intérieur.',
+  draw(h,a,p){const x=h.wx,n=Math.round(2+p*9);for(let j=-n;j<=n;j++)D(x,h.y+j,Math.abs(j)<n*.5?LIGHT[6]:LIGHT[4],fade(p,1.5)-Math.abs(j)/n*.3);
+   if(a<.06)lozenge(x-3,h.y,2,5,.5);
+   for(const sg of[-1,1])for(let i=0;i<2;i++){const y=h.y+sg*(3+a*(46-i*20));D(x-1-i,y,i?LIGHT[3]:LIGHT[5],fade(p,1.5));D(x-1-i,y-sg,LIGHT[4],fade(p,.9))}
+   [[-30,-30],[-44,-4]].forEach(v=>{const s=shot(x-3,h.y,v[0],v[1],150,a,h.g);D(s[0],s[1],LIGHT[5],fade(p,1.6))})}},
+ range:{dur:.5,name:'Poussière d’or',desc:'L’éclat se resserre en un losange blanc qui scintille une fois en croix, puis la poussière d’or actuelle monte de 10 px. Garde le signe déjà connu du duel.',
+  draw(h,a,p){const x=h.x+3*Math.min(1,p*2);if(p<.4){const s=1-p*2;lozenge(x,h.y,1+4.5*s,.6+2.2*s,.55)}
+   if(p>.25&&p<.5){pts(x,h.y,CROSS5,'#fff');pts(x,h.y,[[-2,0],[2,0],[0,-2],[0,2]],LIGHT[5])}
+   if(p>=.4){const e=(p-.4)/.6;D(x,h.y-e*10,LIGHT[4],1-e);D(x-2,h.y+1-e*6,LIGHT[3],.7*(1-e));D(x+2,h.y-1-e*7,LIGHT[5],.7*(1-e))}}}},
+{sec:'s3',id:'spirit',name:'Balle spirituelle',who:'Munition de base de l’Arbalestrie et du canon',speed:320,nose:2,scale:1.5,lift:9,cur:'spirit',
+ fly(q,g,t){ballSpirit(q.x,q.y,t)},
+ wall:{dur:.32,name:'Arcs sur la roche',desc:'Éclat blanc, puis deux micro-éclairs cyan courent le long de la paroi vers le haut et le bas. Trois grains de poussière grise tombent.',
+  draw(h,a,p){const x=h.wx-1;if(p<.35){pts(x-1,h.y,CROSS5,CY[5]);pts(x-1,h.y,[[-2,-2],[-2,2]],CY[3])}
+   const n=Math.min(6,Math.floor(a*60));for(const sg of[-1,1])for(let k=0;k<=n;k++)D(x-(hash(k,sg+3)>.5?1:0),h.y+sg*(1+k),k==n?'#e9fbff':CY[3],fade(p,1.6));
+   [[-12,4],[-6,12],[-18,-6]].forEach(v=>{const s=shot(x-1,h.y,v[0],v[1],90,a,h.g);D(s[0],s[1],'#c7c7bd',.7*fade(p,1.3))})}},
+ range:{dur:.28,name:'Anneau qui s’ouvre',desc:'Le cœur d’encre s’éteint, le liseré cyan s’ouvre en anneau de 2 à 6 px qui se trame, avec un dernier micro-éclair.',
+  draw(h,a,p){const x=h.x+2*p;if(p<.4)P(x,h.y,p<.2?'#5b6068':INK);const r=2+p*4;ring(x,h.y,r,r,p<.4?CY[4]:p<.7?CY[3]:CY[2],fade(p,1.3),Math.ceil(r*5));
+   if(p<.6){const an=hash(Math.floor(a*30),1)*TAU;P(x+Math.cos(an)*(r+1),h.y+Math.sin(an)*(r+1),'#e9fbff');P(x+Math.cos(an+.5)*(r+2),h.y+Math.sin(an+.5)*(r+2),CY[3])}}}},
+{sec:'s3',id:'indra',name:'Balle d’Indra',who:'Braise orange, traînée de flamme',speed:320,nose:3,scale:1.5,lift:9,cur:'indra',
+ fly(q,g,t){ballIndra(q.x,q.y,t)},
+ wall:{dur:.45,name:'Demi-anneau de chaleur',desc:'Étoile de 7 px, demi-anneau de chaleur qui s’ouvre du côté libre seulement, trois braises rebondissent au pied du mur. Une brûlure reste sur la roche.',
+  draw(h,a,p){const x=h.wx-2,C=PAL.indra;ell(h.wx+1,h.y,1.6,3.4,C[0],.9*fade(p,1.2));
+   if(p<.25){for(let i=-3;i<4;i++){const col=Math.abs(i)<2?C[5]:C[3];if(i<=1)P(x+i,h.y,col);P(x,h.y+i,col)}pts(x,h.y,[[-2,-2],[-2,2]],C[4])}
+   const r=3+p*6;for(let k=0;k<=10;k++){const t=-Math.PI/2+k/10*Math.PI;D(h.wx-1-Math.cos(t)*r*.6,h.y+Math.sin(t)*r,C[2],.8*(1-p))}
+   [[-28,-40],[-46,-22],[-16,-56]].forEach((v,i)=>{let s=shot(x,h.y,v[0],v[1],190,a);if(s[1]>h.g)s[1]=h.g-Math.abs(Math.sin(a*13+i))*2;D(s[0],s[1],i%2?C[3]:C[4],fade(p,1.4))})}},
+ range:{dur:.42,name:'Braise qui s’éteint',desc:'Le cœur passe de l’orange au brun puis au noir sans changer de taille, deux filets de fumée montent, les escarbilles de la traînée s’envolent.',
+  draw(h,a,p){const x=Math.round(h.x+3*Math.min(1,p*1.5)),C=PAL.indra;
+   if(p>.2){const e=(p-.2)/.8;D(x-1,h.y-3-e*9,SMOKE[1],.7*(1-e));D(x+1+Math.sin(a*14),h.y-2-e*6,SMOKE[2],.7*(1-e))}
+   D(x-4-a*12,h.y-1-a*16,C[4],fade(p,1.2));D(x-6-a*8,h.y+1-a*10,C[3],fade(p,1));
+   GA=p<.75?1:fade((p-.75)/.25);indraCore(x,h.y,C,p<.25?C[3]:p<.5?C[2]:p<.75?C[1]:C[0]);if(p<.25)P(x,h.y,C[5]);else if(p<.5)P(x,h.y,C[3]);GA=1}}},
+{sec:'s3',id:'medeina',name:'Balle de Medeina',who:'Graine verte, deux feuilles en orbite',speed:320,nose:2,scale:1.5,lift:9,cur:'medeina',
+ fly(q,g,t){ballMedeina(q.x,q.y,t)},
+ wall:{dur:.55,name:'Feuilles qui tombent',desc:'La graine se fend en croix verte, ses deux feuilles se détachent et descendent en se balançant le long du mur. Un peu de sève reste sur la roche.',
+  draw(h,a,p){const x=h.wx-2,C=PAL.medeina;if(p<.25){pts(x,h.y,CROSS5,C[5]);pts(x,h.y,[[-2,-2],[-2,2]],C[3])}
+   pts(h.wx,h.y,[[0,-1],[0,0],[1,1]],C[2],.9*fade(p,1.3));
+   for(let i=0;i<2;i++){const sw=Math.sin(a*13+i*2.4),lx=x-2-i*3-a*8+sw*2,ly=Math.min(h.g,h.y-1+i*2+a*24),f=fade(p,1.6);D(lx,ly,C[4],f);D(lx+(sw>0?1:-1),ly+(i?1:-1)*(Math.abs(sw)<.5?1:0),C[3],f)}}},
+ range:{dur:.6,name:'Pousse',desc:'La graine tombe au sol. Une tige de 3 px en sort, deux feuilles s’ouvrent, puis la pousse s’efface. La seule fin qui laisse un clin d’œil, à garder rare (80 unités).',
+  draw(h,a,p){const T=.13,C=PAL.medeina;if(a<T){const k=a/T;seed(Math.round(h.x+2*k),Math.round(h.y+(h.g-1-h.y)*k*k));return}
+   const x=Math.round(h.x+2),e=clamp((a-T)/.2,0,1),n=Math.round(e*3);GA=fade((p-.75)/.25);P(x-1,h.g+1,INK);P(x+1,h.g+1,INK);P(x,h.g+1,INK);P(x,h.g,C[3]);
+   for(let j=1;j<=n;j++)P(x,h.g-j,j==n?C[3]:C[2]);
+   if(a>T+.2){const o=clamp((a-T-.2)/.1,0,1);P(x-1,h.g-3-(o<1?1:0),C[4]);P(x+1,h.g-3-(o<1?1:0),C[4]);if(o>=1){P(x-2,h.g-4,C[3]);P(x+2,h.g-4,C[3]);P(x,h.g-4,C[5])}}GA=1}}},
+{sec:'s3',id:'sigil',name:'Balle de Sigil',who:'Bille de marbre veiné, tirets de glyphe',speed:320,nose:2,scale:1.5,lift:9,cur:'sigil',
+ fly(q,g,t){ballSigil(q.x,q.y,t)},
+ wall:{dur:.42,name:'Glyphe gravé',desc:'Éclat blanc, puis un glyphe en croix reste gravé clair sur la roche et pâlit. Deux tirets filent le long de la paroi, deux éclats de marbre tombent.',
+  draw(h,a,p){const x=h.wx-2,C=PAL.sigil,f=fade(p,1.4);if(p<.3)pts(x,h.y,CROSS5,C[5]);
+   pts(h.wx+2,h.y,[[0,-2],[0,-1],[0,0],[0,1],[0,2],[-1,0],[1,0],[-1,-2],[1,2]],p<.3?C[5]:C[4],f);
+   const dd=2+p*5;D(h.wx-1,h.y-dd,C[4],f);D(h.wx-1,h.y+dd,C[4],f);
+   [[-22,-26,C[3]],[-34,-6,C[2]]].forEach(v=>{const s=shot(x,h.y,v[0],v[1],210,a,h.g);D(s[0],s[1],v[2],fade(p,1.6))})}},
+ range:{dur:.36,name:'Marbre qui s’effrite',desc:'La bille s’arrête net, son glyphe s’écarte en quatre points fins, puis elle s’effrite en trois grains gris qui tombent droit.',
+  draw(h,a,p){const x=h.x,C=PAL.sigil,dd=Math.round(2+p*4);pts(x,h.y,[[-dd,0],[dd,0],[0,-dd],[0,dd]],C[4],fade(p,1.2));
+   if(p<.3){marble(x,h.y,a);return}const e=a-.36*.3;[[-1,C[3]],[0,C[2]],[1,C[1]]].forEach((v,i)=>{D(x+v[0]*(1+e*14),Math.min(h.g,h.y+e*e*(260-i*60)),v[1],fade((p-.3)/.7,1.5))})}}},
+{sec:'s3',id:'aether',name:'Balle d’Aether',who:'Astre bleu-violet, anneau d’orbite',speed:320,nose:2,scale:1.5,lift:9,cur:'aether',
+ fly(q,g,t){ballAether(q.x,q.y,t)},
+ wall:{dur:.42,name:'Orbite plaquée',desc:'L’anneau d’orbite se rabat contre la paroi et s’y agrandit en ovale vertical. L’étoile qui le parcourait est éjectée vers le haut et s’éteint.',
+  draw(h,a,p){const x=h.wx-2,C=PAL.aether;if(p<.3){pts(x,h.y,[[-1,0],[0,-1],[0,1]],C[4]);P(x,h.y,C[5])}
+   const ry=3+p*5;for(let k=0;k<=10;k++){const t=Math.PI/2+k/10*Math.PI;D(h.wx-1+Math.cos(t)*1.6,h.y+Math.sin(t)*ry,p<.4?C[3]:C[2],.85*(1-p))}
+   const s=shot(x,h.y,-20,-58,70,a);D(s[0],s[1],C[5],fade(p,1.8));D(s[0]+1,s[1]+2,C[3],fade(p,1.2));if(p>.5&&p<.7)pts(s[0],s[1],[[-1,0],[1,0],[0,-1],[0,1]],C[4])}},
+ range:{dur:.42,name:'Implosion',desc:'L’anneau d’orbite se resserre sur l’astre en s’éclaircissant, l’astre scintille une fois en croix, puis il ne reste qu’un point violet qui se trame.',
+  draw(h,a,p){const x=Math.round(h.x+2*Math.min(1,p*2)),C=PAL.aether;
+   if(p<.5){const s=1-p/.5;orbit(x,h.y,3.5*s+1.2,1.5*s+1.2,p<.25?C[2]:C[4],.6+p);astre(x,h.y);P(x+Math.round(Math.cos(a*30)*(3.5*s+1)),h.y+Math.round(Math.sin(a*30)*(1.5*s+1)),C[5])}
+   else if(p<.72){pts(x,h.y,CROSS5,C[5]);if(p<.62)pts(x,h.y,[[-2,0],[2,0],[0,-2],[0,2]],C[4])}
+   else D(x,h.y,C[3],fade((p-.72)/.28,1.4))}}},
+];
+
+// --- reprises (bilan du 2026-11-23) : trois autres fins de portée pour la flèche et l'éclat d'os
+function clipRect(x,y,w,hh,f){c.save();c.beginPath();c.rect(x,y,w,hh);c.clip();f();c.restore()}
+function dust(x,g,e,n){for(let i=0;i<n;i++)D(x-2-i*3-e*3,g-1-e*(2+i),i%2?'#6d7482':'#8a8e98',.75*(1-e))}
+const base=id=>DEFS.find(d=>d.id===id);
+function alt(of,id,name,range){DEFS.push({...base(of),sec:'s4',id,name:base(of).name+' · '+name,only:'range',range})}
+alt('fleche','fleche-a','A Plantée',{dur:.6,name:'A Plantée',desc:'La flèche pique et se plante dans le sol, empennage en l’air. Le fût vibre en s’amortissant, puis elle s’efface. Répond à « Fichée » contre un mur.',
+ draw(h,a,p){const T=.16,k=clamp(a/T,0,1),x=h.x+6*k,y=a<T?h.y+(h.g-h.y)*k*k:h.g,an=a<T?k*1.0:1.0+Math.sin((a-T)*70)*.15*Math.exp(-(a-T)*11);
+  for(let i=1;i<6;i++)D(x-i-2,h.g+1,'#000',.4*fade(p,1.3));GA=p<.65?1:fade((p-.65)/.35);clipRect(0,0,W,h.g+1,()=>arrowAt({x,y},Math.cos(an),Math.sin(an)));GA=1;
+  if(a>=T&&a<T+.14){const e=(a-T)/.14;for(const sx of[-1,1])D(x+sx*(2+e*3),h.g-e*2,'#8a8e98',.7*(1-e))}}});
+alt('fleche','fleche-b','B Essoufflée',{dur:.4,name:'B Essoufflée',desc:'Pas de chute : la flèche ralentit sur 6 px et s’efface de l’empennage vers la pointe, en semant trois brins de bois. La pointe blanche s’éteint la dernière.',
+ draw(h,a,p){const x=Math.round(h.x+6*(1-(1-p)*(1-p))),len=15*(1-p);if(p<.9)clipRect(x+3-len,0,len+1,H,()=>arrowAt({x,y:h.y},1,0));else D(x+2,h.y,'#fff',fade((p-.9)/.1,2));
+  for(let i=0;i<Math.round(3*(1-p));i++)P(x-1+i,h.g,SHADOW);
+  [[ARROW.fl,0],[ARROW.shaft,.2],['#3e2a18',.4]].forEach((v,i)=>{if(p>v[1]){const e=(p-v[1])/(1-v[1]);D(x-11+i*4-e*4,h.y+(i-1)+e*(4+i),v[0],.9*(1-e))}})}});
+alt('fleche','fleche-c','C Glissade',{dur:.5,name:'C Glissade',desc:'La flèche descend à plat, sans tourner, touche le sol et glisse sur 7 px en soulevant un peu de poussière, puis s’efface.',
+ draw(h,a,p){const T=.14;if(a<T){const k=a/T;shadow(h.x+4*k,h.g);arrowAt({x:h.x+4*k,y:h.y+(h.g-2-h.y)*k*k},1,0);return}
+  const j=clamp((a-T)/.2,0,1),x=h.x+4+7*(1-(1-j)*(1-j));if(j<1)dust(x-8,h.g,j,3);GA=p<.7?1:fade((p-.7)/.3);arrowAt({x,y:h.g-2},1,0);GA=1}});
+alt('os','os-a','A Fiché',{dur:.5,name:'A Fiché',desc:'L’éclat pique et se fiche dans le sol, penché comme ceux du sillage du Strazhar, puis s’enfonce de 4 px et disparaît. Sans trait carmin : il n’annonce rien.',
+ draw(h,a,p){const T=.14,k=clamp(a/T,0,1),an=k*1.15,x=h.x+5*k,sink=a<T?0:4*clamp((a-T-.12)/.24,0,1);
+  for(let i=-1;i<3;i++)D(x+i-2,h.g+1,'#000',.4*fade(p,1.3));
+  clipRect(0,0,W,h.g+1,()=>boneAt({x:x+sink*.4,y:a<T?h.y+(h.g-1-h.y)*k*k:h.g-1+sink},Math.cos(an),Math.sin(an)));
+  if(a>=T&&a<T+.1){const e=(a-T)/.1;for(const sx of[-1,1])D(x+sx*(2+e*2),h.g-e*2,BONE[2],.8*(1-e))}}});
+alt('os','os-b','B Poussière d’os',{dur:.36,name:'B Poussière d’os',desc:'Pas de chute : l’éclat s’effrite en vol de la chair vers la pointe. Cinq grains d’os et de chair tombent doucement, la pointe blanche s’éteint la dernière.',
+ draw(h,a,p){const x=Math.round(h.x+4*(1-(1-p)*(1-p))),len=10*(1-p);if(p<.88)clipRect(x+3-len,0,len+1,H,()=>boneAt({x,y:h.y},1,0));else D(x+1,h.y,'#fff',fade((p-.88)/.12,2));
+  for(let i=0;i<Math.round(3*(1-p));i++)P(x-1+i,h.g,SHADOW);
+  for(let i=0;i<5;i++){const st=i*.13;if(p>st){const e=(p-st)/(1-st),t=e*.36;D(x-6+i*1.6-e*3,h.y+(i%3-1)+t*14+t*t*120,i<2?BONE[1]:i<4?BONE[2]:BONE[3],.95*(1-e))}}}});
+alt('os','os-c','C Glissade',{dur:.42,name:'C Glissade',desc:'L’éclat descend à plat, sans tourner ni rebondir, glisse sur 5 px avec un filet de poussière et s’efface.',
+ draw(h,a,p){const T=.13;if(a<T){const k=a/T;shadow(h.x+3*k,h.g);boneAt({x:h.x+3*k,y:h.y+(h.g-1-h.y)*k*k},1,0);return}
+  const j=clamp((a-T)/.16,0,1),x=h.x+3+5*(1-(1-j)*(1-j));if(j<1)dust(x-5,h.g,j,2);GA=p<.65?1:fade((p-.65)/.35);boneAt({x,y:h.g-1},1,0);GA=1}});
+
+// --- décor : sol de grotte, paroi de roche à droite (ou paroi du dôme), repère de fin de portée
+const _bg={};
+function bgTex(mode,dome){const key=mode+(dome?'d':'');if(_bg[key])return _bg[key];const cv=document.createElement('canvas');cv.width=W;cv.height=H;const x2=cv.getContext('2d');
+ const px=(x,y,col)=>{x2.fillStyle=col;x2.fillRect(x,y,1,1)};x2.fillStyle=dome?'#1b1712':'#171a20';x2.fillRect(0,0,W,H);
+ for(let i=0;i<110;i++)px(Math.floor(hash(i,1)*W),Math.floor(hash(i,2)*H),hash(i,3)>.5?(dome?'#231d15':'#1e222a'):(dome?'#14110d':'#111318'));
+ if(mode==='wall'){if(dome){x2.fillStyle='rgba(0,0,0,0.35)';x2.fillRect(WX+1,0,W-WX,H);x2.fillStyle='rgba(240,204,102,0.55)';x2.fillRect(WX,0,1,H);x2.fillStyle='rgba(240,204,102,0.12)';x2.fillRect(WX-1,0,1,H)}
+  else{x2.fillStyle='rgba(0,0,0,0.28)';x2.fillRect(WX-3,0,3,H);x2.fillStyle='#343844';x2.fillRect(WX,0,W-WX,H);
+   for(let y=0;y<H;y++)for(let x=WX;x<W;x++){const v=hash(x*3+7,y*5+1);if(v>.9)px(x,y,'#414653');else if(v<.1)px(x,y,'#2a2d37')}
+   for(let y=0;y<H;y++)px(WX,y,hash(y,9)>.25?'#585e6e':'#474c5a');
+   for(const s of[[72,6,9],[80,22,12],[75,38,7]])for(let j=0;j<s[2];j++)px(s[0]+Math.round(Math.sin(j*.9)*1.5),s[1]+j,'#23262e')}}
+ else{for(let y=GY+7;y<H;y+=2)px(RX,y,'#4a4f5c')}
+ return _bg[key]=cv}
+const _layers={};
+function layerFor(S){if(!_layers[S]){const cv=document.createElement('canvas');cv.width=W/S;cv.height=H/S;_layers[S]={cv,ctx:cv.getContext('2d')}}return _layers[S]}
+
+// Scène : a < 0 la balle vole, a ≥ 0 sa fin se joue. cur : rejoue le comportement actuel du jeu.
+function scene(ctx,def,mode,a,cur){ctx.imageSmoothingEnabled=false;ctx.drawImage(bgTex(mode,def.dome),0,0);
+ const S=def.scale||1,L=layerFor(S);c=L.ctx;GA=1;c.clearRect(0,0,L.cv.width,L.cv.height);
+ const g=GY/S,hx=mode==='wall'?WX/S-def.nose:RX/S,h={x:hx,y:g-(def.lift||14),g,wx:WX/S};
+ if(a<0)def.fly({x:Math.round(hx+def.speed/S*a),y:h.y},g,a);
+ else if(cur){const k=CUR[def.cur],f=k[mode]||k.both;if(a<k.dur)f(h,a,a/k.dur)}
+ else{const fx=def[mode];if(a<fx.dur)fx.draw(h,a,a/fx.dur)}
+ GA=1;ctx.drawImage(L.cv,0,0,W,H)}
+function flight(def,mode){const hx=mode==='wall'?WX-def.nose*(def.scale||1):RX;return Math.min((hx+10)/def.speed,.95)}
+
+// --- cartes
+const KEY='planche-fin-projectiles';let state={};try{state=JSON.parse(localStorage.getItem(KEY)||'{}')}catch(e){}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(state))}catch(e){}tally()}
+const fr=v=>v.toFixed(2).replace('.',',');
+const MODES=[['wall','mur','Contre un mur'],['range','portee','Fin de portée']];
+const FW=30,FH=36,NF=6,LIVE=[];
+let showCur=false;
+function el(tag,cls,html){const e=document.createElement(tag);if(cls)e.className=cls;if(html!==undefined)e.innerHTML=html;return e}
+function vrow(id,label,host){const row=el('div','vrow');row.appendChild(el('span','',label));
+ const paint=()=>{const v=state[id]&&state[id].v;for(const b of row.querySelectorAll('button'))b.classList.toggle('sel',b.dataset.v===v)};
+ for(const[v,l]of[['garder','Garder'],['revoir','Revoir'],['rejeter','Rejeter']]){const b=el('button','',l);b.dataset.v=v;b.id='v-'+id+'-'+v;b.onclick=()=>{const s=state[id]||(state[id]={});s.v=s.v===v?null:v;save();paint()};row.appendChild(b)}
+ paint();host.appendChild(row)}
+for(const def of DEFS){const card=el('div','card'),vis=el('div','vis'),duo=el('div','duo'),strips=el('div','strips');card.appendChild(vis);vis.appendChild(duo);vis.appendChild(strips);
+ const cd={def,views:[],strips:[],vis:false,el:card};
+ for(const[mode,slug,label]of MODES.filter(m=>!def.only||m[0]===def.only)){const fig=el('figure'),cv=el('canvas');cv.width=W;cv.height=H;cv.setAttribute('role','img');cv.setAttribute('aria-label',def.name+' : '+label.toLowerCase());
+  fig.appendChild(cv);fig.appendChild(el('figcaption','',label));duo.appendChild(fig);cd.views.push({mode,ctx:cv.getContext('2d')});
+  const f2=el('figure'),sc=el('canvas');sc.width=FW*NF;sc.height=FH;sc.setAttribute('role','img');sc.setAttribute('aria-label',def.name+' : images clés, '+label.toLowerCase());const fc=el('figcaption');
+  f2.appendChild(sc);f2.appendChild(fc);strips.appendChild(f2);cd.strips.push({mode,label,ctx:sc.getContext('2d'),cap:fc})}
+ const cap=el('div','cap');cap.appendChild(el('b','t',def.name));cap.appendChild(el('div','who',def.who));
+ if(!def.only)cap.appendChild(el('p','',`<b>Mur · ${def.wall.name}.</b> ${def.wall.desc}`));cap.appendChild(el('p','',`<b>Portée · ${def.range.name}.</b> ${def.range.desc}`));
+ cap.appendChild(el('div','spec',`${def.only?'':'mur '+fr(def.wall.dur)+' s · '}portée ${fr(def.range.dur)} s${def.scale?' · dessin ×1,5':''}`));
+ if(!def.only)vrow(def.id+'-mur','Mur',cap);vrow(def.id+'-portee','Portée',cap);
+ const ta=el('textarea');ta.id='n-'+def.id;ta.placeholder='Remarque…';ta.setAttribute('aria-label','Remarque sur '+def.name);ta.value=(state[def.id]&&state[def.id].n)||'';ta.oninput=()=>{(state[def.id]||(state[def.id]={})).n=ta.value;save()};cap.appendChild(ta);
+ card.appendChild(cap);document.getElementById(def.sec).appendChild(card);LIVE.push(cd)}
+const tmp=el('canvas');tmp.width=W;tmp.height=H;const tctx=tmp.getContext('2d');
+function durOf(def,mode){return showCur?CUR[def.cur].dur:def[mode].dur}
+function drawStrips(cd){for(const s of cd.strips){const dur=durOf(cd.def,s.mode),x0=s.mode==='wall'?WX-23:RX-12;s.ctx.imageSmoothingEnabled=false;s.ctx.fillStyle='#07080a';s.ctx.fillRect(0,0,FW*NF,FH);
+  for(let i=0;i<NF;i++){scene(tctx,cd.def,s.mode,dur*i/NF+.001,showCur);s.ctx.drawImage(tmp,x0,9,FW-1,FH,i*FW,0,FW-1,FH)}
+  s.cap.textContent=`${s.label} · ${NF} images sur ${fr(dur)} s${showCur?' (actuel)':''}`}}
+for(const cd of LIVE)drawStrips(cd);
+function tally(){const ids=DEFS.flatMap(d=>d.only?[d.id+'-portee']:[d.id+'-mur',d.id+'-portee']);document.getElementById('tally').textContent=`${ids.filter(i=>state[i]&&state[i].v).length} / ${ids.length} verdicts`}
+tally();
+const io=new IntersectionObserver(es=>{for(const e of es){const cd=LIVE.find(x=>x.el===e.target);if(cd)cd.vis=e.isIntersecting}},{rootMargin:'120px'});
+for(const cd of LIVE)io.observe(cd.el);
+
+let speed=1,paused=false,simT=0,last=performance.now();
+const qs=new URLSearchParams(location.search);if(qs.has('t'))simT=+qs.get('t');if(qs.has('pause'))paused=true;
+if(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches)paused=true;
+function frame(now){const dt=Math.min(.1,(now-last)/1000);last=now;if(!paused)simT+=dt*speed;
+ for(const cd of LIVE){if(!cd.vis&&!qs.has('all'))continue;
+  for(const v of cd.views){const fl=flight(cd.def,v.mode),per=fl+Math.max(durOf(cd.def,v.mode),.3)+.55;
+   try{scene(v.ctx,cd.def,v.mode,(simT%per)-fl,showCur)}catch(e){if(!cd.err){cd.err=1;console.error(cd.def.id,e)}}}}
+ requestAnimationFrame(frame)}
+requestAnimationFrame(frame);
+const tog=(id,f)=>{const b=document.getElementById(id);b.onclick=()=>{const on=b.getAttribute('aria-pressed')!=='true';b.setAttribute('aria-pressed',on);f(on)}};
+tog('cur',on=>{showCur=on;for(const cd of LIVE)drawStrips(cd)});tog('slow',on=>speed=on?.25:1);tog('pause',on=>paused=on);
+if(paused)document.getElementById('pause').setAttribute('aria-pressed','true');
+document.getElementById('copy').onclick=()=>{const L=['Planche « Fin des projectiles » — bilan'];
+ for(const d of DEFS){const m=state[d.id+'-mur'],r=state[d.id+'-portee'],n=state[d.id]&&state[d.id].n;
+  if(d.only){L.push(`- ${d.name} (reprise, portée) : ${(r&&r.v)||'sans avis'}${n?' — '+n:''}`);continue}
+  L.push(`- ${d.name} : mur « ${d.wall.name} » ${(m&&m.v)||'sans avis'} ; portée « ${d.range.name} » ${(r&&r.v)||'sans avis'}${n?' — '+n:''}`)}
+ const out=document.getElementById('out');out.value=L.join('\n');out.style.display='block';const b=document.getElementById('copy');
+ const fallback=()=>{out.focus();out.select();b.textContent='Texte sélectionné : Ctrl+C'};
+ try{navigator.clipboard.writeText(out.value).then(()=>{b.textContent='Bilan copié'},fallback)}catch(e){fallback()}};
+</script>

@@ -2,11 +2,13 @@ extends "res://tests/econ_case.gd"
 ## Étape 10 : partie complète jouée par un joueur automatique, uniquement par les entrées du joueur
 ## (InputController : touches, clics gauche et droit à l'écran ; raccourcis du panneau d'actions).
 ## Introduction (sortie du portail), réactivation de l'Ancre, quatre temples, adeptes en prière, Chambre, caserne
-## et combattants, Puits des Âmes, creusement jusqu'à une galerie, premier assaut ; 5 minutes de jeu.
+## et combattants, Puits des Âmes, creusement jusqu'à une galerie, premier assaut ; 8 minutes de jeu.
 ## Invariants vérifiés chaque seconde ; partie rejouée deux fois : journal et état final identiques.
 
 const STEP := Simulation.MAX_DT
-const MAX_TIME := 300.0
+## Le premier assaut tombe au matin du jour 2 (244,8 s, voir think) : la partie dure assez pour l'affronter, puis
+## pour réunir la Vie du rappel d'un combattant tombé (coût initial × niveau).
+const MAX_TIME := 480.0
 ## La Chambre (tenue par un adepte de Medeina) relève le plafond de population : sans elle, pas de combattants.
 const ORDER := ["sigil", "indra", "medeina", "aether", "bedroom", "caserne", "soulwell"]
 ## Hors scénario : l'Ancre démarre à 1 PV et la séquence d'ouverture (coupée dans les tests) lui donne ses
@@ -139,6 +141,9 @@ func think() -> void:
 	if stats["orb_at"] < 0.0:
 		stats["orb_at"] = GameState.orb_finished_at
 		GameState.core_hp = CORE_HP
+		# Calendrier de la séquence d'ouverture (sim/opening.gd, coupée dans les tests) : premier assaut au matin du
+		# lendemain, et non 20 s après la réactivation — le temps de bâtir, comme en jeu.
+		GameState.next_wave = DayNight.morning(DayNight.day(GameState.sim_time) + 1)
 		_mark("Ancre active")
 	var idle: bool = eng.alive() and eng.build_job == null and (eng.job == null or eng.job["type"] == "anchor_pray") and not eng.orb_job
 	# 2. Bâtiments dans l'ordre, dès qu'ils sont payables.
@@ -152,13 +157,20 @@ func think() -> void:
 		if site != null:
 			_select(eng)
 			_key(KEY_B)
+			# Menu Construire par familles : l'onglet du bâtiment d'abord (touches 1 à 5), puis sa touche. Pour un
+			# Ingénieur sélectionné sans être incarné, la touche d'un bâtiment d'un onglet fermé ne l'ouvre pas.
+			for a: Dictionary in HudModel.panel_actions(sim):
+				if a["id"] == "bfam-" + HudModel.build_family_of(todo) and a["key"] != "":
+					_key(OS.find_keycode_from_string(String(a["key"])))
 			_key(OS.find_keycode_from_string(String(Catalog.BUILDINGS[todo]["key"]).to_upper()))
 			ic._left_click(ic.project(site.x, 0.0, site.y), false)
 			if GameState.buildings.any(func(b: Building) -> bool: return b.type == todo):
 				_mark("chantier %s" % todo)
 			return
 	# 3. Creusement vers une galerie quand les temples sont posés et l'Ingénieur libre.
-	var exploring := todo.is_empty() and sim.state().found == 0
+	# Les galeries sont toutes ouvertes dès le départ (galeries reliées, 2026-11-22) : il ne s'agit plus d'en trouver
+	# une, seulement de creuser une case au clic droit.
+	var exploring := todo.is_empty() and sim.state().dug.is_empty()
 	if idle and exploring:
 		for c: Array in dig_cells:
 			if not sim.state().dug.has(Vector2i(int(c[0]), int(c[1]))):
@@ -213,13 +225,17 @@ func think() -> void:
 				_mark("caserne : %s" % b.queue[0])
 	# 6. Puits des Âmes : rappel de la première âme (touche 1).
 	for b: Building in GameState.buildings:
-		if b.type == "soulwell" and b.complete and not GameState.fallen.is_empty() and Catalog.can_pay(Catalog.revive_cost(GameState.fallen.back())):
+		if b.type == "soulwell" and b.complete and not GameState.fallen.is_empty():
 			_click_building(b)
 			var n := GameState.fallen.size()
-			var revive_price: int = Catalog.revive_cost(GameState.fallen.back())["vie"]
-			_key(KEY_1)
+			var vie_before: float = GameState.res["vie"]
+			# Première âme payable du panneau : sa touche n'est plus forcément « 1 » (les recherches du Puits passent devant).
+			for a: Dictionary in HudModel.panel_actions(sim):
+				if String(a["id"]).begins_with("revive-") and not a["disabled"] and a["key"] != "":
+					_key(OS.find_keycode_from_string(String(a["key"])))
+					break
 			if GameState.fallen.size() < n:
-				stats["revive_spent"] = stats.get("revive_spent", 0) + revive_price
+				stats["revive_spent"] = stats.get("revive_spent", 0) + int(vie_before - float(GameState.res["vie"]))
 				stats["revived"] += 1
 				_mark("Puits : âme rappelée")
 	# 7. Combattants libres : rassemblés à l'entrée de la grotte (clic droit sur le sol).
@@ -289,8 +305,12 @@ func _select(u: Unit) -> void:
 	GameState.hud_menu = ""
 	GameState.hud_mode = ""
 	ic._left_click(ic.project(u.x, 1.0, u.z), false)
-	if not GameState.selected.has(u):
+	# Unité au pied de l'Ancre (ou devant un bâtiment) : le clic a pu prendre l'Ancre ; la sélection est alors posée
+	# directement, panneau de l'unité compris.
+	if not GameState.selected.has(u) or GameState.anchor_selected or GameState.hud_building != null:
 		GameState.selected = [u]
+		GameState.anchor_selected = false
+		GameState.hud_building = null
 
 
 func _click_building(b: Building) -> void:

@@ -38,10 +38,17 @@ static func selected_building() -> Building:
 
 
 ## Incarné : un bâtiment ou une autre unité est ouvert dans le bandeau (clic gauche ou droit).
+## Exilé dont l'IHM incarnée est affichée : l'Exilé incarné, ou l'Ingénieur resté dans la capsule (IHM gardée).
+static func hud_exile() -> Unit:
+	if GameState.incarnated != null:
+		return GameState.incarnated
+	return Capsule.engineer() if GameState.in_capsule else null
+
+
 static func incarnated_panel() -> bool:
-	var inc := GameState.incarnated
+	var inc := hud_exile()
 	return inc != null and (selected_building() != null or GameState.hud_grove != null \
-		or GameState.selected.any(func(u: Unit) -> bool: return u != inc))
+		or GameState.selected.any(func(u: Unit) -> bool: return u != inc and not u.hidden))
 
 
 ## unlocked (buildings.js) : sans prérequis, ou un bâtiment requis achevé ; et son âge de métal ouvert (sim/ages.gd).
@@ -118,9 +125,9 @@ static func can_train_unit(b: Building, id: String) -> bool:
 		for item: String in cost:
 			cost[item] += int(committed.get(item, 0))
 	for item: String in cost:
-		var available := Production.count_in(b.input_box, item) + Production.in_transit(b, item)
+		var available := Production.count_for(b.input_box, item) + Production.in_transit(b, item)
 		for src: Dictionary in Production.supply_sources(b):
-			available += maxi(0, Production.count_in(Production.src_items(src), item) - Production.reserved(src, item))
+			available += maxi(0, Production.count_for(Production.src_items(src), item) - Production.reserved(src, item))
 		if available < int(cost[item]):
 			return false
 	return true
@@ -384,7 +391,10 @@ static func _craft_actions(A: Array[Dictionary], sim: Simulation, B: Building) -
 			title += " · Effet pas encore en jeu : l’objet est stocké."
 		if R.disabled(item):
 			title += " · Pas encore disponible."
-		title += " · Fabriqué en boucle par les adeptes au poste ; cliquer de nouveau pour arrêter."
+		if R.PLANS.has(item):
+			title += " · Fabriqué une seule fois par les adeptes au poste ; cliquer de nouveau pour annuler."
+		else:
+			title += " · Fabriqué en boucle par les adeptes au poste ; cliquer de nouveau pour arrêter."
 		var action := _act("craft-" + item, CRAFT_ICON.get(item, "hammer"), R.name_of(item), CRAFT_KEYS[i + research_keys(B)] if i + research_keys(B) < CRAFT_KEYS.length() else "", title,
 			func() -> void: sim.craft(B, item), not Simulation.can_craft(B, item), B.recipe == item)
 		# Bouton « Laiton et objet franc » (planches/boutons-fabrication-propositions.html, piste 1) :
@@ -887,23 +897,42 @@ static func view(sim: Simulation) -> Dictionary:
 	if foe:
 		_enemy_view(v, foe)
 	elif not anchor and u == null and B == null and GameState.hud_grove != null:
-		_grove_view(v)
+		_grove_view(v, sim.state().lodes)
 	return v
 
 
-## Fiche du bosquet pétrifié sélectionné (GameState.hud_grove).
-static func _grove_view(v: Dictionary) -> void:
+## Fiche du bosquet pétrifié (ou du filon illimité, `lodes` : TerrainState.lodes) sélectionné (GameState.hud_grove).
+static func _grove_view(v: Dictionary, lodes: Dictionary = {}) -> void:
+	if lodes.has(GameState.hud_grove):
+		_lode_view(v, String(lodes[GameState.hud_grove]))
+		return
 	v["chosen"] = "Bosquet pétrifié"
-	v["kind"] = "GISEMENT · BOIS"
+	v["kind"] = "GISEMENT · BOIS NOIR"
 	v["status"] = "Clic droit avec un adepte : récolte"
-	v["health_label"] = "Bois"
+	v["health_label"] = "Bois noir"
 	v["health_pct"] = 100.0
 	v["health_text"] = "Inépuisable"
 	for k: String in ["damage", "range", "armor", "speed"]:
 		v[k] = "—"
-	v["lore"] = "Arbres changés en pierre, au bois inépuisable."
+	v["lore"] = "Arbres changés en pierre, au bois noir inépuisable."
 	v["portrait_enabled"] = true
 	v["portrait_key"] = "grove"
+
+
+## Fiche d'un filon illimité sélectionné (GameState.hud_grove, origine dans TerrainState.lodes).
+static func _lode_view(v: Dictionary, item: String) -> void:
+	var name := String(preload("res://data/mineable_blocks.gd").TYPES.get(item, {}).get("material_name", item))
+	v["chosen"] = "Filon de %s" % name.to_lower() if item != "rock" else "Filon de pierre"
+	v["kind"] = "GISEMENT · %s" % name.to_upper()
+	v["status"] = "Clic droit avec un adepte : minage"
+	v["health_label"] = name
+	v["health_pct"] = 100.0
+	v["health_text"] = "Inépuisable"
+	for k: String in ["damage", "range", "armor", "speed"]:
+		v[k] = "—"
+	v["lore"] = "Veine affleurant du sol, qui ne s’épuise jamais."
+	v["portrait_enabled"] = true
+	v["portrait_key"] = "lode-" + item
 
 
 ## Ennemi sélectionné encore en vie (écart voulu D14), sinon null (et la sélection est oubliée).

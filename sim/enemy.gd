@@ -90,7 +90,8 @@ static func make(k: String, px: float, pz: float, cd: float, scaling: Dictionary
 	e.max_hp = e.hp
 	e.speed = E["speed"] * (Catalog.CREDO_SPEED if Catalog.CREDO_KINDS.has(k) else 1.0)
 	e.reach = E["range"]
-	e.damage = E["damage"] * scaling.get("damage", 1.0)
+	# +5 % par biome (Biomes.power_at) à l'endroit où il naît.
+	e.damage = E["damage"] * scaling.get("damage", 1.0) * Biomes.power_at(pz)
 	e.armor = E.get("armor", 0.0) + scaling.get("armor", 0.0)
 	e.name = Catalog.ENEMY_INFO[k]["name"]
 	e.cooldown = cd
@@ -128,6 +129,9 @@ const BODY := {
 	"skeleton_bomb": {"half_w": 0.8, "top": 3.9, "foot": 0.5, "melee": 0.0},
 	# Champion couronné, à quatre pattes dans toutes ses animations (cadre 68 × 48, export_g1.py).
 	"strazhar": {"half_w": 3.1, "top": 4.2, "foot": 0.5, "melee": 0.8},
+	# Mini-boss des Salles oubliées (sim/eclusier.gd, sim/patine.gd).
+	"eclusier": {"half_w": 2.3, "top": 8.4, "foot": 0.6, "melee": 1.4},
+	"patine": {"half_w": 2.2, "top": 8.6, "foot": 0.8, "melee": 1.4},
 	# Faune du biome 2 (tools/biomes-persos/export_monstres.py). La chauve-souris vole : sa silhouette monte jusqu'à elle.
 	"tick": {"half_w": 1.6, "top": 2.4, "foot": 0.5, "melee": 0.2},
 	"bat": {"half_w": 2.0, "top": 4.6, "foot": 0.5, "melee": 0.2},

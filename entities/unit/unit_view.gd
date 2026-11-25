@@ -22,6 +22,13 @@ const HP_BG := Color("#191b1d")
 const HP_ALLY := Color("#85d6b1")
 const HP_GUARD := Color("#9db88f")
 const HP_ENEMY := Color("#db7772")
+## Barre « Médaillon » des ennemis : les boss gardent la grande barre du HUD (BossBar) ; pastille par faction.
+const BOSS_KINDS := ["martyre", "oeil", "oeil_pupille", "gorge", "archipretre"]
+const FAUNA_KINDS := ["tick", "bat", "eel", "croc", "feline"]
+const FACTION_CREDO := Color("#d9a441")
+const FACTION_BETE := Color("#b24bd6")
+const FACTION_MORTS := Color("#a6d07e")
+const FACTION_FAUNE := Color("#8ea4b4")
 const Gear := preload("res://data/gear_items.gd")
 ## Halo de sélection alliée : lueur cyan douce au sol, anneau vif par-dessus.
 const HALO := Color("#3fe6ff")
@@ -37,8 +44,12 @@ var _idle: Array[AtlasTexture] = []
 var _walk: Array[AtlasTexture] = []
 var _enemy_attack: Array[AtlasTexture] = []
 var _enemy_death: Array[AtlasTexture] = []
+## Mort en cendres (AshDeath, piste « Souffle ») : remplace l'atlas de mort, sauf pour ASH_KEEP.
+var _ash: AshDeath
 ## Animations propres à la Martyre de Byrsa : incantation et réaction aux coups (vides pour les autres).
 var _enemy_cast: Array[AtlasTexture] = []
+## Geste de tir sur les jambes de la marche (tools/lanceurs) : joué à la place de cast quand l'ennemi avance.
+var _enemy_cast_run: Array[AtlasTexture] = []
 var _enemy_hit: Array[AtlasTexture] = []
 var _corpse_shadow_ready := false
 static var _enemy_sheets: Dictionary = {}
@@ -69,6 +80,8 @@ var _mining_seal: Node2D
 var _iris: Node2D
 ## Voile de la Martyre porté (entities/unit/veil_fx.gd) : liseré, pendentif, coup absorbé.
 var _veil: Node2D
+## Garde de la Martyre (entities/unit/martyre_ward_fx.gd) : même liseré, couvert selon ses charges.
+var _ward: Node2D
 ## Les douze mods du 2026-11-21 (entities/unit/mods_worn_fx.gd) : derrière et devant le corps.
 var _mods_back: Node2D
 var _mods_front: Node2D
@@ -91,6 +104,14 @@ var _warped := false
 ## Ingénieur sans armure : vue de face (« d ») ou de dos (« u ») quand il marche surtout vers le bas ou le
 ## haut de l'écran, gardée au repos ; vide = profil.
 var _vdir := ""
+## Pivot de l'Ingénieur : cap affiché sur la rose à huit directions (E, SE, S, SO, O, NO, N, NE), qui rejoint le cap
+## voulu d'un cran toutes les HEAD_STEP s (horloge réelle) en passant par les poses de trois quarts, de face ou de dos.
+const HEAD_STEP := 0.04
+const HEAD_DIR: Array[String] = ["", "dr", "d", "dr", "", "ur", "u", "ur"]
+const HEAD_FACE: Array[int] = [1, 1, 0, -1, -1, -1, 0, 1]
+var _head := -1
+var _head_face := 1
+var _head_t := 0.0
 var _face := 1
 var _under_key: Variant = null
 var _over_key := Vector4(-1, -1, -1, -1)
@@ -115,6 +136,8 @@ const LUNGE_OUT := 0.26
 ## La Brute et le Strazhar non plus : leurs planches (tools/unites-maj/export_g1.py) portent l'élan du coup.
 const LUNGE := {"creep": 3, "scout": 3, "shield": 2, "soldier": 2,
 		"croc": 5, "feline": 6, "archer": -1, "spitter": -1}
+## Ennemis qui gardent leur propre atlas de mort (boss à mise en scène).
+const ASH_KEEP := ["martyre"]
 ## Mort : projection en arrière (px) sur DEATH_KICK_T s.
 const DEATH_KICK := 4.0
 const DEATH_KICK_T := 0.22
@@ -129,6 +152,8 @@ var _last_hp := NAN
 var _hurt_t := -INF
 var _hurt_k := 0.0
 var _recoil_k := 0.0
+## Durée (s) pendant laquelle le regard reste vers le dernier tir.
+const AIM_HOLD := 0.6
 var _recoil_dir := -1
 ## Réaction dessinée au coup (atlas "hit") : début, et durée minimale entre deux réactions (s). La Martyre garde
 ## sa propre cadence (Enemy.hurt_at, sim/martyre.gd).
@@ -155,7 +180,7 @@ func setup(u: Unit, meta: Dictionary, sim: Simulation, w: World = null) -> void:
 		TyrienArt.load_all()
 		for exil: bool in [false, true]:
 			var pack := {"meta": TyrienArt.meta["anims"]}
-			for anim: String in ["idle", "walk", "kneel", "pray", "settle", "lotus", "idle_d", "walk_d", "idle_u", "walk_u", "hit", "c_idle", "c_walk", "c_idle_d", "c_walk_d", "c_idle_u", "c_walk_u", "helm"]:
+			for anim: String in ["idle", "walk", "kneel", "pray", "settle", "lotus", "idle_d", "walk_d", "idle_u", "walk_u", "hit", "c_idle", "c_walk", "c_idle_d", "c_walk_d", "c_idle_u", "c_walk_u", "idle_dr", "walk_dr", "idle_ur", "walk_ur", "c_idle_dr", "c_walk_dr", "c_idle_ur", "c_walk_ur", "helm"]:
 				if TyrienArt.meta["anims"].has(anim):
 					pack[anim] = TyrienArt.anim_of(anim, exil)
 			_bare_sets[exil] = pack
@@ -163,7 +188,7 @@ func setup(u: Unit, meta: Dictionary, sim: Simulation, w: World = null) -> void:
 	if enemy:
 		if not _enemy_sheets.has(u.role):
 			var sheets := {}
-			for action: String in ["idle", "walk", "attack", "death", "cast", "hit"]:
+			for action: String in ["idle", "walk", "attack", "death", "cast", "cast_run", "hit"]:
 				if meta.has(action):
 					sheets[action] = _frames(base + action + ".png", meta[action])
 			_enemy_sheets[u.role] = sheets
@@ -172,6 +197,7 @@ func setup(u: Unit, meta: Dictionary, sim: Simulation, w: World = null) -> void:
 		_enemy_attack = _enemy_sheets[u.role]["attack"]
 		_enemy_death = _enemy_sheets[u.role]["death"]
 		_enemy_cast = _enemy_sheets[u.role].get("cast", [] as Array[AtlasTexture])
+		_enemy_cast_run = _enemy_sheets[u.role].get("cast_run", [] as Array[AtlasTexture])
 		_enemy_hit = _enemy_sheets[u.role].get("hit", [] as Array[AtlasTexture])
 		if not _attack_active.has(u.role):
 			_attack_active[u.role] = _active_length(_enemy_attack, float(meta["attack"]["fps"]))
@@ -203,6 +229,11 @@ func setup(u: Unit, meta: Dictionary, sim: Simulation, w: World = null) -> void:
 	_body.centered = false
 	_body.use_parent_material = true
 	add_child(_body)
+	if enemy and u.role == Martyre.KIND:
+		_ward = preload("res://entities/unit/martyre_ward_fx.gd").new()
+		_ward.view = self
+		_ward.use_parent_material = true
+		add_child(_ward)
 	if not enemy and u.role == "engineer":
 		_med_front.view = self
 		_med_front.front = true
@@ -325,7 +356,7 @@ func _update() -> void:
 	if enemy and world and not world.fog.visible_at(u.pos()):
 		visible = false
 	# Invulnérable après un coup de la Martyre : l'Ingénieur clignote.
-	if not enemy and (Martyre.blinking(u) or OeilMatrice.blinking(u)):
+	if not enemy and (Martyre.blinking(u) or OeilMatrice.blinking(u) or Patine.blinking(u)):
 		visible = false
 	position = Proj.nat(u.x, 0.0, u.z)
 	# Voyage par un portail (PortalNet, Orbe suspendu) : la bulle referme le voyageur, qui pâlit, rapetisse puis
@@ -351,8 +382,28 @@ func _update() -> void:
 		var rk := clampf((GameState.sim_time - ge.risen_at) / 1.4, 0.0, 1.0)
 		modulate = Color(lerpf(0.06, 1.0, rk), lerpf(0.05, 1.0, rk), lerpf(0.08, 1.0, rk), 1.0)
 	_track_hurt(u, GameState.sim_time)
+	if _ash and not u.dead:
+		# Relevé (Pylône de Merenor) : le corps reprend sa place, les cendres s'en vont.
+		_ash.queue_free()
+		_ash = null
+		_body.visible = true
+		_under.visible = true
 	if enemy and u.dead:
 		var age := maxf(0.0, GameState.sim_time - (u as Enemy).died_at)
+		if not ASH_KEEP.has(u.role):
+			# Le corps part en cendres dans le sens opposé au regard, depuis la dernière image affichée.
+			if _ash == null:
+				_ash = AshDeath.new()
+				var last := _body.texture as AtlasTexture
+				_ash.setup(last if last else _idle[0], float(_meta["ax"]), float(_meta["ay"]), u.role)
+				add_child(_ash)
+			_ash.scale = Vector2(-1 if u.face < 0 else 1, 1)
+			_ash.tick(age * (u as Enemy).pace)
+			_body.visible = false
+			_under.visible = false
+			_over.visible = false
+			modulate = Color(1, 1, 1, clampf(Loot.corpse_life(u as Enemy) - age, 0.0, 1.0))
+			return
 		_body.texture = _enemy_death[mini(_enemy_death.size() - 1, floori(age * (u as Enemy).pace * float(_meta["death"]["fps"])))]
 		_body.offset = Vector2(-float(_meta["ax"]), -float(_meta["ay"]))
 		# Projection en arrière au coup fatal (sens opposé au regard), amortie, puis le corps reste là.
@@ -385,7 +436,10 @@ func _update() -> void:
 	var dxs: float = foe.x - u.x if foe else u.x - _lx
 	# u._face est partagé avec les frappes (swordStrike, volley) : une orientation imposée tient tant
 	# qu'aucun ennemi n'est visé et que l'unité ne bouge pas.
-	if absf(dxs) > 0.001:
+	# Tir récent (Exilé armé) : regard tenu vers la direction du tir, même en reculant.
+	if not enemy and GameState.sim_time - u.sh_t0 < AIM_HOLD and absf(u.aim_dir.x) > 0.001:
+		u.face = -1 if u.aim_dir.x < 0.0 else 1
+	elif absf(dxs) > 0.001:
 		u.face = -1 if dxs < 0.0 else 1
 	_face = u.face if u.face != 0 else 1
 	if not _bare_sets.is_empty():
@@ -397,12 +451,17 @@ func _update() -> void:
 		if foe:
 			_vdir = ""
 		elif moved:
-			if absf(ddz) > absf(ddx) * 1.2:
-				_vdir = "d" if ddz > 0.0 else "u"
-			elif absf(ddx) > absf(ddz):
-				_vdir = ""
+			_vdir = _dir8(ddx, ddz, _vdir)
 	else:
 		_vdir = ""
+	# Pose affichée : cap en cours de pivot (trois quarts), sinon le cap voulu.
+	var vd := _vdir
+	var pivot_face := _face
+	var pivot := bare and _bare.has("walk_dr")
+	if pivot:
+		_head_step(Time.get_ticks_msec() / 1000.0)
+		vd = HEAD_DIR[_head]
+		pivot_face = _head_face
 	_lx = u.x
 	_lz = u.z
 	# Ennemi masqué (brouillard, caché) : seul l'état d'animation suit son cours (marche, regard, demi-tour,
@@ -411,7 +470,7 @@ func _update() -> void:
 		_feel.turn(_face, Time.get_ticks_msec() / 1000.0)
 		return
 	var cannon := bare and String(Gear.weapon(u).get("piece", "")) == "cannon" and _bare.has("c_walk")
-	var walk_frames: Array[AtlasTexture] = (_bare[("c_walk_" if cannon and _bare.has("c_walk_d") else "walk_") + _vdir] if _vdir != "" else (_bare["c_walk"] if cannon else _bare["walk"])) if bare else _walk
+	var walk_frames: Array[AtlasTexture] = (_bare[("c_walk_" if cannon and _bare.has("c_walk_d") else "walk_") + vd] if vd != "" else (_bare["c_walk"] if cannon else _bare["walk"])) if bare else _walk
 	var wn := walk_frames.size()
 	var wi := floori(_wp * wn) % wn
 	var bob_i := floori(_wp * 6.0) if enemy else wi
@@ -426,9 +485,10 @@ func _update() -> void:
 		# Boucle de repos à sa propre cadence (Martyre de Byrsa : 74 images à 24 i/s).
 		frame = _idle[floori(t * (u as Enemy).pace * float(_meta["idle"]["fps"])) % _idle.size()]
 	else:
-		var idle_frames: Array = (_bare[("c_idle_" if cannon and _bare.has("c_idle_d") else "idle_") + _vdir] if _vdir != "" else (_bare["c_idle"] if cannon else _bare["idle"])) if bare else _idle
+		var idle_frames: Array = (_bare[("c_idle_" if cannon and _bare.has("c_idle_d") else "idle_") + vd] if vd != "" else (_bare["c_idle"] if cannon else _bare["idle"])) if bare else _idle
 		var it := t * ((u as Enemy).pace if enemy else 1.0)
 		frame = idle_frames[(floori(it * IDLE_FPS) + (key & 7) * 3) % idle_frames.size()]
+	var dir_frame := frame
 	var ax := float(_meta["ax"])
 	var ay := float(_meta["ay"])
 	# Marche ennemie dans un cadre propre (Strazhar à quatre pattes) : ancre de la marche.
@@ -472,9 +532,25 @@ func _update() -> void:
 			bob = 0
 		# Incantation (la plus récente des deux l'emporte), puis réaction aux coups si rien d'autre ne joue.
 		if not _enemy_cast.is_empty():
+			var cm: Dictionary = _meta["cast"]
 			var ca := (t - (u as Enemy).cast_started) * (u as Enemy).pace
-			if ca >= 0.0 and ca < float(_meta["cast"]["duration"]) and (u as Enemy).cast_started >= (u as Enemy).attack_started:
-				frame = _enemy_cast[mini(_enemy_cast.size() - 1, floori(ca * float(_meta["cast"]["fps"])))]
+			var casting := ca >= 0.0 and (u as Enemy).cast_started >= (u as Enemy).attack_started
+			if cm.get("attack", false):
+				# Tir porté par le coup lui-même (Thuriféraire) : l'atlas est avancé pour que le départ de la boule
+				# (release) tombe à la fin de l'annonce, ou sur le coup s'il n'est pas annoncé.
+				ca = age + maxf(0.0, float(cm["release"]) - windup)
+				casting = age >= 0.0
+			if casting and ca < float(cm["duration"]):
+				var cast_frames := _enemy_cast
+				if walking and not _enemy_cast_run.is_empty():
+					cm = _meta["cast_run"]
+					cast_frames = _enemy_cast_run
+				frame = cast_frames[mini(cast_frames.size() - 1, floori(ca * float(cm["fps"])))]
+				# Cadre propre au geste (bâton levé, bras tendu) : ses pieds ne sont pas à l'ancre du repos.
+				if cm.has("ax"):
+					ax = float(cm["ax"])
+					ay = float(cm["ay"])
+				bob = 0
 				playing = true
 		if not _enemy_hit.is_empty() and not playing:
 			var ha := (t - ((u as Enemy).hurt_at if u.role == Martyre.KIND else _hit_t)) * (u as Enemy).pace
@@ -556,17 +632,14 @@ func _update() -> void:
 	# planches/armes-attaques.html ; démarre à sw_t0 (épées) ou sh_t0 (canon).
 	if bare and not winded and med.is_empty():
 		var anim := String(Gear.weapon(u).get("anim", ""))
-		# Tir surtout vers le sud ou le nord : pose de face ou de dos (sinon profil), au gantelet comme à l'Arbalestrie.
-		var vertical := anim == "shoot" and absf(u.aim_dir.y) > absf(u.aim_dir.x) * 1.2
-		var down := u.aim_dir.y > 0.0
-		if anim == "shoot" and cannon and TyrienArt.meta["anims"].has("c_shoot"):
-			anim = "c_shoot"
-			if vertical and TyrienArt.meta["anims"].has("c_shoot_d"):
-				anim = "c_shoot_d" if down else "c_shoot_u"
-		elif vertical:
-			var vert := "shoot_d" if down else "shoot_u"
-			if TyrienArt.meta["anims"].has(vert):
-				anim = vert
+		# Tir : pose selon la direction parmi huit (profil, trois quarts, face, dos ; EffectsDrawer.shot_pose), au
+		# gantelet comme à l'Arbalestrie.
+		if anim == "shoot":
+			var pose := EffectsDrawer.shot_pose(u.aim_dir)
+			if cannon and TyrienArt.meta["anims"].has("c_shoot"):
+				anim = "c_shoot"
+			if pose != "" and TyrienArt.meta["anims"].has(anim + "_" + pose):
+				anim += "_" + pose
 		if anim != "" and TyrienArt.meta["anims"].has(anim):
 			var fps := TyrienArt.fps(anim)
 			var frames := TyrienArt.anim(anim)
@@ -600,17 +673,24 @@ func _update() -> void:
 	# Demi-tour en trois images (largeurs intermédiaires, un pixel d'affaissement), horloge réelle.
 	var now := Time.get_ticks_msec() / 1000.0
 	var kx := _feel.turn(_face, now)
-	_body.position = Vector2(jolt, -bob + roundf(drop) + (1.0 if _feel.turning(now) else 0.0))
+	var dip := 1.0 if _feel.turning(now) else 0.0
+	# Ingénieur au repos ou en marche : il pivote par ses poses (cap affiché), sans affaissement.
+	if pivot and frame == dir_frame:
+		kx = float(pivot_face)
+		dip = 0.0
+	_body.position = Vector2(jolt, -bob + roundf(drop) + dip)
 	_body.scale = Vector2(kx, 1)
 	if _mining_seal:
 		_mining_seal.tick(_face, _body.position, ReviveFx.body_shown(u))
 	if _iris:
 		_iris.tick(_face, _body.position, ReviveFx.body_shown(u))
 	if _veil:
-		_veil.tick(_body, _vdir, ReviveFx.body_shown(u))
+		_veil.tick(_body, vd.left(1), ReviveFx.body_shown(u))
+	if _ward:
+		_ward.tick(_body, ReviveFx.body_shown(u))
 	if _mods_back:
-		_mods_back.tick(_face, _body.position, _vdir, ReviveFx.body_shown(u))
-		_mods_front.tick(_face, _body.position, _vdir, ReviveFx.body_shown(u))
+		_mods_back.tick(_face, _body.position, vd.left(1), ReviveFx.body_shown(u))
+		_mods_front.tick(_face, _body.position, vd.left(1), ReviveFx.body_shown(u))
 	if _revive:
 		# Rappel : sprite, ombre et barre de vie masqués tant que la bulle n'a pas pris la forme de l'unité.
 		var shown := ReviveFx.body_shown(u)
@@ -631,6 +711,46 @@ func _update() -> void:
 	if over_key != _over_key:
 		_over_key = over_key
 		_over.queue_redraw()
+
+
+## Direction de marche parmi huit : "" (profil), "dr" / "ur" (trois quarts de face / de dos), "d" / "u" ; le côté
+## gauche ou droit vient du miroir (_face). Garde la direction en cours à 6° près pour ne pas trembler aux limites.
+func _dir8(dx: float, dz: float, cur: String) -> String:
+	var a := rad_to_deg(atan2(absf(dz), absf(dx)))
+	var v := "d" if dz > 0.0 else "u"
+	if not _bare.has("walk_dr"):
+		return v if a > 50.0 else ("" if a < 45.0 else cur)
+	var center := 0.0 if cur == "" else (45.0 if cur.length() == 2 else 90.0)
+	if absf(a - center) < 28.5 and (cur == "" or cur[0] == v):
+		return cur
+	return "" if a < 22.5 else (v + "r" if a < 67.5 else v)
+
+
+## Avance le cap affiché d'un cran vers le cap voulu (_vdir, _face) par le plus court ; un demi-tour complet passe
+## par la pose de face.
+func _head_step(now: float) -> void:
+	var goal := 2 if _vdir == "d" else (6 if _vdir == "u" else 0)
+	if _vdir == "":
+		goal = 0 if _face > 0 else 4
+	elif _vdir == "dr":
+		goal = 1 if _face > 0 else 3
+	elif _vdir == "ur":
+		goal = 7 if _face > 0 else 5
+	if _head < 0:
+		_head = goal
+		_head_t = now
+	while _head != goal and now - _head_t >= HEAD_STEP:
+		_head_t = now if now - _head_t > 4.0 * HEAD_STEP else _head_t + HEAD_STEP
+		var d := posmod(goal - _head, 8)
+		var step := 1 if d < 4 else -1
+		if d == 4:
+			step = 1 if _head < 2 or _head >= 6 else -1
+		_head = posmod(_head + step, 8)
+	if _head == goal:
+		_head_t = now
+		_head_face = _face
+	elif HEAD_FACE[_head] != 0:
+		_head_face = HEAD_FACE[_head]
 
 
 ## Casque de combat : progression vers fermé tant que le dernier tir date de moins de HELM_HOLD s, puis relevé ;
@@ -657,7 +777,7 @@ func _sync_helm(frame: Texture2D, cannon: bool, t: float) -> void:
 		var i := TyrienArt.anim(anim).find(frame)
 		if i >= 0 and TyrienArt.meta["anims"].has("helm_d"):
 			show = true
-			layer = "helm_d" if anim.ends_with("_d") else "helm_u"
+			layer = "helm_" + anim.get_slice("_", anim.get_slice_count("_") - 1)
 			dy = int(heads[anim][i])
 			break
 	for anim: String in ([] if show else ["c_idle", "c_walk", "c_shoot"]):
@@ -669,8 +789,6 @@ func _sync_helm(frame: Texture2D, cannon: bool, t: float) -> void:
 				dy = 1 if (i % 24) >= 9 and (i % 24) <= 20 else 0
 			elif anim == "c_walk":
 				dy = 1 if i in [0, 1, 5, 6, 7, 11] else 0
-			else:
-				dy = 1 if i == 1 or i == 2 else 0
 	if step <= 0 or not show:
 		if _helm:
 			_helm.visible = false
@@ -695,7 +813,6 @@ func _shot_kick(t: float) -> float:
 
 ## Lumière du bout du canon, par image (x, y dans le cadre de 48 px) : repos, marche, tir.
 const TIP_WALK_Y: Array[int] = [33, 33, 32, 32, 31, 32, 33, 33, 32, 32, 31, 32]
-const TIP_SHOOT: Array[Vector2i] = [Vector2i(40, 27), Vector2i(37, 28), Vector2i(38, 28), Vector2i(38, 27), Vector2i(39, 27), Vector2i(40, 27)]
 var _tip: Sprite2D
 static var _tip_tex: ImageTexture
 
@@ -715,21 +832,16 @@ func _sync_tip(frame: Texture2D, cannon: bool) -> void:
 			if i >= 0:
 				at = Vector2i(39, TIP_WALK_Y[i % TIP_WALK_Y.size()])
 			else:
-				i = TyrienArt.anim("c_shoot").find(frame)
-				if i >= 0:
-					at = TIP_SHOOT[mini(i, TIP_SHOOT.size() - 1)]
-					size = Vector2(2, 2)
-				else:
-					# De face ou de dos (canon sur l'épaule, ou tir vers le sud / le nord) : lumière mesurée à l'export
-					# (templier.json « tips »).
-					var tips: Dictionary = TyrienArt.meta.get("tips", {})
-					for anim: String in tips:
-						i = TyrienArt.anim(anim).find(frame)
-						if i >= 0:
-							var p: Array = tips[anim][i]
-							at = Vector2i(int(p[0]), int(p[1]))
-							size = Vector2(3 if anim.ends_with("_d") and not anim.begins_with("c_shoot") else 2, 2)
-							break
+				# Tir de profil, ou de face / de dos (canon sur l'épaule, tir vers le sud / le nord) : lumière relevée à l'export
+				# (templier.json « tips »).
+				var tips: Dictionary = TyrienArt.meta.get("tips", {})
+				for anim: String in tips:
+					i = TyrienArt.anim(anim).find(frame)
+					if i >= 0:
+						var p: Array = tips[anim][i]
+						at = Vector2i(int(p[0]), int(p[1]))
+						size = Vector2(3 if (anim.ends_with("_d") or anim.ends_with("_dr")) and not anim.begins_with("c_shoot") else 2, 2)
+						break
 	if at == Vector2i.ZERO:
 		if _tip:
 			_tip.visible = false
@@ -832,13 +944,15 @@ class _UnitBar extends Node2D:
 		var w := maxf(12.0 / px, 2.8 * ZN)
 		var y := -view.hp_y()
 		var u := view.unit
-		# Unité amie : barre de vie seulement sous le pointeur (badges toujours affichés).
-		if view.enemy or UnitView.hovered == u:
-			draw_rect(Rect2(-w / 2.0, y, w, 4.0 / px), HP_BG)
-			var fill := HP_ENEMY if view.enemy else (HP_GUARD if u.role == "guard" else HP_ALLY)
-			draw_rect(Rect2(-w / 2.0, y, w * maxf(0.0, u.hp / u.max_hp), 4.0 / px), fill)
 		if view.enemy:
+			if not BOSS_KINDS.has((u as Enemy).kind):
+				_medallion(u as Enemy)
 			return
+		# Unité amie : barre de vie seulement sous le pointeur (badges toujours affichés).
+		if UnitView.hovered == u:
+			draw_rect(Rect2(-w / 2.0, y, w, 4.0 / px), HP_BG)
+			var fill := HP_GUARD if u.role == "guard" else HP_ALLY
+			draw_rect(Rect2(-w / 2.0, y, w * maxf(0.0, u.hp / u.max_hp), 4.0 / px), fill)
 		# drawLevelBadge : ★niveau au-dessus de la barre (16 px plus haut pour une escouade), gras 10 px d'écran.
 		var lvl := Catalog.lvl(u)
 		var by := y - (16.0 if u.squad else 5.0) / px
@@ -856,6 +970,61 @@ class _UnitBar extends Node2D:
 			draw_arc(at, 9.0, 0.0, TAU, 20, Color("#f4ecd6"), 1.0, true)
 			preload("res://ui/inventory/item_icon.gd").draw_item(self, "firing_post", at, 0.5)
 		draw_set_transform(Vector2.ZERO)
+
+	## Barre « Médaillon » des ennemis hors boss (planches/barres-vie-ennemis.html, piste A), en pixels natifs :
+	## cadre noir 1 px, liseré clair puis deux rangs de rouge, fond rouge éteint ; pastille ronde Ø 5 px suspendue
+	## sous le milieu, à la couleur de la faction. Le bas de la pastille mord d'un pixel sur le haut du sprite.
+	func _medallion(e: Enemy) -> void:
+		var w := 20 if float(Enemy.BODY.get(e.kind, {}).get("half_w", 1.0)) >= 2.0 else 16
+		var x := -w / 2
+		var y := -int(view.hp_y()) - 5
+		var iw := w - 2
+		var dark := Color("#0c0606")
+		draw_rect(Rect2(x, y, w, 5), dark)
+		draw_rect(Rect2(x - 1, y + 1, 1, 3), Color(0, 0, 0, 0.35))
+		draw_rect(Rect2(x + w, y + 1, 1, 3), Color(0, 0, 0, 0.35))
+		draw_rect(Rect2(x + 1, y + 1, iw, 1), Color("#5a1c17"))
+		draw_rect(Rect2(x + 1, y + 2, iw, 2), Color("#44130f"))
+		var f := roundi(iw * clampf(e.hp / maxf(1.0, e.max_hp), 0.0, 1.0))
+		if f > 0:
+			draw_rect(Rect2(x + 1, y + 1, f, 1), Color("#ff7e64"))
+			draw_rect(Rect2(x + 1, y + 2, f, 1), Color("#d2302a"))
+			draw_rect(Rect2(x + 1, y + 3, f, 1), Color("#a52320"))
+		# Pastille : anneau noir autour d'un disque 5 × 5 (coins vides), reflet en haut à gauche, ombre en bas.
+		var c := _faction(e)
+		var gx := -2
+		var gy := y + 4
+		for row in 7:
+			for col in 7:
+				var cx := col - 1
+				var cy := row - 1
+				var inside := _disc(cx, cy)
+				var ring := not inside and (_disc(cx - 1, cy) or _disc(cx + 1, cy) or _disc(cx, cy - 1) or _disc(cx, cy + 1))
+				if ring:
+					draw_rect(Rect2(gx + cx, gy + cy, 1, 1), dark)
+				elif inside:
+					var k := c
+					if cy == 4 or (cy == 3 and (cx == 0 or cx == 4)):
+						k = c.darkened(0.45)
+					elif cy <= 1 and cx <= 2:
+						k = c.lightened(0.25)
+					draw_rect(Rect2(gx + cx, gy + cy, 1, 1), k)
+		draw_rect(Rect2(gx + 1, gy + 1, 1, 1), c.lightened(0.75))
+
+	static func _disc(cx: int, cy: int) -> bool:
+		if cx < 0 or cx > 4 or cy < 0 or cy > 4:
+			return false
+		return not ((cy == 0 or cy == 4) and (cx == 0 or cx == 4))
+
+	## Couleur de faction de la pastille : Bête, Morts (squelettes), Faune (neutres et bêtes des biomes), Credo.
+	static func _faction(e: Enemy) -> Color:
+		if e.beast:
+			return FACTION_BETE
+		if e.kind.begins_with("skeleton"):
+			return FACTION_MORTS
+		if e.neutral or FAUNA_KINDS.has(e.kind):
+			return FACTION_FAUNE
+		return FACTION_CREDO
 
 	func _text(text: String, at: Vector2, c: Color) -> void:
 		if _bold == null:

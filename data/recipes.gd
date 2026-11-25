@@ -1,6 +1,6 @@
 extends RefCounted
 ## Fabrication : recettes de l'Atelier, de la Scierie, de l'Archerie, de la Fonderie et de l'Armurerie (spec du 2026-11-17).
-## Scierie (fibre de bois) et Archerie (arc, flèches) prises à l'Atelier le 2026-11-20.
+## Scierie (fibre de bois noir) et Archerie (arc, flèches) prises à l'Atelier le 2026-11-20.
 ## Planche (Scierie) et Établi d'exo (mods fabriqués sur plan) ajoutés le 2026-11-22 (planches/intro-capsule-planche.html).
 ## Découpage du 2026-11-20 : la Fonderie (id « forge ») ne fait que des lingots ; l'Armurerie (id « creuset »)
 ## fait toutes les armes et armures, uniquement à partir de lingots.
@@ -33,44 +33,44 @@ const ITEMS := {
 	"focus_staff": {"name": "Bâton à focale", "color": Color("#b8e8d8"),
 		"desc": "Nécessaire pour former un mage cristallisé (un par mage)."},
 	# Scierie
-	"wood_fiber": {"name": "Fibre de bois", "color": Color("#c8b080"),
+	"wood_fiber": {"name": "Fibre de bois noir", "color": Color("#c8b080"),
 		"desc": "Ingrédient des recettes de niveau supérieur."},
 	# Plans de mods (2026-11-22) : objets du paquetage ; la recette est apprise à leur réception (GameState.plans).
 	# Depuis le 2026-11-22, boss, ennemis et caches lâchent le plan de chaque mod, plus le mod (sim/loot.gd).
 	"plan_analyse": {"name": "Plan de mod « Analyse »", "color": Color("#1f9fb8"),
-		"desc": "Plan tyrien d’un module d’exo. Recette apprise : Analyse, à l’Établi d’exo (50 fibres de bois, 50 planches, 5 ichor)."},
+		"desc": "Plan tyrien d’un module d’exo. Recette apprise : Analyse, à l’Établi d’exo (5 fibres de bois noir, 5 planches, 1 ichor)."},
 	"plan_veil": {"name": "Plan de mod « Voile de la Martyre »", "color": Color("#1f9fb8"),
-		"desc": "Plan tyrien d’un module d’exo. Recette apprise : Voile de la Martyre, à l’Établi d’exo (50 fibres de bois, 50 planches, 10 ichor)."},
+		"desc": "Plan tyrien d’un module d’exo. Recette apprise : Voile de la Martyre, à l’Établi d’exo (50 fibres de bois noir, 50 planches, 10 ichor)."},
 	"plan_drill": {"name": "Plan de mod « Foreuse de Gorge-Cuivre »", "color": Color("#1f9fb8"),
-		"desc": "Plan tyrien d’un module d’exo. Recette apprise : Foreuse de Gorge-Cuivre, à l’Établi d’exo (100 fibres de bois, 100 planches, 40 ichor, 20 lingots de cuivre)."},
+		"desc": "Plan tyrien d’un module d’exo. Recette apprise : Foreuse de Gorge-Cuivre, à l’Établi d’exo (100 fibres de bois noir, 100 planches, 40 ichor, 20 lingots de cuivre)."},
 	"plan_iris": {"name": "Plan de mod « Iris de la Matrice »", "color": Color("#1f9fb8"),
-		"desc": "Plan tyrien d’un module d’exo. Recette apprise : Iris de la Matrice, à l’Établi d’exo (60 fibres de bois, 60 planches, 15 ichor, 5 lingots de cuivre)."},
+		"desc": "Plan tyrien d’un module d’exo. Recette apprise : Iris de la Matrice, à l’Établi d’exo (60 fibres de bois noir, 60 planches, 15 ichor, 5 lingots de cuivre)."},
 	"plan_scale": {"name": "Plan de mod « Écaille d’esquive »", "color": Color("#1f9fb8"),
-		"desc": "Plan tyrien d’un module d’exo. Recette apprise : Écaille d’esquive, à l’Établi d’exo (60 fibres de bois, 60 planches, 15 ichor, 5 lingots de cuivre)."},
+		"desc": "Plan tyrien d’un module d’exo. Recette apprise : Écaille d’esquive, à l’Établi d’exo (60 fibres de bois noir, 60 planches, 15 ichor, 5 lingots de cuivre)."},
 	"plan_ember": {"name": "Plan de mod « Cœur de braise »", "color": Color("#1f9fb8"),
-		"desc": "Plan tyrien d’un module d’exo. Recette apprise : Cœur de braise, à l’Établi d’exo (80 fibres de bois, 80 planches, 25 ichor, 10 lingots de cuivre)."},
+		"desc": "Plan tyrien d’un module d’exo. Recette apprise : Cœur de braise, à l’Établi d’exo (80 fibres de bois noir, 80 planches, 25 ichor, 10 lingots de cuivre)."},
 	"plan_magnet": {"name": "Plan de mod « Aimant d’ichor »", "color": Color("#1f9fb8"),
-		"desc": "Plan tyrien d’un module d’exo. Recette apprise : Aimant d’ichor, à l’Établi d’exo (50 fibres de bois, 50 planches, 10 ichor)."},
+		"desc": "Plan tyrien d’un module d’exo. Recette apprise : Aimant d’ichor, à l’Établi d’exo (50 fibres de bois noir, 50 planches, 10 ichor)."},
 	"plan_lens": {"name": "Plan de mod « Lentille de souffle »", "color": Color("#1f9fb8"),
-		"desc": "Plan tyrien d’un module d’exo. Recette apprise : Lentille de souffle, à l’Établi d’exo (60 fibres de bois, 60 planches, 15 ichor, 5 lingots de cuivre)."},
-	"plan_barrel": {"name": "Plan de mod « Barillet double »", "color": Color("#1f9fb8"),
-		"desc": "Plan tyrien d’un module d’exo. Recette apprise : Barillet double, à l’Établi d’exo (80 fibres de bois, 80 planches, 25 ichor, 10 lingots de cuivre)."},
+		"desc": "Plan tyrien d’un module d’exo. Recette apprise : Lentille de souffle, à l’Établi d’exo (60 fibres de bois noir, 60 planches, 15 ichor, 5 lingots de cuivre)."},
+	"plan_patine": {"name": "Plan de mod « Mines de patine »", "color": Color("#1f9fb8"),
+		"desc": "Plan tyrien d’un module d’exo. Recette apprise : Mines de patine, à l’Établi d’exo (60 fibres de bois noir, 60 planches, 15 ichor, 10 lingots de cuivre)."},
 	"plan_frost": {"name": "Plan de mod « Culasse froide »", "color": Color("#1f9fb8"),
-		"desc": "Plan tyrien d’un module d’exo. Recette apprise : Culasse froide, à l’Établi d’exo (50 fibres de bois, 50 planches, 10 ichor)."},
+		"desc": "Plan tyrien d’un module d’exo. Recette apprise : Culasse froide, à l’Établi d’exo (50 fibres de bois noir, 50 planches, 10 ichor)."},
 	"plan_seal": {"name": "Plan de mod « Sceau sensible »", "color": Color("#1f9fb8"),
-		"desc": "Plan tyrien d’un module d’exo. Recette apprise : Sceau sensible, à l’Établi d’exo (50 fibres de bois, 50 planches, 10 ichor)."},
+		"desc": "Plan tyrien d’un module d’exo. Recette apprise : Sceau sensible, à l’Établi d’exo (50 fibres de bois noir, 50 planches, 10 ichor)."},
 	"plan_wisp": {"name": "Plan de mod « Lanterne de Medeina »", "color": Color("#1f9fb8"),
-		"desc": "Plan tyrien d’un module d’exo. Recette apprise : Lanterne de Medeina, à l’Établi d’exo (60 fibres de bois, 60 planches, 15 ichor, 5 lingots de cuivre)."},
+		"desc": "Plan tyrien d’un module d’exo. Recette apprise : Lanterne de Medeina, à l’Établi d’exo (60 fibres de bois noir, 60 planches, 15 ichor, 5 lingots de cuivre)."},
 	"plan_anchor": {"name": "Plan de mod « Ancre de rappel »", "color": Color("#1f9fb8"),
-		"desc": "Plan tyrien d’un module d’exo. Recette apprise : Ancre de rappel, à l’Établi d’exo (80 fibres de bois, 80 planches, 25 ichor, 10 lingots de cuivre)."},
+		"desc": "Plan tyrien d’un module d’exo. Recette apprise : Ancre de rappel, à l’Établi d’exo (80 fibres de bois noir, 80 planches, 25 ichor, 10 lingots de cuivre)."},
 	"plan_chant": {"name": "Plan de mod « Voix du Chantre »", "color": Color("#1f9fb8"),
-		"desc": "Plan tyrien d’un module d’exo. Recette apprise : Voix du Chantre, à l’Établi d’exo (60 fibres de bois, 60 planches, 15 ichor, 5 lingots de cuivre)."},
+		"desc": "Plan tyrien d’un module d’exo. Recette apprise : Voix du Chantre, à l’Établi d’exo (60 fibres de bois noir, 60 planches, 15 ichor, 5 lingots de cuivre)."},
 	"plan_sack": {"name": "Plan de mod « Sac sans fond »", "color": Color("#1f9fb8"),
-		"desc": "Plan tyrien d’un module d’exo. Recette apprise : Sac sans fond, à l’Établi d’exo (80 fibres de bois, 80 planches, 25 ichor, 10 lingots de cuivre)."},
+		"desc": "Plan tyrien d’un module d’exo. Recette apprise : Sac sans fond, à l’Établi d’exo (80 fibres de bois noir, 80 planches, 25 ichor, 10 lingots de cuivre)."},
 	"plan_echo": {"name": "Plan de mod « Écho du pylône »", "color": Color("#1f9fb8"),
-		"desc": "Plan tyrien d’un module d’exo. Recette apprise : Écho du pylône, à l’Établi d’exo (60 fibres de bois, 60 planches, 15 ichor, 5 lingots de cuivre)."},
+		"desc": "Plan tyrien d’un module d’exo. Recette apprise : Écho du pylône, à l’Établi d’exo (60 fibres de bois noir, 60 planches, 15 ichor, 5 lingots de cuivre)."},
 	"plank": {"name": "Planche", "color": Color("#b08a5a"),
-		"desc": "Bois refendu et dressé. Ingrédient des mods de l’Établi d’exo."},
+		"desc": "Bois noir refendu et dressé. Ingrédient des mods de l’Établi d’exo."},
 	# Archerie
 	"bow": {"name": "Arc", "color": Color("#9a7040"),
 		"desc": "Nécessaire pour recruter un archer (un par archer)."},
@@ -78,9 +78,9 @@ const ITEMS := {
 		"desc": "Munitions des archers. Fabriquées par lots de 15."},
 	# Armurerie
 	"sword": {"name": "Épée", "color": Color("#b8c0c8"),
-		"desc": "Nécessaire pour recruter un Épée et bouclier (une par soldat)."},
+		"desc": "Nécessaire pour recruter un Épée et bouclier (une par soldat) ; toute épée en cuivre ou en fer ramassée convient."},
 	"shield": {"name": "Bouclier", "color": Color("#9aa4ae"),
-		"desc": "Nécessaire pour recruter un Épée et bouclier (un par soldat)."},
+		"desc": "Nécessaire pour recruter un Épée et bouclier (un par soldat) ; tout bouclier en cuivre ou en fer ramassé convient."},
 	# Fonderie
 	"copper_ingot": {"name": "Lingot de cuivre", "color": Color("#d4885e"),
 		"desc": "Ingrédient des recettes de niveau supérieur."},
@@ -120,7 +120,6 @@ const RECIPES := {
 		"module_ember": {"wood_fiber": 80, "plank": 80, "ichor": 25, "copper_ingot": 10},
 		"module_magnet": {"wood_fiber": 50, "plank": 50, "ichor": 10},
 		"module_lens": {"wood_fiber": 60, "plank": 60, "ichor": 15, "copper_ingot": 5},
-		"module_barrel": {"wood_fiber": 80, "plank": 80, "ichor": 25, "copper_ingot": 10},
 		"module_frost": {"wood_fiber": 50, "plank": 50, "ichor": 10},
 		"module_seal": {"wood_fiber": 50, "plank": 50, "ichor": 10},
 		"module_wisp": {"wood_fiber": 60, "plank": 60, "ichor": 15, "copper_ingot": 5},
@@ -128,7 +127,8 @@ const RECIPES := {
 		"module_chant": {"wood_fiber": 60, "plank": 60, "ichor": 15, "copper_ingot": 5},
 		"module_sack": {"wood_fiber": 80, "plank": 80, "ichor": 25, "copper_ingot": 10},
 		"module_echo": {"wood_fiber": 60, "plank": 60, "ichor": 15, "copper_ingot": 5},
-		"module_analyse": {"wood_fiber": 50, "plank": 50, "ichor": 5},
+		"module_analyse": {"wood_fiber": 5, "plank": 5, "ichor": 1},
+		"module_patine": {"wood_fiber": 60, "plank": 60, "ichor": 15, "copper_ingot": 10},
 	},
 	"archerie": {
 		"bow": {"wood": 1, "wood_fiber": 1},
@@ -163,6 +163,12 @@ const CASERNE_ITEMS := {
 	"chantre": {"focus_staff": 1},
 	"envouteur": {"focus_staff": 1},
 }
+## Objets ramassés ou fabriqués qui tiennent lieu d'un objet de caserne (épées à une ou deux mains, boucliers),
+## du moins précieux au plus précieux : l'objet générique d'abord, le cuivre, puis le fer.
+const CASERNE_SUBSTITUTES := {
+	"sword": ["copper_sword", "copper_greatsword", "iron_sword", "iron_greatsword"],
+	"shield": ["copper_shield", "iron_shield"],
+}
 ## Rôles dont l'objet se compte par formation et non par combattant (un arc pour quatre archers, un bâton par mage).
 const PER_TRAINING := ["archer", "guerisseuse", "chantre", "envouteur"]
 
@@ -173,7 +179,7 @@ static func disabled(item: String) -> bool:
 
 
 static func output_quantity(item: String) -> int:
-	return 5 if item == "arrows" else 1
+	return 3 if item == "arrows" else 1
 
 
 static func craft_time(building_type: String) -> float:
@@ -184,9 +190,9 @@ static func craft_time(building_type: String) -> float:
 
 ## Recettes sur plan : objet -> plan à connaître (GameState.plans). Le plan « analyse » vient du Coffre Antique,
 ## les autres du butin (sim/loot.gd). Coûts par rareté du mod, proposés le 2026-11-22, à régler.
-const PLANS := {"module_veil": "veil", "module_drill": "drill", "module_iris": "iris", "module_scale": "scale", "module_ember": "ember", "module_magnet": "magnet", "module_lens": "lens", "module_barrel": "barrel", "module_frost": "frost", "module_seal": "seal", "module_wisp": "wisp", "module_anchor": "anchor", "module_chant": "chant", "module_sack": "sack", "module_echo": "echo", "module_analyse": "analyse"}
+const PLANS := {"module_veil": "veil", "module_drill": "drill", "module_iris": "iris", "module_scale": "scale", "module_ember": "ember", "module_magnet": "magnet", "module_lens": "lens", "module_frost": "frost", "module_seal": "seal", "module_wisp": "wisp", "module_anchor": "anchor", "module_chant": "chant", "module_sack": "sack", "module_echo": "echo", "module_analyse": "analyse", "module_patine": "patine"}
 ## Objet plan -> mod qu'il apprend à fabriquer.
-const PLAN_ITEMS := {"plan_veil": "module_veil", "plan_drill": "module_drill", "plan_iris": "module_iris", "plan_scale": "module_scale", "plan_ember": "module_ember", "plan_magnet": "module_magnet", "plan_lens": "module_lens", "plan_barrel": "module_barrel", "plan_frost": "module_frost", "plan_seal": "module_seal", "plan_wisp": "module_wisp", "plan_anchor": "module_anchor", "plan_chant": "module_chant", "plan_sack": "module_sack", "plan_echo": "module_echo", "plan_analyse": "module_analyse"}
+const PLAN_ITEMS := {"plan_veil": "module_veil", "plan_drill": "module_drill", "plan_iris": "module_iris", "plan_scale": "module_scale", "plan_ember": "module_ember", "plan_magnet": "module_magnet", "plan_lens": "module_lens", "plan_frost": "module_frost", "plan_seal": "module_seal", "plan_wisp": "module_wisp", "plan_anchor": "module_anchor", "plan_chant": "module_chant", "plan_sack": "module_sack", "plan_echo": "module_echo", "plan_analyse": "module_analyse", "plan_patine": "module_patine"}
 
 
 ## Apprend la recette du plan `item` (ramassé, rapporté par l'Oublieux) ; vrai si elle était nouvelle.

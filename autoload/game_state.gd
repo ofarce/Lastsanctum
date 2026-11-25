@@ -59,6 +59,8 @@ var chest_opened_at: float = INF
 var base_inventory: Array[Dictionary] = []
 ## Défenses de l'Atelier posées (sim/placeables.gd) : {item, cell: Vector2i, x, z, tick}.
 var placed: Array[Dictionary] = []
+## Portes des tunnels de la grotte (sim/cave_doors.gd) : {hp, max_hp, open, broken, hit_at}, une par bouche.
+var cave_doors: Array[Dictionary] = []
 ## Objet à poser en mode « place » (HUD.mode), choisi dans le menu Poser de l'Ingénieur.
 var hud_place_item: String = ""
 ## Objets persistants au sol : {item: identifiant, position: Vector2(x, z)}.
@@ -123,8 +125,26 @@ var martyre_state := ""
 ## Martyre levée dans son arène du quartier B (Temple en salles) : hors vague, les assauts continuent ; sa mort
 ## ouvre la porte mb2 de la route du boss.
 var martyre_arena := false
+## Ses motifs joués par un autre boss ("oeil" : phases I et III de l'Œil de la Matrice, Martyre.host_*) ; "" sinon.
+var martyre_host := ""
 ## L'Archiprêtre aux racines, mini-boss 1 du Temple (sim/archipretre.gd) ; vide = à poser.
 var archipretre: Dictionary = {}
+## Mini-boss des Salles oubliées (sim/eclusier.gd, sim/patine.gd) ; vides = à poser.
+var eclusier: Dictionary = {}
+var patine: Dictionary = {}
+## Mines de patine (mod de l'Exilé, sim/mods.gd) : [{x, z, until, dmg, src}].
+var patine_mines: Array[Dictionary] = []
+## Repères d'entrée de quartier (sim/quarter_marks.gd) : quartiers dont la stèle et l'arche sont allumées,
+## quartiers déjà parcourus (carton complet une seule fois), dernier quartier où était l'Exilé, carton affiché
+## {name, sub, color, at, dur} (vide = aucun).
+var quarter_lit: Dictionary = {}
+var quarter_seen: Dictionary = {}
+var quarter_last := ""
+var quarter_card: Dictionary = {}
+## Carton d'entrée de biome (sim/biome_card.gd) : dernier biome où était l'Exilé (-1 = base, jungle), carton
+## {name, at} (vide = aucun).
+var biome_last := -1
+var biome_card: Dictionary = {}
 var martyre_center := Vector2.ZERO
 var martyre_at: float = INF
 var martyre_down_at: float = INF
@@ -152,6 +172,10 @@ var martyre_rot: Array = [0, 0, 0]
 var martyre_radius := 48.0
 var martyre_shrink_at: float = INF
 var martyre_iframe_until: float = -INF
+## Garde de la Martyre : charges (0..Martyre.WARD_MAX, fractionnaires pendant la recharge), dernier tir absorbé ou subi.
+var martyre_ward: float = 5.0
+var martyre_ward_hit_at: float = -INF
+var martyre_ward_absorb_at: float = -INF
 ## Boss de la frontière, l'Œil de la Matrice (sim/oeil.gd) : "" salle pas encore découverte, "waiting" éveillé,
 ## "duel" Ingénieur dans la salle, "defeated" tombé (porte de chair ouverte). Balles en vol, couloirs du Regard
 ## (fx), et le reste de son état dans oeil_run (phase, prochain motif, ouverture de l'œil, regard…).
@@ -160,6 +184,10 @@ var oeil_state := ""
 var oeil_bullets: Array[Dictionary] = []
 var oeil_fx: Array[Dictionary] = []
 var oeil_run: Dictionary = {}
+## Ses attaques jouées par un autre boss ("archipretre", OeilMatrice.host_*) ; "" sinon. L'hôte a son propre état
+## (oeil_host_run, à la place d'oeil_run) : l'Œil peut être éveillé, en attente dans sa salle, pendant ce temps.
+var oeil_host := ""
+var oeil_host_run: Dictionary = {}
 ## Bâtiments du sanctuaire (buildings) et unités tombées que le Puits des Âmes peut rappeler (FALLEN).
 var buildings: Array[Building] = []
 var fallen: Array[Unit] = []
@@ -200,6 +228,12 @@ var mods_crafted: Array[String] = []
 var incarnated_hurt_at := -INF
 ## Retour de l'Ingénieur tombé : instant où il réapparaît dans la capsule (INF s'il est en vie).
 var engineer_respawn_at: float = INF
+## Mort et retour de l'Ingénieur (sim/engineer_return.gd) : où il est tombé, vers où il regardait, si la caméra
+## suit le feu follet (il était incarné), et l'instant de son retour (souffle de la capsule).
+var engineer_fell_pos := Vector2.ZERO
+var engineer_fell_face := 1
+var engineer_fell_follow := false
+var engineer_back_at: float = -INF
 ## Munition choisie pour l'Arbalestrie (data/ammo.gd), gardée d'une incarnation à l'autre.
 var ammo := "spirit"
 ## Munition d'avant le dernier changement et instant du changement (Barillet double, Culasse froide : sim/mods.gd) ;
@@ -224,6 +258,8 @@ func reset() -> void:
 	mods_crafted.clear()
 	incarnated_hurt_at = -INF
 	engineer_respawn_at = INF
+	engineer_fell_follow = false
+	engineer_back_at = -INF
 	ammo = "spirit"
 	ammo_prev = "spirit"
 	mods_seen = {}
@@ -263,6 +299,7 @@ func reset() -> void:
 	ground_items.clear()
 	caches.clear()
 	placed.clear()
+	cave_doors.clear()
 	units.clear()
 	selected.clear()
 	next_uid = 0
@@ -296,7 +333,17 @@ func reset() -> void:
 	martyre = null
 	martyre_state = ""
 	martyre_arena = false
+	martyre_host = ""
 	archipretre = {}
+	eclusier = {}
+	patine = {}
+	patine_mines.clear()
+	quarter_lit = {}
+	quarter_seen = {}
+	quarter_last = ""
+	quarter_card = {}
+	biome_last = -1
+	biome_card = {}
 	martyre_center = Vector2.ZERO
 	martyre_at = INF
 	martyre_down_at = INF
@@ -317,11 +364,16 @@ func reset() -> void:
 	martyre_radius = 48.0
 	martyre_shrink_at = INF
 	martyre_iframe_until = -INF
+	martyre_ward = 5.0
+	martyre_ward_hit_at = -INF
+	martyre_ward_absorb_at = -INF
 	oeil = null
 	oeil_state = ""
 	oeil_bullets.clear()
 	oeil_fx.clear()
 	oeil_run = {}
+	oeil_host = ""
+	oeil_host_run = {}
 	enemy_corpses.clear()
 	buildings.clear()
 	fallen.clear()
